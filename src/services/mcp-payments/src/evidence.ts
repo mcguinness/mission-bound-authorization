@@ -39,6 +39,8 @@ import {
   type EvidenceVerifyResult,
   MISSION_RECEIPT_MEDIA_TYPE,
   newRecordId,
+  parseWorkItem,
+  type WorkItemRef,
   REFUSAL_RECORD_MEDIA_TYPE,
   evaluationRequestDigest,
   preRequestDigest,
@@ -210,19 +212,44 @@ export interface ExecutionEvidenceObject {
   mission_id: string;
   audience: string;
   authorized_parameter_digest?: string;
+  /**
+   * Absent beside `authorized_parameter_digest` only on a `suppressed` record
+   * whose PEP could not establish the effective parameters: the comparison
+   * is unavailable, never equality and never a deviation (#786).
+   */
   effective_parameter_digest?: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#773): the context pair,
+   * on the parameter pair's terms. The authorized member mirrors the linked
+   * Decision Evidence's `evaluation_context_digest`; the effective one is
+   * absent where the executing PEP could not re-establish the context.
+   */
+  authorized_evaluation_context_digest?: string;
+  effective_evaluation_context_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   outcome_at: string;
   error?: string;
+  /**
+   * One entry per attached obligation, in the decision's order. `id` and
+   * `type` are present exactly when the decision supplied that member as a
+   * non-empty string, never invented (#786).
+   */
   obligation_outcomes?: Array<{
-    id: string;
-    type: string;
+    id?: string;
+    type?: string;
     outcome: "fulfilled" | "failed" | "unsupported";
     error?: string;
   }>;
   sequence: number;
   emitter: { id: string; role: "pep" | "executor" };
   hop_reference?: RuntimeHopReference;
+  /**
+   * @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+   * qualified work-item identifier the executing PEP attributed to the
+   * request this disposition concerns, a coordinated extension member the
+   * harness profile owns.
+   */
+  work_item?: WorkItemRef;
   attempted_at?: string;
   completed_at?: string;
   result_summary?: Record<string, JsonValue>;
@@ -760,7 +787,9 @@ function envelopeKid(envelope: EvidenceEnvelope): string {
  * PEP's enforcement scope, and `phase_invalid` (@spec
  * authzen#context-action-phase, #1629, D744), a request whose action phase is
  * outside the defined set or absent where the PDP's trusted operation
- * declaration requires one.
+ * declaration requires one, and `compensation_link_invalid` (@spec
+ * authzen#context-compensation-link, #252), a compensate-phase request with no
+ * `compensates_evaluation_id`, or any request carrying a malformed one.
  */
 export const REFUSAL_DENIAL_REASONS = Object.freeze({
   pep: Object.freeze([
@@ -784,8 +813,30 @@ export const REFUSAL_DENIAL_REASONS = Object.freeze({
     // "`phase_unavailable` (the operation is a phase of a compound action and
     // the PEP cannot establish the phase before requesting a decision)".
     "phase_unavailable",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-compensation-link
+    // (#252): "`compensation_link_unavailable` (the operation is a compensate
+    // phase and the PEP cannot establish, from retained and verified evidence,
+    // the committed effect it offsets and that effect's Decision)".
+    "compensation_link_unavailable",
+    // @spec runtime-evidence#pre-decision-refusal, runtime#evaluation-context-binding
+    // (#773): the PEP cannot capture the authoritative evaluation context a
+    // covered operation binds before requesting a decision.
+    "evaluation_context_unresolvable",
   ] as const),
-  pdp: Object.freeze(["mission_context_missing", "operation_target_invalid", "phase_invalid"] as const),
+  pdp: Object.freeze([
+    "mission_context_missing",
+    "operation_target_invalid",
+    "phase_invalid",
+    "compensation_link_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-evaluation-binding
+    // (#773): evaluation-context binding inputs missing, malformed or
+    // incompatible with the declared binding, for a covered operation.
+    "evaluation_context_invalid",
+    // @spec runtime-evidence#pre-decision-refusal, authzen#context-work-item
+    // (#815): a request whose `context.work_item` is present but not
+    // exactly `{issuer, id}`, an unusable input refused before evaluation.
+    "work_item_invalid",
+  ] as const),
 });
 export type PepRefusalDenialReason = (typeof REFUSAL_DENIAL_REASONS.pep)[number];
 
@@ -836,10 +887,14 @@ export interface ExecutionEvidenceInput {
   audience: string;
   authorized_parameter_digest?: string;
   effective_parameter_digest?: string;
+  authorized_evaluation_context_digest?: string;
+  effective_evaluation_context_digest?: string;
   outcome: "completed" | "failed" | "suppressed";
   error?: string;
   obligation_outcomes?: ExecutionEvidenceObject["obligation_outcomes"];
   hop_reference?: RuntimeHopReference;
+  /** @spec runtime-evidence#evidence-extensions `work_item` (#815). */
+  work_item?: WorkItemRef;
   attempted_at?: string;
   completed_at?: string;
   result_summary?: Record<string, JsonValue>;
@@ -1276,6 +1331,12 @@ export class EvidenceStore {
       ...(input.effective_parameter_digest !== undefined
         ? { effective_parameter_digest: input.effective_parameter_digest }
         : {}),
+      ...(input.authorized_evaluation_context_digest !== undefined
+        ? { authorized_evaluation_context_digest: input.authorized_evaluation_context_digest }
+        : {}),
+      ...(input.effective_evaluation_context_digest !== undefined
+        ? { effective_evaluation_context_digest: input.effective_evaluation_context_digest }
+        : {}),
       outcome: input.outcome,
       outcome_at,
       ...(input.error !== undefined ? { error: input.error } : {}),
@@ -1283,6 +1344,8 @@ export class EvidenceStore {
       sequence,
       emitter: { id: emitterId, role },
       ...(input.hop_reference !== undefined ? { hop_reference: input.hop_reference } : {}),
+      // Runtime allowlist, not a cast: exactly `issuer` and `id`, or nothing.
+      ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(input.work_item)),
       ...(input.attempted_at !== undefined ? { attempted_at: input.attempted_at } : {}),
       ...(input.completed_at !== undefined ? { completed_at: input.completed_at } : {}),
       ...(input.result_summary !== undefined ? { result_summary: input.result_summary } : {}),
@@ -1321,6 +1384,31 @@ export class EvidenceStore {
 
   all(): readonly Evidence[] {
     return this.records;
+  }
+
+  /**
+   * @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`
+   * (#252): "The trusted execution path MUST establish this link from
+   * retained, verified evidence of the original evaluation". Re-verify one
+   * retained Decision Evidence or Execution Evidence row under its own
+   * envelope, with this store's verification-key resolver, at the moment the
+   * row is relied on. A retained row is not trusted merely for being held: a
+   * durable backend's rows are recovered at startup without re-verification,
+   * so a row changed at rest verifies here or is not relied on.
+   *
+   * The resolver is the one {@link retainDecision} uses; it must also resolve
+   * the executor's published key for an Execution Evidence row. Absent a
+   * resolver, or a key for the row's emitter, nothing verifies: fail closed.
+   */
+  async verifyRetained(row: DecisionEvidence | ExecutionEvidence): Promise<boolean> {
+    if (!this.resolveDecisionEvidenceKey) return false;
+    const mediaType = row.kind === "decision" ? DECISION_EVIDENCE_MEDIA_TYPE : EXECUTION_EVIDENCE_MEDIA_TYPE;
+    const result = await verifyEvidenceEnvelope(
+      row.content as unknown as Parameters<typeof verifyEvidenceEnvelope>[0],
+      mediaType,
+      this.resolveDecisionEvidenceKey,
+    );
+    return result.valid;
   }
 }
 

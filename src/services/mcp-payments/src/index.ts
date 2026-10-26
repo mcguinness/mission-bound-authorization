@@ -1,14 +1,29 @@
 export { defaultRemittanceAddress, PaymentsStore, type Invoice, type ResolvedRecipients, type Vendor } from "./payments-store.js";
 export { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 export { type MissionViewSource, type ViewPreparation, type ViewSourceRefusal } from "./view-source.js";
-export { type KeyRole, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
+export {
+  type KeyAlgorithms,
+  type KeyRole,
+  type KeyRoles,
+  type RefreshingRoleKeys,
+  refreshingRoleKeyResolvers,
+  roleKeyResolvers,
+} from "./key-roles.js";
 export {
   buildEffectiveParams,
   buildListEffectiveParams,
+  buildReversalParams,
   parameterDigest,
   type EffectiveParams,
   type ListEffectiveParams,
 } from "./effective-params.js";
+export {
+  captureEvaluationContext,
+  EvaluationContextSalts,
+  type HeldEvaluationContext,
+  PAYMENTS_FACT_RESOLVERS,
+  recomputeEvaluationContext,
+} from "./evaluation-context.js";
 export {
   boundaryEvidenceAuthorization,
   type EvidenceBoundaryAuthorization,
@@ -51,6 +66,7 @@ export {
   type TxnCredential,
   type EnforceResult,
   type ExecutionAttempt,
+  type AttemptEvaluationContext,
   type WriteReservationScope,
   type ReverifyOutcome,
   type SuppressOutcome,
@@ -73,9 +89,12 @@ export {
   TOOL_ACTIONS,
   PAYMENTS_INVOICE_CONTRACT,
   PAYMENTS_PROFILE_VERSION,
+  RETAINED_OPERATION_PROFILES,
   type ActionMapping,
+  type CompensatedEffect,
 } from "./pep.js";
 export {
+  CONNECTOR_REFUSAL_ERRORS,
   CONNECTOR_TOOLS,
   type DispositionGap,
   dispatchPathFor,
@@ -110,7 +129,16 @@ export {
   type HttpMediatedClient,
 } from "./mcp-http-transport.js";
 export { accessTokenHash } from "./dpop.js";
-export { Connectors, type WireCommit, type EmailCommit, type CommitResult, type CommittedEffect } from "./connectors.js";
+export {
+  Connectors,
+  type WireCommit,
+  type EmailCommit,
+  type CommitResult,
+  type CommittedEffect,
+  type CommittedEffectSource,
+  type CommittedWire,
+  type ReversalCommit,
+} from "./connectors.js";
 export { TransactionEngine, operationKey, type OpState } from "./transaction.js";
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
@@ -142,6 +170,8 @@ export {
 } from "./write-reservations.js";
 export { type RedemptionStatus, recordRedeemingAttempt, redemptionStatusFor } from "./redemption-status.js";
 export {
+  MALFORMED_OBLIGATION,
+  malformedObligationOutcome,
   NotificationOutbox,
   type ObligationNotification,
   type ObligationNotifier,
@@ -187,6 +217,8 @@ export {
   type ReceiptIssuerScope,
   type ReceiptResolvedRecord,
   type ReceiptVerifyFailure,
+  executionDivergence,
+  type ReceiptDivergence,
   type ReceiptVerifyResult,
 } from "./mission-receipt.js";
 export {

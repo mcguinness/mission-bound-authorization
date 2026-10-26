@@ -25,6 +25,8 @@ import {
   compareAmounts,
   computeAnchor,
   type ConstraintFacts,
+  type AuthorityDependencyEnforcement,
+  checkAuthorityDependency,
   conditionsNoBroader,
   type CredentialAuthorityEntry,
   entryMatchesTarget,
@@ -37,8 +39,13 @@ import {
   entitlementPermits,
   type EntitlementResolver,
   idempotencyScopeDigest,
+  type EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
   isActionPhase,
   isCurrencyCode,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  sameEvaluationContextBinding,
   isIdempotencyKey,
   isValidAmount,
   MISSION_ORIGIN_SUBJECT_TYP,
@@ -54,7 +61,7 @@ import {
   timeWindowEndMs,
   unsupportedEntryMember,
 } from "@mission/core";
-import { RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { EVALUATION_CONTEXT_BINDING, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { randomUUID } from "node:crypto";
 import { getTracer } from "@mission/telemetry";
 import { SignJWT, type CryptoKey, type JWTVerifyGetKey } from "jose";
@@ -68,7 +75,7 @@ import type {
   RuntimeCapabilitySource,
   RuntimeCredentialRef,
 } from "./decision-evidence.js";
-import { runtimeCapabilitySourceOf, evaluationRequestDigest } from "./decision-evidence.js";
+import { runtimeCapabilitySourceOf, evaluationRequestDigest, isEvaluationIdentifier } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import {
   type ClaimInput,
@@ -111,6 +118,7 @@ import {
 } from "./runtime-posture.js";
 import { type MissionStateObservation, parseStateObservation, rfc3339Ms, verifyStateAssertion } from "./state-observation.js";
 import { ownReadCeiling } from "./own-read-ceiling.js";
+import { parseWorkItem } from "./work-item.js";
 
 export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, PrincipalMappingObservation, PrincipalMappingResolver } from "@mission/core";
 
@@ -316,6 +324,15 @@ export interface EvaluationRequest {
     credential?: RuntimeCredentialRef & { authority?: unknown };
     capability_source?: RuntimeCapabilitySource;
     /**
+     * @spec authzen#context-work-item (#815): OPTIONAL, the qualified
+     * work-item identifier `{issuer, id}` the PEP took from the harness's
+     * authenticated attachment, never from tool arguments. Typed `unknown`
+     * deliberately: a malformed value is refused before evaluation as
+     * `work_item_invalid`, never admitted by the type system, and only a
+     * value `parseWorkItem` accepts reaches the permit or Decision Evidence.
+     */
+    work_item?: unknown;
+    /**
      * @spec authzen#context-audience-freshness: CONDITIONAL, present where
      * the deployment's declared state-source placement has the PEP supply
      * state, absent where it places state establishment with the PDP.
@@ -349,6 +366,29 @@ export interface EvaluationRequest {
      * `action_phase` is retrospective. Neither substitutes for the condition.
      */
     action_phase?: string;
+    /**
+     * @spec authzen#context-evaluation-binding (#773): CONDITIONAL, REQUIRED
+     * for an operation the runtime profile's Evaluation-Context Binding
+     * covers: the prefixed canonical-object digest of the context the PEP
+     * captured, an observation this PDP echoes and cannot recompute without
+     * the PEP's secret salt. Typed `unknown` deliberately: a malformed value
+     * is refused before evaluation (`evaluation_context_invalid`), never
+     * admitted by the type system.
+     */
+    evaluation_context_digest?: unknown;
+    /** @spec authzen#context-evaluation-binding (#773): the versioned descriptor reference `{id, version, digest}`. */
+    evaluation_context_binding?: unknown;
+    /**
+     * @spec authzen#context-compensation-link (#252): CONDITIONAL, REQUIRED
+     * on a request whose `action_phase` is `compensate`. The `evaluation_id`
+     * of the committed effect the operation offsets, which the PEP
+     * establishes from its own retained, verified evidence and never from an
+     * agent argument. Typed `unknown` deliberately: {@link evaluate} refuses
+     * a malformed value, or a compensate-phase request without one, before
+     * evaluation (`compensation_link_invalid`). Correlation only: it confers
+     * no authority.
+     */
+    compensates_evaluation_id?: unknown;
     action_approval?: ActionApproval;
     /**
      * @spec authority-server#mission-join (#557 review point 1) — present
@@ -417,6 +457,13 @@ export type DenialReason =
   | "view_inconsistent"
   | "mission_inactive"
   | "actor_invalid"
+  /**
+   * @spec authzen#context-work-item, authzen#runtime-denial-classification
+   * (#815): "the deployment claims work-item attribution for the action's
+   * class and the decision request carries no `context.work_item`." A
+   * malformed one is the pre-evaluation refusal `work_item_invalid` instead.
+   */
+  | "work_item_context_missing"
   /**
    * @spec authzen#pdp-request rule 6, authzen#context-credential (#825, D312) —
    * the PEP-supplied credential facts are expired, inconsistent, or otherwise
@@ -503,10 +550,18 @@ export interface Decision {
  * Record `denial_reason` values a PDP refuses a decision request with before
  * evaluating it. A refusal is not a decision: it carries no `evaluation_id`
  * and no Decision Evidence, and never a PDP denial reason such as
- * `out_of_authority`. `phase_invalid` names an unusable decision input, not an
- * evaluated policy denial (@spec authzen#failure-condition-coverage).
+ * `out_of_authority`. `phase_invalid` and `compensation_link_invalid` (#252)
+ * name unusable decision inputs, not evaluated policy denials (@spec
+ * authzen#failure-condition-coverage).
  */
-export type PdpRefusalReason = "operation_target_invalid" | "phase_invalid";
+export type PdpRefusalReason =
+  | "operation_target_invalid"
+  | "phase_invalid"
+  | "compensation_link_invalid"
+  | "evaluation_context_invalid"
+  // @spec authzen#context-work-item (#815): a present `context.work_item`
+  // that is not exactly `{issuer, id}`, an unusable input like the phase.
+  | "work_item_invalid";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -605,6 +660,17 @@ export interface EvaluateOptions {
    * Mission bound alone binds a named fixture from `@mission/pdp/test-support`.
    */
   resourcePolicy: ResourcePolicy;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): a declared
+   * authority dependency this PDP evaluates directly, as part of its
+   * Resource-policy step: an action under a Mission the declaration governs
+   * is refused `resource_policy` (the mechanism's own refusal) unless an
+   * acceptable observation establishes the dependency, and a permit expires
+   * no later than that observation's accepted validity. Applied only where
+   * the declaration routes direct evaluation to the PDP. Bound PDP-side, like
+   * `resourcePolicy`, and never supplied by an enforcement component.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
   now: () => Date;
   /**
    * The declared freshness posture per action class: a window in seconds, an
@@ -751,6 +817,16 @@ export interface EvaluateOptions {
    */
   joinAssertion?: JoinAssertionPolicy;
   /**
+   * @spec authzen#context-work-item, harness#work-item-identity (#815): the
+   * action classes this PDP's trusted Enforcement Scope Statement claims
+   * work-item attribution for. A request in one with no `context.work_item`
+   * denies `work_item_context_missing`. A PDP-side binding, like
+   * `phasedActions`: an enforcement component that could supply it could
+   * drop its own claim. Absent: no class is claimed, and a work item is
+   * carried where present but never required.
+   */
+  workItemAttributedClasses?: ReadonlySet<string>;
+  /**
    * @spec runtime#idempotency (#917): this PDP's Exact idempotency claim
    * domain, bound at decision-point construction exactly as `evidence` is.
    * Absent, no high-consequence class has a declared domain, and a request in
@@ -817,6 +893,16 @@ export interface EvaluateOptions {
    * phased action, and only an out-of-set phase is refused.
    */
   phasedActions?: ReadonlySet<string>;
+  /**
+   * @spec authzen#context-evaluation-binding, runtime#evaluation-context-binding
+   * (#773): this PDP's own trusted Evaluation-Context Binding claim and
+   * declaration, which the PEP's context inputs are validated against. A
+   * PDP-side binding, like `resourceContracts`: an enforcement component that
+   * could supply it could declare its own inputs compatible. Defaults to the
+   * deployment's statement (`EVALUATION_CONTEXT_BINDING`), which covers
+   * nothing without its claim.
+   */
+  evaluationContextBinding?: EvaluationContextBindingDeclarations;
 }
 
 /**
@@ -852,13 +938,18 @@ export type DecisionOptions = Omit<
   EvaluateOptions,
   | "evidence"
   | "claims"
+  // @spec authzen#context-work-item (#815): so are the classes the statement
+  // claims work-item attribution for, for the reason the phased actions are.
+  | "workItemAttributedClasses"
   | "requester"
   | "consumptionStatus"
   | "resourcePolicy"
+  | "authorityDependency"
   | "refusals"
   | "resourceContracts"
   | "durationLeases"
   | "phasedActions"
+  | "evaluationContextBinding"
 >;
 
 /** What the claim step left for {@link evaluate} to finish. */
@@ -920,6 +1011,36 @@ function newDecisionId(): string {
   return `dec_${randomUUID()}`;
 }
 
+/**
+ * @spec authzen#context-evaluation-binding (#773): the request's
+ * evaluation-context inputs as this PDP establishes them against its trusted
+ * declaration. For a covered operation (the action and, for a compound
+ * action, the validated phase the declaration lists): both inputs, the
+ * digest in the canonical-object digest form and the reference exactly
+ * `{id, version, digest}` and equal to the one declared for the operation,
+ * or `"invalid"`. For an operation the declaration does not cover:
+ * `undefined`, the inputs neither required nor established, so nothing is
+ * echoed or recorded for it. Pure, so the permit and its evidence read the
+ * same values the pre-evaluation check accepted.
+ */
+function evaluationContextOf(
+  req: EvaluationRequest,
+  opts: Pick<EvaluateOptions, "evaluationContextBinding">,
+): { digest: string; binding: EvaluationContextBindingRef } | "invalid" | undefined {
+  const declarations = opts.evaluationContextBinding ?? EVALUATION_CONTEXT_BINDING;
+  const r = req as { action?: { name?: unknown }; context?: Record<string, unknown> } | undefined;
+  const action = r?.action?.name;
+  const phase = r?.context?.action_phase;
+  if (typeof action !== "string") return undefined;
+  const entry = declarations.operation(action, isActionPhase(phase) ? phase : undefined);
+  if (!entry) return undefined;
+  const digest = r?.context?.evaluation_context_digest;
+  const binding = r?.context?.evaluation_context_binding;
+  if (!isEvaluationContextDigest(digest) || !isEvaluationContextBindingRef(binding)) return "invalid";
+  if (!sameEvaluationContextBinding(binding, entry.descriptor)) return "invalid";
+  return { digest, binding: { id: binding.id, version: binding.version, digest: binding.digest } };
+}
+
 export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): Promise<Decision> {
   // @spec runtime#input-resource-policy (#828): a decision reached without
   // the Resource-policy bound would permit on the other bounds alone. Options
@@ -964,6 +1085,51 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (phaseUnusable) {
     await recordPdpRefusal(opts.refusals, "phase_invalid", req);
     throw new DecisionRequestRefused("phase_invalid");
+  }
+  // @spec authzen#pdp-consistency-checks check 12, authzen#context-compensation-link,
+  // authzen#failure-condition-coverage (#252): `compensates_evaluation_id`,
+  // when present, is a well-formed evaluation identifier, and a request whose
+  // validated phase is `compensate` carries one. Otherwise the request is
+  // unusable, refused before evaluation as `compensation_link_invalid`: no
+  // decision, no evaluation_id and no Decision Evidence, so no compensate
+  // Decision is ever issued without its required link. Checked after the
+  // phase, which it reads, so a request failing both is refused once, as
+  // `phase_invalid`. Syntax only: the PEP established the link from its own
+  // verified evidence, and the link confers no authority here.
+  const compensationLink = (req as { context?: { compensates_evaluation_id?: unknown } } | undefined)?.context
+    ?.compensates_evaluation_id;
+  const linkUnusable =
+    compensationLink !== undefined
+      ? !isEvaluationIdentifier(compensationLink)
+      : actionPhase === "compensate";
+  if (linkUnusable) {
+    await recordPdpRefusal(opts.refusals, "compensation_link_invalid", req);
+    throw new DecisionRequestRefused("compensation_link_invalid");
+  }
+  // @spec authzen#context-evaluation-binding, authzen#failure-condition-coverage,
+  // runtime-evidence#pre-decision-refusal (#773): "The PDP MUST validate their
+  // shape and applicability against the declared operation binding, and MUST
+  // NOT issue a covered permit when either is missing, malformed or
+  // incompatible with that declaration; it refuses such a request before
+  // evaluation". Checked after the phase, so a request failing both is
+  // refused once, as `phase_invalid`. An unusable input, not a policy denial:
+  // a Refusal Record `evaluation_context_invalid`, with no decision, no
+  // evaluation_id and no Decision Evidence.
+  if (evaluationContextOf(req, opts) === "invalid") {
+    await recordPdpRefusal(opts.refusals, "evaluation_context_invalid", req);
+    throw new DecisionRequestRefused("evaluation_context_invalid");
+  }
+  // @spec authzen#context-work-item, authzen#failure-condition-coverage
+  // (#815): "The PDP MUST refuse, before evaluation, a request whose
+  // `context.work_item` is present but not of that shape". An unusable
+  // decision input, not an evaluated policy denial: a Refusal Record
+  // `work_item_invalid`, with no decision, no evaluation_id and no Decision
+  // Evidence. Absence is not this refusal: where the class is claimed it is
+  // the evaluated denial `work_item_context_missing` (step 1b).
+  const presentedWorkItem = (req as { context?: { work_item?: unknown } } | undefined)?.context?.work_item;
+  if (presentedWorkItem !== undefined && parseWorkItem(presentedWorkItem) === undefined) {
+    await recordPdpRefusal(opts.refusals, "work_item_invalid", req);
+    throw new DecisionRequestRefused("work_item_invalid");
   }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.
@@ -1053,6 +1219,8 @@ async function emitDecisionEvidence(
       }
     : undefined;
   const capability_source = runtimeCapabilitySourceOf(req.context.capability_source);
+  const contextInputs = evaluationContextOf(req, opts);
+  const contextEvidence = contextInputs === "invalid" ? undefined : contextInputs;
   return emitter.emit({
     ...(capability_source ? { capability_source } : {}),
     mission: {
@@ -1070,6 +1238,11 @@ async function emitDecisionEvidence(
     // denial included. A failed join or a direct Mission-bound decision
     // never set it.
     ...(join.viewId !== undefined ? { join_view_id: join.viewId } : {}),
+    // @spec runtime-evidence#evidence-extensions `work_item` (#815): REQUIRED
+    // "when the decision request carried a well-formed work-item context,
+    // recorded as presented", permit or denial; a malformed one is never
+    // signed into the record.
+    ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(req.context.work_item)),
     subject: {
       id: req.subject.id,
       ...(req.subject.properties?.iss !== undefined ? { properties: { iss: req.subject.properties.iss } } : {}),
@@ -1093,10 +1266,25 @@ async function emitDecisionEvidence(
     // reaches this point (evaluate refuses it before evaluation), and the
     // guard here keeps an unvalidated string out of a signed record either way.
     ...(isActionPhase(req.context.action_phase) ? { action_phase: req.context.action_phase } : {}),
+    // @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`,
+    // authzen#context-compensation-link (#252): the VALIDATED link, on a
+    // permit and on a denial alike. A malformed value never reaches this point
+    // (evaluate refuses it before evaluation), and the guard keeps one out of a
+    // signed record either way.
+    ...(isEvaluationIdentifier(req.context.compensates_evaluation_id)
+      ? { compensates_evaluation_id: req.context.compensates_evaluation_id }
+      : {}),
     ...(req.context.actor !== undefined ? { actor: req.context.actor } : {}),
     ...(req.context.credential !== undefined ? { credential: req.context.credential } : {}),
     ...(principal_mapping !== undefined ? { principal_mapping } : {}),
     ...(req.context.parameter_digest !== undefined ? { parameter_digest: req.context.parameter_digest } : {}),
+    // @spec runtime-evidence#decision-evidence-object `evaluation_context_digest`,
+    // `evaluation_context_binding` (#773): REQUIRED for a decision on a covered
+    // operation, permit or denial, "when the corresponding validated input
+    // was established"; a value this PDP did not establish is never signed.
+    ...(contextEvidence !== undefined
+      ? { evaluation_context_digest: contextEvidence.digest, evaluation_context_binding: contextEvidence.binding }
+      : {}),
     ...(decision.context.conditions !== undefined
       ? { conditions: decision.context.conditions as RuntimeConditions }
       : {}),
@@ -1141,6 +1329,9 @@ async function evaluateInner(
   const { view, fga, modelId, now } = opts;
   const pvid = policyViewId(view, modelId);
   const actionClass = req.context.action_class;
+  // @spec authzen#context-work-item (#815): the request's work item as this
+  // PDP reads it; only this value reaches the permit condition.
+  const workItem = parseWorkItem(req.context.work_item);
   // @spec authzen#context-audience-freshness: the PEP's audience, the
   // token-validation and permit-boundary input. Read once and validated
   // below; never the entry-match operand (#1276, D457).
@@ -1271,6 +1462,18 @@ async function evaluateInner(
     credentialAuthority = parseCredentialAuthority(req.context.credential?.authority);
   } catch {
     return deny("credential_invalid");
+  }
+
+  // 1b. Work-item context (@spec authzen#context-work-item, #815): "Where the
+  // deployment's Enforcement Scope Statement claims work-item attribution for
+  // the action's class, the PDP MUST deny with `work_item_context_missing` a
+  // decision from which `context.work_item` is absent." A malformed member
+  // never reaches this point: `evaluate` refused it before evaluation as
+  // `work_item_invalid`. The class is the deployment class the trusted PEP
+  // supplied; the claim is this PDP's own binding, never a request member.
+  // Elsewhere an absent member relaxes nothing: Mission-level attribution only.
+  if (workItem === undefined && actionClass !== undefined && opts.workItemAttributedClasses?.has(actionClass)) {
+    return deny("work_item_context_missing");
   }
 
   // 2. Mission state (@spec: mission_inactive).
@@ -1749,6 +1952,13 @@ async function evaluateInner(
   }
   /** The reference the permit binds: present exactly where a contract applies. */
   const permitContract = contractApplies ? resourceContractOf(requestContract) : undefined;
+  /**
+   * @spec authzen#context-evaluation-binding (#773): the validated context
+   * inputs of a covered operation, which `evaluate` already refused when
+   * unusable; absent for an operation the declaration does not cover.
+   */
+  const establishedContextInputs = evaluationContextOf(req, opts);
+  const establishedContext = establishedContextInputs === "invalid" ? undefined : establishedContextInputs;
 
   // 5a. Containment overlay: the entry WAS approved (step 5 matched), but the
   //     containment delta covers this (resource, action) pair, so the issuer
@@ -2103,6 +2313,33 @@ async function evaluateInner(
   // contract's resolution from step 4b: the policy stays a bound evaluated
   // independently of the join (@spec authority-server#mission-join rule 8,
   // #818).
+  // @spec runtime#input-authority-dependency (#830, D798): direct
+  // evaluation of a declared authority dependency, composed into this
+  // Resource-policy step: "A dependency enforced through an existing
+  // mechanism keeps that mechanism's refusal", so a dependency not
+  // established refuses `resource_policy`, and the refusal's cause
+  // (withdrawn, invalidated, stale or unavailable) is retained in the
+  // deployment's dependency evidence, not on the wire.
+  let dependencyValidUntilMs: number | undefined;
+  const dependency = opts.authorityDependency;
+  // @spec runtime#input-authority-dependency (#830): under lifecycle-mediated
+  // enforcement the PDP also refuses while the reconciliation is overdue,
+  // whatever the Mission's state reads ("A current `active` state does not
+  // show that this reconciliation is current").
+  const directHere = dependency?.declaration.enforcement.direct === "pdp";
+  const lifecycleHere = dependency?.declaration.enforcement.lifecycle === true;
+  if (dependency !== undefined && (directHere || lifecycleHere)) {
+    const checked = checkAuthorityDependency(
+      dependency,
+      { id: view.id, issuer: view.issuer },
+      { enforcer: "pdp", action: req.action.name },
+      { direct: directHere, lag: lifecycleHere },
+    );
+    if (!checked.ok) {
+      return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
+    }
+    dependencyValidUntilMs = checked.validUntilMs;
+  }
   const iss = req.subject.properties?.iss;
   const client = req.context.actor?.client_id;
   const policy = await checkResourcePolicy(opts.resourcePolicy, {
@@ -2334,6 +2571,10 @@ async function evaluateInner(
       ...windowCeilings,
       // @spec metering#metering (#1440): a duration-leased permit expires with its lease.
       ...(lease.kind === "leased" ? [lease.ceiling] : []),
+      // @spec runtime#input-authority-dependency (#830): "A permit issued in
+      // reliance on a dependency observation MUST expire no later than that
+      // observation's accepted validity."
+      ...(dependencyValidUntilMs !== undefined ? [{ name: "authority_dependency_valid_until", atMs: dependencyValidUntilMs }] : []),
     ],
   });
   if (deadline.kind === "elapsed") {
@@ -2462,6 +2703,10 @@ async function evaluateInner(
       conditions: {
         valid_until: validUntil,
         ...(highConsequence || singleUseDefault ? { use_limit: 1 } : {}),
+        // @spec authzen#decision-conditions `work_item` (#815): "REQUIRED on a
+        // permit for a decision whose request carried `context.work_item`,
+        // and equal to it." The executing PEP compares it at every use.
+        ...(workItem !== undefined ? { work_item: workItem } : {}),
         ...(req.context.parameter_digest ? { parameter_digest: req.context.parameter_digest } : {}),
         // @spec authzen#response-context `action_phase` — the LIVE permit
         // binding: the validated request phase, echoed so the executing PEP
@@ -2475,6 +2720,13 @@ async function evaluateInner(
         // validated request's `resource.properties.resource_contract`". The
         // executing PEP compares it at every use.
         ...(permitContract !== undefined ? { resource_contract: permitContract } : {}),
+        // @spec authzen#response-context `evaluation_context_digest`,
+        // runtime#evaluation-context-binding (#773): "The PDP MUST return the
+        // supplied context digest as a permit condition for a covered
+        // operation", equal to the validated request's. Echoed, never
+        // recomputed: the PDP holds neither the salt nor the PEP's
+        // observation.
+        ...(establishedContext !== undefined ? { evaluation_context_digest: establishedContext.digest } : {}),
       },
     }),
   };

@@ -16,12 +16,19 @@ export interface EffectiveParams {
   capability_snapshot?: CapabilitySnapshot;
   action: string;
   invoice_id: string;
-  invoice_version: number;
+  /** The invoice record's version; absent on a reversal's form ({@link buildReversalParams}). */
+  invoice_version?: number;
   vendor_id: string;
-  vendor_version: number;
+  /** The vendor record's version; absent on a reversal's form. */
+  vendor_version?: number;
   amount: { amount: string; currency: string };
   payee_account: string;
   resource: string;
+  /**
+   * @spec runtime#compound-actions (#252): present exactly on a compensate
+   * crossing's form: the operation key of the committed wire it offsets.
+   */
+  reverses?: string;
   /**
    * @spec resource-access#initial-common-constraints (#1266): every final
    * recipient the operation reaches, present only where the vendor record
@@ -50,6 +57,34 @@ export function buildEffectiveParams(input: {
     payee_account: invoice.payee_account,
     resource,
     ...(input.recipients !== undefined ? { recipients: [...input.recipients] } : {}),
+  };
+}
+
+/**
+ * @spec runtime#compound-actions (#252): the normal form a compensate
+ * crossing binds. Its effect parameters are the committed wire's, from that
+ * wire's own ledger record, never the invoice as it reads now and never an
+ * argument: the invoice and vendor the wire paid, its amount and currency,
+ * its payee, the operation target, and the operation key of the wire it
+ * offsets. `parameter_digest` over this form is what the compensating
+ * Decision evaluates and binds, so a constraint such as a reversal ceiling is
+ * evaluated against what will actually be offset.
+ */
+export function buildReversalParams(input: {
+  action: string;
+  wire: { invoiceId: string; vendorId: string; payeeAccount: string; amount: string; currency: string };
+  resource: string;
+  reverses: string;
+}): EffectiveParams {
+  const { action, wire, resource, reverses } = input;
+  return {
+    action,
+    invoice_id: wire.invoiceId,
+    vendor_id: wire.vendorId,
+    amount: { amount: wire.amount, currency: wire.currency },
+    payee_account: wire.payeeAccount,
+    resource,
+    reverses,
   };
 }
 

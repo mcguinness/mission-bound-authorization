@@ -43,7 +43,12 @@ describe("the drawdown classification agrees with the approval-authentication fl
   it("starts with an agreeing mapping: every action the floor classifies high-risk maps into the fresh-approval classes", async () => {
     const agreeing: ProgressiveDrawdownOptions = {
       ...PROGRESSIVE,
-      actionClasses: { ...PROGRESSIVE.actionClasses, "payments:remittance.send": "external_commitment" },
+      actionClasses: {
+        ...PROGRESSIVE.actionClasses,
+        "payments:remittance.send": "external_commitment",
+        // #252: the compensate operation the floor classifies irreversible.
+        "payments:payment.reverse": "irreversible_action",
+      },
     };
     const invoking = new Set<string>(APPROVAL_FLOOR.floors.flatMap((f) => f.applies_to));
     const floorClass = APPROVAL_FLOOR.classification.flatMap((c) =>

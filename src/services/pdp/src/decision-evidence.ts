@@ -20,13 +20,21 @@
 
 import { randomBytes } from "node:crypto";
 import type { ContextActor } from "@mission/actor-chain";
-import { type ActionPhase, canonicalDigest, isActionPhase, type JsonValue } from "@mission/core";
+import {
+  type ActionPhase,
+  canonicalDigest,
+  isActionPhase,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  type JsonValue,
+} from "@mission/core";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   type EvidenceEnvelope,
   type EvidenceSigningKey,
   signEvidenceEnvelope,
 } from "./runtime-evidence-integrity.js";
+import { parseWorkItem, type WorkItemRef } from "./work-item.js";
 
 /** @spec runtime-evidence#decision-evidence-object mission sub-object (REQUIRES `policy_view_id`). */
 export interface RuntimeMissionRef {
@@ -118,6 +126,12 @@ export interface RuntimeConditions {
    * (the emitter keeps `valid_until` and `use_limit` only).
    */
   resource_contract?: { id: string; version: string; digest: string };
+  /**
+   * @spec authzen#response-context `evaluation_context_digest` (#773): the
+   * live context binding of a covered permit. Like `parameter_digest`, it is
+   * recorded once, top-level, never inside the record's `conditions`.
+   */
+  evaluation_context_digest?: string;
 }
 
 /** @spec runtime-evidence#decision-evidence-object `action_class` (runtime profile's classes). */
@@ -197,6 +211,14 @@ export interface DecisionEvidenceObject {
    * of the record; never echoed in the AuthZEN response context.
    */
   join_view_id?: string;
+  /**
+   * @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+   * qualified work-item identifier the decision request carried, a top-level
+   * coordinated extension member the harness profile owns, recorded as
+   * presented on a permit or a denial; absent when the request carried none
+   * or a malformed one.
+   */
+  work_item?: WorkItemRef;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -217,7 +239,22 @@ export interface DecisionEvidenceObject {
   principal_mapping?: RuntimePrincipalMapping;
   hop_reference?: RuntimeHopReference;
   parameter_digest?: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-object (#773): the validated
+   * context digest and descriptor reference of a covered operation. On a
+   * permit the digest equals the live condition. Never the salt.
+   */
+  evaluation_context_digest?: string;
+  evaluation_context_binding?: { id: string; version: string; digest: string };
   evaluation_request_digest?: string;
+  /**
+   * @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`,
+   * authzen#context-compensation-link (#252): CONDITIONAL, REQUIRED for a
+   * compensate-phase decision. The validated `context.compensates_evaluation_id`
+   * of the request: the `evaluation_id` of the committed effect this decision
+   * compensates. Correlation only, never authority.
+   */
+  compensates_evaluation_id?: string;
   conditions?: RuntimeConditions;
   decision: "permit" | "deny";
   denial_reason?: string;
@@ -233,6 +270,17 @@ export interface DecisionEvidenceObject {
   emitter: { id: string; role: "pdp" };
   evaluated_at: string;
   evidence_envelope: EvidenceEnvelope;
+}
+
+/**
+ * @spec authzen#response-context `evaluation_id`, authzen#context-compensation-link
+ * (#252): whether `value` is a well-formed evaluation identifier, ABNF
+ * `1*64( ALPHA / DIGIT / "-" / "_" )`. Syntax only: it says nothing about
+ * whether the identifier names an evaluation, which the PEP establishes from
+ * its own verified evidence.
+ */
+export function isEvaluationIdentifier(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(value);
 }
 
 /** At least 128 bits of entropy, ABNF `1*64( ALPHA / DIGIT / "-" / "_" )` (runtime-evidence.md, every `*_id` member). */
@@ -293,6 +341,8 @@ export interface DecisionEvidenceEmissionInput {
   mission: RuntimeMissionRef;
   /** The PDP's joined-view commitment, set only when this decision rode a successful join. */
   join_view_id?: string;
+  /** @spec runtime-evidence#evidence-extensions `work_item` (#815): the request's well-formed work item. */
+  work_item?: WorkItemRef;
   subject: RuntimeSubjectRef;
   resource: RuntimeResourceRef;
   action: RuntimeActionRef;
@@ -308,10 +358,21 @@ export interface DecisionEvidenceEmissionInput {
    * caller and re-checked here; it is never cast into the enum.
    */
   action_phase?: ActionPhase;
+  /**
+   * @spec authzen#context-compensation-link (#252): the VALIDATED
+   * `context.compensates_evaluation_id`, on a permit and on a denial alike.
+   * REQUIRED when `action_phase` is `compensate`: the emitter refuses to sign
+   * a compensate-phase record without a well-formed link rather than
+   * manufacture one. Malformed input is omitted, never signed.
+   */
+  compensates_evaluation_id?: string;
   actor?: ContextActor;
   credential?: RuntimeCredentialRef;
   principal_mapping?: RuntimePrincipalMapping;
   parameter_digest?: string;
+  /** @spec runtime-evidence#decision-evidence-object (#773): the PDP-validated context inputs, absent where not established. */
+  evaluation_context_digest?: string;
+  evaluation_context_binding?: { id: string; version: string; digest: string };
   /**
    * @spec authzen#evaluation-request-digest-input: the digest of the request
    * as submitted, computed by the caller on receipt (before any default or
@@ -412,6 +473,25 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       if (input.decision === "permit" && input.conditions?.action_phase !== input.action_phase) {
         throw new Error("Decision Evidence phase binding differs from wire conditions");
       }
+      // @spec runtime-evidence#decision-evidence-object `compensates_evaluation_id`
+      // (#252): "REQUIRED for a compensate-phase decision". A compensate-phase
+      // record that cannot carry a well-formed link is never manufactured: the
+      // PDP refuses such a request before evaluation, and this guard keeps a
+      // record without the link from being signed either way.
+      if (input.action_phase === "compensate" && !isEvaluationIdentifier(input.compensates_evaluation_id)) {
+        throw new Error("Decision Evidence for a compensate-phase decision requires compensates_evaluation_id");
+      }
+      // @spec runtime-evidence#decision-evidence-object `evaluation_context_digest`
+      // (#773): "On a permit the digest MUST equal the live permit condition."
+      if (input.decision === "permit" && input.conditions?.evaluation_context_digest !== input.evaluation_context_digest) {
+        throw new Error("Decision Evidence context binding differs from wire conditions");
+      }
+      // "Malformed input MUST be omitted, never copied into signed evidence as
+      // an established binding": a digest without its reference, or either in
+      // a malformed shape, is not recorded.
+      const contextRecorded =
+        isEvaluationContextDigest(input.evaluation_context_digest) &&
+        isEvaluationContextBindingRef(input.evaluation_context_binding);
       if (input.decision === "permit" && classes.slice(2).includes(action_class) && input.conditions?.use_limit !== 1) {
         throw new Error("Decision Evidence high-consequence permit requires use_limit 1");
       }
@@ -445,6 +525,8 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         evaluation_id: input.evaluation_id,
         mission,
         ...(input.join_view_id !== undefined ? { join_view_id: requiredString(input.join_view_id) } : {}),
+        // Runtime allowlist, not a cast: exactly `issuer` and `id`, or nothing.
+        ...((w) => (w !== undefined ? { work_item: w } : {}))(parseWorkItem(input.work_item)),
         subject: { id: requiredString(input.subject.id),
           ...(typeof input.subject.type === "string" ? { type: input.subject.type } : {}),
           ...(typeof input.subject.properties?.iss === "string" ? { properties: { iss: input.subject.properties.iss } } : {}),
@@ -462,7 +544,21 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(credential ? { credential } : {}),
         ...(input.principal_mapping !== undefined ? { principal_mapping: input.principal_mapping } : {}),
         ...(input.parameter_digest !== undefined ? { parameter_digest: input.parameter_digest } : {}),
+        ...(contextRecorded
+          ? {
+              evaluation_context_digest: input.evaluation_context_digest,
+              evaluation_context_binding: {
+                id: (input.evaluation_context_binding as { id: string }).id,
+                version: (input.evaluation_context_binding as { version: string }).version,
+                digest: (input.evaluation_context_binding as { digest: string }).digest,
+              },
+            }
+          : {}),
         ...(evaluation_request_digest !== undefined ? { evaluation_request_digest } : {}),
+        // Only a validated identifier is recorded; malformed input is omitted.
+        ...(isEvaluationIdentifier(input.compensates_evaluation_id)
+          ? { compensates_evaluation_id: input.compensates_evaluation_id }
+          : {}),
         ...(input.conditions !== undefined ? { conditions: {
           valid_until: requiredString(input.conditions.valid_until),
           ...(input.conditions.use_limit !== undefined ? { use_limit: input.conditions.use_limit } : {}),

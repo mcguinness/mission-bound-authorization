@@ -448,7 +448,7 @@ describe("Mission Receipt build + verify", () => {
     const execution = await signedExecution({ effective_parameter_digest: "sha-256:changed" });
     const receipt = await buildAndSignMissionReceipt({ kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution }, "receipts.example.com", RECEIPT_SIGNER);
     expect(await verifyMissionReceipt(receipt, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey))
-      .toEqual({ valid: true, unauthorized_execution: true });
+      .toEqual({ valid: true, unauthorized_execution: true, divergence: { parameter: true } });
     const foreignMission = await resigned(receipt, { mission: { ...MISSION, issuer: "https://other-issuer.test" } });
     expect(await verifyMissionReceipt(foreignMission, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey))
       .toEqual({ valid: false, reason: "join_failure" });
@@ -475,7 +475,7 @@ describe("Mission Receipt build + verify", () => {
     );
     expect(
       await verifyMissionReceipt(failedReceipt, resolverFor({ decision, execution: failed }), receiptIssuers, resolveEvidenceKey),
-    ).toEqual({ valid: true, unauthorized_execution: true });
+    ).toEqual({ valid: true, unauthorized_execution: true, divergence: { parameter: true } });
 
     const suppressed = await signedExecution({
       outcome: "suppressed",
@@ -487,9 +487,12 @@ describe("Mission Receipt build + verify", () => {
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
+    // Not an unauthorized execution; the divergent pair is still reported
+    // (#773: "The audit consumer reports each divergent pair whatever the
+    // `error`").
     expect(
       await verifyMissionReceipt(suppressedReceipt, resolverFor({ decision, execution: suppressed }), receiptIssuers, resolveEvidenceKey),
-    ).toEqual({ valid: true });
+    ).toEqual({ valid: true, divergence: { parameter: true } });
   });
 
   it("a compromised receipt issuer key cannot bypass the boundary rule through scope publication", async () => {
@@ -831,21 +834,52 @@ describe("Mission Receipt build + verify", () => {
     expect(result).toEqual({ valid: false, reason: "join_failure" });
   });
 
-  it("rejects an Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3)", async () => {
+  it("rejects a completed or failed Execution Evidence record missing effective_parameter_digest while authorized_parameter_digest is present (#739 review point 3, #786)", async () => {
+    // @spec runtime-evidence#execution-evidence-object: "REQUIRED whenever
+    // `authorized_parameter_digest` is present, except on a `suppressed`
+    // record whose executing PEP could not establish the effective
+    // parameters." The exception never excuses the evidence of an effect.
     const decision = await signedDecision();
-    const execution = await signedExecution({ effective_parameter_digest: undefined });
+    for (const variant of [{ outcome: "completed" as const }, { outcome: "failed" as const, error: "connector_error" }]) {
+      const execution = await signedExecution({ ...variant, effective_parameter_digest: undefined });
+      const receipt = await buildAndSignMissionReceipt(
+        { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+        "receipts.example.com",
+        RECEIPT_SIGNER,
+      );
+      const result = await verifyMissionReceipt(
+        receipt,
+        resolverFor({ decision, execution }),
+        receiptIssuers,
+        resolveEvidenceKey,
+      );
+      expect(result, variant.outcome).toEqual({ valid: false, reason: "join_failure" });
+    }
+  });
+
+  it("accepts a suppressed record that keeps the authorized digest and omits the effective one as comparison unavailable, and reports no parameter deviation (#786)", async () => {
+    // @spec runtime-evidence#execution-evidence-object: "The absence means the
+    // comparison is unavailable, and a consumer MUST NOT read it as equality
+    // or as a parameter deviation." The record has the shape a suppression
+    // for a target that could not be established at use carries.
+    const decision = await signedDecision();
+    const execution = await signedExecution({
+      outcome: "suppressed",
+      error: "target_drift",
+      effective_parameter_digest: undefined,
+    });
+    expect(execution.authorized_parameter_digest).toBe(decision.parameter_digest);
+    expect(JSON.parse(JSON.stringify(execution))).not.toHaveProperty("effective_parameter_digest");
     const receipt = await buildAndSignMissionReceipt(
       { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
       "receipts.example.com",
       RECEIPT_SIGNER,
     );
-    const result = await verifyMissionReceipt(
-      receipt,
-      resolverFor({ decision, execution }),
-      receiptIssuers,
-      resolveEvidenceKey,
-    );
-    expect(result).toEqual({ valid: false, reason: "join_failure" });
+    // Valid, and no `unauthorized_execution` flag: neither equality nor a
+    // deviation is read from the absence.
+    expect(
+      await verifyMissionReceipt(receipt, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey),
+    ).toEqual({ valid: true });
   });
 
   it("verifies a selected target projection against the source record (#739 review point 4)", async () => {
@@ -1075,5 +1109,81 @@ describe("Mission Receipt chaining is per stream and never assumed complete (@sp
     const corrupted = await resigned(base, { evidence: [{ ...base.evidence[0], evidence_id: "another-id" }] });
     expect(await verifyMissionReceipt(corrupted, resolverFor({ decision }), receiptIssuers, resolveEvidenceKey, undefined, resolve))
       .toEqual({ valid: false, reason: "identifier_mismatch" });
+  });
+});
+
+/**
+ * @spec runtime-evidence#context-drift-classification, runtime-evidence#toctou-and-parameter-binding
+ * (#773): "The audit consumer reports each divergent pair whatever the
+ * `error`." The verifier classifies the parameter pair and the
+ * evaluation-context pair each on its own, from the digests, never from the
+ * record's single primary `error`, and reads an absent effective digest as a
+ * comparison that was not made.
+ */
+describe("the receipt verifier reports each divergent digest pair whatever the record's error (@spec runtime-evidence#context-drift-classification, #773)", () => {
+  const CONTEXT = "sha-256:contextdigest";
+
+  const verifyExecution = async (execution: ExecutionEvidenceObject, decision: DecisionEvidenceObject) => {
+    const receipt = await buildAndSignMissionReceipt(
+      { kind: "execution", mission: MISSION, decisionEvidence: decision, executionEvidence: execution },
+      "receipts.example.com",
+      RECEIPT_SIGNER,
+    );
+    return verifyMissionReceipt(receipt, resolverFor({ decision, execution }), receiptIssuers, resolveEvidenceKey);
+  };
+
+  it("reports a context-only divergence on a suppressed target_drift record, without an unauthorized-execution flag", async () => {
+    const decision = await signedDecision({ evaluation_context_digest: CONTEXT });
+    const execution = await signedExecution({
+      outcome: "suppressed",
+      error: "target_drift",
+      authorized_evaluation_context_digest: CONTEXT,
+      effective_evaluation_context_digest: "sha-256:moved",
+    });
+    expect(await verifyExecution(execution, decision)).toEqual({ valid: true, divergence: { evaluation_context: true } });
+    // An executor that acted despite the drift is an unauthorized execution.
+    const executed = await signedExecution({
+      authorized_evaluation_context_digest: CONTEXT,
+      effective_evaluation_context_digest: "sha-256:moved",
+    });
+    expect(await verifyExecution(executed, decision)).toEqual({
+      valid: true,
+      unauthorized_execution: true,
+      divergence: { evaluation_context: true },
+    });
+  });
+
+  it("reports both pairs diverging whichever single error the record names", async () => {
+    const decision = await signedDecision({ evaluation_context_digest: CONTEXT });
+    for (const error of ["target_drift", "parameter_mismatch"]) {
+      const execution = await signedExecution({
+        outcome: "suppressed",
+        error,
+        effective_parameter_digest: "sha-256:changed",
+        authorized_evaluation_context_digest: CONTEXT,
+        effective_evaluation_context_digest: "sha-256:moved",
+      });
+      expect(await verifyExecution(execution, decision), error).toEqual({
+        valid: true,
+        divergence: { parameter: true, evaluation_context: true },
+      });
+    }
+  });
+
+  it("does not report an unavailable context as a divergence, and holds the authorized context digest to the linked Decision Evidence", async () => {
+    const decision = await signedDecision({ evaluation_context_digest: CONTEXT });
+    const unavailable = await signedExecution({
+      outcome: "suppressed",
+      error: "target_drift",
+      authorized_evaluation_context_digest: CONTEXT,
+    });
+    expect(await verifyExecution(unavailable, decision)).toEqual({ valid: true });
+    // The authorized member mirrors the linked record in both directions.
+    const unmirrored = await signedExecution({ authorized_evaluation_context_digest: "sha-256:other", effective_evaluation_context_digest: "sha-256:other" });
+    expect(await verifyExecution(unmirrored, decision)).toEqual({ valid: false, reason: "join_failure" });
+    const missing = await signedExecution({});
+    expect(await verifyExecution(missing, decision)).toEqual({ valid: false, reason: "join_failure" });
+    const invented = await signedExecution({ authorized_evaluation_context_digest: CONTEXT, effective_evaluation_context_digest: CONTEXT });
+    expect(await verifyExecution(invented, await signedDecision())).toEqual({ valid: false, reason: "join_failure" });
   });
 });

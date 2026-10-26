@@ -134,10 +134,21 @@ async function fromLedger(
     execution_id: newRecordId("exe"),
     evaluation_id: evaluationId,
     mission_id: decision.content.mission.id,
+    // @spec runtime-evidence#evidence-extensions `work_item` (#815): a late
+    // record carries the work item the linked Decision Evidence recorded,
+    // which a released effect's request carried (the `work_item` use check).
+    ...(decision.content.work_item !== undefined ? { work_item: decision.content.work_item } : {}),
     // @spec runtime#permit-binding (#853, D487): a late record keeps its
     // operation's original boundary, never the one in force when it is made.
     audience: decision.content.audience,
     ...(digest !== undefined ? { authorized_parameter_digest: digest, effective_parameter_digest: digest } : {}),
+    // @spec runtime-evidence#execution-evidence-object (#773): a late record
+    // mirrors the linked Decision Evidence's context digest. It makes no
+    // re-resolution of its own, so it records no effective context digest
+    // rather than copying the authorized one.
+    ...(typeof decision.content.evaluation_context_digest === "string"
+      ? { authorized_evaluation_context_digest: decision.content.evaluation_context_digest }
+      : {}),
     outcome: "completed",
   });
   return offer(input.claims, evaluationId, [executed.content]);

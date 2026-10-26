@@ -172,6 +172,13 @@ import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
+import {
+  guardKernelStore,
+  type RecoveryGuard,
+  type RecoveryUncertainError,
+  refuseUnwitnessedOpen,
+  witnessSharesStoreTree,
+} from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
 import {
   assembleResourceContracts,
@@ -410,6 +417,14 @@ export class MissionNotFoundError extends Error {}
  */
 export class StaleVersionError extends Error {}
 /**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a due
+ * schedule's transition could not be persisted, and a re-read shows no other
+ * request committed it or replaced the schedule. A decision never reports the
+ * pre-deadline state in its place: the Status operation answers `unavailable`
+ * and issuance fails closed.
+ */
+export class MissionStateUnavailableError extends Error {}
+/**
  * @spec control-plane#fresh-observation — raised only under the OPTIONAL
  * `strictObservationWatermark` policy: state advanced between the observation
  * point and delivery, and this deployment chose refusal over delivering a
@@ -434,7 +449,11 @@ export class GateError extends Error {
       // operation identity was settled by an authoritative NON-acceptance and
       // its count was returned. That identity is TERMINAL: retrying it would
       // mint a second artifact for one operation, off a count nobody holds.
-      | "operation_refunded",
+      | "operation_refunded"
+      // @spec runtime#input-authority-dependency (#830, D798): a declared
+      // authority dependency the Mission relies on is not established. It
+      // refuses `invalid_grant` with no `mission_error`.
+      | "authority_dependency",
     message: string,
   ) {
     super(message);
@@ -564,6 +583,15 @@ export interface StatusObservationOptions {
    * absent, neither member is included and the response is unchanged.
    */
   joinDisclosure?: boolean;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the authenticated
+   * caller holds the deployment's audit-or-correlation disclosure privilege,
+   * so the `mission` object also carries `authority_hash`. The provider
+   * decides it from the client's configured disclosure privileges, never from
+   * a Status-read or lifecycle grant or from join enrollment; absent, the
+   * member is omitted.
+   */
+  discloseProvenance?: boolean;
   nonce?: string;
   freshnessSeconds?: number;
   /**
@@ -622,6 +650,14 @@ export interface KernelOptions {
   statusKey: CryptoKey;
   statusKid: string;
   /**
+   * @spec #831 B2: the public JWKs of the Status role's generations the AS
+   * still accepts (active and overlap), each under its `kid`. A record the
+   * status signer signed under an earlier generation verifies by its `kid`
+   * through {@link MissionKernel.statusVerificationKeyFor}. Absent: the
+   * active key alone.
+   */
+  statusVerificationJwks?: Record<string, unknown>[];
+  /**
    * @spec containment#containment-policy — the ISSUER-HELD ContainmentPolicy
    * (the map from a protected-event class to what narrows). OPTIONAL: only
    * {@link MissionKernel.containOnEvent} reads it, so a kernel constructed
@@ -670,6 +706,28 @@ export interface KernelOptions {
    * {@link MissionKernel.registerDurableSubscriber} instead.
    */
   onLifecycleCommit?: (commit: LifecycleCommit) => void;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the issuance
+   * gates' check of a declared authority dependency, beside the `active`
+   * check: consulted at the approval decision ({@link prepareApproval},
+   * {@link approve}) and at every gate a derivation passes
+   * ({@link gateActive}, {@link gateDerivation}, {@link checkDerivation}),
+   * before any count is written. It reads a cached observation and does no
+   * I/O, so it never holds a transaction across a source read. A refusal
+   * names its cause, which the caller retains; the wire refusal is the
+   * gate's own (`access_denied` at the approval, `invalid_grant` at a
+   * derivation), with no new identifier. Absent, no dependency is gated.
+   */
+  authorityDependencyGate?: (
+    candidate: {
+      /** The Mission, once it exists; absent at the approval decision. */
+      mission?: { id: string; issuer: string };
+      subject: { iss: string; sub: string };
+      clientId: string;
+      authoritySource: string;
+    },
+    surface: "approval" | "derivation",
+  ) => { failure: string } | undefined;
   /**
    * @spec draft-mcguinness-oauth-mission#per-entry-enforcement,
    * child-delegation#fanout — the AS's actor-type ASSERTION registry: a map from
@@ -802,11 +860,20 @@ export interface KernelOptions {
    * default stays in-memory and single-process; a `file` names the OPT-IN
    * file-backed SINGLE-WRITER store that makes restart recovery of the durable
    * lifecycle outbox and the terminal tombstones observable. It authorizes no
-   * second writer: multi-process claiming and fencing stay behind #641's
-   * deployment trigger, and `packages/store` adds no busy timeout and no
-   * IMMEDIATE transaction mode.
+   * second writer: multi-process claiming stays behind #641's deployment
+   * trigger. Without a {@link recoveryWitness} the file takes no lock and no
+   * busy timeout; with one it is held exclusively (#250 step 3).
    */
   store?: StoreOptions;
+  /**
+   * @spec control-plane#rollback (#250 step 3): the recovery witness for a
+   * file-backed `store`, a file kept outside the database restore unit. With
+   * it, the kernel opens the store exclusively, admits it only when its
+   * recovery marker matches the witness exactly, and advances both on every
+   * write transaction ({@link guardKernelStore}). Without it, a restored
+   * older store is not detected.
+   */
+  recoveryWitness?: { file: string };
   /**
    * @spec control-plane#tombstones — the deployment's declared retention
    * horizons. The detailed tombstone horizon is their COMPOSED maximum; the
@@ -851,6 +918,8 @@ function derivationCapExhausted(id: string): GateError {
 
 export class MissionKernel {
   readonly db: Database;
+  /** @spec control-plane#rollback (#250 step 3): the commit guard of a witnessed store, else undefined. */
+  readonly recovery: RecoveryGuard | undefined;
   /**
    * @spec issuance-grant#effective-set-projection (#617 review 3) — the durable
    * Mission-bound grant index. Its own store handle, deliberately NOT this
@@ -1013,7 +1082,23 @@ export class MissionKernel {
       opts.issuer,
     );
     this.sourceResolver = opts.authoritySourceResolver ?? catalogAuthoritySourceResolver(this.sourceCatalog);
-    this.db = openStore(SCHEMA, opts.store ?? {});
+    // @spec control-plane#rollback (#250 step 3): a witnessed store is opened
+    // exclusively and admitted before anything below writes to it.
+    if (opts.recoveryWitness && !opts.store?.file) {
+      throw new Error("recoveryWitness needs a file-backed kernel store");
+    }
+    if (opts.recoveryWitness && opts.store?.file && witnessSharesStoreTree(opts.store.file, opts.recoveryWitness.file)) {
+      throw new Error("the recovery witness must be outside the store's directory, and the store outside the witness's");
+    }
+    this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
+    try {
+      if (opts.recoveryWitness && opts.store?.file) {
+        this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
+      } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+    } catch (e) {
+      this.db.close();
+      throw e;
+    }
     migrateMissions(this.db);
     this.sourceBindings = new SourceBindingStore(this.db);
     reconcileSourceBindings(
@@ -1337,6 +1422,17 @@ export class MissionKernel {
   private statusPublicKey?: KeyObject;
 
   /**
+   * @spec #831 B2: the Status key a record names by `kid`, among the
+   * generations the AS still accepts (active and overlap); undefined for any
+   * other `kid`, a retired or compromised generation's included.
+   */
+  statusVerificationKeyFor(kid: string): KeyObject | undefined {
+    if (kid === this.opts.statusKid) return this.statusVerificationKey();
+    const jwk = this.opts.statusVerificationJwks?.find((k) => k.kid === kid);
+    return jwk ? createPublicKey({ key: jwk as never, format: "jwk" }) : undefined;
+  }
+
+  /**
    * @spec mission#standing-consent-bases: the auditor's check of a Mission's
    * committed activation policy, recomputed from the retained snapshot alone.
    * Independent of the current registry: a policy since replaced or retired
@@ -1593,6 +1689,7 @@ export class MissionKernel {
       approver: input.approver,
     });
     this.assertAuthorityWithinSource(resolvedSource, authoritySet);
+    this.assertAuthorityDependency(input, resolvedSource);
     return {
       proposal,
       authoritySet,
@@ -1600,6 +1697,20 @@ export class MissionKernel {
       childActorProvenance: derived.childActorProvenance,
       resolvedSource,
     };
+  }
+
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the approval
+   * decision's check of a declared authority dependency, for the Subject and
+   * client the new Mission would carry under its established source. Refuses
+   * `access_denied`, the approval decision's refusal, naming no cause.
+   */
+  private assertAuthorityDependency(input: ApproveInput, resolvedSource: AuthoritySourceResolution): void {
+    const refused = this.opts.authorityDependencyGate?.(
+      { subject: input.subject, clientId: input.clientId, authoritySource: resolvedSource.provenance.type },
+      "approval",
+    );
+    if (refused) throw new IntentError("access_denied", "the approval's declared authority dependency is not established");
   }
 
   /**
@@ -1673,6 +1784,9 @@ export class MissionKernel {
       );
     }
     this.assertAuthorityWithinSource(current, prepared.authoritySet);
+    // @spec runtime#input-authority-dependency (#830): checked again at the
+    // commit, as the source is: the observation can change during the grant save.
+    this.assertAuthorityDependency(input, current);
     return current;
   }
 
@@ -4094,15 +4208,16 @@ export class MissionKernel {
    * expiry takes precedence over its parent's termination.
    */
   observe(record: MissionRecord): MissionRecord {
-    return this.observeAt(record, this.now().getTime(), 0);
+    return this.observeAt(record, this.now().getTime(), 0, false);
   }
 
-  private observeAt(record: MissionRecord, nowMs: number, depth: number): MissionRecord {
-    const own = observeExpiry(record, nowMs);
+  private observeAt(record: MissionRecord, nowMs: number, depth: number, dueRevoke: boolean): MissionRecord {
+    let own = observeExpiry(record, nowMs);
+    if (dueRevoke && own.state !== "terminated") own = observeDueRevoke(own, nowMs);
     if (own.state === "terminated" || !record.parent?.id || depth > 64) return own;
     const stored = this.get(record.parent.id);
     if (!stored) return own;
-    const parent = this.observeAt(stored, nowMs, depth + 1);
+    const parent = this.observeAt(stored, nowMs, depth + 1, dueRevoke);
     if (parent.state !== "terminated") return own;
     return { ...own, state: "terminated", termination: parentTerminatedTermination(parent) };
   }
@@ -4111,6 +4226,23 @@ export class MissionKernel {
   observedRecord(id: string): MissionRecord | undefined {
     const record = this.get(id);
     return record ? this.observe(record) : undefined;
+  }
+
+  /**
+   * @spec status#mission-lifecycle-endpoint ("Operations"), mission#issuance-gating
+   * (#1659, D771): the record as the release fence decides on it. As
+   * {@link observe}, and a due `on_expiry=revoke` schedule of the Mission or
+   * any ancestor is also projected, read-only, as its `revoked` termination at
+   * `suspend_until`. Expiry is observed first, so a deadline the Mission's
+   * `expires_at` overtook yields `expired`; a recorded termination is kept; a
+   * replaced or cancelled schedule is not the record's current one and
+   * projects nothing. A due `resume` projects nothing: the suspension it ends
+   * was committed after the gate, which still releases. Nothing is written, no
+   * version advances, no event is emitted and no derivation is refunded.
+   */
+  observedForRelease(id: string): MissionRecord | undefined {
+    const record = this.get(id);
+    return record ? this.observeAt(record, this.now().getTime(), 0, true) : undefined;
   }
 
   /**
@@ -4126,10 +4258,11 @@ export class MissionKernel {
    * @spec status#state-machine, status#legal-transitions: the same clock
    * applies a due suspension schedule, AFTER expiry, so a Mission past its
    * `expires_at` is `expired` and never resumed, and a deadline at or after
-   * `expires_at` never applies. Unlike expiry, a due
-   * schedule is never projected: a resume or revocation that did not commit
-   * is not reported, and the caller gets the stored `suspended` row (which
-   * derives nothing) until the commit lands.
+   * `expires_at` never applies. Unlike expiry, a due schedule is never
+   * projected here: it commits, and a resume or revocation whose write fails
+   * is never reported as the stored `suspended` row ({@link applyDueSchedule};
+   * the release fence projects a due revocation read-only,
+   * {@link observedForRelease}).
    */
   applyExpiry(record: MissionRecord): MissionRecord {
     const observed = this.observe(record);
@@ -4151,10 +4284,17 @@ export class MissionKernel {
    * @spec status#mission-lifecycle-endpoint ("Operations"): commit the
    * transition a due schedule owes ({@link dueScheduleTransition}) under the
    * `(version, state)` compare-and-set, which clears the schedule with it.
-   * On a failed write the caller gets the current row, never a projection.
    * Whichever path reaches it (a read, a request, or the timer), the commit
    * names the schedule it applied, so every effect outside the kernel follows
    * that commit through the durable fan-out.
+   *
+   * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+   * failed write is re-read. When the row moved (another request committed the
+   * transition or replaced the schedule), the expiry clock runs on the row as
+   * it now stands. When it did not, the write failed in storage, and
+   * {@link MissionStateUnavailableError} is raised rather than reporting the
+   * pre-deadline state: the Status operation answers `unavailable`, issuance
+   * fails closed, and the timer retries.
    */
   private applyDueSchedule(record: MissionRecord, observed: MissionRecord): MissionRecord {
     const due = dueScheduleTransition(record, this.now().getTime());
@@ -4165,12 +4305,16 @@ export class MissionKernel {
         appliedSchedule: record.schedule,
       });
     } catch {
+      let current: MissionRecord | undefined;
       try {
-        const current = this.get(record.id);
-        return current ? this.observe(current) : observed;
+        current = this.get(record.id);
       } catch {
-        return observed;
+        current = undefined;
       }
+      if (current && (current.version !== record.version || current.state !== record.state)) {
+        return this.applyExpiry(current);
+      }
+      throw new MissionStateUnavailableError(`mission ${record.id}: its due schedule could not be applied`);
     }
   }
 
@@ -4227,6 +4371,21 @@ export class MissionKernel {
         );
       }
       ancestor = fresh.parent;
+    }
+    // @spec runtime#input-authority-dependency (#830, D798): beside the
+    // `active` check, the Mission's declared authority dependency, before any
+    // count is written.
+    const dependency = this.opts.authorityDependencyGate?.(
+      {
+        mission: { id: record.id, issuer: record.issuer },
+        subject: record.subject,
+        clientId: record.client_id,
+        authoritySource: record.authority_source.type,
+      },
+      "derivation",
+    );
+    if (dependency) {
+      throw new GateError("authority_dependency", `mission ${id}: its declared authority dependency is not established`);
     }
     return record;
   }
@@ -4454,6 +4613,21 @@ export class MissionKernel {
     observation: { accepted: boolean; authority: string; artifactId?: string; completion?: string },
   ): boolean {
     return this.derivationReservations.reconcile(reservationId, observation);
+  }
+
+  /**
+   * @spec derivation-limits#counted-operations (#935, D772): return one
+   * derivation counted WITHOUT a reservation (the provider token hook, the
+   * delegated exchange, the delegation handle) when the process that counted
+   * it observed the derivation fail before any artifact left: an authoritative
+   * in-process non-acceptance. Only the request that spent the count calls
+   * this, once per count; an ambiguous outcome (a crash or a lost response)
+   * never reaches it and stays counted.
+   */
+  refundDerivation(id: string): void {
+    this.db
+      .prepare("UPDATE missions SET derivation_count = derivation_count - 1 WHERE id = ? AND derivation_count > 0")
+      .run(id);
   }
 
   /**
@@ -4697,11 +4871,11 @@ export class MissionKernel {
         ...(opts.joinDisclosure
           ? { subject: { iss: record.subject.iss, sub: record.subject.sub }, client_id: record.client_id }
           : {}),
-        // @spec mission-status#mission-status-response (#702) — OPTIONAL,
-        // disclosed at the AS's discretion (issuance profile's introspection
-        // disclosure footing); this reference AS discloses it on every
-        // Status response.
-        authority_hash: record.authority_hash,
+        // @spec status#mission-status-response (#702; #1682, D795): OPTIONAL,
+        // disclosed only to a caller the AS authorizes for audit or
+        // correlation use, on the issuance profile's introspection
+        // disclosure footing.
+        ...(opts.discloseProvenance ? { authority_hash: record.authority_hash } : {}),
         state: record.state,
         // @spec status#mission-status-response: CONDITIONAL `termination`,
         // present exactly when `state` is `terminated`: its `reason`,
@@ -5152,7 +5326,9 @@ export class MissionKernel {
         issuer: record.issuer,
         missionId: record.id,
         terminalState: record.state,
-        ...(record.termination ? { terminationReason: record.termination.reason } : {}),
+        ...(record.termination
+          ? { terminationReason: record.termination.reason, termination: record.termination }
+          : {}),
         finalVersion: record.version,
         transitionAt: persisted.committed_at,
         commitEventId: persisted.event_id,
@@ -5173,6 +5349,17 @@ export class MissionKernel {
    */
   close(): void {
     this.db.close();
+    // @spec control-plane#rollback (#250 step 3): and the witness's lock.
+    this.recovery?.release();
+  }
+
+  /**
+   * @spec control-plane#rollback (#250 step 3): the uncertainty a witnessed
+   * kernel ran into at run time, if any. While it is set, every write refuses,
+   * and state-dependent service must refuse too.
+   */
+  recoveryUncertainty(): RecoveryUncertainError | undefined {
+    return this.recovery?.uncertainty;
   }
 
   private mustGet(id: string): MissionRecord {
@@ -5265,6 +5452,19 @@ function dueScheduleTransition(
   return schedule.on_expiry === "resume"
     ? { to: "active" }
     : { to: "terminated", termination: { reason: "revoked", terminated_at: new Date(until).toISOString() } };
+}
+
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): the
+ * record with a due `on_expiry=revoke` schedule projected as its termination,
+ * with no write and no `version`; any other record unchanged. The caller has
+ * already observed expiry, so a deadline `expires_at` overtook never reaches
+ * here as due.
+ */
+function observeDueRevoke(record: MissionRecord, nowMs: number): MissionRecord {
+  const due = dueScheduleTransition(record, nowMs);
+  if (due?.to !== "terminated" || !due.termination) return record;
+  return { ...record, state: "terminated", termination: due.termination };
 }
 
 /**

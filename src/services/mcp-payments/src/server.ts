@@ -20,6 +20,7 @@ import {
   readTxnMissionClaim,
   toolsOf,
   verifyAttenuationChain,
+  type IssuerKeysFetch,
 } from "@mission/core";
 import {
   calculateJwkThumbprint,
@@ -49,6 +50,7 @@ import {
   type ActionApprovalInput,
   type ActionMapping,
   CANONICAL_RESOURCE,
+  type CompensatedEffect,
   type DecisionEvidenceGap,
   type EnforceResult,
   type ExecutionAttempt,
@@ -72,7 +74,15 @@ import {
 import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
-import { type KeyResolver, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
+import {
+  type KeyAlgorithms,
+  type KeyResolver,
+  type KeyRole,
+  type KeyRoles,
+  type RefreshingRoleKeys,
+  refreshingRoleKeyResolvers,
+  roleKeyResolvers,
+} from "./key-roles.js";
 import {
   openTxnStores,
   type TxnConsumeOutcome,
@@ -229,6 +239,7 @@ export const TOOLS: ToolDef[] = [
   { name: "check_transfer", description: "Check whether a wire transfer is feasible, reserving nothing", action: "payments:payment.execute" },
   { name: "hold_transfer", description: "Place a hold for a wire transfer", action: "payments:payment.execute" },
   { name: "execute_wire_transfer", description: "Execute a wire transfer", action: "payments:payment.execute" },
+  { name: "reverse_wire_transfer", description: "Reverse a committed wire transfer", action: "payments:payment.reverse" },
   { name: "send_remittance_email", description: "Send remittance advice", action: "payments:remittance.send" },
 ];
 
@@ -251,18 +262,44 @@ const CONNECTOR_OPERATIONS: Record<
     effective: EffectiveParams;
     permitId: string;
     missionId: string;
+    /**
+     * @spec runtime#compound-actions (#252): the committed effect a
+     * compensate crossing offsets, as the PEP established it from verified
+     * evidence before the decision request. Absent on every other crossing.
+     */
+    compensates?: CompensatedEffect;
   }) => CommitResult
 > = {
   execute_wire_transfer: ({ connectors, opKey, effective, permitId, missionId }) =>
     connectors.postWire({
       opKey,
       invoiceId: effective.invoice_id,
+      vendorId: effective.vendor_id,
       payeeAccount: effective.payee_account,
       amount: effective.amount.amount,
       currency: effective.amount.currency,
       permitId,
       missionId,
     }),
+  // @spec runtime#compound-actions (#252): the compensate crossing offsets the
+  // one committed wire its Decision linked, named by the wire's operation key
+  // (bound in the reversal's parameter digest) and evaluation identifier, with
+  // the amount, currency and payee the Decision evaluated and bound; the
+  // connector refuses them unless they equal the wire's record. Never an agent
+  // argument. With no established link there is nothing to offset.
+  reverse_wire_transfer: ({ connectors, opKey, effective, permitId, missionId, compensates }) =>
+    compensates && effective.reverses !== undefined
+      ? connectors.reverseWire({
+          opKey,
+          reversedOpKey: effective.reverses,
+          reversedPermitId: compensates.evaluationId,
+          amount: effective.amount.amount,
+          currency: effective.amount.currency,
+          payeeAccount: effective.payee_account,
+          permitId,
+          missionId,
+        })
+      : { committed: false, deduped: false, refusal: "wire_not_committed" },
   send_remittance_email: ({ connectors, opKey, effective, permitId, missionId }) =>
     connectors.sendEmail({
       opKey,
@@ -391,6 +428,21 @@ export const REVERSIBLE_WRITE_REFUSAL_ERRORS: Readonly<Record<string, string>> =
 export const SETTLEMENT_REFUSAL_ERROR = "https://payments.demo/execution-errors/already_settled";
 
 /**
+ * @spec runtime#compound-actions (#252): the Execution Evidence `error` for a
+ * reversal the ledger refused with no effect, by the connector's refusal: the
+ * linked wire is not a committed entry, the reversal's amount, currency or
+ * payee differs from the wire's record, or it is already reversed. Each is a
+ * collision-resistant name for the reason {@link SETTLEMENT_REFUSAL_ERROR} is;
+ * the caller-visible diagnostic is the short name.
+ */
+export const CONNECTOR_REFUSAL_ERRORS: Readonly<Record<NonNullable<CommitResult["refusal"]>, string>> = Object.freeze({
+  already_settled: SETTLEMENT_REFUSAL_ERROR,
+  wire_not_committed: "https://payments.demo/execution-errors/wire_not_committed",
+  reversal_mismatch: "https://payments.demo/execution-errors/reversal_mismatch",
+  already_reversed: "https://payments.demo/execution-errors/already_reversed",
+});
+
+/**
  * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4): the
  * Execution Evidence `error` for a result the PEP withheld because its
  * `completed` record could not be recorded before disclosure. Computing a
@@ -464,7 +516,8 @@ export interface WriteToolResult {
 /**
  * Why a released effect's `completed` Execution Evidence does not exist: its
  * emission failed after one retry, or no effective parameter digest could be
- * observed for a parameter-bound permit.
+ * observed for a parameter-bound permit, or no effective context digest for a
+ * context-bound one (#773).
  */
 export type DispositionGap = Extract<SuppressOutcome, { recorded: false }>["gap"];
 
@@ -474,13 +527,31 @@ export interface McpServerDeps {
   pep: Pep;
   payments: PaymentsStore;
   loadView: (ref: MissionReference) => LoadedView | undefined;
-  jwks: { keys: Record<string, unknown>[] };
+  /** The issuer's keys as a fixed set; or give `jwksUri`, never both. */
+  jwks?: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 C2: the issuer's `jwks_uri`, from metadata the deployment has
+   * validated. Its keys are held through `IssuerKeys` (`@mission/core`): each
+   * role's pinned `kid`s only, refreshed within the freshness the issuer
+   * declares, so a rotation is followed without a restart once `keyRoles`
+   * lists the new `kid`. Exactly one of `jwks` and `jwksUri` is given.
+   */
+  jwksUri?: string;
+  /** Tests: the clock and fetch the `jwksUri` key holder uses. */
+  issuerKeysOptions?: { now?: () => number; fetch?: IssuerKeysFetch };
+  /**
+   * @spec #831 C2 (D825): the per-role algorithm policy, applied the same way
+   * to a fixed set and to a `jwksUri`. A role not listed accepts whatever its
+   * pinned key admits.
+   */
+  keyAlgorithms?: KeyAlgorithms;
   /**
    * @spec runtime-oauth#token-validation (#825, D312) — the `kid`s trusted
    * for each token class, configured locally. Access tokens and attenuation
-   * roots resolve from `jwks`, transaction tokens from `txnTokenJwks`, each
-   * only among its own role's keys. Never defaulted: a shared JWKS and
-   * distinct `typ` strings do not enforce key purpose.
+   * roots resolve from `jwks` (or `jwksUri`), transaction tokens from
+   * `txnTokenJwks` (or `txnTokenJwksUri`), each only among its own role's
+   * keys. Never defaulted: a shared JWKS and distinct `typ` strings do not
+   * enforce key purpose.
    */
   keyRoles: KeyRoles;
   issuer: string;
@@ -511,6 +582,8 @@ export interface McpServerDeps {
    * hybrid txn-token path.
    */
   txnTokenJwks?: { keys: Record<string, unknown>[] };
+  /** @spec #831 C2: the transaction-token issuer's `jwks_uri`, held like `jwksUri`; never with `txnTokenJwks`. */
+  txnTokenJwksUri?: string;
   asIssuer?: string;
   /**
    * @spec txn-authorization#two-phase-expiry (key discovery) — this resource's
@@ -598,11 +671,13 @@ export interface TransactionToolResult {
 export class McpPaymentsServer {
   get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
   /** Keys pinned to the access-token role (@spec runtime-oauth#token-validation, D312). */
-  private readonly resolveAccessKey: KeyResolver;
+  private resolveAccessKey: KeyResolver;
   /** Keys pinned to the attenuation-root role. */
-  private readonly resolveRootKey: KeyResolver;
+  private resolveRootKey: KeyResolver;
   /** Keys pinned to the transaction-token role; absent when the txn tier is off. */
-  private readonly resolveTxnKey?: KeyResolver;
+  private resolveTxnKey?: KeyResolver;
+  /** @spec #831 C2 (D825): the reload of a `jwksUri` server's trusted configuration, in place. */
+  private readonly refreshing?: RefreshingRoleKeys;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
   private readonly txnPending: TxnPendingStore;
   /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
@@ -611,15 +686,52 @@ export class McpPaymentsServer {
   private readonly dpopReplay: DpopProofReplay;
   /** @spec RFC 7662 (#818 slice 3): the estate route's introspection adapter, when configured. */
   private readonly introspector?: TokenIntrospector;
-  constructor(private readonly deps: McpServerDeps) {
-    if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
-    const pinned = roleKeyResolvers(deps.keyRoles, {
-      jwks: deps.jwks,
-      txnTokenJwks: deps.txnTokenJwks,
-    });
+  /** The snapshot path's pinned resolvers over the fixed key sets. */
+  private snapshotResolvers(roles: KeyRoles, algorithms: KeyAlgorithms | undefined): Record<KeyRole, KeyResolver> {
+    return roleKeyResolvers(
+      roles,
+      { jwks: this.deps.jwks as { keys: Record<string, unknown>[] }, txnTokenJwks: this.deps.txnTokenJwks },
+      algorithms,
+    );
+  }
+
+  /**
+   * @spec #831 C2 (D825): reload the trusted configuration while serving:
+   * the `kid`s pinned to each role, and the algorithm policy. It takes effect
+   * at the next verification; a configuration that pins one `kid` to two
+   * roles, or gives one key two roles, is refused and the one in force stays.
+   * A `jwksUri` server replaces its trust in place; a fixed-set server
+   * rebuilds its pins over the same sets.
+   */
+  reloadKeyRoles(roles: KeyRoles, algorithms?: KeyAlgorithms): void {
+    const pinned = this.refreshing ? (this.refreshing.setRoles(roles, algorithms), this.refreshing) : this.snapshotResolvers(roles, algorithms);
     this.resolveAccessKey = pinned.accessToken;
     this.resolveRootKey = pinned.attenuationRoot;
-    if (deps.txnTokenJwks) this.resolveTxnKey = pinned.transactionToken;
+    if (this.resolveTxnKey) this.resolveTxnKey = pinned.transactionToken;
+  }
+
+  constructor(private readonly deps: McpServerDeps) {
+    if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
+    if ((deps.jwks === undefined) === (deps.jwksUri === undefined)) {
+      throw new Error("McpPaymentsServer: give exactly one of jwks and jwksUri");
+    }
+    if (deps.txnTokenJwks !== undefined && deps.txnTokenJwksUri !== undefined) {
+      throw new Error("McpPaymentsServer: give txnTokenJwks or txnTokenJwksUri, not both");
+    }
+    if ((deps.jwksUri === undefined) !== (deps.txnTokenJwksUri === undefined) && deps.txnTokenJwks !== undefined) {
+      throw new Error("McpPaymentsServer: a jwksUri server takes txnTokenJwksUri, not txnTokenJwks");
+    }
+    if (deps.jwksUri !== undefined) {
+      this.refreshing = refreshingRoleKeyResolvers(
+        deps.keyRoles,
+        { jwksUri: deps.jwksUri, txnTokenJwksUri: deps.txnTokenJwksUri },
+        { ...(deps.issuerKeysOptions ?? {}), ...(deps.keyAlgorithms ? { algorithms: deps.keyAlgorithms } : {}) },
+      );
+    }
+    const pinned = this.refreshing ?? this.snapshotResolvers(deps.keyRoles, deps.keyAlgorithms);
+    this.resolveAccessKey = pinned.accessToken;
+    this.resolveRootKey = pinned.attenuationRoot;
+    if (deps.txnTokenJwks || deps.txnTokenJwksUri) this.resolveTxnKey = pinned.transactionToken;
     const stores = deps.txnStores ?? openTxnStores();
     this.txnPending = stores.pending;
     this.txnConsumption = stores.consumption;
@@ -1481,10 +1593,15 @@ export class McpPaymentsServer {
     // write's completed disposition, over the parameters reverification just
     // confirmed. The hold stores nothing, so a record that cannot be written
     // withholds the result (D770 ruling 4); the single use stays consumed.
-    const recorded = await this.deps.pep.completeExecution(
-      attempt,
-      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
-    );
+    const recorded = await this.deps.pep.completeExecution(attempt, {
+      ...(bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {}),
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // reverification re-established before the effect, never one recomputed
+      // after it, when the effect itself can move a declared fact.
+      ...(bound.effectiveEvaluationContextDigest !== undefined
+        ? { effectiveEvaluationContextDigest: bound.effectiveEvaluationContextDigest }
+        : {}),
+    });
     if (!recorded.recorded) return this.withholdUnevidenced(attempt);
     return { ok: true, result };
   }
@@ -1804,10 +1921,15 @@ export class McpPaymentsServer {
     // emission does, so a record that cannot be written is reported as a gap,
     // never a refusal, and its result is withheld (D770 ruling 4): a retry
     // under the key retrieves it under that retry's own permit and record.
-    const recorded = await this.deps.pep.completeExecution(
-      attempt,
-      bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {},
-    );
+    const recorded = await this.deps.pep.completeExecution(attempt, {
+      ...(bound.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: bound.effectiveParameterDigest } : {}),
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // reverification re-established before the effect, never one recomputed
+      // after it, when the effect itself can move a declared fact.
+      ...(bound.effectiveEvaluationContextDigest !== undefined
+        ? { effectiveEvaluationContextDigest: bound.effectiveEvaluationContextDigest }
+        : {}),
+    });
     if (!recorded.recorded) return { ok: false, gap: recorded.gap };
     return { ok: true, result: outcome.result };
   }
@@ -1991,8 +2113,12 @@ export class McpPaymentsServer {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: "permit_expired" };
     }
-    // TOCTOU re-verify inside the lease, before commit.
-    const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
+    // TOCTOU re-verify inside the lease, before commit. A compensate crossing
+    // (#252) re-derives its form from the committed wire's record, not the
+    // invoice as it reads now.
+    const bound = res.compensates
+      ? await this.deps.pep.reverifyCompensation(res.effective, digest, token, attempt, res.compensates)
+      : await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
       return { ok: false, refusal_reason: bound.error };
@@ -2067,15 +2193,19 @@ export class McpPaymentsServer {
       effective: res.effective,
       permitId,
       missionId: resolvedMission.id,
+      ...(res.compensates ? { compensates: res.compensates } : {}),
     });
     // @spec runtime#security-considerations (#1270): the resource refused a
     // second settlement of the invoice with no effect, so this is affirmative
     // non-execution under the deployment's collision-resistant error, the
-    // same disposition as the reversible writes' `schedule_exists`.
+    // same disposition as the reversible writes' `schedule_exists`. A
+    // reversal the ledger refused (#252) disposes the same way, under its own
+    // error.
     if (!commit.committed) {
-      await this.deps.pep.suppressExecution(attempt, SETTLEMENT_REFUSAL_ERROR);
+      const refusal = commit.refusal ?? "already_settled";
+      await this.deps.pep.suppressExecution(attempt, CONNECTOR_REFUSAL_ERRORS[refusal]);
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: commit.refusal ?? "already_settled" };
+      return { ok: false, refusal_reason: refusal };
     }
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write
@@ -2121,10 +2251,26 @@ export class McpPaymentsServer {
       audience: attempt.audience,
       authorized_parameter_digest: digest,
       effective_parameter_digest: digest,
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // pair of a covered crossing. The authorized member mirrors the linked
+      // Decision Evidence; the effective one is the context `reverify()`
+      // re-established and found equal before this commit point, an
+      // observation it made, never a copy of the authorized digest.
+      ...(attempt.authorizedEvaluationContextDigest !== undefined
+        ? {
+            authorized_evaluation_context_digest: attempt.authorizedEvaluationContextDigest,
+            ...(bound.effectiveEvaluationContextDigest !== undefined
+              ? { effective_evaluation_context_digest: bound.effectiveEvaluationContextDigest }
+              : {}),
+          }
+        : {}),
       outcome: "completed",
       // @spec authzen#obligation-processing (#1640): the obligations this
       // permit's PEP fulfilled before release.
       ...(attempt.obligationOutcomes ? { obligation_outcomes: attempt.obligationOutcomes } : {}),
+      // @spec runtime-evidence#evidence-extensions `work_item` (#815): the
+      // work item the PEP attributed to this request.
+      ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
       ...(token.jti
         ? {
             hop_reference: {

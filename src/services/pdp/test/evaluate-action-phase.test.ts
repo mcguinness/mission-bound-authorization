@@ -32,7 +32,11 @@ import { relationForAction, stalenessBound } from "../src/policy.js";
 import { createPdpRefusalRecorder, type PdpRefusalRecord } from "../src/refusal-record.js";
 import { type EvidenceKeyResolver, REFUSAL_RECORD_MEDIA_TYPE, verifyEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
+import {
+  EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+  RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+  resourcePolicyFixture,
+} from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 const AUDIENCE = "http://localhost:4403/mcp";
@@ -67,7 +71,11 @@ const view = (): MissionView => ({
   client_id: "ap-agent",
 });
 
-/** A request for `action` at `phase`; `undefined` omits the member. */
+/**
+ * A request for `action` at `phase`; `undefined` omits the member. A
+ * `compensate` request carries the link to a committed effect it requires
+ * (#252), so the phase alone decides each case here.
+ */
 const request = (phase: unknown, action = PAY): EvaluationRequest =>
   withCredential({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
@@ -78,6 +86,7 @@ const request = (phase: unknown, action = PAY): EvaluationRequest =>
       actor: { client_id: "ap-agent" },
       parameter_digest: "sha-256:pd1629",
       ...(phase !== undefined ? { action_phase: phase } : {}),
+      ...(phase === "compensate" ? { compensates_evaluation_id: "dec_committed_1629" } : {}),
     },
   } as EvaluationRequest);
 
@@ -122,6 +131,10 @@ async function inProcess(req: EvaluationRequest, over: Partial<EvaluateOptions> 
     resourcePolicy: policy,
     evidence,
     refusals: (r) => refusals.push(r),
+    // #773: a deployment that does not claim Evaluation-Context Binding; the
+    // phase is this file's subject (evaluate-evaluation-context.test.ts
+    // witnesses the claimed path, refused after the phase).
+    evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
     ...over,
   }).then(
     (decision) => ({ decision }),
@@ -238,6 +251,7 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       refusals: (r) => refusals.push(r),
       phasedActions: PHASED,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
     });
     // A widened options object naming an empty declaration is stripped, never applied.
     const widened = { ...decisionOptions(fga), phasedActions: new Set<string>() } as DecisionOptions;
@@ -246,7 +260,12 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
     const permitted = await point.decide(request("commit"), decisionOptions(fga));
     expect(permitted.decision, JSON.stringify(permitted.context)).toBe(true);
     // A decision point bound to no declaration requires no phase, whatever the caller names.
-    const open = createEphemeralDecisionPoint({ emitterId: "pdp-1629", audience: AUDIENCE, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
+    const open = createEphemeralDecisionPoint({
+      emitterId: "pdp-1629",
+      audience: AUDIENCE,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+    });
     const claimed = { ...decisionOptions(fga), phasedActions: PHASED } as DecisionOptions;
     expect((await open.decide(request(undefined), claimed)).decision).toBe(true);
   });
@@ -263,6 +282,7 @@ describe("the PDP refuses an unusable action phase before evaluation (@spec auth
       evaluateFn: evaluateRequest,
       resourcePolicy: policy,
       phasedActions: PHASED,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
       refusals: createPdpRefusalRecorder({
         signer: { kid: "pdp-1629", key: privateKey },
         emitterId: "pdp.example",

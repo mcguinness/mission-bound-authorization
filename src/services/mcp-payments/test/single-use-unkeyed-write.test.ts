@@ -33,6 +33,7 @@ import {
   CANONICAL_RESOURCE,
   CONSUMED_PERMIT_RETENTION_MARGIN_MS,
   createEphemeralEvidenceKeys,
+  EvaluationContextSalts,
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
@@ -78,7 +79,7 @@ const VIEW: MissionView = {
   client_id: "ap-agent",
 };
 
-function harness(o: { file?: string; store?: "none" } = {}) {
+function harness(o: { file?: string; store?: "none"; salts?: EvaluationContextSalts } = {}) {
   let nowMs = BASE_MS;
   const now = () => new Date(nowMs);
   let replayed: Decision | undefined;
@@ -114,6 +115,7 @@ function harness(o: { file?: string; store?: "none" } = {}) {
     loadView,
     instanceEpoch: "epoch-1080",
     now,
+    ...(o.salts ? { evaluationContextSalts: () => o.salts as EvaluationContextSalts } : {}),
   });
   const server = new McpPaymentsServer({
     pep,
@@ -241,12 +243,17 @@ describe("single-use permits on the unkeyed write path (@spec runtime#single-use
 
   it("the consumed record survives a store reopen: a new server on the same file refuses the replay permit_consumed with no hold", async () => {
     const file = tempFile();
-    const before = harness({ file });
+    // The two servers share one Evaluation-Context Binding salt keeper, so the
+    // replay reaches the single-use check this test is about. Across a real
+    // restart the binding is lost too and the replay is refused target_drift
+    // first (#773, evaluation-context.test.ts).
+    const salts = new EvaluationContextSalts();
+    const before = harness({ file, salts });
     expect(await hold(before)).toEqual({ ok: true, result: HELD });
     const permit = before.lastDecision();
     before.store?.close();
 
-    const after = harness({ file });
+    const after = harness({ file, salts });
     after.replay(permit);
     const replayed = await hold(after);
     expect(replayed).toEqual({ ok: false, refusal_reason: "permit_consumed" });

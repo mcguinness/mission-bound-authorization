@@ -14,6 +14,8 @@ import { randomUUID } from "node:crypto";
 import { type ActObject, buildContextActor, flattenActChain } from "@mission/actor-chain";
 import {
   type ActionPhase,
+  type AuthorityDependencyEnforcement,
+  checkAuthorityDependency,
   type CollectionMemberFacts,
   type ConstraintFacts,
   type CredentialAuthorityEntry,
@@ -22,7 +24,9 @@ import {
   credentialEntriesFromAuthority,
   entryMatchesTarget,
   establishOperationTarget,
+  type EvaluationContextBindingDeclarations,
   type IdempotencyScope,
+  sameEvaluationContextBinding,
   idempotencyScopeDigest,
   isActionPhase,
   type JsonValue,
@@ -39,7 +43,7 @@ import {
   type TxnMissionClaim,
   unsupportedEntryMember,
 } from "@mission/core";
-import { CATALOG_TOOL_BINDINGS, RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { CATALOG_TOOL_BINDINGS, EVALUATION_CONTEXT_BINDING, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { getTracer } from "@mission/telemetry";
 import {
   type AudienceContext,
@@ -71,6 +75,8 @@ import {
   type OriginPrincipal,
   type PrincipalMappingResolver,
   RUNTIME_POSTURE,
+  sameWorkItem,
+  type WorkItemRef,
   relationForAction,
   stalenessBound,
   stateSourcePlacement,
@@ -79,17 +85,31 @@ import {
 import {
   buildEffectiveParams,
   buildListEffectiveParams,
+  buildReversalParams,
   type EffectiveParams,
   type ListEffectiveParams,
   listMembers,
   parameterDigest,
 } from "./effective-params.js";
 import type {
+  DecisionEvidence,
   EvidenceStore,
+  ExecutionEvidence,
   ExecutionEvidenceObject,
   PepRefusalDenialReason,
   RuntimeHopReference,
 } from "./evidence.js";
+import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
+import {
+  captureEvaluationContext,
+  declaredParameterMembers,
+  deviatingParameterMembers,
+  EvaluationContextSalts,
+  type HeldEvaluationContext,
+  readStoreRecords,
+  recomputeEvaluationContext,
+  type StoreRecords,
+} from "./evaluation-context.js";
 import type { PaymentsStore } from "./payments-store.js";
 import { operationKey } from "./transaction.js";
 import { signChallenge } from "./txn-challenge.js";
@@ -153,9 +173,11 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * Operation Profile {@link TOOL_ACTIONS} implements, the `operation_profile`
  * a contract document names. A contract version naming it performs under the
  * live Operation Profile; one naming another performs under that retained
- * profile (`PepDeps.retainedOperationProfiles`), or not at all.
+ * profile (`PepDeps.retainedOperationProfiles`, by default
+ * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
+ * compensate crossing `reverse_wire_transfer`.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v13";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -354,6 +376,16 @@ export interface ActionMapping {
    */
   phase?: ActionPhase;
   /**
+   * @spec runtime#compound-actions, authzen#context-compensation-link (#252):
+   * for a `compensate` crossing, the operation whose committed effect it
+   * offsets, named by action identifier and phase. The PEP finds that effect
+   * in its own retained, verified evidence and carries the effect's
+   * `evaluation_id` as `context.compensates_evaluation_id`; an agent argument
+   * never names it. A compensate crossing without this member has no effect
+   * to link and is refused before any decision request.
+   */
+  compensates?: { action: string; phase: ActionPhase };
+  /**
    * @spec resource-access#resource-matching (#1276, D447, D457): this
    * operation's documented, trusted operation contract: how the PEP
    * establishes its target before any authority is matched. The shipped
@@ -491,8 +523,29 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   check_transfer: { action: "payments:payment.execute", phase: "preflight", actionClass: "consequential_read", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   hold_transfer: { action: "payments:payment.execute", phase: "prepare", actionClass: "consequential_write", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true },
   execute_wire_transfer: { action: "payments:payment.execute", phase: "commit", actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
+  // @spec runtime#compound-actions (#252): the compensate crossing, its own
+  // action identifier and its own single-use, high-consequence Decision. It
+  // offsets the committed wire `execute_wire_transfer` released; neither that
+  // wire's permit nor the link to it authorizes the reversal.
+  reverse_wire_transfer: { action: "payments:payment.reverse", phase: "compensate", compensates: { action: "payments:payment.execute", phase: "commit" }, actionClass: "irreversible_action", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true },
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
+
+/**
+ * @spec runtime#resource-contract rule 3 (#249, #252): the Operation Profiles
+ * of the superseded contract versions this resource still performs within
+ * their declared retention, keyed by the `operation_profile` their documents
+ * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
+ * live profile without the compensate crossing `reverse_wire_transfer`, which
+ * v14 added: every crossing it names performs exactly as it did, and the
+ * crossing it does not name is not performed under it. A snapshot taken at
+ * load, never the live table.
+ */
+export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
+  "payments-runtime-profile-v13": Object.freeze(
+    Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
+  ),
+});
 
 /**
  * @spec runtime#read-binding — synthetic check object for a bulk
@@ -631,6 +684,9 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
   "parameter_digest",
   "valid_until",
   "use_limit",
+  // @spec authzen#decision-conditions `work_item` (#815): recognized because
+  // it is enforced (the `work_item` row of PERMIT_USE_CHECKS).
+  "work_item",
   // @spec authzen#response-context `resource_contract` (#249, D553): this PEP
   // recognizes and enforces the contract condition (the `resource_contract`
   // row of PERMIT_USE_CHECKS), so a permit carrying it is usable here.
@@ -642,6 +698,14 @@ const RECOGNIZED_CONDITIONS: ReadonlySet<string> = new Set([
   // enforced the condition without recognizing it would refuse every permit
   // carrying one as an unrecognized member instead.
   "action_phase",
+  // @spec runtime#evaluation-context-binding, authzen#response-context
+  // `evaluation_context_digest` (#773): this PEP recognizes and enforces the
+  // context condition (the `evaluation_context` row of PERMIT_USE_CHECKS).
+  // "A condition on an operation outside the declared binding is invalid
+  // there": that row refuses it on a crossing that captured no context, after
+  // the phase row, so a permit carried to another crossing is still reported
+  // as the phase failure it is.
+  "evaluation_context_digest",
 ]);
 
 /**
@@ -675,6 +739,10 @@ interface PermitUseCheck {
       profile: ActionMapping | undefined;
       boundary: BoundaryEstablishment;
       contracts: ResourceContractDeclarations;
+      /** The declared authority dependency's recheck at this use (synchronous, over the resolver's cached observation). */
+      dependency: (attempt: ExecutionAttempt, now: Date) => string | undefined;
+      /** @spec runtime#evaluation-context-binding (#773): the attempt's context re-resolved and compared now. */
+      evaluationContext: (attempt: ExecutionAttempt) => string | undefined;
     },
   ) => string | undefined;
 }
@@ -696,6 +764,17 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
       boundary.ok && boundary.boundary === attempt.audience && boundary.version === attempt.boundaryVersion
         ? undefined
         : BOUNDARY_CUTOVER_ERROR,
+  },
+  {
+    // @spec authzen#decision-conditions `work_item` (#815): "At every use,
+    // the executing PEP MUST compare it with the work item it attributes to
+    // the request it is executing, and MUST NOT release an effect when they
+    // differ or when either is present without the other. Such a refusal is
+    // Execution Evidence `suppressed` / `work_item_mismatch`." A permit for
+    // one work item never executes for another, a cached, retransmitted or
+    // resumed permit included. Both values are in hand, so this is synchronous.
+    name: "work_item",
+    failure: (attempt) => (sameWorkItem(attempt.permitWorkItem, attempt.workItem) ? undefined : "work_item_mismatch"),
   },
   {
     // @spec runtime#resource-contract rule 5, authzen#response-context
@@ -774,6 +853,32 @@ const PERMIT_USE_CHECKS: readonly PermitUseCheck[] = [
       const current = establishOperationTarget(profile?.target, attempt.operationArguments);
       return current.ok && current.target === attempt.operationTarget ? undefined : "target_drift";
     },
+  },
+  {
+    // @spec runtime#evaluation-context-binding (#773): "The executing PEP MUST
+    // re-resolve the declared facts and recompute the bound context with its
+    // own applicable descriptor immediately before releasing the effect ... A
+    // missing binding, changed descriptor, unequal digest, or unavailable fact
+    // MUST cause refusal before any effect." Every crossing of a covered
+    // operation, on every dispatch path, is held to its own context here, at
+    // admission and again at release; the comparison reads the in-memory
+    // store and declaration only, so it is synchronous as this table requires.
+    // The error is the primary one Runtime Evidence's truth table names
+    // (`Pep.evaluationContextFailure`).
+    name: "evaluation_context",
+    failure: (attempt, { evaluationContext }) => evaluationContext(attempt),
+  },
+  {
+    // @spec runtime#input-authority-dependency (#830, D798, D813): a permit
+    // relying on a declared authority dependency releases no effect once the
+    // observation it relied on has passed its accepted validity (the ceiling
+    // the composed step carried from admission), nor once a known withdrawal,
+    // an observed invalidation or a loss of every acceptable observation has
+    // reached this PEP. Synchronous over the resolver's cached observation, as
+    // this table requires, and refused as that mechanism refuses,
+    // `resource_policy`.
+    name: "authority_dependency",
+    failure: (attempt, { dependency, now }) => dependency(attempt, now),
   },
   {
     // @spec authzen#response-context, runtime-evidence#execution-evidence-object
@@ -887,9 +992,18 @@ export interface PepDeps {
    * operation's parameters, and perform the operation, under the resolved
    * contract, never under another version the resource serves." A version
    * naming {@link PAYMENTS_PROFILE_VERSION} performs under the live profile;
-   * one naming a profile absent here is not performed at all.
+   * one naming a profile absent here is not performed at all. Absent, the
+   * shipped {@link RETAINED_OPERATION_PROFILES} apply.
    */
-  retainedOperationProfiles?: () => Readonly<Record<string, Record<string, ActionMapping>>>;
+  retainedOperationProfiles?: () => Readonly<Record<string, Readonly<Record<string, ActionMapping>>>>;
+  /**
+   * @spec runtime#compound-actions (#252): the committed-effect records a
+   * compensate crossing reads its parameters from: the ledger connector's
+   * entry for the wire it offsets. Absent, no compensation's parameters can
+   * be established and every compensate crossing is refused before any
+   * decision request (`compensation_link_unavailable`).
+   */
+  committedEffects?: CommittedEffectSource;
   /**
    * @spec runtime#compound-actions — the trusted Operation Profile this PEP
    * derives each crossing's action and phase from, resolved on EVERY lookup
@@ -902,6 +1016,21 @@ export interface PepDeps {
    * phase and refuses rather than releasing an effect.
    */
   operationProfile?: () => Record<string, ActionMapping>;
+  /**
+   * @spec runtime#evaluation-context-binding (#773): the Evaluation-Context
+   * Binding claim and declaration this PEP captures and re-resolves under,
+   * resolved on EVERY lookup so a declaration change between a Decision and
+   * its use is observed. Defaults to the published statement's
+   * (`EVALUATION_CONTEXT_BINDING`), which covers nothing without its claim.
+   */
+  evaluationContextBinding?: () => EvaluationContextBindingDeclarations;
+  /**
+   * @spec runtime#evaluation-context-binding (#773): the salt keeper, resolved
+   * on every lookup. Defaults to one keeper per PEP, minted at construction:
+   * a new PEP is a new epoch, which holds none of an earlier epoch's
+   * versions, so the bindings made under them fail closed at use.
+   */
+  evaluationContextSalts?: () => EvaluationContextSalts;
   /**
    * @spec authzen#response-context — the permit `conditions` members this PEP
    * recognizes. Defaults to {@link RECOGNIZED_CONDITIONS}. Injectable so a
@@ -1087,6 +1216,27 @@ export interface PepDeps {
    */
   revokedInstances?: Set<string>;
   /**
+   * @spec runtime#input-authority-dependency, runtime#input-resource-policy
+   * (#830, D798): a declared authority dependency this PEP evaluates as a
+   * composed resource-policy step, where the declaration routes direct
+   * evaluation to the PEP. After the PDP permits and before anything is
+   * released, an action under a Mission the declaration governs is refused
+   * `resource_policy` unless an acceptable observation establishes the
+   * dependency: the PDP permits within Mission authority, and this step still
+   * refuses. The cause is retained in the deployment's dependency evidence.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
+  /**
+   * @spec harness#work-item-identity (#815): the work-item attachers the
+   * Enforcement Scope Statement names, each authenticated client mapped to
+   * the harness URI that attaches its work items
+   * (`readWorkItemAttribution(statement).attachers`). A work item rides a
+   * decision request only where the reference that carried it verified and
+   * its `work_item_issuer` is the harness named for the client this request
+   * authenticated. Absent, no work item is ever carried.
+   */
+  workItemAttachers?: ReadonlyMap<string, string>;
+  /**
    * @spec authzen#obligation-processing (#1640): the transport this PEP
    * performs the AuthZEN Obligations Profile's `notification` obligation
    * through, on a permit before release and on a denial. Absent, a
@@ -1107,6 +1257,26 @@ export interface PepDeps {
     decision: Decision;
     effective?: EffectiveParams;
   }) => void;
+}
+
+/**
+ * @spec harness#work-item-identity (#815): "A PEP implementing this profile
+ * MUST take a work item only from these members, once the reference itself
+ * verifies, and only where the statement names the harness that
+ * `work_item_issuer` identifies as the attacher for the client the PEP
+ * authenticated on that request. It MUST NOT read a work item from tool
+ * arguments or any other value the agent supplies, and MUST NOT carry one it
+ * cannot attribute to that attacher." The caller passes the reference only
+ * after verifying it; the tool arguments are never an input here.
+ */
+function attributedWorkItem(
+  reference: PropagatedMissionReference | undefined,
+  clientId: string | undefined,
+  attachers: ReadonlyMap<string, string> | undefined,
+): WorkItemRef | undefined {
+  if (reference === undefined || "malformed" in reference || reference.workItem === undefined) return undefined;
+  if (clientId === undefined || attachers?.get(clientId) !== reference.workItem.issuer) return undefined;
+  return { issuer: reference.workItem.issuer, id: reference.workItem.id };
 }
 
 /**
@@ -1240,6 +1410,49 @@ export interface EnforceResult {
    * retrospective evidence is not what authorizes them.
    */
   evidence_gap?: DecisionEvidenceGap;
+  /**
+   * @spec runtime#compound-actions, authzen#context-compensation-link (#252):
+   * present on a permit for a `compensate` crossing. The committed effect the
+   * crossing offsets, as this PEP established it before the decision request
+   * from its own retained, verified evidence: the effect's Decision
+   * `evaluation_id`, which the request carried as
+   * `context.compensates_evaluation_id`, and the operation key the effect
+   * committed under, derived from that verified Decision. Never an agent
+   * argument.
+   */
+  compensates?: CompensatedEffect;
+}
+
+/**
+ * @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
+ * (#1266, #773): the live resource facts a decision request carries for an
+ * invoice-scoped crossing, from one observation of the store records: the
+ * vendor the invoice names, the invoice's issuance instant (an invoice with
+ * none carries no fact, which satisfies no issuance bound), the tenant that
+ * owns it (its vendor's), and its own classification label. The context
+ * capture commits the same records, so the facts the decision evaluates and
+ * the facts its binding commits are one observation, with no await between
+ * them (the owner's #1663 review 3).
+ */
+function liveResourceProperties(records: StoreRecords): Record<string, string> {
+  const { invoice, vendor } = records;
+  return {
+    vendor_id: vendor.id,
+    ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
+    ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
+    ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
+  };
+}
+
+/**
+ * @spec runtime#compound-actions (#252): one committed effect a compensation
+ * offsets, established from verified evidence, never from an agent argument.
+ */
+export interface CompensatedEffect {
+  /** The `evaluation_id` of the Decision whose committed effect is offset. */
+  evaluationId: string;
+  /** The operation key that effect committed under, derived from that verified Decision. */
+  opKey: string;
 }
 
 /** Why a denial carries no retained Decision Evidence (D770 ruling 6). */
@@ -1360,12 +1573,54 @@ export interface ExecutionAttempt {
    */
   permitValidUntil?: unknown;
   /**
+   * @spec runtime#input-authority-dependency (#830, D798, D813): present where
+   * this PEP holds a declared authority dependency governing the Mission. It
+   * is rechecked at every use of the permit, release included. Where the
+   * dependency is routed to this PEP's composed step, `validUntilMs` is the
+   * ceiling that step established at admission: the accepted validity of the
+   * observation it relied on, which the effect is never released after.
+   */
+  authorityDependency?: { validUntilMs?: number };
+  /**
+   * @spec authzen#decision-conditions `work_item` (#815): the permit's
+   * `conditions.work_item` EXACTLY as the verified decision carried it,
+   * unnarrowed, so a malformed value stays distinguishable at the comparison.
+   */
+  permitWorkItem?: unknown;
+  /**
+   * @spec harness#work-item-identity (#815): the work item this PEP
+   * attributes to the request the attempt executes, from the harness's
+   * verified attachment only. Absent when the request carried none this PEP
+   * could attribute. Execution Evidence records it
+   * (@spec runtime-evidence#evidence-extensions `work_item`).
+   */
+  workItem?: WorkItemRef;
+  /**
    * @spec runtime-evidence#execution-evidence-object
    * `authorized_parameter_digest`: taken from the RETAINED Decision Evidence,
    * not from `decision.context.conditions`, since the member MUST be absent
    * when the linked record carries no `parameter_digest`.
    */
   authorizedParameterDigest?: string;
+  /**
+   * @spec runtime#evaluation-context-binding (#773): present on a crossing the
+   * declaration covered at the decision: the binding this PEP captured and
+   * sent, held for the attempt, with the parameters the permit was decided on
+   * (a frozen copy) and the parameter members the descriptor's facts also
+   * occupy. `effective` is the parameter object the executor is about to use.
+   */
+  evaluationContext?: AttemptEvaluationContext;
+  /**
+   * @spec authzen#response-context `evaluation_context_digest`: the permit's
+   * condition EXACTLY as the verified decision carried it, unnarrowed.
+   */
+  permitEvaluationContextDigest?: unknown;
+  /**
+   * @spec runtime-evidence#execution-evidence-object
+   * `authorized_evaluation_context_digest`: from the RETAINED Decision
+   * Evidence's `evaluation_context_digest`, absent when it carries none.
+   */
+  authorizedEvaluationContextDigest?: string;
   /** One execution identity per disposition attempt; reused for emission retries. */
   executionId: string;
   /**
@@ -1392,21 +1647,40 @@ export interface ExecutionAttempt {
   /**
    * Re-observe this operation's effective parameter digest from CURRENT
    * authoritative state, at the moment of the disposition. `undefined` means
-   * the operation binds no parameters, or its target can no longer be
-   * resolved; it is never a licence to repeat the authorized digest, which
-   * would assert an observation that was not made.
+   * the operation binds no parameters, or its effective parameters can no
+   * longer be established (its target or routing no longer resolves); the
+   * record then omits the effective digest, and this is never a licence to
+   * repeat the authorized digest, which would assert an observation that was
+   * not made.
    */
   observeEffectiveDigest: () => string | undefined;
 }
 
+/** @spec runtime#evaluation-context-binding (#773): what an attempt holds for its context check. */
+export interface AttemptEvaluationContext {
+  held: HeldEvaluationContext;
+  decided: Readonly<EffectiveParams>;
+  declaredParameters: ReadonlySet<string>;
+  effective: EffectiveParams;
+}
+
 /**
- * The result of one post-permit disposition. `recorded: false` carries the
- * reason no valid record could be emitted: the disposition still refuses the
- * action, and the gap is an open defect rather than a fabricated record.
+ * The result of one post-permit disposition. `recorded: false` reports why no
+ * record was emitted, rather than papering over it: `emission_failed` after
+ * one retry on the same execution identity, or
+ * `effective_parameter_digest_unobservable` for a COMPLETED disposition whose
+ * effective digest could not be observed, since a completed record never
+ * omits it, and `effective_evaluation_context_digest_unobservable` for one
+ * whose context-bound permit's effective context digest could not be (#773).
+ * A suppression never reports either: it emits without the effective digest,
+ * "comparison unavailable" (#786).
  */
 export type SuppressOutcome =
   | { recorded: true }
-  | { recorded: false; gap: "effective_parameter_digest_unobservable" | "emission_failed" };
+  | {
+      recorded: false;
+      gap: "effective_parameter_digest_unobservable" | "effective_evaluation_context_digest_unobservable" | "emission_failed";
+    };
 
 /**
  * The typed result of a pre-execution recheck. `error` names the gate that
@@ -1415,7 +1689,7 @@ export type SuppressOutcome =
  * {@link Pep.suppressExecution}.
  */
 export type ReverifyOutcome =
-  | { ok: true; effectiveParameterDigest?: string }
+  | { ok: true; effectiveParameterDigest?: string; effectiveEvaluationContextDigest?: string }
   | { ok: false; error: string; disposition: SuppressOutcome };
 
 /** Every caller-visible diagnostic this PEP refuses with on its Refusal Record path (`refuse`, `recordRefusal`). */
@@ -1437,7 +1711,9 @@ export type PepRefusalDiagnostic =
   | "pdp_unreachable"
   | "unresolvable_recipients"
   | "credential_boundary_changed"
-  | "phase_unavailable";
+  | "phase_unavailable"
+  | "compensation_link_unavailable"
+  | "evaluation_context_unresolvable";
 
 /**
  * @spec runtime-evidence#pre-decision-refusal (issue #786) — the deployment's
@@ -1508,6 +1784,16 @@ export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, P
   // cannot establish the phase before requesting a decision. Already an
   // enumerated value, carried unchanged.
   phase_unavailable: "phase_unavailable",
+  // @spec runtime-evidence#pre-decision-refusal, authzen#context-compensation-link
+  // (#252): the operation is a compensate phase and this PEP cannot establish,
+  // from its retained and verified evidence, a committed effect it offsets and
+  // that effect's Decision. Already an enumerated value, carried unchanged.
+  compensation_link_unavailable: "compensation_link_unavailable",
+  // @spec runtime-evidence#pre-decision-refusal, runtime#evaluation-context-binding
+  // (#773): "An inability to capture context before requesting a Decision
+  // produces a pre-decision Refusal Record." Already an enumerated value,
+  // carried unchanged; distinct from the PDP's `evaluation_context_invalid`.
+  evaluation_context_unresolvable: "evaluation_context_unresolvable",
 });
 
 /** Whether `diagnostic` is one this PEP refuses with on its Refusal Record path. */
@@ -1595,9 +1881,32 @@ type TargetObject = {
   };
 };
 
+/**
+ * @spec runtime#evaluation-context-binding (#773): the parameters a permit
+ * was decided on, held for the attempt as a frozen copy, so a later change to
+ * the object the executor uses stays observable as a deviation.
+ */
+function frozenParameters(effective: EffectiveParams): Readonly<EffectiveParams> {
+  const { capability_snapshot: _localInvocationGuard, ...parameters } = effective;
+  const copy = JSON.parse(JSON.stringify(parameters)) as EffectiveParams;
+  const freeze = (v: unknown): void => {
+    if (v !== null && typeof v === "object") {
+      for (const child of Object.values(v)) freeze(child);
+      Object.freeze(v);
+    }
+  };
+  freeze(copy);
+  return copy;
+}
+
 export class Pep {
   readonly capabilityCatalog: CapabilityCatalog;
   private readonly now: () => Date;
+  /**
+   * @spec runtime#evaluation-context-binding (#773): this PEP's own salt
+   * keeper when none is injected: minted with the PEP, held in memory only.
+   */
+  private readonly defaultContextSalts = new EvaluationContextSalts();
   /** @spec authzen#context-audience-freshness: who supplies Mission state for this enforcement scope. */
   private readonly placement: StateSourcePlacement;
   /** @spec runtime#runtime-conformance (#853, D487): where this PEP's boundary is declared. */
@@ -1685,7 +1994,7 @@ export class Pep {
     const crossings =
       profile === undefined || profile === PAYMENTS_PROFILE_VERSION
         ? (this.deps.operationProfile?.() ?? TOOL_ACTIONS)
-        : (this.deps.retainedOperationProfiles?.()[profile] ?? {});
+        : (this.retainedProfiles()[profile] ?? {});
     return Object.values(crossings).some((m) => m.action === mapping.action && m.phase !== undefined);
   }
 
@@ -1702,7 +2011,12 @@ export class Pep {
    */
   toolActionUnder(tool: string, profile: string | undefined): ActionMapping | undefined {
     if (profile === undefined || profile === PAYMENTS_PROFILE_VERSION) return this.toolAction(tool);
-    return this.deps.retainedOperationProfiles?.()[profile]?.[tool];
+    return this.retainedProfiles()[profile]?.[tool];
+  }
+
+  /** The retained Operation Profiles, by version: the deployment's, or {@link RETAINED_OPERATION_PROFILES}. */
+  private retainedProfiles(): Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> {
+    return this.deps.retainedOperationProfiles?.() ?? RETAINED_OPERATION_PROFILES;
   }
 
   /**
@@ -1811,6 +2125,122 @@ export class Pep {
   /** The permit `conditions` members this PEP recognizes (@spec authzen#response-context). */
   private recognizedConditions(): ReadonlySet<string> {
     return this.deps.recognizedConditions ?? RECOGNIZED_CONDITIONS;
+  }
+
+  /** @spec runtime#evaluation-context-binding (#773): the claim and declaration, read now. */
+  contextDeclarations(): EvaluationContextBindingDeclarations {
+    return this.deps.evaluationContextBinding?.() ?? EVALUATION_CONTEXT_BINDING;
+  }
+
+  /** @spec runtime#evaluation-context-binding (#773): the salt keeper, read now. */
+  private contextSalts(): EvaluationContextSalts {
+    return this.deps.evaluationContextSalts?.() ?? this.defaultContextSalts;
+  }
+
+  /**
+   * The effective parameters of `effective`'s operation from CURRENT store
+   * state, or `undefined` when its target or the routing it addresses no
+   * longer resolves, so no parameters "actually attempted" can be
+   * established.
+   */
+  private freshEffectiveParams(
+    effective: EffectiveParams,
+    compensates?: { opKey: string; evaluationId: string },
+  ): EffectiveParams | undefined {
+    // @spec runtime#compound-actions (#252): a compensation's parameters are
+    // the committed wire's reversal form, re-derived from that wire's ledger
+    // record, never the invoice as it reads now.
+    if (compensates) {
+      const wire = this.deps.committedEffects?.committedWire(compensates.opKey, compensates.evaluationId);
+      return wire
+        ? buildReversalParams({ action: effective.action, wire, resource: effective.resource, reverses: compensates.opKey })
+        : undefined;
+    }
+    const invoice = this.deps.payments.getInvoice(effective.invoice_id);
+    const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
+    if (!invoice || !vendor) return undefined;
+    const bound = recipientParams(
+      effective.recipients !== undefined || this.reachesRecipients(effective.action),
+      this.deps.payments,
+      vendor.id,
+    );
+    if (!bound) return undefined;
+    return buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource, ...bound });
+  }
+
+  /**
+   * @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+   * `effective_evaluation_context_digest` (#773): the attempt's context
+   * recomputed now, for the parameters about to be used, under the
+   * descriptor the binding committed and the salt version it was made
+   * under; `undefined` when the attempt holds no binding or the context
+   * cannot be established, which is never a licence to repeat the
+   * authorized digest.
+   */
+  observeEffectiveContextDigest(attempt: ExecutionAttempt): string | undefined {
+    const bound = attempt.evaluationContext;
+    if (!bound) return undefined;
+    const fresh = recomputeEvaluationContext({
+      held: bound.held,
+      declarations: this.contextDeclarations(),
+      salts: this.contextSalts(),
+      invoiceId: bound.effective.invoice_id,
+      payments: this.deps.payments,
+      ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+    });
+    return fresh.ok ? fresh.digest : undefined;
+  }
+
+  /**
+   * @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+   * (#773): the context check every crossing makes at use, and the one
+   * classification of its failure, the primary `error` of Runtime Evidence's
+   * truth table:
+   *
+   * | Context | Parameters about to be used | `error` |
+   * |---|---|---|
+   * | not establishable (fact, target, salt version, committed descriptor) | any | `target_drift` |
+   * | established | a member outside the descriptor's declared facts differs | `parameter_mismatch` |
+   * | established, and unequal or unbound | unchanged, or differing only in declared facts | `target_drift` |
+   * | established and equal, under a descriptor the declaration no longer names | unchanged | `target_drift` |
+   *
+   * The context is recomputed under the descriptor the binding committed, so
+   * its digest stays comparable: a changed descriptor is refused by its own
+   * check, never by an unequal digest over unchanged facts.
+   * An unavailable context is `target_drift` whatever else moved: no context
+   * comparison is invented for it. A parameter deviation is the primary error
+   * only where both comparisons were made and a member the descriptor does
+   * not declare differs from the decided one. Every digest pair that can be
+   * observed is recorded by the disposition writer either way, so the
+   * primary error never erases the other divergence.
+   *
+   * A crossing that captured no context: a context condition on it is
+   * invalid there (`condition_unrecognized`), and a crossing the
+   * declaration covers now, whose permit binds no context, is a missing
+   * binding. Synchronous: it reads the in-memory store and declaration.
+   */
+  evaluationContextFailure(attempt: ExecutionAttempt): string | undefined {
+    const bound = attempt.evaluationContext;
+    if (!bound) {
+      if (attempt.permitEvaluationContextDigest !== undefined) return "condition_unrecognized";
+      const crossing = this.toolActionUnder(attempt.tool, attempt.operationProfile);
+      return crossing && this.contextDeclarations().covers(attempt.action, crossing.phase) ? "target_drift" : undefined;
+    }
+    const observed = this.observeEffectiveContextDigest(attempt);
+    if (observed === undefined) return "target_drift";
+    const current = this.freshEffectiveParams(bound.effective, bound.held.compensates);
+    if (current && deviatingParameterMembers(bound.decided as EffectiveParams, current).some((m) => !bound.declaredParameters.has(m))) {
+      return "parameter_mismatch";
+    }
+    // A missing condition, or one other than the binding this PEP sent.
+    if (attempt.permitEvaluationContextDigest !== bound.held.digest) return "target_drift";
+    if (observed !== bound.held.digest) return "target_drift";
+    // The descriptor-change check, independent of the digests: the operation's
+    // live declaration must still name the descriptor the binding committed.
+    // A crossing no longer covered, or now covered under another descriptor,
+    // is refused though its facts are unchanged.
+    const live = this.contextDeclarations().operation(bound.held.operation.action, bound.held.operation.phase);
+    return live && sameEvaluationContextBinding(live.descriptor, bound.held.reference) ? undefined : "target_drift";
   }
 
   /**
@@ -2143,6 +2573,13 @@ export class Pep {
       return await this.refuse(boundary, token, "phase_unavailable", mapping.action, view);
     }
 
+    // @spec runtime#evaluation-context-binding (#773): one read of the
+    // declaration for this request; a covered crossing captures its context
+    // from authoritative state before the decision request, below.
+    const contextDeclarations = this.contextDeclarations();
+    const contextCovered = contextDeclarations.covers(mapping.action, mapping.phase);
+    let contextCapture: { held: HeldEvaluationContext; declaredParameters: ReadonlySet<string> } | undefined;
+
     // Effective parameters from authoritative store state (D34).
     let effective: EffectiveParams | undefined;
     let listEffective: ListEffectiveParams | undefined;
@@ -2210,24 +2647,43 @@ export class Pep {
       const bound = recipients && recipientsRouted ? { recipients } : {};
       effective = buildEffectiveParams({ action: mapping.action, invoice, vendor, resource: operationTarget, ...bound });
       amount = effective.amount;
-      // @spec resource-access#initial-common-constraints (#1266): the
-      // invoice's issuance instant is this service's own record, never an
-      // argument; an invoice with none carries no fact, which satisfies no
-      // issuance bound. The invoice version the parameter digest binds moves
-      // with any change to it, so a changed fact refuses at reverification.
-      resourceObj = {
-        type: "invoice",
-        id: invoice.id,
-        properties: {
-          vendor_id: vendor.id,
-          ...(typeof invoice.issued_at === "string" ? { issued_at: invoice.issued_at } : {}),
-          // The tenant that owns the invoice is its vendor's, from the vendor
-          // record, whose version the parameter digest also binds.
-          ...(typeof vendor.tenant === "string" ? { tenant: vendor.tenant } : {}),
-          // The invoice's own classification label, from its record.
-          ...(typeof invoice.classification === "string" ? { data_classification: invoice.classification } : {}),
-        },
-      };
+      // The one observation of the store records this crossing's decision
+      // and context are built from.
+      const records: StoreRecords = { invoice, vendor, payments: this.deps.payments };
+      // @spec runtime#evaluation-context-binding, runtime-evidence#pre-decision-refusal
+      // (#773): "The enforcing PEP MUST capture the declared facts from their
+      // authoritative interfaces and MUST NOT accept agent-supplied values as
+      // those observations." Captured here, beside the invoice and vendor
+      // load and before any decision request, from the records the request's
+      // invoice resolves to. "An inability to capture context before
+      // requesting a Decision produces a pre-decision Refusal Record":
+      // `evaluation_context_unresolvable`, never a phaseless or contextless
+      // request to the PDP. A compensate crossing's facts are the committed
+      // wire's, not the invoice's (#252): it captures below, once its link is
+      // established.
+      if (contextCovered && !mapping.compensates) {
+        const captured = captureEvaluationContext({
+          declarations: contextDeclarations,
+          salts: this.contextSalts(),
+          mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+          operation: { action: mapping.action, ...(mapping.phase !== undefined ? { phase: mapping.phase } : {}) },
+          invoiceId: invoice.id,
+          payments: this.deps.payments,
+          records,
+        });
+        if (!captured.ok) {
+          return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
+            resource: { type: "invoice", id: invoice.id },
+          });
+        }
+        contextCapture = { held: captured.held, declaredParameters: captured.declaredParameters };
+      }
+      // @spec resource-access#initial-common-constraints (#1266): the live
+      // facts are this service's own records, never an argument, and the
+      // same observation the capture above committed. The invoice and vendor
+      // versions the parameter digest binds move with any change to them, so
+      // a changed fact refuses at reverification.
+      resourceObj = { type: "invoice", id: invoice.id, properties: liveResourceProperties(records) };
     } else if (mapping.bindsVendorScope) {
       // @spec runtime#read-binding — "a consequential read whose parameters
       // ... request a bulk or export-like result ... MUST bind those
@@ -2323,6 +2779,117 @@ export class Pep {
       }
     }
 
+    // @spec runtime#compound-actions, authzen#context-compensation-link,
+    // runtime-evidence#pre-decision-refusal (#252): a compensate crossing
+    // offsets a committed effect, so its effect parameters are that effect's,
+    // never the invoice as it reads now and never an argument. Before any
+    // authorization (the credential bound below, then the PDP), this PEP
+    // establishes the link from its own retained, verified evidence and reads
+    // the committed wire's own ledger record through it, and the operation's
+    // normal form becomes that wire's invoice, vendor, amount, currency and
+    // payee plus the key of the wire it offsets. The credential bound, the
+    // PDP's constraints, `parameter_digest`, the operation key, the claim on
+    // the idempotency key, any approval bound to the digest, and every
+    // evidence record then bind what will actually be offset. The agent names
+    // only the invoice. No committed effect (none at all, or one only
+    // prepared, held or refused), more than one, a relied-on record that does
+    // not verify, or no ledger record is a link this PEP cannot establish,
+    // refused `compensation_link_unavailable` with no decision request. A
+    // credential naming no compensation at this target is refused first, so
+    // such a caller learns nothing about the effect.
+    let compensates: CompensatedEffect | undefined;
+    if (mapping.phase === "compensate") {
+      const presented = (token.mission !== undefined ? token.credentialAuthority : carriedAuthority) ?? [];
+      const named =
+        Array.isArray(presented) &&
+        presented.some((e) => e.actions.includes(mapping.action) && entryMatchesTarget(e, operationTarget));
+      if (!named && !joinMappingUnavailable) {
+        if (token.mission !== undefined) {
+          await this.recordRefusal(boundary, token, "out_of_authority", mapping.action, view, undefined, { resource: resourceObj });
+          return { permitted: false, denial_reason: "out_of_authority" };
+        }
+        return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
+      }
+      const established =
+        mapping.compensates && effective
+          ? await this.compensatedEffect(missionAnchor, effective.invoice_id, mapping.compensates)
+          : undefined;
+      if (!established) {
+        return await this.refuse(boundary, token, "compensation_link_unavailable", mapping.action, view, undefined, {
+          resource: resourceObj,
+        });
+      }
+      compensates = established.link;
+      effective = buildReversalParams({
+        action: mapping.action,
+        wire: established.wire,
+        resource: operationTarget,
+        reverses: established.link.opKey,
+      });
+      amount = effective.amount;
+      // @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
+      // (#1266, #773; the owner's #1663 review 3): the link was established
+      // across awaits, so the live facts read above may no longer stand. One
+      // synchronous observation of the store records the committed wire's
+      // invoice names, taken now, after the last await of link
+      // establishment, is what both the decision's live properties and the
+      // context capture below are built from, with no await between them.
+      // A record gone by now is the same pre-decision refusal as above.
+      const snapshotInvoice = this.deps.payments.getInvoice(established.wire.invoiceId);
+      if (!snapshotInvoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
+      const snapshotVendor = this.deps.payments.getVendor(snapshotInvoice.vendor_id);
+      if (!snapshotVendor) {
+        return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
+          resource: { type: "invoice", id: snapshotInvoice.id },
+        });
+      }
+      const snapshot: StoreRecords = { invoice: snapshotInvoice, vendor: snapshotVendor, payments: this.deps.payments };
+      // The vendor the decision evaluates stays the wire's: only the live
+      // facts are read from the store (the owner's ruling: the existing
+      // decision semantics are preserved).
+      resourceObj = {
+        type: "invoice",
+        id: snapshotInvoice.id,
+        properties: { ...liveResourceProperties(snapshot), vendor_id: effective.vendor_id },
+      };
+      // @spec runtime#evaluation-context-binding, runtime#compound-actions
+      // (#773, #252): a covered compensate crossing captures its own context,
+      // and its facts describe the reversal it would perform: the committed
+      // wire's own ledger record through the link just established (the
+      // vendor, amount and currency, and payee that wire paid, and the
+      // operation key it committed under), never the invoice as it reads
+      // now. With the link established, a context this PEP still cannot
+      // capture is refused before the decision request, as any other.
+      if (contextCovered) {
+        const captured = captureEvaluationContext({
+          declarations: contextDeclarations,
+          salts: this.contextSalts(),
+          mission: { issuer: missionAnchor.issuer, id: missionAnchor.id },
+          operation: { action: mapping.action, phase: mapping.phase },
+          invoiceId: established.wire.invoiceId,
+          payments: this.deps.payments,
+          compensates: { opKey: established.link.opKey, evaluationId: established.link.evaluationId },
+          ...(this.deps.committedEffects ? { committedEffects: this.deps.committedEffects } : {}),
+          // Exactly the records the decision's properties above and its
+          // effect parameters came from: no second read.
+          records: snapshot,
+          wire: established.wire,
+        });
+        if (!captured.ok) {
+          return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view, undefined, {
+            resource: resourceObj,
+          });
+        }
+        contextCapture = { held: captured.held, declaredParameters: captured.declaredParameters };
+      }
+    }
+
+    // @spec runtime#evaluation-context-binding (#773): a covered crossing that
+    // names no invoice has no target to capture a context for.
+    if (contextCovered && contextCapture === undefined) {
+      return await this.refuse(boundary, token, "evaluation_context_unresolvable", mapping.action, view);
+    }
+
     // @spec runtime#input-authority, runtime-oauth#authorization-details-mapping
     // (#825) — the credential bound, on the target this PEP resolved: the
     // action must fall within the verified credential's own authority, one
@@ -2395,6 +2962,14 @@ export class Pep {
       // still permits nothing there (#818 review P2).
       return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
     }
+
+    // @spec harness#work-item-identity, authzen#context-work-item (#815): the
+    // harness's work item, taken only from the propagated reference that
+    // carried it (already verified above: on the Mission-bound path it names
+    // the credential's own Mission, on the Join path it is the reference the
+    // join verifies) and only for the attacher the statement names for this
+    // request's authenticated client. `args` is never read for it.
+    const workItem = attributedWorkItem(signals?.missionReference, token.clientId, this.deps.workItemAttachers);
 
     // Actor facts and capability presentation originate at the enforcement surface.
     const contextActor = buildContextActor({
@@ -2497,6 +3072,10 @@ export class Pep {
         // from its own read.
         ...(this.placement === "pep" ? { mission_state_observation: observation } : {}),
         actor: contextActor,
+        // @spec authzen#context-work-item (#815): "The PEP populates
+        // `context.work_item` only from the harness's authenticated
+        // attachment, never from tool arguments."
+        ...(workItem !== undefined ? { work_item: workItem } : {}),
         // @spec authzen#context-credential (#825, D312): verified facts only,
         // and the credential's own authority on every decision, so the PDP
         // enforces the credential bound itself.
@@ -2511,6 +3090,17 @@ export class Pep {
         ...(capability.catalog_sourced ? { capability_source: capability.binding } : {}),
         ...(effective ? { parameter_digest: parameterDigest(effective) } : {}),
         ...(listDigest ? { parameter_digest: listDigest } : {}),
+        // @spec authzen#context-evaluation-binding (#773): "For an operation
+        // covered by the runtime profile's optional Evaluation-Context Binding
+        // extension, the PEP MUST supply `context.evaluation_context_digest`
+        // and `context.evaluation_context_binding`." The digest commits the
+        // salted context; the secret salt itself never rides the request.
+        ...(contextCapture
+          ? {
+              evaluation_context_digest: contextCapture.held.digest,
+              evaluation_context_binding: { ...contextCapture.held.reference },
+            }
+          : {}),
         ...(amount ? { amount } : {}),
         action_class: mapping.actionClass,
         // @spec authzen#context-action-phase — supplied from THIS surface's
@@ -2518,6 +3108,10 @@ export class Pep {
         // agent-supplied `action_phase` argument is not read anywhere on this
         // path, so it cannot select or move the phase of a crossing.
         ...(mapping.phase !== undefined ? { action_phase: mapping.phase } : {}),
+        // @spec authzen#context-compensation-link (#252): the `evaluation_id`
+        // of the committed effect this compensate crossing offsets, as this
+        // PEP established it above from verified evidence; never an argument.
+        ...(compensates ? { compensates_evaluation_id: compensates.evaluationId } : {}),
         ...(actionApproval ? { action_approval: actionApproval } : {}),
         // @spec authority-server#mission-join (#557 review point 1) —
         // present exactly on the baseline-Join path: tells the PDP to
@@ -2816,8 +3410,32 @@ export class Pep {
       ...(conditionsOf(decision)?.valid_until !== undefined
         ? { permitValidUntil: conditionsOf(decision)?.valid_until }
         : {}),
+      // @spec authzen#decision-conditions `work_item` (#815): the permit's
+      // condition as the verified decision carried it, and the work item this
+      // PEP attributes to the request it is executing.
+      ...(conditionsOf(decision)?.work_item !== undefined ? { permitWorkItem: conditionsOf(decision)?.work_item } : {}),
+      ...(workItem !== undefined ? { workItem } : {}),
       ...(retained?.parameter_digest !== undefined
         ? { authorizedParameterDigest: retained.parameter_digest }
+        : {}),
+      // @spec runtime#evaluation-context-binding (#773): the binding this PEP
+      // captured and sent, held for the attempt with the decided parameters,
+      // so the permit is never reinterpreted through a changed declaration.
+      ...(contextCapture && effective
+        ? {
+            evaluationContext: {
+              held: contextCapture.held,
+              decided: frozenParameters(effective),
+              declaredParameters: contextCapture.declaredParameters,
+              effective,
+            },
+          }
+        : {}),
+      ...(conditionsOf(decision)?.evaluation_context_digest !== undefined
+        ? { permitEvaluationContextDigest: conditionsOf(decision)?.evaluation_context_digest }
+        : {}),
+      ...(typeof retained?.evaluation_context_digest === "string"
+        ? { authorizedEvaluationContextDigest: retained.evaluation_context_digest }
         : {}),
       executionId: newRecordId("exe"),
       permitId: decision.context.decision_id as string,
@@ -2841,21 +3459,12 @@ export class Pep {
         : {}),
       observeEffectiveDigest: () => {
         if (effective) {
-          const invoice = this.deps.payments.getInvoice(effective.invoice_id);
-          const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
-          // The target is gone: no digest over "the parameters actually
-          // attempted" exists to observe. Declining is the honest answer.
-          if (!invoice || !vendor) return undefined;
-          const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
-          if (!bound) return undefined;
-          const fresh = buildEffectiveParams({
-            action: effective.action,
-            invoice,
-            vendor,
-            resource: effective.resource,
-            ...bound,
-          });
-          return parameterDigest(fresh);
+          // The target, or the routing it addresses, no longer resolves: no
+          // digest over "the parameters actually attempted" exists to
+          // observe. The observation is withheld, so the suppressed record
+          // still emits and carries no effective digest (#786).
+          const fresh = this.freshEffectiveParams(effective);
+          return fresh ? parameterDigest(fresh) : undefined;
         }
         if (listEffective) {
           const loaded = loadCheckedView(this.deps.loadView, {
@@ -2879,6 +3488,14 @@ export class Pep {
         return undefined;
       },
     };
+    // @spec runtime#compound-actions (#252): a compensate crossing's
+    // parameters are the committed wire's, so a disposition observes them from
+    // that wire's ledger record, not from the invoice as it reads now.
+    if (compensates && effective) {
+      const link = compensates;
+      const reversal = effective;
+      attempt.observeEffectiveDigest = () => this.observeReversalDigest(reversal, link);
+    }
 
     // @spec authzen#response-context, runtime#decision-output: "a condition
     // the enforcing component does not recognize makes the permit unusable."
@@ -2903,6 +3520,30 @@ export class Pep {
       return { permitted: false, refusal_reason: "unrecognized_condition" };
     }
 
+    // @spec runtime#input-authority-dependency (#830, D798): the composed
+    // resource-policy step for a declared dependency routed to this PEP, after
+    // the permit and before any obligation runs or effect is released. A
+    // dependency not established suppresses the permit, and the refusal is
+    // this mechanism's own, `resource_policy`.
+    const dependency = this.deps.authorityDependency;
+    if (dependency !== undefined && dependency.declaration.enforcement.direct === "pep") {
+      const checked = checkAuthorityDependency(dependency, { id: missionAnchor.id, issuer: missionAnchor.issuer }, {
+        enforcer: "pep",
+        action: mapping.action,
+      });
+      if (!checked.ok) {
+        await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy" };
+      }
+      // The ceiling travels with the permit into execution admission and is
+      // enforced at release (the `authority_dependency` use check).
+      attempt.authorityDependency = checked.validUntilMs !== undefined ? { validUntilMs: checked.validUntilMs } : {};
+    } else if (dependency !== undefined && dependency.governed({ id: missionAnchor.id, issuer: missionAnchor.issuer })) {
+      // Routed to the PDP, whose permit carries the ceiling as `valid_until`:
+      // this PEP still rechecks known invalidations at release.
+      attempt.authorityDependency = {};
+    }
+
     // @spec authzen#obligation-processing (#1640, D744 ruling 8): "on a
     // permit the PEP MUST fulfill each obligation before releasing the
     // action's effect", and "MUST treat an obligation it does not recognize,
@@ -2913,25 +3554,28 @@ export class Pep {
     // judged: one obligation not fulfilled suppresses it, never a silently
     // granted permit and never folded into the conditions refusal reason
     // above (a distinct rule, a distinct reason).
+    //
+    // A present `obligations` member that is not an array (null, an object,
+    // a string) names no obligation this PEP can perform or account for: it
+    // is malformed and refused, and the record carries no outcome list rather
+    // than a fabricated one (D770 ruling 5).
     const attached: unknown = decision.context.obligations;
     if (attached !== undefined && !(Array.isArray(attached) && attached.length === 0)) {
-      // A member that is not an array names no obligation this PEP can
-      // perform or account for: unfulfillable, with no outcome list.
       const processed: ObligationProcessing = Array.isArray(attached)
         ? await processObligations(attached, this.deps.notifier, attempt.evaluationId)
         : { fulfilled: false };
       if (!processed.fulfilled) {
         // @spec runtime-evidence#execution-evidence-object `obligation_outcomes`
-        // ("one object per attached obligation"): every entry is named when
-        // every attached obligation identifies itself, and the member is
-        // omitted entirely when one does not (#786).
+        // ("one object per attached obligation, in the order the decision
+        // returned them"): every attached obligation has its entry, a malformed
+        // one included, with no `id` or `type` invented for it (#786).
         await this.suppressExecution(attempt, "obligation_unfulfilled", {
           ...(processed.outcomes ? { obligationOutcomes: processed.outcomes } : {}),
         });
         return { permitted: false, refusal_reason: "unfulfillable_obligation" };
       }
-      // Fulfilled means every obligation identified itself, so the list is whole.
-      if (processed.outcomes) attempt.obligationOutcomes = processed.outcomes;
+      // Fulfilled: every obligation identified itself and was performed.
+      attempt.obligationOutcomes = processed.outcomes;
     }
 
     // @spec runtime#idempotency (#918): the pair a keyed reversible write
@@ -2971,7 +3615,131 @@ export class Pep {
       ...(listEffective ? { listEffective } : {}),
       ...(capabilitySnapshot ? { capabilitySnapshot } : {}),
       ...(listVendorScope ? { list_vendor_scope: listVendorScope } : {}),
+      ...(compensates ? { compensates } : {}),
     };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime-evidence#decision-evidence-object
+   * `compensates_evaluation_id`, authzen#context-compensation-link (#252): the
+   * one committed effect of `compensated` on invoice `invoiceId` under the
+   * governing Mission, from this PEP's retained evidence: a permit's Decision
+   * Evidence for that action and phase on that invoice, joined by its signed
+   * `evaluation_id` to `completed` Execution Evidence, both re-verified under
+   * their own envelopes now. The operation key the effect committed under is
+   * derived from the verified Decision, never read from a retention row's
+   * unsigned join key. Through that key and the evaluation identifier the
+   * committed wire's own ledger record (`PepDeps.committedEffects`) supplies
+   * the effect's parameters: the invoice and vendor it paid, its amount,
+   * currency and payee.
+   *
+   * `undefined` when there is no such effect (none at all, or one only
+   * prepared, held or refused), when there is more than one, when a relied-on
+   * record does not verify, or when no ledger record answers for it (no
+   * source bound included). Every filter reads signed content, not a row's
+   * unsigned members. This deployment links only an effect committed under
+   * the same Mission.
+   */
+  private async compensatedEffect(
+    mission: { id: string; issuer: string },
+    invoiceId: string,
+    compensated: { action: string; phase: ActionPhase },
+  ): Promise<{ link: CompensatedEffect; wire: CommittedWire } | undefined> {
+    const held = this.deps.evidence.all();
+    const committed: Array<{ decision: DecisionEvidence; execution: ExecutionEvidence }> = [];
+    for (const row of held) {
+      if (row.kind !== "decision") continue;
+      const d = row.content;
+      if (
+        d.decision !== "permit" ||
+        d.mission.id !== mission.id ||
+        d.mission.issuer !== mission.issuer ||
+        d.action.name !== compensated.action ||
+        d.action_phase !== compensated.phase ||
+        d.resource.type !== "invoice" ||
+        d.resource.id !== invoiceId
+      ) {
+        continue;
+      }
+      const completed = held.filter(
+        (e): e is ExecutionEvidence =>
+          e.kind === "execution" &&
+          e.content.evaluation_id === d.evaluation_id &&
+          e.content.mission_id === mission.id &&
+          e.content.outcome === "completed",
+      );
+      // Permitted and never committed: a prepared, held or refused attempt.
+      if (completed.length === 0) continue;
+      committed.push(...completed.map((execution) => ({ decision: row, execution })));
+    }
+    if (committed.length !== 1) return undefined;
+    const [{ decision, execution }] = committed as [{ decision: DecisionEvidence; execution: ExecutionEvidence }];
+    if (!(await this.deps.evidence.verifyRetained(decision))) return undefined;
+    if (!(await this.deps.evidence.verifyRetained(execution))) return undefined;
+    const original = decision.content;
+    if (typeof original.parameter_digest !== "string") return undefined;
+    const link: CompensatedEffect = {
+      evaluationId: original.evaluation_id,
+      opKey: operationKey(original.mission.id, original.action.name, original.parameter_digest, original.action_phase),
+    };
+    const wire = this.deps.committedEffects?.committedWire(link.opKey, link.evaluationId);
+    if (!wire || wire.invoiceId !== invoiceId) return undefined;
+    return { link, wire };
+  }
+
+  /**
+   * @spec runtime#compound-actions, runtime#execution-reverification (#252):
+   * the compensate crossing's counterpart of {@link reverify}. Its normal
+   * form is the committed wire's, so it is re-derived from that wire's ledger
+   * record through the established link, never from the invoice as it reads
+   * now, and compared with the digest the permit bound. A record that
+   * answers differently is a parameter mismatch. A record that no longer
+   * answers leaves the effective parameters unestablished: `target_drift`,
+   * with the authorized digest kept and the effective one absent (#786).
+   */
+  async reverifyCompensation(
+    effective: EffectiveParams,
+    expectedDigest: string,
+    token: TokenFacts,
+    attempt: ExecutionAttempt,
+    link: CompensatedEffect,
+  ): Promise<ReverifyOutcome> {
+    const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
+    if (!capability.ok) return capability;
+    // @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+    // (#773): on a covered compensate crossing the context check runs in the
+    // same step and classifies first, as in {@link reverify}: a moved fact of
+    // the committed wire's record is `target_drift` though it also moves the
+    // reversal form's digest.
+    const context = this.evaluationContextFailure(attempt);
+    if (context !== undefined) {
+      const disposition = await this.suppressExecution(attempt, context);
+      return { ok: false, error: context, disposition };
+    }
+    const freshDigest = this.observeReversalDigest(effective, link);
+    if (freshDigest === undefined) {
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
+    }
+    if (freshDigest !== expectedDigest) {
+      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
+      return { ok: false, error: "parameter_mismatch", disposition };
+    }
+    const contextDigest = this.observeEffectiveContextDigest(attempt);
+    return {
+      ok: true,
+      effectiveParameterDigest: freshDigest,
+      ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
+    };
+  }
+
+  /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */
+  private observeReversalDigest(effective: EffectiveParams, link: CompensatedEffect): string | undefined {
+    const wire = this.deps.committedEffects?.committedWire(link.opKey, link.evaluationId);
+    if (!wire) return undefined;
+    return parameterDigest(
+      buildReversalParams({ action: effective.action, wire, resource: effective.resource, reverses: link.opKey }),
+    );
   }
 
   /**
@@ -2986,12 +3754,14 @@ export class Pep {
    * agent's arguments or an unverified response. `role` is `pep`: nothing
    * executed, so the executor did not dispose of this permit.
    *
-   * The effective digest is OBSERVED here, at the disposition, and the record
-   * is not emitted at all when an authorized digest is present and no
-   * observation can be made ({@link SuppressOutcome} `gap`). Emitting a
-   * sentinel would fabricate an observation; emitting the record without the
-   * member would be invalid under the present schema. That case is #786's
-   * declared outstanding defect, joint with #594.
+   * The effective digest is OBSERVED here, at the disposition. When the
+   * effective parameters cannot be established (the permit's target no
+   * longer resolves, say), the record keeps the authorized digest and omits
+   * the effective one: "this member MUST be absent rather than copied from
+   * `authorized_parameter_digest` or populated with a fabricated digest ...
+   * The absence means the comparison is unavailable". That exception is the
+   * suppressed record's alone: the shared writer never emits a completed
+   * record without the effective digest ({@link completeExecution}).
    *
    * Emission is awaited so signing and retention complete before the caller
    * learns the outcome, and one retry reuses the same execution identity. A
@@ -3030,11 +3800,14 @@ export class Pep {
    */
   async completeExecution(
     attempt: ExecutionAttempt,
-    opts: { effectiveParameterDigest?: string } = {},
+    opts: { effectiveParameterDigest?: string; effectiveEvaluationContextDigest?: string } = {},
   ): Promise<SuppressOutcome> {
     return this.recordDisposition(attempt, {
       outcome: "completed",
       ...(opts.effectiveParameterDigest !== undefined ? { effectiveParameterDigest: opts.effectiveParameterDigest } : {}),
+      ...(opts.effectiveEvaluationContextDigest !== undefined
+        ? { effectiveEvaluationContextDigest: opts.effectiveEvaluationContextDigest }
+        : {}),
     });
   }
 
@@ -3045,15 +3818,45 @@ export class Pep {
    */
   private async recordDisposition(
     attempt: ExecutionAttempt,
-    disposition: { outcome: "suppressed"; error: string } | { outcome: "completed"; effectiveParameterDigest?: string },
+    disposition:
+      | { outcome: "suppressed"; error: string }
+      | { outcome: "completed"; effectiveParameterDigest?: string; effectiveEvaluationContextDigest?: string },
     opts: { obligationOutcomes?: ExecutionEvidenceObject["obligation_outcomes"] } = {},
   ): Promise<SuppressOutcome> {
     const observed =
       disposition.outcome === "completed" && disposition.effectiveParameterDigest !== undefined
         ? disposition.effectiveParameterDigest
         : attempt.observeEffectiveDigest();
-    if (attempt.authorizedParameterDigest !== undefined && observed === undefined) {
+    // @spec runtime-evidence#execution-evidence-object
+    // `effective_parameter_digest` (#786): "REQUIRED whenever
+    // `authorized_parameter_digest` is present, except on a `suppressed`
+    // record whose executing PEP could not establish the effective
+    // parameters." A suppression always emits, without the member when it is
+    // unobserved. A completed disposition never omits it: with no observation
+    // there is no valid completed record to emit, and that is the reported
+    // gap, never a record that drops the member.
+    if (disposition.outcome === "completed" && attempt.authorizedParameterDigest !== undefined && observed === undefined) {
       return { recorded: false, gap: "effective_parameter_digest_unobservable" };
+    }
+    // @spec runtime-evidence#execution-evidence-object
+    // `effective_evaluation_context_digest` (#773): the context pair on the
+    // same terms. A suppression records the context it could re-establish
+    // now, under the committed descriptor and salt version, and omits it
+    // otherwise. A completed disposition of a covered crossing carries the
+    // context its reverification re-established before the effect, where the
+    // path reverified (the write paths), or the context re-established now
+    // (the read path, which releases no effect), as the parameter digest
+    // falls back above; with neither, it is the reported gap.
+    const observedContext =
+      disposition.outcome === "completed" && disposition.effectiveEvaluationContextDigest !== undefined
+        ? disposition.effectiveEvaluationContextDigest
+        : this.observeEffectiveContextDigest(attempt);
+    if (
+      disposition.outcome === "completed" &&
+      attempt.authorizedEvaluationContextDigest !== undefined &&
+      observedContext === undefined
+    ) {
+      return { recorded: false, gap: "effective_evaluation_context_digest_unobservable" };
     }
     // The outcomes of the permit's obligations, as performed before release,
     // unless this disposition is the obligation failure itself.
@@ -3065,19 +3868,34 @@ export class Pep {
       evaluation_id: attempt.evaluationId,
       mission_id: attempt.mission.id,
       audience: attempt.audience,
-      // The pair is carried together or not at all: the authorized member MUST
-      // be absent when the linked Decision Evidence carries no
-      // `parameter_digest`, and an effective digest alone commits nothing.
-      ...(attempt.authorizedParameterDigest !== undefined && observed !== undefined
+      // The authorized member mirrors the linked Decision Evidence: present
+      // exactly when it carries `parameter_digest`. The effective member is
+      // present only beside it and only when observed: an effective digest
+      // alone commits nothing, and an unobserved one is never invented.
+      ...(attempt.authorizedParameterDigest !== undefined
         ? {
             authorized_parameter_digest: attempt.authorizedParameterDigest,
-            effective_parameter_digest: observed,
+            ...(observed !== undefined ? { effective_parameter_digest: observed } : {}),
+          }
+        : {}),
+      // @spec runtime-evidence#execution-evidence-object (#773): the context
+      // pair on the same terms: the authorized member mirrors the linked
+      // Decision Evidence, and the effective one is present only when the
+      // context was re-established now. Recorded whatever the outcome or `error`, so
+      // the primary error never erases either divergence.
+      ...(attempt.authorizedEvaluationContextDigest !== undefined
+        ? {
+            authorized_evaluation_context_digest: attempt.authorizedEvaluationContextDigest,
+            ...(observedContext !== undefined ? { effective_evaluation_context_digest: observedContext } : {}),
           }
         : {}),
       outcome: disposition.outcome,
       ...(disposition.outcome === "suppressed" ? { error: disposition.error } : {}),
       ...(obligationOutcomes ? { obligation_outcomes: obligationOutcomes } : {}),
       ...(attempt.hopReference ? { hop_reference: attempt.hopReference } : {}),
+      // @spec runtime-evidence#evidence-extensions `work_item` (#815):
+      // "recorded as the executing PEP attributed it".
+      ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
     };
     for (let tries = 0; tries < 2; tries += 1) {
       try {
@@ -3171,6 +3989,52 @@ export class Pep {
    * `operation_already_claimed` record was written), where a second record
    * under the same execution identity would be refused.
    */
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798, D813): the declared
+   * dependency's recheck at a use of the permit. The ceiling the composed step
+   * carried from admission refuses once reached, whatever a later read shows;
+   * then the dependency is evaluated again over the resolver's current cached
+   * observation wherever the declaration routes direct evaluation, so a known
+   * withdrawal, an observed invalidation or a lost observation that reached
+   * this PEP after the decision stops the release. Under lifecycle-only
+   * enforcement the route's own checks run instead: the reconciliation's
+   * currency, an unresolved Subject, and the declared observation limits
+   * (`max_staleness_seconds`, and the online check where declared). Each
+   * refusal is recorded in the deployment's dependency evidence.
+   */
+  private authorityDependencyAtUse(attempt: ExecutionAttempt, now: Date): string | undefined {
+    const dependency = this.deps.authorityDependency;
+    const carried = attempt.authorityDependency;
+    if (dependency === undefined || carried === undefined) return undefined;
+    const mission = { id: attempt.mission.id, issuer: attempt.mission.issuer };
+    const governed = dependency.governed(mission);
+    if (governed === undefined) return undefined;
+    if (carried.validUntilMs !== undefined && now.getTime() >= carried.validUntilMs) {
+      dependency.evidence?.record({
+        enforcer: "pep",
+        dependency: dependency.declaration.id,
+        failure: "stale",
+        mission,
+        subject: governed.subject,
+        client: governed.clientId,
+        action: attempt.action,
+        at: now.toISOString(),
+      });
+      return "resource_policy";
+    }
+    // Lifecycle-only, the route's own checks: the reconciliation's currency,
+    // an unresolved Subject, and the declared observation limits (staleness
+    // and any online check); a direct route evaluates the observation itself.
+    const lifecycleOnly = dependency.declaration.enforcement.direct === undefined;
+    const checked = checkAuthorityDependency(
+      dependency,
+      mission,
+      { enforcer: "pep", action: attempt.action },
+      lifecycleOnly ? { direct: false, lag: true } : { direct: true, lag: false },
+    );
+    return checked.ok ? undefined : "resource_policy";
+  }
+
   permitUseFailure(attempt: ExecutionAttempt): string | undefined {
     for (const check of PERMIT_USE_CHECKS) {
       const now = this.now();
@@ -3181,6 +4045,8 @@ export class Pep {
         profile: this.toolActionUnder(attempt.tool, attempt.operationProfile),
         boundary: this.boundaryContext.establish(now),
         contracts: this.contracts(),
+        dependency: (a, at) => this.authorityDependencyAtUse(a, at),
+        evaluationContext: (a) => this.evaluationContextFailure(a),
       });
       if (error !== undefined) return error;
     }
@@ -3202,22 +4068,40 @@ export class Pep {
   ): Promise<ReverifyOutcome> {
     const capability = await this.reverifyCapability(effective.capability_snapshot, token, effective.action, attempt);
     if (!capability.ok) return capability;
+    // @spec runtime#evaluation-context-binding, runtime-evidence#execution-evidence-object
+    // (#773): on a crossing that captured a context, the context check runs
+    // in the same step and classifies first, so a moved authoritative fact
+    // is `target_drift` though it also moves the overlapping parameter
+    // digest, and a deviating agent-supplied member stays
+    // `parameter_mismatch`. An uncovered crossing is unchanged.
+    const context = this.evaluationContextFailure(attempt);
+    if (context !== undefined) {
+      const disposition = await this.suppressExecution(attempt, context);
+      return { ok: false, error: context, disposition };
+    }
     const invoice = this.deps.payments.getInvoice(effective.invoice_id);
     const vendor = invoice ? this.deps.payments.getVendor(invoice.vendor_id) : undefined;
     if (!invoice || !vendor) {
-      // The permit's target no longer resolves. The parameters it bound cannot
-      // be met, so the disposition is a parameter mismatch; the record itself
-      // is the outstanding case above (no effective digest is observable).
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      // @spec runtime-evidence#execution-evidence-object
+      // `effective_parameter_digest` (#786): the target the permit was
+      // evaluated for no longer resolves, so the effective parameters cannot
+      // be established. That is `target_drift`, "never `parameter_mismatch`:
+      // no comparison was made", and the record carries the authorized digest
+      // with the effective one absent.
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     // @spec resource-access#initial-common-constraints (#1266): the routed
-    // recipients re-resolved now; a routing that changed, or no longer
-    // resolves, is a parameter mismatch.
+    // recipients re-resolved now. A routing that changed is a parameter
+    // mismatch, caught by the digest comparison below. A routing that no
+    // longer resolves leaves the recipients the operation addresses, and so
+    // its effective parameters, unestablished: the post-permit counterpart of
+    // the pre-decision `unresolvable_recipients` (`target_unresolvable`),
+    // recorded `target_drift` with no effective digest (#786).
     const bound = recipientParams(effective.recipients !== undefined || this.reachesRecipients(effective.action), this.deps.payments, vendor.id);
     if (!bound) {
-      const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
-      return { ok: false, error: "parameter_mismatch", disposition };
+      const disposition = await this.suppressExecution(attempt, "target_drift");
+      return { ok: false, error: "target_drift", disposition };
     }
     const fresh = buildEffectiveParams({ action: effective.action, invoice, vendor, resource: effective.resource, ...bound });
     const freshDigest = parameterDigest(fresh);
@@ -3225,7 +4109,12 @@ export class Pep {
       const disposition = await this.suppressExecution(attempt, "parameter_mismatch");
       return { ok: false, error: "parameter_mismatch", disposition };
     }
-    return { ok: true, effectiveParameterDigest: freshDigest };
+    const contextDigest = this.observeEffectiveContextDigest(attempt);
+    return {
+      ok: true,
+      effectiveParameterDigest: freshDigest,
+      ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
+    };
   }
 
   /**

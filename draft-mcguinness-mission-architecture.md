@@ -974,8 +974,10 @@ can still admit, at decision time, an effect the Approver never saw
 rendered in that form.
 
 Attribution has the same limit at task-item grain: proving which
-concurrent task item produced a permitted action needs a verified
-cross-link that no family carrier supplies ({{binding-properties}}).
+concurrent task item produced a permitted action needs the verified
+cross-link of the optional `work-item-attributed` composition
+({{binding-properties}}); without it, a deployment attributes an
+action to its Mission only.
 
 ## Survivable Incorrectness {#survivable-incorrectness}
 
@@ -3140,20 +3142,29 @@ every member property:
   ({{I-D.draft-mcguinness-mission-harness}});
 - **mission-credential-bound**: `credential-mission-bound` plus
   `presenter-key-bound`, end to end; `instance-bound` strengthens
-  the claim where an instance identity exists and is verified; and
+  the claim where an instance identity exists and is verified;
 - **runtime-action-bound**: Mission binding establishment
   ({{I-D.draft-mcguinness-mission-runtime}}, Section "Mission Binding
-  Establishment") plus `action-bound`.
+  Establishment") plus `action-bound`; and
+- **work-item-attributed**: `work-item-bound` plus `action-bound` plus
+  a verified cross-link: the action permit, or its authenticated
+  request context, binds the same qualified work-item identifier the
+  harness recorded for that item and its Mission, and the executing
+  enforcement point refuses a permit whose work item differs from the
+  request it executes ({{I-D.draft-mcguinness-mission-harness}},
+  {{I-D.draft-mcguinness-mission-authzen}}).
 
-The family defines no work-item-attribution composition. Holding
-`work-item-bound` and `action-bound` together does not prove the
-permitted action came from that work item: concurrent items under
-one Mission still substitute. The composition becomes definable only
-when a verified cross-link exists: the action permit, or its
-authenticated request context, binds the same tamper-resistant
-work-item identifier the harness recorded. No family carrier
-supplies that cross-link, so a deployment claims the two properties
-separately and nothing more.
+Without the cross-link, holding `work-item-bound` and `action-bound`
+together does not prove the permitted action came from that work
+item: concurrent items under one Mission still substitute. The
+cross-link holds on a path only where the harness is the declared
+attacher, the work item reaches the decision through the harness's
+authenticated attachment and never from a value the agent supplies,
+and the decision, its cache key, the permit, and the Decision and
+Execution Evidence all carry it. A path without the cross-link claims
+Mission-level attribution only. `work-item-attributed` is optional,
+and it proves neither that the action serves the work item's purpose
+nor isolation between work items.
 
 The mechanism mapping is conservative:
 
@@ -4408,6 +4419,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Binding Properties: the `work-item-attributed` composition
+  is `work-item-bound` plus `action-bound` plus the verified cross-link
+  that binds the harness's qualified work-item identifier into the
+  decision, the permit, and the evidence; a path without it claims
+  Mission-level attribution only (#815).
 
 - Deployment Profile Example Shapes: the first shape's illustrative
   `revocation_exposure` member states the inputs that size what can

@@ -18,7 +18,14 @@
  */
 
 import {
+  type AuthorityDependencyDeclaration,
+  EVALUATION_CONTEXT_BINDING_EXTENSION,
+  EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
+  type EvaluationContextGranularity,
+  type EvaluationContextProperty,
   IDEMPOTENCY_SCOPE_DIMENSIONS,
+  parseAuthorityDependencyDeclarations,
   isScopeDimension,
   isVolatileScopeMember,
   type ResourceContractDeclaration,
@@ -80,7 +87,8 @@ export type EnforcementExtensionName =
   | "transaction_assurance"
   | "evidence"
   | "high_assurance_agent"
-  | "outcome_reconciliation";
+  | "outcome_reconciliation"
+  | "evaluation_context_binding";
 
 /**
  * @spec runtime#execution-reverification — one `transaction_assurance`
@@ -252,8 +260,46 @@ export interface ExecutionCapabilityDeclaration {
   asserted: ReadonlyArray<(typeof EXECUTION_ASSERTIONS)[number]>;
 }
 
+/**
+ * @spec runtime#evaluation-context-binding (#773): the Evaluation-Context
+ * Binding declaration: "the covered classes and operations, each operation's
+ * versioned binding descriptor, and whether it reaches the verified or
+ * enforced property". Each descriptor is published with its document, which
+ * names every decision-relevant fact's authoritative resolver, normalization
+ * and granularity, and hashes to its reference. Read through the one parser
+ * every consumer applies (`EvaluationContextBindingDeclarations`). A
+ * reference-statement representation, not a Runtime wire member.
+ */
+export interface EvaluationContextBindingDeclaration {
+  covered_classes: readonly string[];
+  operations: ReadonlyArray<{
+    operation: string;
+    action_class: string;
+    phases?: ReadonlyArray<(typeof COMPOUND_PHASES)[number]>;
+    property: EvaluationContextProperty;
+    descriptor: EvaluationContextBindingRef;
+  }>;
+  descriptors: ReadonlyArray<
+    EvaluationContextBindingRef & {
+      document: {
+        id: string;
+        version: string;
+        targets: readonly string[];
+        facts: ReadonlyArray<{
+          name: string;
+          resolver: string;
+          granularity: EvaluationContextGranularity;
+          normalization: string;
+          parameter?: string;
+        }>;
+      };
+    }
+  >;
+}
+
 export interface EnforcementExtensionDeclarations {
   custody?: ReadonlyArray<{ mediated_class: string; custody_mode: string }>;
+  evaluation_context_binding?: EvaluationContextBindingDeclaration;
   transaction_assurance?: ReadonlyArray<TransactionAssuranceDeclaration>;
   reversible_write_idempotency?: ReadonlyArray<ReversibleWriteControlDeclaration>;
   execution_capabilities?: ReadonlyArray<ExecutionCapabilityDeclaration>;
@@ -275,6 +321,13 @@ export interface EnforcementExtensionDeclarations {
    * Runtime wire member.
    */
   resource_contracts?: ReadonlyArray<ResourceContractDeclaration>;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): each declared
+   * authority dependency, with every element the Runtime requires
+   * ({@link authorityDependencyFindings}). A reference-statement
+   * representation, not a Runtime wire member.
+   */
+  authority_dependencies?: ReadonlyArray<AuthorityDependencyDeclaration>;
 }
 
 /**
@@ -622,6 +675,79 @@ export function resourceContractFindings(input: unknown): EnforcementScopeFindin
   } catch (e) {
     return [{ member: "extensions.resource_contracts", problem: (e as Error).message }];
   }
+}
+
+/**
+ * @spec runtime#input-authority-dependency (#830, D798): "A deployment that
+ * declares an authority dependency MUST state in its Enforcement Scope
+ * Statement" the dependency and its source, what it governs, the invalidating
+ * changes, its maximum staleness, its enforcement route and its recovery and
+ * responsibility transfer. The `authority_dependencies` declarations, checked
+ * wherever they appear through the one parser every enforcing component reads
+ * them with: a declaration missing any element is refused at load.
+ */
+export function authorityDependencyFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const declared = extensions.authority_dependencies;
+  if (declared === undefined) return [];
+  try {
+    parseAuthorityDependencyDeclarations(declared);
+    return [];
+  } catch (e) {
+    return [{ member: "extensions.authority_dependencies", problem: (e as Error).message }];
+  }
+}
+
+/**
+ * @spec runtime#evaluation-context-binding (#773): the Evaluation-Context
+ * Binding claim and declaration, through the one parser every consumer reads
+ * them with. Refused at load: a claim with no declaration, no covered class, a
+ * covered class with no operation, an operation with no descriptor, a
+ * descriptor document that does not hash to its reference ("Published
+ * descriptor bytes MUST remain immutable for that reference"), a fact naming
+ * no authoritative resolver, normalization or granularity, a covered class
+ * outside `mediated_scope.action_classes`, and an operation declaring the
+ * enforced property whose execution capabilities assert no
+ * `evaluation_context_enforced` ("The **enforced** property MUST NOT be
+ * claimed without an atomic resource-side comparison coupled to the effect";
+ * that assertion itself needs a declared precondition). A declaration present
+ * without the claim is checked the same way and covers nothing.
+ */
+export function evaluationContextBindingFindings(input: unknown): EnforcementScopeFinding[] {
+  const stmt = object(input) ? input : {};
+  const member = `extensions.${EVALUATION_CONTEXT_BINDING_EXTENSION}`;
+  let declared: EvaluationContextBindingDeclarations;
+  try {
+    declared = new EvaluationContextBindingDeclarations(stmt);
+  } catch (e) {
+    return [{ member, problem: (e as Error).message }];
+  }
+  const findings: EnforcementScopeFinding[] = [];
+  const scope = object(stmt.mediated_scope) ? stmt.mediated_scope : {};
+  const mediated = Array.isArray(scope.action_classes) ? (scope.action_classes as readonly unknown[]) : [];
+  for (const c of declared.coveredClasses) {
+    if (!mediated.includes(c)) findings.push({ member, problem: `covered class "${c}" is outside mediated_scope.action_classes` });
+  }
+  const extensions = object(stmt.extensions) ? stmt.extensions : {};
+  const capabilities = Array.isArray(extensions.execution_capabilities) ? (extensions.execution_capabilities as unknown[]) : [];
+  for (const o of declared.operations) {
+    if (o.property !== "enforced") continue;
+    const asserted = capabilities.some(
+      (c) =>
+        object(c) &&
+        c.operation === o.operation &&
+        Array.isArray(c.asserted) &&
+        c.asserted.includes("evaluation_context_enforced"),
+    );
+    if (!asserted) {
+      findings.push({
+        member,
+        problem: `declares the enforced property for ${o.operation} with no execution capability asserting evaluation_context_enforced`,
+      });
+    }
+  }
+  return findings;
 }
 
 /**

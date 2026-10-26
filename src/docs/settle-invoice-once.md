@@ -2,7 +2,7 @@
 
 This walkthrough follows one wire for one invoice through the reference
 payments resource, from admission to settlement, and names the test that
-witnesses each failure case. It describes `payments-runtime-profile-v13`
+witnesses each failure case. It describes `payments-runtime-profile-v14`
 ([operation-profile-payments-v1.md](operation-profile-payments-v1.md)) as
 built and adds no requirement. Paths are relative to `src/`.
 
@@ -134,7 +134,7 @@ W28).
 | Mission termination while unresolved | Reconciliation reads no Mission state: after termination it still settles the claim from the ledger entry recorded against the permit. A new effect under the terminated Mission is refused `mission_inactive`: the PDP refuses a non-active state in its own view and in the state the PEP reads live and sends (`evaluate.ts`). The PEP reads Mission state for the decision only, so an attempt already holding its permit runs to its commit point within the permit's validity and the lease (by code reading; no test isolates it). | No new effect under a non-active Mission, and the outcome of initiated work is still recorded | W15 |
 | Duplicate settlement evidence | The same completed record sent twice settles the claim once (`duplicate: true`); a second, distinct completed record for the evaluation is refused `already_settled`. A record retried after it was retained, or emitted twice at once, is kept once under its `execution_id`. Reconciliation records nothing new where the attempt's record exists. A completed record with no committed effect is alerted `orphaned_evidence` and never matched. | One settlement per evaluation; evidence never creates or doubles an effect | W16, W17, W18, W12, W26 |
 | A different request key for the same invoice | Same Mission, unchanged record: the operation key is unchanged, and redemption refuses it (`operation_already_claimed`; the caller sees `permit_consumed`). Same Mission after the record changes, or another Mission: the operation key differs, and the ledger refuses `already_settled`, recorded `suppressed` with `https://payments.demo/execution-errors/already_settled`. `check_transfer` then reports the invoice not feasible. | The invoice settles once under any Mission, operation key or caller key | W2, W10, W21, W22, W23, W24 |
-| A target fact changing before commit | A change between the decision and the reread moves `parameter_digest`, and the attempt is suppressed `parameter_mismatch` with no wire. By code reading, the reread and the ledger insert are separate steps, and the ledger compares no record version, so a change after the reread is not refused; the wire still pays the amount and payee the permit bound. The reference claims no Evaluation-Context Binding, and Runtime keeps this residual (`#security-considerations`, TOCTOU and Replay). | The executed parameters equal the authorized ones, checked up to the reread | W25, W29 |
+| A target fact changing before commit | The reference claims Evaluation-Context Binding for `payments:payment.execute` at the verified property (#773): a change between the decision and the reread moves the bound context, and the attempt is suppressed `target_drift` with no wire, both digest pairs recorded. By code reading, the reread and the ledger insert are separate steps, and the ledger compares no record version, so a change after the reread is not refused; the wire still pays the amount and payee the permit bound. The enforced property is not claimed, and Runtime keeps this residual (`#security-considerations`, TOCTOU and Replay). | The executed parameters and the bound context equal the authorized ones, checked up to the reread | W25, W29, W31 |
 
 ### Witnesses
 
@@ -172,6 +172,7 @@ added.
 - W28. `packages/orchestration/test/orchestration.test.ts`: `state-change behavior (@spec orchestration#state-change-behavior) > an unknown step never runs its post-completion behavior: a compensate plan routes to human review (§ in-flight)`
 - W29. `services/mcp-payments/test/outcome-reconciler.test.ts`: `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a refusal before any effect: the redeeming attempt's own suppressed Execution Evidence settles failed when its settlement never arrived, and nothing executes`
 - W30. `services/mcp-payments/test/outcome-reconciler.test.ts`: `the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing`
+- W31. `services/mcp-payments/test/evaluation-context.test.ts` (new): `the primary error of a context failure at use, with every available digest pair recorded (@spec runtime-evidence#execution-evidence-object, runtime#evaluation-context-binding, #773) > a moved authoritative fact on a covered operation is target_drift: zero effects, both digest pairs recorded and each unequal`
 
 ## The Action Evidence Boundary
 

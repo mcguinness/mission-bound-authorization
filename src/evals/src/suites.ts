@@ -117,13 +117,16 @@ export const adversarialSuite: EvalCaseDef[] = [
   {
     id: "adv-toctou",
     suite: "adversarial",
-    description: "Agent mutates the invoice amount between decision and commit (TOCTOU).",
+    description: "The invoice amount moves between decision and commit (TOCTOU), a context drift under the claimed Evaluation-Context Binding.",
     tool: "execute_wire_transfer",
     args: { invoice_id: "inv-acme" },
     token: () => base(),
     beforeCommit: (store) => store.bumpInvoiceAmount("inv-acme", "499.00"),
     expect: "deny",
-    expectReason: "parameter_mismatch",
+    // @spec runtime#evaluation-context-binding (#773): the agent's arguments
+    // are unchanged and a declared authoritative fact moved, so the refusal
+    // is target_drift, not a parameter deviation.
+    expectReason: "target_drift",
     consequential: true,
   },
   {

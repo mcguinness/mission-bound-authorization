@@ -24,7 +24,8 @@ import {
   resolveCoResolvedLocalPrincipal,
 } from "@mission/core";
 import { openStore, redeemOnce, redemptionSchema, type Database } from "@mission/store";
-import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK } from "jose";
+import type { KeyObject } from "node:crypto";
+import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK, type JWSHeaderParameters } from "jose";
 
 export const ID_JAG_TYP = "oauth-id-jag+jwt";
 export const JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
@@ -37,13 +38,22 @@ export const JWT_BEARER_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
  */
 const FRESHNESS_SKEW_TOLERANCE_MS = 5_000;
 
+/** One trusted issuer's verification keys: fixed, or resolved per grant by `kid`. */
+export type RasTrustAnchor =
+  | { keys: JWK[] }
+  | { resolveKey: (header: JWSHeaderParameters) => Promise<KeyObject | CryptoKey> };
+
 export interface RasConfig {
   issuer: string;
   /** Required destination policy, applied on every redemption before one-time use. */
   localCeiling: readonly AuthorityEntry[];
   localPolicyVersion: string;
-  /** Trusted originating Mission issuers -> their JWKS (issuer trust, local policy). */
-  trustedIssuers: Record<string, { keys: JWK[] }>;
+  /**
+   * Trusted originating Mission issuers -> their keys (issuer trust, local
+   * policy): a fixed JWKS, or a key resolver over the issuer's published set
+   * (#831 C: `IssuerKeys` from `@mission/core`), which follows a rotation.
+   */
+  trustedIssuers: Record<string, RasTrustAnchor>;
   signKey: CryptoKey;
   signKid: string;
   localTokenTtlSeconds?: number;
@@ -198,7 +208,7 @@ export class ResourceAuthorizationServer {
     let payload: Record<string, unknown>;
     let header: Record<string, unknown>;
     try {
-      const jwks = createLocalJWKSet({ keys: anchor.keys } as never);
+      const jwks = "resolveKey" in anchor ? anchor.resolveKey : createLocalJWKSet({ keys: anchor.keys } as never);
       const res = await jwtVerify(idJag, jwks, { audience: this.cfg.issuer, issuer, typ: ID_JAG_TYP });
       payload = res.payload as Record<string, unknown>;
       header = res.protectedHeader as Record<string, unknown>;

@@ -20,12 +20,19 @@
  * the estate `14918`.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { type ActingToken, DEFAULT_AUDIT_RETENTION_S, initSigningKeyRing, type JoinAssertionDeployment, validateMissionIntent } from "@mission/authorization-server";
+import { dirname, join } from "node:path";
+import {
+  type ActingToken,
+  DEFAULT_AUDIT_RETENTION_S,
+  initSigningKeyRing,
+  type JoinAssertionDeployment,
+  reconcileKernelRecovery,
+  validateMissionIntent,
+} from "@mission/authorization-server";
 import { AUDIT_HORIZON_SECONDS, CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { accessTokenHash } from "@mission/mcp-payments";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
@@ -37,6 +44,14 @@ import { buildPilotMas, newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, type MasProcessOptions, startMasProcess } from "../src/mas-pilot/mas-process.js";
 import { masConsoleRoutes, startOperatorConsole } from "../src/mas-pilot/operator-console.js";
 import { relocateEstate } from "./mas-pilot-support.js";
+
+/** A kernel store's recovery witness, created before the MAS first starts on it (#250 step 3). */
+function kernelWitnessFor(storeFile: string, witnessFile: string): string {
+  mkdirSync(dirname(storeFile), { recursive: true });
+  mkdirSync(dirname(witnessFile), { recursive: true });
+  reconcileKernelRecovery({ storeFile, witnessFile, action: "init" });
+  return witnessFile;
+}
 
 const MAS_PORT = 14917;
 const MAS_URL = `http://127.0.0.1:${MAS_PORT}`;
@@ -83,7 +98,7 @@ describe("the MAS operator console reads join evidence (@spec authority-server#j
   it("reads a Mission's join evidence events behind the console's bearer, that Mission's alone, and the MAS serves them on no route of its own", async () => {
     const config = loadMasPilotConfig();
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const known = new Map<string, ActingToken>();
     const deployment: JoinAssertionDeployment = {
       async establishActingToken(form) {
@@ -168,7 +183,7 @@ describe("the pilot's kernel keeps join evidence for the deployment's audit hori
   it("keeps an event for one year after its Mission's expiry, the horizon its tombstones share: past the reusable 90-day default and at its retain_until it is kept across a restart, and only a boot after retain_until prunes it", async () => {
     const config = loadMasPilotConfig();
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const dir = mkdtempSync(join(tmpdir(), "mas-pilot-join-horizon-"));
     dirs.push(dir);
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
@@ -268,7 +283,7 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     const configPath = join(dir, "mas-pilot.json");
     writeFileSync(configPath, JSON.stringify(config));
     const pdpClient = config.separated_mas.pdp_client_id;
-    const pdp = await newStatusClientKey(pdpClient);
+    const pdp = await newStatusClientKey(pdpClient, { disclose: ["provenance"] });
     const joinIntrospectionSecret = crypto.randomUUID();
 
     // The estate the MAS introspects, with the MAS's introspection client registered.
@@ -289,6 +304,7 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       statusClients: [pdp.registration],
       keyRing,
       kernelStore: join(dir, "state", "kernel.db"),
+      kernelWitness: kernelWitnessFor(join(dir, "state", "kernel.db"), join(dir, "witness", "kernel.witness")),
       joinIntrospectionSecret,
       operatorConsole: true,
     };

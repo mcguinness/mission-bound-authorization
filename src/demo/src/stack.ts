@@ -7,8 +7,10 @@
 
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { IssuerKeys } from "@mission/core";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
+  type KernelStoreConfig,
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
@@ -30,7 +32,8 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -296,6 +299,15 @@ export interface DemoStack {
    * a test runs it with `runOnce()`. Every close path stops it first.
    */
   reconciler: OutcomeReconciler;
+  /**
+   * @spec #831 C2 (D825): reload the AS kids the stack's consumers trust
+   * from `topology.json` as it is now, while serving: the payments
+   * resource's pins and the RAS's continuation role. Each consumer replaces
+   * its trust atomically, refusing a configuration that would give one key
+   * two roles. With no AS, nothing AS-signed is verified, and this does
+   * nothing.
+   */
+  reloadTrust(): void;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -392,7 +404,7 @@ export async function composeStack(opts: {
    * a key ring. The composition creates the file's directory; whoever
    * composed the stack closes the kernel (`DemoStack.kernel.close()`).
    */
-  kernelStore?: { file: string };
+  kernelStore?: KernelStoreConfig;
   /**
    * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
    * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
@@ -486,7 +498,9 @@ export async function composeStack(opts: {
   // and the AS txn public JWKS + issuer the RS validates a presented txn-token
   // against.
   let challengeSigner: PepDeps["challengeSigner"];
-  let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
+  // @spec #831 C2: with the auth server, the RS holds the AS's keys through
+  // its jwks_uri (IssuerKeys) rather than a snapshot taken at assembly.
+  let serverJwksUri: string | undefined;
   let rsAsIssuer: string | undefined;
   // @spec txn-authorization#two-phase-expiry — the resource's PUBLISHED
   // txn-challenge key material: served over real HTTP at the resource's
@@ -514,6 +528,8 @@ export async function composeStack(opts: {
   // Resolved after the RS is constructed; the discovery listener reads it
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
+  // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
+  let rasContinuationKeys: IssuerKeys | undefined;
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -701,9 +717,12 @@ export async function composeStack(opts: {
     kernel = as.kernel;
     issuer = asUrl;
     issuerEvidenceStore = as.issuerEvidence;
-    // The RS verifies real tokens against the AS's published public JWKS (the
-    // as-txn public key is published there too; createLocalJWKSet resolves by kid).
-    serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    // @spec #831 C2: the RS verifies real tokens under the AS's jwks_uri,
+    // held through IssuerKeys: the trusted kids of each role only, refreshed
+    // within the freshness the AS declares (the as-txn key is published
+    // there too), so an AS key rotation is followed without a restart.
+    serverJwksUri = `${asUrl}/jwks`;
+    serverJwks = { keys: [] };
     challengeSigner = {
       sign: rsTxnKeys.privateKey,
       kid: rsTxnKey.kid,
@@ -711,15 +730,15 @@ export async function composeStack(opts: {
       asIssuer: asUrl,
       lifetimeSeconds: txnTopo.challengeLifetimeSeconds,
     };
-    txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
     // Access tokens verify only under the AS token key and transaction
     // tokens only under its txn key, though both come from one JWKS. The
-    // AS issues no attenuation roots, so that class is refused here.
+    // AS issues no attenuation roots, so that class is refused here. Each
+    // role's kids are the ones the topology's consumers trust (#831 C2).
     rsKeyRoles = {
-      accessToken: [TOPOLOGY.keys.asToken.kid],
+      accessToken: trustedKids(TOPOLOGY.keys.asToken),
       attenuationRoot: [],
-      transactionToken: [TOPOLOGY.keys.asTxn.kid],
+      transactionToken: trustedKids(TOPOLOGY.keys.asTxn),
     };
 
     // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
@@ -734,14 +753,19 @@ export async function composeStack(opts: {
     const rasKeys = await generateKeyPair(rasTokenKey.alg, { extractable: true });
     const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: rasTokenKey.kid, alg: rasTokenKey.alg };
     // @spec id-continuation-assertion — the continuation ID-JAG is signed by the
-    // dedicated as-continuation key the AS generates per boot and publishes on
-    // its jwks_uri (fetched above). The RAS trusts it under the AS issuer too, so
-    // a continuation ID-JAG redeems into a local token (D39 per-purpose keys).
+    // dedicated as-continuation key the AS publishes on its jwks_uri. The RAS
+    // trusts it under the AS issuer too, so a continuation ID-JAG redeems into a
+    // local token (D39 per-purpose keys). @spec #831 C2: held through IssuerKeys
+    // (the trusted continuation kids only), beside the stack's own cross-domain
+    // key: a grant naming the cross-domain kid resolves locally, and any other
+    // kid resolves only through the AS's continuation role, never falling back.
     const asContinuationKey = TOPOLOGY.keys.asContinuation;
-    const asContinuationPub = serverJwks.keys.find((k) => k.kid === asContinuationKey.kid);
-    if (!asContinuationPub) {
-      throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
-    }
+    rasContinuationKeys = new IssuerKeys({
+      jwksUri: `${asUrl}/jwks`,
+      roles: { continuation: { kids: trustedKids(asContinuationKey), algs: [asContinuationKey.alg] } },
+    });
+    const asContinuationKeys = rasContinuationKeys.resolver("continuation");
+    const rasAnchorKey = composedTrustAnchor([xdPub as never], asContinuationKeys);
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
       rasJwks: { keys: [rasPub as never] },
@@ -760,7 +784,7 @@ export async function composeStack(opts: {
       localCeiling: RAS_LOCAL_POLICY.ceiling,
       localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
       issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { keys: [xdPub as never, asContinuationPub as never] } },
+      trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
       signKey: rasKeys.privateKey,
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
@@ -1082,7 +1106,10 @@ export async function composeStack(opts: {
   // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
   // PEP verifies the PDP's Decision Evidence under the declared statement
   // versions, by the record's (audience, kid) pair, against exactly what the
-  // decision point publishes for the records it emits.
+  // decision point publishes for the records it emits. The executor's own
+  // key is held there too (#252): a compensation links the committed effect
+  // it offsets only after re-verifying that effect's retained Execution
+  // Evidence, and an unverifiable record links nothing.
   const evidence = new EvidenceStore(
     evidenceKeys.signing,
     buildBoundaryEvidenceKeyResolver(boundary.declaration, [
@@ -1092,6 +1119,9 @@ export async function composeStack(opts: {
         emitterId: decisionPoint.evidenceVerification.emitterId,
         role: "pdp",
       },
+      ...evidenceKeys.verification
+        .filter((k) => k.role === "executor")
+        .map((k) => ({ kid: k.kid, publicKey: k.publicKey, emitterId: k.emitterId, role: "executor" as const })),
     ]),
     evidenceRetention,
     boundaryEvidenceAuthorization(boundary),
@@ -1225,6 +1255,9 @@ export async function composeStack(opts: {
   const pep = new Pep({
     payments,
     evidence,
+    // @spec runtime#compound-actions (#252): a compensation reads the
+    // committed wire's own ledger record for the parameters it offsets.
+    committedEffects: connectors,
     boundary,
     decide: decisionChannel.decide,
     claims: decisionChannel.claims,
@@ -1266,14 +1299,13 @@ export async function composeStack(opts: {
     pep,
     payments,
     loadView,
-    jwks: serverJwks,
+    ...(serverJwksUri ? { jwksUri: serverJwksUri, txnTokenJwksUri: serverJwksUri } : { jwks: serverJwks }),
     keyRoles: rsKeyRoles,
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
-    ...(txnTokenJwks ? { txnTokenJwks } : {}),
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
@@ -1380,6 +1412,18 @@ export async function composeStack(opts: {
     pdpClaims,
     writeReservations,
     reconciler,
+    reloadTrust: () => {
+      if (!rsAsIssuer) return;
+      const keys = readTopologyKeys();
+      server.reloadKeyRoles({
+        accessToken: trustedKids(keys.asToken),
+        attenuationRoot: [],
+        transactionToken: trustedKids(keys.asTxn),
+      });
+      rasContinuationKeys?.setRoles({
+        continuation: { kids: trustedKids(keys.asContinuation), algs: [keys.asContinuation.alg] },
+      });
+    },
     fga,
     modelId,
     payments,

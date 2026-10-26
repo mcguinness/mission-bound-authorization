@@ -29,7 +29,7 @@
 
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from "node:http";
-import { contractCanEstablish, type OperationContract } from "@mission/core";
+import { contractCanEstablish, type EvaluationContextBindingDeclarations, type OperationContract } from "@mission/core";
 import { macEqualHex, macHex, REQUEST_MAC_DOMAIN, RESPONSE_MAC_DOMAIN, sha256Hex } from "./channel-mac.js";
 import { requestMacParts } from "./client.js";
 import type { DecisionEvidenceEmitter } from "./decision-evidence.js";
@@ -176,6 +176,13 @@ export interface PdpRemoteServerConfig {
    * `context.action_phase` is refused before evaluation as `phase_invalid`.
    */
   phasedActions?: ReadonlySet<string>;
+  /**
+   * @spec authzen#context-evaluation-binding (#773): this PDP's
+   * Evaluation-Context Binding claim and declaration, bound on this side of
+   * the network hop exactly as `phasedActions` is. Absent, `evaluate` reads
+   * the deployment's statement.
+   */
+  evaluationContextBinding?: EvaluationContextBindingDeclarations;
   /**
    * The settlement and reconciliation channel for one authenticated
    * requester. Defaults to one over {@link PdpRemoteServerConfig.claims}.
@@ -427,8 +434,10 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     delete opts.resourceContracts;
     delete opts.durationLeases;
     delete opts.phasedActions;
+    delete (opts as Partial<EvaluateOptions>).evaluationContextBinding;
     if (config.evidence) opts.evidence = config.evidence;
     if (config.phasedActions) opts.phasedActions = config.phasedActions;
+    if (config.evaluationContextBinding) opts.evaluationContextBinding = config.evaluationContextBinding;
     if (config.durationLeases) opts.durationLeases = config.durationLeases;
     if (config.refusals) opts.refusals = config.refusals;
     if (config.claims) opts.claims = config.claims;

@@ -2148,6 +2148,11 @@ governance evaluation to the Mission's approval event. It does not,
 by itself, establish a separate business decision for each subsequent
 action.
 
+Authenticating approval evidence does not, by itself, establish that
+conditions governing later reliance remain satisfied. Whether
+subsequent changes to an Approver's role, a delegation, or governing
+policy affect an existing Mission depends on the deployment's policy.
+
 # Mission Lifecycle {#lifecycle}
 
 A Mission is in one of two states:
@@ -2259,6 +2264,25 @@ alone. A deployment MUST provide an authenticated means, independent
 of possession of any token, by which a party its policy authorizes
 revokes a Mission by `mission_id` (so a Mission can be stopped even
 when no refresh token is held).
+
+When the AS establishes that the principal identified by a Mission's
+recorded `subject` ({{record-principal-members}}) has been
+deprovisioned, it SHOULD terminate that Mission with termination
+reason `revoked`. The rule reaches every Mission not yet terminated,
+including one a companion profile has suspended, and identifies the
+Subject by its recorded `iss` and `sub`. Temporary disablement, a
+source outage, or an unavailable lookup does not by itself establish
+deprovisioning. The departure or disablement of an Approver, an
+accountable owner, or a client triggers the rule only when that
+principal is the recorded Subject; an organizational Mission records
+the organizational principal as its Subject ({{authority-sources}}),
+so an approving officer's departure does not terminate it under this
+rule. A deployment that does not follow this rule documents why; that
+exception cannot bypass a continuing dependency the deployment
+requires or rewrite the recorded Subject. Termination stops further
+issuance ({{issuance-gating}}) but does not itself recall tokens
+already issued; an earlier execution cutoff depends on the
+deployment's enforcement mechanism.
 
 The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
@@ -6413,7 +6437,7 @@ Companion variations:
   profile's lifecycle operations, and the AS derives nothing in
   between ({{lifecycle}}). The revocation at 08:53:20 is the agent's
   own `revoke` operation, with the reason "Quarterly reconcile
-  completed early", under an explicit lifecycle authorization the
+  cancelled", under an explicit lifecycle authorization the
   deployment grants it for this Mission; its resource tokens and
   refresh token confer no such authority. The AS commits it as state
   version 4.
@@ -7467,6 +7491,19 @@ Cross-Domain:
   a grant binding resolves the Mission for the operations using it,
   and a profile-defined grant can instead resolve it through its
   authenticated `mission` reference (#1631, D751).
+- Editorial, no requirement change: the Mission Status variation's
+  revocation `reason` describes a revocation, not a completion
+  (#1535).
+- Editorial, no requirement change: Single Accountable Approver states
+  that authenticating approval evidence does not establish that
+  conditions governing later reliance remain satisfied, and that the
+  effect of later changes to an Approver's role, a delegation, or
+  governing policy on an existing Mission is deployment policy (#830).
+- When the AS establishes that a Mission's recorded Subject has been
+  deprovisioned, it SHOULD terminate the Mission with reason `revoked`;
+  temporary disablement, an outage, or another principal's departure
+  does not trigger the rule, and termination does not recall issued
+  tokens (Revocation; #830).
 
 -01
 

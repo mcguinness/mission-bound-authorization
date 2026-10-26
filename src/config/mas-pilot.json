@@ -6,6 +6,7 @@
     "issuer": "http://127.0.0.1:14818",
     "host": "127.0.0.1",
     "port": 14818,
+    "trusted_kids": ["estate-signing-1"],
     "accounts": ["u-1001", "u-1002", "u-1003", "u-1004", "alice"],
     "clients": [
       {
@@ -152,6 +153,7 @@
     { "tool": "check_transfer", "class": "consequential_read", "gateway": "joined" },
     { "tool": "hold_transfer", "class": "consequential_write", "gateway": "joined" },
     { "tool": "execute_wire_transfer", "class": "irreversible_action", "gateway": "mission_bound_only" },
+    { "tool": "reverse_wire_transfer", "class": "irreversible_action", "gateway": "mission_bound_only" },
     { "tool": "send_remittance_email", "class": "external_commitment", "gateway": "mission_bound_only" }
   ]
 }

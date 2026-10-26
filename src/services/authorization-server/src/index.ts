@@ -1,5 +1,6 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
+import type { MissionStatusRateLimit } from "./adapters/status-rate-limit.js";
 import {
   INTROSPECTION_PRINCIPALS,
   DESIGNABLE_CLIENTS,
@@ -30,18 +31,27 @@ import {
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
 import type { ResourceContractDeclarations, ScopeProjectionMapping } from "@mission/core";
+import {
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  type AuthorityDependencyEvidence,
+  type AuthorityDependencyResolver,
+  evaluateAuthorityDependency,
+} from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
 import {
   generateEphemeralSigningKeys,
-  loadSigningKeyRing,
+  loadSigningKeyRingState,
   SigningKeyRingError,
   type SigningKeySource,
 } from "./kernel/signing-key-ring.js";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
+export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
 export {
   governedResourceRefusal,
   isMissionGovernedResource,
@@ -87,6 +97,7 @@ import {
   type ServiceTokenPrincipal,
   type TxnArs,
 } from "./adapters/provider.js";
+import { VerifyOnlySigningKey } from "./adapters/verify-only-signing-key.js";
 import type { CrossOrgOptions } from "./adapters/cross-org-grant.js";
 import { bindAuthoritySourceCatalog } from "./kernel/authority-source.js";
 import { mappedAudiences } from "./kernel/approved-audience.js";
@@ -142,6 +153,7 @@ export {
   GateError,
   LifecycleConflictError,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   ObservationWatermarkError,
   StaleVersionError,
   STATUS_SIGNING_ALG,
@@ -168,15 +180,33 @@ export {
 
 export { MISSION_ID_ENTROPY_BYTES, newMissionId } from "./kernel/mission-id.js";
 export {
+  activateSigningKeyGeneration,
   AS_SIGNING_ROLES,
+  type AsSigningKeys,
   type AsSigningRole,
+  compromiseSigningKeyGeneration,
+  generationKid,
   initSigningKeyRing,
+  JWKS_MAX_AGE_SECONDS,
+  type KernelStoreConfig,
   kernelStoreFromEnv,
   loadSigningKeyRing,
+  loadSigningKeyRingState,
+  migrateSigningKeyRing,
+  retireSigningKeyGeneration,
+  type SigningKeyRetention,
+  type SigningKeyRingVerification,
+  type RoleSigningKeys,
   SIGNING_KEY_RING_FORMAT,
+  SIGNING_KEY_RING_FORMAT_V1,
+  SIGNING_KEY_STATES,
   SigningKeyRingError,
   type SigningKeySource,
+  type SigningKeyState,
   signingKeysFromEnv,
+  stageSigningKeyGeneration,
+  verifySigningKeyRing,
+  type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
 export {
   attachCapabilitySources,
@@ -224,6 +254,16 @@ export {
   MissionTombstoneStore,
   type TombstoneRetentionInputs,
 } from "./kernel/tombstones.js";
+export {
+  readRecoveryWitness,
+  reconcileKernelRecovery,
+  RecoveryReconciliationError,
+  RecoveryUncertainError,
+  type RecoveryReconciliation,
+  type RecoveryUncertainReason,
+  type RecoveryWitnessRecord,
+  witnessSharesStoreTree,
+} from "./kernel/recovery-witness.js";
 export type { ProtectedEventSource } from "./adapters/provider.js";
 export {
   ALL_PROVIDER_CAPABILITIES,
@@ -639,6 +679,7 @@ export {
   type RecordedModelOutput,
   recordGovernedPolicyConsent,
   STANDARD_CLASS,
+  standingConsentsAttestedUnder,
   unclassifiedActions,
   validateGovernedPolicyApprovalConfig,
   withdrawGovernedPolicyConsent,
@@ -695,6 +736,7 @@ export {
   createTemplate,
   dispatchFromTemplate,
   findDispatch,
+  recordDispatchDelivery,
   selectDispatchAgent,
   TemplateStore,
   TemplateError,
@@ -842,6 +884,12 @@ export interface LifecycleClientRegistration {
   operations?: readonly string[];
   /** @spec status#lifecycle-authorization (#1535): the Missions it reaches; absent, every Mission. */
   missions?: LifecycleMissionScope;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the disclosure
+   * privileges bound to this client; `provenance` admits `authority_hash` on
+   * its Mission Status Responses. Absent, none.
+   */
+  disclose?: readonly string[];
 }
 
 export interface BuiltAs {
@@ -865,6 +913,22 @@ export interface BuiltAs {
    * denial) and observe pending approvals.
    */
   missionApprovalDeferrals?: MissionApprovalDeferralStore;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the declared
+   * authority dependency this assembly gates issuance on, with `governed`
+   * answered from this kernel's records, for the deployment's PDP or composed
+   * PEP step to evaluate the same dependency from the same observations.
+   * Present exactly where the assembly was given one.
+   */
+  authorityDependency?: AuthorityDependencyEnforcement;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): the reconciler
+   * of a declared dependency under lifecycle-mediated enforcement. Present
+   * exactly where the declaration declares it.
+   */
+  authorityReconciler?: AuthorityReconciler;
+  /** Stops the declared dependency's scheduled source reads and reconciliation passes; present with the dependency. */
+  stopAuthorityDependency?: () => void;
   /**
    * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
@@ -988,9 +1052,11 @@ export async function buildAuthorizationServer(opts: {
    * default is in-memory and single-process; a `file` selects the OPT-IN
    * file-backed SINGLE-WRITER store, which is what makes the durable lifecycle
    * outbox and the terminal tombstones survive a restart and lets the recovery
-   * test exercise that path. It authorizes no second writer.
+   * test exercise that path. It authorizes no second writer. A `witness`
+   * (#250 step 3) adds the recovery witness: the store is held exclusively and
+   * opens only when it matches the witness.
    */
-  kernelStore?: { file?: string };
+  kernelStore?: { file?: string; witness?: string };
   /**
    * @spec control-plane#tombstones, authority-server#join-assertion-artifact
    * (#1560, D770): the deployment's declared post-expiry audit retention, in
@@ -1210,6 +1276,11 @@ export async function buildAuthorizationServer(opts: {
    */
   dpopProofReplay?: DpopProofReplay;
   /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation. Defaults to DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
+  /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
    * token (a `scope`, the join route's audience, no `mission` claim) on a
@@ -1232,6 +1303,32 @@ export async function buildAuthorizationServer(opts: {
    * no client-credentials issuance; production callers MUST omit this.
    */
   testClientCredentials?: boolean;
+  /**
+   * @spec runtime#input-authority-dependency (#830, D798): a declared
+   * authority dependency (config/authority-dependencies.json) and the
+   * identity-state resolver that observes it. Every issuance gate consults it
+   * beside the `active` check: the approval decision refuses `access_denied`
+   * and a derivation (code redemption, refresh before its refresh token is
+   * consumed, token exchange, child and expansion) refuses `invalid_grant`,
+   * each within the declared bound and failing closed when no acceptable
+   * observation remains. `refreshIntervalMs` re-reads the source on that
+   * period, outside any store transaction; absent, the caller refreshes.
+   * Absent, no dependency is gated.
+   */
+  authorityDependency?: {
+    declaration: AuthorityDependencyDeclaration;
+    resolver: AuthorityDependencyResolver;
+    evidence?: AuthorityDependencyEvidence;
+    now?: () => number;
+    refreshIntervalMs?: number;
+    /**
+     * Under lifecycle-mediated enforcement (the declaration's
+     * `enforcement.lifecycle`), the reconciler's period: a pass reads the
+     * source and commits `suspend` or `revoke` through the lifecycle
+     * operations (`AuthorityReconciler`). Absent, the caller runs passes.
+     */
+    reconcileIntervalMs?: number;
+  };
   /**
    * @spec discharge#discharge-authority — additional service-token principals and
    * their scopes, merged OVER the shipped dev token (which carries both
@@ -1397,28 +1494,31 @@ export async function buildAuthorizationServer(opts: {
   if ("ring" in keySource && opts.testTokenSigningJwk) {
     throw new SigningKeyRingError("testTokenSigningJwk cannot be combined with a key ring");
   }
-  const signing =
+  const ringState =
     "ring" in keySource
-      ? await loadSigningKeyRing(keySource.ring, opts.issuer, roleConfig)
-      : await generateEphemeralSigningKeys(roleConfig);
+      ? await loadSigningKeyRingState(keySource.ring, opts.issuer, roleConfig)
+      : { keys: await generateEphemeralSigningKeys(roleConfig) };
+  const signing = ringState.keys;
+  // @spec #831 B2: each role signs under its active generation's `kid`; the
+  // jwks_uri publishes every role's live set (pending, active and overlap
+  // generations), and the AS's own verifiers accept a role's active and
+  // overlap generations. A generation withdrawn as compromised is in none.
   let tokenPrivateKey: CryptoKey = signing.asToken.privateKey;
   let tokenJwk: Record<string, unknown> = signing.asToken.privateJwk;
-  let tokenJwkPub: Record<string, unknown> = signing.asToken.publicJwk;
+  let tokenKid = signing.asToken.kid;
+  let tokenPublished = signing.asToken.published;
+  let tokenVerification = signing.asToken.verification;
   if (opts.testTokenSigningJwk) {
     const injected = { ...opts.testTokenSigningJwk, kid: asToken.kid, alg: asToken.alg, use: "sig" };
     tokenPrivateKey = (await importJWK(injected as JWK, asToken.alg)) as CryptoKey;
     tokenJwk = injected;
-    tokenJwkPub = publicJwkOf(injected as JWK);
+    tokenKid = asToken.kid;
+    tokenPublished = [publicJwkOf(injected as JWK)];
+    tokenVerification = tokenPublished;
   }
-  const statusKeys = { privateKey: signing.asStatus.privateKey };
-  const txnKeys = { privateKey: signing.asTxn.privateKey };
-  const continuationKeys = { privateKey: signing.asContinuation.privateKey };
-  const statusJwkPriv = signing.asStatus.privateJwk;
-  const txnJwkPriv = signing.asTxn.privateJwk;
-  const continuationJwkPriv = signing.asContinuation.privateJwk;
-  const statusJwkPub = signing.asStatus.publicJwk;
-  const txnJwkPub = signing.asTxn.publicJwk;
-  const continuationJwkPub = signing.asContinuation.publicJwk;
+  const statusKeys = { privateKey: signing.asStatus.privateKey, kid: signing.asStatus.kid };
+  const txnKeys = { privateKey: signing.asTxn.privateKey, kid: signing.asTxn.kid };
+  const continuationKeys = { privateKey: signing.asContinuation.privateKey, kid: signing.asContinuation.kid };
 
   const agent = await seedAgentClient();
   const child = await seedChildClient();
@@ -1465,12 +1565,13 @@ export async function buildAuthorizationServer(opts: {
     ...Object.fromEntries(
       (opts.lifecycleClients ?? []).map((c) => [
         c.client_id,
-        c.operations === undefined && c.missions === undefined
+        c.operations === undefined && c.missions === undefined && c.disclose === undefined
           ? c.grants
           : {
               grants: c.grants,
               ...(c.operations !== undefined ? { operations: c.operations } : {}),
               ...(c.missions !== undefined ? { missions: c.missions } : {}),
+              ...(c.disclose !== undefined ? { disclose: c.disclose } : {}),
             },
       ]),
     ),
@@ -1546,9 +1647,61 @@ export async function buildAuthorizationServer(opts: {
   const knownSubjects = new Set([...USERS.map((u) => u.sub), ...AUTHORITY_SOURCES.entries.flatMap((e) => e.principals ?? [])]);
   const approverRoleSubs = new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub));
   const approvalFloor = opts.approvalFloor ?? APPROVAL_FLOOR;
+  // @spec runtime#input-authority-dependency (#830, D798): the issuance
+  // gates' dependency check, over the resolver's cached observation.
+  const dependency = opts.authorityDependency;
+  const dependencyNow = dependency?.now ?? (() => Date.now());
+  // @spec runtime#state-freshness (#830): a composition may run the declared
+  // observation path faster than its external-change bound states, never
+  // slower.
+  const declaredBound = dependency?.declaration.external_change_bound;
+  if (declaredBound) {
+    const periods = [
+      ["refreshIntervalMs", dependency?.refreshIntervalMs, declaredBound.detection_period_seconds],
+      ["reconcileIntervalMs", dependency?.reconcileIntervalMs, declaredBound.reconciliation_period_seconds],
+    ] as const;
+    for (const [option, intervalMs, periodSeconds] of periods) {
+      if (intervalMs !== undefined && periodSeconds !== undefined && intervalMs > periodSeconds * 1000) {
+        throw new Error(`authorityDependency.${option} ${intervalMs} exceeds the declared period of ${periodSeconds} s`);
+      }
+    }
+  }
+  const authorityDependencyGate: ConstructorParameters<typeof MissionKernel>[0]["authorityDependencyGate"] = dependency
+    ? (candidate, surface) => {
+        if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(candidate.authoritySource)) return undefined;
+        const nowMs = dependencyNow();
+        const evaluated = evaluateAuthorityDependency(dependency.declaration, dependency.resolver.view(candidate.subject), {
+          clientId: candidate.clientId,
+          nowMs,
+        });
+        if (evaluated.ok) return undefined;
+        dependency.evidence?.record({
+          enforcer: "as",
+          dependency: dependency.declaration.id,
+          failure: evaluated.failure,
+          ...(candidate.mission ? { mission: candidate.mission } : {}),
+          subject: candidate.subject,
+          client: candidate.clientId,
+          action: surface,
+          ...(evaluated.observedAt !== undefined ? { observed_at: evaluated.observedAt } : {}),
+          at: new Date(nowMs).toISOString(),
+        });
+        return { failure: evaluated.failure };
+      }
+    : undefined;
+  // The observation path's schedules, stopped together (`stopAuthorityDependency`).
+  const dependencyTimers: ReturnType<typeof setInterval>[] = [];
+  if (dependency?.refreshIntervalMs !== undefined) {
+    // Re-read the source on its period, outside any store transaction; an
+    // unref'd timer never keeps the process alive.
+    const timer = setInterval(() => void dependency.resolver.refresh(), dependency.refreshIntervalMs);
+    timer.unref();
+    dependencyTimers.push(timer);
+  }
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
+    ...(authorityDependencyGate ? { authorityDependencyGate } : {}),
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
     // trusted entry-to-audience mapping (the same mapping the provider reads
     // at every issuance), read at each approval or consent event and
@@ -1558,6 +1711,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec control-plane#deployment-declaration (D27) — in-memory by default;
     // the file-backed single-writer store is the declared opt-in.
     ...(opts.kernelStore?.file ? { store: { file: opts.kernelStore.file } } : {}),
+    // @spec control-plane#rollback (#250 step 3): the recovery witness.
+    ...(opts.kernelStore?.file && opts.kernelStore.witness
+      ? { recoveryWitness: { file: opts.kernelStore.witness } }
+      : {}),
     // @spec control-plane#tombstones — the deployment's declared retention
     // horizons, composed into the detailed tombstone horizon. Every input is a
     // number this deployment actually declares: the access-token lifetime is
@@ -1632,7 +1789,8 @@ export async function buildAuthorizationServer(opts: {
     // `authority_source` from this and from nothing a client sends.
     authoritySourceCatalog: (opts.authoritySources ?? AUTHORITY_SOURCES) as never,
     statusKey: statusKeys.privateKey,
-    statusKid: asStatus.kid,
+    statusKid: statusKeys.kid,
+    statusVerificationJwks: signing.asStatus.verification,
     ...(opts.now ? { now: opts.now } : {}),
     // Fan the committed transition out to the Status List republisher (PULL) and
     // any injected subscriber, e.g. the Mission Signals emitter (PUSH). The
@@ -1653,6 +1811,17 @@ export async function buildAuthorizationServer(opts: {
   // kernel's database and are written in its committing transactions; the
   // adapters reach them through these names.
   const continuationStore = kernel.continuations;
+  // @spec runtime#input-authority-dependency (#830, D798): lifecycle-mediated
+  // enforcement of the declared dependency, where the declaration declares it.
+  const authorityReconciler =
+    dependency?.declaration.enforcement.lifecycle === true
+      ? new AuthorityReconciler({ kernel, declaration: dependency.declaration, resolver: dependency.resolver })
+      : undefined;
+  if (authorityReconciler && dependency?.reconcileIntervalMs !== undefined) {
+    const timer = setInterval(() => void authorityReconciler.reconcile(), dependency.reconcileIntervalMs);
+    timer.unref();
+    dependencyTimers.push(timer);
+  }
   const delegationFamilyStore = kernel.delegationFamilies;
   if (schedulesAdopted) {
     suspensionScheduler = new SuspensionScheduler(kernel, {
@@ -1801,9 +1970,11 @@ export async function buildAuthorizationServer(opts: {
   // ID-JAG; the validator's pinned ICA typ keeps the two token types apart. The
   // resource->AS map mirrors the demo cross-domain wiring (stack.ts). The
   // subject resolver is deterministic over a constant salt.
-  const publicJwks = { keys: [tokenJwkPub, statusJwkPub, txnJwkPub, continuationJwkPub] };
+  const publicJwks = {
+    keys: [...tokenPublished, ...signing.asStatus.published, ...signing.asTxn.published, ...signing.asContinuation.published],
+  };
   const continuationAssertionIssuers: ContinuationIssuer[] = opts.continuationAssertionIssuers ?? [
-    { iss: opts.issuer, jwks: { keys: [continuationJwkPub] } as never, attestsFor: [] },
+    { iss: opts.issuer, jwks: { keys: signing.asContinuation.verification } as never, attestsFor: [] },
   ];
   const resourceToAs =
     opts.resourceToAs ??
@@ -1846,9 +2017,21 @@ export async function buildAuthorizationServer(opts: {
     creationIdempotency,
     statusListPublisher,
     clients: clientRegistrations,
-    jwks: { keys: [tokenJwk, statusJwkPriv, txnJwkPriv, continuationJwkPriv] },
+    // @spec #831 (role binding): the provider signs with the access-token key
+    // alone; every role's public key is still published on the jwks_uri
+    // (`publicJwks`, served by the adapter). @spec #831 B2: it also verifies
+    // its own JWTs (an `id_token_hint`) under the access-token role's overlap
+    // generations, held verify-only and ahead of the signer, so `key_ops`
+    // alone keeps them out of signing; no other role's key is held.
+    jwks: {
+      keys: [
+        ...tokenVerification.filter((k) => k.kid !== tokenKid).map((k) => new VerifyOnlySigningKey(k)),
+        tokenJwk,
+      ] as never,
+    },
     publicJwks,
-    accessTokenJwks: { keys: [tokenJwkPub] },
+    ...(ringState.revision !== undefined ? { jwksRevision: ringState.revision } : {}),
+    accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
     ...(opts.approverLogin ? { approverLogin: new ApproverLoginRelyingParty(opts.approverLogin, opts.issuer) } : {}),
@@ -1889,14 +2072,14 @@ export async function buildAuthorizationServer(opts: {
           txnAuthorization: {
             ...opts.transactionAuthorization,
             tokenKey: txnKeys.privateKey,
-            tokenKid: asTxn.kid,
+            tokenKid: txnKeys.kid,
           },
         }
       : {}),
     // @spec child-delegation#child-client-identity — sign the child-bound RFC 7523
     // authorization grant with the AS token key (verifies on the jwks_uri).
     childGrantKey: tokenPrivateKey,
-    childGrantKid: asToken.kid,
+    childGrantKid: tokenKid,
     childGrantAlg: asToken.alg,
     // @spec authority-server#mission-join (#557) — the dev-only ordinary
     // issuance route, signed with this AS's own token key so the resource
@@ -1909,7 +2092,7 @@ export async function buildAuthorizationServer(opts: {
       ? {
           devOrdinaryIssuance: {
             key: tokenPrivateKey,
-            kid: asToken.kid,
+            kid: tokenKid,
             alg: asToken.alg,
             audience: MAS_JOIN.join_resource,
           },
@@ -1933,7 +2116,7 @@ export async function buildAuthorizationServer(opts: {
     resourceToAs,
     subjectResolver,
     continuationGrantKey: continuationKeys.privateKey,
-    continuationGrantKid: asContinuation.kid,
+    continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
     protectedEventSources,
@@ -1948,6 +2131,7 @@ export async function buildAuthorizationServer(opts: {
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
     dpopProofReplay,
+    ...(opts.missionStatusRateLimit ? { missionStatusRateLimit: opts.missionStatusRateLimit } : {}),
     ...(joinAssertionService ? { joinAssertionService } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
@@ -2014,6 +2198,30 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
     ...(joinAssertionService ? { joinAssertions: joinAssertionService } : {}),
+    ...(authorityReconciler ? { authorityReconciler } : {}),
+    ...(dependency ? { stopAuthorityDependency: () => dependencyTimers.forEach((timer) => clearInterval(timer)) } : {}),
+    ...(dependency
+      ? {
+          authorityDependency: {
+            declaration: dependency.declaration,
+            resolver: dependency.resolver,
+            ...(dependency.evidence ? { evidence: dependency.evidence } : {}),
+            ...(dependency.now ? { now: dependency.now } : {}),
+            ...(authorityReconciler ? { reconciliation: () => authorityReconciler.lag() } : {}),
+            // The principal and client a Mission's dependency is evaluated for,
+            // from this kernel's record: only a Mission this AS holds, under an
+            // authority source the declaration governs.
+            governed: (mission: { id: string; issuer: string }) => {
+              const record = kernel.get(mission.id);
+              if (!record || record.issuer !== mission.issuer) return undefined;
+              if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(record.authority_source.type)) {
+                return undefined;
+              }
+              return { subject: record.subject, clientId: record.client_id };
+            },
+          } satisfies AuthorityDependencyEnforcement,
+        }
+      : {}),
     startupRemediation: {
       revokedChildren,
       successors: successorRemediation,
@@ -2061,3 +2269,8 @@ export function startupRemediationNotices(
       : []),
   ];
 }
+export {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./adapters/status-rate-limit.js";

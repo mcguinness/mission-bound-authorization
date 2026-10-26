@@ -4,6 +4,11 @@
  * Wiring facts verified by the pre-flight spike (src/spikes/SPIKE-REPORT.md).
  */
 
+import {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./status-rate-limit.js";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
@@ -46,7 +51,6 @@ import Provider, {
   type Configuration,
   type KoaContextWithOIDC,
   type ResourceServer,
-  type SigningAlgorithmWithNone,
 } from "oidc-provider";
 import { loadReusableGrant, missionInteractionPolicy, ORDINARY_REQUEST_REFUSAL } from "./interaction-policy.js";
 import { type GovernedResourcePolicy, governedResourceRefusal, isMissionGovernedResource } from "./governed-resources.js";
@@ -280,6 +284,43 @@ export function lifecycleMissionError(
 }
 
 /**
+ * @spec derivation-limits#counted-operations (#935, D772): the derivations a
+ * token request counted without a reservation, by request, for
+ * {@link settleCountedDerivations}.
+ */
+const derivationsCountedBy = new WeakMap<object, string[]>();
+
+/** Record that the token request `ctx` counted one derivation against `missionId`; nothing outside a request. */
+export function noteCountedDerivation(ctx: unknown, missionId: string): void {
+  if (!ctx || typeof ctx !== "object") return;
+  const counted = derivationsCountedBy.get(ctx);
+  if (counted) counted.push(missionId);
+  else derivationsCountedBy.set(ctx, [missionId]);
+}
+
+/**
+ * @spec derivation-limits#counted-operations (#935, D772): settle the
+ * derivations `ctx` counted: a response other than 200, or an exception that
+ * escaped the request after its response was prepared (Koa then answers 500),
+ * delivered no token, so each one failed in process before any artifact left
+ * and is returned. A 200 that completed settles nothing, a 200 the release
+ * fence then refuses included: that Mission has ended, and the fence refunds
+ * nothing (D771).
+ */
+function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }, threw: boolean): void {
+  const counted = derivationsCountedBy.get(ctx);
+  if (!counted) return;
+  derivationsCountedBy.delete(ctx);
+  if (ctx.status === 200 && !threw) return;
+  for (const missionId of counted) kernel.refundDerivation(missionId);
+}
+
+/** A request that reads no Mission state: discovery metadata or the key set (#250 step 3). */
+function isRecoveryDiagnostic(ctx: { method: string; path: string }): boolean {
+  return (ctx.method === "GET" || ctx.method === "HEAD") && (ctx.path === "/jwks" || ctx.path.startsWith("/.well-known/"));
+}
+
+/**
  * @spec mission#issuance-gating, status#mission-lifecycle-endpoint — map a
  * kernel {@link GateError} onto the `mission_error` diagnostic value, where
  * one applies. `reason` alone is not enough: `mission_not_active` covers
@@ -323,15 +364,17 @@ export function gateErrorToMissionError(
  * token whose Mission ended after the save-time gate is refused here, at the
  * last synchronous point before the response leaves. Only an ended Mission
  * refuses: `terminated` by any cause, its own expiry or an ancestor's
- * termination included, as {@link MissionKernel.observedRecord} observes it.
- * A suspension committed after the gate still releases. The check is a read
- * and commits nothing, not even an expiry it observes.
+ * termination included, and a revocation schedule of the Mission or an
+ * ancestor whose deadline has passed (#1659, D771), as
+ * {@link MissionKernel.observedForRelease} projects it. A suspension committed
+ * after the gate still releases, and so does a due `resume`. The check is a
+ * read and commits nothing, not even an expiry or a due schedule it observes.
  *
  * A refusal here leaves the derivation the gate counted spent. Whether such a
  * refusal returns the count is #935's, and nothing here returns it.
  */
 export function releaseFenceRefusal(kernel: MissionKernel, missionId: string): GateError | undefined {
-  const observed = kernel.observedRecord(missionId);
+  const observed = kernel.observedForRelease(missionId);
   if (!observed) return new GateError("mission_not_active", `mission ${missionId} does not resolve at release`);
   if (observed.state !== "terminated") return undefined;
   return new GateError(
@@ -397,6 +440,7 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -476,6 +520,7 @@ import {
   type ApproveInput,
   type MissionKernel,
   MissionNotFoundError,
+  MissionStateUnavailableError,
   type PreparedApproval,
   StaleVersionError,
   STATUS_SIGNING_ALG,
@@ -536,6 +581,7 @@ import {
   DispatchMismatchError,
   findDispatch,
   pinDispatchPolicy,
+  recordDispatchDelivery,
   TemplateError,
   type CreateTemplateInput,
   type DispatchInput,
@@ -676,6 +722,13 @@ export interface LifecycleClientPolicy {
   /** Among `revoke`, `suspend`, `resume`, `complete` and `contain`. */
   operations?: readonly string[];
   missions?: LifecycleMissionScope;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the disclosure
+   * privileges the deployment binds to this client. `provenance` admits
+   * `mission.authority_hash` on its Mission Status Responses, the audit or
+   * correlation use the profile authorizes. Absent, none: no grant confers it.
+   */
+  disclose?: readonly string[];
 }
 
 /** A client's lifecycle grants: the grant list alone, or with the deployment's policy for it. */
@@ -685,6 +738,12 @@ export type LifecycleClientGrants = readonly string[] | LifecycleClientPolicy;
 function lifecycleGrantList(entry: LifecycleClientGrants | undefined): readonly string[] {
   if (entry === undefined) return [];
   return "grants" in entry ? entry.grants : entry;
+}
+
+/** The disclosure privileges a client's lifecycle grants bind; a bare grant list binds none. */
+function lifecycleDisclosures(entry: LifecycleClientGrants | undefined): readonly string[] {
+  if (entry === undefined || !("grants" in entry)) return [];
+  return entry.disclose ?? [];
 }
 
 /** @spec status#lifecycle-authorization (#1535): whether a Mission lies within a client's Mission scope. */
@@ -790,6 +849,12 @@ export interface AdapterOptions {
    * `subject_token` verifies under. `publicJwks` holds every AS role's key.
    */
   accessTokenJwks: { keys: Record<string, unknown>[] };
+  /**
+   * @spec #831 B2: the key ring revision the AS loaded, served as the
+   * `/jwks` `ETag` so verification can confirm which revision is running.
+   * Absent with keys generated at boot.
+   */
+  jwksRevision?: number;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -992,6 +1057,12 @@ export interface AdapterOptions {
    */
   dpopProofReplay?: DpopProofReplay;
   /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation, both routes. Defaults to
+   * DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
+  /**
    * @spec mission#introspection (issue #541 P1-2) — the (iss, jti) -> grantId
    * issuance index, consulted by introspection's per-token individual-
    * revocation check (never `record.grant_id`, which is only the Mission's
@@ -1147,6 +1218,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     for (const operation of "grants" in entry ? (entry.operations ?? []) : []) {
       if (!LIFECYCLE_GRANT_OPERATIONS.has(operation)) {
         throw new Error(`lifecycleClientGrants: ${clientId} names unknown operation ${operation}`);
+      }
+    }
+    // @spec status#mission-status-response (#1682): `provenance` is the one
+    // disclosure privilege a Mission Status Response honors.
+    for (const privilege of lifecycleDisclosures(entry)) {
+      if (privilege !== "provenance") {
+        throw new Error(`lifecycleClientGrants: ${clientId} names unknown disclosure privilege ${privilege}`);
       }
     }
   }
@@ -1390,12 +1468,16 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * `mission_error` where a value applies. `ctx` is the token request; the
    * refresh pre-check passes none, so it refuses `invalid_grant`.
    */
-  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown): unknown {
+  function missionGateRefusal(e: unknown, missionId: string, ctx?: unknown, observed?: MissionRecord): unknown {
+    // @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a
+    // due schedule whose transition could not be persisted fails closed as a
+    // transient refusal, never as the pre-deadline state.
+    if (e instanceof MissionStateUnavailableError) return sourceUnavailableError(e.message);
     return e instanceof GateError
       ? tokenEndpointGateRefusal(
           e.reason,
           e.message,
-          gateErrorToMissionError(e.reason, kernel.observedRecord(missionId)),
+          gateErrorToMissionError(e.reason, observed ?? kernel.observedRecord(missionId)),
           isTokenExchangeRequest(ctx),
         )
       : e;
@@ -1510,6 +1592,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
           exchange,
         );
       }
+      if (e instanceof MissionStateUnavailableError) throw sourceUnavailableError(e.message);
       throw e;
     }
     throw expiring();
@@ -1975,18 +2058,12 @@ export function buildProvider(opts: AdapterOptions): Provider {
         : !code.scopes.has("offline_access"),
     pkce: { required: () => true },
     // @spec mission#submission-via-par (#1503): the one Request Object
-    // signing algorithm (features.requestObjects below).
-    // @spec #831 (role binding): the provider holds every AS role's signing
-    // key and selects one by algorithm, so an ID Token in another role's
-    // algorithm would be signed under that role's key (a client registered
-    // for ES256 got an ID Token under as-status). ID Tokens are limited to the
-    // access-token key's algorithm; a registration naming another is refused.
-    // Signed userinfo, JWT introspection and JWT response modes are off, so no
-    // other client-facing JWT is signed. Every other list keeps the default.
-    enabledJWA: {
-      requestObjectSigningAlgValues: ["ES256"],
-      idTokenSigningAlgValues: accessTokenSigningAlgs(opts),
-    },
+    // signing algorithm (features.requestObjects below); every other
+    // algorithm list keeps the provider's default. The provider's keystore
+    // holds the access-token key alone (#831 role binding), so it signs no
+    // ID Token or other JWT under another role's key, and a client registered
+    // for another algorithm is refused.
+    enabledJWA: { requestObjectSigningAlgValues: ["ES256"] },
     interactions: {
       url: (_ctx, interaction) => `/interaction/${interaction.uid}`,
       // @spec mission#approval-event (#1247), device-authorization#approval
@@ -2008,6 +2085,9 @@ export function buildProvider(opts: AdapterOptions): Provider {
     features: {
       // We serve our own approval interaction (the mission-kernel adapter).
       devInteractions: { enabled: false },
+      // @spec #831 B2: admits the verify-only keys for the access-token
+      // role's overlap generations (VerifyOnlySigningKey) in `jwks`.
+      externalSigningSupport: { enabled: true, ack: "experimental-01" },
       pushedAuthorizationRequests: { enabled: true, requirePushedAuthorizationRequests: true },
       // @spec mission#submission-via-par (#1503): the second carriage of the
       // Submission envelope, a `mission_intent` claim in a signed Request
@@ -2411,8 +2491,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
         // MissionKernel.reserveDerivation}). The conditional write still
         // prevents cap overshoot; coupling the count to THIS artifact needs the
         // provider's issuance state recorded transactionally before delivery,
-        // which this slice does not build.
+        // which this slice does not build. A failure this request observes
+        // before the token leaves returns the count (#935, D772); a crash or
+        // a lost response does not, and stays counted.
         const gated = missionGate(target, "issue");
+        noteCountedDerivation(_ctx, record.id);
         // @spec child-delegation#parent-member + expansion#predecessor-member — a
         // Child Mission projects the `parent` lineage member; a successor Mission
         // projects the `predecessor` lineage member (its predecessor's mission_id),
@@ -2696,15 +2779,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
     }
     if (!refused) return;
     const { missionId, refusal } = refused;
+    // The fence's own observation (#1659): a due revocation it projected is the
+    // refusal's `mission_error`, never the stored `suspended`.
+    const observed = kernel.observedForRelease(missionId);
     if (ctx.oidc?.route !== "token") {
       // The transaction endpoint's own refusal for a Mission that is not active.
       ctx.status = 400;
       ctx.body = { error: "access_denied", error_description: refusal.message };
     } else if (isTokenExchangeRequest(ctx) && body.issued_token_type === ID_JAG_TOKEN_TYPE) {
       // @spec id-continuation-assertion: ICA -02 5.5.6's codes, as at the gate.
-      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, kernel.observedRecord(missionId));
+      refuseContinuationGate(ctx as unknown as KoaContextWithOIDC, refusal.reason, observed);
     } else {
-      const err = missionGateRefusal(refusal, missionId, ctx) as MissionGrantError | MissionExchangeError;
+      const err = missionGateRefusal(refusal, missionId, ctx, observed) as MissionGrantError | MissionExchangeError;
       ctx.status = err.statusCode;
       ctx.body = {
         error: err.error,
@@ -2713,6 +2799,22 @@ export function buildProvider(opts: AdapterOptions): Provider {
       };
     }
     ctx.set("cache-control", "no-store");
+  }
+
+  /**
+   * @spec control-plane#rollback (#250 step 3): answer 503
+   * `temporarily_unavailable` in place of any response but discovery metadata
+   * and the key set while the kernel is uncertain. True when it refused.
+   */
+  function refuseWhileUncertain(ctx: { method: string; path: string; status: number; body: unknown; set(field: string, value: string): void }): boolean {
+    if (!kernel.recoveryUncertainty() || isRecoveryDiagnostic(ctx)) return false;
+    ctx.status = 503;
+    ctx.body = {
+      error: "temporarily_unavailable",
+      error_description: "the authorization server's durable state is uncertain and must be reconciled before it serves again",
+    };
+    ctx.set("cache-control", "no-store");
+    return true;
   }
 
   // @spec mission#issuance-gating (#250): THE RELEASE FENCE, the AS's final
@@ -2729,6 +2831,52 @@ export function buildProvider(opts: AdapterOptions): Provider {
   provider.use(async (ctx, next) => {
     await next();
     fenceRelease(ctx);
+    // @spec control-plane#rollback (#250 step 3): uncertainty that began while
+    // this request was in flight (a write elsewhere, the request-path drain)
+    // still refuses its response, here where nothing awaits after.
+    refuseWhileUncertain(ctx);
+  });
+  // @spec #831 (role binding): the provider's keystore holds the access-token
+  // key alone (`jwks`), so it signs nothing under another role's key. The
+  // jwks_uri still publishes every role's public key: the provider serves the
+  // route, with its CORS handling and content type, and only the key set it
+  // answered with is replaced by `publicJwks`.
+  // @spec #831 B2: the response declares an explicit freshness lifetime, the
+  // interval a pending generation is published before it activates.
+  provider.use(async (ctx, next) => {
+    await next();
+    if (ctx.method === "GET" && ctx.path === "/jwks" && ctx.status === 200) {
+      ctx.body = { keys: opts.publicJwks.keys };
+      ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+      if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
+    }
+  });
+
+  // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
+  // state became uncertain while running (a witness write that failed, or a
+  // write that bypassed its guard) refuses every state-dependent request until
+  // it is reconciled offline. Only discovery metadata and the key set, which
+  // read no Mission state, still answer.
+  provider.use(async (ctx, next) => {
+    if (refuseWhileUncertain(ctx)) return;
+    await next();
+  });
+
+  // @spec derivation-limits#counted-operations (#935, D772): settles the
+  // derivations a request counted without a reservation. Registered after the
+  // fence, so it runs inside it: its code after `next()` sees the response the
+  // grant produced, or the exception that escaped it, before the fence
+  // decides, and awaits nothing.
+  provider.use(async (ctx, next) => {
+    let threw = false;
+    try {
+      await next();
+    } catch (e) {
+      threw = true;
+      throw e;
+    } finally {
+      settleCountedDerivations(kernel, ctx, threw);
+    }
   });
 
   // @spec device-authorization#request (#1202): the device authorization
@@ -2803,7 +2951,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
   if (grantEnabled.get(MISSION_DISPATCH_GRANT_TYPE)) {
     provider.registerGrantType(
       MISSION_DISPATCH_GRANT_TYPE,
-      (ctx) => handleMissionDispatchGrant(provider, opts, ctx),
+      (ctx) => serializeDispatch(opts.kernel, ctx, () => handleMissionDispatchGrant(provider, opts, ctx)),
       // `authorization_details` carries the dispatcher's authority proposal
       // (@spec mission#authority-proposal), the same standard carriage as PAR
       // and the child/expansion exchanges; it MUST be declared here or
@@ -3120,15 +3268,6 @@ export function namesRequestedRar(ctx: unknown): boolean {
   }
 }
 
-/** @spec #831 (role binding): the algorithms of the access-token signing key, the one key an ID Token uses. */
-function accessTokenSigningAlgs(opts: AdapterOptions): SigningAlgorithmWithNone[] {
-  return [
-    ...new Set(
-      opts.accessTokenJwks.keys.map((k) => k.alg).filter((a): a is SigningAlgorithmWithNone => typeof a === "string" && a !== "none"),
-    ),
-  ];
-}
-
 export function resourceServerInfoFor(resource: string, accessTokenTTL: number) {
   return {
     audience: resource,
@@ -3253,6 +3392,10 @@ async function handleDeferredGrant(
           throw new errors.ExpiredToken();
         case "access_denied":
           throw new errors.AccessDenied();
+        case "mission_not_active":
+          // @spec mission#issuance-gating: refused as any grant other than a
+          // Token Exchange is, with the Mission's own mission_error.
+          throw new MissionGrantError("mission is not active", lifecycleMissionError(r.observed));
         default:
           throw new errors.InvalidGrant("unknown or already-redeemed deferral_code");
       }
@@ -3458,12 +3601,12 @@ async function handleChildJwtBearerGrant(
     throw new errors.InvalidRequest("assertion (the child-bound JWT authorization grant) required");
   }
 
-  // 2. Verify the assertion. It is signed by the AS token key, so it verifies on
-  //    the same public JWKS as tokens; iss = the AS, aud = the token endpoint,
-  //    typ = the child-grant typ.
+  // 2. Verify the assertion. It is signed by the AS token key, and verifies
+  //    under that key alone (#831 role binding); iss = the AS, aud = the token
+  //    endpoint, typ = the child-grant typ.
   let claims: Record<string, unknown>;
   try {
-    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.publicJwks as never), {
+    const verified = await jwtVerify(assertion, createLocalJWKSet(opts.accessTokenJwks as never), {
       issuer: opts.issuer,
       audience: `${opts.issuer}/token`,
       typ: CHILD_GRANT_TYP,
@@ -3685,7 +3828,15 @@ const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
-  const jwksResolver = createLocalJWKSet(opts.publicJwks as never);
+  // @spec status#security-considerations (#1686): one window per client across
+  // both Mission Status routes.
+  const statusLimiter = new MissionStatusRateLimiter(
+    opts.missionStatusRateLimit ?? DEFAULT_MISSION_STATUS_RATE_LIMIT,
+    () => kernel.nowDate().getTime(),
+  );
+  // @spec #831 (role binding): introspection resolves an access token under
+  // the access-token key alone, never another AS role's key.
+  const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
   // @spec txn-authorization#two-phase-expiry — the admitted pending workflows.
   const txnWorkflows = newTxnWorkflows();
   // @spec deferred-approval#front-channel: where Deferred Mission Approval is
@@ -3899,6 +4050,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    */
   const mayReadStatus = (principal: ServiceTokenPrincipal): boolean =>
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
+
+  /**
+   * @spec status#mission-status-response (#1682, D795): whether the
+   * authenticated caller holds the deployment's audit-or-correlation
+   * disclosure privilege, `provenance`, in ONE place for every Mission Status
+   * Response this AS builds: both Status routes, the lifecycle confirmation
+   * and the discharge envelope. Read from the client's configured disclosure
+   * privileges only: the `mission_status` and `mission_lifecycle` grants and
+   * join enrollment confer none. An own property lookup, so no inherited name
+   * resolves a client.
+   */
+  const discloseProvenance = (principal: ServiceTokenPrincipal): boolean =>
+    Object.hasOwn(lifecycleClientGrants, principal.principal_id) &&
+    lifecycleDisclosures(lifecycleClientGrants[principal.principal_id]).includes("provenance");
 
   /**
    * @spec authority-server#join-disclosure (#818; #1591, D708): whether the
@@ -4314,11 +4479,30 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
     // --- Signed Status (@spec status#mission-status-response) ---
     // A deployment with Mission Status off serves no such route (404).
+    // @spec status#security-considerations, status#mission-status-errors
+    // (#1686): an authenticated client over its limit is answered
+    // `rate_limited` (429) with when to retry, before any Mission is read, so
+    // the answer is the same whichever Mission it asked about.
+    const statusRateLimited = (client: string, nonce: string | undefined): boolean => {
+      const retryAfter = statusLimiter.admit(client);
+      if (retryAfter === undefined) return false;
+      ctx.status = 429;
+      ctx.set("cache-control", "no-store");
+      ctx.set("Retry-After", String(retryAfter));
+      ctx.body = {
+        error: "rate_limited",
+        error_description: "Consumer is rate-limited.",
+        retry_after: retryAfter,
+        ...(nonce ? { nonce } : {}),
+      };
+      return true;
+    };
     const statusMatch = ctx.path.match(/^\/missions\/([^/]+)\/status$/);
     if (statusMatch && ctx.method === "GET" && enabled("status")) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
+      if (statusRateLimited(principal.principal_id, statusNonce)) return;
       const statusAudience = str(ctx.query.audience);
       try {
         // A caller without the read grant gets the same not-found body as an
@@ -4334,17 +4518,30 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // enrolled PDP's own enforcement scope; every other request leaves
           // the option out, so its response is unchanged.
           ...(joinDisclosureFor(principal, statusAudience) ? { joinDisclosure: true } : {}),
+          ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
+      } catch (e) {
+        ctx.set("cache-control", "no-store");
+        if (e instanceof MissionStateUnavailableError) {
+          // @spec status#mission-status-errors (#1659, D771): a due schedule
+          // whose transition could not be persisted is `unavailable`, never a
+          // signed pre-deadline state.
+          ctx.status = 503;
+          ctx.body = {
+            error: "unavailable",
+            error_description: "Mission state is temporarily unavailable.",
+            ...(statusNonce ? { nonce: statusNonce } : {}),
+          };
+          return;
+        }
         // @spec status#mission-status-errors, status#mission-status-anti-oracle
         // — one not-found shape for the unknown and the invisible reference,
         // echoing the request's `nonce` when it carried one.
         ctx.status = 404;
-        ctx.set("cache-control", "no-store");
         ctx.body = {
           error: "not_found",
           error_description: "Mission reference is not found or not visible.",
@@ -4412,7 +4609,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // members: `nonce` REQUIRED and well formed (a malformed one is refused
       // and never echoed), `mission_id` REQUIRED, `audience` non-empty when sent.
       if (echo === undefined) {
-        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 characters", undefined);
+        refuse(400, "invalid_request", "nonce is required: a string of 1 to 255 Unicode code points", undefined);
         return;
       }
       const missionId = form.params.mission_id;
@@ -4425,6 +4622,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
         return;
       }
+      // @spec status#security-considerations, status#mission-status-processing
+      // (#1686): the per-consumer limit falls between request syntax (step 2)
+      // and authorization (step 3), so the processing order's refusals are
+      // unchanged and no Mission has been read.
+      if (statusRateLimited(auth.clientId, echo)) return;
       const principal: ServiceTokenPrincipal = {
         principal_id: auth.clientId,
         scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],
@@ -4440,13 +4642,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // @spec status#mission-status-response check 6: `sub` is the client.
           caller: principal.principal_id,
           ...(joinDisclosureFor(principal, audience) ? { joinDisclosure: true } : {}),
+          ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
         });
         ctx.status = 200;
         ctx.set("content-type", MISSION_STATUS_RESPONSE_MEDIA_TYPE);
         ctx.set("cache-control", "no-store");
         ctx.body = jws;
-      } catch {
-        refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+      } catch (e) {
+        // @spec status#mission-status-errors (#1659, D771): a due schedule whose
+        // transition could not be persisted is `unavailable`, never a signed
+        // pre-deadline state; every other failure is the one not-found shape.
+        if (e instanceof MissionStateUnavailableError) {
+          refuse(503, "unavailable", "Mission state is temporarily unavailable.", echo);
+        } else {
+          refuse(404, "not_found", "Mission reference is not found or not visible.", echo);
+        }
       }
       return;
     }
@@ -4623,7 +4833,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (nonce === undefined) {
         deliver(400, {
           error: "invalid_request",
-          error_description: "nonce is REQUIRED: a string of 1 to 255 characters",
+          error_description: "nonce is REQUIRED: a string of 1 to 255 Unicode code points",
         });
         return;
       }
@@ -4927,6 +5137,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           request: discharge,
           nonce,
           mayReadStatus,
+          discloseProvenance: discloseProvenance(principal),
           // @spec control-plane#serialization — the discharge latch, the nonce
           // claim and the OBSERVATION (or receipt) the response reports commit
           // together; only the signature happens after.
@@ -5041,6 +5252,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             requester: principal.principal_id,
             actingParty: principal.principal_id,
             nonce,
+            ...(discloseProvenance(principal) ? { discloseProvenance: true } : {}),
           });
           lifecycleResponses.claimInCallerTx(nonceKey, {
             requestDigest: digest,
@@ -5507,7 +5719,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           issuer: opts.issuer,
           kernel,
           clients: opts.clients,
-          publicJwks: opts.publicJwks as { keys: JWK[] },
+          accessTokenJwks: opts.accessTokenJwks as { keys: JWK[] },
           dpopProofReplay: opts.dpopProofReplay as DpopProofReplay,
           // @spec txn-authorization#challenge-redemption — the SAME liveness
           // path introspection answers from: the issuance index resolves the
@@ -6268,6 +6480,41 @@ function dispatchErrorCode(reason: DispatchReason): "invalid_request" | "access_
  * oidc-provider's err_out renderer would otherwise strip any member other
  * than error/error_description (same technique as handleChildCreationExchange).
  */
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): the
+ * Dispatches in flight, by reservation key (authenticated Dispatcher,
+ * dispatch_event_id), per kernel.
+ */
+const dispatchesInFlight = new WeakMap<MissionKernel, Map<string, Promise<void>>>();
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery (#250): one
+ * Dispatch per reservation key runs at a time. A concurrent request with the
+ * same key waits for the one in flight, then looks the key up again and
+ * reads the delivery it recorded, so concurrent retries recover one token
+ * and count it once. Instance-level serialization for the declared
+ * one-process topology, as the kernel's exclusive derivations are;
+ * multi-process claiming stays behind #641.
+ */
+async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC, run: () => Promise<void>): Promise<void> {
+  const eventId = (ctx.oidc.params as Record<string, unknown>).dispatch_event_id;
+  const clientId = ctx.oidc.client?.clientId;
+  if (typeof eventId !== "string" || !eventId || !clientId) return run();
+  const key = `${clientId}\u0000${eventId}`;
+  let inFlight = dispatchesInFlight.get(kernel);
+  if (!inFlight) dispatchesInFlight.set(kernel, (inFlight = new Map()));
+  for (let held = inFlight.get(key); held; held = inFlight.get(key)) {
+    await held.catch(() => undefined);
+  }
+  const attempt = run();
+  inFlight.set(key, attempt);
+  try {
+    await attempt;
+  } finally {
+    if (inFlight.get(key) === attempt) inFlight.delete(key);
+  }
+}
+
 async function handleMissionDispatchGrant(
   provider: Provider,
   opts: AdapterOptions,
@@ -6421,8 +6668,11 @@ async function handleMissionDispatchGrant(
   // the completed-operation recovery lookup runs after possession verification
   // and BEFORE evidence re-verification and the gates.
   let record: MissionRecord | undefined;
+  let recovery: { delivery?: Record<string, unknown> } | undefined;
   try {
-    record = findDispatch(kernel, store, dispatchInput)?.mission;
+    const found = findDispatch(kernel, store, dispatchInput);
+    record = found?.mission;
+    recovery = found?.recovered;
   } catch (e) {
     if (dispatchFailure(e)) return;
     ctx.status = 400;
@@ -6477,6 +6727,16 @@ async function handleMissionDispatchGrant(
   // details projects the EFFECTIVE set (approved minus containment overlay).
   const effective = kernel.effectiveAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
+  // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
+  // dispatch_event_id is gated to the previously committed instance rather
+  // than derived again: the retry recovers the token the Dispatch delivered,
+  // counting nothing. A retry that cannot recover it falls through to the
+  // gated mint below: an inactive instance is refused by its own gate, and an
+  // expired or narrowed delivery is re-minted as a delivery event, never as a
+  // second Dispatch.
+  if (recovery && replayDispatchDelivery(ctx, kernel, record, recovery.delivery, audienceCarriedEntries(record, [resource], effective))) {
+    return;
+  }
   let grantId: string;
   if (record.grant_id) {
     grantId = record.grant_id;
@@ -6513,6 +6773,13 @@ async function handleMissionDispatchGrant(
   at.jkt = jkt; // sender-constrain to the dispatcher's DPoP key (tokenType -> DPoP)
   ctx.oidc.entity("AccessToken", at);
   const jwt = await at.save();
+  // @spec mission-template#grant-type: recorded under the reservation key, so
+  // a lost-response retry recovers this token rather than deriving again.
+  recordDispatchDelivery(kernel, dispatchInput, {
+    access_token: jwt,
+    exp: decodeJwt(jwt).exp,
+    authorization_details: carried,
+  });
 
   ctx.status = 200;
   ctx.body = {
@@ -6528,6 +6795,44 @@ async function handleMissionDispatchGrant(
     authorization_details: carried,
   };
   ctx.set("cache-control", "no-store");
+}
+
+/**
+ * @spec mission-template#grant-type, expansion#creation-recovery: answer a
+ * Dispatch retry with the access token the Dispatch already delivered. True
+ * when it answered; false when the retry must mint instead: no delivery is
+ * recorded, the token has expired, the instance is no longer active, or the
+ * token carries other authority than the instance's token would carry now.
+ */
+function replayDispatchDelivery(
+  ctx: KoaContextWithOIDC,
+  kernel: MissionKernel,
+  record: MissionRecord,
+  stored: Record<string, unknown> | undefined,
+  carriedNow: unknown[],
+): boolean {
+  const token = stored?.access_token;
+  const exp = stored?.exp;
+  if (typeof token !== "string" || typeof exp !== "number") return false;
+  const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
+  if (exp <= nowS) return false;
+  if (kernel.applyExpiry(record).state !== "active") return false;
+  if (JSON.stringify(stored?.authorization_details) !== JSON.stringify(carriedNow)) return false;
+  const scope = decodeJwt(token).scope;
+  ctx.status = 200;
+  ctx.body = {
+    access_token: token,
+    token_type: "DPoP",
+    expires_in: exp - nowS,
+    // @spec mission#scope-projection: the stored token's own projected scope.
+    ...(typeof scope === "string" ? { scope } : {}),
+    mission_id: record.id,
+    // @spec mission#grant-binding: the committed effective expiry, verbatim.
+    mission_expires_at: record.expires_at,
+    authorization_details: carriedNow,
+  };
+  ctx.set("cache-control", "no-store");
+  return true;
 }
 
 /**
@@ -7715,6 +8020,12 @@ async function handleDischarge(input: {
    */
   mayReadStatus: (principal: ServiceTokenPrincipal) => boolean;
   /**
+   * @spec status#mission-status-response (#1682, D795): the caller holds the
+   * configured `provenance` disclosure privilege, so a Status envelope it
+   * receives carries `authority_hash`.
+   */
+  discloseProvenance: boolean;
+  /**
    * @spec control-plane#serialization — invoked INSIDE the latch transaction
    * with the material the response will be signed from (a Status observation
    * or a Discharge Receipt), so the committed outcome and its replayable
@@ -7800,6 +8111,7 @@ async function handleDischarge(input: {
         requester: principal.principal_id,
         nonce,
         dischargeResult: result,
+        ...(input.discloseProvenance ? { discloseProvenance: true } : {}),
       });
       input.claimResponse?.(
         {

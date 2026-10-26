@@ -961,6 +961,30 @@ PEP cannot establish the phase before requesting a decision, it MUST
 refuse locally without requesting or using a permit;
 {{failure-condition-coverage}} defines the carrier.
 
+## Compensation Link Context {#context-compensation-link}
+
+`context.compensates_evaluation_id` is CONDITIONAL: REQUIRED on a
+request whose `action_phase` is `compensate`. Its value is a string
+with the syntax of `evaluation_id` ({{response-context}}): the
+evaluation identifier of the Decision whose committed effect the
+operation offsets ({{I-D.draft-mcguinness-mission-runtime}}).
+
+The PEP MUST establish the value from retained, verified evidence of
+that committed effect and of the Decision it executed under, taking
+that Decision's `evaluation_id`, and MUST NOT take it from an
+agent-supplied argument. An agent MAY identify the effect it asks to
+offset; the PEP resolves that identification against its own evidence.
+A PEP that cannot establish the link MUST refuse before requesting a
+decision ({{failure-condition-coverage}}).
+
+The PDP checks the member ({{pdp-consistency-checks}}) and records the
+validated value as Decision Evidence's `compensates_evaluation_id`, on
+a permit or a denial, omitting malformed input
+({{I-D.draft-mcguinness-mission-runtime-evidence}}). The member is not
+a permit condition and confers no authority: the compensation is
+evaluated as its own action, and the compensated action's permit never
+authorizes it ({{I-D.draft-mcguinness-mission-runtime}}).
+
 ## Evaluation-Context Binding {#context-evaluation-binding}
 
 For an operation covered by the runtime profile's optional
@@ -1115,6 +1139,41 @@ a `stale_state` denial ({{runtime-denial-classification}}).
   fail-closed default applies: the PDP MUST deny with
   `taint_context_missing` ({{runtime-denial-classification}}) when
   `context.taint` is absent from an in-scope decision.
+
+## Work-Item Context {#context-work-item}
+
+`work_item`:
+: OPTIONAL, carried at `context.work_item`. A registered extension
+  point owned by the harness profile
+  ({{I-D.draft-mcguinness-mission-harness}}), which defines the
+  qualified work-item identifier and its attacher. An object with
+  exactly two members, both strings: `issuer`, the URI of the harness
+  that issued the identifier, and `id`, that harness's identifier for
+  the work item.
+
+The PEP populates `context.work_item` only from the harness's
+authenticated attachment: the work item a verified Mission reference
+carries, for the attacher the Enforcement Scope Statement declares for
+the authenticated client ({{I-D.draft-mcguinness-mission-harness}}).
+A reference that verifies does not by itself establish that
+attachment, and the PEP never takes a work item from tool arguments or
+another value the agent supplies.
+
+The PDP MUST refuse, before evaluation, a request whose
+`context.work_item` is present but not of that shape: an unusable
+input, recorded as the Refusal Record `work_item_invalid`
+({{failure-condition-coverage}}), never an evaluated denial. Where
+the deployment's Enforcement Scope Statement claims work-item
+attribution for the action's class, the PDP MUST deny with
+`work_item_context_missing`
+({{runtime-denial-classification}}) a decision from which
+`context.work_item` is absent. Elsewhere its absence relaxes nothing,
+and the deployment claims Mission-level attribution only.
+
+The member is part of the authorization binding and the cache key
+({{projections}}), so no cached decision or resumed execution crosses
+work items, and a permit for a decision that carried it binds it as
+the `work_item` condition ({{decision-conditions}}).
 
 ## Approval Context {#context-approval}
 
@@ -1272,13 +1331,13 @@ Authorization binding:
   contract reference ({{context-resource-contract}}),
   credential-derived facts, the Mission reference, the authority and
   view identity, the approval, and every policy-relevant context
-  input, including `taint`, the Mission history reference, the
-  capability source, and any extension member a companion profile
-  adds. This is what a permit is bound to. A new companion context
-  member is part of the authorization binding by default; a companion
-  narrows it only by amending this enumeration. It excludes only the
-  request's volatile machinery: the `supported_obligations`
-  declaration and transport metadata.
+  input, including `taint`, `work_item`, the Mission history
+  reference, the capability source, and any extension member a
+  companion profile adds. This is what a permit is bound to. A new
+  companion context member is part of the authorization binding by
+  default; a companion narrows it only by amending this enumeration.
+  It excludes only the request's volatile machinery: the
+  `supported_obligations` declaration and transport metadata.
 
 Cache key:
 : The authorization binding plus the explicit state generation the
@@ -1582,6 +1641,13 @@ self-consistent:
     `resource.properties.audience`, `resource.type` or `resource.id`,
     and MUST record the refusal as a Refusal Record with
     `denial_reason` `operation_target_invalid`
+    ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+12. `context.compensates_evaluation_id`, when present, is a string with
+    the syntax of `evaluation_id` ({{response-context}}), and it is
+    present when `context.action_phase` is `compensate`
+    ({{context-compensation-link}}). Otherwise the PDP MUST refuse the
+    request before evaluation and MUST record the refusal as a Refusal
+    Record with `denial_reason` `compensation_link_invalid`
     ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 ## Clock Skew {#clock-skew}
@@ -1945,11 +2011,14 @@ relying on the permit, each evaluated at every use. Members:
 : CONDITIONAL. A string. REQUIRED on a permit for an operation
   covered by {{context-evaluation-binding}}; MUST equal the
   validated request's context digest. The executing PEP MUST
-  recompute it with its own applicable descriptor and authoritative
-  facts, and MUST refuse before an effect on a missing or unequal
-  binding, an unknown descriptor, or an unavailable fact. A mismatch
+  recompute it under the descriptor the binding committed, from
+  authoritative facts, and MUST refuse before an effect on a missing or
+  unequal binding, a descriptor the operation's declaration no longer
+  names, an unrecoverable descriptor, or an unavailable fact. A mismatch
   or inability to re-resolve after a permit is Execution Evidence
-  `suppressed` with `target_drift`, not a PDP denial reason.
+  `suppressed`, not a PDP denial reason, with the `error` the runtime
+  evidence profile's classification names
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 `action_phase`:
 : CONDITIONAL. A string from `preflight`, `prepare`, `commit`, or
@@ -1976,6 +2045,15 @@ relying on the permit, each evaluated at every use. Members:
   contract applies, an unresolvable reference, or an unequal one
   is Execution Evidence `suppressed` /
   `resource_contract_unresolvable`, not a PDP denial.
+
+`work_item`:
+: CONDITIONAL. An object; REQUIRED on a permit for a decision whose
+  request carried `context.work_item` ({{context-work-item}}), and
+  equal to it. At every use, the executing PEP MUST compare it with
+  the work item it attributes to the request it is executing, and
+  MUST NOT release an effect when they differ or when either is
+  present without the other. Such a refusal is Execution Evidence
+  `suppressed` / `work_item_mismatch`, not a PDP denial.
 
 The PEP MUST honor every condition present, at every use of the
 permit. A permit carrying a condition member the PEP does not
@@ -2192,6 +2270,10 @@ Decision Evidence's `denial_reason`:
   for the action's class, as the harness profile defines
   ({{I-D.draft-mcguinness-mission-harness}}), and the decision request
   carries no `context.taint` ({{context-taint}}).
+- `work_item_context_missing`: the deployment claims work-item
+  attribution for the action's class and the decision request carries
+  no `context.work_item` ({{context-work-item}}). A malformed one is
+  the pre-evaluation refusal `work_item_invalid` instead.
 - `stale_state`: the Mission state the decision relies on is not
   current: the PEP-supplied freshness is outside the deployment's
   staleness bound (a freshness-bound violation), the PDP cannot
@@ -2468,6 +2550,8 @@ rule.
 | PDP unreachable | Refusal Record | `pdp_unreachable` |
 | Mission state not establishable at the PEP | Refusal Record | `state_unavailable` |
 | Required phase not establishable at the PEP before the decision request | Refusal Record | `phase_unavailable` |
+| Committed effect a compensation offsets, or the Decision it executed under, not establishable at the PEP from retained, verified evidence before the decision request | Refusal Record | `compensation_link_unavailable` |
+| Authoritative evaluation context of a covered operation not capturable at the PEP before the decision request | Refusal Record | `evaluation_context_unresolvable` |
 | Presented credential's own authority does not cover the request, established before any decision request | Refusal Record | `credential_authority_insufficient` |
 | Enforcement surface implements no such action | Refusal Record | `request_unsupported` |
 | Supplied arguments fail the PEP-established action's required input schema | Refusal Record | `request_invalid` |
@@ -2479,7 +2563,9 @@ rule.
 | In-scope request reaches the PDP without the Mission decision context | Refusal Record | `mission_context_missing` |
 | Operation target absent, malformed, or outside the requesting PEP's enforcement scope at the PDP | Refusal Record | `operation_target_invalid` |
 | `action_phase` outside the closed set, or absent where the trusted operation declaration requires a phase, at the PDP | Refusal Record | `phase_invalid` |
+| `compensates_evaluation_id` absent where `action_phase` is `compensate`, or malformed, at the PDP | Refusal Record | `compensation_link_invalid` |
 | Evaluation-context binding inputs missing, malformed, or incompatible with the declared operation binding, for a covered operation, at the PDP | Refusal Record | `evaluation_context_invalid` |
+| `context.work_item` present but not an object with exactly the string members `issuer` and `id`, at the PDP | Refusal Record | `work_item_invalid` |
 | Action outside the Authority Set (including an invoked identity outside the approved set with no recorded source binding), or the request would broaden it | PDP denial | `out_of_authority` |
 | Duration-lease renewal names no lease the PDP issued or an ended activity, or fails continuity with the evaluation it renews | PDP denial | `out_of_authority` |
 | Resource policy requires a stronger authentication context, satisfiable by in-process step-up with no change to credential-bound inputs | Obligation on permit | step-up obligation ({{AUTHZEN-OBL}}) |
@@ -2491,6 +2577,7 @@ rule.
 | Request Mission `id` or `issuer`, or (when carried) `authority_hash` or `policy_view_id`, inconsistent with the loaded view or the directly evaluated Mission record | PDP denial | `view_inconsistent` |
 | Mission not `active`, including a passed `expires_at` | PDP denial | `mission_inactive` |
 | External Mission-binding join verification fails | PDP denial | `mission_binding_failed` |
+| Work-item context absent where work-item attribution is claimed for the action's class | PDP denial | `work_item_context_missing` |
 | Required `act` chain missing or malformed | PDP denial | `actor_invalid` |
 | Credential facts expired or inconsistent | PDP denial | `credential_invalid` |
 | Credential authority absent, or carrying an entry the PDP cannot evaluate in full | PDP denial | `credential_invalid` |
@@ -2506,10 +2593,11 @@ rule.
 | Resource contract reference missing where required, or not resolvable, established by the PDP | PDP denial | `resource_contract_drift` |
 | Presented approval bound to a resource contract reference other than the request's | PDP denial | ARAP's `out_of_scope` ({{ARAP}}) |
 | Policy-required history predicate unsatisfied or not establishable | PDP denial | `history_not_satisfied` |
-| Effective parameters differ at the executing PEP | Execution Evidence | `parameter_mismatch` |
+| Effective parameters differ at the executing PEP in a parameter no claimed evaluation-context binding declares as a fact | Execution Evidence | `parameter_mismatch` |
 | Permit's bound phase differs from the crossing, is missing or malformed where a phase is required, or cannot be established at use | Execution Evidence | `phase_mismatch` |
 | A claimed evaluation-context binding differs or cannot be established at use | Execution Evidence | `target_drift` |
 | Operation target at use differs from the request's `operation_target`, or cannot be established at use | Execution Evidence | `target_drift` |
+| Named target object the permit was evaluated for, or the effective parameters it determines, not establishable at use | Execution Evidence | `target_drift` |
 | Permit validity window passed at execution | Execution Evidence | `permit_expired` |
 | Consumed single-use identifier presented again | Execution Evidence | `permit_consumed` |
 | Different evaluation identifier presented for an operation identity already claimed | Execution Evidence | `operation_already_claimed` |
@@ -2520,6 +2608,7 @@ rule.
 | Resource contract the permit was decided under not re-resolvable at use, or unequal to the contract the operation would be performed under | Execution Evidence | `resource_contract_unresolvable` |
 | Obligation attached to a permit could not be fulfilled | Execution Evidence | `obligation_unfulfilled` |
 | Operator or safety control suppressed execution | Execution Evidence | `kill_switch` |
+| Permit's work-item condition differs from the work item attributed to the executing request, or one is present without the other | Execution Evidence | `work_item_mismatch` |
 
 The following rules separate conditions that share a carrier or an
 identifier:
@@ -2533,15 +2622,30 @@ identifier:
   ({{I-D.draft-mcguinness-mission-runtime-evidence}}); it does not
   invent a PDP denial or an Execution Evidence record for a permit
   never obtained.
-- Unusable inputs: `phase_invalid` and `evaluation_context_invalid` are
-  PDP refusals before evaluation. They describe decision inputs the PDP
-  cannot use, not an evaluated policy denial, and a PDP claiming only
-  the Decision Base records them in its own internal form
-  ({{profiles-and-capabilities}}).
+- Compensation: A PEP that cannot establish the committed effect a
+  compensation offsets refuses before any decision request, with
+  `compensation_link_unavailable`. The compensated action's permit
+  presented at a compensating crossing is a post-permit failure of its
+  phase binding, `phase_mismatch` as Execution Evidence, never a Refusal
+  Record.
+- Unusable inputs: `phase_invalid`, `compensation_link_invalid`,
+  `evaluation_context_invalid`, and `work_item_invalid` are PDP
+  refusals before evaluation. They
+  describe decision inputs the PDP cannot use, not an evaluated policy
+  denial, and a PDP claiming only the Decision Base records them in its
+  own internal form ({{profiles-and-capabilities}}).
 - Target: A target-determining argument that changed under a
   parameter-bound permit is a parameter deviation, `parameter_mismatch`;
   `target_drift` records an operation target that differs while the
   bound parameters do not.
+- Context: under a claimed Evaluation-Context Binding a moved declared
+  fact can change the parameter digest too. The recorded `error` is
+  `target_drift` unless the context is established and an agent-supplied
+  parameter changed, and every observable digest pair is kept
+  ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
+  `evaluation_context_unresolvable` is the PEP's capture failure before
+  the decision request, and `evaluation_context_invalid` the PDP's
+  refusal of the inputs it received.
 - Duplicates: The `duplicate_suppressed` and `idempotency_conflict` rows
   key on the same (idempotency scope, `idempotency_key`) claim
   ({{idempotency-claim}}), and whether the new request's operation
@@ -2664,7 +2768,7 @@ profile defines two Decision Evidence extension members:
 `mission_history`, the policy-selected history predicates and their
 outcomes ({{context-history}}), and `authority_bound` (below). It also
 carries coordinated extension members owned elsewhere, for example
-`taint` (owned by the harness profile,
+`taint` and `work_item` (owned by the harness profile,
 {{I-D.draft-mcguinness-mission-harness}}) and `capability_source`
 (owned by Mission Capability Binding,
 {{I-D.draft-mcguinness-mission-capability-binding}}).
@@ -2683,9 +2787,9 @@ This profile maps its wire members into Decision Evidence as follows,
 in addition to the members other sections require the PDP to record:
 
 - `mission`, `subject`, `resource`, `action`, `audience`,
-  `credential`, `parameter_digest`, `obligations`, and `taint` are
-  populated from the correspondingly named members of the PDP request
-  and response ({{pdp-request}}, {{pdp-response}}).
+  `credential`, `parameter_digest`, `obligations`, `taint`, and
+  `work_item` are populated from the correspondingly named members of
+  the PDP request and response ({{pdp-request}}, {{pdp-response}}).
 - `mission_history` records the predicates the PDP evaluated and their
   outcomes ({{context-history}}); the PDP computes it, never copying it
   from `context.mission_history`.
@@ -2802,7 +2906,8 @@ Mission Capability Binding
 profile ({{I-D.draft-mcguinness-mission-harness}}) are normative
 references. The requirements that cite them bind only a deployment that
 adopts Capability Binding, or the harness capability the requirement
-names (PDP-enforced taint, for the taint members).
+names (PDP-enforced taint, for the taint members, and work-item
+attribution, for the work-item member).
 
 A PEP conforming to the Decision Base MUST:
 
@@ -2819,7 +2924,8 @@ A PEP conforming to the Decision Base MUST:
 - process obligations as {{obligation-processing}} requires;
 - honor every decision condition present (`parameter_digest`,
   `valid_until`, `use_limit`, `action_phase`,
-  `evaluation_context_digest`, `resource_contract`) at every use of
+  `evaluation_context_digest`, `resource_contract`, `work_item`) at
+  every use of
   the permit, applying its own deployment classification floor to that
   duty independent of any class the PDP applied internally
   ({{decision-conditions}});
@@ -2995,7 +3101,8 @@ response members this document defines ({{pdp-request}},
 in an IANA registry. Members a companion adds are that companion's:
 `context.capability_source`
 ({{I-D.draft-mcguinness-mission-capability-binding}}), and
-`context.taint` and `action.properties.external_communication`
+`context.taint`, `context.work_item`, and
+`action.properties.external_communication`
 ({{I-D.draft-mcguinness-mission-harness}}). The Mission-bound token
 claims this profile consumes are registered by
 {{I-D.draft-mcguinness-oauth-mission}}. This document registers no
@@ -3075,6 +3182,36 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
+- Work-Item Context: `context.work_item` is a harness-owned extension
+  point the PEP populates only from the harness's authenticated
+  attachment. A malformed member is refused before evaluation as
+  `work_item_invalid`, and an absent one where work-item attribution is
+  claimed for the action's class is denied
+  `work_item_context_missing`. The member is part of the authorization
+  binding and the cache key, a permit binds it as the `work_item`
+  condition, and a permit for another work item is Execution Evidence
+  `suppressed` / `work_item_mismatch` (#815).
+
+- Failure-Condition Coverage maps a covered operation's evaluation
+  context not capturable at the PEP to the Refusal Record
+  `evaluation_context_unresolvable`, and limits the `parameter_mismatch`
+  row to a parameter no claimed binding declares as a fact; a context
+  failure at use carries the `error` the runtime evidence profile's
+  classification names; the context digest condition is recomputed under
+  the descriptor the binding committed (#773).
+
+- Compensation link (#252). `context.compensates_evaluation_id` is
+  REQUIRED on a compensate-phase request, established by the PEP from
+  retained, verified evidence of the committed effect and its Decision,
+  never from an agent argument. PDP-side consistency check 12 refuses a
+  missing or malformed link before evaluation as
+  `compensation_link_invalid`, and Failure-Condition Coverage maps it and
+  the PEP's `compensation_link_unavailable`.
+
+- Failure-Condition Coverage maps a named target object, or the
+  effective parameters it determines, not establishable at use to
+  Execution Evidence `target_drift`, the post-permit counterpart of the
+  pre-decision `target_unresolvable` (#786).
 - Owner-ruled follow-ups to the editorial pass (#1629). A PDP claiming
   the Obligations feature publishes its supported obligation types; a
   PEP's `supported_obligations` declaration is optional and its

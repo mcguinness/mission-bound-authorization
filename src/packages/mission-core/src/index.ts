@@ -55,6 +55,30 @@ export {
   toolsSubset,
   verifyAttenuationChain,
 } from "./attenuation-chain.js";
+export {
+  AuthorityDependencyConfigError,
+  type AuthorityDependencyDeclaration,
+  type AuthorityDependencyEnforcement,
+  AuthorityDependencyEvidence,
+  type AuthorityDependencyRefusal,
+  AuthorityDependencyResolver,
+  checkAuthorityDependency,
+  classifyObservedInvalidation,
+  type DependencyEvaluation,
+  type DependencyFailure,
+  type DependencyPrincipal,
+  evaluateAuthorityDependency,
+  type GovernedAuthoritySource,
+  type IdentityStateRecord,
+  type InvalidatingChange,
+  type ObservedInvalidation,
+  type PrincipalStateObservation,
+  type PrincipalStateView,
+  type PrincipalStatus,
+  parseAuthorityDependencyDeclarations,
+  type ReconciledInvalidation,
+  type ReconcilerOperation,
+} from "./authority-dependency.js";
 export type {
   AuthorityEntry,
   ChildFanoutControls,
@@ -189,6 +213,24 @@ export {
   newDpopProofReplay,
 } from "./dpop-replay.js";
 export {
+  EVALUATION_CONTEXT_BINDING_EXTENSION,
+  EVALUATION_CONTEXT_GRANULARITIES,
+  EVALUATION_CONTEXT_PROPERTIES,
+  EvaluationContextBindingConfigError,
+  EvaluationContextBindingDeclarations,
+  type EvaluationContextBindingRef,
+  type EvaluationContextDescriptor,
+  type EvaluationContextDescriptorResolution,
+  type EvaluationContextFact,
+  type EvaluationContextGranularity,
+  type EvaluationContextOperation,
+  type EvaluationContextProperty,
+  evaluationContextBindingViolation,
+  isEvaluationContextBindingRef,
+  isEvaluationContextDigest,
+  sameEvaluationContextBinding,
+} from "./evaluation-context.js";
+export {
   canonicalIdempotencyScope,
   IDEMPOTENCY_KEY_PATTERN,
   IDEMPOTENCY_SCOPE_DIMENSIONS,
@@ -203,6 +245,17 @@ export {
   type ScopeActorInput,
   VOLATILE_SCOPE_MEMBERS,
 } from "./idempotency.js";
+export {
+  explicitFreshnessSeconds,
+  freshUntil,
+  IssuerKeyError,
+  type IssuerKeyRefusal,
+  type IssuerKeyRole,
+  IssuerKeys,
+  type IssuerKeysFetch,
+  type IssuerKeysOptions,
+  keyThumbprint,
+} from "./issuer-keys.js";
 export {
   type LocalApprovedSetRetrieval,
   LocalApprovedSetVerificationError,
@@ -230,6 +283,7 @@ export {
   MCP_REFERENCE_META_KEY,
   MISSION_REFERENCE_HEADER,
   type PropagatedMissionReference,
+  type PropagatedWorkItem,
   parseMcpReferenceMeta,
   parseMissionReferenceField,
 } from "./mission-reference.js";

@@ -1534,3 +1534,283 @@ describe("a carryover replacement keeps the old child's original approved audien
     expect(kernel.get(replacementId)?.approved_audiences).toEqual([["https://rs-a.test/"]]);
   });
 });
+
+describe("Child Mission Carryover compositions in the reference deployment (@spec child-delegation#carryover, child-delegation#carryover-cas, #919)", () => {
+  /** The carryover columns a deferral row holds. */
+  const planOf = (run: Run) =>
+    run.store.db
+      .prepare("SELECT carryover_plan_id, carryover_manifest_json FROM expansion_deferrals WHERE deferral_code = ?")
+      .get(run.code);
+
+  it("prepares no plan for a predecessor with no live descendant and completes an ordinary expansion", () => {
+    const pred = approvePredecessor();
+    const run = openApproved(pred.id);
+    expect(planOf(run)).toEqual({ carryover_plan_id: null, carryover_manifest_json: null });
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.carryover).toBeUndefined();
+    expect(run.store.carryoverResultFor(run.code)).toBeUndefined();
+    expect(kernel.get(pred.id)?.termination?.reason).toBe("superseded");
+  });
+
+  it("with the switch off when the expansion opens, prepares no plan and cascades the live subtree ordinarily, carrying nothing", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const grandchild = addChild(child.id, "grandchild-a");
+    const run = openApproved(pred.id, { config: config({ enabled: false }) });
+    expect(planOf(run)).toEqual({ carryover_plan_id: null, carryover_manifest_json: null });
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(out.carryover).toBeUndefined();
+    expect(kernel.get(child.id)?.termination).toMatchObject({ reason: "parent_terminated", parent: pred.id });
+    expect(kernel.get(grandchild.id)?.termination).toMatchObject({ reason: "parent_terminated", parent: child.id });
+    expect(kernel.get(child.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.get(grandchild.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.descendantsOf(out.successor.id)).toEqual([]);
+  });
+
+  it("carries a child suspended and resumed before rendering; one suspended at rendering and resumed before completion refuses the batch", () => {
+    const pred = approvePredecessor();
+    const resumed = addChild(pred.id, "child-a");
+    kernel.transition(resumed.id, "suspend");
+    kernel.transition(resumed.id, "resume");
+    const run = openApproved(pred.id);
+    expect(manifestOf(run).entries.find((e) => e.child_id === resumed.id)?.outcome).toBe("carry");
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    expect(kernel.get(resumed.id)?.termination?.carried_to).toBeDefined();
+
+    const later = approvePredecessor();
+    const child = addChild(later.id, "child-b");
+    kernel.transition(child.id, "suspend");
+    const run2 = openApproved(later.id);
+    const manifest = manifestOf(run2);
+    expect(manifest.entries.find((e) => e.child_id === child.id)).toMatchObject({
+      outcome: "cascade",
+      reason: "suspended_not_resumed",
+    });
+    kernel.transition(child.id, "resume");
+    expect(redeem(run2)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("active");
+    expect(kernel.get(later.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child was suspended after approval", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    expect(manifest.entries.find((e) => e.child_id === child.id)?.outcome).toBe("carry");
+    kernel.transition(child.id, "suspend");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("suspended");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child was contained after approval", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a", ["payments:invoice.read", "payments:invoice.list"]);
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    kernel.contain(child.id, {
+      event: {
+        type: "anomaly.detected",
+        source: "svc:soc",
+        observed_at: clock.toISOString(),
+        event_id: "ev-contain-919",
+      },
+      remove: [{ resource: RESOURCE, actions: ["payments:invoice.list"] }],
+    });
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(child.id)?.state).toBe("active");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a rendered child's record is gone at completion", () => {
+    const pred = approvePredecessor();
+    const child = addChild(pred.id, "child-a");
+    const sibling = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    // A row removed out of band, as a purge would.
+    kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(child.id);
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(sibling.id)?.state).toBe("active");
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+
+  it("refuses a batch when a carried child's own expiry arrives before completion: no replacement can outlive it", () => {
+    const pred = approvePredecessor();
+    const expiring = createChildMission(kernel, {
+      parentId: pred.id,
+      intent: kernel.validateIntent(
+        JSON.stringify({ goal: "Pay Acme invoices", target_resources: [RESOURCE], expires_at: "2026-07-01T00:05:00Z" }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: "child-a", sub_profile: "ai_agent" },
+    }).child;
+    const run = openApproved(pred.id);
+    const manifest = manifestOf(run);
+    const entry = manifest.entries.find((e) => e.child_id === expiring.id);
+    expect(entry?.outcome).toBe("carry");
+    // Inside the deferral's lifetime, past the child's own expiry.
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(kernel.get(manifest.successor.mission_id)).toBeUndefined();
+    expect(kernel.get(entry?.replacement?.replacement_id as string)).toBeUndefined();
+    expect(kernel.get(pred.id)?.state).toBe("active");
+  });
+});
+
+describe("a carried child's own expiry at completion (@spec child-delegation#carryover-cas, child-delegation#child-state, #1674)", () => {
+  /** A child of `parentId` whose own expiry falls inside the expansion's deferral window. */
+  const expiringChild = (parentId: string, actor: string) =>
+    createChildMission(kernel, {
+      parentId,
+      intent: kernel.validateIntent(
+        JSON.stringify({ goal: "Pay Acme invoices", target_resources: [RESOURCE], expires_at: "2026-07-01T00:05:00Z" }),
+      ),
+      proposedAuthority: proposed(["payments:invoice.read"]),
+      childActor: { sub: actor, sub_profile: "ai_agent" },
+    }).child;
+  const reservationStates = (run: Run): string[] =>
+    (
+      run.store.db
+        .prepare(
+          "SELECT state FROM carryover_reservations WHERE plan_id = (SELECT carryover_plan_id FROM expansion_deferrals WHERE deferral_code = ?)",
+        )
+        .all(run.code) as Array<{ state: string }>
+    ).map((r) => r.state);
+
+  it("is excluded and recorded expired under a plan committing state changes, while its sibling carries", () => {
+    const stateOnly: CarryoverExclusionPolicy = {
+      mode: "disclosed_exclusions",
+      change_classes: ["state_changed"],
+      dependent_descendant_exclusion: true,
+      unrendered_child_cascade: true,
+    };
+    const pred = approvePredecessor();
+    const expiring = expiringChild(pred.id, "child-a");
+    const sibling = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id, { config: config({ exclusionPolicy: stateOnly }) });
+    expect(manifestOf(run).entries.find((e) => e.child_id === expiring.id)?.outcome).toBe("carry");
+    // Inside the deferral's lifetime, past the child's own expiry, which no
+    // transition has persisted.
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(kernel.get(expiring.id)?.state).toBe("active");
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    if ("error" in out) return;
+    expect(kernel.get(expiring.id)?.termination).toMatchObject({ reason: "expired", terminated_at: expiring.expires_at });
+    expect(kernel.get(expiring.id)?.termination?.carried_to).toBeUndefined();
+    expect(kernel.get(sibling.id)?.termination?.carried_to).toBeDefined();
+    const row = run.store.carryoverResultFor(run.code)?.map.find((r) => r.old_child.mission_id === expiring.id);
+    expect(row).toMatchObject({
+      outcome: "excluded",
+      reason: "state_changed",
+      terminal_state: "terminated",
+      termination: { reason: "expired", terminated_at: expiring.expires_at },
+    });
+  });
+
+  it("refuses the batch under all-or-nothing, and a refused completion cancels the plan's reservations whatever its cause", () => {
+    const pred = approvePredecessor();
+    expiringChild(pred.id, "child-a");
+    const run = openApproved(pred.id);
+    expect(reservationStates(run).every((s) => s === "held")).toBe(true);
+    clock = new Date("2026-07-01T00:06:00Z");
+    expect(redeem(run)).toEqual({ error: "access_denied" });
+    expect(reservationStates(run).length).toBeGreaterThan(0);
+    expect(reservationStates(run).every((s) => s === "cancelled")).toBe(true);
+
+    // A refusal with no carryover cause: the predecessor revoked in the window.
+    clock = new Date("2026-07-01T00:00:00Z");
+    const other = approvePredecessor();
+    addChild(other.id, "child-b");
+    const run2 = openApproved(other.id);
+    kernel.transition(other.id, "revoke");
+    expect(redeem(run2)).toMatchObject({ error: "access_denied" });
+    expect(reservationStates(run2).length).toBeGreaterThan(0);
+    expect(reservationStates(run2).every((s) => s === "cancelled")).toBe(true);
+  });
+});
+
+describe("a rendered carryover row whose record is gone (@spec child-delegation#carryover-cas, child-delegation#carryover-evidence, #1675)", () => {
+  const RECORD_MISSING: CarryoverExclusionPolicy = {
+    mode: "disclosed_exclusions",
+    change_classes: ["record_missing"],
+    dependent_descendant_exclusion: true,
+    unrendered_child_cascade: true,
+  };
+  const removeRecord = (id: string) => kernel.db.prepare("DELETE FROM missions WHERE id = ?").run(id);
+
+  it("is recorded once, from its tombstone, with the termination it committed, in the map and the signed evidence; the rest carries", () => {
+    const pred = approvePredecessor();
+    const gone = addChild(pred.id, "child-a");
+    const kept = addChild(pred.id, "child-b");
+    const run = openApproved(pred.id, { config: config({ exclusionPolicy: RECORD_MISSING }) });
+    const rendered = manifestOf(run).entries.map((e) => e.child_id);
+    kernel.transition(gone.id, "revoke");
+    const committed = (kernel.get(gone.id) as MissionRecord).termination;
+    expect(committed?.reason).toBe("revoked");
+    // The tombstone keeps the termination exactly as committed.
+    expect(kernel.tombstones.find(ISS, gone.id)?.termination).toEqual(committed);
+    removeRecord(gone.id);
+    const out = redeem(run);
+    expect("error" in out, JSON.stringify(out)).toBe(false);
+    const result = run.store.carryoverResultFor(run.code);
+    if (!result) throw new Error("no carryover result");
+    for (const map of [result.map, decodeCarryoverEvidence(result.evidence_jws).map]) {
+      for (const id of rendered) expect(map.filter((r) => r.old_child.mission_id === id)).toHaveLength(1);
+      expect(map.find((r) => r.old_child.mission_id === gone.id)).toEqual({
+        old_child: { issuer: ISS, mission_id: gone.id },
+        outcome: "excluded",
+        reason: "record_missing",
+        terminal_state: "terminated",
+        termination: committed,
+      });
+      expect(map.find((r) => r.old_child.mission_id === kept.id)?.outcome).toBe("carried");
+    }
+  });
+
+  it("refuses the batch when the tombstone's detail is pruned, kept no termination, or does not exist", () => {
+    const cases: Array<[string, (id: string) => void]> = [
+      [
+        "pruned",
+        (id) => {
+          kernel.transition(id, "revoke");
+          kernel.db.prepare("UPDATE mission_tombstones SET detail_expires_at = 0 WHERE mission_id = ?").run(id);
+          kernel.tombstones.pruneDetails();
+          expect(kernel.tombstones.find(ISS, id)).toMatchObject({ detailPruned: true });
+          expect(kernel.tombstones.find(ISS, id)?.termination).toBeUndefined();
+        },
+      ],
+      [
+        "written before the termination was kept",
+        (id) => {
+          kernel.transition(id, "revoke");
+          kernel.db.prepare("UPDATE mission_tombstones SET termination_json = NULL WHERE mission_id = ?").run(id);
+        },
+      ],
+      ["absent, the record removed with no terminal transition", () => {}],
+    ];
+    for (const [label, prepare] of cases) {
+      const pred = approvePredecessor();
+      const gone = addChild(pred.id, "child-a");
+      addChild(pred.id, "child-b");
+      const run = openApproved(pred.id, { config: config({ exclusionPolicy: RECORD_MISSING }) });
+      const manifest = manifestOf(run);
+      prepare(gone.id);
+      removeRecord(gone.id);
+      expect(redeem(run), label).toEqual({ error: "access_denied" });
+      expect(kernel.get(manifest.successor.mission_id), label).toBeUndefined();
+      expect(kernel.get(pred.id)?.state, label).toBe("active");
+    }
+  });
+});

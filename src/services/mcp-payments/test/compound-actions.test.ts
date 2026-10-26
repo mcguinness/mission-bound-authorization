@@ -15,20 +15,31 @@
  * connector, so the pre-effect seam is exercised where there is no connector
  * to stop as well as where there is.
  *
+ * The compensate crossing (#252 PR C2) is `reverse_wire_transfer`, on its own
+ * action identifier `payments:payment.reverse`: it offsets a wire
+ * `execute_wire_transfer` committed, through the reference connector, under
+ * its own single-use Decision, carrying the link to the committed original
+ * that the PEP establishes from its own verified evidence.
+ *
  * Unconditional: the FGA check is a stub, so this file never skips.
  */
 
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { CATALOG_TOOL_BINDINGS } from "@mission/demo-data";
-import type { Decision, Fga, MissionView } from "@mission/pdp";
+import { type Decision, DecisionRequestRefused, type EvaluationRequest, type Fga, type MissionView } from "@mission/pdp";
 import {
   buildEffectiveParams,
+  buildReversalParams,
   CANONICAL_RESOURCE,
   Connectors,
   CONNECTOR_TOOLS,
   createEphemeralEvidenceKeys,
+  DECISION_EVIDENCE_MEDIA_TYPE,
+  type Evidence,
+  reconcile,
   type DecisionEvidence,
+  EvaluationContextSalts,
   EvidenceStore,
   type ExecutionEvidence,
   McpPaymentsServer,
@@ -57,9 +68,34 @@ const AUTHORITY = [
   {
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
+    // #252: the compensation's own authority, beside the commit's.
+    actions: ["payments:payment.execute", "payments:payment.reverse", "payments:payment.schedule", "payments:invoice.read"],
+    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+  },
+];
+
+/**
+ * The wire's authority under its own ceiling, and the compensation's under a
+ * USD 10 reversal ceiling (#252, the owner's regression).
+ */
+const AUTHORITY_REVERSAL_CEILING_10 = [
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
     actions: ["payments:payment.execute", "payments:payment.schedule", "payments:invoice.read"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
   },
+  {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: ["payments:payment.reverse"],
+    constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
+  },
+];
+
+/** The same Mission authority with no authority to compensate (#252). */
+const AUTHORITY_WITHOUT_REVERSE = [
+  { ...AUTHORITY[0], actions: AUTHORITY[0]?.actions.filter((a) => a !== "payments:payment.reverse") },
 ];
 
 const TOKEN: TokenFacts = {
@@ -103,6 +139,8 @@ interface Harness {
   overrideProfile: (tool: string, mapping: ActionMapping | undefined) => void;
   /** How many decision requests the PEP has sent. */
   decisionRequests: () => number;
+  /** What the decision function threw, in order: a PDP refusal before evaluation lands here (#252). */
+  decideErrors: () => unknown[];
   digest: () => string;
 }
 
@@ -111,6 +149,20 @@ function harness(
     recognizedConditions?: ReadonlySet<string>;
     /** Run inside the PEP's `observe` hook, after the Decision and before admission. */
     onObserve?: (h: Harness) => void;
+    /** The Mission's Authority Set, in place of {@link AUTHORITY} (#252). */
+    authority?: readonly unknown[];
+    /**
+     * Rows a durable retention backend hands the evidence store at startup
+     * (#252): recovered as held, with no re-verification, which is exactly
+     * the state a record changed at rest arrives in.
+     */
+    preload?: readonly Evidence[];
+    /** The reference connectors, shared with another harness's committed effects (#252). */
+    connectors?: Connectors;
+    /** Rewrite the request on its way to the PDP: a non-conforming requester (#252). */
+    rewrite?: (req: EvaluationRequest) => EvaluationRequest;
+    /** @spec runtime#evaluation-context-binding (#773): a salt keeper shared with another harness, one epoch for both. */
+    salts?: EvaluationContextSalts;
   } = {},
 ): Harness {
   let pepNowMs = BASE_MS;
@@ -118,6 +170,7 @@ function harness(
   const dropped = new Set<string>();
   const overridden = new Map<string, ActionMapping>();
   let requested = 0;
+  const thrown: unknown[] = [];
   let replayed: Decision | undefined;
   let captured: Decision | undefined;
   let envelope: Record<string, unknown> | undefined;
@@ -158,7 +211,7 @@ function harness(
     state,
     version: 1,
     authority_hash: "sha-256:m252",
-    authority_set: AUTHORITY as MissionView["authority_set"],
+    authority_set: (opts.authority ?? AUTHORITY) as MissionView["authority_set"],
     subject: { iss: "https://as.test", sub: "alice" },
     client_id: "ap-agent",
   });
@@ -171,8 +224,24 @@ function harness(
       ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: new Date(pepNowMs).toISOString() } }
       : undefined;
 
-  const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
-  const connectors = new Connectors(() => new Date(pepNowMs));
+  const sequences = new Map<string, number>();
+  const evidence = new EvidenceStore(
+    EVIDENCE_KEYS.signing,
+    EVIDENCE_KEYS.resolver,
+    opts.preload
+      ? {
+          nextSequence: (missionId, emitterId, role) => {
+            const key = `${missionId} ${emitterId} ${role}`;
+            const n = sequences.get(key) ?? 100;
+            sequences.set(key, n + 1);
+            return n;
+          },
+          retain: () => {},
+          retained: () => (opts.preload ?? []).map((row) => ({ row: row as never })),
+        }
+      : undefined,
+  );
+  const connectors = opts.connectors ?? new Connectors(() => new Date(pepNowMs));
   const engine = new TransactionEngine("epoch-252", () => new Date(BASE_MS));
 
   const pep = new Pep({
@@ -182,7 +251,12 @@ function harness(
     decide: async (req, options) => {
       requested += 1;
       if (replayed) return replayed;
-      return EVIDENCE_KEYS.decide(req, options);
+      try {
+        return await EVIDENCE_KEYS.decide(opts.rewrite ? opts.rewrite(req) : req, options);
+      } catch (e) {
+        thrown.push(e);
+        throw e;
+      }
     },
     observe: ({ decision, envelope: request }) => {
       captured = decision;
@@ -191,6 +265,7 @@ function harness(
     },
     payments,
     evidence,
+    committedEffects: connectors,
     fga: alwaysAllowFga,
     modelId: "unit-test-model",
     loadView,
@@ -203,6 +278,7 @@ function harness(
           .map(([tool, mapping]) => [tool, overridden.get(tool) ?? mapping]),
       ) as Record<string, ActionMapping>,
     ...(opts.recognizedConditions ? { recognizedConditions: opts.recognizedConditions } : {}),
+    ...(opts.salts ? { evaluationContextSalts: () => opts.salts as EvaluationContextSalts } : {}),
   });
 
   const server = new McpPaymentsServer({
@@ -245,6 +321,7 @@ function harness(
       else overridden.set(tool, mapping);
     },
     decisionRequests: () => requested,
+    decideErrors: () => thrown,
     digest: () => {
       const invoice = payments.getInvoice("inv-1");
       const vendor = invoice ? payments.getVendor(invoice.vendor_id) : undefined;
@@ -294,6 +371,57 @@ async function cross(
   if (crossing.call === "read") return h.server.callReadTool(crossing.tool, args, TOKEN, hook);
   if (crossing.call === "write") return h.server.callWriteTool(crossing.tool, args, TOKEN, hook);
   return h.server.callTransactionTool(crossing.tool, args, TOKEN, hook);
+}
+
+/**
+ * @spec runtime#compound-actions (#252): the compensate crossing, through the
+ * served transaction dispatch path. The agent names only the invoice whose
+ * wire it asks to reverse, and a fresh key for this one compensation.
+ */
+async function reverse(
+  h: Harness,
+  invoiceId = "inv-1",
+  idempotencyKey = `idem_${randomUUID()}`,
+): Promise<{ ok: boolean; refusal_reason?: string; denial_reason?: string; result?: unknown }> {
+  return h.server.callTransactionTool("reverse_wire_transfer", { invoice_id: invoiceId, idempotency_key: idempotencyKey }, TOKEN);
+}
+
+/** The Decision Evidence of the commit-phase permit for a wire, the original a compensation links. */
+const commitPermitOf = (h: Harness): DecisionEvidence | undefined =>
+  decisions(h).find((d) => d.content.decision === "permit" && d.content.action_phase === "commit");
+
+/** The Decision Evidence the compensate crossing obtained. */
+const compensating = (h: Harness): DecisionEvidence[] =>
+  decisions(h).filter((d) => d.content.action.name === "payments:payment.reverse");
+
+const refusalsOf = (h: Harness): RefusalRecord[] =>
+  h.evidence.forMission("msn_252").filter((e): e is RefusalRecord => e.kind === "refusal");
+
+/**
+ * A compensation the PEP refused before any decision request because it could
+ * not establish the committed original from verified evidence: the
+ * diagnostic, no new decision request, no compensating Decision Evidence, no
+ * reversal, and one verifiable signed `compensation_link_unavailable` record.
+ */
+async function expectLinkUnavailable(
+  h: Harness,
+  res: { ok: boolean; refusal_reason?: string; denial_reason?: string },
+  requestsBefore: number,
+  label: string,
+): Promise<void> {
+  expect(res, label).toMatchObject({ ok: false, refusal_reason: "compensation_link_unavailable" });
+  expect(h.decisionRequests(), label).toBe(requestsBefore);
+  expect(compensating(h), label).toHaveLength(0);
+  expect(h.connectors.reversalEntries("msn_252"), label).toHaveLength(0);
+  const refusals = refusalsOf(h).filter((r) => r.content.action.name === "payments:payment.reverse");
+  expect(refusals, label).toHaveLength(1);
+  expect(refusals[0]?.content, label).toMatchObject({
+    denial_reason: "compensation_link_unavailable",
+    emitter: { role: "pep" },
+    mission: { id: "msn_252", issuer: "https://as.test" },
+  });
+  const content = refusals[0]?.content as RefusalRecord["content"];
+  expect(await verifyEvidenceEnvelope(content, REFUSAL_RECORD_MEDIA_TYPE, EVIDENCE_KEYS.resolver), label).toEqual({ valid: true });
 }
 
 describe("compound-action phases (@spec runtime#compound-actions)", () => {
@@ -605,6 +733,372 @@ describe("compound-action phases (@spec runtime#compound-actions)", () => {
     expect(committed.ok, JSON.stringify(committed)).toBe(true);
     expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
   });
+
+  it("offsets a committed wire through the reference connector under a fresh compensate Decision whose evidence links the original commit's evaluation_id", async () => {
+    const h = harness();
+    const committed = await cross(h, crossings[2]);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const wireOpKey = (committed.result as { op_key: string }).op_key;
+    const original = commitPermitOf(h)?.content;
+    expect(original?.evaluation_id).toEqual(expect.any(String));
+
+    const reversed = await reverse(h);
+    expect(reversed.ok, JSON.stringify(reversed)).toBe(true);
+    // The PEP carried the link it established from its own evidence, and the
+    // compensation obtained its own Decision: a fresh, single-use permit for
+    // its own action, at the compensate phase.
+    expect(h.lastEnvelope()?.compensates_evaluation_id).toBe(original?.evaluation_id);
+    const records = compensating(h);
+    expect(records).toHaveLength(1);
+    const record = records[0]?.content;
+    expect(record?.decision).toBe("permit");
+    expect(record?.action_phase).toBe("compensate");
+    expect(record?.compensates_evaluation_id).toBe(original?.evaluation_id);
+    expect(record?.evaluation_id).not.toBe(original?.evaluation_id);
+    expect(record?.conditions?.use_limit).toBe(1);
+    expect(await verifyEvidenceEnvelope(record as never, DECISION_EVIDENCE_MEDIA_TYPE, EVIDENCE_KEYS.resolver)).toEqual({ valid: true });
+    // The reference connector offset exactly the committed wire, under the
+    // compensation's own operation key and permit, and left the wire's own
+    // ledger entry as it was.
+    const reverseOpKey = (reversed.result as { op_key: string }).op_key;
+    expect(reverseOpKey).toBe(
+      operationKey("msn_252", "payments:payment.reverse", record?.parameter_digest as string, "compensate"),
+    );
+    expect(reverseOpKey).not.toBe(wireOpKey);
+    expect(h.connectors.reversalEntries("msn_252")).toEqual([
+      expect.objectContaining({
+        op_key: reverseOpKey,
+        reversed_op_key: wireOpKey,
+        invoice_id: "inv-1",
+        amount: "125.00",
+        currency: "USD",
+        permit_id: record?.evaluation_id,
+      }),
+    ]);
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
+    // Each effect has its own completed Execution Evidence, and
+    // reconciliation joins both: the reversal is an effect of its own permit.
+    expect(executions(h).filter((e) => e.content.outcome === "completed").map((e) => e.op_key)).toEqual([wireOpKey, reverseOpKey]);
+    expect(reconcile("msn_252", h.evidence, h.connectors).ok).toBe(true);
+  });
+
+  it("denies a reversal of a committed USD 125 wire under a USD 10 reversal ceiling after the invoice changed to USD 1, with zero connector effects", async () => {
+    // The owner's regression: the reversal ceiling is evaluated against what
+    // the compensation will actually offset, the committed wire's amount,
+    // never the invoice as it reads now.
+    const h = harness({ authority: AUTHORITY_REVERSAL_CEILING_10 });
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    h.payments.bumpInvoiceAmount("inv-1", "1.00");
+    const denied = await reverse(h);
+    expect(denied).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+    // The decision request carried the committed amount, and the denial's
+    // evidence binds the committed-effect form.
+    expect(h.lastEnvelope()?.amount).toEqual({ amount: "125.00", currency: "USD" });
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
+  });
+
+  it("reverses exactly the committed amount whatever the invoice now reads, and the Decision Evidence and Execution Evidence carry the committed-effect parameters' digest", async () => {
+    const h = harness();
+    const committed = await cross(h, crossings[2]);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const wireOpKey = (committed.result as { op_key: string }).op_key;
+    h.payments.bumpInvoiceAmount("inv-1", "1.00");
+    const reversed = await reverse(h);
+    expect(reversed.ok, JSON.stringify(reversed)).toBe(true);
+    // The form the compensating Decision bound: the committed wire's own
+    // record, and the key of the wire it offsets.
+    const expected = parameterDigest(
+      buildReversalParams({
+        action: "payments:payment.reverse",
+        wire: { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD" },
+        resource: CANONICAL_RESOURCE,
+        reverses: wireOpKey,
+      }),
+    );
+    expect(h.lastEnvelope()?.amount).toEqual({ amount: "125.00", currency: "USD" });
+    expect(h.lastEnvelope()?.parameter_digest).toBe(expected);
+    const record = compensating(h)[0]?.content;
+    expect(record?.decision).toBe("permit");
+    expect(record?.parameter_digest).toBe(expected);
+    const reverseOpKey = (reversed.result as { op_key: string }).op_key;
+    expect(reverseOpKey).toBe(operationKey("msn_252", "payments:payment.reverse", expected, "compensate"));
+    const execution = executions(h).find((e) => e.op_key === reverseOpKey)?.content;
+    expect(execution).toMatchObject({
+      outcome: "completed",
+      evaluation_id: record?.evaluation_id,
+      authorized_parameter_digest: expected,
+      effective_parameter_digest: expected,
+    });
+    expect(h.connectors.reversalEntries("msn_252")).toEqual([
+      expect.objectContaining({ reversed_op_key: wireOpKey, amount: "125.00", currency: "USD" }),
+    ]);
+  });
+
+  it("refuses at use a compensation whose committed wire record no longer matches the form its permit bound, with zero connector effects", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    // The wire's record changes after the Decision and before the effect:
+    // the form re-derived from it no longer has the digest the permit bound.
+    const refused = await h.server.callTransactionTool(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => {
+        h.connectors.db.prepare("UPDATE ledger SET amount = '99.00' WHERE invoice_id = 'inv-1'").run();
+      },
+    );
+    // @spec runtime-evidence#context-drift-classification (#773): the shipped
+    // statement covers the compensate crossing, and the amount is a declared
+    // fact of the wire's record, so the moved fact is `target_drift`, with
+    // the parameter pair still recorded and unequal. A deployment that does
+    // not claim the binding records `parameter_mismatch` (witnessed in
+    // evaluation-context.test.ts).
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "target_drift" });
+    const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+    expect(suppressed.map((e) => e.content.error)).toEqual(["target_drift"]);
+    expect(suppressed[0]?.content.effective_parameter_digest).toBeDefined();
+    expect(suppressed[0]?.content.effective_parameter_digest).not.toBe(suppressed[0]?.content.authorized_parameter_digest);
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
+  it("suppresses a compensation whose committed wire record no longer answers at use as target_drift, keeping the authorized digest and omitting the effective one", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const refused = await h.server.callTransactionTool(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      TOKEN,
+      () => {
+        h.connectors.db.prepare("DELETE FROM ledger WHERE invoice_id = 'inv-1'").run();
+      },
+    );
+    expect(refused).toMatchObject({ ok: false, refusal_reason: "target_drift" });
+    const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+    expect(suppressed).toHaveLength(1);
+    expect(suppressed[0]?.content.error).toBe("target_drift");
+    expect(suppressed[0]?.content.authorized_parameter_digest).toBe(compensating(h)[0]?.content.parameter_digest);
+    expect(suppressed[0]?.content).not.toHaveProperty("effective_parameter_digest");
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
+  it("the PDP refuses a compensate request without compensates_evaluation_id, or with a malformed one, before evaluation", async () => {
+    // A requester that drops or garbles the link: the PDP never evaluates the
+    // request, so no compensate Decision exists without its required link.
+    const cases: Array<[string, (ctx: Record<string, unknown>) => void]> = [
+      ["absent", (ctx) => delete ctx.compensates_evaluation_id],
+      ["empty", (ctx) => (ctx.compensates_evaluation_id = "")],
+      ["outside the identifier syntax", (ctx) => (ctx.compensates_evaluation_id = "dec 1")],
+      ["over 64 characters", (ctx) => (ctx.compensates_evaluation_id = "d".repeat(65))],
+      ["a number", (ctx) => (ctx.compensates_evaluation_id = 7)],
+      ["null", (ctx) => (ctx.compensates_evaluation_id = null)],
+    ];
+    for (const [label, garble] of cases) {
+      const h = harness({
+        rewrite: (req) => {
+          if (req.context.action_phase !== "compensate") return req;
+          const context = { ...req.context } as Record<string, unknown>;
+          garble(context);
+          return { ...req, context } as EvaluationRequest;
+        },
+      });
+      expect((await cross(h, crossings[2])).ok, label).toBe(true);
+      const refused = await reverse(h);
+      expect(refused.ok, label).toBe(false);
+      const thrown = h.decideErrors();
+      expect(thrown, label).toHaveLength(1);
+      expect(thrown[0], label).toBeInstanceOf(DecisionRequestRefused);
+      expect((thrown[0] as DecisionRequestRefused).denial_reason, label).toBe("compensation_link_invalid");
+      expect(compensating(h), label).toHaveLength(0);
+      expect(h.connectors.reversalEntries("msn_252"), label).toHaveLength(0);
+      expect(executions(h).filter((e) => e.content.outcome !== "completed"), label).toHaveLength(0);
+    }
+  });
+
+  it("ignores an agent-supplied compensates_evaluation_id argument and links the verified original", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[1])).ok).toBe(true);
+    const heldEvaluation = h.lastDecision()?.context.decision_id as string;
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const original = commitPermitOf(h)?.content.evaluation_id;
+    expect(original).not.toBe(heldEvaluation);
+    // Handed past the tool boundary, an argument naming another evaluation is
+    // never read: the request, the Decision Evidence and the established link
+    // all carry the committed original.
+    const res = await h.pep.enforce(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}`, compensates_evaluation_id: heldEvaluation },
+      TOKEN,
+    );
+    expect(res.permitted, res.refusal_reason ?? res.denial_reason).toBe(true);
+    expect(h.lastEnvelope()?.compensates_evaluation_id).toBe(original);
+    expect(res.compensates?.evaluationId).toBe(original);
+    expect(compensating(h).map((d) => d.content.compensates_evaluation_id)).toEqual([original]);
+    // At the served tool boundary the member is in no schema, so intake
+    // (D316) refuses it before any Decision, whatever it names.
+    const refused = await h.server.callTransactionTool(
+      "reverse_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}`, compensates_evaluation_id: original },
+      TOKEN,
+    );
+    expect(refused).toEqual({ ok: false, refusal_reason: "invalid_request" });
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
+  it("refuses a compensation whose original is unknown before any decision request", async () => {
+    // Nothing committed at all.
+    const empty = harness();
+    await expectLinkUnavailable(empty, await reverse(empty), 0, "no evidence at all");
+    // A wire committed for one invoice links nothing for another.
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const before = h.decisionRequests();
+    await expectLinkUnavailable(h, await reverse(h, "inv-2"), before, "another invoice's wire");
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
+  });
+
+  it("refuses a compensation whose original was only prepared, held or refused before any decision request", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[0])).ok).toBe(true);
+    expect((await cross(h, crossings[1])).ok).toBe(true);
+    // A commit-phase permit whose wire never committed: it expired before the effect.
+    const expired = await cross(h, crossings[2], () => h.advancePep(10 * 60 * 1000));
+    expect(expired.refusal_reason).toBe("permit_expired");
+    expect(commitPermitOf(h)).toBeDefined();
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(0);
+    h.advancePep(-10 * 60 * 1000);
+    const before = h.decisionRequests();
+    await expectLinkUnavailable(h, await reverse(h), before, "prepared, held and refused only");
+  });
+
+  it("refuses a compensation whose original record does not verify before any decision request", async () => {
+    const source = harness();
+    expect((await cross(source, crossings[2])).ok).toBe(true);
+    const rows = [...source.evidence.all()];
+    // A row changed at rest, recovered by the store as held: one member of the
+    // commit's Decision Evidence, or of its completed Execution Evidence,
+    // under the envelope signed over the original bytes.
+    const decisionAltered = rows.map((r) =>
+      r.kind === "decision" && r.content.action_phase === "commit"
+        ? ({ ...r, content: { ...r.content, evaluated_at: "2026-01-01T00:00:00.000Z" } } as Evidence)
+        : r,
+    );
+    const executionAltered = rows.map((r) =>
+      r.kind === "execution" && r.content.outcome === "completed"
+        ? ({ ...r, content: { ...r.content, outcome_at: "2026-01-01T00:00:00.000Z" } } as Evidence)
+        : r,
+    );
+    for (const [label, preload] of [
+      ["Decision Evidence altered", decisionAltered],
+      ["Execution Evidence altered", executionAltered],
+    ] as const) {
+      const h = harness({ preload, connectors: source.connectors });
+      await expectLinkUnavailable(h, await reverse(h), 0, label);
+    }
+    // Control: the same records unaltered link the original, and the wire is offset.
+    const control = harness({ preload: rows, connectors: source.connectors });
+    const reversed = await reverse(control);
+    expect(reversed.ok, JSON.stringify(reversed)).toBe(true);
+    expect(source.connectors.reversalEntries("msn_252")).toHaveLength(1);
+  });
+
+  it("refuses the original commit permit presented at the compensating crossing: zero effects, one suppressed Execution Evidence record, no Refusal Record", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const commitPermit = h.lastDecision();
+    expect(conditionsOf(commitPermit)?.action_phase).toBe("commit");
+    h.replay(commitPermit);
+    const refused = await reverse(h);
+    expect(refused.ok).toBe(false);
+    expect(refused.refusal_reason).toBe("phase_mismatch");
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+    expect(h.connectors.ledgerEntries("msn_252")).toHaveLength(1);
+    const suppressed = executions(h).filter((e) => e.content.outcome === "suppressed");
+    expect(suppressed).toHaveLength(1);
+    expect(suppressed[0]?.content.evaluation_id).toBe(commitPermit?.context.decision_id);
+    expect(suppressed[0]?.content.error).toBe("phase_mismatch");
+    expect(refusalsOf(h)).toHaveLength(0);
+  });
+
+  it("denies a compensation the Mission's authority does not cover, though its link to the committed original is established", async () => {
+    // The link and the original commit's authority grant nothing: without
+    // its own authority the compensation is denied, and the denial still
+    // records the validated link.
+    const h = harness({ authority: AUTHORITY_WITHOUT_REVERSE });
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const original = commitPermitOf(h)?.content.evaluation_id;
+    const denied = await reverse(h);
+    expect(denied).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+    expect(h.lastEnvelope()?.compensates_evaluation_id).toBe(original);
+    expect(compensating(h).map((d) => [d.content.decision, d.content.action_phase, d.content.compensates_evaluation_id])).toEqual([
+      ["deny", "compensate", original],
+    ]);
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(0);
+  });
+
+  it("does not offset a committed wire twice under a duplicate compensation", async () => {
+    const h = harness();
+    expect((await cross(h, crossings[2])).ok).toBe(true);
+    const key = `idem_${randomUUID()}`;
+    expect((await reverse(h, "inv-1", key)).ok).toBe(true);
+    // The same key again: the PDP's claim answers it with the completed
+    // compensation, never a second one.
+    const again = await reverse(h, "inv-1", key);
+    expect(again).toMatchObject({ ok: false, denial_reason: "duplicate_suppressed" });
+    // A new key is a new compensation request for an operation already
+    // claimed: its fresh permit is refused at use, before the connector.
+    const fresh = await reverse(h);
+    expect(fresh).toMatchObject({ ok: false, refusal_reason: "permit_consumed" });
+    expect(executions(h).filter((e) => e.content.outcome === "suppressed").map((e) => e.content.error)).toEqual([
+      "operation_already_claimed",
+    ]);
+    expect(h.connectors.reversalEntries("msn_252")).toHaveLength(1);
+  });
+
+  it("the reference connector offsets a committed wire once, only with the wire's recorded amount, currency and payee, and refuses an unknown or uncommitted one", () => {
+    const connectors = new Connectors();
+    const wire = { invoiceId: "inv-1", vendorId: "acme", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", missionId: "msn_252" };
+    expect(connectors.postWire({ ...wire, opKey: "op:wire", permitId: "dec_wire" })).toEqual({ committed: true, deduped: false });
+    const reversal = {
+      reversedOpKey: "op:wire",
+      reversedPermitId: "dec_wire",
+      amount: "125.00",
+      currency: "USD",
+      payeeAccount: "acct-acme",
+      missionId: "msn_252",
+    };
+    // Reversal parameters that differ from the committed wire's record are
+    // refused, whatever the caller presents, before anything is offset.
+    for (const differing of [{ amount: "1.00" }, { amount: "125.01" }, { currency: "EUR" }, { payeeAccount: "acct-other" }]) {
+      expect(connectors.reverseWire({ ...reversal, ...differing, opKey: "op:rev-x", permitId: "dec_rev_x" }), JSON.stringify(differing)).toEqual({
+        committed: false,
+        deduped: false,
+        refusal: "reversal_mismatch",
+      });
+    }
+    expect(connectors.reversalEntries()).toEqual([]);
+    expect(connectors.reverseWire({ ...reversal, opKey: "op:rev-1", permitId: "dec_rev_1" })).toEqual({ committed: true, deduped: false });
+    // A retry under the same operation key is deduped, not a second offset.
+    expect(connectors.reverseWire({ ...reversal, opKey: "op:rev-1", permitId: "dec_rev_1" })).toEqual({ committed: true, deduped: true });
+    // A second reversal of the same wire under another operation key is refused.
+    expect(connectors.reverseWire({ ...reversal, opKey: "op:rev-2", permitId: "dec_rev_2" })).toEqual({
+      committed: false,
+      deduped: false,
+      refusal: "already_reversed",
+    });
+    // A wire never committed, and a committed key the link's permit did not commit, are refused.
+    for (const named of [
+      { reversedOpKey: "op:unknown", reversedPermitId: "dec_wire" },
+      { reversedOpKey: "op:wire", reversedPermitId: "dec_other" },
+    ]) {
+      expect(connectors.reverseWire({ ...reversal, ...named, opKey: "op:rev-3", permitId: "dec_rev_3" })).toEqual({
+        committed: false,
+        deduped: false,
+        refusal: "wire_not_committed",
+      });
+    }
+    expect(connectors.reversalEntries()).toEqual([expect.objectContaining({ op_key: "op:rev-1", reversed_op_key: "op:wire" })]);
+  });
 });
 
 describe("permit initiation validity at use (@spec runtime#execution-reverification)", () => {
@@ -638,13 +1132,16 @@ describe("permit initiation validity at use (@spec runtime#execution-reverificat
     // that could not be derived opens no operation row and takes no
     // redemption, and the refusal names the permit's window rather than a
     // duplicate.
-    const source = harness();
+    // One salt epoch for both harnesses, so the replayed permit's context
+    // binding is this PEP's own and the lease is what this test reaches (#773).
+    const salts = new EvaluationContextSalts();
+    const source = harness({ salts });
     expect((await cross(source, crossings[2])).ok).toBe(true);
     const permit = source.lastDecision();
     const conditions = { ...(permit?.context.conditions as Record<string, unknown>) };
     conditions.valid_until = new Date(BASE_MS).toISOString();
 
-    const h = harness();
+    const h = harness({ salts });
     h.replay({ ...permit, context: { ...permit?.context, conditions } } as Decision);
     const refused = await cross(h, crossings[2]);
     expect(refused.refusal_reason).toBe("permit_expired");
