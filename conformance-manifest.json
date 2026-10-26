@@ -13233,15 +13233,16 @@
     "issuance",
     "runtime-enforced"
    ],
-   "surface": "resource-operation",
-   "assertion": "no-side-effect",
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
    "observation": {
-    "normative": "given a token response whose granted authorization_details narrows or omits a proposed entry, the client uses the token for no operation outside the granted set, treats a narrowed entry as granting only its stated narrower authority, and need not reject the partial grant"
+    "normative": "given a token response whose granted authorization_details narrows or omits a proposed entry, the authority the client records as available to it is the granted set: no omitted entry is recorded as granted, and a narrowed entry is recorded at its stated narrower authority; the client need not reject the partial grant",
+    "local": "The row observes the client's account of its own authority, nothing more. It does not forbid the client from attempting a request outside the granted set: the resource server decides such a request, and an authorization challenge is a permitted outcome (D859)."
    },
    "level": "cross-component",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1719, D845. The AS side (the exact echo) is core.tokens.response-authorization-details-exact. No reference Mission client consumes the echo, and an AS test never witnesses a client obligation, so this row stays todo until a client witness. A partial grant creates no refusal duty: the client need not reject it."
+   "notes": "#1719, D845. The AS side (the exact echo) is core.tokens.response-authorization-details-exact. No reference Mission client consumes the echo, and an AS test never witnesses a client obligation, so this row stays todo until a client witness. A partial grant creates no refusal duty: the client need not reject it. D859: the observation tests the MUST NOT's text (no assumed authority), not a prohibition on any operation."
   },
   {
    "id": "core.scope-projection.semantic-subset-condition",
