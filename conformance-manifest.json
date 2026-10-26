@@ -23,8 +23,8 @@
     "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "11975d1d3cb7414df40ebb0ba35ecfa9a8c30441",
-    "content_sha256": "cf6cfe5239760a11465dec8e5712f7413b6245f4b9a331e19b5241d20a777a78"
+    "revision": "80378d7762a658e6c2f89b066d93a48a5e8906c0",
+    "content_sha256": "6dd7bb6708133bcef6ee979c66d057151b35a1ebf2b62f5290714fa4243256cd"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -91,16 +91,16 @@
     "content_sha256": "6b1af63354697423fb6b73b8a3ddf1d592106c4835848f99c5a3a03299eda724"
    },
    "draft-mcguinness-mission-orchestration.md": {
-    "revision": "1e0fa8a821c5ae0a6c5a172635ecbf720d3392d3",
-    "content_sha256": "3174fa1ab1b9b76c260e561a7d036e61f599d50f9543356ffa6f96d92d8ef946"
+    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
+    "content_sha256": "b54570c5a1a8170b7fba90bb8e4d9b163e3603e736726d81bbbc8334f1007637"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
     "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
     "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "f0ae62b925829bb0c1095fa7eee1e87adc66471d",
-    "content_sha256": "c61c6cfc7f22764c8ffe5c89d2afca8f28ddb7a958187eab0634c777a3b6e223"
+    "revision": "4a904d2f0a0df0d87f8986fab437600736674163",
+    "content_sha256": "3eca33ca871a15671b3515010f5580f46000500880f176118e93e3eaa1a3bcef"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -159,8 +159,8 @@
     "content_sha256": "665929b2d3917e67c8460beac4de5e21b3a974edc710a684d3d2ca1e7eab3555"
    },
    "draft-mcguinness-mission-harness.md": {
-    "revision": "1859f68af5307bc7ad368e3cd58383c8b42c7dd9",
-    "content_sha256": "d339ce2786b7f680f388cb23abe5df7a94e68d1ec6b73f4efd3b09d2ebaeefe1"
+    "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
+    "content_sha256": "9af0d69fb3397fc1c4341de0f9b98855f0b7b70a6cb4149e8a1e9d8860a078ee"
    }
   }
  },
@@ -10397,12 +10397,44 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver, owner or client who is not the recorded Subject; already-issued tokens are not recalled by the termination itself"
+    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver, owner or client who is not the recorded Subject; already-issued tokens are not recalled by the termination itself",
+    "local": "the reference's declared dependency (config/authority-dependencies.json, subject_deprovisioned mapped to revoke): the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) evaluates each governed Mission's recorded subject against the identity source, matched by iss (the source's issuer) and sub, and commits revoke through the lifecycle operation for any Mission not yet terminated, a suspended one included; the Mission Status endpoint then reports it terminated with reason revoked and the issuance gates refuse it. A disabled Subject is suspended, not revoked; a source that cannot be read, or that holds no record of the principal, commits nothing; an Approver's or a client identifier's disablement or deprovisioning changes nothing unless that principal is the recorded Subject"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 Q-e (D798). todo until witnessed: #830's reference reconciler (Q-d) commits revoke on deprovisioning. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the AS terminates a deprovisioned Subject's Missions, identified by the recorded Subject (@spec mission#revocation, #830 Q-e) > revokes a Mission whose approver is its recorded Subject when that principal is deprovisioned, and refuses further issuance under it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "lifecycle-mediated enforcement of the declared dependency by the reconciler (@spec runtime#input-authority-dependency, #830) > revokes on deprovisioning a Mission an earlier pass suspended for disablement",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "lifecycle-mediated enforcement of the declared dependency by the reconciler (@spec runtime#input-authority-dependency, #830) > suspends an active Mission when its Subject is disabled or withdraws the delegation, revokes on deprovisioning a suspended Mission included, and a repeat pass commits nothing",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "lifecycle-mediated enforcement of the declared dependency by the reconciler (@spec runtime#input-authority-dependency, #830) > never revokes on an outage, a principal the source holds no record of, or a disabled Subject; an approver's or the client's departure changes nothing",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the AS terminates a deprovisioned Subject's Missions, identified by the recorded Subject (@spec mission#revocation, #830 Q-e) > matches the deprovisioned principal by the recorded iss and sub: a source describing another issuer's principals revokes nothing, though one of them shares the Subject's sub",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#830 Q-e (D798); witnessed by #830 Q-d's reference reconciler (owner review of #1695). partial: two clauses of the observation have no witness. An owner's departure: the reference records no accountable owner apart from the Subject and the Approver. The non-recall of already-issued tokens: no witness observes token storage; the reference's revocation is the lifecycle commit alone. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed). Mutation-proved for the witnessed clauses: deprovisioning committing suspend instead of revoke, skipping a suspended Mission, evaluating the Approver in place of the recorded Subject, a source outage revoking, and matching the principal by sub alone, each failed its witness."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
@@ -17073,7 +17105,7 @@
     "local": "the transition, its status observation and the nonce claim commit in one transaction (provider.ts withTransaction around kernel.transition, observeInCallerTx, claimInCallerTx); the signed 200 is written after it returns, and send() retains the bytes before delivering them"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -17089,12 +17121,36 @@
     },
     {
      "file": "src/services/authorization-server/test/lifecycle-commit-ordering.test.ts",
-     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > runs on a WAL store with synchronous NORMAL, under which a committed transaction survives a process crash",
+     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > runs on a WAL store with synchronous FULL under normal locking",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-crash-restart.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "a lifecycle transition survives an abrupt process exit (@spec status#lifecycle-processing, #1684, D826) > after an acknowledged revocation, an abrupt kill leaves the terminal state, its version and the retained response: the retransmit replays the same bytes, with no second transition"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-crash-restart.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "a lifecycle transition survives an abrupt process exit (@spec status#lifecycle-processing, #1684, D826) > a kill between the commit and the response's retention is recovered by finalizing the committed revocation from its retained observation, with its original timestamps, never executing it again"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-store-durability.test.ts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint",
+     "name": "the kernel store's durability, independent of its locking (@spec status#lifecycle-processing, #1684, D826) > runs an ordinary file-backed kernel at WAL with synchronous=FULL and normal locking, on its first open and after reopening"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-store-durability.test.ts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint",
+     "name": "the kernel store's durability, independent of its locking (@spec status#lifecycle-processing, #1684, D826) > runs a witnessed kernel at synchronous=FULL with the exclusive locking it requires, on its first open and after reopening"
     }
    ],
-   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review; #1659, D771): the failure path is the first cited test. The ordering witness, on a file-backed store, reads at response release (where send() retains the bytes it delivers), not at signing, through a second connection rather than the writing one: the writing connection holds no open transaction, and the second connection already sees the transition, its version and the claimed nonce. Mutation: releasing the acknowledgement inside the transition's transaction fails it on the open transaction, and, with that assertion removed, on the second connection's read (state active, version 1). The configuration witness asserts WAL with synchronous at least NORMAL (the store runs NORMAL), under which a committed transaction survives a process crash but an operating-system crash or power loss can lose the most recent commits; it is process-crash evidence, not proof against arbitrary hardware failure. A file-backed crash/restart witness is required before tested."
+   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review; #1659, D771): the failure path is the first cited test. The ordering witness, on a file-backed store, reads at response release (where send() retains the bytes it delivers), not at signing, through a second connection rather than the writing one: the writing connection holds no open transaction, and the second connection already sees the transition, its version and the claimed nonce. Mutation: releasing the acknowledgement inside the transition's transaction fails it on the open transaction, and, with that assertion removed, on the second connection's read (state active, version 1). Configuration (#1684, D826): every file-backed kernel writer connection runs WAL with synchronous=FULL, set and read back on its first open and after reopening (a reopened WAL file otherwise runs at WAL's default, NORMAL), under normal locking, or exclusive under a recovery witness. FULL adds a WAL synchronization at each commit, which supports power-loss durability where the storage stack honors synchronization; no test here proves that. Crash/restart witnesses (#1684): the AS runs in a child process on a file-backed store, is killed with SIGKILL at a deterministic barrier, and is reopened on the same files with the WAL preserved. After an acknowledged revocation, the terminal state, its version and the retained response survive, and the retransmit replays the same bytes with no second transition; killed between the commit and the response's retention, the retransmit is finalized from the retained observation with its original iat, exp and fresh_until, never executed again. Mutations: dropping the response's retention fails both witnesses; dropping FULL fails both on the reopened writer connection; re-dating the finalized observation, or executing the committed row again, fails the commit-to-retention witness. Tested after the owner's review (#1707 at 8ee2069e): process-crash evidence plus asserted durability configuration; survival of an operating-system crash or power loss rests on synchronous=FULL and the storage stack, which no test proves."
   },
   {
    "id": "status.lifecycle.final-check-not-suspension",
@@ -21660,6 +21716,120 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty."
+  },
+  {
+   "id": "status.mission-status.per-consumer-rate-limit",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "security-considerations",
+   "text": "The AS MUST implement per-consumer rate limiting (returning `rate_limited`, {{mission-status-errors}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authenticated consumer over its limit on the Mission Status operation is refused `rate_limited` (HTTP 429), and the limit is kept per consumer, so another consumer's requests are unaffected",
+    "local": "a fixed window per authenticated client across both Status routes, default 120 requests per 60 seconds (`missionStatusRateLimit`). On the advertised form POST it is counted between request syntax and authorization (Processing Order steps 2 and 3), so a malformed request keeps its invalid_request refusal and no Mission has been read; on the development GET, after authentication. An unauthenticated request is an authentication failure and is not counted. The windows are in-process, as the deployment is single-process; a refused request is not counted; the limit is decided before any Mission is read, so the refusal is the same whichever Mission the request names"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > refuses a client over its limit rate_limited (429) with Retry-After, retry_after and its nonce, while another client is unaffected",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > decides before any Mission is read: over the limit, an unknown Mission and a known one get the same refusal",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > keeps the processing order: an over-limit client's malformed request is still refused invalid_request",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > an unauthenticated request is refused as an authentication failure and counts against no client",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > limits the development GET route per service principal the same way; an unauthenticated GET counts against no one",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1686 (filed on the owner's review of #1535 finding 17, which kept this a MUST). Proved by mutation: a limiter that never refuses fails the three route witnesses; removing the form POST's check fails its two witnesses, and the GET's its one; one window shared by every client fails the other-client and unauthenticated witnesses; counting the claimed client before authentication fails the unauthenticated witness; placing the check before request syntax fails the processing-order witness. The Lifecycle endpoint is not limited by this row."
+  },
+  {
+   "id": "status.errors.rate-limited-retry-after",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-errors",
+   "text": "For `rate_limited`, the response SHOULD include a `Retry-After` header {{RFC9110}} and a `retry_after` body member in seconds.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a `rate_limited` response includes a `Retry-After` header, whose value RFC 9110 permits as delay-seconds or an HTTP-date, and a `retry_after` body member in seconds",
+    "local": "the reference sends delay-seconds in the header, equal to `retry_after`: the whole seconds until the client's window resets, at least 1; the witness asserts that equality as the reference's encoding, not as a requirement"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/mission-status-rate-limit.test.ts",
+     "name": "Mission Status rate limiting per consumer (@spec status#security-considerations, status#mission-status-errors, #1686) > refuses a client over its limit rate_limited (429) with Retry-After, retry_after and its nonce, while another client is unaffected",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1686. The witness asserts the header and the body member are both present; their agreement as delay-seconds within the window is the reference's local encoding (#1706 review)."
+  },
+  {
+   "id": "status.revocation-propagation.ttl-within-max-stale",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "revocation-enforcement-classes",
+   "text": "Where a deployment needs Mission revocation to take effect but only the baseline derivation-time check is in use, Mission-bound access tokens SHOULD use TTLs no longer than the declared `mission_max_stale_seconds`.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.revocation-propagation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where Mission revocation must take effect and only the baseline derivation-time check is in use, Mission-bound access tokens should live no longer than the advertised `mission_max_stale_seconds`; a deployment whose revocation propagates out of band (token introspection, per-request status checks, or a companion profile's push mechanism) may use longer lifetimes",
+    "local": "the reference issues 300-second Mission-bound access tokens and advertises 300 (`src/config/topology.json`, `enforcement-scope.json`), so its tokens stay within the bound whether or not a consumer also uses its introspection or Status surfaces; the longer-lifetime alternative is not used"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > the issued Mission-bound access token lives no longer than the advertised mission_max_stale_seconds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1686. Proved by mutation: doubling the issued access-token lifetime fails the witness."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-dry-run",
@@ -30573,9 +30743,15 @@
      "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails. Across SIGKILL (#821, #1709 review P2-2): a PEP killed after the connector committed and before any outcome was retained is followed by a fresh process in which neither reconciliation nor a retry under the same key executes the effect again; proved by dropping a prior boot's claim at restart (M10-3)."
   },
   {
    "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
@@ -30729,6 +30905,94 @@
    "notes": "The failure-modes table's individual rows restate refusal conditions already rowed under their own anchors (token-validation, mission-binding, state-freshness, input-history, evidence, input-time, input-state, capability-drift, metering, parameter-digest, single-use-identifiers, input-history, input-authority); this row covers only the table's own added requirement, that the evidence record reconstructs the path."
   },
   {
+   "id": "runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pdp",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "failure-modes",
+   "text": "A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}})",
+   "facet": "decision-evidence-and-pdp-refusals",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the PDP cannot sign or emit a required Decision Evidence record or PDP refusal record for a consequential action, it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never lost while the action proceeds",
+    "local": "the PDP fails closed: a Decision Evidence record that cannot be sequenced or signed fails the decision; a pre-evaluation refusal stays refused when its Refusal Record cannot be recorded, and that record is not retried"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "a PDP that cannot emit a required record issues no decision (@spec runtime#failure-modes, #821) > a decision whose Decision Evidence cannot be emitted is not issued: evaluate() rejects when the sequence source is unreachable or the signature fails",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "a PDP that cannot emit a required record issues no decision (@spec runtime#failure-modes, #821) > a request the PDP refuses before evaluation stays refused when its Refusal Record cannot be recorded: no decision is issued",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > fails the emission closed when the durable source is unreachable: no record is signed",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "The fail-closed branch only; nothing is committed for later signing. Proved by swallowing the emission failure (M8-2), returning a position when the source is unreachable (M8-3, M1-D), and letting a refused request continue (M8-4)."
+  },
+  {
+   "id": "runtime.failure-modes.unemittable-evidence-fails-closed-or-commits-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "failure-modes",
+   "text": "A required evidence record cannot be signed or emitted for a consequential decision or refusal | Fail closed, or durably commit the record for signing and publication under a declared recovery bound ({{agent-isolated-evidence-emission}})",
+   "facet": "pep-refusals",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the PEP cannot sign or emit a required refusal record for a consequential action (a Refusal Record, or Execution Evidence for a suppressed action), it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never silently dropped",
+    "local": "on the transaction tier, a refusal whose suppressed record cannot be written still refuses and reports gap: emission_failed with one evidence_emission_failed operator alert; a Refusal Record that cannot be emitted rejects the call with nothing executed"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821) > a refusal after the permit whose suppressed record cannot be written still refuses, says the record is missing, and alerts the operator once; nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821) > the same holds at a reverification refusal and at a failed attempt write: each refusal carries the gap and one alert, and nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Partial: the read and reversible-write paths still discard a failed suppression's result (server.ts withholdUnevidenced, refuseSingleUse, reservationUnavailable, actorUnkeyable, releaseRetained, and the read path's reverification outcomes); their refusal stands, so nothing proceeds, but the missing record is not surfaced. Follow-up: #1715. The transaction tier's exits are witnessed (#821 PR B item 5). Proved by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6, M5-6r)."
+  },
+  {
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "evidence",
@@ -30858,6 +31122,90 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "runtime.evidence.pre-effect-durability",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "For an action in the high-consequence classes, the component that releases the effect MUST NOT release it until the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation the action holds) are durably committed.",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the component that releases a high-consequence effect releases it only after the permit's Decision Evidence and the identifiers that recover the action's disposition (the evaluation identifier, and any idempotency claim or consumption reservation) are durably committed, so a restart after the release still finds them",
+    "local": "the transaction tier commits an attempt record (execution_id, op_key, evaluation_id, and the retained Decision Evidence's evidence_id and complete-object digest) to the PEP's write-reservation file before the connector call; the PEP retains the permit's Decision Evidence in its retention file before redemption; the idempotency claim is the PDP's claim file, persisted before the permit returns; the composition holds no consumption reservation"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the transaction tier records each attempt before its effect (@spec runtime#evidence pre-effect durability, #821) > before the connector commits, the attempt's operation identity and its retained Decision Evidence are recorded in the PEP's durable file, and a reopened file still names them",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a storage failure retaining the permit's Decision Evidence before execution prevents the effect: the wire never reaches the connector (@spec runtime#evidence, #821)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Witnessed at the releasing component, the PEP (#821 PR B items 2 and 3): at the instant the connector is called, the attempt record and the retained Decision Evidence are in the PEP's files, and reopened files still hold them; the Decision Evidence write precedes redemption, so its failure releases nothing. The restart clause is witnessed across SIGKILL, not a graceful close (#1709 review P2-2): the PEP is killed after the attempt record and before the effect, and after the effect and before any outcome is retained, and a fresh process finds the attempt's execution_id, op_key, evaluation_id and the retained Decision Evidence, while the PDP claim still refuses the key. Proved by disabling the attempt write (M3-1, M3-1r), naming another record in it (M3-3), skipping the durable Decision Evidence write (M8-6), swallowing a failed retention write (M3-R1), leaving the attempt insert uncommitted (M10-1a, M10-1b) and dropping a prior boot's claim at restart (M10-3). The connector ledger is the in-memory simulated external resource, disclosed in src/docs/initial-runtime-deployment.md."
+  },
+  {
+   "id": "runtime.evidence.pre-effect-commit-failure-refuses",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "evidence",
+   "text": "If they cannot be committed, that component MUST refuse the action.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "runtime.transaction-assurance-tier"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "when the pre-effect commit of the Decision Evidence or of the disposition identifiers fails, the releasing component refuses the high-consequence action and releases no effect",
+    "local": "a failed attempt-record write refuses evidence_unavailable with a suppressed disposition; a failed Decision Evidence retention write rejects the call before redemption; neither reaches the connector"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the transaction tier records each attempt before its effect (@spec runtime#evidence pre-effect durability, #821) > an attempt record that cannot be written prevents the effect: the action is refused, nothing reaches the connector, and the disposition is recorded suppressed",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/idempotency-claim-pep.test.ts",
+     "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a storage failure retaining the permit's Decision Evidence before execution prevents the effect: the wire never reaches the connector (@spec runtime#evidence, #821)",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Both pre-effect writes are failed in turn and the resource's ledger stays empty (#821 PR B item 3; 4ac4a125). Proved by ignoring the attempt-write failure (M3-2) and by swallowing the retention failure (M3-R1), with the retain-call and ledger zero-counts each shown load-bearing alone (M3-R2, M3-R3)."
   },
   {
    "id": "runtime.evidence.reconciliation-must-actively-reconcile",
@@ -31084,6 +31432,112 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "runtime.record-integrity.sequence-not-reused-pdp",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "An emitter MUST NOT reuse a sequence value for one Mission, including across a restart and among replicas acting as that emitter",
+   "facet": "decision-evidence-emitter",
+   "role": "PDP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PDP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap",
+    "local": "the PDP emitter takes each value from its claim file, committed before the record is signed, so a value a failed signing took is a gap; one PDP process holds the file, which refuses a second writer"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "the PDP's Decision Evidence sequence at the decision endpoint (@spec runtime#record-integrity, #821) > a PDP restarted on the same claim file continues each Mission's sequence, and no value is issued twice across a failed signing or the restart",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > continues a Mission's sequence across a PDP restart on the same claim file, re-issuing no number",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/pdp-evidence-sequence-stack.test.ts",
+     "name": "the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a second handle on a file another domain holds",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Restart witnessed at the decision endpoint, below it and on the composed stack by reopening the claim file (#821, c62babc1), and across SIGKILL: a PDP killed mid-operation is followed by a fresh process whose next decision takes a value past every one the killed process signed (#1709 review P2-2). Replicas: the deployment runs one PDP, and its claim file refuses a second writer, so no replica allocates from it. Proved by dropping the committed position (M8-1, M1-B, M10-4), ignoring the configured source (M1-C) and unbinding it in the stack (M1-A)."
+  },
+  {
+   "id": "runtime.record-integrity.sequence-not-reused-pep",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "record-integrity",
+   "text": "An emitter MUST NOT reuse a sequence value for one Mission, including across a restart and among replicas acting as that emitter",
+   "facet": "execution-evidence-emitter",
+   "role": "PEP",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a PEP emitter never issues a sequence value twice for one Mission, including after a restart and among replicas acting as that emitter; a value it cannot use leaves a detectable gap",
+    "local": "the PEP's and executor's sequences are allocated from the PEP's retention file; a value whose record could not be retained is a gap; the file refuses a second writer"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
+     "name": "the PEP's per-Mission sequence across a restart (@spec runtime#record-integrity, #821) > a PEP restarted on the same files continues its per-Mission sequence: no value is issued twice, a value it could not use stays a gap, and no second writer shares the store",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/durable-evidence-stack.test.ts",
+     "name": "the composed stack's PEP evidence retention across a restart (@spec runtime-evidence#execution-evidence-object, runtime#record-integrity, #821) > a restarted stack reopens the PEP's retention file with the first boot's records, and the PEP's per-Mission sequence continues past the values they carry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/decision-evidence-retention.test.ts",
+     "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack by reopening the retention file (#821 PR B item 2), and across SIGKILL: after the PEP is killed, a fresh process's next record takes a value past every one the killed process signed (#1709 review P2-2). The stack keeps its published key sets in memory, because evidence keys are generated per boot under fixed kids (#831); records and sequences are what the file keeps. Proved by allocating in memory instead (M8-5, M10-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
   },
   {
    "id": "runtime.compromise-resistant.key-custody-condition",
@@ -32037,7 +32491,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a deployment declaring an authority dependency states the dependency, its authoritative source and the state an observation represents; what it governs; the invalidating changes; its maximum staleness, separately from the Mission-state freshness declaration; its enforcement route; and how reliance is restored and responsibility passes to a successor",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; a composition that enforces it states it under extensions.authority_dependencies (withAuthorityDependencies), and the statement's loader refuses a declaration missing any element"
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; a composition that enforces it states it under extensions.authority_dependencies (withAuthorityDependencies), and the statement's loader refuses a declaration missing any element A lifecycle-only declaration maps every invalidating change to a lifecycle operation, and the reader refuses one that leaves a change unmapped; with a direct route as well a partial mapping is valid, since direct evaluation refuses an unmapped change."
    },
    "level": "unit",
    "coverage": "tested",
@@ -32053,9 +32507,15 @@
      "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > refuses at load a declaration missing any element, or one that names no enforcement route or a non-positive staleness",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > refuses a lifecycle-only declaration whose lifecycle_operations leave an invalidating change unmapped, and accepts the partial mapping where direct evaluation is routed too",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: accepting a declaration with a missing member, and loading a statement without validating its declarations, each failed the refusal witness."
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: accepting a declaration with a missing member, and loading a statement without validating its declarations, each failed the refusal witness. Owner review of #1695 (second round): accepting an unmapped change under lifecycle-only enforcement failed the reader witness."
   },
   {
    "id": "runtime.authority-dependency.reconciliation-lag-refuses",
@@ -32072,12 +32532,68 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`"
+    "normative": "under lifecycle-mediated enforcement, an action the dependency governs is refused while upstream observation or reconciliation exceeds its declared bound, even though the Mission state reads `active`",
+    "local": "the reference's declared dependency (config/authority-dependencies.json, subject-delegation) under lifecycle-mediated enforcement: the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) commits suspend or revoke through the lifecycle operations and records its progress, the time the observation its last complete pass acted on represents; a failed source read, or a pass whose transitions do not all commit, does not advance it. The PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) refuses resource_policy once that progress is absent or older than reconciliation_max_lag_seconds (60 s), whatever the Mission's state reads (an authenticated read of the Mission Status endpoint reports the Mission active while the PDP refuses it), records reconciliation_overdue in the dependency evidence, and caps a permit at the progress plus the lag bound, or earlier at the staleness bound of the reconciliation's observation under lifecycle-only enforcement. The reference composition gives the PDP the progress in process (BuiltAs.authorityDependency.reconciliation); a PDP without it refuses every governed action. The issuance gates evaluate the observation directly and do not apply the lag refusal. Fresh progress does not authorize reliance on a dependency the reconciliation could not resolve: a pass records the governed Missions whose Subject the source holds no record of, and the PDP refuses them unresolved, with no suspension or revocation. The reconciler's progress is dated from when its read was issued, so a slow read does not make an overdue reconciliation current, and a pass over a kernel whose durable state is uncertain neither commits nor counts as current (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > permits while the last complete reconciliation is within the lag bound, refuses resource_policy once it is overdue with the Mission still active, and permits again once a reconciliation completes",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > refuses before any reconciliation has completed: a reconciler that never ran, or lost its progress in a restart, fails closed",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "an overdue reconciliation stops dependent execution while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > refuses an overdue reconciliation where the PDP also evaluates the dependency directly, though the observation shows the delegation held",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a lost event, a disconnected feed and a failed reconciliation are each caught while the Mission still reads active (@spec runtime#input-authority-dependency, #830) > does not advance its progress over a failed reconciliation, so the PDP refuses the Mission it could not restrict; a reconciler restarted mid-pass commits only the remainder",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the reconciler across a restart of a file-backed authorization server (@spec runtime#input-authority-dependency, #830) > refuses at the PDP until its first pass after the restart, then commits no transition twice and acts on the next change",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813) > refuses dependent actions once the source no longer holds the Subject, though the reconciliation is current and the Mission active, records the uncertainty apart from a withdrawal, and revokes nothing",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "the reconciler's reads are ordered with the scheduled refreshes and dated from issue (@spec runtime#input-authority-dependency, #830, D813) > dates its progress from when its read was issued, so a slow read does not make an overdue reconciliation current",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a pass over a kernel whose durable state is uncertain (@spec runtime#input-authority-dependency, control-plane#rollback, #830, D813) > commits nothing and does not count as current, so the PDP refuses until a pass over a reconciled kernel completes",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "Mission Status reports a Mission active while the lifecycle-only PDP refuses it as overdue (@spec runtime#input-authority-dependency, status#mission-status-response, #830) > serves an authenticated Status read showing the Mission active, while a decision under it is refused reconciliation_overdue",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: dropping the lag check, accepting absent progress, refusing only past the bound rather than at it, applying no lag at the PDP, skipping the PDP's step under lifecycle-only enforcement, advancing the progress over a failed pass, treating a failed read as a pass, not giving the PDP the reconciler's progress, starting a reconciler with progress present, and dropping the permit's cap at the reconciliation's currency, each failed its witness. D813 review (PR B): not refusing an unresolved Mission under the lag check, a pass that records no unresolved Missions, progress that omits them, an unresolved set never cleared, revoking an unresolved Subject, dating progress from the read's completion, and counting a pass over an uncertain kernel, each failed its witness. Owner review of #1695 (second round): the Status-endpoint witness replaces the kernel-record proxy; removing the lag refusal failed it."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established",
@@ -32095,7 +32611,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813). Under lifecycle-only enforcement (no direct route) the PDP keeps the declared observation limits: the observation the last complete reconciliation acted on, older than max_staleness_seconds, refuses stale, and a failed latest read under a declared online check refuses unavailable; withdrawal and invalidation stay the reconciler's to commit. Each complete reconciliation also publishes the governed Missions whose recorded Subject its observation shows an applicable invalidation for (mapped to a lifecycle operation or not), and the lifecycle-only PDP refuses them withdrawn or invalidated, as direct evaluation would, whatever the Mission's state reads: an authorized resume while the Subject stays disabled restores nothing, and reliance returns only after a later complete pass observes the recovery and the Mission is active again. The set is recomputed by every complete pass and kept through a failed one. A pass classifies what its own observation shows through the same classification direct evaluation uses (classifyObservedInvalidation): the source's current availability and the observation's age are never taken as an invalidation gone, and a pass that cannot classify a governed Mission publishes nothing."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32153,9 +32669,87 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > publishes reads that complete in issue order in that order, the newer last",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the reconciliation is within its lag bound, and caps the permit at that staleness",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses unavailable on a failed latest read where the declaration requires an online check, though the reconciliation is current",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the lag bound is longer",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses unavailable on a failed latest read where the declaration requires an online check, though the reconciliation is current",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830) > refuses a Mission resumed by an authorized Lifecycle request while its Subject is still disabled, as the issuance gate does",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830) > restores reliance only when both hold: a later pass observes the recovery, and an authorized resume makes the Mission active again",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830) > keeps the previous set through a failed pass: the recovery is not taken from a pass that did not complete",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830) > keeps refusing a Mission revoked on its Subject's deprovisioning, the Subject later restored included",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidating change the declaration does not map to a lifecycle operation (@spec runtime#input-authority-dependency, #830) > refuses at the PDP under lifecycle-only enforcement though the reconciler commits nothing for it and its progress stays current (a declaration built past the reader)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an invalidating change the declaration does not map to a lifecycle operation (@spec runtime#input-authority-dependency, #830) > is refused by direct evaluation where both routes are declared with a partial mapping, before any pass observes it",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a pass classifies what its own observation shows, never the source's availability or the observation's age (@spec runtime#input-authority-dependency, #830) > keeps a disabled Subject's invalidation when a newer failed refresh overlaps the pass's successful read (the owner's probe)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a pass classifies what its own observation shows, never the source's availability or the observation's age (@spec runtime#input-authority-dependency, #830) > keeps a withdrawn delegation's invalidation through the same overlap",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "a pass classifies what its own observation shows, never the source's availability or the observation's age (@spec runtime#input-authority-dependency, #830) > removes the Mission from the set only when a later complete pass observes the recovery (control)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness. Owner review of #1695: ignoring the staleness bound or the online check under lifecycle-only enforcement each failed its witness, at the shared check and at the PDP. Owner review of #1695 (second round): not consulting the retained set (resumed and unmapped witnesses), not publishing it, publishing it cumulatively, clearing it on a failed pass, and a reconciler resuming on re-enablement, each failed its witness. Owner review of #1695 (third round): classifying through evaluateAuthorityDependency again, reading the source's availability, applying staleness, and publishing a pass that could not classify a Mission, each failed its witness."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established-local",
@@ -32173,7 +32767,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813). Under lifecycle-only enforcement the release recheck applies that route's checks (the reconciliation's currency, an unresolved Subject, the staleness bound and a declared online check) rather than none. Under lifecycle-only enforcement the release recheck also refuses a Mission the last complete reconciliation found invalidated."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32231,9 +32825,21 @@
      "name": "the composed step's ceiling on a read admitted at the edge of the observation's validity (@spec runtime#input-authority-dependency, #830, D813) > refuses a read admitted at 299 s of a 300 s validity and reaching release at 300 s",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits at release (@spec runtime#input-authority-dependency, #830) > refuses at release, on every dispatch path, a permit whose source read failed after the decision where the declaration requires an online check",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "lifecycle-only enforcement keeps an established invalidation at release (@spec runtime#input-authority-dependency, #830) > refuses at release, on every dispatch path, a permit under a Mission the reconciliation found invalidated after the decision, whatever its state reads",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness. Owner review of #1695: a release recheck that applies no lifecycle-only check failed the witness. Owner review of #1695 (second round): a release recheck that ignores the retained set failed the witness."
   },
   {
    "id": "runtime.authority-dependency.permit-cap",
@@ -32251,7 +32857,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents; under lifecycle-mediated enforcement (#830 Q-d PR B) the ceiling is the earlier of that validity and the reconciliation's currency, the reconciler's last complete pass plus the declared lag bound; under lifecycle-only enforcement (no direct route) it is the earlier of the lag deadline and max_staleness_seconds after the time the reconciliation's observation represents. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32267,9 +32873,21 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > dates an observation from when its read was issued, so a slow read does not renew an old state's validity",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-lifecycle-limits.test.ts",
+     "name": "lifecycle-only enforcement keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > caps the permit at the earlier of the staleness and lag deadlines, measured from the time the reconciliation's observation represents",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency-lag.test.ts",
+     "name": "lifecycle-only enforcement at the PDP keeps the declaration's observation limits (@spec runtime#input-authority-dependency, #830) > refuses stale once the reconciliation's observation is older than max_staleness_seconds, though the reconciliation is within its lag bound, and caps the permit at that staleness",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness."
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness. Owner review of #1695: returning the lag deadline alone, and measuring the staleness deadline from the decision instant, each failed the lifecycle-only ceiling witnesses."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes",
@@ -32287,7 +32905,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
-    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813)."
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813). A Subject the source answers without is recorded as unresolved, an uncertainty kept apart from a confirmed withdrawal (D813)."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -32309,9 +32927,15 @@
      "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > reports the source's availability from the latest-issued read that completed, not the last to complete",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
+     "name": "an unresolved Subject under lifecycle-only enforcement is an uncertainty that refuses, never a revocation (@spec runtime#input-authority-dependency, #830, D813) > refuses dependent actions once the source no longer holds the Subject, though the reconciliation is current and the Mission active, records the uncertainty apart from a withdrawal, and revokes nothing",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness."
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness. D813 review (PR B): recording an unknown Subject as withdrawn failed the witness."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes-local",
@@ -32466,12 +33090,32 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity"
+    "normative": "a deployment claiming an external-change bound states it from the authoritative system recording the change to a dependent action no longer beginning an effect, states how already-started work is treated, and accounts for detection, evaluation, state change, downstream reliance and permit validity",
+    "local": "config/authority-dependencies.json's external_change_bound: 60 s from the identity source recording the change (identity.json's changed_at) to every issuance gate and PDP decision under a governed Mission refusing and the reconciler having suspended or revoked it, with already-started work stated separately and a path naming detection (detection_period_seconds, 30 s), evaluation, state change (reconciliation_period_seconds, 30 s), downstream reliance, permit validity and the behavior under a failed read or reconciliation. The reader requires the bound to cover one period of each in sequence and the reconciliation period to be shorter than the lag bound; the authorization server refuses to start with a scheduled read or pass slower than declared. Measured under a controlled clock at the declared periods, from every phase of the two schedules in 5 s steps: worst case 30 s to the first gate refusal, to the first PDP refusal and to the suspension. The matrix by principal role, with each cell's owner, source and staleness bound, is src/docs/authority-dependencies.md. The end includes effect release (D813): the measurement composes the payments PEP, which holds a permit issued just before the change and unused across it; from the first read showing the change its release check refuses that permit, while the permit's own valid_until still runs, in the same 30 s worst case, and no effect is released after the cutoff. Permit issuance is not already-started work, as the declaration's already_started states."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > @spec runtime#state-freshness (#830): states its bound from an external authority change from start to end, work already started separately, and the path the claim accounts for",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-dependency-bound.test.ts",
+     "name": "the external-change bound, measured end to end (@spec runtime#state-freshness, #830) > stops every dependent action within the declared bound from the source recording the change, from every phase of the declared schedules, a permit issued before the change and held unused included; a permit decided before the change expires within its observation's validity",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-dependency-bound.test.ts",
+     "name": "the declared schedules, run by the authorization server's own timers (@spec runtime#state-freshness, #830) > refuses to start a composition that schedules either period slower than declared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR B (D798). Mutation-proved: accepting a bound that does not cover its periods, a reconciliation period not shorter than the lag bound, or a lifecycle declaration without a reconciliation period, starting with a slower schedule, and a reconciliation pass acting on a cached read instead of reading the source, each failed its witness. D813 review (PR B): removing the PEP's release check, and not rechecking a PDP-routed dependency at the PEP, each failed the measurement's held-permit witness."
   },
   {
    "id": "authzen.conventions.required-when-known-no-inference",
@@ -42284,9 +42928,27 @@
      "name": "Decision Evidence per-(mission, emitter, role) sequence allocation > allocates a monotonically increasing sequence per role, independently per role, even under the SAME mission and emitter id",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence-endpoint.test.ts",
+     "name": "the PDP's Decision Evidence sequence at the decision endpoint (@spec runtime#record-integrity, #821) > a PDP restarted on the same claim file continues each Mission's sequence, and no value is issued twice across a failed signing or the restart",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/pdp-evidence-sequence-stack.test.ts",
+     "name": "the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path and end to end through the real call sites. The row's cross-component level is not reached: gap detection and ordering across two independently running emitters have no second emitter in this deployment to order against, and the counter is in-memory per process, so it says nothing about ordering across a restart."
+   "notes": "Partial: the counter is the PDP emitter's own (#741), and monotonicity per (Mission, emitter) is asserted at the emission path, end to end through the real call sites, and across a restart that reopens the PDP's claim file at the decision endpoint and on the composed stack (#821). Still unasserted: cross-emitter ordering is never reconstructed from sequence alone, and gap detection by a verifier, which have no verifier or second independently running emitter in this deployment to order against."
   },
   {
    "id": "evidence.decision.denial-reason-unrecognized-and-split",

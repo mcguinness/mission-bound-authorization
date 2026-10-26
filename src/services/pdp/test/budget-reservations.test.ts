@@ -327,6 +327,22 @@ async function until(condition: () => boolean): Promise<void> {
   expect(condition()).toBe(true);
 }
 
+/**
+ * A permit whose reservation an operator released after its lease, though
+ * the wire did execute: the incorrect release a budget correction repairs.
+ * The clock is left past the lease.
+ */
+async function incorrectlyReleased(claims: IdempotencyClaimDomain, c: Clock, missionId = "msn_a", amount = "300.00"): Promise<string> {
+  const evaluationId = await permitted(claims, c, view(missionId, binding(missionId)), { amount });
+  c.set(c.now().getTime() + PAST_LEASE_MS);
+  claims.sweep();
+  expect(claims.reconcileHeldReservation(evaluationId, { kind: "not_executed", reference: "bank-no-entry-yet" })).toEqual({
+    accepted: true,
+    state: "released",
+  });
+  return evaluationId;
+}
+
 /** Permit one charge and return its evaluation id. */
 async function permitted(claims: IdempotencyClaimDomain, c: Clock, v: MissionView, o: RequestOptions = {}): Promise<string> {
   const d = await evaluate(request(c, { missionId: v.id, ...o }), options(claims, c, v));
@@ -827,6 +843,106 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         limit: { amount: "1000.00", currency: "USD" },
         used: { amount: "1300.00", currency: "USD" },
       });
+      claims.close();
+    });
+
+    it("after an incorrect operator release and the claim's reconciliation window, the permit's own PEP's verified completed record commits the 300.00 once, reports the overspend, and further reservations are refused while no headroom remains (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const overspent: BudgetOverspend[] = [];
+      const { open } = domainOnFile(c, { overspent });
+      const claims = open();
+      const a = await incorrectlyReleased(claims, c);
+      // The released headroom is spent by another instance meanwhile.
+      await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "800.00" });
+      c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+      claims.sweep();
+      const record = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: false, budget_corrected: true });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      expect(overspent.map((o) => [o.evaluation_id, o.counter_scope, o.used.amount, o.limit.amount])).toEqual([[a, "standing_consent", "1100.00", "1000.00"]]);
+      // A redelivery is acknowledged and changes nothing.
+      expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: true, budget_corrected: true });
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      expect(overspent).toHaveLength(1);
+      // No headroom remains: the next reservation is refused.
+      expectDenied(await evaluate(request(c, { missionId: "msn_c", amount: "1.00" }), options(claims, c, view("msn_c", binding("msn_c")))), "quota_exceeded");
+      claims.close();
+    });
+
+    it("after an incorrect operator release and the claim's reconciliation window, an operator correction recording execution commits the 300.00 once (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await incorrectlyReleased(claims, c);
+      c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+      claims.sweep();
+      const correction = { kind: "executed" as const, reference: "bank-statement-2026-10-26" };
+      expect(claims.reconcileHeldReservation(a, correction)).toEqual({ accepted: true, state: "committed" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      expect(claims.reconcileHeldReservation(a, correction)).toEqual({ accepted: true, state: "committed", duplicate: true });
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      claims.close();
+    });
+
+    it("the PEP's verified completed record and the operator's executed correction together commit each released reservation once, in either order (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await incorrectlyReleased(claims, c, "msn_a", "300.00");
+      const b = await incorrectlyReleased(claims, c, "msn_b", "200.00");
+      c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+      claims.sweep();
+      const correction = { kind: "executed" as const, reference: "bank-statement-2026-10-26" };
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      expect(claims.reconcileHeldReservation(a, correction)).toEqual({ accepted: true, state: "committed", duplicate: true });
+      expect(claims.reconcileHeldReservation(b, correction)).toEqual({ accepted: true, state: "committed" });
+      expect(await claims.settle(REQUESTER, await executionRecord(b, "completed"))).toMatchObject({ accepted: true, duplicate: true, budget_corrected: true });
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("500.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.committed.amount).toBe("300.00");
+      expect(claims.budgetCounter(instanceCounter("msn_b"))?.committed.amount).toBe("200.00");
+      claims.close();
+    });
+
+    it("a budget correction for an unknown evaluation, from another PEP or epoch, or for an evaluation that never issued a permit is refused and commits nothing (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      // An evaluation that never persisted its permit: its reservation is released, no permit left the PDP.
+      let unpersisted = "";
+      const failing: DecisionEvidenceEmitter = {
+        emit: async (input) => {
+          unpersisted = input.evaluation_id;
+          throw new Error("evidence signer down");
+        },
+      };
+      await expect(evaluate(request(c, { missionId: "msn_x", amount: "100.00" }), options(claims, c, view("msn_x", binding("msn_x")), { evidence: failing }))).rejects.toThrow(/signer down/);
+      expect(claims.reservationsFor(unpersisted).map((r) => r.state)).toEqual(["released", "released"]);
+      const a = await incorrectlyReleased(claims, c);
+      c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+      claims.sweep();
+      const record = await executionRecord(a, "completed");
+      expect((await claims.settle(REQUESTER, await executionRecord("dec_unknown", "completed"))).accepted).toBe(false);
+      expect(await claims.settle({ pep_id: "another-pep", pep_epoch: REQUESTER.pep_epoch }, record)).toMatchObject({ accepted: false });
+      expect(await claims.settle({ pep_id: REQUESTER.pep_id, pep_epoch: "epoch-816-b" }, record)).toMatchObject({ accepted: false });
+      expect(await claims.settle(REQUESTER, await executionRecord(unpersisted, "completed"))).toMatchObject({ accepted: false });
+      expect(claims.reconcileHeldReservation(unpersisted, { kind: "executed", reference: "bank-statement-2026-10-26" })).toEqual({
+        accepted: false,
+        reason: "no_permit_issued",
+      });
+      expect(claims.reconcileHeldReservation("dec_unknown", { kind: "executed", reference: "bank-statement-2026-10-26" })).toEqual({
+        accepted: false,
+        reason: "unknown_evaluation",
+      });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.reservationsFor(unpersisted).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("0.00");
+      // A second, conflicting completed record for a claim its own settlement committed keeps the claim's refusal.
+      const d = await permitted(claims, c, view("msn_d", binding("msn_d")), { amount: "50.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(d, "completed"))).accepted).toBe(true);
+      expect(await claims.settle(REQUESTER, await executionRecord(d, "completed"))).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("50.00");
       claims.close();
     });
 

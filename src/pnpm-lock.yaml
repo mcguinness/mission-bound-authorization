@@ -96,6 +96,9 @@ importers:
       '@mission/console-bff':
         specifier: workspace:*
         version: link:../services/console-bff
+      '@mission/core':
+        specifier: workspace:*
+        version: link:../packages/mission-core
       '@mission/demo-data':
         specifier: workspace:*
         version: link:../packages/demo-data

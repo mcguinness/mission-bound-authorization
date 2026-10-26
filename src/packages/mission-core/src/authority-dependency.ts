@@ -48,8 +48,24 @@ export type InvalidatingChange =
 /** The authority source types a declaration may govern (@spec mission#authority-sources). */
 export type GovernedAuthoritySource = "user_delegated" | "service_owned" | "organizational";
 
-/** Why reliance on a dependency stopped. */
-export type DependencyFailure = "withdrawn" | "invalidated" | "stale" | "unavailable";
+/**
+ * Why reliance on a dependency stopped. `unresolved`: the source answered but
+ * holds no record of the principal, an uncertainty kept apart from a
+ * confirmed withdrawal; it never establishes deprovisioning.
+ * `reconciliation_overdue`: under lifecycle-mediated enforcement, the last
+ * reconciliation that completed rests on an observation older than the
+ * declared lag bound.
+ */
+export type DependencyFailure =
+  | "withdrawn"
+  | "invalidated"
+  | "stale"
+  | "unavailable"
+  | "unresolved"
+  | "reconciliation_overdue";
+
+/** The lifecycle operation a reconciler commits for an invalidating change. */
+export type ReconcilerOperation = "suspend" | "revoke";
 
 /** @spec runtime#input-authority-dependency: one declared authority dependency. */
 export interface AuthorityDependencyDeclaration {
@@ -81,6 +97,29 @@ export interface AuthorityDependencyDeclaration {
     lifecycle: boolean;
     /** Under lifecycle-mediated enforcement, the bound on upstream observation and reconciliation lag. */
     reconciliation_max_lag_seconds?: number;
+    /**
+     * Under lifecycle-mediated enforcement, the operation the reconciler
+     * commits for each invalidating change it acts on: `suspend` for a
+     * recoverable change, `revoke` for deprovisioning. A change it names no
+     * operation for is enforced by refusal alone.
+     */
+    lifecycle_operations?: Partial<Record<InvalidatingChange, ReconcilerOperation>>;
+  };
+  /**
+   * @spec runtime#state-freshness (#830): the deployment's claimed bound from
+   * an external authority change, stated from start to end, with work already
+   * started stated separately and the path it accounts for.
+   */
+  external_change_bound?: {
+    seconds: number;
+    start: string;
+    end: string;
+    already_started: string;
+    path: string;
+    /** The longest interval between two reads of the source. */
+    detection_period_seconds: number;
+    /** Under lifecycle-mediated enforcement, the longest interval between two reconciliation passes. */
+    reconciliation_period_seconds?: number;
   };
   /** What restores reliance after it fails. */
   recovery: string;
@@ -114,6 +153,18 @@ const DECLARATION_MEMBERS = [
   "recovery",
   "responsibility_transfer",
 ] as const;
+/** Members a declaration may carry beside the required ones. */
+const OPTIONAL_DECLARATION_MEMBERS = ["external_change_bound"] as const;
+const BOUND_MEMBERS = [
+  "seconds",
+  "start",
+  "end",
+  "already_started",
+  "path",
+  "detection_period_seconds",
+] as const;
+const positiveInteger = (v: unknown): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v > 0;
 
 const objectOf = (v: unknown): Record<string, unknown> | undefined =>
   v !== null && typeof v === "object" && !Array.isArray(v)
@@ -150,7 +201,7 @@ export function parseAuthorityDependencyDeclarations(
     const ctx = `authority_dependencies[${i}]`;
     const o = objectOf(entry);
     if (!o) throw new AuthorityDependencyConfigError(`${ctx} must be an object`);
-    onlyMembers(ctx, o, DECLARATION_MEMBERS);
+    onlyMembers(ctx, o, [...DECLARATION_MEMBERS, ...OPTIONAL_DECLARATION_MEMBERS]);
     for (const member of DECLARATION_MEMBERS) {
       if (o[member] === undefined)
         throw new AuthorityDependencyConfigError(`${ctx} is missing ${member}`);
@@ -199,6 +250,7 @@ export function parseAuthorityDependencyDeclarations(
       "direct",
       "lifecycle",
       "reconciliation_max_lag_seconds",
+      "lifecycle_operations",
     ]);
     const direct = enforcement.direct;
     if (direct !== undefined && direct !== "pdp" && direct !== "pep") {
@@ -223,6 +275,105 @@ export function parseAuthorityDependencyDeclarations(
         `${ctx}.enforcement.reconciliation_max_lag_seconds applies to lifecycle-mediated enforcement only`,
       );
     }
+    const operationsRaw = enforcement.lifecycle_operations;
+    const operations: Partial<Record<InvalidatingChange, ReconcilerOperation>> = {};
+    if (enforcement.lifecycle === true) {
+      const ops = objectOf(operationsRaw);
+      if (!ops || Object.keys(ops).length === 0) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.enforcement.lifecycle_operations must map one or more invalidating changes to suspend or revoke under lifecycle-mediated enforcement`,
+        );
+      }
+      for (const [change, op] of Object.entries(ops)) {
+        if (!(changes as string[]).includes(change)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.enforcement.lifecycle_operations names ${change}, which is not one of its invalidating changes`,
+          );
+        }
+        if (op !== "suspend" && op !== "revoke") {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.enforcement.lifecycle_operations.${change} must be suspend or revoke`,
+          );
+        }
+        operations[change as InvalidatingChange] = op;
+      }
+    } else if (operationsRaw !== undefined) {
+      throw new AuthorityDependencyConfigError(
+        `${ctx}.enforcement.lifecycle_operations applies to lifecycle-mediated enforcement only`,
+      );
+    }
+    // Lifecycle-only, nothing else refuses a change the reconciler is not
+    // told to commit, so every invalidating change needs an operation. With a
+    // direct route as well, direct evaluation refuses an unmapped change.
+    if (enforcement.lifecycle === true && direct === undefined) {
+      const unmapped = (changes as InvalidatingChange[]).filter((c) => operations[c] === undefined);
+      if (unmapped.length > 0) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.enforcement.lifecycle_operations must map every invalidating change under lifecycle-only enforcement (no direct route); unmapped: ${unmapped.join(", ")}. With a direct route as well, a partial mapping is valid: direct evaluation refuses an unmapped change`,
+        );
+      }
+    }
+    let bound: AuthorityDependencyDeclaration["external_change_bound"];
+    if (o.external_change_bound !== undefined) {
+      const b = objectOf(o.external_change_bound);
+      if (!b)
+        throw new AuthorityDependencyConfigError(`${ctx}.external_change_bound must be an object`);
+      onlyMembers(`${ctx}.external_change_bound`, b, [
+        ...BOUND_MEMBERS,
+        "reconciliation_period_seconds",
+      ]);
+      for (const member of BOUND_MEMBERS) {
+        if (b[member] === undefined)
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound is missing ${member}`,
+          );
+      }
+      for (const member of ["seconds", "detection_period_seconds"] as const) {
+        if (!positiveInteger(b[member])) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.${member} must be a positive integer`,
+          );
+        }
+      }
+      // The path the claim accounts for: a reconciliation period exactly
+      // where a reconciler runs, shorter than its lag bound so a current
+      // reconciler is never refused, and the bound covering one detection
+      // period and one reconciliation period in sequence.
+      const period = b.reconciliation_period_seconds;
+      if (enforcement.lifecycle === true) {
+        if (!positiveInteger(period)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.reconciliation_period_seconds must be a positive integer under lifecycle-mediated enforcement`,
+          );
+        }
+        if (period >= (lag as number)) {
+          throw new AuthorityDependencyConfigError(
+            `${ctx}.external_change_bound.reconciliation_period_seconds must be shorter than enforcement.reconciliation_max_lag_seconds`,
+          );
+        }
+      } else if (period !== undefined) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.external_change_bound.reconciliation_period_seconds applies to lifecycle-mediated enforcement only`,
+        );
+      }
+      if (
+        (b.detection_period_seconds as number) + ((period as number | undefined) ?? 0) >
+        (b.seconds as number)
+      ) {
+        throw new AuthorityDependencyConfigError(
+          `${ctx}.external_change_bound.seconds must cover one detection period and one reconciliation period`,
+        );
+      }
+      bound = {
+        seconds: b.seconds as number,
+        start: text(`${ctx}.external_change_bound.start`, b.start),
+        end: text(`${ctx}.external_change_bound.end`, b.end),
+        already_started: text(`${ctx}.external_change_bound.already_started`, b.already_started),
+        path: text(`${ctx}.external_change_bound.path`, b.path),
+        detection_period_seconds: b.detection_period_seconds as number,
+        ...(period !== undefined ? { reconciliation_period_seconds: period as number } : {}),
+      };
+    }
     return {
       id,
       dependency: text(`${ctx}.dependency`, o.dependency),
@@ -242,9 +393,11 @@ export function parseAuthorityDependencyDeclarations(
         ...(direct !== undefined ? { direct } : {}),
         lifecycle: enforcement.lifecycle,
         ...(lag !== undefined ? { reconciliation_max_lag_seconds: lag as number } : {}),
+        ...(enforcement.lifecycle === true ? { lifecycle_operations: operations } : {}),
       },
       recovery: text(`${ctx}.recovery`, o.recovery),
       responsibility_transfer: text(`${ctx}.responsibility_transfer`, o.responsibility_transfer),
+      ...(bound !== undefined ? { external_change_bound: bound } : {}),
     };
   });
 }
@@ -375,6 +528,45 @@ export class AuthorityDependencyResolver {
   }
 }
 
+/** What one observation shows about a principal for a client, apart from the source's availability or the observation's age. */
+export type ObservedInvalidation =
+  | { failure: "unresolved" }
+  | { failure: "invalidated"; change: "subject_disabled" | "subject_deprovisioned" }
+  | { failure: "withdrawn"; change: "delegation_withdrawn" };
+
+/**
+ * @spec runtime#input-authority-dependency: what `observation` itself shows
+ * about the principal for `clientId`, the one classification direct
+ * evaluation and a reconciler both use. A principal the source holds no
+ * record of is `unresolved`; one deprovisioned or disabled, where the
+ * declaration names that change, `invalidated`; one that withdrew the
+ * delegation from the client, where the declaration names it, `withdrawn`;
+ * otherwise nothing (`undefined`). It reads neither the source's current
+ * availability nor the observation's age: neither is evidence about what the
+ * observation shows.
+ */
+export function classifyObservedInvalidation(
+  declaration: Pick<AuthorityDependencyDeclaration, "invalidating_changes">,
+  observation: PrincipalStateObservation,
+  clientId: string,
+): ObservedInvalidation | undefined {
+  const changes = declaration.invalidating_changes;
+  if (!observation.known) return { failure: "unresolved" };
+  if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) {
+    return { failure: "invalidated", change: "subject_deprovisioned" };
+  }
+  if (observation.status === "disabled" && changes.includes("subject_disabled")) {
+    return { failure: "invalidated", change: "subject_disabled" };
+  }
+  if (
+    changes.includes("delegation_withdrawn") &&
+    observation.withdrawnDelegations.includes(clientId)
+  ) {
+    return { failure: "withdrawn", change: "delegation_withdrawn" };
+  }
+  return undefined;
+}
+
 /** The evaluation's answer: reliance holds until `validUntilMs`, or it stopped, and why. */
 export type DependencyEvaluation =
   | { ok: true; validUntilMs: number; observedAt: string }
@@ -390,9 +582,11 @@ export type DependencyEvaluation =
  *   either way).
  * - The source unreachable where the declaration requires an online check:
  *   `unavailable`, whatever the observation's validity.
- * - A Subject the source holds no record of, or one that withdrew the
- *   delegation: `withdrawn`. A Subject disabled or deprovisioned, where the
- *   declaration names that change: `invalidated`.
+ * - Then what the observation shows ({@link classifyObservedInvalidation}):
+ *   a Subject the source holds no record of is `unresolved`, an uncertainty
+ *   that refuses but is not recorded as a withdrawal; one that withdrew the
+ *   delegation, `withdrawn`; one disabled or deprovisioned, where the
+ *   declaration names that change, `invalidated`.
  * - Otherwise reliance holds until the observation's validity ends.
  */
 export function evaluateAuthorityDependency(
@@ -410,19 +604,8 @@ export function evaluateAuthorityDependency(
   }
   if (declaration.online_check && !view.sourceAvailable)
     return { ok: false, failure: "unavailable", observedAt };
-  const changes = declaration.invalidating_changes;
-  if (!observation.known) return { ok: false, failure: "withdrawn", observedAt };
-  if (observation.status === "disabled" && changes.includes("subject_disabled"))
-    return { ok: false, failure: "invalidated", observedAt };
-  if (observation.status === "deprovisioned" && changes.includes("subject_deprovisioned")) {
-    return { ok: false, failure: "invalidated", observedAt };
-  }
-  if (
-    changes.includes("delegation_withdrawn") &&
-    observation.withdrawnDelegations.includes(input.clientId)
-  ) {
-    return { ok: false, failure: "withdrawn", observedAt };
-  }
+  const shown = classifyObservedInvalidation(declaration, observation, input.clientId);
+  if (shown) return { ok: false, failure: shown.failure, observedAt };
   return { ok: true, validUntilMs, observedAt };
 }
 
@@ -462,6 +645,13 @@ export class AuthorityDependencyEvidence {
   }
 }
 
+/** An applicable invalidation a complete reconciliation observed for one Mission's recorded Subject. */
+export interface ReconciledInvalidation {
+  failure: "withdrawn" | "invalidated";
+  /** The time the observation that showed it represents (RFC 3339). */
+  observedAt: string;
+}
+
 /** What an enforcing component holds to apply one declared dependency. */
 export interface AuthorityDependencyEnforcement {
   declaration: AuthorityDependencyDeclaration;
@@ -478,6 +668,20 @@ export interface AuthorityDependencyEnforcement {
   }) => { subject: DependencyPrincipal; clientId: string } | undefined;
   evidence?: AuthorityDependencyEvidence;
   now?: () => number;
+  /**
+   * Under lifecycle-mediated enforcement, the reconciler's progress: the time
+   * the observation its last complete reconciliation acted on represents, the
+   * governed Missions whose Subject that observation could not resolve, and
+   * those whose Subject it showed an applicable invalidation for (mapped to
+   * a lifecycle operation or not), each with the classification direct
+   * evaluation gives it and the observation's time. Absent where no
+   * reconciler runs.
+   */
+  reconciliation?: () => {
+    lastReconciledAtMs?: number;
+    unresolved?: ReadonlySet<string>;
+    invalidated?: ReadonlyMap<string, ReconciledInvalidation>;
+  };
 }
 
 /**
@@ -485,15 +689,91 @@ export interface AuthorityDependencyEnforcement {
  * `mission`: ungoverned Missions pass with no ceiling; a governed one passes
  * with the observation's validity as a ceiling, or is refused and the refusal
  * retained.
+ *
+ * - `lag` (lifecycle-mediated enforcement): "A current `active` state does
+ *   not show that this reconciliation is current": while the last complete
+ *   reconciliation rests on an observation older than the declared lag bound,
+ *   or none has completed, the action is refused `reconciliation_overdue`,
+ *   whatever the Mission's state reads. Fresh progress does not authorize
+ *   reliance on a dependency the reconciliation could not resolve: a Mission
+ *   whose Subject the last complete reconciliation found no record of is
+ *   refused `unresolved`, and one whose Subject it observed an applicable
+ *   invalidation for is refused `withdrawn` or `invalidated` until a later
+ *   complete pass observes it gone, whatever the Mission's state reads. With `lag` alone (lifecycle-only), the declared
+ *   observation limits still hold: the reconciliation's observation older
+ *   than `max_staleness_seconds` is refused `stale`, a failed latest read
+ *   under a declared online check `unavailable`, and the ceiling is the
+ *   earlier of the staleness and lag deadlines.
+ * - `direct` (direct evaluation): the observation itself must establish the
+ *   dependency.
  */
 export function checkAuthorityDependency(
   enforcement: AuthorityDependencyEnforcement,
   mission: { id: string; issuer: string },
   context: { enforcer: AuthorityDependencyRefusal["enforcer"]; action: string },
+  apply: { direct: boolean; lag: boolean } = { direct: true, lag: false },
 ): { ok: true; validUntilMs?: number } | { ok: false; failure: DependencyFailure } {
   const governed = enforcement.governed(mission);
   if (!governed) return { ok: true };
   const nowMs = (enforcement.now ?? (() => Date.now()))();
+  const refuse = (failure: DependencyFailure, observedAt?: string) => {
+    enforcement.evidence?.record({
+      enforcer: context.enforcer,
+      dependency: enforcement.declaration.id,
+      failure,
+      mission: { id: mission.id, issuer: mission.issuer },
+      subject: governed.subject,
+      client: governed.clientId,
+      action: context.action,
+      ...(observedAt !== undefined ? { observed_at: observedAt } : {}),
+      at: new Date(nowMs).toISOString(),
+    });
+    return { ok: false as const, failure };
+  };
+  const lagBound = enforcement.declaration.enforcement.reconciliation_max_lag_seconds;
+  // A permit relying on the reconciliation's currency expires when the lag
+  // bound would refuse it.
+  let reconciledUntilMs: number | undefined;
+  if (apply.lag && enforcement.declaration.enforcement.lifecycle && lagBound !== undefined) {
+    const progress = enforcement.reconciliation?.();
+    const last = progress?.lastReconciledAtMs;
+    if (last === undefined || nowMs - last >= lagBound * 1000) {
+      return refuse(
+        "reconciliation_overdue",
+        last !== undefined ? new Date(last).toISOString() : undefined,
+      );
+    }
+    if (progress?.unresolved?.has(mission.id)) {
+      return refuse("unresolved", new Date(last).toISOString());
+    }
+    // An invalidation the last complete reconciliation established refuses
+    // whatever the Mission's state reads, a Mission resumed meanwhile
+    // included, until a later complete pass observes it gone.
+    const invalidation = progress?.invalidated?.get(mission.id);
+    if (invalidation) return refuse(invalidation.failure, invalidation.observedAt);
+    reconciledUntilMs = last + lagBound * 1000;
+    if (!apply.direct) {
+      // Lifecycle-only: the declared observation limits hold on this route
+      // too. The observation relied on is the one the last complete
+      // reconciliation acted on, dated from the time it represents: past
+      // `max_staleness_seconds` it no longer establishes reliance (`stale`),
+      // and where the declaration requires an online check, a failed latest
+      // read refuses (`unavailable`). Withdrawal and invalidation stay the
+      // reconciler's to classify and commit.
+      const observedAt = () => new Date(last).toISOString();
+      const staleUntilMs = last + enforcement.declaration.max_staleness_seconds * 1000;
+      if (nowMs >= staleUntilMs) return refuse("stale", observedAt());
+      if (
+        enforcement.declaration.online_check &&
+        !enforcement.resolver.view(governed.subject).sourceAvailable
+      ) {
+        return refuse("unavailable", observedAt());
+      }
+      return { ok: true, validUntilMs: Math.min(reconciledUntilMs, staleUntilMs) };
+    }
+  }
+  // Neither route applies here (lifecycle-only returned above).
+  if (!apply.direct) return { ok: true };
   const evaluated = evaluateAuthorityDependency(
     enforcement.declaration,
     enforcement.resolver.view(governed.subject),
@@ -502,17 +782,11 @@ export function checkAuthorityDependency(
       nowMs,
     },
   );
-  if (evaluated.ok) return { ok: true, validUntilMs: evaluated.validUntilMs };
-  enforcement.evidence?.record({
-    enforcer: context.enforcer,
-    dependency: enforcement.declaration.id,
-    failure: evaluated.failure,
-    mission: { id: mission.id, issuer: mission.issuer },
-    subject: governed.subject,
-    client: governed.clientId,
-    action: context.action,
-    ...(evaluated.observedAt !== undefined ? { observed_at: evaluated.observedAt } : {}),
-    at: new Date(nowMs).toISOString(),
-  });
-  return { ok: false, failure: evaluated.failure };
+  if (evaluated.ok) {
+    return {
+      ok: true,
+      validUntilMs: Math.min(evaluated.validUntilMs, reconciledUntilMs ?? Number.POSITIVE_INFINITY),
+    };
+  }
+  return refuse(evaluated.failure, evaluated.observedAt);
 }
