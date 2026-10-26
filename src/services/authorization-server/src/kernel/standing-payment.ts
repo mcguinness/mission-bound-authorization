@@ -933,9 +933,21 @@ export function standingPaymentBudgetBindingOf(
   },
   record: MissionRecord,
 ): StandingPaymentBudgetBindingResult {
-  const root = standingPaymentRootOf(kernel, record);
-  if (!root) return { kind: "unbound" };
   const underivable = (reason: string): StandingPaymentBudgetBindingResult => ({ kind: "underivable", reason });
+  // The successor chain, as standingPaymentRootOf walks it, except that a
+  // predecessor the kernel holds no record of ends the walk underivable
+  // rather than reading the lineage as an ordinary one.
+  let root: StandingPaymentAdmission | undefined;
+  const seen = new Set<string>();
+  for (let m: MissionRecord | undefined = record; m && !seen.has(m.id); ) {
+    seen.add(m.id);
+    root = kernel.standingPayments.admission(m.id);
+    if (root || m.predecessor === undefined) break;
+    const predecessor: string = m.predecessor;
+    m = kernel.get(predecessor);
+    if (!m) return underivable(`mission ${record.id} names predecessor ${predecessor}, which this kernel holds no record of`);
+  }
+  if (!root) return { kind: "unbound" };
   const instance = kernel.get(root.mission_id);
   const ref = root.dispatch_policy;
   const committed = instance?.template?.dispatch_policy;

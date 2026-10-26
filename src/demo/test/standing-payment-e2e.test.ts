@@ -39,8 +39,10 @@ import {
   Fga,
   RUNTIME_POSTURE,
   type RuntimePosture,
+  UNDERIVABLE_BUDGET,
 } from "@mission/pdp";
 import { APPROVAL_RENDER_REVISION_HEADER, type ApprovalConsole } from "../src/approval-console.js";
+import { kernelBudgetBinding } from "../src/kernel-mission-view.js";
 import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
 
@@ -491,7 +493,7 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
-  it("denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)", async () => {
+  it("denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)", async () => {
     const stack = await compose(15027, newFiles());
     try {
       const templateId = await consentTemplate(stack);
@@ -499,8 +501,15 @@ describe("standing-payment dispatch metered end to end through the composed stac
       // The snapshot the instance's activation retained is gone (pruned past
       // its horizon): the kernel still records the standing payment, but no
       // binding derives from it.
+      const derived = kernelBudgetBinding(stack.kernel, { id: instance, issuer: stack.issuer });
+      expect(derived).toMatchObject({ owner: OWNER, budget_id: BUDGET_ID, destinations: { acme: ACME_ACCOUNT } });
       stack.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
       expect(stack.kernel.standingPayments.admission(instance)).toBeDefined();
+      expect(kernelBudgetBinding(stack.kernel, { id: instance, issuer: stack.issuer })).toBe(UNDERIVABLE_BUDGET);
+      // The source cannot vouch for a Mission this kernel does not hold, or
+      // holds under another issuer: underivable, never unbound.
+      expect(kernelBudgetBinding(stack.kernel, { id: "msn_not_held", issuer: stack.issuer })).toBe(UNDERIVABLE_BUDGET);
+      expect(kernelBudgetBinding(stack.kernel, { id: instance, issuer: "https://another-issuer.test" })).toBe(UNDERIVABLE_BUDGET);
       expect(await wire(stack, instance, "inv-1")).toMatchObject({ ok: false, denial_reason: "constraint_unsupported" });
       expect(wires(stack)).toEqual([]);
       expect(stack.pdpClaims.budgetCounter(SHARED)).toBeUndefined();
