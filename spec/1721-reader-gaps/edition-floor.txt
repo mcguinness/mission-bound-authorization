@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-26T21:39:28Z
-Source repository commit: 6267ccb28448cce76a699251a428270d5a4574fd
+Generated: 2026-10-26T22:03:15Z
+Source repository commit: 604bea2e8d6b98c2458df4301e54fa779ba929b8
 Member count: 7
 
 Reading order:
@@ -16171,6 +16171,7 @@ Table of Contents
    6.  Revocation Propagation
    7.  Operational Considerations
    8.  Authorization Server Metadata
+     8.1.  Historical Key Set
    9.  Conformance
    10. Security Considerations
      10.1.  Mission Status Enumeration
@@ -17782,6 +17783,11 @@ Table of Contents
       bound is declared, and a consumer sizes reliance to token lifetime
       alone.
 
+   mission_historical_jwks_uri:
+      CONDITIONAL.  A string containing an https URL.  The URL of the
+      AS's historical key set (Section 8.1).  REQUIRED while that set
+      lists a key.
+
    token_endpoint_auth_methods_supported [RFC8414] describes the token
    endpoint alone and is never read in place of an endpoint's
    *_auth_methods_supported member.
@@ -17827,6 +17833,44 @@ Table of Contents
        ["ES256"],
      "mission_max_stale_seconds": 60
    }
+
+8.1.  Historical Key Set
+
+   The historical key set holds the public keys the AS has withdrawn as
+   compromised (Section 10.5), so that responses signed under them stay
+   verifiable for audit.  It is a JWT [RFC7519] with typ jwk-set+jwt,
+   served at mission_historical_jwks_uri, which a consumer takes only
+   from authorization server metadata it has validated (Section 3.3 of
+   [RFC8414]).  Its claims are iss (the AS's issuer identifier), iat,
+   and keys: a JWK Set's keys array [RFC7517] holding each such key's
+   public JWK, under its original kid, for at least the audit horizon of
+   every Mission whose responses it signed.
+
+   The AS signs the set under its active Mission Status signing key, the
+   key it currently signs Mission Status responses under, and never
+   under a key the set lists or a key of another role.  When that key is
+   itself compromised, the AS signs the set under its replacement and
+   never under another published key.  A consumer identifies the
+   authorized signer through its trusted configuration, not by its
+   presence in the jwks_uri, since the jwks_uri also carries other
+   roles' keys and retired keys; it accepts a replacement only once that
+   configuration authorizes it.  A consumer MUST NOT accept a historical
+   key set whose signature does not verify under the key its trusted
+   configuration authorizes.
+
+   Each listed JWK carries the revoked member [OpenID.Federation]
+   (Section 8.7.2) with reason compromised and these times:
+
+   *  revoked_at: the time the AS revoked the key; and
+
+   *  compromised_at: an added member of revoked, the established
+      compromise time, the earliest time from which a signature under
+      the key is not trusted.  It is absent when no compromise time is
+      established.
+
+   Both are NumericDate values [RFC7519].  The set reuses OpenID
+   Federation's revoked encoding only; this document defines no OpenID
+   Federation endpoint and claims no conformance to it.
 
 9.  Conformance
 
@@ -17947,25 +17991,39 @@ Table of Contents
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
-   signed such a response under resolvable in its jwks_uri for at least
-   the Mission's audit horizon ([I-D.draft-mcguinness-oauth-mission]),
-   so an archived application/mission-status-response+jwt remains
-   verifiable for audit and dispute.  This is the issuance profile's
+   signed such a response under resolvable for at least the Mission's
+   audit horizon ([I-D.draft-mcguinness-oauth-mission]), so an archived
+   application/mission-status-response+jwt remains verifiable for audit
+   and dispute: a retired key in its jwks_uri, and a compromised key in
+   its historical key set (Section 8.1).  This is the issuance profile's
    retired-key rule ([I-D.draft-mcguinness-oauth-mission],
    Section "Signing and Key Rotation"), with the audit horizon as the
    bound.
 
    A key known or suspected compromised follows the issuance profile's
    compromise rule ([I-D.draft-mcguinness-oauth-mission],
-   Section "Signing and Key Rotation"): the AS publishes it as revoked,
-   or marks it with a compromise time, rather than only rotating it out.
-   Retention keeps an archived response verifiable for audit; it is not
-   trust.  A consumer MUST NOT accept, for a current reliance decision,
-   a response signed under a key the AS has published as compromised.
-   An auditor examining an archived response signed under such a key
-   classifies it by the published compromise information; the Mandate
-   profile's compromise-time rule is one such classification
-   ([I-D.draft-mcguinness-mission-mandate]).
+   Section "Signing and Key Rotation").  Rather than only rotating it
+   out, the AS stops signing with it and removes it from its jwks_uri,
+   and publishes it as revoked in its historical key set.  Retention
+   keeps an archived response verifiable for audit; it is not trust.  A
+   consumer MUST NOT accept, for a current reliance decision, a response
+   signed under a key the AS has published as compromised.  A consumer
+   MUST NOT use a key from the historical key set to verify a response
+   for a current reliance decision.  A consumer MUST NOT rely on a
+   cached copy of the AS's jwks_uri beyond the freshness lifetime its
+   response explicitly declares (Section 4.2.1 of [RFC9111]).  A
+   response without valid explicit freshness information is stale when
+   received, and is never given a heuristic lifetime (Section 4.2.2 of
+   [RFC9111]): the consumer revalidates it before reuse.  The consumer
+   replaces its cached key set with each one it fetches rather than
+   adding to it, so a removed key stops verifying within that lifetime.
+   When the cached set is stale and revalidation fails, the consumer
+   MUST NOT accept a Status or Lifecycle response for a current reliance
+   decision until a fetch or revalidation succeeds.  An auditor
+   examining an archived response signed under a compromised key
+   classifies it by the published compromise information, compromised_at
+   or its absence; the Mandate profile's compromise-time rule is one
+   such classification ([I-D.draft-mcguinness-mission-mandate]).
 
 10.6.  General OAuth Security
 
@@ -18094,6 +18152,16 @@ Table of Contents
    *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
+
+   *  Metadata Name: mission_historical_jwks_uri
+
+   *  Metadata Description: URL of the authorization server's historical
+      key set, the signed set of public keys it has withdrawn as
+      compromised.
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 8.1
 
 12.2.  OAuth Extensions Error Registration
 
@@ -18264,6 +18332,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-01>.
 
+   [OpenID.Federation]
+              OpenID Foundation, "OpenID Federation 1.0", 17 February
+              2026,
+              <https://openid.net/specs/openid-federation-1_0.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -18294,6 +18367,14 @@ Table of Contents
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
@@ -18332,6 +18413,11 @@ Table of Contents
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
               2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [RFC9111]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Caching", STD 98, RFC 9111,
+              DOI 10.17487/RFC9111, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9111>.
 
    [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
               "Recommendations for Secure Use of Transport Layer
@@ -18401,6 +18487,17 @@ Appendix A.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  A key known or suspected compromised leaves the jwks_uri and is no
+      longer used for signing.  It stays resolvable for the audit
+      horizon in a historical key set (mission_historical_jwks_uri, an
+      https URL from validated metadata), signed by the active Mission
+      Status signing key the consumer's configuration authorizes, and
+      marked with OpenID Federation's revoked member: its revocation
+      time and, where established, its compromise time.  Consumers use
+      only explicit jwks_uri freshness, revalidate a stale set, refuse
+      current reliance when that fails, and never verify a current
+      reliance decision under a historical key (#831, D774, D780).
 
    *  A transition is durably committed before any response acknowledges
       it, and the OAuth binding's final issuance check is not extended
@@ -18826,8 +18923,16 @@ Table of Contents
       establishes a Mission in this mode only under a separately
       specified verified join ([I-D.draft-mcguinness-mission-aauth]).
 
-   The mode each enforcement scope uses is part of its Enforcement Scope
-   Statement (Section 5.2).  In either mode, the established Mission is
+   Each enforcement scope declares the modes it serves as
+   mission_establishment_mode in its Enforcement Scope Statement
+   (Section 5.2): credential_carried, externally_established, or a non-
+   empty list of those values without duplicates where it serves both.
+   A scope declares only the modes it actually serves.  Declaring both
+   creates no fallback: the binding profile's precedence decides which
+   reference establishes the Mission (under the Mission Authority Server
+   profile, a credential-carried reference governs), and a conflicting
+   selector or an invalid credential is not rescued by an externally
+   established reference.  In either mode, the established Mission is
    the Mission every input of Section 2.7 (authority, Resource policy,
    parameters, actor, time, state) is evaluated against, and the Mission
    reference the permit and the evidence record bind.
@@ -19559,13 +19664,14 @@ Table of Contents
    *  parameter_digest is sha-256: followed by the base64url, no
       padding, SHA-256 [RFC6234] of the JCS [RFC8785] serialization of
       the normalized parameter object.  It MUST be computed under the
-      same canonicalization rules the issuance profile defines
-      (duplicate member rejection, significant array order, byte-for-
-      byte URI comparison); this document does not define a second
-      canonicalization.  It is a canonical-object digest under the
       substrate's default commitment construction, which this document
-      imports normatively ([I-D.draft-mcguinness-mission-substrate]):
-      the I-JSON requirement and the reject-unknown-prefix rule apply to
+      imports normatively ([I-D.draft-mcguinness-mission-substrate]): a
+      duplicate member is rejected at parse time, array order is
+      significant because JCS preserves it, a URI-valued parameter is
+      preserved unless the Operation Profile defines its normalization
+      (Section 8), and this document defines no second canonicalization.
+      It is a canonical-object digest under that construction: the
+      I-JSON requirement and the reject-unknown-prefix rule apply to
       computing and verifying it unchanged.
 
    *  Every parameter that influences the action's external effect (for
@@ -20030,7 +20136,9 @@ Table of Contents
    the lifecycle state space with its only-active-permits rule, the
    kernel's governance gate; the immutable Approved Context, the
    approval-time fixity behind every anchor its records cite; and the
-   Mission's audit horizon, which bounds the ordered governance record.
+   Mission's retention period as its binding declares it (the audit
+   horizon in the OAuth binding), which bounds the ordered governance
+   record and is the floor for this document's records (Section 11.3).
    The kernel requires no particular integrity anchors: intent_hash and
    authority_hash are the OAuth binding's commitment to the Approved
    Context, supplied by the issuance profile, not by the kernel.
@@ -20220,7 +20328,7 @@ Table of Contents
      "action_classes": ["irreversible_action"],
      "execution_paths": ["tool-gateway"],
      "pep_locations": ["tool-gateway"],
-     "mission_establishment_mode": "mission_claim"
+     "mission_establishment_mode": "credential_carried"
    }
 
    Resource identifiers and path names are non-empty strings.  Resource
@@ -20469,10 +20577,15 @@ Table of Contents
    the resource server's object-level authorization, and that does not
    materially affect the resource set or disclosure risk, need not be
    classified a consequential read, and is then not separately PDP-gated
-   by this profile.  A deployment MUST NOT, however, use classification
-   to evade the floor or a Resource-policy minimum, and once an action
-   is a consequential write or higher it MUST be gated and bound as the
-   table requires.
+   by this profile.  A request that does reach the PDP within a mediated
+   scope with no action class established, where the Enforcement Scope
+   Statement declares action classes, is a request fault: it is refused
+   before evaluation, never evaluated under a class it was not assigned,
+   and no class is recorded for it
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  A deployment MUST
+   NOT, however, use classification to evade the floor or a Resource-
+   policy minimum, and once an action is a consequential write or higher
+   it MUST be gated and bound as the table requires.
 
    One predicate cuts across the classes.  An *external-communication
    action* is a consequential action, of any class, whose effect carries
@@ -21129,8 +21242,8 @@ Table of Contents
 
    *  Reproducible: identical manifest inputs, including the compiler
       identity, produce a byte-identical manifest, and therefore an
-      identical policy_view_id, under the canonicalization rules of
-      [I-D.draft-mcguinness-oauth-mission].
+      identical policy_view_id, under the substrate's default commitment
+      construction ([I-D.draft-mcguinness-mission-substrate]).
 
    *  Identifiable: the view carries a policy_view_id, so PDP cache
       entries are addressable.
@@ -21142,10 +21255,9 @@ Table of Contents
    The committed object is a canonical JSON manifest, never the engine
    binary itself: JCS canonicalization applies to the manifest, and an
    engine-native artifact enters the manifest only by digest, never
-   directly. policy_view_id is the integrity-anchor encoded form
-   ([I-D.draft-mcguinness-oauth-mission]) of the SHA-256 [RFC6234] of
-   the JCS [RFC8785] canonical bytes of that profile's domain-separated,
-   issuer-bound integrity-anchor envelope with typ mission-policy-view:
+   directly. policy_view_id is the sha-256: encoded SHA-256 [RFC6234] of
+   the JCS [RFC8785] canonical bytes of a domain-separated, issuer-bound
+   envelope with typ mission-policy-view:
 
    SHA-256(JCS({
      "typ":   "mission-policy-view",
@@ -21259,7 +21371,15 @@ Table of Contents
       canonicalization;
 
    *  set-like array handling and any other canonicalization beyond the
-      issuance profile's rules;
+      substrate's default commitment construction;
+
+   *  the normalization of URI-valued parameters.  Absent one, a URI-
+      valued parameter is preserved as presented.  A defined
+      normalization applies identically before the commitment and at
+      execution reverification (Section 9.4); it never changes how
+      authority entries match resources
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]) and never
+      rewrites an approved identifier;
 
    *  exactly which fields enter the parameter_digest;
 
@@ -22216,7 +22336,8 @@ Table of Contents
    *  The Resource Server runtime profile MUST define the record's
       concrete serialization and canonicalization before storage and
       integrity protection.  JSON records SHOULD use JCS [RFC8785] under
-      the issuance profile's canonicalization rules.
+      the substrate's default commitment construction
+      ([I-D.draft-mcguinness-mission-substrate]).
 
    *  It MUST be append-only and integrity-protected; the enforcement
       scope MUST name the mechanism (a hash-linked log, signed segments,
@@ -22251,9 +22372,16 @@ Table of Contents
       being issued again.
 
    *  The retention window declared in the Enforcement Scope Statement
-      MUST be no shorter than the Mission's audit horizon, as defined in
-      the Mission Record section of
-      [I-D.draft-mcguinness-oauth-mission].
+      MUST be no shorter than the Mission's retention period as its
+      Mission Substrate Binding declares it
+      ([I-D.draft-mcguinness-mission-substrate], Section "Ordered
+      Governance Record"), nor shorter than any longer period a
+      companion the deployment adopts requires.  That period is a floor
+      for every required record, not only for the governance record it
+      is declared for.  The OAuth binding realizes it as the Mission's
+      audit horizon ([I-D.draft-mcguinness-oauth-mission],
+      Section "Provenance and Expiry"), which covers the Mission Record
+      and its evidence.
 
    Export, transparency registration, and signing for portable
    verification run from the producer's durable store.  They run
@@ -22266,8 +22394,8 @@ Table of Contents
 
    Digest encoding is uniform across this document family: every digest
    a family document defines uses the sha-256: prefixed base64url, no-
-   padding encoding of the issuance profile's integrity-anchor rules
-   ([I-D.draft-mcguinness-oauth-mission]).  The exceptions are
+   padding encoding of the substrate's default commitment construction
+   ([I-D.draft-mcguinness-mission-substrate]).  The exceptions are
    externally fixed encodings: the COSE hashed payload of the audit
    companion's Signed Statements ([I-D.draft-mcguinness-mission-audit])
    carries the raw digest bytes the COSE hash-envelope mechanism
@@ -23324,9 +23452,10 @@ Appendix A.  Parameter Digest Worked Example
 
    The parameter_digest is sha-256: followed by the base64url, no-
    padding SHA-256 of the JCS [RFC8785] serialization of that object,
-   under the issuance profile's canonicalization rules (no envelope; the
-   normalized parameter object is digested directly).  The JCS canonical
-   bytes are a single line with sorted member names and no whitespace:
+   under the substrate's default commitment construction (no envelope;
+   the normalized parameter object is digested directly).  The JCS
+   canonical bytes are a single line with sorted member names and no
+   whitespace:
 
    {"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 
@@ -23440,6 +23569,28 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#854, D814): the record retention floor is
+      the Mission's retention period as its Mission Substrate Binding
+      declares it, realized in the OAuth binding as the audit horizon
+      (the Mission Record and its evidence), and no shorter than a
+      longer period an adopted companion requires; it is a floor for
+      every required record, not only the governance record.  Commitment
+      construction, canonicalization and digest encoding are imported
+      from the substrate's default commitment construction, OAuth
+      references remaining for OAuth-owned anchors.  A URI-valued
+      parameter is preserved unless the Operation Profile defines its
+      normalization, applied identically at commitment and execution
+      reverification.
+
+   *  Changes a requirement (#956, D814): a mediated request that
+      reaches the PDP with no action class established, where the
+      Enforcement Scope Statement declares classes, is a request fault
+      refused before evaluation and is never evaluated or recorded under
+      a class it was not assigned. mission_establishment_mode takes
+      credential_carried, externally_established, or a non-empty
+      duplicate-free list of the modes a scope serves; declaring both
+      creates no fallback, the binding's precedence deciding.
 
    *  Runtime Enforcement Evidence (#821): durability is ordered around
       the effect.  For a high-consequence action, the component that
@@ -24397,17 +24548,19 @@ Table of Contents
       target is absent, malformed, or outside the enforcement scope the
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
-      operation_target_invalid; for one whose action phase is outside
-      the defined set, or is absent where the PDP's trusted operation
-      declaration requires a phase, phase_invalid; for a compensate-
-      phase request with no compensates_evaluation_id, or a request
-      whose compensates_evaluation_id is malformed,
-      compensation_link_invalid; for one whose evaluation-context
-      binding inputs are missing, malformed, or incompatible with the
-      declared binding, for an operation the runtime profile's
-      Evaluation-Context Binding extension covers,
-      evaluation_context_invalid; and for one carrying a work-item
-      context that is not well-formed (the harness profile,
+      operation_target_invalid; for a mediated request with no action
+      class established, where the runtime Enforcement Scope Statement
+      declares action classes, action_class_missing, recorded with no
+      class; for one whose action phase is outside the defined set, or
+      is absent where the PDP's trusted operation declaration requires a
+      phase, phase_invalid; for a compensate-phase request with no
+      compensates_evaluation_id, or a request whose
+      compensates_evaluation_id is malformed, compensation_link_invalid;
+      for one whose evaluation-context binding inputs are missing,
+      malformed, or incompatible with the declared binding, for an
+      operation the runtime profile's Evaluation-Context Binding
+      extension covers, evaluation_context_invalid; and for one carrying
+      a work-item context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -26647,6 +26800,11 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Refusal Record: action_class_missing records a PDP refusal of a
+      mediated request with no action class established, where the
+      runtime Enforcement Scope Statement declares classes, with no
+      class recorded (#956, D814).
+
    *  Extension Members, Refusal Record and Execution Evidence:
       work_item, owned by the harness profile, records the qualified
       work-item identifier on Decision and Execution Evidence, joining
@@ -28263,6 +28421,16 @@ Table of Contents
    consequential action without Mission evaluation is an enforcement
    bypass, not a decision ([I-D.draft-mcguinness-mission-runtime]).
 
+   Likewise, where the runtime Enforcement Scope Statement declares
+   action classes, a mediated request that reaches the PDP with no
+   action class established, neither carried from the PEP's Operation
+   Profile nor assigned by the PDP's own trusted declaration, is
+   malformed: the PDP MUST refuse it before evaluation, MUST NOT
+   evaluate it under a default class or record a class in Decision
+   Evidence, and MUST record the refusal as a Refusal Record with
+   denial_reason action_class_missing
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).
+
    In addition to evaluating the decision inputs the runtime profile
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
    self-consistent:
@@ -29360,6 +29528,13 @@ Table of Contents
    |enforcement scope at the |           |                                 |
    |PDP                      |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |No action class          |Refusal    |action_class_missing             |
+   |established for a        |Record     |                                 |
+   |mediated request where   |           |                                 |
+   |the Enforcement Scope    |           |                                 |
+   |Statement declares action|           |                                 |
+   |classes, at the PDP      |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |action_phase outside the |Refusal    |phase_invalid                    |
    |closed set, or absent    |Record     |                                 |
    |where the trusted        |           |                                 |
@@ -29636,10 +29811,11 @@ Table of Contents
       Refusal Record.
 
    *  Unusable inputs: phase_invalid, compensation_link_invalid,
-      evaluation_context_invalid, and work_item_invalid are PDP refusals
-      before evaluation.  They describe decision inputs the PDP cannot
-      use, not an evaluated policy denial, and a PDP claiming only the
-      Decision Base records them in its own internal form (Section 2).
+      evaluation_context_invalid, work_item_invalid, and
+      action_class_missing are PDP refusals before evaluation.  They
+      describe decision inputs the PDP cannot use, not an evaluated
+      policy denial, and a PDP claiming only the Decision Base records
+      them in its own internal form (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -30394,6 +30570,13 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#956, D814): where the runtime Enforcement
+      Scope Statement declares action classes, the PDP refuses a
+      mediated request with no action class established before
+      evaluation, records the Refusal Record action_class_missing, and
+      never evaluates it under a default class or records one in
+      Decision Evidence.
 
    *  Work-Item Context: context.work_item is a harness-owned extension
       point the PEP populates only from the harness's authenticated
