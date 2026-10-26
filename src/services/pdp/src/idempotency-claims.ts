@@ -37,11 +37,12 @@
  * against one counter neither can pass on headroom the other took. A
  * reservation is `reserved`, `committed`, `released` or `held`, and is never
  * deleted when its claim is purged: committed spend persists. It is released
- * only where no permit left the PDP, or on affirmative non-execution before
- * redemption (`suppressed`); `completed` commits it; anything uncertain
- * (`failed`, a lease that elapsed, a restart) holds it, raising the declared
- * operator alert, and nothing but {@link IdempotencyClaimDomain.reconcileHeldReservation}
- * moves a reservation out of `held`.
+ * only where no permit left the PDP, on affirmative non-execution before
+ * redemption (the redeeming attempt's `suppressed` record, held or not), or
+ * by operator reconciliation ({@link IdempotencyClaimDomain.reconcileHeldReservation});
+ * `completed` commits it; anything uncertain (`failed`, a lease that
+ * elapsed, a restart) holds it, raising the declared operator alert. Time,
+ * restart and the PEP's `unredeemed` answer never release a held one.
  */
 
 import { randomUUID } from "node:crypto";
@@ -938,11 +939,12 @@ export class IdempotencyClaimDomain {
 
   /**
    * @spec metering#settlement-states (#816, D830 rulings 7 and 10): the
-   * operator's authoritative reconciliation of a held reservation, and the
-   * only way out of `held`. Fresh consent, a new policy version, a restart,
-   * a timeout, an elapsed lease and the executing PEP's own settlement or
-   * reconciliation never release one. A reservation in any other state is
-   * refused unchanged.
+   * operator's authoritative reconciliation of a held reservation. Besides
+   * the redeeming attempt's own `suppressed` record (affirmative
+   * non-execution), it is the only release from `held`: fresh consent, a new
+   * policy version, a restart, a timeout, an elapsed lease and the PEP's
+   * `unredeemed` reconciliation never release one. A reservation in any
+   * other state is refused unchanged.
    */
   reconcileHeldReservation(evaluationId: string, resolution: HeldReservationResolution): HeldReservationResult {
     return this.tx(() => {
@@ -1175,18 +1177,20 @@ export class IdempotencyClaimDomain {
    * claim's reservations on the evidence state, never on a generic failure
    * signal, in the settling transaction. `completed` commits the reserved
    * quantity (the payment's amount is the quantity: no actual measure is
-   * conveyed). `suppressed`, affirmative non-execution before redemption,
-   * releases a reservation that is still `reserved`. Anything else, a
-   * `failed` attempt or the redemption owner's `unredeemed` answer, holds
-   * it. A reservation already `held` leaves `held` only by operator
-   * reconciliation ({@link reconcileHeldReservation}), or by `completed`,
-   * which keeps it charged. A duplicate settlement never reaches here.
+   * conveyed). `suppressed` from the redeeming attempt for this permit's own
+   * evaluation is affirmative non-execution before redemption, the
+   * authoritative evidence a held reservation waits for: it releases the
+   * reservation, `reserved` or `held`. Anything else, a `failed` attempt or
+   * the redemption owner's `unredeemed` answer (not authoritative: after a
+   * restart the redemption store holds no record), holds it, and a held one
+   * stays held for operator reconciliation ({@link reconcileHeldReservation}).
+   * A duplicate settlement never reaches here.
    */
   private settleReservations(evaluationId: string, next: "completed" | "failed", outcome: string, nowMs: number): void {
     if (next === "completed") {
       this.transitionReservations(evaluationId, ["reserved", "held"], "committed", `settled_${outcome}`, nowMs);
     } else if (outcome === "suppressed") {
-      this.transitionReservations(evaluationId, ["reserved"], "released", "settled_suppressed", nowMs);
+      this.transitionReservations(evaluationId, ["reserved", "held"], "released", "settled_suppressed", nowMs);
     } else {
       this.transitionReservations(evaluationId, ["reserved"], "held", outcome === "failed" ? "failed" : outcome, nowMs);
     }

@@ -628,7 +628,61 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.close();
     });
 
-    it("operator reconciliation releases a held reservation, and no settlement, PEP reconciliation or restart does (@spec metering#settlement-states, #816)", async () => {
+    it("a later suppressed settlement from the redeeming attempt for the permit's own evaluation releases a held reservation (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      // Affirmative non-execution before redemption, from the attempt the redemption record names.
+      const late = await executionRecord(a, "suppressed");
+      expect((await claims.settle(REQUESTER, late, () => String(late.execution_id))).accepted).toBe(true);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expectPermit(await evaluate(request(c, { missionId: "msn_b", amount: "1000.00" }), options(claims, c, view("msn_b", binding("msn_b")))));
+      claims.close();
+    });
+
+    it("a suppressed settlement for a different evaluation releases nothing held under another (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const plain = await permitted(claims, c, view("msn_plain"), { amount: "50.00" });
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      const other = await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
+      for (const evaluationId of [plain, other]) {
+        const record = await executionRecord(evaluationId, "suppressed");
+        expect((await claims.settle(REQUESTER, record, () => String(record.execution_id))).accepted).toBe(true);
+      }
+      const unknown = await executionRecord("dec_unknown", "suppressed");
+      expect((await claims.settle(REQUESTER, unknown, () => String(unknown.execution_id))).accepted).toBe(false);
+      expect(claims.reservationsFor(other).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("the PEP's unredeemed reconciliation leaves a held reservation held for operator reconciliation (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      // The redemption owner's same-epoch answer settles the claim; it is not authoritative for the budget.
+      expect((await claims.reconcile(REQUESTER, a, { kind: "unredeemed" })).accepted).toBe(true);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)?.held.amount).toBe("300.00");
+      expect(claims.listHeldReservations().map((r) => r.evaluation_id)).toEqual([a, a]);
+      claims.close();
+    });
+
+    it("operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
       let claims = open();
@@ -636,11 +690,6 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       const b = await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
       c.set(T0 + PAST_LEASE_MS);
       claims.sweep();
-      // A late suppressed record from the redeeming attempt settles the claim but cannot release the held budget.
-      const late = await executionRecord(a, "suppressed");
-      expect((await claims.settle(REQUESTER, late, () => String(late.execution_id))).accepted).toBe(true);
-      // The redemption owner's same-epoch proof of no redemption settles the other claim, and also cannot.
-      expect((await claims.reconcile(REQUESTER, b, { kind: "unredeemed" })).accepted).toBe(true);
       claims.close();
       claims = open();
       expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
