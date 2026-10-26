@@ -72,6 +72,7 @@ export {
 } from "./state-observation.js";
 export {
   declaredStatusKeys,
+  refreshingStatusKeys,
   MISSION_STATUS_SKEW_SECONDS,
   MISSION_STATUS_STATES,
   type MissionStatusFailure,
@@ -168,6 +169,7 @@ export {
   type DecisionEvidenceEmitter,
   type DecisionEvidenceEmitterConfig,
   type DecisionEvidenceObject,
+  type DecisionEvidenceSequences,
   type DecisionMeteringEntry,
   METERING_COUNTER_SCOPES,
   type MeteringCounterScope,

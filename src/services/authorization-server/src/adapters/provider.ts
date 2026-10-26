@@ -4,6 +4,11 @@
  * Wiring facts verified by the pre-flight spike (src/spikes/SPIKE-REPORT.md).
  */
 
+import {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./status-rate-limit.js";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
@@ -1084,6 +1089,12 @@ export interface AdapterOptions {
    * invalid_dpop_proof.
    */
   dpopProofReplay?: DpopProofReplay;
+  /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation, both routes. Defaults to
+   * DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
   /**
    * @spec mission#introspection (issue #541 P1-2) — the (iss, jti) -> grantId
    * issuance index, consulted by introspection's per-token individual-
@@ -3867,6 +3878,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   /** @spec mission-template#prohibited-classes (#813): the opt-in standing-payment dispatch workflow is on. */
   const standingPaymentOn = enabled("standing-payment-dispatch");
+  // @spec status#security-considerations (#1686): one window per client across
+  // both Mission Status routes.
+  const statusLimiter = new MissionStatusRateLimiter(
+    opts.missionStatusRateLimit ?? DEFAULT_MISSION_STATUS_RATE_LIMIT,
+    () => kernel.nowDate().getTime(),
+  );
   // @spec #831 (role binding): introspection resolves an access token under
   // the access-token key alone, never another AS role's key.
   const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
@@ -4532,11 +4549,30 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
     // --- Signed Status (@spec status#mission-status-response) ---
     // A deployment with Mission Status off serves no such route (404).
+    // @spec status#security-considerations, status#mission-status-errors
+    // (#1686): an authenticated client over its limit is answered
+    // `rate_limited` (429) with when to retry, before any Mission is read, so
+    // the answer is the same whichever Mission it asked about.
+    const statusRateLimited = (client: string, nonce: string | undefined): boolean => {
+      const retryAfter = statusLimiter.admit(client);
+      if (retryAfter === undefined) return false;
+      ctx.status = 429;
+      ctx.set("cache-control", "no-store");
+      ctx.set("Retry-After", String(retryAfter));
+      ctx.body = {
+        error: "rate_limited",
+        error_description: "Consumer is rate-limited.",
+        retry_after: retryAfter,
+        ...(nonce ? { nonce } : {}),
+      };
+      return true;
+    };
     const statusMatch = ctx.path.match(/^\/missions\/([^/]+)\/status$/);
     if (statusMatch && ctx.method === "GET" && enabled("status")) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
+      if (statusRateLimited(principal.principal_id, statusNonce)) return;
       const statusAudience = str(ctx.query.audience);
       try {
         // A caller without the read grant gets the same not-found body as an
@@ -4656,6 +4692,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
         return;
       }
+      // @spec status#security-considerations, status#mission-status-processing
+      // (#1686): the per-consumer limit falls between request syntax (step 2)
+      // and authorization (step 3), so the processing order's refusals are
+      // unchanged and no Mission has been read.
+      if (statusRateLimited(auth.clientId, echo)) return;
       const principal: ServiceTokenPrincipal = {
         principal_id: auth.clientId,
         scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],

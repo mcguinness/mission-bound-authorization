@@ -11,6 +11,7 @@
     "@mission/agent": "workspace:*",
     "@mission/authorization-server": "workspace:*",
     "@mission/console-bff": "workspace:*",
+    "@mission/core": "workspace:*",
     "@mission/demo-data": "workspace:*",
     "@mission/mcp-payments": "workspace:*",
     "@mission/mcp-saas": "workspace:*",

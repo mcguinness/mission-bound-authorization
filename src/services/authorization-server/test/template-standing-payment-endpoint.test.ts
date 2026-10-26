@@ -625,19 +625,26 @@ async function consentPage(over: Record<string, unknown> = {}, issuer = ISSUER):
   return res.text();
 }
 
-/** The standing payment's ceiling entry, with `requires_action_approval` set. */
-const approvalBoundCeiling = [
-  {
-    type: "mission_resource_access",
-    resource: RESOURCE,
-    actions: [STANDING_PAYMENT_OPERATION],
-    constraints: {
-      max_amount: { amount: "500.00", currency: "USD" },
-      vendors: ["acme"],
-      requires_action_approval: true,
-    },
+/** A payment ceiling entry bounded at `amount`, with `requires_action_approval` set or not. */
+const paymentCeilingEntry = (amount: string, requiresApproval: boolean) => ({
+  type: "mission_resource_access",
+  resource: RESOURCE,
+  actions: [STANDING_PAYMENT_OPERATION],
+  constraints: {
+    max_amount: { amount, currency: "USD" },
+    vendors: ["acme"],
+    ...(requiresApproval ? { requires_action_approval: true } : {}),
   },
+});
+/** Every entry that can authorize the payment requires an action-bound approval. */
+const approvalBoundCeiling = [
+  paymentCeilingEntry("500.00", true),
+  paymentCeilingEntry("200.00", true),
 ];
+/** Only the first entry does: a payment the second authorizes needs none. */
+const mixedCeiling = [paymentCeilingEntry("500.00", true), paymentCeilingEntry("200.00", false)];
+const ARS_APPROVER = "an Approver on the Access Request Service's approval surface";
+const MIXED_LINE = `Action-bound approval for a payment depends on the Template Ceiling entry that authorizes it: ceiling[0] (${RESOURCE}; vendors acme; at most 500.00 USD per payment) requires one, from ${ARS_APPROVER}, bound to that payment's exact parameters; and ceiling[1] (${RESOURCE}; vendors acme; at most 200.00 USD per payment) requires none, so a payment it authorizes executes with no per-payment human approval.`;
 
 describe("standing-payment consent disclosure (@spec template#prohibited-classes, template#template-consent, #813)", () => {
   it("renders the designated operation on the standing-payment consent page (#813)", async () => {
@@ -670,10 +677,50 @@ describe("standing-payment consent disclosure (@spec template#prohibited-classes
     );
   });
 
-  it("renders that each payment requires an action-bound approval, and from whom, where the Template Ceiling sets requires_action_approval (#813)", async () => {
+  it("renders that each payment requires an action-bound approval, and from whom, where every Template Ceiling entry that can authorize the payment sets requires_action_approval (#813)", async () => {
     expect(await consentPage({ ceiling: approvalBoundCeiling })).toContain(
-      "Action-bound approval for each payment: required, from an Approver on the Access Request Service's approval surface, bound to that payment's exact parameters (the Template Ceiling sets requires_action_approval).",
+      `Action-bound approval for each payment: required, from ${ARS_APPROVER}, bound to that payment's exact parameters (every Template Ceiling entry that can authorize it sets requires_action_approval).`,
     );
+  });
+
+  it("renders the action-bound approval per ceiling entry, and never as required for each payment, where only some entries that can authorize the payment set requires_action_approval (#813)", async () => {
+    const html = await consentPage({ ceiling: mixedCeiling });
+    expect(html).toContain(MIXED_LINE);
+    expect(html).not.toContain("Action-bound approval for each payment: required");
+    expect(html).not.toContain("Action-bound approval for each payment: none");
+  });
+
+  it("renders that each payment requires an action-bound approval where the deployment's action-approval predicate names the payment, whatever the ceiling entries set (#813)", async () => {
+    expect(await consentPage({ ceiling: mixedCeiling }, ALT_ISSUER)).toContain(
+      "Action-bound approval for each payment: required, from the payments operations lead, bound to that payment's exact parameters (the deployment's action-approval predicate names payments:payment.execute).",
+    );
+  });
+
+  it("shows a payment authorized through the unrestricted ceiling entry as requiring no approval, and the dispatched instance carries that entry without requires_action_approval (#813)", async () => {
+    const id = await propose(ISSUER, proposal({ ceiling: mixedCeiling, max_active: 3 }));
+    const headers = bob(id);
+    const { "x-csrf-token": _csrf, ...cookie } = headers;
+    const page = await (
+      await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: cookie })
+    ).text();
+    expect(page).toContain(
+      `ceiling[1] (${RESOURCE}; vendors acme; at most 200.00 USD per payment) requires none, so a payment it authorizes executes with no per-payment human approval`,
+    );
+    const revision = await rendered(id, headers);
+    const decided = await decide(id, headers, { render_revision: revision });
+    const { template_id } = (await decided.json()) as { template_id: string };
+    expect(decided.status).toBe(201);
+    const res = await dispatch(ISSUER, template_id);
+    expect(res.status).toBe(200);
+    const [missionId] = as.kernel.standingPayments.dispatchedInstances(template_id);
+    const unrestricted = (as.kernel.get(missionId as string)?.authority_set ?? []).filter(
+      (e) =>
+        e.actions.includes(STANDING_PAYMENT_OPERATION) &&
+        e.constraints?.requires_action_approval !== true,
+    );
+    expect(unrestricted.map((e) => e.constraints?.max_amount)).toEqual([
+      { amount: "200.00", currency: "USD" },
+    ]);
   });
 
   it("renders that each payment requires an action-bound approval, and from whom, where the deployment's action-approval predicate names the payment (#813)", async () => {

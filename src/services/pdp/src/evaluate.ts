@@ -2405,8 +2405,19 @@ async function evaluateInner(
   // deployment's dependency evidence, not on the wire.
   let dependencyValidUntilMs: number | undefined;
   const dependency = opts.authorityDependency;
-  if (dependency !== undefined && dependency.declaration.enforcement.direct === "pdp") {
-    const checked = checkAuthorityDependency(dependency, { id: view.id, issuer: view.issuer }, { enforcer: "pdp", action: req.action.name });
+  // @spec runtime#input-authority-dependency (#830): under lifecycle-mediated
+  // enforcement the PDP also refuses while the reconciliation is overdue,
+  // whatever the Mission's state reads ("A current `active` state does not
+  // show that this reconciliation is current").
+  const directHere = dependency?.declaration.enforcement.direct === "pdp";
+  const lifecycleHere = dependency?.declaration.enforcement.lifecycle === true;
+  if (dependency !== undefined && (directHere || lifecycleHere)) {
+    const checked = checkAuthorityDependency(
+      dependency,
+      { id: view.id, issuer: view.issuer },
+      { enforcer: "pdp", action: req.action.name },
+      { direct: directHere, lag: lifecycleHere },
+    );
     if (!checked.ok) {
       return { decision: false, context: base({ denial_reason: "resource_policy", reason: "resource_policy", next_action: "none" }) };
     }

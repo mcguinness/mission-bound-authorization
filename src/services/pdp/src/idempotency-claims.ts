@@ -70,7 +70,7 @@ import {
   type MissionBudgetBinding,
   resolveBudgetCharge,
 } from "./budget-metering.js";
-import type { DecisionMeteringEntry } from "./decision-evidence.js";
+import type { DecisionEvidenceSequences, DecisionMeteringEntry } from "./decision-evidence.js";
 import { type BoundaryConsumer, lineageScopeDigests, versionInForceAt } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
@@ -285,7 +285,8 @@ export interface HeldReservationResolution {
 }
 
 export type HeldReservationResult =
-  | { accepted: true; state: "released" | "committed" }
+  /** `duplicate`: an `executed` correction for a reservation already committed changed nothing. */
+  | { accepted: true; state: "released" | "committed"; duplicate?: true }
   | { accepted: false; reason: string };
 
 /**
@@ -439,7 +440,19 @@ export interface ClaimTicket {
 }
 
 export type SettlementResult =
-  | { accepted: true; state: "completed" | "failed"; duplicate: boolean }
+  | {
+      accepted: true;
+      state: "completed" | "failed";
+      duplicate: boolean;
+      /**
+       * @spec metering#settlement-states (#816, owner review of #1713): the
+       * claim did not take this `completed` record (its window closed, it was
+       * purged, or it was settled otherwise), but the budget did: the
+       * evaluation's released reservations were committed (or already were).
+       * The claim itself is unchanged.
+       */
+      budget_corrected?: true;
+    }
   | { accepted: false; reason: string };
 
 /** A claim the declared reconciler is asked to resolve. */
@@ -510,6 +523,13 @@ const MIGRATIONS = [
   // generation each claim was made under. A row from before this column
   // holds NULL, and a NULL row never retransmits.
   "ALTER TABLE claims ADD COLUMN statement_version TEXT;",
+  // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+  // (#821, D814): the PDP's Decision Evidence counters, one row per
+  // (Mission, emitter, role) key, so a restart continues each stream.
+  `CREATE TABLE evidence_sequences (
+    scope TEXT PRIMARY KEY,
+    next INTEGER NOT NULL
+  ) STRICT;`,
   // @spec metering#retry, metering#settlement-states, metering#aggregate-bounds
   // (#816, D830): the exact budget counters and their reservations. Neither
   // is ever deleted when a claim is purged at its horizon: committed spend
@@ -533,6 +553,8 @@ const MIGRATIONS = [
     mission_id TEXT NOT NULL,
     amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
     limit_minor INTEGER NOT NULL,
+    pep_id TEXT NOT NULL,
+    pep_epoch TEXT NOT NULL,
     state TEXT NOT NULL CHECK (state IN ('reserved', 'committed', 'released', 'held')),
     reserved_at_ms INTEGER NOT NULL,
     updated_at_ms INTEGER NOT NULL,
@@ -565,6 +587,9 @@ interface ReservationRow {
   amount_minor: number;
   /** The counter's limit the reserving decision applied: an overspend is judged against it. */
   limit_minor: number;
+  /** The PEP and redemption-store epoch the reserving permit was issued to: the only source of a budget correction. */
+  pep_id: string;
+  pep_epoch: string;
   state: ReservationState;
   reserved_at_ms: number;
   updated_at_ms: number;
@@ -583,6 +608,16 @@ interface CounterRow {
 }
 
 /** The counter column an open or settled reservation state is totalled in; `released` counts nowhere. */
+/**
+ * The release causes under which no permit ever left the PDP (the decision
+ * was never persisted): nothing could have executed, so no correction
+ * commits such a reservation.
+ */
+const NO_PERMIT_RELEASES: ReadonlySet<string> = new Set(["not_persisted", "prior_boot_unpersisted", "abandoned_unpersisted"]);
+
+/** The causes a budget correction commits under: a redelivery of one is acknowledged as a duplicate. */
+const CORRECTION_CAUSE = /^(corrected_completed:|operator_reconciled:executed:)/;
+
 const STATE_COLUMN: Record<ReservationState, "reserved_minor" | "held_minor" | "committed_minor" | undefined> = {
   reserved: "reserved_minor",
   held: "held_minor",
@@ -755,6 +790,32 @@ export class IdempotencyClaimDomain {
     };
   }
 
+  /**
+   * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+   * (#821, D814): this PDP's Decision Evidence sequence source, on the same
+   * durable, single-writer file as its claims, for the decision point to
+   * bind to its emitter (`DecisionEvidenceEmitterConfig.sequences`). Each
+   * position is committed before it is returned, so a reopened domain
+   * continues every stream and never re-issues a number a retained record
+   * already carries. A closed or failing domain throws, and the emission
+   * fails with it.
+   */
+  evidenceSequences(): DecisionEvidenceSequences {
+    return {
+      next: (key) =>
+        this.tx(() => {
+          const row = this.db.prepare("SELECT next FROM evidence_sequences WHERE scope = ?").get(key) as
+            | { next: number }
+            | undefined;
+          const next = row?.next ?? 0;
+          this.db
+            .prepare("INSERT INTO evidence_sequences (scope, next) VALUES (?, ?) ON CONFLICT(scope) DO UPDATE SET next = excluded.next")
+            .run(key, next + 1);
+          return next;
+        }),
+    };
+  }
+
   /** Release the file. A closed domain is unreachable: every later call throws. */
   close(): void {
     if (this.closed) return;
@@ -887,10 +948,22 @@ export class IdempotencyClaimDomain {
       this.db
         .prepare(
           `INSERT INTO budget_reservations (evaluation_id, counter_id, scope_digest, idempotency_key, mission_id, amount_minor, limit_minor,
-             state, reserved_at_ms, updated_at_ms, cause)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, 'reserved')`,
+             pep_id, pep_epoch, state, reserved_at_ms, updated_at_ms, cause)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, 'reserved')`,
         )
-        .run(input.evaluationId, counter.id, input.scopeDigest, input.key, request.missionId, amountMinor, counter.limitMinor, nowMs, nowMs);
+        .run(
+          input.evaluationId,
+          counter.id,
+          input.scopeDigest,
+          input.key,
+          request.missionId,
+          amountMinor,
+          counter.limitMinor,
+          input.requester.pep_id,
+          input.requester.pep_epoch,
+          nowMs,
+          nowMs,
+        );
       this.db.prepare("UPDATE budget_counters SET reserved_minor = reserved_minor + ? WHERE counter_id = ?").run(amountMinor, counter.id);
       this.logReservation(input.evaluationId, counter.id, null, "reserved", "reserved", nowMs);
     }
@@ -1065,7 +1138,9 @@ export class IdempotencyClaimDomain {
    * guard the PEP's `unredeemed` reconciliation has): no evidence available
    * then establishes that the effect will not happen. Should a released
    * reservation's permit complete after all, the `completed` settlement
-   * commits it anyway ({@link settleReservations}).
+   * commits it anyway ({@link settleReservations}), as does a later
+   * `executed` answer here: the operator's correction of an incorrect
+   * release, accepted whatever the claim's state or window, and idempotent.
    */
   reconcileHeldReservation(evaluationId: string, resolution: HeldReservationResolution): HeldReservationResult {
     return this.tx(() => {
@@ -1078,6 +1153,16 @@ export class IdempotencyClaimDomain {
       // (by an earlier answer, or the redeeming attempt's suppression) is an
       // idempotent no-op.
       if (resolution.kind === "not_executed" && rows.every((r) => r.state === "released")) return { accepted: true, state: "released" };
+      // @spec metering#settlement-states (#816, owner review of #1713): an
+      // operator correction recording execution after an incorrect release,
+      // independent of the claim and its window: a released reservation
+      // commits (an excess is reported through `onBudgetOverspend`), and one
+      // already committed is acknowledged unchanged.
+      if (resolution.kind === "executed" && !rows.some((r) => r.state === "held")) {
+        const corrected = this.commitReleased(rows, evaluationId, `operator_reconciled:executed:${resolution.reference}`, nowMs);
+        if (!corrected.accepted) return { accepted: false, reason: corrected.reason.replace(/^not_released_/, "not_held_") };
+        return corrected.duplicate ? { accepted: true, state: "committed", duplicate: true } : { accepted: true, state: "committed" };
+      }
       if (!rows.some((r) => r.state === "held")) return { accepted: false, reason: `not_held_${rows[0]?.state}` };
       if (resolution.kind === "not_executed") {
         const claim = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
@@ -1241,7 +1326,71 @@ export class IdempotencyClaimDomain {
       if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
     }
     const outcomeRef = typeof content.evidence_id === "string" ? content.evidence_id : executionId;
-    return this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
+    const settled = this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
+    if (settled.accepted || next !== "completed") return settled;
+    // @spec metering#settlement-states (#816, owner review of #1713): the
+    // claim refused the record (its window closed, it was purged, or it was
+    // settled otherwise), but the budget's accounting does not depend on the
+    // claim's window. The verified record establishes execution, so a
+    // released reservation of the permit it names commits.
+    const corrected = this.tx(() =>
+      this.correctReleasedReservations(requester, evaluationId, `corrected_completed:${outcomeRef}`, this.now().getTime()),
+    );
+    return corrected.accepted ? { accepted: true, state: "completed", duplicate: corrected.duplicate, budget_corrected: true } : settled;
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, owner review of #1713): the
+   * budget correction from the executing PEP's verified `completed` record,
+   * on the reservation rather than the claim, so it holds whatever the
+   * claim's state or window. Only the PEP and epoch the reserving permit was
+   * issued to may correct it. A released reservation commits (an excess is
+   * reported through `onBudgetOverspend`); one already committed is a
+   * duplicate; one released because no permit ever left the PDP is refused,
+   * since nothing could have executed under it. Idempotent per evaluation.
+   */
+  private correctReleasedReservations(
+    requester: ClaimRequester,
+    evaluationId: string,
+    cause: string,
+    nowMs: number,
+  ): { accepted: true; duplicate: boolean } | { accepted: false; reason: string } {
+    const rows = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
+    if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
+    if (rows.some((r) => r.pep_id !== requester.pep_id || r.pep_epoch !== requester.pep_epoch)) {
+      return { accepted: false, reason: "not_the_permit_holder" };
+    }
+    const result = this.commitReleased(rows, evaluationId, cause, nowMs);
+    // A redelivered correction is acknowledged; a reservation the claim's own
+    // settlement committed is not re-acknowledged here, so a conflicting
+    // record keeps the claim's refusal.
+    if (result.accepted && result.duplicate && !rows.every((r) => CORRECTION_CAUSE.test(r.cause))) {
+      return { accepted: false, reason: "already_committed" };
+    }
+    return result;
+  }
+
+  /**
+   * Commit one evaluation's released reservations: the shared step of both
+   * corrections (the PEP's verified `completed` record and the operator's
+   * `executed` answer). Committed already: a duplicate. Released because no
+   * permit left the PDP: refused.
+   */
+  private commitReleased(
+    rows: readonly ReservationRow[],
+    evaluationId: string,
+    cause: string,
+    nowMs: number,
+  ): { accepted: true; duplicate: boolean } | { accepted: false; reason: string } {
+    const released = rows.filter((r) => r.state === "released");
+    if (released.length === 0) {
+      return rows.every((r) => r.state === "committed")
+        ? { accepted: true, duplicate: true }
+        : { accepted: false, reason: `not_released_${rows[0]?.state}` };
+    }
+    if (released.some((r) => NO_PERMIT_RELEASES.has(r.cause))) return { accepted: false, reason: "no_permit_issued" };
+    this.transitionReservations(evaluationId, ["released"], "committed", cause, nowMs);
+    return { accepted: true, duplicate: false };
   }
 
   /** The redemption owner's answer; `undefined` for none, a failure, or no answer in time. */

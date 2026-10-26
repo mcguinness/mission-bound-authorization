@@ -29,7 +29,11 @@ import {
   type MissionBudgetSource,
   UNDERIVABLE_BUDGET,
 } from "./budget-metering.js";
-import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
+import {
+  createDecisionEvidenceEmitter,
+  type DecisionEvidenceEmitter,
+  type DecisionEvidenceSequences,
+} from "./decision-evidence.js";
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
   type DecisionFn,
@@ -124,6 +128,14 @@ export interface DecisionPointConfig {
     audience: string;
     /** @spec runtime-evidence#decision-evidence-integrity (#853, D487): see `DecisionEvidenceEmitterConfig.authorizesAudience`. */
     authorizesAudience?: (audience: string) => boolean;
+    /**
+     * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+     * (#821, D814): see `DecisionEvidenceEmitterConfig.sequences`. A
+     * deployment binds its durable source here (the claim domain's
+     * {@link IdempotencyClaimDomain.evidenceSequences}); absent, the
+     * counters are in memory.
+     */
+    sequences?: DecisionEvidenceSequences;
   };
   /**
    * @spec runtime#idempotency (#917): this decision point's Exact
@@ -379,6 +391,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
         emitterId: config.evidence.emitterId,
         audience: config.evidence.audience,
         ...(config.evidence.authorizesAudience ? { authorizesAudience: config.evidence.authorizesAudience } : {}),
+        ...(config.evidence.sequences ? { sequences: config.evidence.sequences } : {}),
       })
     : undefined;
   const bindings: PointBindings = {
