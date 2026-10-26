@@ -2391,8 +2391,8 @@ grant the client presents:
 
 - the authorization code at the token endpoint;
 - the refresh token on refresh;
-- the Mission-bound `subject_token` on Token Exchange (the
-  `actor_token` identifies the delegate, {{delegated-exchange}}); or
+- the Mission-bound `subject_token` on Token Exchange (a delegate is
+  identified by its client authentication, {{delegated-exchange}}); or
 - a profile-defined grant, through the authenticated `mission`
   reference it carries, such as the Template profile's handoff grant
   ({{I-D.draft-mcguinness-oauth-mission-template}}).
@@ -3396,6 +3396,7 @@ exchange rows of the third table.
 | Token exchange: a DPoP proof lacking the current DPoP nonce, where the authorization server requires one | `use_dpop_nonce` with a `DPoP-Nonce` header ({{Section 8 of RFC9449}}), not `invalid_dpop_proof`. Detail: safe `error_description` |
 | Token exchange with no actor ({{self-exchange}}): the authenticated client is not the Mission's approved agent | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegated-exchange}}): the AS does not authenticate the requesting client by a method it relies on to identify the client, which no public client meets | `invalid_client` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
+| Delegated token exchange ({{delegated-exchange}}): the AS has authenticated the requesting client, and the request carries an `actor_token` | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegated-exchange}}): the `subject_token` is not a designation this AS issued naming the authenticated requesting client | `invalid_request` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Designation ({{designation}}): the AS cannot establish that no resource server accepts the named client's identifier as an audience for its access tokens, including an alias it never issues | `invalid_target` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
 | Delegated token exchange ({{delegation-constraints}}): narrowing leaves no entries for the delegate | `invalid_target` ({{Section 2.2.2 of RFC8693}}). Detail: safe `error_description` |
@@ -3766,9 +3767,9 @@ A designation the AS issues:
   `may_act` claim ({{Section 4.4 of RFC8693}}) whose `sub` is that
   identifier;
 - carries no `cnf` and no `act` claim: like an authorization code, it
-  is bound to the client that redeems it, which proves its own key in
-  the delegated exchange ({{delegated-exchange}}), and the delegated
-  token's `act` renders the AS's accounting
+  is bound to the client that redeems it, which authenticates and
+  proves its own key in the delegated exchange ({{delegated-exchange}}),
+  and the delegated token's `act` renders the AS's accounting
   ({{delegation-constraints}}); and
 - MUST expire shortly after it is issued, and no later than the
   presented token or the Mission's `expires_at`.
@@ -3805,17 +3806,20 @@ subject to all of the following:
   `urn:ietf:params:oauth:token-type:access_token`. The AS MUST refuse
   any other `subject_token` with `invalid_request`
   ({{Section 2.2.2 of RFC8693}}); an access token issued for resource
-  access is never sufficient. The delegate is
-  identified by an `actor_token` or by its own client authentication,
-  and the AS asserts the actor itself ({{delegation-constraints}}).
+  access is never sufficient. The delegate is identified by its own
+  client authentication, and the AS asserts the actor itself
+  ({{delegation-constraints}}).
 - **The delegate authenticates.** The AS MUST authenticate the
   requesting client, whether or not the request carries an
   `actor_token`, by a method it relies on to identify the client
   ({{Section 2.3 of RFC6749}}), and MUST refuse a client it does not
   so authenticate with `invalid_client` ({{Section 5.2 of RFC6749}}),
-  issuing no token. A claimed `client_id`, possession of the
-  designation, or proof of an independently chosen key, such as a
-  DPoP key, does not authenticate a client. This document does not
+  issuing no token. Once it has so authenticated the client, the AS
+  MUST refuse a request that carries an `actor_token` with
+  `invalid_request` ({{Section 2.2.2 of RFC8693}}), issuing no token.
+  A claimed `client_id`, possession of the designation, or proof of
+  an independently chosen key, such as a DPoP key, does not
+  authenticate a client. This document does not
   support a public client as a delegate: {{Section 2.3 of RFC6749}}
   lets an AS establish a client authentication method with a public
   client but not rely on it to identify the client. Only an extension
@@ -7362,9 +7366,8 @@ Authorized Context Correlation:
   Scope and defining sections: The Token Exchange join at delegated
   issuance: the AS, as joining authority, joins the Mission and Subject
   carried by the Mission-bound `subject_token` with the delegate
-  identity independently established by the `actor_token` or the
-  delegate's own client authentication, binding both to the newly issued
-  credential
+  identity independently established by the delegate's own client
+  authentication, binding both to the newly issued credential
 
   Limitations: The base grant binding at issuance co-establishes its
   facts and is not a join; cross-authority joins are the Mission
@@ -7505,10 +7508,13 @@ Cross-Domain:
   a method it relies on to identify the client and refuses any other,
   including every public client, with `invalid_client` and no token; a
   claimed `client_id`, the designation, or an independently chosen key
-  does not authenticate it, and an exchange presenting a designation is
-  a delegated exchange, never a no-actor one (Delegated Exchange,
-  Self-Exchange Down-Scoping, Error and Challenge Mapping, Token Theft;
-  #1718, D845).
+  does not authenticate it. That client authentication alone identifies
+  the delegate: the AS refuses an `actor_token` from an authenticated
+  client with `invalid_request`. An exchange presenting a designation
+  is a delegated exchange, never a no-actor one (Delegated Exchange,
+  Designation, Self-Exchange Down-Scoping, Establishing and Resolving
+  a Binding, Error and Challenge Mapping, Token Theft, OAuth Binding
+  Mapping Assessment; #1718, D845, D859).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging
