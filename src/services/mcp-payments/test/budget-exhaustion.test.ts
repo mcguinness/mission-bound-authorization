@@ -14,6 +14,7 @@
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import {
+  CLAIM_SETTLEMENT_INTAKE,
   createDecisionChannel,
   createDecisionPoint,
   type DecisionEvidenceObject,
@@ -68,6 +69,7 @@ function meteringStatement(): EnforcementScopeStatement {
     enforcement_profile: "exact",
     topology: "local-single-writer",
     reserve_posture: "reserve_then_commit",
+    settlement_intake: CLAIM_SETTLEMENT_INTAKE,
     metered_actions: [{ action: "payments:payment.execute", phase: "commit" }],
     budgets: [
       {

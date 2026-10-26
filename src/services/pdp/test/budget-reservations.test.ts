@@ -26,7 +26,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
-import { type BudgetMeteringDeclaration, budgetCounterId, type MissionBudgetBinding } from "../src/budget-metering.js";
+import {
+  type BudgetMeteringDeclaration,
+  budgetCounterId,
+  CLAIM_SETTLEMENT_INTAKE,
+  type MissionBudgetBinding,
+} from "../src/budget-metering.js";
 import { createDecisionChannel } from "../src/decision-channel.js";
 import {
   createDecisionEvidenceEmitter,
@@ -141,6 +146,7 @@ function declaration(o: { limit?: string; version?: string } = {}): BudgetMeteri
     enforcement_profile: "exact",
     topology: "local-single-writer",
     reserve_posture: "reserve_then_commit",
+    settlement_intake: CLAIM_SETTLEMENT_INTAKE,
     metered_actions: [{ action: EXECUTE, phase: "commit" }],
     budgets: [
       {
@@ -975,6 +981,28 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(() =>
         openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: bare as unknown as EnforcementScopeStatement }),
       ).toThrow(/budget_metering/);
+    });
+
+    it("a budget_metering declaration that does not name the claim settlement channel as its settlement intake is refused at load, claimed or not (@spec metering#settlement-contract, #816)", () => {
+      const { settlement_intake: _named, ...unnamed } = declaration();
+      const cases: Array<[string, unknown]> = [
+        ["no settlement intake", unnamed],
+        ["another settlement intake", { ...declaration(), settlement_intake: "event-api:ssf" }],
+      ];
+      for (const [label, decl] of cases) {
+        for (const claimed of [true, false]) {
+          const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
+          expect(
+            () => openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: budgetStatement(decl, claimed) }),
+            `${label} (claimed: ${claimed})`,
+          ).toThrow(/settlement/);
+        }
+      }
+      // Control: the declaration naming the claim settlement channel opens and meters.
+      const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
+      const claims = openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: budgetStatement() });
+      expect(claims.budgetMetering()).toBeDefined();
+      claims.close();
     });
 
     it("a declaration in force only where claimed: unclaimed, and in the shipped statement that declares none, the PDP meters nothing and a budget-bound Mission is denied constraint_unsupported (@spec metering#topology, #816)", async () => {

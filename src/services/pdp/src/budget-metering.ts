@@ -105,6 +105,15 @@ export interface BudgetDeclaration {
 }
 
 /**
+ * @spec metering#settlement-contract (#816): the one settlement intake this
+ * reference implements: the decision channel's claim settlement
+ * (`ClaimChannel.settle` and `reconcile`), through which the executing PEP
+ * delivers its signed Execution Evidence to the PDP claim domain that holds
+ * the counters. A declaration naming any other intake is refused.
+ */
+export const CLAIM_SETTLEMENT_INTAKE = "pdp-claim-settlement:execution-evidence";
+
+/**
  * The `budget_metering` Enforcement Scope Statement extension: the
  * deployment's declaration of what this PDP meters and how. A
  * reference-statement representation, not a Runtime wire member.
@@ -117,6 +126,13 @@ export interface BudgetMeteringDeclaration {
   enforcement_profile: "exact";
   topology: "local-single-writer";
   reserve_posture: "reserve_then_commit";
+  /**
+   * @spec metering#settlement-contract: "The deployment MUST name the
+   * settlement intake ... in its Enforcement Scope Statement", and the
+   * intake feeds the consistency domain that holds the counter. Exactly
+   * {@link CLAIM_SETTLEMENT_INTAKE}.
+   */
+  settlement_intake: typeof CLAIM_SETTLEMENT_INTAKE;
   metered_actions: readonly MeteredAction[];
   budgets: readonly BudgetDeclaration[];
 }
@@ -127,6 +143,7 @@ const DECLARATION_MEMBERS = new Set([
   "enforcement_profile",
   "topology",
   "reserve_posture",
+  "settlement_intake",
   "metered_actions",
   "budgets",
 ]);
@@ -243,6 +260,11 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
   if (declared.enforcement_profile !== "exact") push(member, "enforcement_profile must be exact: the budget counter runs under the Exact profile only");
   if (declared.topology !== "local-single-writer") push(member, "topology must be local-single-writer, the claim domain's topology");
   if (declared.reserve_posture !== "reserve_then_commit") push(member, "reserve_posture must be reserve_then_commit");
+  if (declared.settlement_intake === undefined) {
+    push(member, "missing the settlement intake");
+  } else if (declared.settlement_intake !== CLAIM_SETTLEMENT_INTAKE) {
+    push(member, `settlement_intake must be ${CLAIM_SETTLEMENT_INTAKE}, the claim settlement that feeds the counters' domain`);
+  }
 
   const actions = declared.metered_actions;
   if (!Array.isArray(actions) || actions.length === 0) {

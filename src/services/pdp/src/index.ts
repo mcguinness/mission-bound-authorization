@@ -136,6 +136,7 @@ export {
 } from "./idempotency-claims.js";
 export {
   BUDGET_METERING_EXTENSION,
+  CLAIM_SETTLEMENT_INTAKE,
   type BudgetAmount,
   type BudgetCounterScope,
   type BudgetDeclaration,
