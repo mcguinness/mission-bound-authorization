@@ -1064,7 +1064,15 @@ export class MissionKernel {
     if (opts.recoveryWitness && opts.store?.file && witnessSharesStoreTree(opts.store.file, opts.recoveryWitness.file)) {
       throw new Error("the recovery witness must be outside the store's directory, and the store outside the witness's");
     }
-    this.db = openStore(SCHEMA, opts.recoveryWitness ? { ...opts.store, exclusive: true } : (opts.store ?? {}));
+    // @spec status#lifecycle-processing (#1684, D826): a file-backed kernel
+    // store runs WAL with synchronous=FULL, configured independently of
+    // locking: normal locking for the ordinary store, exclusive for a
+    // witnessed one.
+    const durability = opts.store?.file ? { synchronous: "FULL" as const } : {};
+    this.db = openStore(
+      SCHEMA,
+      opts.recoveryWitness ? { ...opts.store, ...durability, exclusive: true } : { ...(opts.store ?? {}), ...durability },
+    );
     try {
       if (opts.recoveryWitness && opts.store?.file) {
         this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
