@@ -1665,4 +1665,21 @@ describe("the delegated exchange authenticates the designated client (@spec miss
     expect(refused.body.access_token).toBeUndefined();
     expect(derivations(on, missionId)).toBe(before);
   });
+
+  it("an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, PUBLIC);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const before = derivations(on, missionId);
+
+    const own = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, PUBLIC, own, {
+      ...redemption(designation.body.access_token as string),
+      actor_token: designation.body.access_token as string,
+      actor_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    });
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+  });
 });
