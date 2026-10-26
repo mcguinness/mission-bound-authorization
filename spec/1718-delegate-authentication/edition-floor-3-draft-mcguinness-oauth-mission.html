@@ -4350,8 +4350,8 @@ grant the client presents:<a href="#section-8.1.1-4" class="pilcrow">¶</a></p>
               <p id="section-8.1.1-5.2.1">the refresh token on refresh;<a href="#section-8.1.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.1-5.3">
-              <p id="section-8.1.1-5.3.1">the Mission-bound <code>subject_token</code> on Token Exchange (the
-<code>actor_token</code> identifies the delegate, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>); or<a href="#section-8.1.1-5.3.1" class="pilcrow">¶</a></p>
+              <p id="section-8.1.1-5.3.1">the Mission-bound <code>subject_token</code> on Token Exchange (a delegate is
+identified by its client authentication, <a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>); or<a href="#section-8.1.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-8.1.1-5.4">
               <p id="section-8.1.1-5.4.1">a profile-defined grant, through the authenticated <code>mission</code>
@@ -5669,6 +5669,13 @@ exchange rows of the third table.<a href="#section-10-3" class="pilcrow">¶</a><
 </td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1">Delegated token exchange (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>): the AS has authenticated the requesting client, and the request carries an <code>actor_token</code>
+</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). Detail: safe <code>error_description</code>
+</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Delegated token exchange (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>): the <code>subject_token</code> is not a designation this AS issued naming the authenticated requesting client</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>). Detail: safe <code>error_description</code>
@@ -6172,9 +6179,9 @@ identifier;<a href="#section-12.1-3.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-3.3">
             <p id="section-12.1-3.3.1">carries no <code>cnf</code> and no <code>act</code> claim: like an authorization code, it
-is bound to the client that redeems it, which proves its own key in
-the delegated exchange (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>), and the delegated
-token's <code>act</code> renders the AS's accounting
+is bound to the client that redeems it, which authenticates and
+proves its own key in the delegated exchange (<a href="#delegated-exchange" class="auto internal xref">Section 12.2</a>),
+and the delegated token's <code>act</code> renders the AS's accounting
 (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>); and<a href="#section-12.1-3.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.1-3.4">
@@ -6218,9 +6225,9 @@ this AS issued naming the authenticated requesting client
 <code>urn:ietf:params:oauth:token-type:access_token</code>. The AS <span class="bcp14">MUST</span> refuse
 any other <code>subject_token</code> with <code>invalid_request</code>
 (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>); an access token issued for resource
-access is never sufficient. The delegate is
-identified by an <code>actor_token</code> or by its own client authentication,
-and the AS asserts the actor itself (<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>).<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
+access is never sufficient. The delegate is identified by its own
+client authentication, and the AS asserts the actor itself
+(<a href="#delegation-constraints" class="auto internal xref">Section 12.5</a>).<a href="#section-12.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.2">
             <p id="section-12.2-2.2.1"><strong>The delegate authenticates.</strong> The AS <span class="bcp14">MUST</span> authenticate the
@@ -6228,9 +6235,12 @@ requesting client, whether or not the request carries an
 <code>actor_token</code>, by a method it relies on to identify the client
 (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-2.3" class="relref">Section 2.3</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>), and <span class="bcp14">MUST</span> refuse a client it does not
 so authenticate with <code>invalid_client</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>),
-issuing no token. A claimed <code>client_id</code>, possession of the
-designation, or proof of an independently chosen key, such as a
-DPoP key, does not authenticate a client. This document does not
+issuing no token. Once it has so authenticated the client, the AS
+<span class="bcp14">MUST</span> refuse a request that carries an <code>actor_token</code> with
+<code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>), issuing no token.
+A claimed <code>client_id</code>, possession of the designation, or proof of
+an independently chosen key, such as a DPoP key, does not
+authenticate a client. This document does not
 support a public client as a delegate: <span><a href="https://rfc-editor.org/rfc/rfc6749#section-2.3" class="relref">Section 2.3</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>
 lets an AS establish a client authentication method with a public
 client but not rely on it to identify the client. Only an extension
@@ -11232,9 +11242,8 @@ State-Observable surfaces<a href="#appendix-F-7.10.4" class="pilcrow">¶</a></p>
 <p id="appendix-F-7.12.3">Scope and defining sections: The Token Exchange join at delegated
 issuance: the AS, as joining authority, joins the Mission and Subject
 carried by the Mission-bound <code>subject_token</code> with the delegate
-identity independently established by the <code>actor_token</code> or the
-delegate's own client authentication, binding both to the newly issued
-credential<a href="#appendix-F-7.12.3" class="pilcrow">¶</a></p>
+identity independently established by the delegate's own client
+authentication, binding both to the newly issued credential<a href="#appendix-F-7.12.3" class="pilcrow">¶</a></p>
 <p id="appendix-F-7.12.4">Limitations: The base grant binding at issuance co-establishes its
 facts and is not a join; cross-authority joins are the Mission
 Authority Server's machinery, not this binding's<a href="#appendix-F-7.12.4" class="pilcrow">¶</a></p>
@@ -11403,10 +11412,13 @@ Declared Transformation Capabilities; #1717, D845).<a href="#appendix-G-3.9.1" c
 a method it relies on to identify the client and refuses any other,
 including every public client, with <code>invalid_client</code> and no token; a
 claimed <code>client_id</code>, the designation, or an independently chosen key
-does not authenticate it, and an exchange presenting a designation is
-a delegated exchange, never a no-actor one (Delegated Exchange,
-Self-Exchange Down-Scoping, Error and Challenge Mapping, Token Theft;
-#1718, D845).<a href="#appendix-G-3.10.1" class="pilcrow">¶</a></p>
+does not authenticate it. That client authentication alone identifies
+the delegate: the AS refuses an <code>actor_token</code> from an authenticated
+client with <code>invalid_request</code>. An exchange presenting a designation
+is a delegated exchange, never a no-actor one (Delegated Exchange,
+Designation, Self-Exchange Down-Scoping, Establishing and Resolving
+a Binding, Error and Challenge Mapping, Token Theft, OAuth Binding
+Mapping Assessment; #1718, D845, D859).<a href="#appendix-G-3.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.11">
           <p id="appendix-G-3.11.1">The AS refuses, with <code>invalid_target</code>, a delegated Mission-bound

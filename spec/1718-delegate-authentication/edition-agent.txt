@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-26T21:59:56Z
-Source repository commit: 21ba1083d9b70f1e9526d5502c6ab8a84b564f33
+Generated: 2026-10-26T22:37:46Z
+Source repository commit: 7c0dfaf7bd536e9ad3f8b434d660336706099b4f
 Member count: 9
 
 Reading order:
@@ -9965,8 +9965,8 @@ Table of Contents
 
    *  the refresh token on refresh;
 
-   *  the Mission-bound subject_token on Token Exchange (the actor_token
-      identifies the delegate, Section 12.2); or
+   *  the Mission-bound subject_token on Token Exchange (a delegate is
+      identified by its client authentication, Section 12.2); or
 
    *  a profile-defined grant, through the authenticated mission
       reference it carries, such as the Template profile's handoff grant
@@ -11143,6 +11143,12 @@ Table of Contents
     | no public client meets          |                               |
     +---------------------------------+-------------------------------+
     | Delegated token exchange        | invalid_request               |
+    | (Section 12.2): the AS has      | (Section 2.2.2 of [RFC8693]). |
+    | authenticated the requesting    | Detail: safe                  |
+    | client, and the request carries | error_description             |
+    | an actor_token                  |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_request               |
     | (Section 12.2): the             | (Section 2.2.2 of [RFC8693]). |
     | subject_token is not a          | Detail: safe                  |
     | designation this AS issued      | error_description             |
@@ -11568,9 +11574,10 @@ Table of Contents
       claim (Section 4.4 of [RFC8693]) whose sub is that identifier;
 
    *  carries no cnf and no act claim: like an authorization code, it is
-      bound to the client that redeems it, which proves its own key in
-      the delegated exchange (Section 12.2), and the delegated token's
-      act renders the AS's accounting (Section 12.5); and
+      bound to the client that redeems it, which authenticates and
+      proves its own key in the delegated exchange (Section 12.2), and
+      the delegated token's act renders the AS's accounting
+      (Section 12.5); and
 
    *  MUST expire shortly after it is issued, and no later than the
       presented token or the Mission's expires_at.
@@ -11607,22 +11614,25 @@ Table of Contents
       type:access_token.  The AS MUST refuse any other subject_token
       with invalid_request (Section 2.2.2 of [RFC8693]); an access token
       issued for resource access is never sufficient.  The delegate is
-      identified by an actor_token or by its own client authentication,
-      and the AS asserts the actor itself (Section 12.5).
+      identified by its own client authentication, and the AS asserts
+      the actor itself (Section 12.5).
 
    *  *The delegate authenticates.* The AS MUST authenticate the
       requesting client, whether or not the request carries an
       actor_token, by a method it relies on to identify the client
       (Section 2.3 of [RFC6749]), and MUST refuse a client it does not
       so authenticate with invalid_client (Section 5.2 of [RFC6749]),
-      issuing no token.  A claimed client_id, possession of the
-      designation, or proof of an independently chosen key, such as a
-      DPoP key, does not authenticate a client.  This document does not
-      support a public client as a delegate: Section 2.3 of [RFC6749]
-      lets an AS establish a client authentication method with a public
-      client but not rely on it to identify the client.  Only an
-      extension that defines an explicit binding of a designation to its
-      delegate admits one; deployment policy alone does not.
+      issuing no token.  Once it has so authenticated the client, the AS
+      MUST refuse a request that carries an actor_token with
+      invalid_request (Section 2.2.2 of [RFC8693]), issuing no token.  A
+      claimed client_id, possession of the designation, or proof of an
+      independently chosen key, such as a DPoP key, does not
+      authenticate a client.  This document does not support a public
+      client as a delegate: Section 2.3 of [RFC6749] lets an AS
+      establish a client authentication method with a public client but
+      not rely on it to identify the client.  Only an extension that
+      defines an explicit binding of a designation to its delegate
+      admits one; deployment policy alone does not.
 
    *  *Subject is stable.* sub remains the Mission's Subject.  The
       delegate is an actor, not the Subject.
@@ -15706,9 +15716,8 @@ Appendix F.  OAuth Binding Mapping Assessment
       Scope and defining sections: The Token Exchange join at delegated
       issuance: the AS, as joining authority, joins the Mission and
       Subject carried by the Mission-bound subject_token with the
-      delegate identity independently established by the actor_token or
-      the delegate's own client authentication, binding both to the
-      newly issued credential
+      delegate identity independently established by the delegate's own
+      client authentication, binding both to the newly issued credential
 
       Limitations: The base grant binding at issuance co-establishes its
       facts and is not a join; cross-authority joins are the Mission
@@ -15857,10 +15866,13 @@ Appendix G.  Document History
       by a method it relies on to identify the client and refuses any
       other, including every public client, with invalid_client and no
       token; a claimed client_id, the designation, or an independently
-      chosen key does not authenticate it, and an exchange presenting a
-      designation is a delegated exchange, never a no-actor one
-      (Delegated Exchange, Self-Exchange Down-Scoping, Error and
-      Challenge Mapping, Token Theft; #1718, D845).
+      chosen key does not authenticate it.  That client authentication
+      alone identifies the delegate: the AS refuses an actor_token from
+      an authenticated client with invalid_request.  An exchange
+      presenting a designation is a delegated exchange, never a no-actor
+      one (Delegated Exchange, Designation, Self-Exchange Down-Scoping,
+      Establishing and Resolving a Binding, Error and Challenge Mapping,
+      Token Theft, OAuth Binding Mapping Assessment; #1718, D845, D859).
 
    *  The AS refuses, with invalid_target, a delegated Mission-bound
       token for an audience it has not established as a Mission-aware
