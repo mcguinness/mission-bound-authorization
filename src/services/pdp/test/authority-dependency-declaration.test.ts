@@ -129,4 +129,17 @@ describe("the deployment's Enforcement Scope Statement declares its authority de
       }),
     ).toThrow(/reconciliation_period_seconds applies to lifecycle-mediated enforcement only/);
   });
+
+  it("refuses a lifecycle-only declaration whose lifecycle_operations leave an invalidating change unmapped, and accepts the partial mapping where direct evaluation is routed too", () => {
+    const load = (declaration: Record<string, unknown>) =>
+      loadRuntimePosture({ ...RUNTIME_POSTURE, extensions: { ...RUNTIME_POSTURE.extensions, authority_dependencies: [declaration] } });
+    const enforcement = shipped().enforcement as Record<string, unknown>;
+    const { delegation_withdrawn: _unmapped, ...partial } = enforcement.lifecycle_operations as Record<string, unknown>;
+    const { direct: _direct, ...lifecycleOnly } = enforcement;
+    expect(() => load({ ...shipped(), enforcement: { ...lifecycleOnly, lifecycle_operations: partial } })).toThrow(
+      /must map every invalidating change under lifecycle-only enforcement \(no direct route\); unmapped: delegation_withdrawn\. With a direct route as well, a partial mapping is valid: direct evaluation refuses an unmapped change/,
+    );
+    expect(() => load({ ...shipped(), enforcement: { ...lifecycleOnly } })).not.toThrow();
+    expect(() => load({ ...shipped(), enforcement: { ...enforcement, lifecycle_operations: partial } })).not.toThrow();
+  });
 });

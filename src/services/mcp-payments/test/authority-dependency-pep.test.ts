@@ -120,13 +120,15 @@ async function build(route: "pep" | "pdp" | "lifecycle" = "pep") {
   // The resolver the enforcement reads: the test can hand it a different one
   // between admission and release, as a read completing in that window would.
   let viewing = resolver;
+  let reconciledInvalidations: ReadonlyMap<string, { failure: "withdrawn" | "invalidated"; observedAt: string }> = new Map();
   const dependency = {
     declaration: routedTo(route),
     resolver: { view: (principal: { iss: string; sub: string }) => viewing.view(principal) } as unknown as AuthorityDependencyResolver,
     evidence,
     now: () => nowMs,
-    // The declaration is lifecycle-mediated too; its reconciler is current here.
-    reconciliation: () => ({ lastReconciledAtMs: nowMs }),
+    // The declaration is lifecycle-mediated too; its reconciler is current
+    // here, and the test can hand it the invalidations a pass established.
+    reconciliation: () => ({ lastReconciledAtMs: nowMs, invalidated: reconciledInvalidations }),
     governed: (mission: { id: string }) => (mission.id === view.id ? { subject: { iss: ISSUER, sub: "alice" }, clientId: "ap-agent" } : undefined),
   };
   // The transaction tier's high-consequence class needs the PDP's claim
@@ -211,6 +213,10 @@ async function build(route: "pep" | "pdp" | "lifecycle" = "pep") {
         server.callTransactionTool("execute_wire_transfer", { invoice_id: invoice, idempotency_key: `idem_${randomUUID()}` }, TOKEN, hook),
     } as Record<string, (hook?: () => void, invoice?: string) => Promise<{ ok: boolean; refusal_reason?: string; result?: unknown }>>,
     ledger: () => connectors.ledgerEntries(view.id),
+    /** From now on the reconciliation's published invalidations are `next`. */
+    reconciled: (next: ReadonlyMap<string, { failure: "withdrawn" | "invalidated"; observedAt: string }>) => {
+      reconciledInvalidations = next;
+    },
     /** From now on the enforcement reads `next` (a resolver the test refreshed). */
     observeWith: (next: AuthorityDependencyResolver) => {
       viewing = next;
@@ -454,6 +460,27 @@ describe("lifecycle-only enforcement keeps the declaration's observation limits 
         expect(refused.refusal_reason, path).toBe("resource_policy");
         expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
         expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "unavailable" });
+      }
+      expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("lifecycle-only enforcement keeps an established invalidation at release (@spec runtime#input-authority-dependency, #830)", () => {
+  it("refuses at release, on every dispatch path, a permit under a Mission the reconciliation found invalidated after the decision, whatever its state reads", async () => {
+    const x = await build("lifecycle");
+    try {
+      await x.resolver.refresh();
+      const established = new Map([[view.id, { failure: "invalidated" as const, observedAt: new Date().toISOString() }]]);
+      for (const [path, call] of Object.entries(x.paths)) {
+        x.reconciled(new Map());
+        const refused = await call(() => x.reconciled(established));
+        expect(refused.ok, `${path}: ${JSON.stringify(refused)}`).toBe(false);
+        expect(refused.refusal_reason, path).toBe("resource_policy");
+        expect((x.decisions.at(-1) as { decision: boolean }).decision, path).toBe(true);
+        expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "invalidated" });
       }
       expect(x.ledger()).toHaveLength(0);
     } finally {

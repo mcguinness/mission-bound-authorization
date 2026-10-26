@@ -41,6 +41,7 @@ import {
   type AuthorityDependencyEnforcement,
   AuthorityDependencyEvidence,
   AuthorityDependencyResolver,
+  parseAuthorityDependencyDeclarations,
 } from "@mission/core";
 import { AUTHORITY_DEPENDENCIES, CANONICAL_RESOURCE, parseIdentityState } from "@mission/demo-data";
 import { evaluate as evaluateRequest, type EvaluationRequest, type Fga, type MissionView, relationForAction, stalenessBound } from "@mission/pdp";
@@ -58,7 +59,16 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
-import { type LifecycleTestClient, lifecycleRequest, newLifecycleClient } from "./lifecycle-endpoint.helper.js";
+import { STATUS_ENDPOINT_PATH } from "../src/adapters/lifecycle-endpoint.js";
+import {
+  CLIENT_ASSERTION_TYPE,
+  decodeStatusResponse,
+  type LifecycleTestClient,
+  lifecycleClientAssertion,
+  lifecycleRequest,
+  newLifecycleClient,
+  readAnswer,
+} from "./lifecycle-endpoint.helper.js";
 
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) => evaluateRequest(withCredential(req), opts);
 
@@ -69,7 +79,7 @@ const READ = "payments:invoice.read";
 const SEND = "payments:remittance.send";
 const DECLARATION = AUTHORITY_DEPENDENCIES[0] as AuthorityDependencyDeclaration;
 const LAG_MS = (DECLARATION.enforcement.reconciliation_max_lag_seconds as number) * 1000;
-const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui", "sam"];
+const PRINCIPALS = ["alice", "bob", "dana", "erin", "frank", "gina", "hana", "june", "kim", "lena", "omar", "pat", "quinn", "rui", "sam", "tess", "uma", "val", "wes", "xia", "yan", "zed"];
 
 type SourceRecord = { sub: string; status?: string; withdrawn_delegations?: string[] };
 /** Every principal active and delegating, with `changes` applied: a principal mapped to null is absent from the source. */
@@ -616,5 +626,241 @@ describe("a pass over a kernel whose durable state is uncertain (@spec runtime#i
     expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "reconciliation_overdue", mission: { id: m.id } });
     // Reconciled: a pass over the kernel suspends the Mission.
     expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
+  });
+});
+
+/** The shipped declaration with no direct route: lifecycle-only enforcement, every invalidating change mapped. */
+const LIFECYCLE_ONLY = (() => {
+  const { direct: _direct, ...enforcementOnly } = DECLARATION.enforcement;
+  return { ...DECLARATION, enforcement: enforcementOnly } as AuthorityDependencyDeclaration;
+})();
+/** A decision under the shared assembly's reconciler, by a PDP holding the dependency as lifecycle-only. */
+const lifecycleOnlyDecide = (id: string, action = READ) => decide(id, action, { ...enforcement(), declaration: LIFECYCLE_ONLY });
+const resume = (id: string) => lifecycleRequest(ISSUER, consoleClient, { mission_id: id, operation: "resume", nonce: `nonce-rec-${crypto.randomUUID()}` });
+
+describe("an invalidation the reconciliation established holds under lifecycle-only enforcement, whatever the Mission state reads (@spec runtime#input-authority-dependency, #830)", () => {
+  it("refuses a Mission resumed by an authorized Lifecycle request while its Subject is still disabled, as the issuance gate does", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "tess");
+    expect((await reconciler().reconcile()).ok).toBe(true);
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(true);
+    source = sourceWith({ tess: { status: "disabled" } });
+    const pass = await reconciler().reconcile();
+    expect(mine(pass, m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
+    expect(pass.invalidated).toContain(m.id);
+    const resumed = await resume(m.id);
+    expect(resumed.status, resumed.text).toBe(200);
+    expect(stateOf(m.id).state).toBe("active");
+    const refused = await lifecycleOnlyDecide(m.id);
+    expect(refused.decision).toBe(false);
+    expect(refused.context.denial_reason).toBe("resource_policy");
+    expect(evidence.entries().at(-1)).toMatchObject({
+      enforcer: "pdp",
+      failure: "invalidated",
+      mission: { id: m.id },
+      observed_at: new Date(built(reconciler().lag().lastReconciledAtMs, "the progress")).toISOString(),
+    });
+    expect(() => as.kernel.checkDerivation(m.id)).toThrow(/declared authority dependency is not established/);
+    // Repeated passes keep the progress current and the invalidation established.
+    expect((await reconciler().reconcile()).invalidated).toContain(m.id);
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(false);
+  });
+
+  it("restores reliance only when both hold: a later pass observes the recovery, and an authorized resume makes the Mission active again", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "uma");
+    source = sourceWith({ uma: { status: "disabled" } });
+    expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "suspend", change: "subject_disabled" }]);
+    // Re-enabled: the next complete pass observes it, and the Mission leaves the set.
+    source = sourceWith();
+    const recovered = await reconciler().reconcile();
+    expect(recovered.ok).toBe(true);
+    expect(recovered.invalidated).not.toContain(m.id);
+    expect(reconciler().lag().invalidated?.has(m.id)).toBe(false);
+    // Still suspended: re-enablement alone restores nothing.
+    expect(stateOf(m.id).state).toBe("suspended");
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(false);
+    const resumed = await resume(m.id);
+    expect(resumed.status, resumed.text).toBe(200);
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(true);
+  });
+
+  it("keeps the previous set through a failed pass: the recovery is not taken from a pass that did not complete", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "val");
+    source = sourceWith({ val: { status: "disabled" } });
+    await reconciler().reconcile();
+    expect((await resume(m.id)).status).toBe(200);
+    // The source recovers but cannot be read: the pass fails and publishes nothing.
+    source = new Error("identity source unreachable");
+    const failed = await reconciler().reconcile();
+    expect(failed.ok).toBe(false);
+    expect(reconciler().lag().invalidated?.get(m.id)).toMatchObject({ failure: "invalidated" });
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(false);
+    // A complete pass over the recovered source clears it.
+    source = sourceWith();
+    expect((await reconciler().reconcile()).ok).toBe(true);
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(true);
+  });
+
+  it("keeps refusing a Mission revoked on its Subject's deprovisioning, the Subject later restored included", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "wes");
+    source = sourceWith({ wes: { status: "deprovisioned" } });
+    expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(false);
+    source = sourceWith();
+    await reconciler().reconcile();
+    expect(stateOf(m.id)).toMatchObject({ state: "terminated", reason: "revoked" });
+    expect((await lifecycleOnlyDecide(m.id)).decision).toBe(false);
+  });
+});
+
+describe("an invalidating change the declaration does not map to a lifecycle operation (@spec runtime#input-authority-dependency, #830)", () => {
+  /** An assembly over the controlled source with `declaration`, its own resolver and evidence. */
+  async function assembly(declaration: AuthorityDependencyDeclaration, issuer: string) {
+    let records: unknown = [{ sub: "alice" }, { sub: "bob" }];
+    const assemblyEvidence = new AuthorityDependencyEvidence();
+    const assemblyResolver = new AuthorityDependencyResolver({ issuer, read: async () => records, parse: (raw) => parseIdentityState(raw), now: () => nowMs });
+    await assemblyResolver.refresh();
+    const built_ = await buildAuthorizationServer({
+      issuer,
+      authorityDependency: { declaration, resolver: assemblyResolver, evidence: assemblyEvidence, now: () => nowMs },
+    });
+    const mission = built_.kernel.approve({
+      intent: validateMissionIntent(JSON.stringify({ goal: "Read Acme invoices for alice", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" })),
+      proposedAuthority: [{ type: "mission_resource_access", resource: RESOURCE, actions: [READ], constraints: { vendors: ["acme"] } }],
+      subject: { iss: issuer, sub: "alice" },
+      approver: { iss: issuer, sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `apev-rec-unmapped-${crypto.randomUUID()}`,
+    });
+    return {
+      as: built_,
+      mission,
+      evidence: assemblyEvidence,
+      set: (next: unknown) => {
+        records = next;
+      },
+      decide: () => decide(mission.id, READ, built(built_.authorityDependency, "the dependency enforcement"), built_),
+    };
+  }
+
+  it("refuses at the PDP under lifecycle-only enforcement though the reconciler commits nothing for it and its progress stays current (a declaration built past the reader)", async () => {
+    nowMs = Date.now();
+    const { delegation_withdrawn: _unmapped, ...partial } = LIFECYCLE_ONLY.enforcement.lifecycle_operations ?? {};
+    const declaration = { ...LIFECYCLE_ONLY, enforcement: { ...LIFECYCLE_ONLY.enforcement, lifecycle_operations: partial } } as AuthorityDependencyDeclaration;
+    const x = await assembly(declaration, "http://localhost:15327");
+    try {
+      const reconciler_ = built(x.as.authorityReconciler, "the reconciler");
+      expect((await reconciler_.reconcile()).ok).toBe(true);
+      expect((await x.decide()).decision).toBe(true);
+      x.set([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }, { sub: "bob" }]);
+      for (let pass = 0; pass < 2; pass += 1) {
+        const outcome = await reconciler_.reconcile();
+        expect(outcome.ok).toBe(true);
+        expect(outcome.transitions).toEqual([]);
+        expect(outcome.invalidated).toEqual([x.mission.id]);
+        expect(x.as.kernel.get(x.mission.id)?.state).toBe("active");
+        const refused = await x.decide();
+        expect(refused.decision).toBe(false);
+        expect(x.evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "withdrawn", mission: { id: x.mission.id } });
+      }
+    } finally {
+      x.as.kernel.close();
+    }
+  });
+
+  it("is refused by direct evaluation where both routes are declared with a partial mapping, before any pass observes it", async () => {
+    nowMs = Date.now();
+    const { delegation_withdrawn: _unmapped, ...partial } = DECLARATION.enforcement.lifecycle_operations ?? {};
+    const [declaration] = parseAuthorityDependencyDeclarations([{ ...DECLARATION, enforcement: { ...DECLARATION.enforcement, lifecycle_operations: partial } }]);
+    const x = await assembly(declaration as AuthorityDependencyDeclaration, "http://localhost:15328");
+    try {
+      expect((await built(x.as.authorityReconciler, "the reconciler").reconcile()).ok).toBe(true);
+      x.set([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }, { sub: "bob" }]);
+      await built(x.as.authorityDependency, "the dependency enforcement").resolver.refresh();
+      const refused = await x.decide();
+      expect(refused.decision).toBe(false);
+      expect(x.evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "withdrawn", mission: { id: x.mission.id } });
+      expect(x.as.kernel.get(x.mission.id)?.state).toBe("active");
+    } finally {
+      x.as.kernel.close();
+    }
+  });
+});
+
+describe("Mission Status reports a Mission active while the lifecycle-only PDP refuses it as overdue (@spec runtime#input-authority-dependency, status#mission-status-response, #830)", () => {
+  it("serves an authenticated Status read showing the Mission active, while a decision under it is refused reconciliation_overdue", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "xia");
+    expect((await reconciler().reconcile()).ok).toBe(true);
+    const reconciledAt = nowMs;
+    // The feed disconnects; the reconciliation falls past its lag bound.
+    source = new Error("identity source unreachable");
+    nowMs = reconciledAt + LAG_MS;
+    expect((await reconciler().reconcile()).ok).toBe(false);
+    // An authenticated read of the advertised Mission Status endpoint by a client holding mission_status.
+    const read = await readAnswer(
+      await fetch(`${ISSUER}${STATUS_ENDPOINT_PATH}`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          mission_id: m.id,
+          nonce: `nonce-rec-status-${crypto.randomUUID()}`,
+          client_assertion_type: CLIENT_ASSERTION_TYPE,
+          client_assertion: await lifecycleClientAssertion(ISSUER, readerClient),
+        }).toString(),
+      }),
+    );
+    expect(read.status, read.text).toBe(200);
+    expect(decodeStatusResponse(read.text).mission).toMatchObject({ id: m.id, state: "active" });
+    const refused = await lifecycleOnlyDecide(m.id);
+    expect(refused.decision).toBe(false);
+    expect(refused.context.denial_reason).toBe("resource_policy");
+    expect(evidence.entries().at(-1)).toMatchObject({ enforcer: "pdp", failure: "reconciliation_overdue", mission: { id: m.id } });
+    source = sourceWith();
+    expect((await reconciler().reconcile()).ok).toBe(true);
+  });
+});
+
+describe("the AS terminates a deprovisioned Subject's Missions, identified by the recorded Subject (@spec mission#revocation, #830 Q-e)", () => {
+  it("revokes a Mission whose approver is its recorded Subject when that principal is deprovisioned, and refuses further issuance under it", async () => {
+    nowMs = Date.now();
+    await observe(sourceWith());
+    const m = approve(as, "alice", "alice");
+    source = sourceWith({ alice: { status: "deprovisioned" } });
+    const pass = await reconciler().reconcile();
+    expect(mine(pass, m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
+    expect(stateOf(m.id)).toMatchObject({ state: "terminated", reason: "revoked" });
+    expect(() => as.kernel.checkDerivation(m.id)).toThrow();
+    source = sourceWith();
+    await reconciler().reconcile();
+  });
+
+  it("matches the deprovisioned principal by the recorded iss and sub: a source describing another issuer's principals revokes nothing, though one of them shares the Subject's sub", async () => {
+    nowMs = Date.now();
+    const OTHER_ISSUER = "https://idp.other.example";
+    const foreignSource = new AuthorityDependencyResolver({
+      issuer: OTHER_ISSUER,
+      read: async () => [{ sub: "yan", status: "deprovisioned" }],
+      parse: (raw) => parseIdentityState(raw),
+      now: () => nowMs,
+    });
+    const m = approve(as, "yan");
+    const overForeign = new AuthorityReconciler({ kernel: as.kernel, declaration: DECLARATION, resolver: foreignSource });
+    const pass = await overForeign.reconcile();
+    expect(pass.ok).toBe(true);
+    expect(mine(pass, m)).toEqual([]);
+    expect(pass.unresolved).toContain(m.id);
+    expect(stateOf(m.id).state).toBe("active");
+    // The same sub deprovisioned in this issuer's own source: revoked.
+    source = sourceWith({ yan: { status: "deprovisioned" } });
+    expect(mine(await reconciler().reconcile(), m)).toEqual([{ mission: m.id, operation: "revoke", change: "subject_deprovisioned" }]);
   });
 });

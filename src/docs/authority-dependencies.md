@@ -54,6 +54,19 @@ The enforcers split the failure cases:
   evaluation to the PEP under lifecycle-mediated enforcement must still
   bind the PDP, because the PEP's composed step evaluates the observation
   and not the reconciler's progress.
+- Each complete reconciliation also records the governed Missions whose
+  recorded Subject its observation shows an applicable invalidation for
+  (disabled, delegation withdrawn, deprovisioned), whether or not
+  `lifecycle_operations` maps the change. The PDP and a PEP's release
+  recheck refuse those Missions (`invalidated` or `withdrawn`, as direct
+  evaluation would) whatever the Mission's state reads, so an authorized
+  resume while the Subject is still disabled restores nothing. The set is
+  recomputed by every complete pass and kept through a failed one; a Mission
+  leaves it only when a later complete pass observes the invalidation gone.
+- A lifecycle-only declaration maps every invalidating change to a
+  lifecycle operation; the reader refuses one that leaves a change unmapped.
+  With a direct route as well, a partial mapping is valid, because direct
+  evaluation refuses an unmapped change.
 - Lifecycle-only enforcement (no direct route) keeps the declaration's
   observation limits. The observation relied on is the one the last
   complete reconciliation acted on, dated from the time it represents. Once

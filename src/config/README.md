@@ -71,7 +71,13 @@ a Mission whose Subject that pass found no record of (`unresolved`, never a
 revocation). Without a direct route, the declared observation limits still
 hold: the pass's observation older than `max_staleness_seconds` refuses
 `stale`, a declared online check refuses on a failed latest read, and a
-permit expires at the earlier of the staleness and lag deadlines.
+permit expires at the earlier of the staleness and lag deadlines. Each
+complete pass also records the Missions whose Subject shows an applicable
+invalidation, mapped or not, and the PDP refuses them whatever their state
+reads until a later complete pass observes the invalidation gone. A
+lifecycle-only declaration must map every invalidating change; with a direct
+route as well, a partial mapping is valid because direct evaluation refuses
+an unmapped change.
 `external_change_bound` is the deployment's claimed bound from an external
 change (`@spec runtime#state-freshness`): its `seconds`, start, end, work
 already started, the path, and the two periods the path names,
