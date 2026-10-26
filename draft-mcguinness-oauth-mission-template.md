@@ -411,7 +411,8 @@ An Agent obtains an instance in one of two ways:
 
 Either way, the instance's authority is at most the Template Ceiling,
 narrowed by the run's dispatch intent and any proposal, and never
-includes a prohibited class ({{prohibited-classes}}). Authority beyond
+includes a prohibited class ({{prohibited-classes}}) other than a
+payment admitted under {{standing-payment-exception}}. Authority beyond
 the ceiling takes a fresh human decision: a human-approved expansion
 of the instance, which leaves the template behind, or a new template
 consent ({{instance-composition}}). Each run is a separate instance,
@@ -1457,7 +1458,8 @@ Dispatch confer a class the deployment's own mapping already
 identifies as prohibited, which is exactly the outcome this section
 forbids.
 
-A Dispatch that would grant a prohibited class is refused with
+A Dispatch that would grant a prohibited class that
+{{standing-payment-exception}} does not admit is refused with
 `dispatch_prohibited_class` ({{denial-reasons}}). Unlike the
 progressive profile, which falls back to a fresh human approval in
 band, a Dispatch has no interactive surface to escalate on: the human

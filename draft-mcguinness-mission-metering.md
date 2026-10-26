@@ -881,10 +881,11 @@ enforced under {{capacity-across-missions}} or by a lineage-keyed
 budget identifier and shared counter meeting this section's
 requirements.
 
-An aggregate bound is deployment policy: it is carried on no single
-Mission Intent, is committed by no `intent_hash`, and is disclosed
-through the deployment's Enforcement Scope Statement rather than the
-approval event. A refusal under an aggregate bound is carried as
+An aggregate bound other than a standing-consent budget (below) is
+deployment policy: it is carried on no single Mission Intent, is
+committed by no `intent_hash`, and is disclosed through the
+deployment's Enforcement Scope Statement rather than the approval
+event. A refusal under an aggregate bound is carried as
 `quota_exceeded`, and its Decision Evidence `metering` entry records
 the aggregate key class in `counter_scope` and the counter in
 `counter_id` ({{metering-evidence}}).
