@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 28 April 2027</td>
+<td class="center">Expires 29 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1078,12 +1078,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-evidence-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-25" class="published">25 October 2026</time>
+<time datetime="2026-10-26" class="published">26 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-28">28 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1140,7 +1140,7 @@ records; the OpenID AuthZEN profile is one such producer.<a href="#section-abstr
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 28 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1212,6 +1212,11 @@ records; the OpenID AuthZEN profile is one such producer.<a href="#section-abstr
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
                 <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-toctou-and-parameter-bindin" class="internal xref">TOCTOU and parameter binding</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4.2.1">
+                    <p id="section-toc.1-1.5.2.4.2.1.1"><a href="#section-5.4.1" class="auto internal xref">5.4.1</a>.  <a href="#name-context-drift-and-parameter" class="internal xref">Context Drift and Parameter Deviation</a></p>
+</li>
+                </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5">
                 <p id="section-toc.1-1.5.2.5.1"><a href="#section-5.5" class="auto internal xref">5.5</a>.  <a href="#name-retention" class="internal xref">Retention</a></p>
@@ -1882,7 +1887,12 @@ action reconciles against the action it reverses. The trusted
 execution path <span class="bcp14">MUST</span> establish this link from retained, verified
 evidence of the original evaluation, never merely copy an
 agent-supplied identifier. The link confers no authority and does
-not authorize compensation under the original action's permit.<a href="#section-4.1-1.38.1" class="pilcrow">¶</a></p>
+not authorize compensation under the original action's permit. The
+producer records the value it validated on the request, on a permit
+or a denial, and omits malformed input; a compensate-phase request
+without a usable value is refused before evaluation, so no
+compensate-phase decision lacks this member
+(<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-4.1-1.38.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-4.1-1.39">
@@ -1995,9 +2005,9 @@ required) and a <code>value</code> (string, required).<a href="#section-4.1-1.56
 <p id="section-4.1-2">A Decision Evidence Object is closed to uncoordinated extension; see
 <a href="#evidence-extensions" class="auto internal xref">Section 9</a> for the extension rule and the coordinated
 extension members a deployment following the AuthZEN profile
-commonly carries (<code>taint</code>, <code>mission_history</code>, <code>authority_bound</code>,
-<code>capability_source</code>, <code>hop_reference</code>, <code>principal_mapping</code>,
-<code>join_view_id</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
+commonly carries (<code>taint</code>, <code>work_item</code>, <code>mission_history</code>,
+<code>authority_bound</code>, <code>capability_source</code>, <code>hop_reference</code>,
+<code>principal_mapping</code>, <code>join_view_id</code>).<a href="#section-4.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="pre-decision-refusal">
@@ -2101,22 +2111,37 @@ the operation requires could not be resolved,
 was absent or did not verify, so no decision the PEP can rely on was
 obtained), <code>channel_failure</code>, <code>pdp_unreachable</code>, or
 <code>state_unavailable</code> (where the deployment's state-source placement
-has the PEP supply state, and it cannot establish it), or
+has the PEP supply state, and it cannot establish it),
 <code>phase_unavailable</code> (the operation is a phase of a compound action
 and the PEP cannot establish the phase before requesting a
-decision). For a PDP refusal of an in-scope request that reaches it
+decision), <code>compensation_link_unavailable</code> (the operation is a
+compensate phase and the PEP cannot establish, from retained and
+verified evidence, the committed effect it offsets and the Decision
+that effect executed under), or <code>evaluation_context_unresolvable</code>
+(the runtime profile's Evaluation-Context Binding extension covers
+the operation, and the PEP cannot capture its authoritative
+evaluation context before requesting a decision). For a PDP
+refusal of an in-scope request that reaches it
 without the Mission decision context a runtime enforcement scope
 requires, <code>mission_context_missing</code>; for one whose operation target
 is absent, malformed, or outside the enforcement scope the requesting
 PEP is authorized for (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>),
 <code>operation_target_invalid</code>; for one whose action phase is outside
 the defined set, or is absent where the PDP's trusted operation
-declaration requires a phase, <code>phase_invalid</code>; and for one whose
+declaration requires a phase, <code>phase_invalid</code>; for a compensate-phase
+request with no <code>compensates_evaluation_id</code>, or a request whose
+<code>compensates_evaluation_id</code> is malformed, <code>compensation_link_invalid</code>;
+for one whose
 evaluation-context binding inputs are missing, malformed, or
 incompatible with the declared binding, for an operation the runtime
 profile's Evaluation-Context Binding extension covers,
-<code>evaluation_context_invalid</code>. The last two describe decision inputs
-the PDP cannot use, not an evaluated policy denial. These name
+<code>evaluation_context_invalid</code>; and for one carrying a work-item
+context that is not well-formed (the harness profile,
+<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), <code>work_item_invalid</code>. The
+last four describe decision inputs the PDP cannot use, not an
+evaluated policy denial; <code>evaluation_context_unresolvable</code> is
+instead the PEP's own failure to capture the context, before any
+decision request. These name
 pre-evaluation conditions,
 PEP-side or PDP-side, and are disjoint from the runtime profile's
 PDP denial reasons for an evaluated decision (for example, as
@@ -2660,17 +2685,29 @@ what the permit authorized.<a href="#section-5.1-1.10.1" class="pilcrow">¶</a><
 <code>effective_parameter_digest</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-1.12">
             <p id="section-5.1-1.12.1">CONDITIONAL. A string. <span class="bcp14">REQUIRED</span> whenever
-<code>authorized_parameter_digest</code> is present. The digest, in the same
-form, over the normalized parameters actually attempted or
-executed. Equality with <code>authorized_parameter_digest</code> is the
-binding-held case. Inequality is a parameter deviation, and the
-record REMAINS VALID: evidence of an unauthorized execution is
-still evidence, never grounds to discard the record. A deviation
-recorded against <code>outcome</code> <code>suppressed</code> carries <code>error</code>
-              <code>parameter_mismatch</code>. A deviation recorded against <code>outcome</code>
-              <code>completed</code> or <code>failed</code>, a buggy or compromised executor having
-gone ahead despite the mismatch, is equally representable, and a
-consumer <span class="bcp14">MUST</span> flag it as an unauthorized execution.<a href="#section-5.1-1.12.1" class="pilcrow">¶</a></p>
+<code>authorized_parameter_digest</code> is present, except on a <code>suppressed</code>
+record whose executing PEP could not establish the effective
+parameters. The digest, in the same form, over the normalized
+parameters actually attempted or executed. Equality with
+<code>authorized_parameter_digest</code> is the binding-held case. Inequality
+is a parameter deviation, and the record REMAINS VALID: evidence of
+an unauthorized execution is still evidence, never grounds to
+discard the record. A deviation recorded against <code>outcome</code>
+              <code>suppressed</code> carries <code>error</code> <code>parameter_mismatch</code>, except where
+<a href="#context-drift-classification" class="auto internal xref">Section 5.4.1</a> names <code>target_drift</code>. A deviation
+recorded against <code>outcome</code> <code>completed</code> or <code>failed</code>, a buggy or
+compromised executor having gone ahead despite the mismatch, is
+equally representable, and a consumer <span class="bcp14">MUST</span> flag it as an
+unauthorized execution.<a href="#section-5.1-1.12.1" class="pilcrow">¶</a></p>
+<p id="section-5.1-1.12.2">If the executing PEP cannot establish the effective parameters,
+this member <span class="bcp14">MUST</span> be absent rather than copied from
+<code>authorized_parameter_digest</code> or populated with a fabricated digest,
+and execution <span class="bcp14">MUST</span> be suppressed. The <code>error</code> names the condition
+that prevented it, <code>target_drift</code> when the target the permit was
+evaluated for cannot be established at use, and is never
+<code>parameter_mismatch</code>: no comparison was made. The absence means the
+comparison is unavailable, and a consumer <span class="bcp14">MUST NOT</span> read it as
+equality or as a parameter deviation.<a href="#section-5.1-1.12.2" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-1.13">
@@ -2718,7 +2755,9 @@ example, a kill-switch or a secondary deny).<a href="#section-5.1-1.18.1" class=
             <p id="section-5.1-1.22.1">CONDITIONAL. A string. Error identifier when <code>outcome</code> is <code>failed</code> or
 <code>suppressed</code>, from this closed set: <code>parameter_mismatch</code> (the
 executing PEP found the effective parameters differ from those the
-permit bound), <code>phase_mismatch</code> (the permit's phase differs from the
+permit bound; under a claimed Evaluation-Context Binding,
+<a href="#context-drift-classification" class="auto internal xref">Section 5.4.1</a> names which of this and
+<code>target_drift</code> is recorded), <code>phase_mismatch</code> (the permit's phase differs from the
 executing crossing, is missing or malformed where required, or
 cannot be established at use), <code>target_drift</code> (a declared bound
 evaluation context, or the operation target the permit was
@@ -2742,8 +2781,11 @@ was decided under did not resolve at execution, or differs from the
 contract the operation would be performed under),
 <code>obligation_unfulfilled</code> (a permit suppressed before release because
 an attached obligation could not be fulfilled; the failing entry is
-named in <code>obligation_outcomes</code>), and <code>kill_switch</code> (execution
-suppressed by an operator or safety control). A deployment <span class="bcp14">MAY</span>
+named in <code>obligation_outcomes</code>), <code>work_item_mismatch</code> (the
+permit's work-item condition differs from the work item the
+executing PEP attributes to the request, or one is present without
+the other), and <code>kill_switch</code> (execution suppressed by an operator
+or safety control). A deployment <span class="bcp14">MAY</span>
 define additional values, which <span class="bcp14">MUST</span> be collision-resistant names
 (a short name within a namespace the deployment controls, following
 the Collision-Resistant Name guidance of <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span> Section 4.2) so
@@ -2779,12 +2821,17 @@ failure never made.<a href="#section-5.1-1.22.3" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-5.1-1.24">
             <p id="section-5.1-1.24.1">CONDITIONAL. An array of objects. <span class="bcp14">REQUIRED</span> when the linked Decision
 Evidence carried obligations and a permit disposition exists. One
-object per attached obligation, with <code>id</code> (<span class="bcp14">REQUIRED</span>, a string, the
-obligation's identifier as returned by the decision), <code>type</code>
-(<span class="bcp14">REQUIRED</span>, a string, the obligation type), <code>outcome</code> (<span class="bcp14">REQUIRED</span>, a
-string, one of <code>fulfilled</code>, <code>failed</code>, or <code>unsupported</code>), and <code>error</code>
-(<span class="bcp14">OPTIONAL</span>, a string, an implementation-specific detail on a
-non-<code>fulfilled</code> outcome).<a href="#section-5.1-1.24.1" class="pilcrow">¶</a></p>
+object per attached obligation, in the order the decision returned
+them, with <code>id</code> (a string, the obligation's identifier as returned
+by the decision), <code>type</code> (a string, the obligation type), <code>outcome</code>
+(<span class="bcp14">REQUIRED</span>, a string, one of <code>fulfilled</code>, <code>failed</code>, or
+<code>unsupported</code>), and <code>error</code> (<span class="bcp14">OPTIONAL</span>, a string, an
+implementation-specific detail on a non-<code>fulfilled</code> outcome). <code>id</code>
+and <code>type</code> are each <span class="bcp14">REQUIRED</span> when the decision supplied that member
+as a non-empty string, and absent otherwise, never invented. An
+obligation lacking either is malformed, and its <code>outcome</code> is
+<code>unsupported</code>. This relaxes the record's representation, not the
+obligation's own validity requirements.<a href="#section-5.1-1.24.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-5.1-1.25">
@@ -2962,7 +3009,8 @@ evidence, never an invalid record to discard.<a href="#section-5.4-2" class="pil
 <p id="section-5.4-3">When the executing PEP
 detects the deviation before acting, it <span class="bcp14">MUST</span> refuse the action and
 emit Execution Evidence with <code>outcome</code> <code>suppressed</code> and <code>error</code>
-          <code>parameter_mismatch</code> (<a href="#example-parameter-deviation" class="auto internal xref">Section 5.3</a>). A deviation
+          <code>parameter_mismatch</code> (<a href="#example-parameter-deviation" class="auto internal xref">Section 5.3</a>), or <code>target_drift</code>
+where <a href="#context-drift-classification" class="auto internal xref">Section 5.4.1</a> names it. A deviation
 recorded against an <code>outcome</code> of <code>completed</code> or <code>failed</code>, a buggy or
 compromised executor having gone ahead despite the mismatch, is
 equally representable and is never grounds to reject the record.<a href="#section-5.4-3" class="pilcrow">¶</a></p>
@@ -2976,10 +3024,80 @@ Decision Evidence retains the phase the permit actually authorized.<a href="#sec
 audit consumer <span class="bcp14">MUST</span> classify the execution as a parameter deviation
 and treat it as equivalent to an unauthorized action for compliance
 purposes. The record can carry two digest pairs, and the
-classification follows the pair: divergence of the parameter pair is
-a parameter deviation, the refusal identifier <code>parameter_mismatch</code>;
-divergence of the evaluation-context pair is context drift, the
-refusal identifier <code>target_drift</code>.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+classification follows each pair independently of the record's
+<code>error</code>: divergence of the parameter pair is a parameter deviation,
+and divergence of the evaluation-context pair is context drift. The
+audit consumer reports every divergence a record carries, even where
+its <code>error</code> names only one.<a href="#section-5.4-5" class="pilcrow">¶</a></p>
+<div id="context-drift-classification">
+<section id="section-5.4.1">
+          <h4 id="name-context-drift-and-parameter">
+<a href="#section-5.4.1" class="section-number selfRef">5.4.1. </a><a href="#name-context-drift-and-parameter" class="section-name selfRef">Context Drift and Parameter Deviation</a>
+          </h4>
+<p id="section-5.4.1-1">Under the runtime profile's Evaluation-Context Binding extension
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), a fact the descriptor
+declares can also be bound as a parameter, so a moved fact can change
+both digest pairs. A suppression records one <code>error</code>, named by what
+moved, and keeps every digest pair the executing PEP can observe:<a href="#section-5.4.1-1" class="pilcrow">¶</a></p>
+<table class="center" id="table-2">
+            <caption><a href="#table-2" class="selfRef">Table 2</a></caption>
+<thead>
+              <tr>
+                <th class="text-left" rowspan="1" colspan="1">Evaluation context at use</th>
+                <th class="text-left" rowspan="1" colspan="1">Parameters about to be used</th>
+                <th class="text-left" rowspan="1" colspan="1">error</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">Established and equal</td>
+                <td class="text-left" rowspan="1" colspan="1">Equal</td>
+                <td class="text-left" rowspan="1" colspan="1">none: the bindings hold</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">Not establishable: a declared fact, target, salt version, or the committed descriptor</td>
+                <td class="text-left" rowspan="1" colspan="1">Any</td>
+                <td class="text-left" rowspan="1" colspan="1">
+                  <code>target_drift</code>
+</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">Established</td>
+                <td class="text-left" rowspan="1" colspan="1">A parameter the descriptor does not declare as a fact differs</td>
+                <td class="text-left" rowspan="1" colspan="1">
+                  <code>parameter_mismatch</code>
+</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">Established and unequal to the permit's condition, or the condition missing</td>
+                <td class="text-left" rowspan="1" colspan="1">Equal, or differing only in declared facts</td>
+                <td class="text-left" rowspan="1" colspan="1">
+                  <code>target_drift</code>
+</td>
+              </tr>
+              <tr>
+                <td class="text-left" rowspan="1" colspan="1">Established and equal, under a descriptor the operation's declaration no longer names</td>
+                <td class="text-left" rowspan="1" colspan="1">Equal</td>
+                <td class="text-left" rowspan="1" colspan="1">
+                  <code>target_drift</code>
+</td>
+              </tr>
+            </tbody>
+          </table>
+<p id="section-5.4.1-3">The effective context digest is computed under the descriptor and salt
+version the binding committed, never under one declared since, so
+unchanged facts keep the pair equal under a changed descriptor; the
+change itself is the refusal, and no context divergence is reported for
+it. A parameter the descriptor does not declare as a fact is the
+request's own, so <code>parameter_mismatch</code> records a demonstrated change to a
+request parameter, such as an agent-supplied argument. An unavailable
+context, the committed descriptor unrecoverable included, is never
+compared: <code>effective_evaluation_context_digest</code> is absent, and so is
+<code>effective_parameter_digest</code> where the parameters cannot be established
+(<a href="#execution-evidence-object" class="auto internal xref">Section 5</a>). The audit consumer reports each
+divergent pair whatever the <code>error</code>.<a href="#section-5.4.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="retention">
@@ -3557,9 +3675,9 @@ is a conditional capability map, not a checklist: each row separates
 what base evidence conformance proves, the additional mechanism a
 stronger reading requires, and what no reading proves. It adds no
 requirement to this document or the runtime profile.<a href="#section-7-1" class="pilcrow">¶</a></p>
-<span id="name-evidence-properties-what-th"></span><table class="center" id="table-2">
+<span id="name-evidence-properties-what-th"></span><table class="center" id="table-3">
         <caption>
-<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#table-3" class="selfRef">Table 3</a>:
 <a href="#name-evidence-properties-what-th" class="selfRef">Evidence properties: what the records prove, and under which conditions</a>
         </caption>
 <thead>
@@ -3915,6 +4033,22 @@ denies, and absent for a failed join and for a direct Mission-bound
 decision. Registered and owned by the Mission Authority Server
 (<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>), which defines
 what the commitment distinguishes.<a href="#section-9-3.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-9-3.15">
+<code>work_item</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-9-3.16">
+          <p id="section-9-3.16.1"><span class="bcp14">OPTIONAL</span>. An object with <code>issuer</code> and <code>id</code>, recorded at the top
+level of Decision Evidence and Execution Evidence: the qualified
+work-item identifier of the harness profile
+(<span>[<a href="#I-D.draft-mcguinness-mission-harness" class="cite xref">I-D.draft-mcguinness-mission-harness</a>]</span>), which owns this member.
+<span class="bcp14">REQUIRED</span> on Decision Evidence when the decision request carried a
+well-formed work-item context, recorded as presented, and on
+Execution Evidence when the request the disposition concerns carried
+one, recorded as the executing PEP attributed it. It joins the
+Harness Evidence of the same work item, whose <code>work_item_issuer</code> and
+<code>work_item</code> carry the same pair. The AuthZEN profile is one wire
+carrier (<span>[<a href="#I-D.draft-mcguinness-mission-authzen" class="cite xref">I-D.draft-mcguinness-mission-authzen</a>]</span>).<a href="#section-9-3.16.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -4805,20 +4939,62 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Refusal Record: <code>phase_unavailable</code> records a PEP that cannot
+          <p id="appendix-A-2.1.1">Extension Members, Refusal Record and Execution Evidence:
+<code>work_item</code>, owned by the harness profile, records the qualified
+work-item identifier on Decision and Execution Evidence, joining
+Harness Evidence; the Refusal Record <code>work_item_invalid</code> records a
+PDP refusal, before evaluation, of a malformed work-item context; and
+the Execution Evidence <code>error</code> <code>work_item_mismatch</code> records a permit
+whose work-item condition differs from the request it would execute
+(#815).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Refusal Record: <code>evaluation_context_unresolvable</code> records a PEP that
+cannot capture the authoritative evaluation context of an operation
+Evaluation-Context Binding covers before requesting a decision,
+distinct from the PDP's <code>evaluation_context_invalid</code>. Context Drift
+and Parameter Deviation gives the one <code>error</code> a suppression records
+when the context fails at use: <code>target_drift</code> unless the context is
+established and an agent-supplied parameter changed, with every
+observable digest pair kept and every divergence reported; the
+effective context digest is computed under the committed descriptor,
+so a changed descriptor with unchanged facts is refused without a
+divergence, and an unrecoverable one leaves the digest absent (#773).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Refusal Record and Decision Evidence: <code>compensation_link_unavailable</code>
+records a PEP that cannot establish, from retained and verified
+evidence, the committed effect a compensation offsets;
+<code>compensation_link_invalid</code> records a PDP refusal, before evaluation,
+of a compensate-phase request without a usable
+<code>compensates_evaluation_id</code>. Decision Evidence records the validated
+link and omits malformed input (#252).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Execution Evidence: a PEP that cannot establish the effective
+parameters suppresses execution and omits
+<code>effective_parameter_digest</code>, never copying or fabricating it; the
+absence means the comparison is unavailable, and a target that
+cannot be established at use is <code>target_drift</code>. <code>obligation_outcomes</code>
+keeps one entry per attached obligation, in decision order, omitting
+an <code>id</code> or <code>type</code> the decision did not supply, with <code>outcome</code>
+            <code>unsupported</code> (#786).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Refusal Record: <code>phase_unavailable</code> records a PEP that cannot
 establish a compound action's phase before requesting a decision;
 <code>phase_invalid</code> and <code>evaluation_context_invalid</code> record a PDP refusal,
 before evaluation, of an unusable action phase or evaluation-context
-binding input (#1629).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+binding input (#1629).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Refusal Record and Execution Evidence: <code>resource_contract_unresolvable</code>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Refusal Record and Execution Evidence: <code>resource_contract_unresolvable</code>
 records a resource contract the PEP could not resolve before the
 decision request, or that at execution did not resolve or differed
-from the contract the operation would be performed under (#249).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+from the contract the operation would be performed under (#249).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Decision Evidence, Refusal Record, and Execution Evidence: the
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Decision Evidence, Refusal Record, and Execution Evidence: the
 <code>audience</code> member carries the runtime profile's boundary identifier,
 byte for byte; a component that cannot establish the boundary emits
 no Refusal Record. The evidence key is bound to that identifier
@@ -4826,68 +5002,68 @@ under the declared Enforcement Scope Statement versions, and a
 record from before a boundary identifier change verifies with its
 bytes unchanged under the version that authorizes its key for its
 <code>audience</code>, failing when the versions do not determine one; it is
-historical evidence, never a permit (#853).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+historical evidence, never a permit (#853).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Refusal Record and Execution Evidence: <code>target_unresolvable</code> also
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Refusal Record and Execution Evidence: <code>target_unresolvable</code> also
 covers a PEP that cannot establish one unambiguous operation target;
 a PDP refuses a request whose operation target is absent, malformed
 or outside the requesting PEP's enforcement scope with
 <code>operation_target_invalid</code>; and <code>target_drift</code> also covers an
 operation target that differs from the evaluated one, or cannot be
-established, at use (#1276).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+established, at use (#1276).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Cross-Entry Correspondence (informative) describes how the records
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Cross-Entry Correspondence (informative) describes how the records
 support comparing the outcomes of two Authority Set entries: each
 leg is bound to one approved reference, each leg's evidence leads
 to its entry, and a party the deployment defines compares them,
 with an inconclusive result when a required record is missing. It
 states what the records cannot detect and that history does not
 establish a reservation's current validity, and relates the records
-to the Action Evidence Boundary (#1019).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+to the Action Evidence Boundary (#1019).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Terminology: a Mission reference (<code>id</code>, <code>issuer</code>) is a binding's
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Terminology: a Mission reference (<code>id</code>, <code>issuer</code>) is a binding's
 Mission Reference identifier and Controller namespace in that
 binding's representation, with the OAuth realization unchanged; the
 records' Mission reference members and their presence rules are
-unchanged (#1169).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+unchanged (#1169).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1"><code>authority_bound</code> is a coordinated Decision Evidence extension
 member, registered and owned by the AuthZEN profile: the authority
 bound that decided an <code>out_of_authority</code> or <code>parameter_violation</code>
-deny (#825).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+deny (#825).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
+        <li class="normal" id="appendix-A-2.12">
+          <p id="appendix-A-2.12.1">The Refusal Record's PEP <code>denial_reason</code> set adds <code>request_invalid</code>:
 the PEP established the action, and the supplied arguments fail its
 required input schema. <code>request_unsupported</code> keeps its meaning, an
-action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+action the enforcement surface does not implement (#1106).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
+        <li class="normal" id="appendix-A-2.13">
+          <p id="appendix-A-2.13.1"><code>join_view_id</code> is a coordinated Decision Evidence extension member,
 registered and owned by the Mission Authority Server: the
 joined-view commitment of a decision reached over a successful
 Mission Join (#972 item 27a). The list of commonly carried
-coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+coordinated members also names <code>principal_mapping</code>.<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
+        <li class="normal" id="appendix-A-2.14">
+          <p id="appendix-A-2.14.1">Decision Evidence's <code>mission.policy_view_id</code> is <span class="bcp14">REQUIRED</span> where the
 PDP evaluates through a materialized policy view; a PDP that
 evaluates the Mission's recorded authority directly omits it and
 records <code>authority_hash</code> and the new <code>pdp_policy_version</code>, following
 the runtime profile's two evaluation paths; the Mission Receipt's
-<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
+<code>policy</code> object projects <code>pdp_policy_version</code> likewise.<a href="#appendix-A-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.11">
-          <p id="appendix-A-2.11.1"><code>evaluation_request_digest</code> covers the evaluation request as the
+        <li class="normal" id="appendix-A-2.15">
+          <p id="appendix-A-2.15.1"><code>evaluation_request_digest</code> covers the evaluation request as the
 decision-API profile defines it or, for a Refusal Record emitted
 before any request, a defined pre-request input; the Refusal Record
 member <code>request_digest_input</code> names which. The digest is no longer
 described as privacy-preserving: it commits to its input and does
-not hide an input a party can guess (#971).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
+not hide an input a party can guess (#971).<a href="#appendix-A-2.15.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

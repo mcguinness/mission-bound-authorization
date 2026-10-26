@@ -1071,7 +1071,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 28 April 2027</td>
+<td class="center">Expires 29 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1087,12 +1087,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-runtime-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-25" class="published">25 October 2026</time>
+<time datetime="2026-10-26" class="published">26 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-28">28 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1158,7 +1158,7 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 28 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1241,13 +1241,16 @@ agent-compromise-resistant enforcement and trifecta containment.<a href="#sectio
                     <p id="section-toc.1-1.2.2.7.2.6.1"><a href="#section-2.7.6" class="auto internal xref">2.7.6</a>.  <a href="#name-actor" class="internal xref">Actor</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7.2.7">
-                    <p id="section-toc.1-1.2.2.7.2.7.1"><a href="#section-2.7.7" class="auto internal xref">2.7.7</a>.  <a href="#name-time" class="internal xref">Time</a></p>
+                    <p id="section-toc.1-1.2.2.7.2.7.1"><a href="#section-2.7.7" class="auto internal xref">2.7.7</a>.  <a href="#name-authority-dependencies" class="internal xref">Authority Dependencies</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7.2.8">
-                    <p id="section-toc.1-1.2.2.7.2.8.1"><a href="#section-2.7.8" class="auto internal xref">2.7.8</a>.  <a href="#name-state" class="internal xref">State</a></p>
+                    <p id="section-toc.1-1.2.2.7.2.8.1"><a href="#section-2.7.8" class="auto internal xref">2.7.8</a>.  <a href="#name-time" class="internal xref">Time</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7.2.9">
-                    <p id="section-toc.1-1.2.2.7.2.9.1"><a href="#section-2.7.9" class="auto internal xref">2.7.9</a>.  <a href="#name-history" class="internal xref">History</a></p>
+                    <p id="section-toc.1-1.2.2.7.2.9.1"><a href="#section-2.7.9" class="auto internal xref">2.7.9</a>.  <a href="#name-state" class="internal xref">State</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.7.2.10">
+                    <p id="section-toc.1-1.2.2.7.2.10.1"><a href="#section-2.7.10" class="auto internal xref">2.7.10</a>. <a href="#name-history" class="internal xref">History</a></p>
 </li>
                 </ul>
 </li>
@@ -1808,14 +1811,26 @@ lifecycle-gated-only substrate supports issuance gating and a
 lifetime-bounded action-time posture only: it cannot reflect a
 revocation faster than the credential lifetime, so it cannot host a
 class whose bound demands that.<a href="#section-2.5-3" class="pilcrow">¶</a></p>
+<p id="section-2.5-4">These bounds run from a Mission state change. A deployment that claims
+a bound on how quickly an external authority change stops dependent
+actions (<a href="#input-authority-dependency" class="auto internal xref">Section 2.7.7</a>) <span class="bcp14">MUST</span> state it from the time
+the authoritative system records the change to the time a dependent
+action can no longer begin an effect, and <span class="bcp14">MUST</span> state separately how
+work already started is treated. The claim accounts for detecting the
+change, evaluating its effect, any resulting Mission or policy state
+change, downstream reliance on earlier observations, and the remaining
+validity of issued permits. A bound measured from a Mission state
+change does not establish a bound from the authority change, and a
+measured successful disablement does not establish it when an event is
+lost, a feed is disconnected, or a reconciler fails.<a href="#section-2.5-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-2.5-4.1">
-            <p id="section-2.5-4.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
+<li class="normal" id="section-2.5-5.1">
+            <p id="section-2.5-5.1.1">The PDP <span class="bcp14">MUST</span> refuse a consequential action when it cannot establish,
 within the deployment's published staleness bound, that the Mission
-is <code>active</code>.<a href="#section-2.5-4.1.1" class="pilcrow">¶</a></p>
+is <code>active</code>.<a href="#section-2.5-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-4.2">
-            <p id="section-2.5-4.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with an
+          <li class="normal" id="section-2.5-5.2">
+            <p id="section-2.5-5.2.1">A state source <span class="bcp14">MUST</span> either report the Mission state with an
 explicit expiry or lease end, or report only an observation time, in
 which case the state remains acceptable only until that observation
 time plus the deployment's published staleness bound for the
@@ -1823,28 +1838,28 @@ relevant action class. A permit issued from that state view <span class="bcp14">
 expire no later than this state valid-through: the reported expiry
 or lease end, or, absent one, the observation time plus the
 published staleness bound. The observation time alone, without
-adding the staleness bound, is never a permit's expiry.<a href="#section-2.5-4.2.1" class="pilcrow">¶</a></p>
+adding the staleness bound, is never a permit's expiry.<a href="#section-2.5-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-4.3">
-            <p id="section-2.5-4.3.1">When the credential issuer also holds the Mission, the PDP can learn
+          <li class="normal" id="section-2.5-5.3">
+            <p id="section-2.5-5.3.1">When the credential issuer also holds the Mission, the PDP can learn
 state directly from the issuer through the binding's own state-query
 mechanism. A non-issuer PDP validating a locally accepted credential
 cannot report current Mission state that way; it can establish local
 credential validity, but not issuer-side Mission freshness, absent a
 separate cross-domain arrangement its binding defines
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span> for the OAuth
-binding).<a href="#section-2.5-4.3.1" class="pilcrow">¶</a></p>
+binding).<a href="#section-2.5-5.3.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-4.4">
-            <p id="section-2.5-4.4.1">This document defines no cross-issuer by-Mission status query of its
+          <li class="normal" id="section-2.5-5.4">
+            <p id="section-2.5-5.4.1">This document defines no cross-issuer by-Mission status query of its
 own. Deployments that need tighter freshness than the credential's
 own lifetime, or a cross-domain grant's lifetime, provides use an
 active freshness mechanism their binding defines: a status query, a
 status list, an event-driven signal feed, or an out-of-band trusted
-status feed.<a href="#section-2.5-4.4.1" class="pilcrow">¶</a></p>
+status feed.<a href="#section-2.5-5.4.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-4.5">
-            <p id="section-2.5-4.5.1">The maximum staleness bound per action class and state source is
+          <li class="normal" id="section-2.5-5.5">
+            <p id="section-2.5-5.5.1">The maximum staleness bound per action class and state source is
 declared in the Enforcement Scope Statement
 (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>), together with the revocation latency it
 implies. Publishing the bound without its latency consequence is
@@ -1858,10 +1873,10 @@ it was minted from (Credential-lifetime freshness, below). This document imposes
 universal value because the acceptable latency is deployment- and
 consequence-specific; the bound is the number that determines the
 profile's headline revocation property. The per-class budgets
-below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-2.5-4.5.1" class="pilcrow">¶</a></p>
+below are the <span class="bcp14">RECOMMENDED</span> defaults for the value.<a href="#section-2.5-5.5.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-4.6">
-            <p id="section-2.5-4.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
+          <li class="normal" id="section-2.5-5.6">
+            <p id="section-2.5-5.6.1">For the high-consequence classes, the state source <span class="bcp14">MUST</span> be an active
 freshness mechanism that can reflect a revocation within the staleness
 bound: one that is queried or pushed at a frequency independent of
 the credential's own lifetime, rather than a mechanism whose only
@@ -1869,35 +1884,35 @@ signal is that lifetime expiring. Credential-lifetime expiry alone
 is not an acceptable state source for these classes: it bounds
 staleness only by the lifetime, so a revoked Mission keeps deriving
 consequence until credentials age out, which is the ambient-authority
-gap this profile exists to close.<a href="#section-2.5-4.6.1" class="pilcrow">¶</a></p>
+gap this profile exists to close.<a href="#section-2.5-5.6.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-2.5-5">An informative worked example of the latency arithmetic: for a
+<p id="section-2.5-6">An informative worked example of the latency arithmetic: for a
 PDP-gated class with a published staleness bound of 60 seconds and a
 declared execution bound of 30 seconds, a revocation committed
 immediately after a state observation stops new effect after at most
-90 seconds. That worst case combines:<a href="#section-2.5-5" class="pilcrow">¶</a></p>
+90 seconds. That worst case combines:<a href="#section-2.5-6" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-2.5-6.1">
-            <p id="section-2.5-6.1.1">the stale view remaining acceptable for up to 60 seconds;<a href="#section-2.5-6.1.1" class="pilcrow">¶</a></p>
+<li class="normal" id="section-2.5-7.1">
+            <p id="section-2.5-7.1.1">the stale view remaining acceptable for up to 60 seconds;<a href="#section-2.5-7.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-6.2">
-            <p id="section-2.5-6.2.1">a permit issued from that view expiring no later than the view's
-valid-through (the permit cap above); and<a href="#section-2.5-6.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-2.5-7.2">
+            <p id="section-2.5-7.2.1">a permit issued from that view expiring no later than the view's
+valid-through (the permit cap above); and<a href="#section-2.5-7.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-2.5-6.3">
-            <p id="section-2.5-6.3.1">a permitted action completing within its execution bound.<a href="#section-2.5-6.3.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-2.5-7.3">
+            <p id="section-2.5-7.3.1">a permitted action completing within its execution bound.<a href="#section-2.5-7.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-2.5-7">The general worst case above
+<p id="section-2.5-8">The general worst case above
 counts the permit validity window as its own term because a state
 source reporting an explicit lease end can leave a permit window
 beyond the staleness bound; under observation-time reporting the
 permit cap collapses that term. A path outside PDP gating keeps the
 derived credential's lifetime as its bound, plus the age of the
 observation it was minted from where that minting checked no current
-state.<a href="#section-2.5-7" class="pilcrow">¶</a></p>
-<p id="section-2.5-8"><strong>Credential-lifetime freshness.</strong> Below the high-consequence floor, a
+state.<a href="#section-2.5-8" class="pilcrow">¶</a></p>
+<p id="section-2.5-9"><strong>Credential-lifetime freshness.</strong> Below the high-consequence floor, a
 deployment whose Mission-bound credentials are short-lived can use them
 as its state source, in two forms: credential expiry, and the refresh
 cycle gated on live Mission state, whose issuance gate is an active
@@ -1917,8 +1932,8 @@ declares the source per class in its Enforcement Scope Statement like
 any other. Its revocation latency floor is the credential lifetime, so
 it cannot reflect a revocation faster than that: the high-consequence
 classes require an active source, and a higher-frequency source
-remains the path to tighter bounds.<a href="#section-2.5-8" class="pilcrow">¶</a></p>
-<p id="section-2.5-9">Together the sources form a single freshness dial, and a deployment
+remains the path to tighter bounds.<a href="#section-2.5-9" class="pilcrow">¶</a></p>
+<p id="section-2.5-10">Together the sources form a single freshness dial, and a deployment
 picks a position per action class rather than one posture for the
 estate: from credential-lifetime expiry at one pole, through
 state-gated refresh, to a queried or event-driven active source at
@@ -1932,9 +1947,9 @@ profile catalogs its binding's concrete state sources against this
 dial, each with its capability class, exposure bound, per-action cost,
 and what it cannot provide; the OAuth catalog is
 <span>[<a href="#I-D.draft-mcguinness-mission-runtime-oauth" class="cite xref">I-D.draft-mcguinness-mission-runtime-oauth</a>]</span>, Section "Mission State
-Sources".<a href="#section-2.5-9" class="pilcrow">¶</a></p>
-<p id="section-2.5-10">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
-class, adopted absent a documented, consequence-specific analysis:<a href="#section-2.5-10" class="pilcrow">¶</a></p>
+Sources".<a href="#section-2.5-10" class="pilcrow">¶</a></p>
+<p id="section-2.5-11">The following are the <span class="bcp14">RECOMMENDED</span> default freshness postures per
+class, adopted absent a documented, consequence-specific analysis:<a href="#section-2.5-11" class="pilcrow">¶</a></p>
 <table class="center" id="table-1">
           <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
 <thead>
@@ -1970,9 +1985,9 @@ class, adopted absent a documented, consequence-specific analysis:<a href="#sect
             </tr>
           </tbody>
         </table>
-<p id="section-2.5-12">A deployment justifies any looser value for a high-consequence class
-in its Enforcement Scope Statement.<a href="#section-2.5-12" class="pilcrow">¶</a></p>
-<p id="section-2.5-13">For a Mission carrying a nonzero containment overlay
+<p id="section-2.5-13">A deployment justifies any looser value for a high-consequence class
+in its Enforcement Scope Statement.<a href="#section-2.5-13" class="pilcrow">¶</a></p>
+<p id="section-2.5-14">For a Mission carrying a nonzero containment overlay
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), the <span class="bcp14">RECOMMENDED</span>
 posture for a consequential read whose authorizing entry or action class
 intersects the overlay tightens to a containment-aware state source, for
@@ -1984,8 +1999,8 @@ Mission, and restoration is a successor Mission's own approval
 contained Mission stays <code>active</code>, so a source that reports only
 lifecycle state does not change
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
-"Propagation").<a href="#section-2.5-13" class="pilcrow">¶</a></p>
-<p id="section-2.5-14">A containment-aware source reports the containment overlay or its
+"Propagation").<a href="#section-2.5-14" class="pilcrow">¶</a></p>
+<p id="section-2.5-15">A containment-aware source reports the containment overlay or its
 changes, not only lifecycle state
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
 "Visibility"); the credential profile names which of its sources
@@ -1994,8 +2009,8 @@ shorten the residual, but it checks nothing at action time, so it
 carries Baseline, not Runtime-Enforced, and is not a containment-aware
 source for this tightening
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
-"Containment Properties").<a href="#section-2.5-14" class="pilcrow">¶</a></p>
-<p id="section-2.5-15">A deployment <span class="bcp14">MAY</span> instead tighten on any nonzero overlay regardless of
+"Containment Properties").<a href="#section-2.5-15" class="pilcrow">¶</a></p>
+<p id="section-2.5-16">A deployment <span class="bcp14">MAY</span> instead tighten on any nonzero overlay regardless of
 class. That is a defensible conservative default; its cost is
 incident-time availability load on reads the overlay does not touch,
 since every consequential read then depends on state-source
@@ -2003,14 +2018,14 @@ availability during the incident that triggered containment. The
 under-containment staleness bound for an affected class is declared
 in its Enforcement Scope Statement alongside the ordinary bound
 (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>); this posture adds no separate value, and
-the bound carries its latency consequence like any other.<a href="#section-2.5-15" class="pilcrow">¶</a></p>
-<p id="section-2.5-16">The tightening narrows the post-taint window for the classes and
+the bound carries its latency consequence like any other.<a href="#section-2.5-16" class="pilcrow">¶</a></p>
+<p id="section-2.5-17">The tightening narrows the post-taint window for the classes and
 deployments that adopt a containment-aware source; it does not close
 the Baseline residual
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section
 "Containment Properties"). A consumer bounded by token lifetime
 alone, or a class this tightening does not reach, still runs to its
-existing bound.<a href="#section-2.5-16" class="pilcrow">¶</a></p>
+existing bound.<a href="#section-2.5-17" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="decision-output">
@@ -2073,7 +2088,7 @@ context, the obligations profile, and ARAP (<a href="#authzen" class="auto inter
 <a href="#section-2.7" class="section-number selfRef">2.7. </a><a href="#name-decision-inputs" class="section-name selfRef">Decision Inputs</a>
         </h3>
 <p id="section-2.7-1">Runtime enforcement <span class="bcp14">MUST</span> evaluate every input below except the last:
-History (<a href="#input-history" class="auto internal xref">Section 2.7.9</a>) is <span class="bcp14">OPTIONAL</span>, evaluated where the
+History (<a href="#input-history" class="auto internal xref">Section 2.7.10</a>) is <span class="bcp14">OPTIONAL</span>, evaluated where the
 deployment declares it.<a href="#section-2.7-1" class="pilcrow">¶</a></p>
 <div id="input-authority">
 <section id="section-2.7.1">
@@ -2399,12 +2414,83 @@ overrides a revoked agent or a non-active Mission
 (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>).<a href="#section-2.7.6-4" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="input-time">
+<div id="input-authority-dependency">
 <section id="section-2.7.7">
-          <h4 id="name-time">
-<a href="#section-2.7.7" class="section-number selfRef">2.7.7. </a><a href="#name-time" class="section-name selfRef">Time</a>
+          <h4 id="name-authority-dependencies">
+<a href="#section-2.7.7" class="section-number selfRef">2.7.7. </a><a href="#name-authority-dependencies" class="section-name selfRef">Authority Dependencies</a>
           </h4>
-<p id="section-2.7.7-1">The PDP <span class="bcp14">MUST</span> refuse if the decision context indicates the credential
+<p id="section-2.7.7-1">A deployment's policy can make reliance on a Mission depend on an
+external authority remaining effective: an entitlement, a delegation,
+the approving principal's continuing role, an accountable owner's
+sponsorship, or a governing policy. Approval evidence does not by
+itself establish that such a condition still holds
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Single Accountable
+Approver"), and whether a later change affects an existing Mission is
+the deployment's policy. The agent-registry evaluation of
+<a href="#input-actor" class="auto internal xref">Section 2.7.6</a> is one such dependency.<a href="#section-2.7.7-1" class="pilcrow">¶</a></p>
+<p id="section-2.7.7-2">A deployment that declares an authority dependency <span class="bcp14">MUST</span> state in its
+Enforcement Scope Statement (<a href="#runtime-conformance" class="auto internal xref">Section 5.2</a>):<a href="#section-2.7.7-2" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-2.7.7-3.1">
+              <p id="section-2.7.7-3.1.1">the dependency, its authoritative source, and the state an
+observation of it represents;<a href="#section-2.7.7-3.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-2.7.7-3.2">
+              <p id="section-2.7.7-3.2.1">what it governs: future Mission activations, an existing Mission,
+selected authority entries or actions, or reliance on one particular
+business approval;<a href="#section-2.7.7-3.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-2.7.7-3.3">
+              <p id="section-2.7.7-3.3.1">which changes at the source invalidate reliance;<a href="#section-2.7.7-3.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-2.7.7-3.4">
+              <p id="section-2.7.7-3.4.1">its maximum staleness, separately from the Mission-state freshness
+declaration (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>);<a href="#section-2.7.7-3.4.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-2.7.7-3.5">
+              <p id="section-2.7.7-3.5.1">how it is enforced: by direct evaluation, by lifecycle-mediated
+enforcement, or both; and<a href="#section-2.7.7-3.5.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-2.7.7-3.6">
+              <p id="section-2.7.7-3.6.1">what restores reliance after it fails, and how responsibility passes
+to a successor through an authorized process that leaves the
+original approval's attribution unchanged.<a href="#section-2.7.7-3.6.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
+<p id="section-2.7.7-4">Under direct evaluation, the PDP, or a composed resource-policy step
+(<a href="#input-resource-policy" class="auto internal xref">Section 2.7.4</a>), establishes the dependency for each
+decision it governs from an acceptable authoritative observation.
+Under lifecycle-mediated enforcement, a trusted reconciler translates
+a relevant change into a Mission restriction, such as a lifecycle
+operation or a narrowing where a containment overlay runs, through an
+upstream observation path whose delay is bounded and monitored. A
+current <code>active</code> state does not show that this reconciliation is
+current: when upstream observation or reconciliation exceeds its
+declared bound, the deployment <span class="bcp14">MUST</span> refuse the actions the dependency
+governs until it is current again.<a href="#section-2.7.7-4" class="pilcrow">¶</a></p>
+<p id="section-2.7.7-5">The deployment <span class="bcp14">MUST</span> refuse an action governed by a declared dependency,
+through its declared enforcement route, when the dependency is known
+to be withdrawn, when an applicable invalidation has been observed, or
+when no acceptable authoritative observation remains. Unless the deployment requires an online check, an outage
+alone does not invalidate an observation still within its accepted
+validity. That validity runs from the time the observation represents,
+never from a later re-issue or re-signing
+(<span>[<a href="#I-D.draft-mcguinness-mission-control-plane" class="cite xref">I-D.draft-mcguinness-mission-control-plane</a>]</span>). A permit issued in
+reliance on a dependency observation <span class="bcp14">MUST</span> expire no later than that
+observation's accepted validity.<a href="#section-2.7.7-5" class="pilcrow">¶</a></p>
+<p id="section-2.7.7-6">Retained evidence of such a refusal, from whichever component enforces
+the dependency, distinguishes a known withdrawal, a stale observation
+and an unavailable source. A dependency enforced through
+an existing mechanism keeps that mechanism's refusal: an inactive
+Mission, contained authority, or a failed resource-policy condition.<a href="#section-2.7.7-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="input-time">
+<section id="section-2.7.8">
+          <h4 id="name-time">
+<a href="#section-2.7.8" class="section-number selfRef">2.7.8. </a><a href="#name-time" class="section-name selfRef">Time</a>
+          </h4>
+<p id="section-2.7.8-1">The PDP <span class="bcp14">MUST</span> refuse if the decision context indicates the credential
 is expired. The issuance-and-derivation layer caps a derived
 credential's expiry at the Mission's <code>expires_at</code>, so the
 credential-expiry check enforces the Mission's expiry transitively
@@ -2413,32 +2499,32 @@ credential-expiry check enforces the Mission's expiry transitively
 and its state source do not themselves surface <code>expires_at</code>; where a
 Mission state source does expose it (or reports the Mission
 <code>terminated</code> with reason <code>expired</code>), the PDP <span class="bcp14">MUST</span> refuse on it
-independent of the credential's own expiry.<a href="#section-2.7.7-1" class="pilcrow">¶</a></p>
-<p id="section-2.7.7-2">The PDP sets the permit's validity window from these inputs. That
+independent of the credential's own expiry.<a href="#section-2.7.8-1" class="pilcrow">¶</a></p>
+<p id="section-2.7.8-2">The PDP sets the permit's validity window from these inputs. That
 the action actually executes within that window is the executing
-PEP's reverification, not a decision input (<a href="#parameter-binding" class="auto internal xref">Section 8</a>).<a href="#section-2.7.7-2" class="pilcrow">¶</a></p>
+PEP's reverification, not a decision input (<a href="#parameter-binding" class="auto internal xref">Section 8</a>).<a href="#section-2.7.8-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="input-state">
-<section id="section-2.7.8">
+<section id="section-2.7.9">
           <h4 id="name-state">
-<a href="#section-2.7.8" class="section-number selfRef">2.7.8. </a><a href="#name-state" class="section-name selfRef">State</a>
+<a href="#section-2.7.9" class="section-number selfRef">2.7.9. </a><a href="#name-state" class="section-name selfRef">State</a>
           </h4>
-<p id="section-2.7.8-1">The PDP <span class="bcp14">MUST</span> refuse unless the Mission is <code>active</code>
-(<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-2.7.8-1" class="pilcrow">¶</a></p>
+<p id="section-2.7.9-1">The PDP <span class="bcp14">MUST</span> refuse unless the Mission is <code>active</code>
+(<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-2.7.9-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="input-history">
-<section id="section-2.7.9">
+<section id="section-2.7.10">
           <h4 id="name-history">
-<a href="#section-2.7.9" class="section-number selfRef">2.7.9. </a><a href="#name-history" class="section-name selfRef">History</a>
+<a href="#section-2.7.10" class="section-number selfRef">2.7.10. </a><a href="#name-history" class="section-name selfRef">History</a>
           </h4>
-<p id="section-2.7.9-1">The inputs above evaluate the request; this input evaluates where
+<p id="section-2.7.10-1">The inputs above evaluate the request; this input evaluates where
 the undertaking stands. A deployment <span class="bcp14">MAY</span> evaluate policy predicates
 over the Mission's prior Decision and Execution Evidence (for
 example, a precondition that a named action class completed) as
-deployment-local context keyed on the Mission's identity.<a href="#section-2.7.9-1" class="pilcrow">¶</a></p>
-<p id="section-2.7.9-2">This is
+deployment-local context keyed on the Mission's identity.<a href="#section-2.7.10-1" class="pilcrow">¶</a></p>
+<p id="section-2.7.10-2">This is
 the sequence-aware half of the context asymmetry the architecture
 names (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class="cite xref">I-D.draft-mcguinness-mission-architecture</a>]</span>): the resource
 prices "delete database" the same in isolation and inside an
@@ -2447,25 +2533,25 @@ where the undertaking's history accumulates can tell the two apart.
 The policy side selects: the deployment's policy or materialized
 view names the predicates a decision requires, and the requesting
 component supplies facts or an evidence reference, never the choice
-of predicate.<a href="#section-2.7.9-2" class="pilcrow">¶</a></p>
-<p id="section-2.7.9-3">History is a decision input, never a grant. A history predicate
+of predicate.<a href="#section-2.7.10-2" class="pilcrow">¶</a></p>
+<p id="section-2.7.10-3">History is a decision input, never a grant. A history predicate
 <span class="bcp14">MUST NOT</span> expand authority beyond the issued authority. Where
 deployment or Resource policy
 requires a history predicate, the PDP <span class="bcp14">MUST</span> fail closed when the
 predicate cannot be established or the evidence store cannot be
-consulted.<a href="#section-2.7.9-3" class="pilcrow">¶</a></p>
-<p id="section-2.7.9-4">A deployment that declares history evaluation in its
+consulted.<a href="#section-2.7.10-3" class="pilcrow">¶</a></p>
+<p id="section-2.7.10-4">A deployment that declares history evaluation in its
 Enforcement Scope Statement treats the evidence store as a state
 source under this profile's freshness discipline: a declared
 staleness bound, and refusal when the required history cannot be
-established within the bound (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-2.7.9-4" class="pilcrow">¶</a></p>
-<p id="section-2.7.9-5">Cross-PDP
+established within the bound (<a href="#state-freshness" class="auto internal xref">Section 2.5</a>).<a href="#section-2.7.10-4" class="pilcrow">¶</a></p>
+<p id="section-2.7.10-5">Cross-PDP
 history composes through the deployment's evidence store or
 registered transparency records
 (<span>[<a href="#I-D.draft-mcguinness-mission-audit" class="cite xref">I-D.draft-mcguinness-mission-audit</a>]</span>) and is otherwise out of
 scope. How a decision request names a history predicate, and how
 its evaluation is recorded, is the decision-API binding's
-(<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.7.9-5" class="pilcrow">¶</a></p>
+(<a href="#authzen" class="auto internal xref">Section 15</a>).<a href="#section-2.7.10-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2664,7 +2750,13 @@ semantics remain the orchestration profile's
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>). The correlation
 identifier itself supplies no authority. A compensation is a new
 operation with a new idempotency key and obtains fresh action-bound
-approval where its class requires it.<a href="#section-2.10-6" class="pilcrow">¶</a></p>
+approval where its class requires it.
+Its parameters are those of the committed effect it offsets: the PEP
+<span class="bcp14">MUST</span> establish them from that effect's retained record before
+requesting the Decision, never from current resource state or an
+agent-supplied argument, and bind them through <code>parameter_digest</code>. The
+executing resource <span class="bcp14">MUST</span> refuse an offset whose parameters differ from
+the committed effect's.<a href="#section-2.10-6" class="pilcrow">¶</a></p>
 <p id="section-2.10-7">For a compound action, the transaction-authorization companion's
 single-use token authorizes one commit-phase operation, not a permit
 spanning preparation, commit, and compensation
@@ -2714,7 +2806,7 @@ refusal.<a href="#section-2.11-1" class="pilcrow">¶</a></p>
               <td class="text-left" rowspan="1" colspan="1">Fail closed for consequential actions</td>
             </tr>
             <tr>
-              <td class="text-left" rowspan="1" colspan="1">A policy-required history predicate cannot be established, or the evidence store cannot be consulted (<a href="#input-history" class="auto internal xref">Section 2.7.9</a>)</td>
+              <td class="text-left" rowspan="1" colspan="1">A policy-required history predicate cannot be established, or the evidence store cannot be consulted (<a href="#input-history" class="auto internal xref">Section 2.7.10</a>)</td>
               <td class="text-left" rowspan="1" colspan="1">Fail closed</td>
             </tr>
             <tr>
@@ -3950,7 +4042,7 @@ payload after the decision and before presentation.<a href="#section-5.7-20" cla
 <p id="section-5.8-1">An evidence-signing key is not an authorization credential, and its
 signature <span class="bcp14">MUST NOT</span> be accepted as a grant or as widening the
 Authority Set. Its compromise corrupts the record plane and, where
-signed history is a decision input (<a href="#input-history" class="auto internal xref">Section 2.7.9</a>), can also
+signed history is a decision input (<a href="#input-history" class="auto internal xref">Section 2.7.10</a>), can also
 corrupt later authorization outcomes within that envelope: a forged
 record is a forged precondition (<a href="#security-considerations" class="auto internal xref">Section 17</a>). The
 record plane is what a post-compromise investigation relies on, so
@@ -4651,30 +4743,43 @@ its distinct property; adoption does not require shrinking an existing
 parameter digest. The Operation Profile identifies every consumer of a
 changed digest form and its migration rule, including vendor/target
 identity, amount/currency and destination facts where applicable.<a href="#section-9.1-6" class="pilcrow">¶</a></p>
-<p id="section-9.1-7">The salt <span class="bcp14">MUST</span> be unpredictable, secret, qualified by Mission and version,
-and retained for the lifetime of every outstanding binding that uses it.
-It never appears in decision requests or evidence. It <span class="bcp14">MUST</span> survive restart
-and be consistently available to the PEP replicas that can use those
-bindings, on the terms <a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a> sets for the
-consumed-identifier store; a deployment <span class="bcp14">MUST</span> fail closed for a binding
-whose salt or descriptor cannot be recovered, rather than silently
-replacing either. This is persistent secret-state coordination, not a
-stateless digest scheme. Salting limits guessing of low-entropy values;
-digest-only evidence still exposes equality and linkability.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
+<p id="section-9.1-7">The salt <span class="bcp14">MUST</span> be unpredictable, secret, and qualified by Mission and
+version. It never appears in decision requests or evidence. On the terms
+<a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a> sets for the consumed-identifier store, the salt
+either survives restart and is consistently available to the PEP replicas
+that can use its bindings, or is held per epoch: a restart, or a replica
+that does not hold a version, then loses every binding made under it.
+Rotation <span class="bcp14">MUST</span> retain a version for the lifetime of every outstanding
+binding that uses it, or explicitly invalidate those bindings. Under either
+posture, a deployment <span class="bcp14">MUST</span> fail closed for a binding whose salt or
+descriptor cannot be recovered, rather than silently replacing either.
+Every execution path that can use such a binding refuses it before any
+effect. Neither posture is a stateless digest scheme. Salting limits
+guessing of low-entropy values; digest-only evidence still exposes
+equality and linkability.<a href="#section-9.1-7" class="pilcrow">¶</a></p>
 <p id="section-9.1-8">The PDP <span class="bcp14">MUST</span> return the supplied context digest as a permit condition
 for a covered operation. The executing PEP <span class="bcp14">MUST</span> re-resolve the declared
-facts and recompute the bound context with its own applicable descriptor
-immediately before releasing the effect, in the same step as the
-<code>parameter_digest</code> recomputation of <a href="#execution-reverification" class="auto internal xref">Section 9.4</a>. A
+facts and recompute the bound context under the descriptor and salt
+version the binding committed immediately before releasing the effect, in
+the same step as the <code>parameter_digest</code> recomputation of
+<a href="#execution-reverification" class="auto internal xref">Section 9.4</a>. A
 missing binding, changed descriptor, unequal digest, or unavailable fact
-<span class="bcp14">MUST</span> cause refusal before any effect. A condition on an operation outside
+<span class="bcp14">MUST</span> cause refusal before any effect. A changed descriptor is one the
+operation's declaration no longer names, refused even where the facts
+are unchanged; a committed descriptor that cannot be recovered leaves the
+context unavailable. A condition on an operation outside
 the declared binding is invalid there. The normal invalid-condition and
 permit-binding rules still apply; the request or retrospective evidence
 cannot replace the permit condition.<a href="#section-9.1-8" class="pilcrow">¶</a></p>
 <p id="section-9.1-9">An inability to capture context before requesting a Decision produces a
-pre-decision Refusal Record. After a permit exists, failure to re-resolve
-or match the context produces Execution Evidence with <code>outcome</code>
-          <code>suppressed</code> and <code>error</code> <code>target_drift</code>, not a new PDP denial reason.
+pre-decision Refusal Record, <code>evaluation_context_unresolvable</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>). After a permit exists,
+failure to re-resolve or match the context produces Execution Evidence
+with <code>outcome</code> <code>suppressed</code>, not a new PDP denial reason. Its <code>error</code> is
+<code>target_drift</code> unless the context is established and an agent-supplied
+parameter demonstrably changed, which is <code>parameter_mismatch</code>; the record
+keeps every digest pair the PEP can observe and the audit consumer reports
+each divergence (<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).
 The extension composes with the single-use rule
 (<a href="#single-use-identifiers" class="auto internal xref">Section 9.2</a>) and never substitutes for it, changing
 neither single-use consumption nor retained-permit retry semantics.
@@ -6027,7 +6132,7 @@ established;<a href="#section-16-2.6.1" class="pilcrow">¶</a></p>
         <li class="normal" id="section-16-2.7">
           <p id="section-16-2.7.1">cross-PDP history composition other than through the deployment's
 evidence store or registered transparency records
-(<a href="#input-history" class="auto internal xref">Section 2.7.9</a>);<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
+(<a href="#input-history" class="auto internal xref">Section 2.7.10</a>);<a href="#section-16-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-16-2.8">
           <p id="section-16-2.8.1">action-hierarchy and resource-containment subset extensions (this
@@ -6215,7 +6320,7 @@ metering companion apply (<span>[<a href="#I-D.draft-mcguinness-mission-metering
         <h3 id="name-the-history-input">
 <a href="#section-17.7" class="section-number selfRef">17.7. </a><a href="#name-the-history-input" class="section-name selfRef">The History Input</a>
         </h3>
-<p id="section-17.7-1">The history input (<a href="#input-history" class="auto internal xref">Section 2.7.9</a>) makes prior evidence
+<p id="section-17.7-1">The history input (<a href="#input-history" class="auto internal xref">Section 2.7.10</a>) makes prior evidence
 load-bearing for later decisions, so it is attacker-adjacent
 wherever evidence producers are compromised: a forged record is a
 forged precondition, and a suppressed record denies the step that
@@ -6723,7 +6828,38 @@ worked example shows the concrete record
 <p id="appendix-D-1">[[ To be removed from the final specification ]]<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-D-2.1">
-          <p id="appendix-D-2.1.1">Deployment Considerations: a gated action waits for its gate in
+          <p id="appendix-D-2.1.1">Authority Dependencies: a deployment that makes reliance depend on an
+external authority remaining effective declares the dependency, its
+source, what it governs, invalidating changes, its staleness bound,
+its enforcement route (direct evaluation, lifecycle-mediated, or
+both) and its recovery; reliance stops when no acceptable
+observation remains, and a permit does not outlive the observation.
+Mission State and Freshness states how a bound from an external
+authority change is measured (#830).<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.2">
+          <p id="appendix-D-2.2.1">Evaluation-Context Binding (#773): the salt survives restart and is
+available to every replica that can use its bindings, or is held per
+epoch, so that a restart or a replica without the version loses those
+bindings; rotation retains a version for its outstanding bindings or
+invalidates them explicitly, and every execution path refuses an
+unrecoverable binding before any effect. A capture failure before the
+decision request is the Refusal Record <code>evaluation_context_unresolvable</code>;
+after a permit, the <code>error</code> is <code>target_drift</code> unless the context is
+established and an agent-supplied parameter changed, with every
+observable digest pair kept. The context is recomputed under the
+descriptor the binding committed, and a changed descriptor is refused
+on its own.<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.3">
+          <p id="appendix-D-2.3.1">Compound Actions: a compensation's parameters are those of the
+committed effect it offsets, established from that effect's retained
+record before the Decision and bound through <code>parameter_digest</code>, and
+the executing resource refuses an offset whose parameters differ
+(#252).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.4">
+          <p id="appendix-D-2.4.1">Deployment Considerations: a gated action waits for its gate in
 every class; whether the decision waits on the network depends on
 where the state it consults is held. The Mission is the partition
 key, not the only consistency domain: a table names the domain that
@@ -6732,15 +6868,15 @@ idempotency claim, metering counters under either enforcement
 profile, exclusivity groups spanning Missions, and the per-emitter
 evidence sequence) and the disclosures already required for each. A
 revocation bound limits duration, not consequence (informative). No
-requirement changed.<a href="#appendix-D-2.1.1" class="pilcrow">¶</a></p>
+requirement changed.<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.2">
-          <p id="appendix-D-2.2.1">Idempotency: a duration-lease renewal's completed claim returns the
+        <li class="normal" id="appendix-D-2.5">
+          <p id="appendix-D-2.5.1">Idempotency: a duration-lease renewal's completed claim returns the
 renewal's permit to a retransmission while that permit is valid
-(#1464).<a href="#appendix-D-2.2.1" class="pilcrow">¶</a></p>
+(#1464).<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.3">
-          <p id="appendix-D-2.3.1">Resource Contract: an authority entry can reference, at approval, an
+        <li class="normal" id="appendix-D-2.6">
+          <p id="appendix-D-2.6.1">Resource Contract: an authority entry can reference, at approval, an
 immutable and versioned resource contract that assembles the
 operation's existing definitions. The PDP refuses a missing reference
 where the resource requires one, and one that does not resolve:
@@ -6749,10 +6885,10 @@ declared retention. A retained superseded version relaxes no other
 input. The action-bound approval and the permit bind the reference,
 and the executing PEP re-resolves it before releasing the effect.
 There is no compatibility algorithm or latest-version fallback
-(#249).<a href="#appendix-D-2.3.1" class="pilcrow">¶</a></p>
+(#249).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.4">
-          <p id="appendix-D-2.4.1">Execution Capabilities: where the transaction-assurance tier covers
+        <li class="normal" id="appendix-D-2.7">
+          <p id="appendix-D-2.7.1">Execution Capabilities: where the transaction-assurance tier covers
 an operation's class, its Operation Profile declares durable
 idempotency, conditional-effect support, authoritative outcome
 lookup, the commit point, cancellation, compensation authority, and
@@ -6761,10 +6897,10 @@ Evaluation-Context Binding property needs declared conditional-effect
 support, exactly-once execution needs durable idempotency held by the
 resource, and an unknown high-consequence outcome is never recovered
 by executing the effect again, except as a retransmission the
-resource deduplicates (#817).<a href="#appendix-D-2.4.1" class="pilcrow">¶</a></p>
+resource deduplicates (#817).<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.5">
-          <p id="appendix-D-2.5.1">Enforcement Boundary Identifier: each mediated resource entry of the
+        <li class="normal" id="appendix-D-2.8">
+          <p id="appendix-D-2.8.1">Enforcement Boundary Identifier: each mediated resource entry of the
 Enforcement Scope Statement is an enforcement boundary with one
 identifier, which the PEP establishes from trusted routing or
 configuration, never from the credential's audience order or its
@@ -6776,49 +6912,49 @@ resource". A request whose boundary cannot be established is
 refused, with no record naming a boundary. Changing a Boundary
 Identifier defines the versioned statement, the ordered cutover,
 historical verification, and that aliases never rewrite approved
-entries (#853).<a href="#appendix-D-2.5.1" class="pilcrow">¶</a></p>
+entries (#853).<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.6">
-          <p id="appendix-D-2.6.1">Execution-Outcome Evidence: reconciliation records an outcome only
+        <li class="normal" id="appendix-D-2.9">
+          <p id="appendix-D-2.9.1">Execution-Outcome Evidence: reconciliation records an outcome only
 from an effect the resource attributes to the action through an
 identifier recorded with it, never from resource state alone; the
-Resource Server runtime profile names that identifier (#1271).<a href="#appendix-D-2.6.1" class="pilcrow">¶</a></p>
+Resource Server runtime profile names that identifier (#1271).<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.7">
-          <p id="appendix-D-2.7.1">Permit Binding: the permit binds the operation target an
+        <li class="normal" id="appendix-D-2.10">
+          <p id="appendix-D-2.10.1">Permit Binding: the permit binds the operation target an
 authority-entry match uses, and the OAuth realization of a
 <code>mission_resource_access</code> entry matches its <code>resource</code> against that
-target (#1276).<a href="#appendix-D-2.7.1" class="pilcrow">¶</a></p>
+target (#1276).<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.8">
-          <p id="appendix-D-2.8.1">Mission Binding Establishment: names the AAuth realization of a
+        <li class="normal" id="appendix-D-2.11">
+          <p id="appendix-D-2.11.1">Mission Binding Establishment: names the AAuth realization of a
 credential-carried Mission reference beside the OAuth one, limited
 to the access paths where the AAuth binding supplies
 Credential-Bound, and no longer says AAuth reference propagation
 supplies an externally established reference: the AAuth binding
-defines no join (#1169).<a href="#appendix-D-2.8.1" class="pilcrow">¶</a></p>
+defines no join (#1169).<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.9">
-          <p id="appendix-D-2.9.1">Time: a Mission state source reports an expired Mission as
+        <li class="normal" id="appendix-D-2.12">
+          <p id="appendix-D-2.12.1">Time: a Mission state source reports an expired Mission as
 <code>terminated</code> with reason <code>expired</code>; the refusal on it is unchanged
-(#705).<a href="#appendix-D-2.9.1" class="pilcrow">¶</a></p>
+(#705).<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.10">
-          <p id="appendix-D-2.10.1">Action Classification: the <code>purpose</code> that may raise a class is the
+        <li class="normal" id="appendix-D-2.13">
+          <p id="appendix-D-2.13.1">Action Classification: the <code>purpose</code> that may raise a class is the
 approved Mission's, from its Mission state or a validated
 projection, never a value the request asserts. The semantic
 intent-alignment signal's bound cites the issuance profile's
 treatment of <code>purpose</code> as restrictive outside its configured-mapping
 lookup rather than as inert. The rule 2 statement adds a
-requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.10.1" class="pilcrow">¶</a></p>
+requirement; the signal's requirement is unchanged (#1102).<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.11">
-          <p id="appendix-D-2.11.1">The <code>rendering_independence</code> assurance row names the action-bound
+        <li class="normal" id="appendix-D-2.14">
+          <p id="appendix-D-2.14.1">The <code>rendering_independence</code> assurance row names the action-bound
 approval it is evaluated per; "approval event" is reserved for the
-Mission's creation (#1120).<a href="#appendix-D-2.11.1" class="pilcrow">¶</a></p>
+Mission's creation (#1120).<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.12">
-          <p id="appendix-D-2.12.1">Mission State and Freshness states credential expiry and the
+        <li class="normal" id="appendix-D-2.15">
+          <p id="appendix-D-2.15.1">Mission State and Freshness states credential expiry and the
 state-gated refresh cycle as one Credential-lifetime freshness
 source below the high-consequence floor, conforming only where every
 issuance, refresh, and exchange path checks Mission state within the
@@ -6827,76 +6963,76 @@ from an earlier observation adds that observation's age, and the
 latency statements for paths outside PDP gating carry the same sum.
 No BCP 14 sentence changed; the stated conformance condition,
 previously gated derivation and refresh, now covers every issuance,
-refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.12.1" class="pilcrow">¶</a></p>
+refresh, and exchange path and has its own ledger row.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.13">
-          <p id="appendix-D-2.13.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
+        <li class="normal" id="appendix-D-2.16">
+          <p id="appendix-D-2.16.1">Evaluation-Context Binding no longer speaks of "Runtime-Enforced
 conformance": a level is guidance, never a conformance class. No
-requirement changed.<a href="#appendix-D-2.13.1" class="pilcrow">¶</a></p>
+requirement changed.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.14">
-          <p id="appendix-D-2.14.1">Idempotency defines the Exact and Bounded-consistency enforcement
+        <li class="normal" id="appendix-D-2.17">
+          <p id="appendix-D-2.17.1">Idempotency defines the Exact and Bounded-consistency enforcement
 profiles for its own claim, so the idempotency requirements no longer
 depend on the experimental metering companion, which is cited only as
-applying the same profiles to its counters.<a href="#appendix-D-2.14.1" class="pilcrow">¶</a></p>
+applying the same profiles to its counters.<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.15">
-          <p id="appendix-D-2.15.1">Credential Custody: the acting credential for a high-consequence
+        <li class="normal" id="appendix-D-2.18">
+          <p id="appendix-D-2.18.1">Credential Custody: the acting credential for a high-consequence
 action is sender-constrained in either Mission-establishment mode.
 The PEP supplies a confirmation key only from a binding it verified
 with a current proof of possession, and the PDP denies a
 high-consequence action without one. Enforcement Invariants and
-Failure Modes point to the rule.<a href="#appendix-D-2.15.1" class="pilcrow">¶</a></p>
+Failure Modes point to the rule.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.16">
-          <p id="appendix-D-2.16.1">Out of Scope lists cross-PDP history composition other than through
+        <li class="normal" id="appendix-D-2.19">
+          <p id="appendix-D-2.19.1">Out of Scope lists cross-PDP history composition other than through
 the deployment's evidence store or registered transparency records,
-matching History. No requirement changed.<a href="#appendix-D-2.16.1" class="pilcrow">¶</a></p>
+matching History. No requirement changed.<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.17">
-          <p id="appendix-D-2.17.1">Authority input: for every issuer-held narrowing mechanism the
+        <li class="normal" id="appendix-D-2.20">
+          <p id="appendix-D-2.20.1">Authority input: for every issuer-held narrowing mechanism the
 deployment runs, the PDP establishes current effective authority from
 a source reporting it and refuses when it cannot; the PDP refuses an
-action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.17.1" class="pilcrow">¶</a></p>
+action within a discharged entry (formerly <span class="bcp14">SHOULD</span>).<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.18">
-          <p id="appendix-D-2.18.1">A materialized policy view is one way to evaluate the authority
+        <li class="normal" id="appendix-D-2.21">
+          <p id="appendix-D-2.21.1">A materialized policy view is one way to evaluate the authority
 input, not the only one: the Materialized Policy View section
 governs a PDP that uses one, and the authority input requires
 whatever the PDP evaluates to be no broader than the current
 effective authority and bound to the Mission, with mutable state
 from a state source; the policy-view version names whichever basis
-the PDP evaluated.<a href="#appendix-D-2.18.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.19">
-          <p id="appendix-D-2.19.1">The Operation Profile's items are grouped as the operation's binding
-and its declarations, with no change to any requirement or to which
-operations it applies to; a declaration is stated even where the
-answer is no.<a href="#appendix-D-2.19.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.20">
-          <p id="appendix-D-2.20.1">The record minimum's evaluation request digest is over the input
-the runtime evidence companion defines (#971).<a href="#appendix-D-2.20.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-D-2.21">
-          <p id="appendix-D-2.21.1">Security Considerations notes that an idempotency key identifies a
-request, not the business event it carries out, and that the
-Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
+the PDP evaluated.<a href="#appendix-D-2.21.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.22">
-          <p id="appendix-D-2.22.1">The Enforcement Scope Statement is what a deployment adopting the
-Runtime-Enforced bundle publishes, not what earns the level; the
-level stays guidance, matching the architecture's assurance levels,
-and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.22.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.22.1">The Operation Profile's items are grouped as the operation's binding
+and its declarations, with no change to any requirement or to which
+operations it applies to; a declaration is stated even where the
+answer is no.<a href="#appendix-D-2.22.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.23">
-          <p id="appendix-D-2.23.1">The Introduction states this profile as the per-action decision for
-the action classes it covers, composed over the issuance profile's
-bounds, and Deployment Considerations names introspection as a
-cutoff on the issuance-only path.<a href="#appendix-D-2.23.1" class="pilcrow">¶</a></p>
+          <p id="appendix-D-2.23.1">The record minimum's evaluation request digest is over the input
+the runtime evidence companion defines (#971).<a href="#appendix-D-2.23.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-2.24">
-          <p id="appendix-D-2.24.1">Client-instance references follow their successors:
+          <p id="appendix-D-2.24.1">Security Considerations notes that an idempotency key identifies a
+request, not the business event it carries out, and that the
+Operation Profile and the resource own event-level deduplication.<a href="#appendix-D-2.24.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.25">
+          <p id="appendix-D-2.25.1">The Enforcement Scope Statement is what a deployment adopting the
+Runtime-Enforced bundle publishes, not what earns the level; the
+level stays guidance, matching the architecture's assurance levels,
+and the statement's named claims are what a relying party compares.<a href="#appendix-D-2.25.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.26">
+          <p id="appendix-D-2.26.1">The Introduction states this profile as the per-action decision for
+the action classes it covers, composed over the issuance profile's
+bounds, and Deployment Considerations names introspection as a
+cutoff on the issuance-only path.<a href="#appendix-D-2.26.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-2.27">
+          <p id="appendix-D-2.27.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 {I-D.draft-mcguinness-oauth-client-instance-id}, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6904,37 +7040,37 @@ cited. Attester-verified
 context is instance identity that grants no authority, custody's
 per-instance key follows the successor's instance-unique key for
 attribution, and EAT evidence is no longer tied to a carrier
-profile. No requirement changed.<a href="#appendix-D-2.24.1" class="pilcrow">¶</a></p>
+profile. No requirement changed.<a href="#appendix-D-2.27.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.25">
-          <p id="appendix-D-2.25.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
+        <li class="normal" id="appendix-D-2.28">
+          <p id="appendix-D-2.28.1">Added approval-resolution rule 5, the agent-invokable approval bypass,
 and its negative-conformance case (#759). Observing or requesting an
-independent approval is distinct from resolving it.<a href="#appendix-D-2.25.1" class="pilcrow">¶</a></p>
+independent approval is distinct from resolving it.<a href="#appendix-D-2.28.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.26">
-          <p id="appendix-D-2.26.1">Defined compound-action phases, one Decision per consequential
+        <li class="normal" id="appendix-D-2.29">
+          <p id="appendix-D-2.29.1">Defined compound-action phases, one Decision per consequential
 phase, a PEP-derived phase binding verified at permit use,
 phase-scoped idempotency where phases share an action identifier,
 and compensation correlation (#252). Strength change:
 <code>compensates_evaluation_id</code> on Decision Evidence moves from <span class="bcp14">OPTIONAL</span>
 to <span class="bcp14">REQUIRED</span> for a compensate-phase decision, <span class="bcp14">OPTIONAL</span> otherwise. The
 AuthZEN condition, the evidence member, and conformance coverage are
-specified separately.<a href="#appendix-D-2.26.1" class="pilcrow">¶</a></p>
+specified separately.<a href="#appendix-D-2.29.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.27">
-          <p id="appendix-D-2.27.1">Added per-entry perimeter dispositions inside the existing
+        <li class="normal" id="appendix-D-2.30">
+          <p id="appendix-D-2.30.1">Added per-entry perimeter dispositions inside the existing
 mediated-scope declaration, its compatibility rule, and the
-prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.27.1" class="pilcrow">¶</a></p>
+prohibition on claiming reconstruction as mediation (#758).<a href="#appendix-D-2.30.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.28">
-          <p id="appendix-D-2.28.1">Operational Considerations added (#310): a dependency-conditional outage
+        <li class="normal" id="appendix-D-2.31">
+          <p id="appendix-D-2.31.1">Operational Considerations added (#310): a dependency-conditional outage
 blast-radius table indexed by action class, the remaining-window
 ride-through, the declared positive break-glass mode with truthful
 emergency evidence, and the replication disclosure. The three operator
-declarations carry no implementation coverage.<a href="#appendix-D-2.28.1" class="pilcrow">¶</a></p>
+declarations carry no implementation coverage.<a href="#appendix-D-2.31.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-2.29">
-          <p id="appendix-D-2.29.1">Added the Evaluation-Context Binding named assurance extension (#773),
+        <li class="normal" id="appendix-D-2.32">
+          <p id="appendix-D-2.32.1">Added the Evaluation-Context Binding named assurance extension (#773),
 claimed per mediated action class: a versioned descriptor of
 decision-relevant resource-resolved facts, a salted PEP-computed
 context digest committed with that descriptor, reverification at use,
@@ -6942,7 +7078,7 @@ and the declared verified and enforced properties. The deferred
 evaluation-context bullet is struck and the TOCTOU considerations point
 at the extension, keeping the residual for uncovered facts and
 non-adopters. The wire condition, the evidence members, and conformance
-coverage are specified separately.<a href="#appendix-D-2.29.1" class="pilcrow">¶</a></p>
+coverage are specified separately.<a href="#appendix-D-2.32.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

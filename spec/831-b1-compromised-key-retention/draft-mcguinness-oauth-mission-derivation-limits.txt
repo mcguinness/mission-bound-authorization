@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                 Mission Derivation Limits for OAuth 2.0
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -327,13 +327,16 @@ Table of Contents
    access token a ceiling-drawdown response returns is one derivation,
    counted against the successor, never the predecessor
    ([I-D.draft-mcguinness-oauth-mission-progressive]).  A Template
-   Dispatch is one derivation per dispatch_event_id, counted against the
-   dispatched Mission it creates
-   ([I-D.draft-mcguinness-oauth-mission-template], Section "Dispatch").
-   The redemption of a Dispatch Handoff grant at the Mission Issuer is
-   one derivation, counted against the dispatched Mission its mission
-   claim names ([I-D.draft-mcguinness-oauth-mission-template],
-   Section "Dispatch Handoff").
+   Dispatch's creation is one derivation per dispatch_event_id, counted
+   against the dispatched Mission it creates; a retry that returns the
+   delivered access token counts nothing, and one that mints a
+   replacement delivery counts once more
+   ([I-D.draft-mcguinness-oauth-mission-template], Section "Idempotency
+   and recovery").  The redemption of a Dispatch Handoff grant at the
+   Mission Issuer is one derivation, counted against the dispatched
+   Mission its mission claim names
+   ([I-D.draft-mcguinness-oauth-mission-template], Section "Dispatch
+   Handoff").
 
 4.2.  Atomicity and Concurrency
 
@@ -790,6 +793,12 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  Clarification (#1661, D793): What Counts separates a Template
+      Dispatch's creation, one derivation per dispatch_event_id, from
+      its delivery: a retry that returns the delivered token counts
+      nothing, and one that mints a replacement delivery counts once
+      more.
 
    *  Editorial, no requirement change (#1647, D764): What Counts names
       a Template Dispatch as one derivation per dispatch_event_id,

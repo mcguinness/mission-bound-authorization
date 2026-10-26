@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -99,9 +99,10 @@ Table of Contents
        2.7.4.  Resource Policy
        2.7.5.  Parameters
        2.7.6.  Actor
-       2.7.7.  Time
-       2.7.8.  State
-       2.7.9.  History
+       2.7.7.  Authority Dependencies
+       2.7.8.  Time
+       2.7.9.  State
+       2.7.10. History
      2.8.  Parameter Digest
      2.9.  Permit Binding
      2.10. Compound Actions
@@ -432,6 +433,19 @@ Table of Contents
    credential lifetime, so it cannot host a class whose bound demands
    that.
 
+   These bounds run from a Mission state change.  A deployment that
+   claims a bound on how quickly an external authority change stops
+   dependent actions (Section 2.7.7) MUST state it from the time the
+   authoritative system records the change to the time a dependent
+   action can no longer begin an effect, and MUST state separately how
+   work already started is treated.  The claim accounts for detecting
+   the change, evaluating its effect, any resulting Mission or policy
+   state change, downstream reliance on earlier observations, and the
+   remaining validity of issued permits.  A bound measured from a
+   Mission state change does not establish a bound from the authority
+   change, and a measured successful disablement does not establish it
+   when an event is lost, a feed is disconnected, or a reconciler fails.
+
    *  The PDP MUST refuse a consequential action when it cannot
       establish, within the deployment's published staleness bound, that
       the Mission is active.
@@ -666,7 +680,7 @@ Table of Contents
 2.7.  Decision Inputs
 
    Runtime enforcement MUST evaluate every input below except the last:
-   History (Section 2.7.9) is OPTIONAL, evaluated where the deployment
+   History (Section 2.7.10) is OPTIONAL, evaluated where the deployment
    declares it.
 
 2.7.1.  Authority
@@ -961,7 +975,71 @@ Table of Contents
    credential never overrides a revoked agent or a non-active Mission
    ([I-D.draft-mcguinness-mission-architecture]).
 
-2.7.7.  Time
+2.7.7.  Authority Dependencies
+
+   A deployment's policy can make reliance on a Mission depend on an
+   external authority remaining effective: an entitlement, a delegation,
+   the approving principal's continuing role, an accountable owner's
+   sponsorship, or a governing policy.  Approval evidence does not by
+   itself establish that such a condition still holds
+   ([I-D.draft-mcguinness-oauth-mission], Section "Single Accountable
+   Approver"), and whether a later change affects an existing Mission is
+   the deployment's policy.  The agent-registry evaluation of
+   Section 2.7.6 is one such dependency.
+
+   A deployment that declares an authority dependency MUST state in its
+   Enforcement Scope Statement (Section 5.2):
+
+   *  the dependency, its authoritative source, and the state an
+      observation of it represents;
+
+   *  what it governs: future Mission activations, an existing Mission,
+      selected authority entries or actions, or reliance on one
+      particular business approval;
+
+   *  which changes at the source invalidate reliance;
+
+   *  its maximum staleness, separately from the Mission-state freshness
+      declaration (Section 2.5);
+
+   *  how it is enforced: by direct evaluation, by lifecycle-mediated
+      enforcement, or both; and
+
+   *  what restores reliance after it fails, and how responsibility
+      passes to a successor through an authorized process that leaves
+      the original approval's attribution unchanged.
+
+   Under direct evaluation, the PDP, or a composed resource-policy step
+   (Section 2.7.4), establishes the dependency for each decision it
+   governs from an acceptable authoritative observation.  Under
+   lifecycle-mediated enforcement, a trusted reconciler translates a
+   relevant change into a Mission restriction, such as a lifecycle
+   operation or a narrowing where a containment overlay runs, through an
+   upstream observation path whose delay is bounded and monitored.  A
+   current active state does not show that this reconciliation is
+   current: when upstream observation or reconciliation exceeds its
+   declared bound, the deployment MUST refuse the actions the dependency
+   governs until it is current again.
+
+   The deployment MUST refuse an action governed by a declared
+   dependency, through its declared enforcement route, when the
+   dependency is known to be withdrawn, when an applicable invalidation
+   has been observed, or when no acceptable authoritative observation
+   remains.  Unless the deployment requires an online check, an outage
+   alone does not invalidate an observation still within its accepted
+   validity.  That validity runs from the time the observation
+   represents, never from a later re-issue or re-signing
+   ([I-D.draft-mcguinness-mission-control-plane]).  A permit issued in
+   reliance on a dependency observation MUST expire no later than that
+   observation's accepted validity.
+
+   Retained evidence of such a refusal, from whichever component
+   enforces the dependency, distinguishes a known withdrawal, a stale
+   observation and an unavailable source.  A dependency enforced through
+   an existing mechanism keeps that mechanism's refusal: an inactive
+   Mission, contained authority, or a failed resource-policy condition.
+
+2.7.8.  Time
 
    The PDP MUST refuse if the decision context indicates the credential
    is expired.  The issuance-and-derivation layer caps a derived
@@ -978,11 +1056,11 @@ Table of Contents
    the action actually executes within that window is the executing
    PEP's reverification, not a decision input (Section 8).
 
-2.7.8.  State
+2.7.9.  State
 
    The PDP MUST refuse unless the Mission is active (Section 2.5).
 
-2.7.9.  History
+2.7.10.  History
 
    The inputs above evaluate the request; this input evaluates where the
    undertaking stands.  A deployment MAY evaluate policy predicates over
@@ -1180,7 +1258,12 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-orchestration]).  The correlation
    identifier itself supplies no authority.  A compensation is a new
    operation with a new idempotency key and obtains fresh action-bound
-   approval where its class requires it.
+   approval where its class requires it.  Its parameters are those of
+   the committed effect it offsets: the PEP MUST establish them from
+   that effect's retained record before requesting the Decision, never
+   from current resource state or an agent-supplied argument, and bind
+   them through parameter_digest.  The executing resource MUST refuse an
+   offset whose parameters differ from the committed effect's.
 
    For a compound action, the transaction-authorization companion's
    single-use token authorizes one commit-phase operation, not a permit
@@ -1232,7 +1315,7 @@ Table of Contents
     | cannot be established, |                                        |
     | or the evidence store  |                                        |
     | cannot be consulted    |                                        |
-    | (Section 2.7.9)        |                                        |
+    | (Section 2.7.10)       |                                        |
     +------------------------+----------------------------------------+
     | PDP unreachable        | Fail closed for consequential actions; |
     |                        | do not proceed on cached permits past  |
@@ -2303,7 +2386,7 @@ Table of Contents
    An evidence-signing key is not an authorization credential, and its
    signature MUST NOT be accepted as a grant or as widening the
    Authority Set. Its compromise corrupts the record plane and, where
-   signed history is a decision input (Section 2.7.9), can also corrupt
+   signed history is a decision input (Section 2.7.10), can also corrupt
    later authorization outcomes within that envelope: a forged record is
    a forged precondition (Section 17).  The record plane is what a post-
    compromise investigation relies on, so the property that the agent
@@ -2936,39 +3019,51 @@ Table of Contents
    vendor/target identity, amount/currency and destination facts where
    applicable.
 
-   The salt MUST be unpredictable, secret, qualified by Mission and
-   version, and retained for the lifetime of every outstanding binding
-   that uses it.  It never appears in decision requests or evidence.  It
-   MUST survive restart and be consistently available to the PEP
-   replicas that can use those bindings, on the terms Section 9.2 sets
-   for the consumed-identifier store; a deployment MUST fail closed for
-   a binding whose salt or descriptor cannot be recovered, rather than
-   silently replacing either.  This is persistent secret-state
-   coordination, not a stateless digest scheme.  Salting limits guessing
-   of low-entropy values; digest-only evidence still exposes equality
-   and linkability.
+   The salt MUST be unpredictable, secret, and qualified by Mission and
+   version.  It never appears in decision requests or evidence.  On the
+   terms Section 9.2 sets for the consumed-identifier store, the salt
+   either survives restart and is consistently available to the PEP
+   replicas that can use its bindings, or is held per epoch: a restart,
+   or a replica that does not hold a version, then loses every binding
+   made under it.  Rotation MUST retain a version for the lifetime of
+   every outstanding binding that uses it, or explicitly invalidate
+   those bindings.  Under either posture, a deployment MUST fail closed
+   for a binding whose salt or descriptor cannot be recovered, rather
+   than silently replacing either.  Every execution path that can use
+   such a binding refuses it before any effect.  Neither posture is a
+   stateless digest scheme.  Salting limits guessing of low-entropy
+   values; digest-only evidence still exposes equality and linkability.
 
    The PDP MUST return the supplied context digest as a permit condition
    for a covered operation.  The executing PEP MUST re-resolve the
-   declared facts and recompute the bound context with its own
-   applicable descriptor immediately before releasing the effect, in the
-   same step as the parameter_digest recomputation of Section 9.4.  A
-   missing binding, changed descriptor, unequal digest, or unavailable
-   fact MUST cause refusal before any effect.  A condition on an
-   operation outside the declared binding is invalid there.  The normal
-   invalid-condition and permit-binding rules still apply; the request
-   or retrospective evidence cannot replace the permit condition.
+   declared facts and recompute the bound context under the descriptor
+   and salt version the binding committed immediately before releasing
+   the effect, in the same step as the parameter_digest recomputation of
+   Section 9.4.  A missing binding, changed descriptor, unequal digest,
+   or unavailable fact MUST cause refusal before any effect.  A changed
+   descriptor is one the operation's declaration no longer names,
+   refused even where the facts are unchanged; a committed descriptor
+   that cannot be recovered leaves the context unavailable.  A condition
+   on an operation outside the declared binding is invalid there.  The
+   normal invalid-condition and permit-binding rules still apply; the
+   request or retrospective evidence cannot replace the permit
+   condition.
 
    An inability to capture context before requesting a Decision produces
-   a pre-decision Refusal Record.  After a permit exists, failure to re-
-   resolve or match the context produces Execution Evidence with outcome
-   suppressed and error target_drift, not a new PDP denial reason.  The
-   extension composes with the single-use rule (Section 9.2) and never
-   substitutes for it, changing neither single-use consumption nor
-   retained-permit retry semantics.  Every consequential phase captures
-   and checks its own context; a fact declared prepare-stable SHOULD
-   also be compared across prepare and commit, without reusing either
-   phase's permit.
+   a pre-decision Refusal Record, evaluation_context_unresolvable
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  After a permit
+   exists, failure to re-resolve or match the context produces Execution
+   Evidence with outcome suppressed, not a new PDP denial reason.  Its
+   error is target_drift unless the context is established and an agent-
+   supplied parameter demonstrably changed, which is parameter_mismatch;
+   the record keeps every digest pair the PEP can observe and the audit
+   consumer reports each divergence
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  The extension
+   composes with the single-use rule (Section 9.2) and never substitutes
+   for it, changing neither single-use consumption nor retained-permit
+   retry semantics.  Every consequential phase captures and checks its
+   own context; a fact declared prepare-stable SHOULD also be compared
+   across prepare and commit, without reusing either phase's permit.
 
    The *verified* property is a successful reread and comparison.  It
    leaves a possible resource change between that comparison and the
@@ -4201,7 +4296,8 @@ Table of Contents
       established;
 
    *  cross-PDP history composition other than through the deployment's
-      evidence store or registered transparency records (Section 2.7.9);
+      evidence store or registered transparency records
+      (Section 2.7.10);
 
    *  action-hierarchy and resource-containment subset extensions (this
       profile uses the flat subset rule of
@@ -4357,7 +4453,7 @@ Table of Contents
 
 17.7.  The History Input
 
-   The history input (Section 2.7.9) makes prior evidence load-bearing
+   The history input (Section 2.7.10) makes prior evidence load-bearing
    for later decisions, so it is attacker-adjacent wherever evidence
    producers are compromised: a forged record is a forged precondition,
    and a suppressed record denies the step that depends on it.  This is
@@ -4868,6 +4964,34 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Authority Dependencies: a deployment that makes reliance depend on
+      an external authority remaining effective declares the dependency,
+      its source, what it governs, invalidating changes, its staleness
+      bound, its enforcement route (direct evaluation, lifecycle-
+      mediated, or both) and its recovery; reliance stops when no
+      acceptable observation remains, and a permit does not outlive the
+      observation.  Mission State and Freshness states how a bound from
+      an external authority change is measured (#830).
+
+   *  Evaluation-Context Binding (#773): the salt survives restart and
+      is available to every replica that can use its bindings, or is
+      held per epoch, so that a restart or a replica without the version
+      loses those bindings; rotation retains a version for its
+      outstanding bindings or invalidates them explicitly, and every
+      execution path refuses an unrecoverable binding before any effect.
+      A capture failure before the decision request is the Refusal
+      Record evaluation_context_unresolvable; after a permit, the error
+      is target_drift unless the context is established and an agent-
+      supplied parameter changed, with every observable digest pair
+      kept.  The context is recomputed under the descriptor the binding
+      committed, and a changed descriptor is refused on its own.
+
+   *  Compound Actions: a compensation's parameters are those of the
+      committed effect it offsets, established from that effect's
+      retained record before the Decision and bound through
+      parameter_digest, and the executing resource refuses an offset
+      whose parameters differ (#252).
 
    *  Deployment Considerations: a gated action waits for its gate in
       every class; whether the decision waits on the network depends on

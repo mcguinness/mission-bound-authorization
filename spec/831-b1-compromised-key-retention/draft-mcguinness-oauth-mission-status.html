@@ -1066,7 +1066,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 28 April 2027</td>
+<td class="center">Expires 29 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1079,12 +1079,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-status-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-25" class="published">25 October 2026</time>
+<time datetime="2026-10-26" class="published">26 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-28">28 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1144,7 +1144,7 @@ profile.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 28 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1369,7 +1369,7 @@ holding a <code>mission_id</code> resolves, with responses signed as a JWS
 </li>
         <li class="normal" id="section-1-3.2">
           <p id="section-1-3.2.1">An extension to OAuth token introspection that carries a Mission
-projection, which a deployment <span class="bcp14">MAY</span> return as a <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed
+projection, which a deployment can return as a <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed
 response (<a href="#introspection-projection" class="auto internal xref">Section 4</a>).<a href="#section-1-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-1-3.3">
@@ -1510,7 +1510,8 @@ for a specific audience <span class="bcp14">MUST</span> send it.<a href="#sectio
 <dt id="section-3.1-2.5">
 <code>nonce</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.6">
-            <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce binding the
+            <p id="section-3.1-2.6.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 Unicode code points. A
+client-generated nonce binding the
 response to this request. It <span class="bcp14">MUST</span> be unique per request within the
 response lifetime. A consumer <span class="bcp14">MUST</span> reject a response whose <code>nonce</code>
 does not equal the one it sent. This is a standard client challenge:
@@ -1601,7 +1602,13 @@ authenticates directly as a client (mechanism 1 or 3) carries the
 deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
-of <a href="#mission-status-errors" class="auto internal xref">Section 3.10</a> (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+of <a href="#mission-status-errors" class="auto internal xref">Section 3.10</a> (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>). This
+includes an authenticated caller presenting an otherwise-valid access
+token without the <code>mission_status</code> scope: it receives the not-found
+response, not the <code>insufficient_scope</code> error of
+<span><a href="https://rfc-editor.org/rfc/rfc6750#section-3.1" class="relref">Section 3.1</a> of [<a href="#RFC6750" class="cite xref">RFC6750</a>]</span>. An expired token, a token for another
+audience, or a failed sender constraint is instead an access-token
+authentication failure (<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>).<a href="#section-3.2-4" class="pilcrow">¶</a></p>
 <p id="section-3.2-5">A presented access token (mechanism 2) <span class="bcp14">MUST</span> be audience-restricted to
 this endpoint's protected-resource identifier: the <code>resource</code> value the
 AS publishes for this endpoint in its Protected Resource Metadata
@@ -1670,6 +1677,10 @@ none, it receives HTTP 400 <code>invalid_client</code>.<a href="#section-3.3-2.3
         </ul>
 <p id="section-3.3-3">Every challenge carries the <code>resource_metadata</code> parameter naming the
 endpoint's Protected Resource Metadata (<span><a href="https://rfc-editor.org/rfc/rfc9728#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>).
+A 401 response carries the challenge or challenges and a JSON body
+(<a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>): a challenge's <code>error</code> attribute, when
+present, follows its scheme as above and is distinct from the body's
+<code>error</code>, which is <code>unauthorized</code>.
 An authenticated caller not authorized for the referenced Mission
 receives <code>not_found</code> (404) with no challenge
 (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>).<a href="#section-3.3-3" class="pilcrow">¶</a></p>
@@ -1724,7 +1735,11 @@ JWS, not <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> (see <a
 <p id="section-3.5-4">In the ERP examples in this document, the operation contract identifies
 <code>https://erp.example.com</code> as the operation target
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). Actions and
-constraints determine the permitted operations within that service.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
+constraints determine the permitted operations within that service.
+In the audience-scoped Mission Status example below, the consumer is
+the ERP resource server, client <code>erp-rs</code>, which the Mission Issuer's
+configuration authorizes for that audience; its client identifier is
+the response's <code>sub</code>.<a href="#section-3.5-4" class="pilcrow">¶</a></p>
 <p id="section-3.5-5">The signed payload reports the Mission's current state and the
 audience-scoped evidence the consumer needs.<a href="#section-3.5-5" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-3.5-6">
@@ -1753,15 +1768,13 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
 {
   "iss": "https://as.example.com",
   "aud": "https://erp.example.com",
-  "sub": "s6BhdRkqt3",
+  "sub": "erp-rs",
   "nonce": "nonce_K9pV4nT2sR7mB1xQ",
   "iat": 1793606400,
   "exp": 1793606460,
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "active",
     "version": 1,
     "expires_at":  "2026-12-31T23:59:59Z",
@@ -1826,8 +1839,9 @@ authoritative
 state space is the issuance profile's
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
 Lifecycle"): <code>active</code> and <code>terminated</code>, this profile's <code>suspended</code>
-when the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>)
-is deployed, and any further state a companion profile defines and
+when the Mission Lifecycle endpoint's <code>suspend</code> operation
+(<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>) is deployed, and any further state a
+companion profile defines and
 the deployment runs. A consumer applies the issuance profile's
 forward-compatibility rule: only <code>active</code> permits reliance, and
 every other value, recognized or not, is non-active. This
@@ -2310,8 +2324,6 @@ for a token whose Mission is <code>active</code>:<a href="#section-4-5" class="p
     "mission": {
       "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
       "issuer": "https://as.example.com",
-      "authority_hash":
-        "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
       "state":   "active",
       "fresh_until": "2026-11-02T08:00:55Z"
     }
@@ -2349,11 +2361,12 @@ server metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>
 distinct from <span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> token revocation. The endpoint <span class="bcp14">MUST</span> be
 served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the
 recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>.<a href="#section-5-2" class="pilcrow">¶</a></p>
-<p id="section-5-3">Adopting this endpoint extends the issuance profile's lifecycle state
-space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
-Lifecycle") with one additional state, <code>suspended</code> (a
-paused Mission that derives no tokens until resumed), and one
-termination reason, <code>completed</code> (the Mission completed
+<p id="section-5-3">This endpoint's operations extend the issuance profile's lifecycle
+state space (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission
+Lifecycle"), each value arriving with the operation that introduces
+it (<a href="#conformance" class="auto internal xref">Section 9</a>): <code>suspend</code> adds one state, <code>suspended</code> (a paused
+Mission that derives no tokens until resumed), and <code>complete</code> adds
+one termination reason, <code>completed</code> (the Mission completed
 successfully).
 Issuance gating treats any state other than <code>active</code> as
 non-deriving, exactly as the issuance profile gates on <code>active</code>.<a href="#section-5-3" class="pilcrow">¶</a></p>
@@ -2364,8 +2377,9 @@ Tokens already derived under the Mission remain valid until their own
 deployment that
 needs a prompt cutoff on outstanding tokens uses the propagation
 mechanisms of <a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>.<a href="#section-5-4" class="pilcrow">¶</a></p>
-<p id="section-5-5">Suspension is reversible, so a refresh refused for it should not spend
-the client's ability to refresh after a <code>resume</code>. After validating a
+<p id="section-5-5">Suspension is reversible. Consuming or invalidating a refresh token
+solely because of suspension can prevent refresh after a <code>resume</code>.
+After validating a
 refresh request and before consuming or rotating its refresh token,
 the AS <span class="bcp14">SHOULD</span> check whether the Mission, or another Mission whose
 state a companion profile makes gate its derivation, is suspended.
@@ -2450,7 +2464,9 @@ The AS applies it as <a href="#idempotency" class="auto internal xref">Section 5
 <dt id="section-5.1-2.13">
 <code>nonce</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-5.1-2.14">
-            <p id="section-5.1-2.14.1"><span class="bcp14">REQUIRED</span>. A string. A client-generated nonce.<a href="#section-5.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-5.1-2.14.1"><span class="bcp14">REQUIRED</span>. A string of 1 to 255 Unicode code points. A
+client-generated nonce, the request's idempotency key
+(<a href="#idempotency" class="auto internal xref">Section 5.6</a>).<a href="#section-5.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2486,7 +2502,9 @@ Mission unchanged, so the refusal discloses nothing about it.<a href="#section-5
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior,
 idempotency and outcome vocabulary, result shape, and conformance
-requirements completely.<a href="#section-5.1-8" class="pilcrow">¶</a></p>
+requirements completely. It registers the value by defining it in
+its own specification; no IANA registry holds <code>operation</code> values
+(<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-5.1-8" class="pilcrow">¶</a></p>
 <p id="section-5.1-9">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
 pair is the Mission's schedule. When the <code>suspend_until</code> of a current
 schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
@@ -2779,7 +2797,7 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwi...
 
 mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 &amp;operation=revoke
-&amp;reason=Quarterly+reconcile+completed+early
+&amp;reason=Quarterly+reconcile+cancelled
 &amp;nonce=nonce_8Y3vN0sM6tP1xR9bQ5
 </pre><a href="#section-5.5-2" class="pilcrow">¶</a>
 </div>
@@ -2815,8 +2833,6 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6ImFzLWtleS0yMDI2LXEzIi...
   "mission": {
     "id": "msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "terminated",
     "termination": {
       "reason": "revoked",
@@ -2869,8 +2885,6 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
   "mission": {
     "id": "msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5",
     "issuer": "https://as.example.com",
-    "authority_hash":
-      "sha-256:hjXlwWBY64-RPs1Z-E_gbyklNcViI5c9jiyMbE4KvFM",
     "state": "suspended",
     "version": 2,
     "suspend_until": "2026-11-09T08:15:00Z",
@@ -2892,7 +2906,8 @@ and <code>on_expiry</code> in <code>mission</code> alongside <code>state</code>.
 <a href="#section-5.6" class="section-number selfRef">5.6. </a><a href="#name-idempotency-and-conflicts" class="section-name selfRef">Idempotency and Conflicts</a>
         </h3>
 <p id="section-5.6-1">The request <code>nonce</code> (<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>) is
-the idempotency key: an opaque string of 1 to 255 characters. The AS
+the idempotency key: an opaque string of 1 to 255 Unicode code points.
+The AS
 treats an absent, empty, longer, or non-string <code>nonce</code> as malformed
 (<code>invalid_request</code>, with no <code>nonce</code> echoed).<a href="#section-5.6-1" class="pilcrow">¶</a></p>
 <p id="section-5.6-2">The AS <span class="bcp14">MUST</span> deduplicate
@@ -3128,8 +3143,9 @@ and <span class="bcp14">MUST NOT</span> assume a tighter bound.<a href="#section
 bound: the advertisement is the ceiling on every reliance window
 built from these surfaces. The 60-second value in this document's
 examples is a tight deployment's choice, not a floor.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">Where Mission revocation must take effect but only the baseline
-derivation-time check is in use, Mission-bound access tokens <span class="bcp14">SHOULD</span> use
+<p id="section-6-6">Where a deployment needs Mission revocation to take effect but only
+the baseline derivation-time check is in use, Mission-bound access
+tokens <span class="bcp14">SHOULD</span> use
 TTLs no longer than the declared <code>mission_max_stale_seconds</code>.
 Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or a companion profile's
@@ -3411,9 +3427,8 @@ anti-oracle property
 </li>
         <li class="normal" id="section-9-3.2">
           <p id="section-9-3.2.1"><strong>Introspection projection</strong>: carry the Mission projection on the
-introspection response (<a href="#introspection-projection" class="auto internal xref">Section 4</a>), returning it
-as a <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span>-signed response where end-to-end integrity is
-required.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
+introspection response (<a href="#introspection-projection" class="auto internal xref">Section 4</a>), signing it
+with <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> as that section provides.<a href="#section-9-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.3">
           <p id="section-9-3.3.1"><strong>Mission Lifecycle</strong>: serve the Mission Lifecycle endpoint
@@ -3451,8 +3466,8 @@ Mission Lifecycle meets this class.<a href="#section-9-3.4.1" class="pilcrow">¶
 </li>
         <li class="normal" id="section-9-3.5">
           <p id="section-9-3.5.1"><strong>Revocation propagation</strong>: advertise <code>mission_max_stale_seconds</code>
-and size Mission-bound access-token TTLs to it
-(<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>).<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
+and size Mission-bound access-token TTLs as
+<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a> provides.<a href="#section-9-3.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-9-4">A Mission Issuer that claims any extension above meets the following
@@ -3547,8 +3562,8 @@ audit horizon (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite 
 audit and dispute: a retired key in its <code>jwks_uri</code>, and a compromised
 key in its historical key set (<a href="#historical-key-set" class="auto internal xref">Section 8.1</a>). This is the
 issuance profile's retired-key rule
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), with the audit horizon as the
-bound.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Signing and Key
+Rotation"), with the audit horizon as the bound.<a href="#section-10.5-1" class="pilcrow">¶</a></p>
 <p id="section-10.5-2">A key known or suspected compromised follows the issuance profile's
 compromise rule (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
 "Signing and Key Rotation"). Rather than only rotating it out, the AS
@@ -4215,6 +4230,29 @@ and a past <code>suspend_until</code> is refused only on a new request.<a href="
           <p id="appendix-A-3.4.1">An RFC 7009 revocation does not by itself revoke a Mission, and a
 revocation that a deployment's policy couples to it commits the same
 <code>revoke</code> transition, state version and event.<a href="#appendix-A-3.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.5">
+          <p id="appendix-A-3.5.1">Editorial, no requirement change: in the audience-scoped Mission
+Status example, the consumer is the ERP resource server; no example
+response shows <code>authority_hash</code> to a caller the example does not
+show holding its disclosure privilege; and the revocation's <code>reason</code>
+describes a revocation, not a completion (#1535).<a href="#appendix-A-3.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.6">
+          <p id="appendix-A-3.6.1">The <code>nonce</code> is a string of 1 to 255 Unicode code points at both
+endpoints, a constraint the Mission Status request now states
+(#1535).<a href="#appendix-A-3.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.7">
+          <p id="appendix-A-3.7.1">Conformance's introspection-signing and TTL-sizing items defer to
+the sections that state those rules, resolving language that
+conflicted with them; each lifecycle value arrives with the
+operation that introduces it; an otherwise-valid access token
+without the <code>mission_status</code> scope receives the not-found response,
+not <code>insufficient_scope</code>; a 401's challenge errors are distinct from
+its JSON body's <code>unauthorized</code>; and a companion registers an
+extension operation by defining it in its own specification
+(#1535).<a href="#appendix-A-3.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
