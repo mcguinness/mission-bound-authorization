@@ -4221,9 +4221,10 @@ reliance when that fails, and never verify a current reliance
 decision under a historical key (#831, D774, D780).<a href="#appendix-A-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.2">
-          <p id="appendix-A-3.2.1">A consumer verifies a Mission Status response only under a key its
-trusted configuration authorizes for that AS's Mission Status
-responses, never under any key the <code>jwks_uri</code> carries (#831, D842).<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-3.2.1">The consumer's signature check is strengthened: a consumer verifies
+a Mission Status response only under a key its trusted configuration
+authorizes for that AS's Mission Status responses, never merely
+because the key appears in <code>jwks_uri</code> (#831, D842).<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-3.3">
           <p id="appendix-A-3.3.1">A transition is durably committed before any response acknowledges

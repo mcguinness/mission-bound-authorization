@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-26T21:54:32Z
-Source repository commit: 3197a611c1e88c5acdaa30ee3f037b52fc82380a
+Generated: 2026-10-26T22:10:48Z
+Source repository commit: 575201c4fb710b64584507b9443925a3ef0f423a
 Member count: 7
 
 Reading order:
@@ -18432,9 +18432,10 @@ Appendix A.  Document History
       current reliance when that fails, and never verify a current
       reliance decision under a historical key (#831, D774, D780).
 
-   *  A consumer verifies a Mission Status response only under a key its
-      trusted configuration authorizes for that AS's Mission Status
-      responses, never under any key the jwks_uri carries (#831, D842).
+   *  The consumer's signature check is strengthened: a consumer
+      verifies a Mission Status response only under a key its trusted
+      configuration authorizes for that AS's Mission Status responses,
+      never merely because the key appears in jwks_uri (#831, D842).
 
    *  A transition is durably committed before any response acknowledges
       it, and the OAuth binding's final issuance check is not extended
