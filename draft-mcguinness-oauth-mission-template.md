@@ -165,9 +165,10 @@ fresh human approval, and the instance is handed to its agent, which
 works it with ordinary Mission-bound tokens. Each instance is bounded
 by its own freshly derived Authority Set, is independently gated and
 revocable, and never exceeds the template ceiling. High-consequence
-authority classes are never dispatched by policy: they stay on a
-fresh human decision. Consent is given once, to the ceiling; dispatch
-draws within it deterministically.
+authority classes stay on a fresh human decision, apart from one
+optional exception for recurring payment of approved invoices to
+committed destinations under an exact budget. Consent is given once,
+to the ceiling; dispatch draws within it deterministically.
 
 --- middle
 
@@ -199,7 +200,10 @@ re-checkable ({{I-D.draft-mcguinness-mission-architecture}}). The
 accountable principal for every dispatched Mission is the human who
 approved the template. The high-consequence classes stay on a fresh
 human decision, exactly as that verb requires
-({{prohibited-classes}}).
+({{prohibited-classes}}), with one optional exception: recurring
+payment of approved invoices to committed destinations under an exact
+budget ({{standing-payment-exception}}). Other unattended
+high-consequence work needs a directly approved Mission.
 
 This document is optional and experimental: adopt it for evaluation,
 not as a stable interface. Removing the per-dispatch human from a
@@ -246,8 +250,9 @@ authority ceiling on a single evolving Mission; this document removes
 the per-dispatch human from a consented template that mints many
 independent Missions. Both concentrate one considered human consent to
 a ceiling in place of many hurried consents, and both hold the
-high-consequence classes back for a human. Where progressive draws a
-successor within one chain, a template dispatches independent
+high-consequence classes back for a human, this document with one
+bounded exception ({{standing-payment-exception}}). Where progressive
+draws a successor within one chain, a template dispatches independent
 instances.
 
 # Conventions and Terminology {#conventions-and-terminology}
@@ -666,7 +671,9 @@ The consent disclosure MUST render, at minimum:
 - that instances issue at machine speed, by policy, with no
   per-instance human approval; and
 - that the high-consequence classes ({{prohibited-classes}}) are never
-  dispatched by policy and still require a fresh human decision.
+  dispatched by policy and still require a fresh human decision, other
+  than an operation the template admits under
+  {{standing-payment-exception}}, whose disclosure that section adds.
 
 A consent that does not render these is standing dispatch authority
 obtained by omission. A template the human did not knowingly consent to
@@ -894,8 +901,9 @@ The Mission Issuer adjudicates a Dispatch in this order:
    is a new template consent, not a dispatch.
 6. **Prohibited-class check.** Apply the prohibited-class rule
    ({{prohibited-classes}}) to the surviving post-intersection set. If
-   it would grant a high-consequence class, refuse the Dispatch with
-   `dispatch_prohibited_class` ({{denial-reasons}}).
+   it would grant a high-consequence class that
+   {{standing-payment-exception}} does not admit, refuse the Dispatch
+   with `dispatch_prohibited_class` ({{denial-reasons}}).
 7. **Enforce the bounds.** Refuse the Dispatch if it would exceed
    `max_active` or `dispatch_rate`, if no Agent is selected, or if the
    instance's Mission-Issuer-established Subject or its selected Agent
@@ -1392,8 +1400,9 @@ counted as the issuance profile requires.
 # Prohibited Classes {#prohibited-classes}
 
 Some authority classes are too consequential to activate without a
-human at the moment of the decision. A Dispatch MUST NOT instantiate a
-Mission that grants authority in any of these classes, even when the
+human at the moment of the decision. Except as
+{{standing-payment-exception}} admits, a Dispatch MUST NOT instantiate
+a Mission that grants authority in any of these classes, even when the
 class is within the Template Ceiling:
 
 - the irreversible, external-commitment, or privileged-administration
@@ -1454,7 +1463,73 @@ progressive profile, which falls back to a fresh human approval in
 band, a Dispatch has no interactive surface to escalate on: the human
 path is an ordinary Mission created through a fresh approval
 ({{I-D.draft-mcguinness-oauth-mission}}), requested out of band. The
-Dispatch Policy MUST NOT dispatch a Mission bearing a prohibited class.
+Dispatch Policy MUST NOT dispatch a Mission bearing a prohibited class
+that {{standing-payment-exception}} does not admit.
+
+## Standing Payment Exception {#standing-payment-exception}
+
+A Mission Issuer MAY admit one exception to the prohibited-class rule:
+the dispatch of one designated payment-execution operation, for
+recurring payment of approved invoices, whose only prohibited class is
+the irreversible class. Nothing else is admitted. External-commitment,
+privileged-administration and cross-domain authority, and authority
+satisfying the external-communication predicate, stay prohibited, and
+the exception never waives another prohibited predicate the operation
+satisfies under the published mapping. The designated operation stays
+in the configured dispatch-prohibited set: the exception admits it
+only where every condition below holds, and otherwise the Dispatch is
+refused with `dispatch_prohibited_class` ({{denial-reasons}}).
+
+- **One operation.** The published mapping designates the operation
+  and states every prohibited predicate it satisfies; the irreversible
+  class is the only one.
+- **A bounded ceiling.** The ceiling entry granting it names one
+  resource, the approved vendors, and a per-payment `max_amount` in
+  one currency. It grants no delegation authority.
+- **Committed destinations.** The Dispatch Policy commits, for each
+  approved vendor, the payee account approved for it.
+- **An exact budget.** The Dispatch Policy commits a budget: an
+  identifier qualified within the budget owner's accounting domain,
+  its currency, its limit, and a per-instance maximum. Each instance's
+  Mission Intent carries a `max_budget` no larger than the per-instance
+  maximum. Both are enforced under the metering profile's Exact
+  profile, the instance's bound on its own counter and the budget on
+  one counter shared by every instance dispatched under it and their
+  successors ({{I-D.draft-mcguinness-mission-metering}}); neither
+  substitutes for the other.
+- **Governed approval.** The template approval's retained policy
+  snapshot commits the class-named exceptions for the irreversible
+  class and the consumption-bound class, each with its recency
+  ceiling, under Approval Governance
+  ({{I-D.draft-mcguinness-mission-approval-governance}}).
+- **A human approver.** The template consent meets the issuance
+  profile's approval-authentication floor for the irreversible class,
+  and the consenting principal is neither a Dispatcher nor the
+  instance's Agent, nor a key or assertion the Agent holds.
+
+Admission authorizes no execution. Each payment still takes a fresh
+runtime decision, with parameter binding, execution reverification,
+transaction assurance, and every applicable action-approval
+requirement ({{I-D.draft-mcguinness-mission-runtime}}). The PDP
+compares the payee the enforcing PEP establishes for the effect with
+the destination committed for the vendor, and execution
+reverification binds that payee: a payee account other than the
+committed one, including a changed bank account for an approved
+vendor, inherits no approval. Work outside the committed envelope is
+refused and escalates out of band to an ordinary, freshly approved
+Mission.
+
+Raising the budget, the per-payment bound, or the destinations is a
+new `template_version` and a fresh human approval. Its disclosure
+renders the budget's consumption to date and its outstanding
+reservations, and the approval neither releases a held reservation nor
+resets consumption ({{I-D.draft-mcguinness-mission-metering}}).
+
+The consent disclosure of a template admitting the exception MUST
+render, beside the minimum of {{template-consent}}, the designated
+operation, the committed destinations, the per-payment bound, the
+budget with its per-instance maximum, and that each payment executes
+without a per-payment human approval.
 
 # The Denial Reasons {#denial-reasons}
 
@@ -1470,8 +1545,9 @@ established for adjudication denials
 
 `dispatch_prohibited_class`:
 : The dispatched instance would grant a high-consequence class
-  ({{prohibited-classes}}), which a Dispatch never auto-approves. The
-  authority is available only through a fresh human approval.
+  ({{prohibited-classes}}) that {{standing-payment-exception}} does not
+  admit, which a Dispatch never auto-approves. The authority is
+  available only through a fresh human approval.
 
 `dispatch_policy_changed`:
 : The Dispatch Policy the Mission Issuer would evaluate no longer
@@ -1532,7 +1608,12 @@ creation and then steps out of the way.
   consequence of the child-delegation profile's strict-subset rule, a
   Child Mission is a strict subset of the instance's Authority Set,
   which is itself within the Template Ceiling, so the whole delegation
-  tree stays within the ceiling without any new rule here.
+  tree stays within the ceiling without any new rule here. An instance
+  holding authority admitted under {{standing-payment-exception}} is
+  the exception: its Mission Issuer refuses to create a Child Mission,
+  or any cross-organization or cross-domain derivation, under it, and
+  its successors continue its budget counters
+  ({{I-D.draft-mcguinness-mission-metering}}).
 
 # Audit Linkage {#audit-linkage}
 
@@ -1590,7 +1671,9 @@ document adds the dispatch surface.
   and is not an Approver: it can trigger instantiation only within the
   template a human approved. A compromised Dispatcher cannot exceed the
   Template Ceiling (double intersection, {{dispatch}}), cannot dispatch
-  a high-consequence class ({{prohibited-classes}}), and cannot outrun
+  a high-consequence class ({{prohibited-classes}}) beyond a payment the
+  template admits within its committed destinations, per-payment bound
+  and budget ({{standing-payment-exception}}), and cannot outrun
   `max_active` or `dispatch_rate`. Its blast radius is therefore bounded
   to no more than the human consented to when approving the template,
   and every instance it dispatched is independently gated, revocable,
@@ -1651,8 +1734,11 @@ conforming issuance-profile Mission Issuer
   the instance Authority Set, and that the effective expiry is later
   than the creation instant ({{template-consent}}, {{dispatch}});
 - refuse a Dispatch outside the ceiling with `out_of_template_ceiling`
-  and a Dispatch of a prohibited class with `dispatch_prohibited_class`
-  ({{denial-reasons}});
+  and a Dispatch of a prohibited class that
+  {{standing-payment-exception}} does not admit with
+  `dispatch_prohibited_class` ({{denial-reasons}}), and, where it
+  admits that exception, meet every condition and disclosure of that
+  section;
 - make every Dispatch idempotent per `dispatch_event_id`, adopting the
   expansion profile's creation idempotency apparatus by reference
   under `op: dispatch`, with the `(client, dispatch_event_id)`
@@ -1767,6 +1853,16 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#813, D814, D830): Standing Payment Exception
+  admits, as an option, dispatch of one designated payment-execution
+  operation whose only prohibited class is the irreversible class,
+  under a bounded ceiling, committed destinations, an exact budget
+  shared across the template's instances and their successors with a
+  per-instance `max_budget`, governed class-named exceptions and a human
+  approver. Every other prohibited class and predicate stays
+  prohibited, a Child Mission is refused under such an instance, and
+  each payment still takes a fresh runtime decision with its payee
+  bound through execution reverification.
 - Clarification (#1661, D793): a Dispatch performs exactly one creation
   derivation per `dispatch_event_id`, and a retry is recovery of its
   delivery. Returning the delivered access token, while it is valid and
