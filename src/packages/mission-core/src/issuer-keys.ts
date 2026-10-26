@@ -216,7 +216,7 @@ export class IssuerKeys {
       const config = this.#roles[role];
       const { kid, alg } = header;
       if (typeof kid !== "string") throw new IssuerKeyError("no_kid", "the header names no kid");
-      if (!config || !config.kids.includes(kid))
+      if (!config?.kids.includes(kid))
         throw new IssuerKeyError("untrusted_kid", `kid ${kid} is not trusted for ${role}`);
       if (typeof alg !== "string" || (config.algs !== undefined && !config.algs.includes(alg))) {
         throw new IssuerKeyError("algorithm", `alg ${String(alg)} is not accepted for ${role}`);

@@ -359,7 +359,9 @@ describe("a resolution under way when the trusted roles change (@spec #831 C2 re
     keys.setRoles({ accessToken: { kids: [] }, status: { kids: ["as-token"] } });
     release();
     await expect(pending).rejects.toEqual(refusal("unknown_kid"));
-    expect(material(await keys.resolver("status")({ kid: "as-token", alg: "ES256" }))).toBe(publicOf(moved));
+    expect(material(await keys.resolver("status")({ kid: "as-token", alg: "ES256" }))).toBe(
+      publicOf(moved),
+    );
   });
 });
 
