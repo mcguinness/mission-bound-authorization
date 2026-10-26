@@ -1169,16 +1169,17 @@ carrying an entry that fails it with the
 `invalid_authorization_details` error code.
 
 Policy narrowing is distinct. During Authority Set derivation the AS
-MAY narrow or omit a syntactically valid entry that policy cannot
-accept ({{authorization-derivation}}). The granted
+MAY omit a syntactically valid entry that policy cannot accept, or
+narrow it where the AS has declared `narrowing` for its type
+({{authorization-derivation}}, {{transformation-capabilities}}). The granted
 `authorization_details` in the token response reflects every
 narrowing and omission ({{token-response}}).
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
-type*: narrowed under that type's own subset rule where it defines
-one, or carried through unchanged where it defines none
-({{other-types}}).
+type*: narrowed under that type's own subset rule where the AS has
+declared `narrowing` for the type, or carried through unchanged
+otherwise ({{transformation-capabilities}}).
 
 `goal` and `task_bounds` then serve as rendering and bounding context
 over the proposed authority. Each proposed entry that carries a
@@ -1251,8 +1252,9 @@ the request: Issuance Gating ({{issuance-gating}}), the subset rule
 Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
-the example Intent of {{mission-intent}}. Authority Set derivation
-narrows `invoices.*` to `invoices.read`, keeps the proposed Q3
+the example Intent of {{mission-intent}}. Authority Set derivation,
+under a declared `narrowing` capability, narrows `invoices.*` to
+`invoices.read`, keeps the proposed Q3
 issuance window and write ceiling, which the Intent's task bounds
 support, and carries the proposed `delegation` policy through
 unchanged (the example Authority Set of {{authorization-derivation}}):
@@ -1426,6 +1428,10 @@ entries depend on whether an authority proposal was submitted:
   consent to a pre-approved ceiling is the separate, experimental
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
+
+In either mode, narrowing a candidate entry needs a declared
+`narrowing` capability for its type; without one, the entry is
+retained unchanged or omitted ({{transformation-capabilities}}).
 
 Authority Set derivation can run provisionally during submission
 processing, where the inputs it needs are available
@@ -1645,6 +1651,15 @@ establishes none of the others:
 The AS MUST NOT narrow, delegate, or project to `scope` an entry of a
 type for which it has not declared the corresponding capability; on an
 undeclared capability the entry is carried as approved.
+
+The `narrowing` capability also governs Authority Set derivation, and
+approval does not waive the subset proof. Without `narrowing` for its
+type, the AS retains a valid candidate entry, whether proposed
+({{authority-proposal}}) or yielded by a configured mapping
+({{derivation-modes}}), unchanged, or omits it where this document
+permits omission; it never modifies the entry under a claimed subset
+relation. A malformed entry is refused as {{authority-proposal}}
+states.
 
 The AS relates each entry to the audiences that consume it through a
 trusted entry-to-audience mapping, such as authenticated configuration
@@ -6904,9 +6919,10 @@ The five properties below restate, for a policy author, what
   are refused ({{authority-proposal}}, {{subset}}, {{error-mapping}}).
   Authority Set derivation does not repair them by omitting the entry
   or dropping the constraint. An entry the
-  engine compares but policy cannot accept differs: it is narrowed or
-  omitted, and the granted echo reflects that
-  ({{authority-proposal}}).
+  engine compares but policy cannot accept differs: it is narrowed,
+  under a declared `narrowing` capability
+  ({{transformation-capabilities}}), or omitted, and the granted echo
+  reflects that ({{authority-proposal}}).
 - **Issuer-established members are not client-supplied.** The issuer
   establishes `policy_version` ({{authorization-derivation}}), and
   `authority_source` and `approval_basis` ({{authority-sources}},
