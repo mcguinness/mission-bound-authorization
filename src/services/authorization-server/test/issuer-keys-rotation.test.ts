@@ -77,6 +77,13 @@ describe("a consumer's issuer keys across the issuer's rotation, retirement and 
       jwksUri: `${ISSUER}/jwks`,
       roles: { status: { kids: [asStatus.kid, `${asStatus.kid}-2`], algs: ["ES256"] } },
       now: () => t,
+      // The issuer's clock agrees with the consumer's: its answer's Date is the consumer's time.
+      fetch: async (url, init) => {
+        const res = await fetch(url, init);
+        const headers = new Headers(res.headers);
+        headers.set("date", new Date(t).toUTCString());
+        return new Response(res.body, { status: res.status, headers });
+      },
     });
     const status = consumer.resolver("status");
     const verifies = async (jws: string): Promise<boolean | string> => {

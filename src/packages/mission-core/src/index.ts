@@ -205,6 +205,7 @@ export {
 } from "./idempotency.js";
 export {
   explicitFreshnessSeconds,
+  freshUntil,
   IssuerKeyError,
   type IssuerKeyRefusal,
   type IssuerKeyRole,

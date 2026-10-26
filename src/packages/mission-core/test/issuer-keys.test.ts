@@ -2,6 +2,7 @@ import { generateKeyPairSync, type KeyObject } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   explicitFreshnessSeconds,
+  freshUntil,
   IssuerKeyError,
   IssuerKeys,
   type IssuerKeysFetch,
@@ -77,21 +78,47 @@ const publicOf = (jwk: Record<string, unknown>) => {
   return JSON.stringify(rest);
 };
 
-describe("an issuer's freshness, as the response declares it (RFC 9111 4.2.1, 4.2.2)", () => {
-  it("is max-age less Age, and nothing when the response declares none, forbids reuse, or conflicts", () => {
+describe("an issuer's freshness, as the response declares it (RFC 9111 4.2)", () => {
+  it("is the declared max-age, and nothing when the response declares none, forbids reuse, or conflicts", () => {
     const h = (v: Record<string, string>) => new Headers(v);
     expect(explicitFreshnessSeconds(h({ "cache-control": "max-age=300" }))).toBe(300);
-    expect(
-      explicitFreshnessSeconds(h({ "cache-control": "public, max-age=300", age: "100" })),
-    ).toBe(200);
+    expect(explicitFreshnessSeconds(h({ "cache-control": "public, max-age=300" }))).toBe(300);
     expect(explicitFreshnessSeconds(h({ "cache-control": 'max-age="60"' }))).toBe(60);
-    expect(explicitFreshnessSeconds(h({ "cache-control": "max-age=30", age: "45" }))).toBe(0);
     expect(explicitFreshnessSeconds(h({}))).toBe(0);
     expect(explicitFreshnessSeconds(h({ expires: "Wed, 21 Oct 2099 07:28:00 GMT" }))).toBe(0);
     expect(explicitFreshnessSeconds(h({ "cache-control": "max-age=300, no-store" }))).toBe(0);
     expect(explicitFreshnessSeconds(h({ "cache-control": "no-cache, max-age=300" }))).toBe(0);
     expect(explicitFreshnessSeconds(h({ "cache-control": "max-age=300, max-age=60" }))).toBe(0);
     expect(explicitFreshnessSeconds(h({ "cache-control": "max-age=five" }))).toBe(0);
+  });
+
+  it("runs from the request: the lifetime less the larger of the apparent age by Date and Age plus the response delay (4.2.3)", () => {
+    const h = (v: Record<string, string>) => new Headers({ "cache-control": "max-age=300", ...v });
+    const at = Date.parse("Sun, 25 Oct 2026 10:00:00 GMT");
+    // Answered 4 s after the request: the 300 s run from the request.
+    expect(freshUntil(h({}), at, at + 4000)).toBe(at + 300_000);
+    expect(freshUntil(h({ age: "100" }), at, at + 4000)).toBe(at + 200_000);
+    expect(freshUntil(h({ age: "301" }), at, at)).toBe(at);
+    // A Date 50 s before receipt: the apparent age, larger, counts; each HTTP-date form is GMT.
+    for (const date of [
+      "Sun, 25 Oct 2026 09:59:10 GMT",
+      "Sunday, 25-Oct-26 09:59:10 GMT",
+      "Sun Oct 25 09:59:10 2026",
+    ]) {
+      expect(freshUntil(h({ date }), at, at)).toBe(at + 250_000);
+    }
+    // A Date ahead of the consumer's clock adds no age.
+    expect(freshUntil(h({ date: "Sun, 25 Oct 2026 10:01:00 GMT" }), at, at)).toBe(at + 300_000);
+    // An Age or Date that is not one valid value, or no lifetime: stale when received.
+    for (const bad of [
+      { age: "ten" },
+      { age: "10, 20" },
+      { date: "yesterday" },
+      { date: "Sun, 25 Oct 2026 09:59:10 GMT, Sun, 25 Oct 2026 09:59:20 GMT" },
+      { "cache-control": "no-cache" },
+    ]) {
+      expect(freshUntil(h(bad), at, at + 4000)).toBe(at + 4000);
+    }
   });
 });
 
@@ -130,6 +157,29 @@ describe("an issuer's keys under a consumer's trusted roles (@spec #831 C1)", ()
     expect(() => keys.resolver("transaction")).toThrow(/no role transaction/);
   });
 
+  it("uses a key only to verify: one whose key_ops omit verify, or whose use is another, is not used", async () => {
+    const { fetch } = issuer({
+      keys: [
+        key("as-token", { use: undefined, key_ops: ["verify"] }),
+        key("as-sign", { use: undefined, key_ops: ["sign"] }),
+        key("as-malformed", { use: undefined, key_ops: "verify" }),
+        key("as-enc", { use: "enc" }),
+      ],
+      headers: fresh(300),
+    });
+    const kids = ["as-token", "as-sign", "as-malformed", "as-enc"];
+    const access = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids } },
+      fetch,
+      now: clock().now,
+    }).resolver("accessToken");
+    await access({ kid: "as-token", alg: "ES256" });
+    for (const kid of kids.slice(1)) {
+      await expect(access({ kid, alg: "ES256" })).rejects.toEqual(refusal("unknown_kid"));
+    }
+  });
+
   it("refuses a key published for another algorithm than the header's", async () => {
     const { fetch } = issuer({ keys: [key("as-token", { alg: "ES384" })], headers: fresh(300) });
     const keys = new IssuerKeys({
@@ -165,6 +215,52 @@ describe("an issuer's keys under a consumer's trusted roles (@spec #831 C1)", ()
     // Replaced, not added to: the withdrawn key stops verifying, the new one verifies.
     expect(material(await access({ kid: "as-token-2", alg: "ES256" }))).toBe(publicOf(t2));
     await expect(access({ kid: "as-token", alg: "ES256" })).rejects.toEqual(refusal("unknown_kid"));
+  });
+
+  it("counts the declared lifetime from when the request was sent, not from when a slow answer arrived", async () => {
+    const c = clock();
+    const answered = issuer({ keys: [key("as-token")], headers: fresh(300) });
+    const slow: IssuerKeysFetch = async (url, init) => {
+      c.advance(4);
+      return answered.fetch(url, init);
+    };
+    const access = new IssuerKeys({ jwksUri: JWKS_URI, roles, fetch: slow, now: c.now }).resolver(
+      "accessToken",
+    );
+    await access({ kid: "as-token", alg: "ES256" });
+    c.advance(295);
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(answered.requests).toHaveLength(1);
+    // 300 s after the request, 296 s after the answer: stale.
+    c.advance(1);
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(answered.requests).toHaveLength(2);
+  });
+
+  it("keeps the stored lifetime when a 304 carries no Cache-Control, and takes the 304's own when it does (RFC 9111 4.3.4)", async () => {
+    const c = clock();
+    const { fetch, requests } = issuer(
+      { keys: [key("as-token")], headers: fresh(300, '"7"') },
+      { status: 304, headers: { etag: '"7"' } },
+      { status: 304, headers: fresh(60, '"7"') },
+    );
+    const access = new IssuerKeys({ jwksUri: JWKS_URI, roles, fetch, now: c.now }).resolver(
+      "accessToken",
+    );
+    await access({ kid: "as-token", alg: "ES256" });
+    c.advance(300);
+    await access({ kid: "as-token", alg: "ES256" });
+    c.advance(299);
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(requests).toHaveLength(2);
+    c.advance(1);
+    await access({ kid: "as-token", alg: "ES256" });
+    c.advance(59);
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(requests).toHaveLength(3);
+    c.advance(1);
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(requests).toHaveLength(4);
   });
 
   it("treats a response that declares no freshness as stale when received: every later use revalidates", async () => {
