@@ -2589,6 +2589,19 @@ The `mission_error` member is diagnostic only: it grants nothing, an
 unrecognized value is ignored, and it is returned only to the
 authenticated client presenting the Mission's grant.
 
+The `mission_error` values this section names each report a
+terminated Mission ({{termination}}): no retry under the same grant
+cures the refusal. Further work needs a new approval or, for
+`superseded`, the successor Mission
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). A new approval is
+a fresh approval event, not an automatic consequence of the refusal; a
+credential held outside the Mission is no fallback for its task
+({{downgrade-by-omission}}); and the refusal gives no assurance that
+the refresh token remains usable. This reading is keyed on the value,
+not on the error code, because the same refusal covers a Mission in a
+non-terminal state that a companion profile registers
+({{iana-lifecycle-states}}), whose meaning that profile defines.
+
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
 revocation checks.
