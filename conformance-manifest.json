@@ -75,8 +75,8 @@
     "content_sha256": "510aa2b7589242e78495474cfbc6d6c8edb3d1aa21bcd1359cc98b2f07927e66"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
-    "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
+    "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
+    "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
@@ -59333,6 +59333,37 @@
     }
    ],
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
+  },
+  {
+   "id": "resource-access.entry-validation.http-userinfo-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource` is an `http` or `https` URI carrying a userinfo subcomponent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose http or https resource carries a userinfo subcomponent, an empty one or under an upper-case scheme included, is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an http or https resource carrying a userinfo subcomponent, empty or not",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states RFC 9110 Section 4.2.4's rule for an entry's resource. The reference refuses it at every entry boundary through carriesHttpUserinfo: proposal intake, isAuthorityEntry, the ceiling loaders, template creation and direct derivation; an Intent's target_resources is not held to it. Proved by mutation: an intake that skips the check fails the witness. Cases ev-res-05 to ev-res-08 run (entry-validation); ev-res-09, an @ in the path, is valid."
   },
   {
    "id": "resource-access.entry-validation.resource-match-unrecognized-refused",

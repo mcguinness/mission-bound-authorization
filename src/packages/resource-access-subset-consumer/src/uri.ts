@@ -59,18 +59,30 @@ function isHost(host: string): boolean {
   return REG_NAME.test(host);
 }
 
+/** The parts of an authority this consumer needs. */
+export interface Authority {
+  readonly host: string;
+  /**
+   * The userinfo subcomponent, present when the authority holds an "@"
+   * (RFC 3986 section 3.2.1); an empty userinfo is the empty string.
+   */
+  readonly userinfo?: string;
+}
+
 /** The parts of an absolute-URI this consumer needs. */
 export interface AbsoluteUri {
   readonly scheme: string;
   /** The authority, when the hier-part takes the "//" authority form. */
-  readonly authority?: { readonly host: string };
+  readonly authority?: Authority;
 }
 
-function parseAuthority(authority: string): { host: string } | undefined {
+function parseAuthority(authority: string): Authority | undefined {
   let rest = authority;
+  let userinfo: string | undefined;
   const at = rest.indexOf("@");
   if (at >= 0) {
-    if (!USERINFO.test(rest.slice(0, at))) return undefined;
+    userinfo = rest.slice(0, at);
+    if (!USERINFO.test(userinfo)) return undefined;
     rest = rest.slice(at + 1);
   }
   let host = rest;
@@ -92,7 +104,7 @@ function parseAuthority(authority: string): { host: string } | undefined {
     }
   }
   if (!isHost(host) || !PORT.test(port)) return undefined;
-  return { host };
+  return userinfo === undefined ? { host } : { host, userinfo };
 }
 
 /**
