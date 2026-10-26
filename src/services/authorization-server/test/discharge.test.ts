@@ -980,6 +980,9 @@ describe("the discharge operation on the lifecycle endpoint", () => {
     });
     // A sibling of `mission`, which reports the UNCHANGED state and the new version.
     expect(payload.mission).toMatchObject({ id: record.id, state: "active", version: 2 });
+    // @spec status#mission-status-response (#1682): the discharging client
+    // holds no disclosure privilege, so the envelope omits `authority_hash`.
+    expect(payload.mission).not.toHaveProperty("authority_hash");
     expect(payload.nonce).toBe(body.nonce);
     // @spec discharge#visibility — the discharged entry is omitted from the
     // audience-scoped authorization_details the Status surface returns.

@@ -881,6 +881,12 @@ export interface LifecycleClientRegistration {
   operations?: readonly string[];
   /** @spec status#lifecycle-authorization (#1535): the Missions it reaches; absent, every Mission. */
   missions?: LifecycleMissionScope;
+  /**
+   * @spec status#mission-status-response (#1682, D795): the disclosure
+   * privileges bound to this client; `provenance` admits `authority_hash` on
+   * its Mission Status Responses. Absent, none.
+   */
+  disclose?: readonly string[];
 }
 
 export interface BuiltAs {
@@ -1536,12 +1542,13 @@ export async function buildAuthorizationServer(opts: {
     ...Object.fromEntries(
       (opts.lifecycleClients ?? []).map((c) => [
         c.client_id,
-        c.operations === undefined && c.missions === undefined
+        c.operations === undefined && c.missions === undefined && c.disclose === undefined
           ? c.grants
           : {
               grants: c.grants,
               ...(c.operations !== undefined ? { operations: c.operations } : {}),
               ...(c.missions !== undefined ? { missions: c.missions } : {}),
+              ...(c.disclose !== undefined ? { disclose: c.disclose } : {}),
             },
       ]),
     ),

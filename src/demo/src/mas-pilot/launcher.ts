@@ -339,7 +339,8 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
       } else {
         // @spec status#mission-status-authentication (#1407): the PDP's key is
         // generated here, where the PDP runs; the MAS gets the public half.
-        const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id);
+        // The PDP's policy view commits `authority_hash` (#1682, D795).
+        const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id, { disclose: ["provenance"] });
         pdpKey = pdp.privateJwk;
         const env: NodeJS.ProcessEnv = { ...process.env };
         for (const name of ["NODE_OPTIONS", ...KEY_ENV, "MAS_PILOT_CONFIG", "MAS_PILOT_JOIN_INTROSPECTION_SECRET"]) delete env[name];
