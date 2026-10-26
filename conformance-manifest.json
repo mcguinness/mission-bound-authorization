@@ -21674,8 +21674,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "an authenticated consumer over its limit on the Mission Status operation is refused `rate_limited` (HTTP 429); the limit is per consumer, so another consumer is unaffected, and the refusal reveals nothing about the referenced Mission",
-    "local": "a fixed window per authenticated client across both Status routes, default 120 requests per 60 seconds (`missionStatusRateLimit`). On the advertised form POST it is counted between request syntax and authorization (Processing Order steps 2 and 3), so a malformed request keeps its invalid_request refusal and no Mission has been read; on the development GET, after authentication. An unauthenticated request is an authentication failure and is not counted. The windows are in-process, as the deployment is single-process; a refused request is not counted"
+    "normative": "an authenticated consumer over its limit on the Mission Status operation is refused `rate_limited` (HTTP 429), and the limit is kept per consumer, so another consumer's requests are unaffected",
+    "local": "a fixed window per authenticated client across both Status routes, default 120 requests per 60 seconds (`missionStatusRateLimit`). On the advertised form POST it is counted between request syntax and authorization (Processing Order steps 2 and 3), so a malformed request keeps its invalid_request refusal and no Mission has been read; on the development GET, after authentication. An unauthenticated request is an authentication failure and is not counted. The windows are in-process, as the deployment is single-process; a refused request is not counted; the limit is decided before any Mission is read, so the refusal is the same whichever Mission the request names"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21728,8 +21728,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a `rate_limited` response carries a `Retry-After` header and a `retry_after` body member, the same whole seconds",
-    "local": "the seconds until the client's window resets, at least 1"
+    "normative": "a `rate_limited` response includes a `Retry-After` header, whose value RFC 9110 permits as delay-seconds or an HTTP-date, and a `retry_after` body member in seconds",
+    "local": "the reference sends delay-seconds in the header, equal to `retry_after`: the whole seconds until the client's window resets, at least 1; the witness asserts that equality as the reference's encoding, not as a requirement"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21741,7 +21741,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1686. The witness asserts the header and the body member agree and fall within the window."
+   "notes": "#1686. The witness asserts the header and the body member are both present; their agreement as delay-seconds within the window is the reference's local encoding (#1706 review)."
   },
   {
    "id": "status.revocation-propagation.ttl-within-max-stale",
@@ -21758,8 +21758,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission-bound access token the AS issues lives no longer than the `mission_max_stale_seconds` it advertises",
-    "local": "the reference issues 300-second access tokens and advertises 300 (`src/config/topology.json`, `enforcement-scope.json`); the MAY branch, longer lifetimes where revocation propagates out of band, is not exercised"
+    "normative": "where Mission revocation must take effect and only the baseline derivation-time check is in use, Mission-bound access tokens should live no longer than the advertised `mission_max_stale_seconds`; a deployment whose revocation propagates out of band (token introspection, per-request status checks, or a companion profile's push mechanism) may use longer lifetimes",
+    "local": "the reference issues 300-second Mission-bound access tokens and advertises 300 (`src/config/topology.json`, `enforcement-scope.json`), so its tokens stay within the bound whether or not a consumer also uses its introspection or Status surfaces; the longer-lifetime alternative is not used"
    },
    "level": "endpoint",
    "coverage": "tested",

@@ -27,9 +27,12 @@ export class MissionStatusRateLimiter {
     private readonly limit: MissionStatusRateLimit,
     private readonly now: () => number,
   ) {
-    for (const [name, value] of Object.entries(limit)) {
-      if (!Number.isInteger(value) || value < 1) {
-        throw new Error(`missionStatusRateLimit.${name} must be a positive integer`);
+    // Each required member by name: a configuration read from JSON can omit
+    // one, which a loop over the members present would never check.
+    for (const name of ["requests", "windowSeconds"] as const) {
+      const value: unknown = (limit as Partial<MissionStatusRateLimit> | null | undefined)?.[name];
+      if (!Number.isInteger(value) || (value as number) < 1) {
+        throw new Error(`missionStatusRateLimit.${name} is required and must be a positive integer`);
       }
     }
   }

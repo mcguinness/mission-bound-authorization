@@ -208,9 +208,25 @@ describe("the Mission Status rate limiter's window (#1686)", () => {
     expect(limiter.admit("a")).toBeUndefined();
   });
 
-  it("refuses a limit that is not a positive integer", () => {
-    for (const limit of [{ requests: 0, windowSeconds: 60 }, { requests: 5, windowSeconds: 0.5 }]) {
-      expect(() => new MissionStatusRateLimiter(limit, () => 0)).toThrow(/positive integer/);
+  it("refuses a limit that is not a positive integer, or that omits either member", () => {
+    for (const limit of [
+      { requests: 0, windowSeconds: 60 },
+      { requests: 5, windowSeconds: 0.5 },
+      { requests: 1 },
+      { windowSeconds: 60 },
+      {},
+      null,
+    ]) {
+      expect(() => new MissionStatusRateLimiter(limit as never, () => 0), JSON.stringify(limit)).toThrow(/required and must be a positive integer/);
+    }
+  });
+
+  it("refuses to build an AS whose configured limit, as read from JSON, omits a member", async () => {
+    for (const json of ['{"requests":1}', '{"windowSeconds":60}', "{}"]) {
+      await expect(
+        buildAuthorizationServer({ issuer: "http://localhost:14996", missionStatusRateLimit: JSON.parse(json) }),
+        json,
+      ).rejects.toThrow(/missionStatusRateLimit\.(requests|windowSeconds) is required/);
     }
   });
 });
