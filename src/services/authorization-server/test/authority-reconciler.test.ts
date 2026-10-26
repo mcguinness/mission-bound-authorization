@@ -845,6 +845,7 @@ describe("the AS terminates a deprovisioned Subject's Missions, identified by th
 
   it("matches the deprovisioned principal by the recorded iss and sub: a source describing another issuer's principals revokes nothing, though one of them shares the Subject's sub", async () => {
     nowMs = Date.now();
+    await observe(sourceWith());
     const OTHER_ISSUER = "https://idp.other.example";
     const foreignSource = new AuthorityDependencyResolver({
       issuer: OTHER_ISSUER,
