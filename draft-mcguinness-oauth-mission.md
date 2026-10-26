@@ -1958,10 +1958,10 @@ The consent rendering is hardened against client text:
   ({{approval-preparation}}), so crafted client text cannot pass as
   derived authority or as a statement of the AS.
 
-An AS that judges goal text misleading refuses the submission rather
-than truncating the text: the Intent is recorded verbatim and
-committed by `intent_hash` ({{integrity-anchors}}), so a truncated
-rendering would show the Approver less than the record holds.
+The rendering presents `goal` and `task_bounds` as recorded, without
+truncation: the Intent is recorded verbatim and committed by
+`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
+show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
@@ -7626,9 +7626,9 @@ Cross-Domain:
   "Mission-governed client"; and Issuance Gating gives the reason a
   Token Exchange refusal uses `invalid_request` (#1532).
 - The consent rendering attributes client-supplied text to the client,
-  identified from client identity information the AS trusts, and an AS
-  that judges goal text misleading refuses the submission rather than
-  truncating the text (Rendering Safeguards; #1532).
+  identified from client identity information the AS trusts, and
+  presents `goal` and `task_bounds` as recorded, without truncation
+  (Rendering Safeguards; #1532, D859).
 
 -01
 
