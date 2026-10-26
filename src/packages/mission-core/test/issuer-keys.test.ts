@@ -5,6 +5,7 @@ import {
   IssuerKeyError,
   IssuerKeys,
   type IssuerKeysFetch,
+  keyThumbprint,
 } from "../src/index.js";
 
 // #831 C1: an issuer's keys as a consumer holds them. Trust from
@@ -272,5 +273,147 @@ describe("an issuer's keys under a consumer's trusted roles (@spec #831 C1)", ()
       () => new IssuerKeys({ jwksUri: JWKS_URI, roles: { a: { kids: ["k"], algs: [] } } }),
     ).toThrow(/role a accepts no algorithm/);
     expect(new IssuerKeyError("unknown_kid", "x").code).toBe("unknown_kid");
+  });
+});
+
+describe("a consumer's trusted roles, changed while it runs (@spec #831 C2 review)", () => {
+  it("takes effect at the next resolution: a kid added verifies, a kid removed is refused, a resolver made earlier follows", async () => {
+    const t1 = key("as-token");
+    const t2 = key("as-token-2");
+    const { fetch, requests } = issuer({ keys: [t1, t2], headers: fresh(300) });
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] } },
+      fetch,
+      now: clock().now,
+    });
+    const access = keys.resolver("accessToken");
+    await access({ kid: "as-token", alg: "ES256" });
+    // Published, but not yet trusted.
+    await expect(access({ kid: "as-token-2", alg: "ES256" })).rejects.toEqual(
+      refusal("untrusted_kid"),
+    );
+    keys.setRoles({ accessToken: { kids: ["as-token", "as-token-2"] } });
+    expect(material(await access({ kid: "as-token-2", alg: "ES256" }))).toBe(publicOf(t2));
+    keys.setRoles({ accessToken: { kids: ["as-token-2"] } });
+    await expect(access({ kid: "as-token", alg: "ES256" })).rejects.toEqual(
+      refusal("untrusted_kid"),
+    );
+    expect(material(await access({ kid: "as-token-2", alg: "ES256" }))).toBe(publicOf(t2));
+    // Re-selected from the set already held: no fetch for a change of trust.
+    expect(requests).toHaveLength(1);
+  });
+
+  it("refuses a replacement that would give one key to two roles, keeping the roles in force; a kid moved to another role stops resolving for the first", async () => {
+    const shared = key("as-token");
+    const { fetch } = issuer({
+      keys: [shared, { ...shared, kid: "as-status" }, key("as-txn")],
+      headers: fresh(300),
+    });
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] }, status: { kids: ["as-txn"] } },
+      fetch,
+      now: clock().now,
+    });
+    const access = keys.resolver("accessToken");
+    const status = keys.resolver("status");
+    await access({ kid: "as-token", alg: "ES256" });
+    expect(() =>
+      keys.setRoles({ accessToken: { kids: ["as-token"] }, status: { kids: ["as-status"] } }),
+    ).toThrow(/publishes one key for both accessToken and status/);
+    expect(() => keys.setRoles({ accessToken: { kids: ["k"] }, status: { kids: ["k"] } })).toThrow(
+      /kid k is trusted for both/,
+    );
+    // The roles in force are unchanged.
+    await access({ kid: "as-token", alg: "ES256" });
+    await expect(status({ kid: "as-status", alg: "ES256" })).rejects.toEqual(
+      refusal("untrusted_kid"),
+    );
+    keys.setRoles({ accessToken: { kids: [] }, status: { kids: ["as-txn", "as-token"] } });
+    await expect(access({ kid: "as-token", alg: "ES256" })).rejects.toEqual(
+      refusal("untrusted_kid"),
+    );
+    await status({ kid: "as-token", alg: "ES256" });
+  });
+});
+
+describe("a resolution under way when the trusted roles change (@spec #831 C2 review)", () => {
+  it("refuses a key whose kid moved to another role while its fetch was in flight", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const moved = key("as-token");
+    const fetch: IssuerKeysFetch = async () => {
+      await gate;
+      return new Response(JSON.stringify({ keys: [moved] }), { headers: fresh(300) });
+    };
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] }, status: { kids: [] } },
+      fetch,
+      now: clock().now,
+    });
+    const pending = keys.resolver("accessToken")({ kid: "as-token", alg: "ES256" });
+    keys.setRoles({ accessToken: { kids: [] }, status: { kids: ["as-token"] } });
+    release();
+    await expect(pending).rejects.toEqual(refusal("unknown_kid"));
+    expect(material(await keys.resolver("status")({ kid: "as-token", alg: "ES256" }))).toBe(publicOf(moved));
+  });
+});
+
+describe("a role's algorithms, from the consumer's policy or the published key (@spec #831 C2 review)", () => {
+  it("accepts whatever the published key admits when the role lists none, and only the listed algorithms when it does", async () => {
+    const p521 = generateKeyPairSync("ec", { namedCurve: "P-521" }).publicKey.export({
+      format: "jwk",
+    });
+    const es512 = { ...p521, kid: "as-token", alg: "ES512", use: "sig" };
+    const { fetch } = issuer({ keys: [es512], headers: fresh(300) });
+    const open = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] } },
+      fetch,
+    });
+    expect(material(await open.resolver("accessToken")({ kid: "as-token", alg: "ES512" }))).toBe(
+      publicOf(es512),
+    );
+    // The published key names its algorithm: another is refused even with no policy.
+    await expect(open.resolver("accessToken")({ kid: "as-token", alg: "ES256" })).rejects.toEqual(
+      refusal("algorithm"),
+    );
+    const narrow = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"], algs: ["ES256"] } },
+      fetch,
+    });
+    await expect(narrow.resolver("accessToken")({ kid: "as-token", alg: "ES512" })).rejects.toEqual(
+      refusal("algorithm"),
+    );
+  });
+});
+
+describe("the trusted keys' thumbprints, for keeping two sources apart (@spec #831 C2 review)", () => {
+  it("are the fresh set's trusted keys with their roles, and refuse when the set cannot be revalidated", async () => {
+    const c = clock();
+    const t1 = key("as-token");
+    const { fetch } = issuer(
+      { keys: [t1, key("as-txn"), key("other")], headers: fresh(60) },
+      new Error("down"),
+    );
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids: ["as-token"] }, transactionToken: { kids: ["as-txn"] } },
+      fetch,
+      now: c.now,
+    });
+    const prints = await keys.trustedThumbprints();
+    expect([...prints.values()].sort()).toEqual(["accessToken", "transactionToken"]);
+    const t1Print = keyThumbprint(
+      await keys.resolver("accessToken")({ kid: "as-token", alg: "ES256" }),
+    );
+    expect(prints.get(t1Print as string)).toBe("accessToken");
+    c.advance(60);
+    await expect(keys.trustedThumbprints()).rejects.toEqual(refusal("unavailable"));
   });
 });
