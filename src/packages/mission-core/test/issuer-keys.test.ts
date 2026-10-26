@@ -130,6 +130,29 @@ describe("an issuer's keys under a consumer's trusted roles (@spec #831 C1)", ()
     expect(() => keys.resolver("transaction")).toThrow(/no role transaction/);
   });
 
+  it("uses a key only to verify: one whose key_ops omit verify, or whose use is another, is not used", async () => {
+    const { fetch } = issuer({
+      keys: [
+        key("as-token", { use: undefined, key_ops: ["verify"] }),
+        key("as-sign", { use: undefined, key_ops: ["sign"] }),
+        key("as-malformed", { use: undefined, key_ops: "verify" }),
+        key("as-enc", { use: "enc" }),
+      ],
+      headers: fresh(300),
+    });
+    const kids = ["as-token", "as-sign", "as-malformed", "as-enc"];
+    const access = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles: { accessToken: { kids } },
+      fetch,
+      now: clock().now,
+    }).resolver("accessToken");
+    await access({ kid: "as-token", alg: "ES256" });
+    for (const kid of kids.slice(1)) {
+      await expect(access({ kid, alg: "ES256" })).rejects.toEqual(refusal("unknown_kid"));
+    }
+  });
+
   it("refuses a key published for another algorithm than the header's", async () => {
     const { fetch } = issuer({ keys: [key("as-token", { alg: "ES384" })], headers: fresh(300) });
     const keys = new IssuerKeys({

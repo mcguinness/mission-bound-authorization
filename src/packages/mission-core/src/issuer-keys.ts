@@ -32,6 +32,9 @@
  *   and a failed fetch never admits the key.
  * - **One key never serves two roles**: a set publishing the same key under
  *   two roles' identifiers is refused whole.
+ * - **A key is used only to verify**: one published with a `use` other than
+ *   `sig`, or with `key_ops` that do not list `verify` (RFC 7517 Sections
+ *   4.2 and 4.3), is not used, as a fixed key set's resolver would not.
  */
 import {
   createHash,
@@ -305,6 +308,11 @@ export class IssuerKeys {
       const role = roleOfKid.get(jwk.kid);
       if (!role || out.has(jwk.kid)) continue;
       if (jwk.use !== undefined && jwk.use !== "sig") continue;
+      if (
+        jwk.key_ops !== undefined &&
+        !(Array.isArray(jwk.key_ops) && jwk.key_ops.includes("verify"))
+      )
+        continue;
       let key: KeyObject;
       try {
         key = createPublicKey({ key: jwk as NodeJwk, format: "jwk" });
