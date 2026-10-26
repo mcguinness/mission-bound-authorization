@@ -748,7 +748,10 @@ Evidence ({{execution-evidence-object}}), never a Refusal Record:
   requires, `mission_context_missing`; for one whose operation target
   is absent, malformed, or outside the enforcement scope the requesting
   PEP is authorized for ({{I-D.draft-mcguinness-mission-authzen}}),
-  `operation_target_invalid`; for one whose action phase is outside
+  `operation_target_invalid`; for a mediated request with no action
+  class established, where the runtime Enforcement Scope Statement
+  declares action classes, `action_class_missing`, recorded with no
+  class; for one whose action phase is outside
   the defined set, or is absent where the PDP's trusted operation
   declaration requires a phase, `phase_invalid`; for a compensate-phase
   request with no `compensates_evaluation_id`, or a request whose
@@ -2703,6 +2706,10 @@ evidence representation their shared envelope carries (using the
 
 \[\[ To be removed from the final specification ]]
 
+- Refusal Record: `action_class_missing` records a PDP refusal of a
+  mediated request with no action class established, where the runtime
+  Enforcement Scope Statement declares classes, with no class recorded
+  (#956, D814).
 - Extension Members, Refusal Record and Execution Evidence:
   `work_item`, owned by the harness profile, records the qualified
   work-item identifier on Decision and Execution Evidence, joining

@@ -40,7 +40,13 @@ import { exportJWK, SignJWT } from "jose";
 import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
 import { IntrospectionUnavailableError } from "./introspection.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
-import { MISSION_REFERENCE_HEADER, parseMissionReferenceField } from "@mission/core";
+import {
+  MCP_REFERENCE_META_KEY,
+  MISSION_REFERENCE_HEADER,
+  parseMcpReferenceMeta,
+  parseMissionReferenceField,
+  reconcilePropagatedReferences,
+} from "@mission/core";
 import { TOOL_ACTIONS, type RequestSignals, type TokenFacts } from "./pep.js";
 import { serveResourceMetadata } from "./resource-metadata.js";
 import { dispatchPathFor, type McpPaymentsServer } from "./server.js";
@@ -59,10 +65,13 @@ export interface HttpMcpChannel {
 }
 
 /** The HTTP mediated client surface: tool access with NO `_meta` credential --
- * the mission token + DPoP proof travel in the HTTP headers instead. */
+ * the mission token + DPoP proof travel in the HTTP headers instead. An
+ * optional `missionReference` rides `params._meta` under the propagation key
+ * (@spec authority-server#mcp-reference), typed `unknown` so a caller can
+ * present a malformed shape: the server decides what is well-formed. */
 export interface HttpMediatedClient {
   listTools: () => Promise<string[]>;
-  callTool: (name: string, args: Record<string, unknown>) => Promise<MediatedToolResult>;
+  callTool: (name: string, args: Record<string, unknown>, missionReference?: unknown) => Promise<MediatedToolResult>;
 }
 
 /**
@@ -200,9 +209,23 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {
     const token = extra.authInfo?.extra?.tokenFacts as TokenFacts | undefined;
-    const signals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
+    const authSignals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     if (!token) return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+    // @spec authority-server#mcp-reference (#1694): the propagated reference
+    // also rides params._meta on each tools/call, and a server that silently
+    // ignores that key is not a conforming Mission PEP. It is read with the
+    // stdio transport's closed parser and reconciled with the
+    // Mission-Reference field the middleware parsed: either alone is the
+    // reference, and two carriages that disagree, or a malformed one, reach
+    // the PEP as one unusable reference, which it refuses
+    // `mission_reference_conflict` (@spec authority-server#reference-verification).
+    const { missionReference: fieldReference, ...rest } = authSignals ?? {};
+    const missionReference = reconcilePropagatedReferences(
+      fieldReference,
+      parseMcpReferenceMeta(request.params._meta?.[MCP_REFERENCE_META_KEY]),
+    );
+    const signals: RequestSignals = { ...rest, ...(missionReference ? { missionReference } : {}) };
     const verdict = await route(paymentsServer, request.params.name, args, token, signals);
     return toCallToolResult(verdict);
   });
@@ -503,8 +526,12 @@ export async function createHttpMediatedClient(
       const res = await mcp.listTools();
       return res.tools.map((t) => t.name);
     },
-    async callTool(name, args) {
-      const res = await mcp.callTool({ name, arguments: args });
+    async callTool(name, args, missionReference) {
+      const res = await mcp.callTool({
+        name,
+        arguments: args,
+        ...(missionReference !== undefined ? { _meta: { [MCP_REFERENCE_META_KEY]: missionReference } } : {}),
+      });
       return (res.structuredContent ?? { ok: false, refusal_reason: "no_result" }) as unknown as MediatedToolResult;
     },
   };

@@ -16,6 +16,7 @@ import {
   delegateMatcherListViolation,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
+  carriesHttpUserinfo,
   isAbsoluteUri,
   isValidAmount,
   isSubsetEntry,
@@ -176,6 +177,13 @@ function assertWellFormedResources(entries: readonly AuthorityEntry[]): void {
       throw new IntentError(
         "invalid_authorization_details",
         `authorization_details entry resource ${JSON.stringify(entry.resource)} is not an RFC 3986 absolute URI`,
+      );
+    }
+    // @spec resource-access#entry-validation (#1376): nor an http(s) URI carrying userinfo.
+    if (carriesHttpUserinfo(entry.resource)) {
+      throw new IntentError(
+        "invalid_authorization_details",
+        `authorization_details entry resource ${JSON.stringify(entry.resource)} carries a userinfo subcomponent`,
       );
     }
   }

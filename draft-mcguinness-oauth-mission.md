@@ -2718,9 +2718,11 @@ audiences associated with the entries it carries, never the designated
 client its `aud` names ({{token-claims}}). A designation carries only a
 permitted subset of the presented token's entries ({{subset}},
 {{delegation-constraints}}), each keeping its original approved
-audience ({{transformation-capabilities}}). The delegated token issued
-at its redemption is subject to every rule of this section unchanged
-({{delegated-exchange}}).
+audience ({{transformation-capabilities}}). An entry without an
+original approved audience is not carried, and a designation that
+would carry no entry is refused with `invalid_target`. The delegated
+token issued at its redemption is subject to every rule of this
+section unchanged ({{delegated-exchange}}).
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -7516,9 +7518,10 @@ Cross-Domain:
 - A designation's `aud` names its redeemer and reassigns no entry's
   original approved audience: the audience rules test the audiences
   associated with the entries it carries, a permitted subset of the
-  presented token's, and the delegated token issued at its redemption
-  is subject to every audience rule (Audience and Token Response,
-  Declared Transformation Capabilities; #1717, D845).
+  presented token's that excludes an entry without an original approved
+  audience, and the delegated token issued at its redemption is subject
+  to every audience rule (Audience and Token Response, Declared
+  Transformation Capabilities; #1717, D845, D859).
 - The key-publication requirement applies to an AS that issues
   Mission-bound JWT access tokens for resource servers to consume, not
   to one issuing only designations; the first capability carrier that
