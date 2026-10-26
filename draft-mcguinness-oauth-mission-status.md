@@ -1567,13 +1567,16 @@ when the suspension commits can complete.
 
 ## Relationship to RFC 7009
 
-A Mission revocation through this endpoint cascades to credentials
-derived from the Mission per the AS's advertised revocation
-propagation ({{revocation-enforcement-classes}}). The AS MAY
+A Mission revocation through this endpoint reaches credentials
+already derived from the Mission through the AS's advertised
+revocation propagation ({{revocation-enforcement-classes}});
+otherwise they remain valid until their own `exp`. The AS MAY
 additionally revoke specific outstanding tokens it knows by `jti`,
 with the same effect as {{RFC7009}} revocation of each token. An
-{{RFC7009}} revocation does not by itself revoke a Mission; the
-lifecycle endpoint is the authoritative Mission state change.
+{{RFC7009}} revocation does not by itself revoke a Mission: Mission
+state changes only by a lifecycle transition ({{legal-transitions}}),
+such as a request to this endpoint, a deadline, expiry, or the
+coupling below.
 
 Where a deployment's revocation policy treats revoking a Mission's
 refresh token as revoking the Mission
