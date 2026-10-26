@@ -55,8 +55,8 @@
     "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "f1fcc299596897011b012aa9430a29c75032cbca",
-    "content_sha256": "dcadc3226715107512b0b555ccb9773c48960d5ecd7c91d6b2ae1b0eff32b90e"
+    "revision": "3832d435322edf4bfc1fa485a0eb9a653d045db7",
+    "content_sha256": "5af05b12c727d5615396b8b025ee9120aa891b5ac54e6f927fe9361e2386b310"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -2634,6 +2634,41 @@
     }
    ],
    "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
+  },
+  {
+   "id": "status.response.consumer-authorized-signer",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "the JWS signature against a current `jwks_uri` entry for the `issuer` AS that the consumer's trusted configuration authorizes for that AS's Mission Status responses; a key's presence in the `jwks_uri` does not authorize it",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Mission Status Response signed under a key the issuer publishes in its `jwks_uri` but the consumer's trusted configuration does not authorize for that issuer's Mission Status responses (another role's key, say), and relies on nothing it carries",
+    "local": "The reference's Mission Status consumer is the PDP. It verifies only under its declared Status kids: declaredStatusKeys over a fixed key set, and refreshingStatusKeys over the issuer's `jwks_uri` through IssuerKeys (#831 C2), both in src/services/pdp/src/mission-status-resolver.ts."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response signed by a key the issuer publishes for another purpose",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
+     "name": "the declared Status keys over a jwks_uri (@spec #831 C2) > verifies under a declared kid only, and follows the set the issuer publishes",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 (D842): the step 3 role restriction, ruled a C follow-up with a verifier row. Proven by disabling each path: declaredStatusKeys keeping every published key fails \"refuses a response signed by a key the issuer publishes for another purpose\" (the response is accepted); refreshingStatusKeys trusting whatever kid the header names fails the refreshing test at its undeclared-key assertion (the token-key signature verifies). Role verifier: the duty is every consumer's, whatever kind."
   },
   {
    "id": "status.response.consumer-issuer-binding",
