@@ -559,13 +559,13 @@ describe("standing-payment dispatch metered end to end through the composed stac
       // binding derives from it.
       const derived = kernelBudgetBinding(stack.kernel, { id: instance, issuer: stack.issuer });
       expect(derived).toMatchObject({ owner: OWNER, budget_id: BUDGET_ID, destinations: { acme: ACME_ACCOUNT } });
-      stack.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
-      expect(stack.kernel.standingPayments.admission(instance)).toBeDefined();
-      expect(kernelBudgetBinding(stack.kernel, { id: instance, issuer: stack.issuer })).toBe(UNDERIVABLE_BUDGET);
       // The source cannot vouch for a Mission this kernel does not hold, or
       // holds under another issuer: underivable, never unbound.
       expect(kernelBudgetBinding(stack.kernel, { id: "msn_not_held", issuer: stack.issuer })).toBe(UNDERIVABLE_BUDGET);
       expect(kernelBudgetBinding(stack.kernel, { id: instance, issuer: "https://another-issuer.test" })).toBe(UNDERIVABLE_BUDGET);
+      stack.kernel.db.prepare("DELETE FROM activation_policy_snapshots").run();
+      expect(stack.kernel.standingPayments.admission(instance)).toBeDefined();
+      expect(kernelBudgetBinding(stack.kernel, { id: instance, issuer: stack.issuer })).toBe(UNDERIVABLE_BUDGET);
       expect(await wire(stack, instance, "inv-1")).toMatchObject({ ok: false, denial_reason: "constraint_unsupported" });
       expect(wires(stack)).toEqual([]);
       expect(stack.pdpClaims.budgetCounter(SHARED)).toBeUndefined();
