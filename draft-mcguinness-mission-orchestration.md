@@ -965,7 +965,7 @@ retention requirements of the runtime profile
 reference:
 
 - append-only integrity protection under a named mechanism;
-- a per-Mission sequence indicator;
+- a per-emitter sequence indicator for each Mission;
 - no raw parameters in the record; and
 - a retention window no shorter than the Mission's audit horizon.
 
@@ -1081,6 +1081,9 @@ This document makes no IANA request.
 
 \[\[ To be removed from the final specification ]]
 
+- Record Integrity and Retention ({{evidence-integrity}}): the
+  imported sequence indicator is per emitter for each Mission, as the
+  runtime profile scopes it. No requirement changed (#821).
 - In-Flight Requests ({{in-flight}}): `committed` requires evidence
   that the effect occurred, and an outcome the deployment cannot
   establish is `unknown`, the runtime profile's undetermined outcome.
