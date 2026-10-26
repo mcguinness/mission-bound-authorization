@@ -13,6 +13,7 @@
  */
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
+import { canonicalDigest } from "@mission/core";
 import {
   CLAIM_SETTLEMENT_INTAKE,
   createDecisionChannel,
@@ -56,6 +57,9 @@ const TOKEN: TokenFacts = {
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
 
+/** The committed Dispatch Policy the budget was approved under. */
+const DISPATCH_POLICY = { id: "dp_vendor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "v1" }) };
+
 /** The shipped statement, claiming `budget_metering` for one standing-consent budget of 200.00 USD. */
 function meteringStatement(): EnforcementScopeStatement {
   const statement = structuredClone(RUNTIME_POSTURE) as unknown as EnforcementScopeStatement & {
@@ -64,7 +68,6 @@ function meteringStatement(): EnforcementScopeStatement {
   };
   statement.claims = [...(statement.claims ?? []), "budget_metering"];
   statement.extensions.budget_metering = {
-    owner: "acme-treasury",
     unit: { currency: "USD", exponent: 2 },
     enforcement_profile: "exact",
     topology: "local-single-writer",
@@ -73,11 +76,12 @@ function meteringStatement(): EnforcementScopeStatement {
     metered_actions: [{ action: "payments:payment.execute", phase: "commit" }],
     budgets: [
       {
+        owner: "acme-treasury",
         budget_id: "vendor-payments-2026",
         counter_scope: "standing_consent",
         currency: "USD",
         limit: "200.00",
-        policy: { template_id: "tmpl_vendor_payments", template_version: "1" },
+        policy: DISPATCH_POLICY,
       },
     ],
   };
@@ -105,7 +109,7 @@ const view = (): MissionView => ({
     budget_id: "vendor-payments-2026",
     currency: "USD",
     limit: "200.00",
-    policy: { template_id: "tmpl_vendor_payments", template_version: "1" },
+    policy: DISPATCH_POLICY,
     instance: { max_budget: { amount: "1000.00", currency: "USD" }, root_mission_id: "msn_816" },
   },
 });

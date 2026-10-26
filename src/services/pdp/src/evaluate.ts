@@ -562,7 +562,7 @@ export type DenialReason =
    * constraint", metering#metering (#816, decision b): the Mission carries a
    * budget binding this PDP cannot meter (no budget store, a budget its
    * statement does not declare as bound, another currency, or a limit or
-   * policy version that differs from the declaration), so it refuses rather
+   * Dispatch Policy reference that differs from the declaration), so it refuses rather
    * than pass the bound through unmetered.
    */
   | "constraint_unsupported";

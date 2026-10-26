@@ -143,6 +143,8 @@ export {
   type BudgetMeteringDeclaration,
   budgetCounterId,
   budgetMeteringFindings,
+  type DispatchPolicyRef,
+  isDispatchPolicyRef,
   isMissionBudgetBinding,
   type MeteredAction,
   type MissionBudgetBinding,

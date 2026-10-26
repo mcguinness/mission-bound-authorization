@@ -26,10 +26,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
+import { canonicalDigest } from "@mission/core";
 import {
   type BudgetMeteringDeclaration,
   budgetCounterId,
   CLAIM_SETTLEMENT_INTAKE,
+  type DispatchPolicyRef,
   type MissionBudgetBinding,
 } from "../src/budget-metering.js";
 import { createDecisionChannel } from "../src/decision-channel.js";
@@ -88,7 +90,9 @@ const HORIZON_MS = 604_800_000;
 
 const OWNER = "acme-treasury";
 const BUDGET_ID = "vendor-payments-2026";
-const TEMPLATE_ID = "tmpl_vendor_payments";
+/** The committed Dispatch Policy the budget was approved under, and its re-consented successor. */
+const POLICY_V1: DispatchPolicyRef = { id: "dp_vendor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "v1" }) };
+const POLICY_V2: DispatchPolicyRef = { id: "dp_vendor_payments", version: "2", digest: canonicalDigest({ dispatch_policy: "v2" }) };
 
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
@@ -139,9 +143,8 @@ async function executionRecord(
   return { ...content, evidence_envelope };
 }
 
-function declaration(o: { limit?: string; version?: string } = {}): BudgetMeteringDeclaration {
+function declaration(o: { limit?: string; policy?: DispatchPolicyRef } = {}): BudgetMeteringDeclaration {
   return {
-    owner: OWNER,
     unit: { currency: "USD", exponent: 2 },
     enforcement_profile: "exact",
     topology: "local-single-writer",
@@ -150,11 +153,12 @@ function declaration(o: { limit?: string; version?: string } = {}): BudgetMeteri
     metered_actions: [{ action: EXECUTE, phase: "commit" }],
     budgets: [
       {
+        owner: OWNER,
         budget_id: BUDGET_ID,
         counter_scope: "standing_consent",
         currency: "USD",
         limit: o.limit ?? "1000.00",
-        policy: { template_id: TEMPLATE_ID, template_version: o.version ?? "1" },
+        policy: o.policy ?? POLICY_V1,
       },
     ],
   };
@@ -205,7 +209,7 @@ function binding(root: string, o: Partial<MissionBudgetBinding> & { maxBudget?: 
     budget_id: BUDGET_ID,
     currency: "USD",
     limit: "1000.00",
-    policy: { template_id: TEMPLATE_ID, template_version: "1" },
+    policy: POLICY_V1,
     instance: { max_budget: { amount: maxBudget ?? "1000.00", currency: "USD" }, root_mission_id: root },
     ...over,
   };
@@ -726,9 +730,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.sweep();
       claims.close();
       // Re-consent: version 2 of the policy raises the limit to 1200.00.
-      claims = open(budgetStatement(declaration({ limit: "1200.00", version: "2" })));
+      claims = open(budgetStatement(declaration({ limit: "1200.00", policy: POLICY_V2 })));
       expect(claims.reservationsFor(first).map((r) => r.state)).toEqual(["held", "held"]);
-      const v2 = (id: string) => view(id, binding(id, { limit: "1200.00", policy: { template_id: TEMPLATE_ID, template_version: "2" } }));
+      const v2 = (id: string) => view(id, binding(id, { limit: "1200.00", policy: POLICY_V2 }));
       const refused = await evaluate(request(c, { missionId: "msn_b", amount: "700.00" }), options(claims, c, v2("msn_b")));
       expectDenied(refused, "quota_exceeded");
       expect(entry(refused, "standing_consent")?.remaining.amount).toBe("600.00");
@@ -739,7 +743,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
   });
 
   describe("a budget this PDP cannot meter is refused (decision b)", () => {
-    it("currency mismatch, an undeclared budget, another owner, and a limit or policy version that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)", async () => {
+    it("currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
       const claims = open();
@@ -749,7 +753,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         ["undeclared budget", binding("msn_x", { budget_id: "another-budget" })],
         ["another budget owner", binding("msn_x", { owner: "globex-treasury" })],
         ["limit that disagrees with the declaration", binding("msn_x", { limit: "2000.00" })],
-        ["policy version that disagrees with the declaration", binding("msn_x", { policy: { template_id: TEMPLATE_ID, template_version: "2" } })],
+        ["policy id that disagrees with the declaration", binding("msn_x", { policy: { ...POLICY_V1, id: "dp_other" } })],
+        ["policy version that disagrees with the declaration", binding("msn_x", { policy: { ...POLICY_V1, version: "2" } })],
+        ["policy digest that disagrees with the declaration", binding("msn_x", { policy: { ...POLICY_V1, digest: POLICY_V2.digest } })],
       ];
       for (const [label, b, o] of cases) {
         const d = await evaluate(request(c, { missionId: "msn_x", ...o }), options(claims, c, view("msn_x", b)));
@@ -953,7 +959,8 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         ["Bounded profile", { ...declaration(), enforcement_profile: "bounded" }],
         ["another topology", { ...declaration(), topology: "shared-linearizable" }],
         ["commit before execution", { ...declaration(), reserve_posture: "commit_before_execution" }],
-        ["no owner", { ...declaration(), owner: "" }],
+        ["budget without an owner", { ...declaration(), budgets: [{ ...declaration().budgets[0], owner: "" }] }],
+        ["owner at the declaration's top level", { ...declaration(), owner: OWNER }],
         ["unit without exponent", { ...declaration(), unit: { currency: "USD" } }],
         ["no metered action", { ...declaration(), metered_actions: [] }],
         ["unknown phase", { ...declaration(), metered_actions: [{ action: EXECUTE, phase: "settle" }] }],
@@ -961,8 +968,11 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         ["lineage counter scope", { ...declaration(), budgets: [{ ...declaration().budgets[0], counter_scope: "lineage" }] }],
         ["budget in another currency", { ...declaration(), budgets: [{ ...declaration().budgets[0], currency: "EUR" }] }],
         ["limit the unit cannot count", { ...declaration(), budgets: [{ ...declaration().budgets[0], limit: "1000.001" }] }],
-        ["policy without a version", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { template_id: TEMPLATE_ID } }] }],
-        ["duplicate budget id", { ...declaration(), budgets: [declaration().budgets[0], declaration().budgets[0]] }],
+        ["policy without a version", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { id: POLICY_V1.id, digest: POLICY_V1.digest } }] }],
+        ["policy without a digest", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { id: POLICY_V1.id, version: "1" } }] }],
+        ["policy digest not sha-256", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { ...POLICY_V1, digest: "md5:abc" } }] }],
+        ["policy in the template shape", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { template_id: "tmpl_vendor_payments", template_version: "1" } }] }],
+        ["duplicate budget for one owner", { ...declaration(), budgets: [declaration().budgets[0], declaration().budgets[0]] }],
         ["unknown member", { ...declaration(), counter_owner: "mcp-payments-pdp" }],
       ];
       for (const [label, decl] of malformed) {

@@ -7,11 +7,12 @@
  *
  * - The deployment's `budget_metering` declaration, an Enforcement Scope
  *   Statement extension the claim domain reads from its own statement. It
- *   names the budget owner, the unit, the Exact profile and the single-writer
- *   topology the reservation runs under, the reserve-then-commit posture, the
- *   actions it meters, and each budget it meters with a disclosure copy of
- *   the approved policy's limit and the policy version that limit was
- *   committed under.
+ *   names the unit, the Exact profile and the single-writer topology the
+ *   reservation runs under, the reserve-then-commit posture, the settlement
+ *   intake, the actions it meters, and each budget it meters: its owner and
+ *   id, a disclosure copy of the approved policy's limit, and the committed
+ *   Dispatch Policy that limit was approved under, by `id`, `version` and
+ *   `digest`.
  * - A Mission's {@link MissionBudgetBinding}, a PDP-local member of the
  *   loaded Mission view (`MissionView.budget`), derived from the committed
  *   policy snapshot. It never enters `req.context`, so it is not part of the
@@ -55,6 +56,32 @@ export interface BudgetAmount {
 }
 
 /**
+ * @spec metering#aggregate-bounds (#816): the committed Dispatch Policy a
+ * budget's limit was approved under, identified by its `id`, `version` and
+ * `digest` (a `sha-256:` canonical digest). Compared member for member.
+ */
+export interface DispatchPolicyRef {
+  id: string;
+  version: string;
+  digest: string;
+}
+
+const POLICY_MEMBERS = ["id", "version", "digest"];
+const DIGEST_FORMAT = /^sha-256:[A-Za-z0-9_-]{43}$/;
+
+/** Whether `value` is exactly `{id, version, digest}` with a `sha-256:` digest. */
+export function isDispatchPolicyRef(value: unknown): value is DispatchPolicyRef {
+  return (
+    object(value) &&
+    nonEmpty(value.id) &&
+    nonEmpty(value.version) &&
+    typeof value.digest === "string" &&
+    DIGEST_FORMAT.test(value.digest) &&
+    Object.keys(value).every((k) => POLICY_MEMBERS.includes(k))
+  );
+}
+
+/**
  * The budget a Mission is bound to, as this PDP holds it beside the Mission
  * view (`MissionView.budget`). PDP-local: derived by the loader from the
  * kernel's committed policy snapshot, never read from a decision request. A
@@ -62,8 +89,8 @@ export interface BudgetAmount {
  *
  * The policy is the authoritative home of `limit`; the Enforcement Scope
  * Statement discloses a copy, and a binding that disagrees with the
- * declaration (limit, policy version, owner, budget or currency) is a budget
- * this PDP cannot meter (`constraint_unsupported`).
+ * declaration (limit, policy `id`, `version` or `digest`, owner, budget or
+ * currency) is a budget this PDP cannot meter (`constraint_unsupported`).
  */
 export interface MissionBudgetBinding {
   /** The accounting domain that owns the budget; with `budget_id` it keys the shared counter. */
@@ -74,8 +101,8 @@ export interface MissionBudgetBinding {
   currency: string;
   /** The approved policy's shared limit, a decimal string in `currency`. */
   limit: string;
-  /** The committed policy the limit was approved under. */
-  policy: { template_id: string; template_version: string };
+  /** The committed Dispatch Policy the limit was approved under. */
+  policy: DispatchPolicyRef;
   /** The instance bound. */
   instance: {
     /** The instance Intent's `max_budget`. */
@@ -95,13 +122,19 @@ export interface MeteredAction {
   phase?: ActionPhase;
 }
 
-/** One declared budget: its id, its counter class, and the disclosure copy of the policy's limit. */
+/**
+ * One declared budget: its owner and id (the shared counter's key), its
+ * counter class, the disclosure copy of the policy's limit, and the
+ * committed Dispatch Policy it was approved under.
+ */
 export interface BudgetDeclaration {
+  /** The accounting domain that owns the budget. */
+  owner: string;
   budget_id: string;
   counter_scope: "standing_consent";
   currency: string;
   limit: string;
-  policy: { template_id: string; template_version: string };
+  policy: DispatchPolicyRef;
 }
 
 /**
@@ -119,8 +152,6 @@ export const CLAIM_SETTLEMENT_INTAKE = "pdp-claim-settlement:execution-evidence"
  * reference-statement representation, not a Runtime wire member.
  */
 export interface BudgetMeteringDeclaration {
-  /** The budget owner (accounting domain) every declared budget belongs to. */
-  owner: string;
   /** The counter unit: the currency, and the minor-unit exponent amounts are counted in. */
   unit: { currency: string; exponent: number };
   enforcement_profile: "exact";
@@ -138,7 +169,6 @@ export interface BudgetMeteringDeclaration {
 }
 
 const DECLARATION_MEMBERS = new Set([
-  "owner",
   "unit",
   "enforcement_profile",
   "topology",
@@ -147,7 +177,7 @@ const DECLARATION_MEMBERS = new Set([
   "metered_actions",
   "budgets",
 ]);
-const BUDGET_MEMBERS = new Set(["budget_id", "counter_scope", "currency", "limit", "policy"]);
+const BUDGET_MEMBERS = new Set(["owner", "budget_id", "counter_scope", "currency", "limit", "policy"]);
 /** The widest minor-unit exponent a counter takes; every count stays a safe integer. */
 const MAX_EXPONENT = 9;
 
@@ -187,7 +217,6 @@ export function budgetCounterId(scope: BudgetCounterScope, key: Record<string, s
 /** Whether `value` is a binding of the documented shape; a malformed one is a budget this PDP cannot meter. */
 export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBinding {
   if (!object(value)) return false;
-  const policy = value.policy;
   const instance = value.instance;
   return (
     nonEmpty(value.owner) &&
@@ -195,9 +224,7 @@ export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBi
     isCurrencyCode(value.currency) &&
     typeof value.limit === "string" &&
     isValidAmount(value.limit) &&
-    object(policy) &&
-    nonEmpty(policy.template_id) &&
-    nonEmpty(policy.template_version) &&
+    isDispatchPolicyRef(value.policy) &&
     object(instance) &&
     nonEmpty(instance.root_mission_id) &&
     object(instance.max_budget) &&
@@ -246,7 +273,6 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
   for (const key of Object.keys(declared)) {
     if (!DECLARATION_MEMBERS.has(key)) push(member, `unknown member ${key}`);
   }
-  if (!nonEmpty(declared.owner)) push(member, "missing the budget owner");
   const unit = declared.unit;
   const unitOk =
     object(unit) &&
@@ -299,9 +325,12 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
       for (const key of Object.keys(raw)) {
         if (!BUDGET_MEMBERS.has(key)) push(at, `unknown member ${key}`);
       }
+      if (!nonEmpty(raw.owner)) push(at, "missing the budget owner");
       if (!nonEmpty(raw.budget_id)) push(at, "missing the budget id");
-      else if (ids.has(raw.budget_id)) push(at, `duplicate budget id ${raw.budget_id}`);
-      else ids.add(raw.budget_id);
+      // The shared counter's key is (owner, budget id): one declaration per key.
+      const key = JSON.stringify([raw.owner, raw.budget_id]);
+      if (ids.has(key)) push(at, `duplicate budget ${String(raw.budget_id)} of owner ${String(raw.owner)}`);
+      ids.add(key);
       if (raw.counter_scope !== "standing_consent") push(at, "counter_scope must be standing_consent");
       if (!isCurrencyCode(raw.currency) || (unitOk && raw.currency !== (unit as { currency: string }).currency)) {
         push(at, "currency must be the unit's currency");
@@ -311,14 +340,8 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
       } else if (!unitOk && (typeof raw.limit !== "string" || !isValidAmount(raw.limit))) {
         push(at, "limit must be a decimal amount");
       }
-      const policy = raw.policy;
-      if (
-        !object(policy) ||
-        !nonEmpty(policy.template_id) ||
-        !nonEmpty(policy.template_version) ||
-        Object.keys(policy).some((k) => k !== "template_id" && k !== "template_version")
-      ) {
-        push(at, "policy must be exactly {template_id, template_version}, the committed policy the limit was approved under");
+      if (!isDispatchPolicyRef(raw.policy)) {
+        push(at, "policy must be exactly {id, version, digest} (a sha-256: digest), the committed Dispatch Policy the limit was approved under");
       }
     });
   }
@@ -335,7 +358,7 @@ export interface BudgetCounterCharge {
 
 /** What a budget binding and an amount resolve to under a declaration. */
 export type BudgetChargeResolution =
-  /** The binding cannot be metered here: undeclared budget, another owner, currency, limit or policy version. */
+  /** The binding cannot be metered here: undeclared budget, another owner, currency, limit, or policy id, version or digest. */
   | { kind: "unsupported" }
   /** The request's amount is not one the unit counts exactly. */
   | { kind: "amount_invalid" }
@@ -344,10 +367,11 @@ export type BudgetChargeResolution =
 /**
  * @spec metering#aggregate-bounds, metering#capacity-across-missions (#816,
  * D830 rulings 1, 2, 5): resolve one charge. The binding must name a budget
- * the declaration lists under the same owner, in the declared currency, with
- * the declared limit (compared by value) and the declared policy version; the
- * request's amount must be in that currency too (no conversion). The
- * instance counter comes first, then the shared one.
+ * the declaration lists under the same (owner, budget id), in the declared
+ * currency, with the declared limit (compared by value) and the declared
+ * Dispatch Policy (`id`, `version` and `digest`, each exactly); the request's
+ * amount must be in that currency too (no conversion). The instance counter
+ * comes first, then the shared one.
  */
 export function resolveBudgetCharge(
   declaration: BudgetMeteringDeclaration,
@@ -357,8 +381,8 @@ export function resolveBudgetCharge(
 ): BudgetChargeResolution {
   if (!isMissionBudgetBinding(binding)) return { kind: "unsupported" };
   const { currency, exponent } = declaration.unit;
-  const declared = declaration.budgets.find((b) => b.budget_id === binding.budget_id);
-  if (!declared || binding.owner !== declaration.owner) return { kind: "unsupported" };
+  const declared = declaration.budgets.find((b) => b.owner === binding.owner && b.budget_id === binding.budget_id);
+  if (!declared) return { kind: "unsupported" };
   if (
     binding.currency !== currency ||
     declared.currency !== currency ||
@@ -369,8 +393,9 @@ export function resolveBudgetCharge(
   }
   if (compareAmounts(binding.limit, declared.limit) !== 0) return { kind: "unsupported" };
   if (
-    binding.policy.template_id !== declared.policy.template_id ||
-    binding.policy.template_version !== declared.policy.template_version
+    binding.policy.id !== declared.policy.id ||
+    binding.policy.version !== declared.policy.version ||
+    binding.policy.digest !== declared.policy.digest
   ) {
     return { kind: "unsupported" };
   }
