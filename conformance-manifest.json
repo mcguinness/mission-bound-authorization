@@ -30571,9 +30571,15 @@
      "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > missing evidence after an effect across a restart: the prior epoch's claim is never listed, closes indeterminate when its window closes with the declared alert, and the retry executes nothing",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails."
+   "notes": "Partial: recovery through a declared outcome lookup, a retransmission to a resource with durable idempotency, and a weaker connector are #817 steps 4 and 5 (two connectors and the recovery demonstration), which wait on #249 and #210. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the retry then executes and the duplicate_suppressed assertion fails. Across SIGKILL (#821, #1709 review P2-2): a PEP killed after the connector committed and before any outcome was retained is followed by a fresh process in which neither reconciliation nor a retry under the same key executes the effect again; proved by dropping a prior boot's claim at restart (M10-3)."
   },
   {
    "id": "runtime.execution-capabilities.unknown-outcome-held-without-lookup",
@@ -30781,7 +30787,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial: the read and reversible-write paths still discard a failed suppression's result (server.ts withholdUnevidenced, refuseSingleUse, reservationUnavailable, actorUnkeyable, releaseRetained, and the read path's reverification outcomes). Their refusal stands, so nothing proceeds, but the missing record is not surfaced. The transaction tier's exits are witnessed (#821 PR B item 5). Proved by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6)."
+   "notes": "Partial: the read and reversible-write paths still discard a failed suppression's result (server.ts withholdUnevidenced, refuseSingleUse, reservationUnavailable, actorUnkeyable, releaseRetained, and the read path's reverification outcomes); their refusal stands, so nothing proceeds, but the missing record is not surfaced. Follow-up: #1715. The transaction tier's exits are witnessed (#821 PR B item 5). Proved by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6, M5-6r)."
   },
   {
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
@@ -30948,13 +30954,19 @@
      "surface": "resource-operation"
     },
     {
-     "file": "src/services/mcp-payments/test/outcome-reconciler.test.ts",
-     "name": "the declared outcome reconciler runs the reconciliation (@spec runtime#evidence outcome reconciliation, #1103) > a prior process's attempt record survives a restart and leaves its operation undetermined: the empty ledger proves nothing, no record is fabricated, the claim closes indeterminate, and nothing executes again (#821)",
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
      "level": "cross-component",
      "surface": "resource-operation"
     }
    ],
-   "notes": "Witnessed at the releasing component, the PEP (#821 PR B items 2 and 3): at the instant the connector is called, the attempt record and the retained Decision Evidence are in the PEP's files, and reopened files still hold them; the Decision Evidence write precedes redemption, so its failure releases nothing; after a restart the attempt record survives and the PDP claim still refuses the key. Proved by disabling the attempt write (M3-1), naming another record in it (M3-3), skipping the durable Decision Evidence write (M8-6), and swallowing a failed retention write (M3-R1). The connector ledger is the in-memory simulated external resource, disclosed in src/docs/initial-runtime-deployment.md."
+   "notes": "Witnessed at the releasing component, the PEP (#821 PR B items 2 and 3): at the instant the connector is called, the attempt record and the retained Decision Evidence are in the PEP's files, and reopened files still hold them; the Decision Evidence write precedes redemption, so its failure releases nothing. The restart clause is witnessed across SIGKILL, not a graceful close (#1709 review P2-2): the PEP is killed after the attempt record and before the effect, and after the effect and before any outcome is retained, and a fresh process finds the attempt's execution_id, op_key, evaluation_id and the retained Decision Evidence, while the PDP claim still refuses the key. Proved by disabling the attempt write (M3-1, M3-1r), naming another record in it (M3-3), skipping the durable Decision Evidence write (M8-6), swallowing a failed retention write (M3-R1), leaving the attempt insert uncommitted (M10-1a, M10-1b) and dropping a prior boot's claim at restart (M10-3). The connector ledger is the in-memory simulated external resource, disclosed in src/docs/initial-runtime-deployment.md."
   },
   {
    "id": "runtime.evidence.pre-effect-commit-failure-refuses",
@@ -31264,9 +31276,15 @@
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim runs under the Exact profile only, and an unsupported topology is refused at startup > refuses a second handle on a file another domain holds",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Restart witnessed at the decision endpoint, below it and on the composed stack, each by reopening the claim file (#821, c62babc1). Replicas: the deployment runs one PDP, and its claim file refuses a second writer, so no replica allocates from it. Proved by dropping the committed position (M8-1, M1-B), ignoring the configured source (M1-C) and unbinding it in the stack (M1-A)."
+   "notes": "Restart witnessed at the decision endpoint, below it and on the composed stack by reopening the claim file (#821, c62babc1), and across SIGKILL: a PDP killed mid-operation is followed by a fresh process whose next decision takes a value past every one the killed process signed (#1709 review P2-2). Replicas: the deployment runs one PDP, and its claim file refuses a second writer, so no replica allocates from it. Proved by dropping the committed position (M8-1, M1-B, M10-4), ignoring the configured source (M1-C) and unbinding it in the stack (M1-A)."
   },
   {
    "id": "runtime.record-integrity.sequence-not-reused-pep",
@@ -31308,9 +31326,15 @@
      "name": "retention honors the declared audit window (@spec runtime-evidence#receipt-retention) > recovers the retained records, the emitter sequences and the key retirement metadata after a restart",
      "level": "unit",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after the effect and before outcome retention: the attempt's identifiers survive, the outcome stays undetermined rather than decided from an empty ledger, and nothing executes again",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack, each by reopening the retention file (#821 PR B item 2). The stack keeps its published key sets in memory, because evidence keys are generated per boot under fixed kids (#831); records and sequences are what the file keeps. Proved by allocating in memory instead (M8-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
+   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack by reopening the retention file (#821 PR B item 2), and across SIGKILL: after the PEP is killed, a fresh process's next record takes a value past every one the killed process signed (#1709 review P2-2). The stack keeps its published key sets in memory, because evidence keys are generated per boot under fixed kids (#831); records and sequences are what the file keeps. Proved by allocating in memory instead (M8-5, M10-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
   },
   {
    "id": "runtime.compromise-resistant.key-custody-condition",
@@ -40177,6 +40201,12 @@
     {
      "file": "src/demo/test/pdp-evidence-sequence-stack.test.ts",
      "name": "the composed stack's PDP keeps its Decision Evidence counters in its claim file (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > a PDP restarted on the shipped stack's claim file continues a Mission's Decision Evidence sequence where the stack left it",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/pre-effect-crash.test.ts",
+     "name": "the crash boundary around a transaction-tier effect, across SIGKILL (@spec runtime#evidence, #821) > killed after pre-effect persistence and before the effect: the attempt's identifiers and Decision Evidence survive, no outcome is invented, and nothing executes on reconciliation or a retry",
      "level": "cross-component",
      "surface": "evidence-emission"
     }
