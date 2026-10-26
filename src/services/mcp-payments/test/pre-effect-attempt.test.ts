@@ -14,6 +14,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonicalDigest, type JsonValue } from "@mission/core";
+import { DurableStoreError } from "@mission/store";
 import {
   createDecisionChannel,
   createEphemeralDecisionPoint,
@@ -35,6 +36,7 @@ import {
   EVIDENCE_UNAVAILABLE_ERROR,
   EvidenceStore,
   McpPaymentsServer,
+  openEvidenceRetentionStore,
   openWriteReservationStore,
   PaymentsStore,
   Pep,
@@ -78,8 +80,17 @@ const view = (): MissionView => ({
   client_id: "ap-agent",
 });
 
-/** One executing PEP over a durable write-reservation file, and the PDP it asks. */
-async function harness(reservationsFile = tempFile("pep-attempts-", "write-reservations.sqlite")) {
+/**
+ * One executing PEP over its durable files, and the PDP it asks: the
+ * write-reservation file (attempt records) and the evidence retention file
+ * (retained records and per-emitter sequences). A second harness on the same
+ * files is a restarted PEP.
+ */
+async function harness(
+  files: { reservations?: string; retention?: string } = {},
+) {
+  const reservationsFile = files.reservations ?? tempFile("pep-attempts-", "write-reservations.sqlite");
+  const retentionFile = files.retention ?? tempFile("pep-retention-", "evidence-retention.sqlite");
   const now = () => new Date();
   const payments = new PaymentsStore();
   payments.seed(
@@ -124,7 +135,8 @@ async function harness(reservationsFile = tempFile("pep-attempts-", "write-reser
       stateSourcePlacement: "pep" as const,
     }),
   });
-  const evidence = new EvidenceStore(keys.signing, keys.resolver);
+  const retention = openEvidenceRetentionStore({ file: retentionFile, owner: PEP_LOCATION, retentionWindowSeconds: 3_600 });
+  const evidence = new EvidenceStore(keys.signing, keys.resolver, retention);
   const connectors = new Connectors(now);
   const writeReservations: WriteReservationStore = openWriteReservationStore({ file: reservationsFile, owner: PEP_LOCATION });
   const alerts = new CollectingAlertSink();
@@ -152,6 +164,8 @@ async function harness(reservationsFile = tempFile("pep-attempts-", "write-reser
   });
   return {
     reservationsFile,
+    retentionFile,
+    retention,
     alerts,
     payments,
     connectors,
@@ -162,6 +176,7 @@ async function harness(reservationsFile = tempFile("pep-attempts-", "write-reser
       await channel.close();
       claims.close();
       writeReservations.close();
+      retention.close();
     },
   };
 }
@@ -177,10 +192,12 @@ describe("the transaction tier records each attempt before its effect (@spec run
   it("before the connector commits, the attempt's operation identity and its retained Decision Evidence are recorded in the PEP's durable file, and a reopened file still names them", async () => {
     const h = await harness();
     let atCommit: ReturnType<WriteReservationStore["attempts"]> | undefined;
+    let decisionAtCommit: string | undefined;
     const postWire = h.connectors.postWire.bind(h.connectors);
     vi.spyOn(h.connectors, "postWire").mockImplementation((input) => {
-      // What the PEP's file holds at the instant the effect is released.
+      // What the PEP's files hold at the instant the effect is released.
       atCommit = h.writeReservations.attempts();
+      decisionAtCommit = h.retention.get("decision", atCommit[0]?.decisionEvidence.evidenceId ?? "")?.digest;
       return postWire(input);
     });
     try {
@@ -200,17 +217,23 @@ describe("the transaction tier records each attempt before its effect (@spec run
           attemptedAtMs: expect.any(Number),
         },
       ]);
+      // The permit's Decision Evidence was already in the retention file.
+      expect(decisionAtCommit).toBe(canonicalDigest(decision as unknown as JsonValue));
       // The completed record carries the instant the attempt was recorded.
       expect(completed?.attempted_at).toBe(new Date(atCommit?.[0]?.attemptedAtMs as number).toISOString());
     } finally {
       await h.close();
     }
-    // The file outlives the process that wrote it.
+    // The files outlive the process that wrote them.
     const reopened = openWriteReservationStore({ file: h.reservationsFile, owner: PEP_LOCATION });
+    const retained = openEvidenceRetentionStore({ file: h.retentionFile, owner: PEP_LOCATION, retentionWindowSeconds: 3_600 });
     try {
       expect(reopened.attempts()).toEqual(atCommit);
+      const evidenceId = atCommit?.[0]?.decisionEvidence.evidenceId as string;
+      expect(retained.get("decision", evidenceId)?.digest).toBe(atCommit?.[0]?.decisionEvidence.digest);
     } finally {
       reopened.close();
+      retained.close();
     }
   });
 
@@ -241,6 +264,49 @@ function failWrites(h: Harness, role: "pep" | "executor"): { restore: () => void
   });
   return { restore: () => spy.mockRestore() };
 }
+
+describe("the PEP's per-Mission sequence across a restart (@spec runtime#record-integrity, #821)", () => {
+  it("a PEP restarted on the same files continues its per-Mission sequence: no value is issued twice, a value it could not use stays a gap, and no second writer shares the store", async () => {
+    // A request for an invoice the resource does not hold is refused before
+    // any decision, with a Refusal Record the PEP signs under the Mission.
+    const refuse = (h: Harness) =>
+      h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-404", idempotency_key: key() }, TOKEN);
+    const refusals = (h: Harness) => h.evidence.all().flatMap((e) => (e.kind === "refusal" ? [e.content] : []));
+    const first = await harness();
+    let before: number[];
+    try {
+      await refuse(first);
+      // A second process cannot act as this emitter on the same store: the
+      // file refuses a second writer, so no replica allocates from it.
+      expect(() =>
+        openEvidenceRetentionStore({ file: first.retentionFile, owner: PEP_LOCATION, retentionWindowSeconds: 3_600 }),
+      ).toThrow(DurableStoreError);
+      // A record that cannot be retained takes its value with it: the value
+      // is a gap, never issued again.
+      vi.spyOn(first.retention, "retain").mockImplementationOnce(() => {
+        throw new Error("SQLITE_FULL: database or disk is full");
+      });
+      await expect(refuse(first)).rejects.toThrow(/SQLITE_FULL/);
+      await refuse(first);
+      before = refusals(first).map((r) => r.sequence as number);
+      expect(before).toHaveLength(2);
+      expect(before[1]).toBeGreaterThan((before[0] as number) + 1);
+    } finally {
+      await first.close(); // the process dies
+    }
+    const restarted = await harness({ reservations: first.reservationsFile, retention: first.retentionFile });
+    try {
+      await refuse(restarted);
+      const all = refusals(restarted).map((r) => r.sequence as number);
+      // The first process's records came back from the file, and the new one
+      // takes the next value: no value is issued twice for the Mission.
+      expect(all).toEqual([...before, (before.at(-1) as number) + 1]);
+      expect(new Set(all).size).toBe(all.length);
+    } finally {
+      await restarted.close();
+    }
+  });
+});
 
 describe("a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821)", () => {
   it("a refusal after the permit whose suppressed record cannot be written still refuses, says the record is missing, and alerts the operator once; nothing executes", async () => {
