@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -102,6 +102,7 @@ Table of Contents
    6.  Revocation Propagation
    7.  Operational Considerations
    8.  Authorization Server Metadata
+     8.1.  Historical Key Set
    9.  Conformance
    10. Security Considerations
      10.1.  Mission Status Enumeration
@@ -1713,6 +1714,11 @@ Table of Contents
       bound is declared, and a consumer sizes reliance to token lifetime
       alone.
 
+   mission_historical_jwks_uri:
+      CONDITIONAL.  A string containing an https URL.  The URL of the
+      AS's historical key set (Section 8.1).  REQUIRED while that set
+      lists a key.
+
    token_endpoint_auth_methods_supported [RFC8414] describes the token
    endpoint alone and is never read in place of an endpoint's
    *_auth_methods_supported member.
@@ -1758,6 +1764,44 @@ Table of Contents
        ["ES256"],
      "mission_max_stale_seconds": 60
    }
+
+8.1.  Historical Key Set
+
+   The historical key set holds the public keys the AS has withdrawn as
+   compromised (Section 10.5), so that responses signed under them stay
+   verifiable for audit.  It is a JWT [RFC7519] with typ jwk-set+jwt,
+   served at mission_historical_jwks_uri, which a consumer takes only
+   from authorization server metadata it has validated (Section 3.3 of
+   [RFC8414]).  Its claims are iss (the AS's issuer identifier), iat,
+   and keys: a JWK Set's keys array [RFC7517] holding each such key's
+   public JWK, under its original kid, for at least the audit horizon of
+   every Mission whose responses it signed.
+
+   The AS signs the set under its active Mission Status signing key, the
+   key it currently signs Mission Status responses under, and never
+   under a key the set lists or a key of another role.  When that key is
+   itself compromised, the AS signs the set under its replacement and
+   never under another published key.  A consumer identifies the
+   authorized signer through its trusted configuration, not by its
+   presence in the jwks_uri, since the jwks_uri also carries other
+   roles' keys and retired keys; it accepts a replacement only once that
+   configuration authorizes it.  A consumer MUST NOT accept a historical
+   key set whose signature does not verify under the key its trusted
+   configuration authorizes.
+
+   Each listed JWK carries the revoked member [OpenID.Federation]
+   (Section 8.7.2) with reason compromised and these times:
+
+   *  revoked_at: the time the AS revoked the key; and
+
+   *  compromised_at: an added member of revoked, the established
+      compromise time, the earliest time from which a signature under
+      the key is not trusted.  It is absent when no compromise time is
+      established.
+
+   Both are NumericDate values [RFC7519].  The set reuses OpenID
+   Federation's revoked encoding only; this document defines no OpenID
+   Federation endpoint and claims no conformance to it.
 
 9.  Conformance
 
@@ -1878,25 +1922,39 @@ Table of Contents
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
-   signed such a response under resolvable in its jwks_uri for at least
-   the Mission's audit horizon ([I-D.draft-mcguinness-oauth-mission]),
-   so an archived application/mission-status-response+jwt remains
-   verifiable for audit and dispute.  This is the issuance profile's
+   signed such a response under resolvable for at least the Mission's
+   audit horizon ([I-D.draft-mcguinness-oauth-mission]), so an archived
+   application/mission-status-response+jwt remains verifiable for audit
+   and dispute: a retired key in its jwks_uri, and a compromised key in
+   its historical key set (Section 8.1).  This is the issuance profile's
    retired-key rule ([I-D.draft-mcguinness-oauth-mission],
    Section "Signing and Key Rotation"), with the audit horizon as the
    bound.
 
    A key known or suspected compromised follows the issuance profile's
    compromise rule ([I-D.draft-mcguinness-oauth-mission],
-   Section "Signing and Key Rotation"): the AS publishes it as revoked,
-   or marks it with a compromise time, rather than only rotating it out.
-   Retention keeps an archived response verifiable for audit; it is not
-   trust.  A consumer MUST NOT accept, for a current reliance decision,
-   a response signed under a key the AS has published as compromised.
-   An auditor examining an archived response signed under such a key
-   classifies it by the published compromise information; the Mandate
-   profile's compromise-time rule is one such classification
-   ([I-D.draft-mcguinness-mission-mandate]).
+   Section "Signing and Key Rotation").  Rather than only rotating it
+   out, the AS stops signing with it and removes it from its jwks_uri,
+   and publishes it as revoked in its historical key set.  Retention
+   keeps an archived response verifiable for audit; it is not trust.  A
+   consumer MUST NOT accept, for a current reliance decision, a response
+   signed under a key the AS has published as compromised.  A consumer
+   MUST NOT use a key from the historical key set to verify a response
+   for a current reliance decision.  A consumer MUST NOT rely on a
+   cached copy of the AS's jwks_uri beyond the freshness lifetime its
+   response explicitly declares (Section 4.2.1 of [RFC9111]).  A
+   response without valid explicit freshness information is stale when
+   received, and is never given a heuristic lifetime (Section 4.2.2 of
+   [RFC9111]): the consumer revalidates it before reuse.  The consumer
+   replaces its cached key set with each one it fetches rather than
+   adding to it, so a removed key stops verifying within that lifetime.
+   When the cached set is stale and revalidation fails, the consumer
+   MUST NOT accept a Status or Lifecycle response for a current reliance
+   decision until a fetch or revalidation succeeds.  An auditor
+   examining an archived response signed under a compromised key
+   classifies it by the published compromise information, compromised_at
+   or its absence; the Mandate profile's compromise-time rule is one
+   such classification ([I-D.draft-mcguinness-mission-mandate]).
 
 10.6.  General OAuth Security
 
@@ -2025,6 +2083,16 @@ Table of Contents
    *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
+
+   *  Metadata Name: mission_historical_jwks_uri
+
+   *  Metadata Description: URL of the authorization server's historical
+      key set, the signed set of public keys it has withdrawn as
+      compromised.
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 8.1
 
 12.2.  OAuth Extensions Error Registration
 
@@ -2195,6 +2263,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-01>.
 
+   [OpenID.Federation]
+              OpenID Foundation, "OpenID Federation 1.0", 17 February
+              2026,
+              <https://openid.net/specs/openid-federation-1_0.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -2225,6 +2298,14 @@ Table of Contents
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
@@ -2263,6 +2344,11 @@ Table of Contents
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
               2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [RFC9111]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Caching", STD 98, RFC 9111,
+              DOI 10.17487/RFC9111, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9111>.
 
    [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
               "Recommendations for Secure Use of Transport Layer
@@ -2332,6 +2418,17 @@ Appendix A.  Document History
    [[ To be removed from the final specification ]]
 
    -01
+
+   *  A key known or suspected compromised leaves the jwks_uri and is no
+      longer used for signing.  It stays resolvable for the audit
+      horizon in a historical key set (mission_historical_jwks_uri, an
+      https URL from validated metadata), signed by the active Mission
+      Status signing key the consumer's configuration authorizes, and
+      marked with OpenID Federation's revoked member: its revocation
+      time and, where established, its compromise time.  Consumers use
+      only explicit jwks_uri freshness, revalidate a stale set, refuse
+      current reliance when that fails, and never verify a current
+      reliance decision under a historical key (#831, D774, D780).
 
    *  A transition is durably committed before any response acknowledges
       it, and the OAuth binding's final issuance check is not extended

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-25T23:05:46Z
-Source repository commit: dcf52ed8c4c9141a02b7821b2c239ece46f2d066
+Generated: 2026-10-26T21:50:24Z
+Source repository commit: 34262847b7da54b4f9cd1f1dca40c75baa90c852
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           25 October 2026
-Expires: 28 April 2027
+Intended status: Informational                           26 October 2026
+Expires: 29 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -6002,8 +6002,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission Substrate Requirements
@@ -6061,7 +6061,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -7602,8 +7602,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7662,7 +7662,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -9719,6 +9719,11 @@ Table of Contents
    by itself, establish a separate business decision for each subsequent
    action.
 
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
+
 7.  Mission Lifecycle
 
    A Mission is in one of two states:
@@ -9830,6 +9835,24 @@ Table of Contents
    of possession of any token, by which a party its policy authorizes
    revokes a Mission by mission_id (so a Mission can be stopped even
    when no refresh token is held).
+
+   When the AS establishes that the principal identified by a Mission's
+   recorded subject (Section 14.3) has been deprovisioned, it SHOULD
+   terminate that Mission with termination reason revoked.  The rule
+   reaches every Mission not yet terminated, including one a companion
+   profile has suspended, and identifies the Subject by its recorded iss
+   and sub.  Temporary disablement, a source outage, or an unavailable
+   lookup does not by itself establish deprovisioning.  The departure or
+   disablement of an Approver, an accountable owner, or a client
+   triggers the rule only when that principal is the recorded Subject;
+   an organizational Mission records the organizational principal as its
+   Subject (Section 6.7), so an approving officer's departure does not
+   terminate it under this rule.  A deployment that does not follow this
+   rule documents why; that exception cannot bypass a continuing
+   dependency the deployment requires or rewrite the recorded Subject.
+   Termination stops further issuance (Section 8.2) but does not itself
+   recall tokens already issued; an earlier execution cutoff depends on
+   the deployment's enforcement mechanism.
 
    The wire shape of that operation is out of scope for this document.
    A deployment-defined authenticated surface satisfies this
@@ -15821,6 +15844,19 @@ Appendix G.  Document History
       revocation reason describes a revocation, not a completion
       (#1535).
 
+   *  Editorial, no requirement change: Single Accountable Approver
+      states that authenticating approval evidence does not establish
+      that conditions governing later reliance remain satisfied, and
+      that the effect of later changes to an Approver's role, a
+      delegation, or governing policy on an existing Mission is
+      deployment policy (#830).
+
+   *  When the AS establishes that a Mission's recorded Subject has been
+      deprovisioned, it SHOULD terminate the Mission with reason
+      revoked; temporary disablement, an outage, or another principal's
+      departure does not trigger the rule, and termination does not
+      recall issued tokens (Revocation; #830).
+
    -01
 
    *Breaking wire changes*
@@ -15970,8 +16006,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16023,7 +16059,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -16068,6 +16104,7 @@ Table of Contents
    6.  Revocation Propagation
    7.  Operational Considerations
    8.  Authorization Server Metadata
+     8.1.  Historical Key Set
    9.  Conformance
    10. Security Considerations
      10.1.  Mission Status Enumeration
@@ -17679,6 +17716,11 @@ Table of Contents
       bound is declared, and a consumer sizes reliance to token lifetime
       alone.
 
+   mission_historical_jwks_uri:
+      CONDITIONAL.  A string containing an https URL.  The URL of the
+      AS's historical key set (Section 8.1).  REQUIRED while that set
+      lists a key.
+
    token_endpoint_auth_methods_supported [RFC8414] describes the token
    endpoint alone and is never read in place of an endpoint's
    *_auth_methods_supported member.
@@ -17724,6 +17766,44 @@ Table of Contents
        ["ES256"],
      "mission_max_stale_seconds": 60
    }
+
+8.1.  Historical Key Set
+
+   The historical key set holds the public keys the AS has withdrawn as
+   compromised (Section 10.5), so that responses signed under them stay
+   verifiable for audit.  It is a JWT [RFC7519] with typ jwk-set+jwt,
+   served at mission_historical_jwks_uri, which a consumer takes only
+   from authorization server metadata it has validated (Section 3.3 of
+   [RFC8414]).  Its claims are iss (the AS's issuer identifier), iat,
+   and keys: a JWK Set's keys array [RFC7517] holding each such key's
+   public JWK, under its original kid, for at least the audit horizon of
+   every Mission whose responses it signed.
+
+   The AS signs the set under its active Mission Status signing key, the
+   key it currently signs Mission Status responses under, and never
+   under a key the set lists or a key of another role.  When that key is
+   itself compromised, the AS signs the set under its replacement and
+   never under another published key.  A consumer identifies the
+   authorized signer through its trusted configuration, not by its
+   presence in the jwks_uri, since the jwks_uri also carries other
+   roles' keys and retired keys; it accepts a replacement only once that
+   configuration authorizes it.  A consumer MUST NOT accept a historical
+   key set whose signature does not verify under the key its trusted
+   configuration authorizes.
+
+   Each listed JWK carries the revoked member [OpenID.Federation]
+   (Section 8.7.2) with reason compromised and these times:
+
+   *  revoked_at: the time the AS revoked the key; and
+
+   *  compromised_at: an added member of revoked, the established
+      compromise time, the earliest time from which a signature under
+      the key is not trusted.  It is absent when no compromise time is
+      established.
+
+   Both are NumericDate values [RFC7519].  The set reuses OpenID
+   Federation's revoked encoding only; this document defines no OpenID
+   Federation endpoint and claims no conformance to it.
 
 9.  Conformance
 
@@ -17844,25 +17924,39 @@ Table of Contents
 
    The AS signs Mission Status and Lifecycle responses with a key from
    its jwks_uri.  The AS MUST keep the public JWK for every kid it has
-   signed such a response under resolvable in its jwks_uri for at least
-   the Mission's audit horizon ([I-D.draft-mcguinness-oauth-mission]),
-   so an archived application/mission-status-response+jwt remains
-   verifiable for audit and dispute.  This is the issuance profile's
+   signed such a response under resolvable for at least the Mission's
+   audit horizon ([I-D.draft-mcguinness-oauth-mission]), so an archived
+   application/mission-status-response+jwt remains verifiable for audit
+   and dispute: a retired key in its jwks_uri, and a compromised key in
+   its historical key set (Section 8.1).  This is the issuance profile's
    retired-key rule ([I-D.draft-mcguinness-oauth-mission],
    Section "Signing and Key Rotation"), with the audit horizon as the
    bound.
 
    A key known or suspected compromised follows the issuance profile's
    compromise rule ([I-D.draft-mcguinness-oauth-mission],
-   Section "Signing and Key Rotation"): the AS publishes it as revoked,
-   or marks it with a compromise time, rather than only rotating it out.
-   Retention keeps an archived response verifiable for audit; it is not
-   trust.  A consumer MUST NOT accept, for a current reliance decision,
-   a response signed under a key the AS has published as compromised.
-   An auditor examining an archived response signed under such a key
-   classifies it by the published compromise information; the Mandate
-   profile's compromise-time rule is one such classification
-   ([I-D.draft-mcguinness-mission-mandate]).
+   Section "Signing and Key Rotation").  Rather than only rotating it
+   out, the AS stops signing with it and removes it from its jwks_uri,
+   and publishes it as revoked in its historical key set.  Retention
+   keeps an archived response verifiable for audit; it is not trust.  A
+   consumer MUST NOT accept, for a current reliance decision, a response
+   signed under a key the AS has published as compromised.  A consumer
+   MUST NOT use a key from the historical key set to verify a response
+   for a current reliance decision.  A consumer MUST NOT rely on a
+   cached copy of the AS's jwks_uri beyond the freshness lifetime its
+   response explicitly declares (Section 4.2.1 of [RFC9111]).  A
+   response without valid explicit freshness information is stale when
+   received, and is never given a heuristic lifetime (Section 4.2.2 of
+   [RFC9111]): the consumer revalidates it before reuse.  The consumer
+   replaces its cached key set with each one it fetches rather than
+   adding to it, so a removed key stops verifying within that lifetime.
+   When the cached set is stale and revalidation fails, the consumer
+   MUST NOT accept a Status or Lifecycle response for a current reliance
+   decision until a fetch or revalidation succeeds.  An auditor
+   examining an archived response signed under a compromised key
+   classifies it by the published compromise information, compromised_at
+   or its absence; the Mandate profile's compromise-time rule is one
+   such classification ([I-D.draft-mcguinness-mission-mandate]).
 
 10.6.  General OAuth Security
 
@@ -17991,6 +18085,16 @@ Table of Contents
    *  Change Controller: IESG
 
    *  Specification Document(s): this document, Section 8
+
+   *  Metadata Name: mission_historical_jwks_uri
+
+   *  Metadata Description: URL of the authorization server's historical
+      key set, the signed set of public keys it has withdrawn as
+      compromised.
+
+   *  Change Controller: IESG
+
+   *  Specification Document(s): this document, Section 8.1
 
 12.2.  OAuth Extensions Error Registration
 
@@ -18161,6 +18265,11 @@ Table of Contents
               <https://datatracker.ietf.org/doc/html/draft-mcguinness-
               oauth-mission-01>.
 
+   [OpenID.Federation]
+              OpenID Foundation, "OpenID Federation 1.0", 17 February
+              2026,
+              <https://openid.net/specs/openid-federation-1_0.html>.
+
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -18191,6 +18300,14 @@ Table of Contents
    [RFC7515]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web
               Signature (JWS)", RFC 7515, DOI 10.17487/RFC7515, May
               2015, <https://www.rfc-editor.org/rfc/rfc7515>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7517>.
+
+   [RFC7519]  Jones, M., Bradley, J., and N. Sakimura, "JSON Web Token
+              (JWT)", RFC 7519, DOI 10.17487/RFC7519, May 2015,
+              <https://www.rfc-editor.org/rfc/rfc7519>.
 
    [RFC7523]  Jones, M., Campbell, B., and C. Mortimore, "JSON Web Token
               (JWT) Profile for OAuth 2.0 Client Authentication and
@@ -18229,6 +18346,11 @@ Table of Contents
    [RFC9068]  Bertocci, V., "JSON Web Token (JWT) Profile for OAuth 2.0
               Access Tokens", RFC 9068, DOI 10.17487/RFC9068, October
               2021, <https://www.rfc-editor.org/rfc/rfc9068>.
+
+   [RFC9111]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Caching", STD 98, RFC 9111,
+              DOI 10.17487/RFC9111, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9111>.
 
    [RFC9325]  Sheffer, Y., Saint-Andre, P., and T. Fossati,
               "Recommendations for Secure Use of Transport Layer
@@ -18299,6 +18421,17 @@ Appendix A.  Document History
 
    -01
 
+   *  A key known or suspected compromised leaves the jwks_uri and is no
+      longer used for signing.  It stays resolvable for the audit
+      horizon in a historical key set (mission_historical_jwks_uri, an
+      https URL from validated metadata), signed by the active Mission
+      Status signing key the consumer's configuration authorizes, and
+      marked with OpenID Federation's revoked member: its revocation
+      time and, where established, its compromise time.  Consumers use
+      only explicit jwks_uri freshness, revalidate a stale set, refuse
+      current reliance when that fails, and never verify a current
+      reliance decision under a historical key (#831, D774, D780).
+
    *  A transition is durably committed before any response acknowledges
       it, and the OAuth binding's final issuance check is not extended
       to suspension.
@@ -18352,8 +18485,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18412,7 +18545,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -18447,9 +18580,10 @@ Table of Contents
        2.7.4.  Resource Policy
        2.7.5.  Parameters
        2.7.6.  Actor
-       2.7.7.  Time
-       2.7.8.  State
-       2.7.9.  History
+       2.7.7.  Authority Dependencies
+       2.7.8.  Time
+       2.7.9.  State
+       2.7.10. History
      2.8.  Parameter Digest
      2.9.  Permit Binding
      2.10. Compound Actions
@@ -18722,8 +18856,16 @@ Table of Contents
       establishes a Mission in this mode only under a separately
       specified verified join ([I-D.draft-mcguinness-mission-aauth]).
 
-   The mode each enforcement scope uses is part of its Enforcement Scope
-   Statement (Section 5.2).  In either mode, the established Mission is
+   Each enforcement scope declares the modes it serves as
+   mission_establishment_mode in its Enforcement Scope Statement
+   (Section 5.2): credential_carried, externally_established, or a non-
+   empty list of those values without duplicates where it serves both.
+   A scope declares only the modes it actually serves.  Declaring both
+   creates no fallback: the binding profile's precedence decides which
+   reference establishes the Mission (under the Mission Authority Server
+   profile, a credential-carried reference governs), and a conflicting
+   selector or an invalid credential is not rescued by an externally
+   established reference.  In either mode, the established Mission is
    the Mission every input of Section 2.7 (authority, Resource policy,
    parameters, actor, time, state) is evaluated against, and the Mission
    reference the permit and the evidence record bind.
@@ -18779,6 +18921,19 @@ Table of Contents
    posture only: it cannot reflect a revocation faster than the
    credential lifetime, so it cannot host a class whose bound demands
    that.
+
+   These bounds run from a Mission state change.  A deployment that
+   claims a bound on how quickly an external authority change stops
+   dependent actions (Section 2.7.7) MUST state it from the time the
+   authoritative system records the change to the time a dependent
+   action can no longer begin an effect, and MUST state separately how
+   work already started is treated.  The claim accounts for detecting
+   the change, evaluating its effect, any resulting Mission or policy
+   state change, downstream reliance on earlier observations, and the
+   remaining validity of issued permits.  A bound measured from a
+   Mission state change does not establish a bound from the authority
+   change, and a measured successful disablement does not establish it
+   when an event is lost, a feed is disconnected, or a reconciler fails.
 
    *  The PDP MUST refuse a consequential action when it cannot
       establish, within the deployment's published staleness bound, that
@@ -19014,7 +19169,7 @@ Table of Contents
 2.7.  Decision Inputs
 
    Runtime enforcement MUST evaluate every input below except the last:
-   History (Section 2.7.9) is OPTIONAL, evaluated where the deployment
+   History (Section 2.7.10) is OPTIONAL, evaluated where the deployment
    declares it.
 
 2.7.1.  Authority
@@ -19309,7 +19464,71 @@ Table of Contents
    credential never overrides a revoked agent or a non-active Mission
    ([I-D.draft-mcguinness-mission-architecture]).
 
-2.7.7.  Time
+2.7.7.  Authority Dependencies
+
+   A deployment's policy can make reliance on a Mission depend on an
+   external authority remaining effective: an entitlement, a delegation,
+   the approving principal's continuing role, an accountable owner's
+   sponsorship, or a governing policy.  Approval evidence does not by
+   itself establish that such a condition still holds
+   ([I-D.draft-mcguinness-oauth-mission], Section "Single Accountable
+   Approver"), and whether a later change affects an existing Mission is
+   the deployment's policy.  The agent-registry evaluation of
+   Section 2.7.6 is one such dependency.
+
+   A deployment that declares an authority dependency MUST state in its
+   Enforcement Scope Statement (Section 5.2):
+
+   *  the dependency, its authoritative source, and the state an
+      observation of it represents;
+
+   *  what it governs: future Mission activations, an existing Mission,
+      selected authority entries or actions, or reliance on one
+      particular business approval;
+
+   *  which changes at the source invalidate reliance;
+
+   *  its maximum staleness, separately from the Mission-state freshness
+      declaration (Section 2.5);
+
+   *  how it is enforced: by direct evaluation, by lifecycle-mediated
+      enforcement, or both; and
+
+   *  what restores reliance after it fails, and how responsibility
+      passes to a successor through an authorized process that leaves
+      the original approval's attribution unchanged.
+
+   Under direct evaluation, the PDP, or a composed resource-policy step
+   (Section 2.7.4), establishes the dependency for each decision it
+   governs from an acceptable authoritative observation.  Under
+   lifecycle-mediated enforcement, a trusted reconciler translates a
+   relevant change into a Mission restriction, such as a lifecycle
+   operation or a narrowing where a containment overlay runs, through an
+   upstream observation path whose delay is bounded and monitored.  A
+   current active state does not show that this reconciliation is
+   current: when upstream observation or reconciliation exceeds its
+   declared bound, the deployment MUST refuse the actions the dependency
+   governs until it is current again.
+
+   The deployment MUST refuse an action governed by a declared
+   dependency, through its declared enforcement route, when the
+   dependency is known to be withdrawn, when an applicable invalidation
+   has been observed, or when no acceptable authoritative observation
+   remains.  Unless the deployment requires an online check, an outage
+   alone does not invalidate an observation still within its accepted
+   validity.  That validity runs from the time the observation
+   represents, never from a later re-issue or re-signing
+   ([I-D.draft-mcguinness-mission-control-plane]).  A permit issued in
+   reliance on a dependency observation MUST expire no later than that
+   observation's accepted validity.
+
+   Retained evidence of such a refusal, from whichever component
+   enforces the dependency, distinguishes a known withdrawal, a stale
+   observation and an unavailable source.  A dependency enforced through
+   an existing mechanism keeps that mechanism's refusal: an inactive
+   Mission, contained authority, or a failed resource-policy condition.
+
+2.7.8.  Time
 
    The PDP MUST refuse if the decision context indicates the credential
    is expired.  The issuance-and-derivation layer caps a derived
@@ -19326,11 +19545,11 @@ Table of Contents
    the action actually executes within that window is the executing
    PEP's reverification, not a decision input (Section 8).
 
-2.7.8.  State
+2.7.9.  State
 
    The PDP MUST refuse unless the Mission is active (Section 2.5).
 
-2.7.9.  History
+2.7.10.  History
 
    The inputs above evaluate the request; this input evaluates where the
    undertaking stands.  A deployment MAY evaluate policy predicates over
@@ -19378,13 +19597,14 @@ Table of Contents
    *  parameter_digest is sha-256: followed by the base64url, no
       padding, SHA-256 [RFC6234] of the JCS [RFC8785] serialization of
       the normalized parameter object.  It MUST be computed under the
-      same canonicalization rules the issuance profile defines
-      (duplicate member rejection, significant array order, byte-for-
-      byte URI comparison); this document does not define a second
-      canonicalization.  It is a canonical-object digest under the
       substrate's default commitment construction, which this document
-      imports normatively ([I-D.draft-mcguinness-mission-substrate]):
-      the I-JSON requirement and the reject-unknown-prefix rule apply to
+      imports normatively ([I-D.draft-mcguinness-mission-substrate]): a
+      duplicate member is rejected at parse time, array order is
+      significant because JCS preserves it, a URI-valued parameter is
+      preserved unless the Operation Profile defines its normalization
+      (Section 8), and this document defines no second canonicalization.
+      It is a canonical-object digest under that construction: the
+      I-JSON requirement and the reject-unknown-prefix rule apply to
       computing and verifying it unchanged.
 
    *  Every parameter that influences the action's external effect (for
@@ -19585,7 +19805,7 @@ Table of Contents
     | cannot be established, |                                        |
     | or the evidence store  |                                        |
     | cannot be consulted    |                                        |
-    | (Section 2.7.9)        |                                        |
+    | (Section 2.7.10)       |                                        |
     +------------------------+----------------------------------------+
     | PDP unreachable        | Fail closed for consequential actions; |
     |                        | do not proceed on cached permits past  |
@@ -19849,7 +20069,9 @@ Table of Contents
    the lifecycle state space with its only-active-permits rule, the
    kernel's governance gate; the immutable Approved Context, the
    approval-time fixity behind every anchor its records cite; and the
-   Mission's audit horizon, which bounds the ordered governance record.
+   Mission's retention period as its binding declares it (the audit
+   horizon in the OAuth binding), which bounds the ordered governance
+   record and is the floor for this document's records (Section 11.3).
    The kernel requires no particular integrity anchors: intent_hash and
    authority_hash are the OAuth binding's commitment to the Approved
    Context, supplied by the issuance profile, not by the kernel.
@@ -20039,7 +20261,7 @@ Table of Contents
      "action_classes": ["irreversible_action"],
      "execution_paths": ["tool-gateway"],
      "pep_locations": ["tool-gateway"],
-     "mission_establishment_mode": "mission_claim"
+     "mission_establishment_mode": "credential_carried"
    }
 
    Resource identifiers and path names are non-empty strings.  Resource
@@ -20288,10 +20510,15 @@ Table of Contents
    the resource server's object-level authorization, and that does not
    materially affect the resource set or disclosure risk, need not be
    classified a consequential read, and is then not separately PDP-gated
-   by this profile.  A deployment MUST NOT, however, use classification
-   to evade the floor or a Resource-policy minimum, and once an action
-   is a consequential write or higher it MUST be gated and bound as the
-   table requires.
+   by this profile.  A request that does reach the PDP within a mediated
+   scope with no action class established, where the Enforcement Scope
+   Statement declares action classes, is a request fault: it is refused
+   before evaluation, never evaluated under a class it was not assigned,
+   and no class is recorded for it
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).  A deployment MUST
+   NOT, however, use classification to evade the floor or a Resource-
+   policy minimum, and once an action is a consequential write or higher
+   it MUST be gated and bound as the table requires.
 
    One predicate cuts across the classes.  An *external-communication
    action* is a consequential action, of any class, whose effect carries
@@ -20656,7 +20883,7 @@ Table of Contents
    An evidence-signing key is not an authorization credential, and its
    signature MUST NOT be accepted as a grant or as widening the
    Authority Set. Its compromise corrupts the record plane and, where
-   signed history is a decision input (Section 2.7.9), can also corrupt
+   signed history is a decision input (Section 2.7.10), can also corrupt
    later authorization outcomes within that envelope: a forged record is
    a forged precondition (Section 17).  The record plane is what a post-
    compromise investigation relies on, so the property that the agent
@@ -20948,8 +21175,8 @@ Table of Contents
 
    *  Reproducible: identical manifest inputs, including the compiler
       identity, produce a byte-identical manifest, and therefore an
-      identical policy_view_id, under the canonicalization rules of
-      [I-D.draft-mcguinness-oauth-mission].
+      identical policy_view_id, under the substrate's default commitment
+      construction ([I-D.draft-mcguinness-mission-substrate]).
 
    *  Identifiable: the view carries a policy_view_id, so PDP cache
       entries are addressable.
@@ -20961,10 +21188,9 @@ Table of Contents
    The committed object is a canonical JSON manifest, never the engine
    binary itself: JCS canonicalization applies to the manifest, and an
    engine-native artifact enters the manifest only by digest, never
-   directly. policy_view_id is the integrity-anchor encoded form
-   ([I-D.draft-mcguinness-oauth-mission]) of the SHA-256 [RFC6234] of
-   the JCS [RFC8785] canonical bytes of that profile's domain-separated,
-   issuer-bound integrity-anchor envelope with typ mission-policy-view:
+   directly. policy_view_id is the sha-256: encoded SHA-256 [RFC6234] of
+   the JCS [RFC8785] canonical bytes of a domain-separated, issuer-bound
+   envelope with typ mission-policy-view:
 
    SHA-256(JCS({
      "typ":   "mission-policy-view",
@@ -21078,7 +21304,15 @@ Table of Contents
       canonicalization;
 
    *  set-like array handling and any other canonicalization beyond the
-      issuance profile's rules;
+      substrate's default commitment construction;
+
+   *  the normalization of URI-valued parameters.  Absent one, a URI-
+      valued parameter is preserved as presented.  A defined
+      normalization applies identically before the commitment and at
+      execution reverification (Section 9.4); it never changes how
+      authority entries match resources
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]) and never
+      rewrites an approved identifier;
 
    *  exactly which fields enter the parameter_digest;
 
@@ -21949,13 +22183,24 @@ Table of Contents
    is the Execution Evidence Object, defined by the runtime evidence
    companion ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
+   Durability is ordered around the effect.  For an action in the high-
+   consequence classes, the component that releases the effect MUST NOT
+   release it until the permit's Decision Evidence and the identifiers
+   that recover the action's disposition (the evaluation identifier, and
+   any idempotency claim or consumption reservation the action holds)
+   are durably committed.  If they cannot be committed, that component
+   MUST refuse the action.  A crash after an irreversible external
+   effect is released and before its outcome is recorded leaves an
+   unknown outcome, reconciled as below, with recovery under Section 8.2
+   and Section 9.3.
+
    Reconciliation is bounded in time by the reconciliation window,
    orphan-detection component, and alerting obligation the Enforcement
    Scope Statement declares (Section 5.2): an execution-outcome record
    is expected for each decision within the window, and the named
    component detects orphaned evidence (a decision with no matching
-   execution-outcome record within it) and sequence gaps in a Mission's
-   records (Section 11.3).
+   execution-outcome record within it) and per-emitter sequence gaps in
+   a Mission's records (Section 11.3).
 
    An unknown outcome has an owner and a deadline, not only a window:
    the declared component MUST actively reconcile each unresolved
@@ -22024,7 +22269,8 @@ Table of Contents
    *  The Resource Server runtime profile MUST define the record's
       concrete serialization and canonicalization before storage and
       integrity protection.  JSON records SHOULD use JCS [RFC8785] under
-      the issuance profile's canonicalization rules.
+      the substrate's default commitment construction
+      ([I-D.draft-mcguinness-mission-substrate]).
 
    *  It MUST be append-only and integrity-protected; the enforcement
       scope MUST name the mechanism (a hash-linked log, signed segments,
@@ -22053,15 +22299,36 @@ Table of Contents
       correlation members and each record's timestamps together
       ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
+   *  An emitter MUST NOT reuse a sequence value for one Mission,
+      including across a restart and among replicas acting as that
+      emitter: a value it cannot use leaves a detectable gap rather than
+      being issued again.
+
    *  The retention window declared in the Enforcement Scope Statement
-      MUST be no shorter than the Mission's audit horizon, as defined in
-      the Mission Record section of
-      [I-D.draft-mcguinness-oauth-mission].
+      MUST be no shorter than the Mission's retention period as its
+      Mission Substrate Binding declares it
+      ([I-D.draft-mcguinness-mission-substrate], Section "Ordered
+      Governance Record"), nor shorter than any longer period a
+      companion the deployment adopts requires.  That period is a floor
+      for every required record, not only for the governance record it
+      is declared for.  The OAuth binding realizes it as the Mission's
+      audit horizon ([I-D.draft-mcguinness-oauth-mission],
+      Section "Provenance and Expiry"), which covers the Mission Record
+      and its evidence.
+
+   Export, transparency registration, and signing for portable
+   verification run from the producer's durable store.  They run
+   asynchronously only as the audit companion's Registration
+   Availability ([I-D.draft-mcguinness-mission-audit]) and the signer-
+   outage rule of Section 5.8 permit, without losing a required record,
+   and a record a composing profile requires to be individually signed
+   stays individually signed
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
    Digest encoding is uniform across this document family: every digest
    a family document defines uses the sha-256: prefixed base64url, no-
-   padding encoding of the issuance profile's integrity-anchor rules
-   ([I-D.draft-mcguinness-oauth-mission]).  The exceptions are
+   padding encoding of the substrate's default commitment construction
+   ([I-D.draft-mcguinness-mission-substrate]).  The exceptions are
    externally fixed encodings: the COSE hashed payload of the audit
    companion's Signed Statements ([I-D.draft-mcguinness-mission-audit])
    carries the raw digest bytes the COSE hash-envelope mechanism
@@ -22566,7 +22833,8 @@ Table of Contents
       established;
 
    *  cross-PDP history composition other than through the deployment's
-      evidence store or registered transparency records (Section 2.7.9);
+      evidence store or registered transparency records
+      (Section 2.7.10);
 
    *  action-hierarchy and resource-containment subset extensions (this
       profile uses the flat subset rule of
@@ -22722,7 +22990,7 @@ Table of Contents
 
 17.7.  The History Input
 
-   The history input (Section 2.7.9) makes prior evidence load-bearing
+   The history input (Section 2.7.10) makes prior evidence load-bearing
    for later decisions, so it is attacker-adjacent wherever evidence
    producers are compromised: a forged record is a forged precondition,
    and a suppressed record denies the step that depends on it.  This is
@@ -23117,9 +23385,10 @@ Appendix A.  Parameter Digest Worked Example
 
    The parameter_digest is sha-256: followed by the base64url, no-
    padding SHA-256 of the JCS [RFC8785] serialization of that object,
-   under the issuance profile's canonicalization rules (no envelope; the
-   normalized parameter object is digested directly).  The JCS canonical
-   bytes are a single line with sorted member names and no whitespace:
+   under the substrate's default commitment construction (no envelope;
+   the normalized parameter object is digested directly).  The JCS
+   canonical bytes are a single line with sorted member names and no
+   whitespace:
 
    {"amount_usd":"423.50","source_invoice_id":"inv_2026Q3_842"}
 
@@ -23233,6 +23502,51 @@ Appendix C.  Runtime Evidence Worked Examples
 Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Changes a requirement (#854, D814): the record retention floor is
+      the Mission's retention period as its Mission Substrate Binding
+      declares it, realized in the OAuth binding as the audit horizon
+      (the Mission Record and its evidence), and no shorter than a
+      longer period an adopted companion requires; it is a floor for
+      every required record, not only the governance record.  Commitment
+      construction, canonicalization and digest encoding are imported
+      from the substrate's default commitment construction, OAuth
+      references remaining for OAuth-owned anchors.  A URI-valued
+      parameter is preserved unless the Operation Profile defines its
+      normalization, applied identically at commitment and execution
+      reverification.
+
+   *  Changes a requirement (#956, D814): a mediated request that
+      reaches the PDP with no action class established, where the
+      Enforcement Scope Statement declares classes, is a request fault
+      refused before evaluation and is never evaluated or recorded under
+      a class it was not assigned. mission_establishment_mode takes
+      credential_carried, externally_established, or a non-empty
+      duplicate-free list of the modes a scope serves; declaring both
+      creates no fallback, the binding's precedence deciding.
+
+   *  Runtime Enforcement Evidence (#821): durability is ordered around
+      the effect.  For a high-consequence action, the component that
+      releases the effect releases it only after the permit's Decision
+      Evidence and the identifiers that recover the action's disposition
+      are durably committed, and refuses the action when they cannot be.
+      A crash after an irreversible external effect is released and
+      before its outcome is recorded is an unknown outcome under the
+      existing reconciliation rules.  An emitter never reuses a sequence
+      value for one Mission, across a restart or among its replicas; a
+      value it cannot use is a detectable gap.  Export, transparency
+      registration and portable signing run from the producer's durable
+      store under the existing asynchronous rules, and orphan detection
+      names per-emitter sequence gaps.
+
+   *  Authority Dependencies: a deployment that makes reliance depend on
+      an external authority remaining effective declares the dependency,
+      its source, what it governs, invalidating changes, its staleness
+      bound, its enforcement route (direct evaluation, lifecycle-
+      mediated, or both) and its recovery; reliance stops when no
+      acceptable observation remains, and a permit does not outlive the
+      observation.  Mission State and Freshness states how a bound from
+      an external authority change is measured (#830).
 
    *  Evaluation-Context Binding (#773): the salt survives restart and
       is available to every replica that can use its bindings, or is
@@ -23466,8 +23780,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                         Mission Runtime Evidence
@@ -23517,7 +23831,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -24167,17 +24481,19 @@ Table of Contents
       target is absent, malformed, or outside the enforcement scope the
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
-      operation_target_invalid; for one whose action phase is outside
-      the defined set, or is absent where the PDP's trusted operation
-      declaration requires a phase, phase_invalid; for a compensate-
-      phase request with no compensates_evaluation_id, or a request
-      whose compensates_evaluation_id is malformed,
-      compensation_link_invalid; for one whose evaluation-context
-      binding inputs are missing, malformed, or incompatible with the
-      declared binding, for an operation the runtime profile's
-      Evaluation-Context Binding extension covers,
-      evaluation_context_invalid; and for one carrying a work-item
-      context that is not well-formed (the harness profile,
+      operation_target_invalid; for a mediated request with no action
+      class established, where the runtime Enforcement Scope Statement
+      declares action classes, action_class_missing, recorded with no
+      class; for one whose action phase is outside the defined set, or
+      is absent where the PDP's trusted operation declaration requires a
+      phase, phase_invalid; for a compensate-phase request with no
+      compensates_evaluation_id, or a request whose
+      compensates_evaluation_id is malformed, compensation_link_invalid;
+      for one whose evaluation-context binding inputs are missing,
+      malformed, or incompatible with the declared binding, for an
+      operation the runtime profile's Evaluation-Context Binding
+      extension covers, evaluation_context_invalid; and for one carrying
+      a work-item context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -26417,6 +26733,11 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Refusal Record: action_class_missing records a PDP refusal of a
+      mediated request with no action class established, where the
+      runtime Enforcement Scope Statement declares classes, with no
+      class recorded (#956, D814).
+
    *  Extension Members, Refusal Record and Execution Evidence:
       work_item, owned by the harness profile, records the qualified
       work-item identifier on Decision and Execution Evidence, joining
@@ -26551,8 +26872,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -26601,7 +26922,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -28033,6 +28354,16 @@ Table of Contents
    consequential action without Mission evaluation is an enforcement
    bypass, not a decision ([I-D.draft-mcguinness-mission-runtime]).
 
+   Likewise, where the runtime Enforcement Scope Statement declares
+   action classes, a mediated request that reaches the PDP with no
+   action class established, neither carried from the PEP's Operation
+   Profile nor assigned by the PDP's own trusted declaration, is
+   malformed: the PDP MUST refuse it before evaluation, MUST NOT
+   evaluate it under a default class or record a class in Decision
+   Evidence, and MUST record the refusal as a Refusal Record with
+   denial_reason action_class_missing
+   ([I-D.draft-mcguinness-mission-runtime-evidence]).
+
    In addition to evaluating the decision inputs the runtime profile
    requires, the PDP MUST verify that the AuthZEN-carried envelope is
    self-consistent:
@@ -29130,6 +29461,13 @@ Table of Contents
    |enforcement scope at the |           |                                 |
    |PDP                      |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |No action class          |Refusal    |action_class_missing             |
+   |established for a        |Record     |                                 |
+   |mediated request where   |           |                                 |
+   |the Enforcement Scope    |           |                                 |
+   |Statement declares action|           |                                 |
+   |classes, at the PDP      |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |action_phase outside the |Refusal    |phase_invalid                    |
    |closed set, or absent    |Record     |                                 |
    |where the trusted        |           |                                 |
@@ -29406,10 +29744,11 @@ Table of Contents
       Refusal Record.
 
    *  Unusable inputs: phase_invalid, compensation_link_invalid,
-      evaluation_context_invalid, and work_item_invalid are PDP refusals
-      before evaluation.  They describe decision inputs the PDP cannot
-      use, not an evaluated policy denial, and a PDP claiming only the
-      Decision Base records them in its own internal form (Section 2).
+      evaluation_context_invalid, work_item_invalid, and
+      action_class_missing are PDP refusals before evaluation.  They
+      describe decision inputs the PDP cannot use, not an evaluated
+      policy denial, and a PDP claiming only the Decision Base records
+      them in its own internal form (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -30165,6 +30504,13 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Changes a requirement (#956, D814): where the runtime Enforcement
+      Scope Statement declares action classes, the PDP refuses a
+      mediated request with no action class established before
+      evaluation, records the Refusal Record action_class_missing, and
+      never evaluates it under a default class or records one in
+      Decision Evidence.
+
    *  Work-Item Context: context.work_item is a harness-owned extension
       point the PEP populates only from the harness's authenticated
       attachment.  A malformed member is refused before evaluation as
@@ -30333,8 +30679,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -30386,7 +30732,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -31805,8 +32151,9 @@ Table of Contents
    retention requirements of the runtime profile
    ([I-D.draft-mcguinness-mission-runtime]), imported here by reference:
    append-only integrity protection under a named mechanism, a per-
-   Mission sequence indicator, no raw parameters in the record, and a
-   retention window no shorter than the Mission's audit horizon.
+   emitter sequence indicator for each Mission, no raw parameters in the
+   record, and a retention window no shorter than the Mission's audit
+   horizon.
 
    A Harness Evidence record is registrable on the Mission's
    transparency feed ([I-D.draft-mcguinness-mission-audit]).  Its
@@ -32405,6 +32752,10 @@ Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Harness Evidence: the imported sequence indicator is per emitter
+      for each Mission, as the runtime profile scopes it.  No
+      requirement changed (#821).
+
    *  Work-Item Identity: the harness assigns a qualified work-item
       identifier (work_item_issuer and work_item), binds it to one
       Mission, and attaches it as extension members of the propagated
@@ -32472,8 +32823,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -32528,7 +32879,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
