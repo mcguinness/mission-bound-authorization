@@ -1256,7 +1256,10 @@ authorization, follow from the authentication case:
 In every case the AS MUST record the acting party, and the response
 envelope's `sub` carries it ({{mission-status-response}}), distinct
 from any access token's `sub`. A deployment-defined audit member of
-the Mission Status Response MAY carry it as well.
+the Mission Status Response MAY carry it as well. For a delegated
+access token, the represented party its `sub` denotes is part of the
+delegation context the AS evaluates, which a policy authorizing the
+Mission's Subject or Approver matches.
 
 Which parties may perform which operation on which Missions is
 deployment-defined. Typical
