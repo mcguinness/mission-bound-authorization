@@ -1083,7 +1083,7 @@ pair is the Mission's schedule. When the `suspend_until` of a current
 schedule passes, the AS MUST apply `on_expiry` (transition to
 `active` for `resume`, or to `terminated` with reason `revoked` for
 `revoke`) and emit the corresponding transition, without a further
-request. While the Mission
+request, unless expiry governs (below). While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
 surface in the signed Mission Status Response ({{mission-status-response}})
 so a consumer sees the pending outcome.
