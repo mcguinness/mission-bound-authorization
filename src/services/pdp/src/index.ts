@@ -132,6 +132,7 @@ export {
   type HeldReservation,
   type HeldReservationResolution,
   type HeldReservationResult,
+  type ReservationReleaseResult,
   type ReservationRecord,
   type ReservationState,
 } from "./idempotency-claims.js";

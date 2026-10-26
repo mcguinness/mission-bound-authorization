@@ -41,6 +41,7 @@ import type {
   ConsumptionStatusFn,
   IdempotencyClaimDomain,
   RedeemingExecutionFn,
+  ReservationReleaseResult,
   SettlementResult,
   UnresolvedClaim,
 } from "./idempotency-claims.js";
@@ -62,6 +63,15 @@ export interface ClaimChannel {
   listUnresolved(): Promise<UnresolvedClaim[]>;
   /** Resolve one unresolved claim. */
   reconcile(evaluationId: string, resolution: ClaimResolution): Promise<SettlementResult>;
+  /**
+   * @spec metering#settlement-states (#813, #816, decision e): this
+   * requester's PEP-signed `suppressed` Execution Evidence for a budget-bound
+   * permit it refused before redeeming it, which releases the permit's
+   * budget reservations without settling its claim
+   * (`IdempotencyClaimDomain.releaseUnredeemed`). Absent on a channel whose
+   * PDP meters no budget (a remote PDP, decision f).
+   */
+  releaseUnredeemed?(record: unknown): Promise<ReservationReleaseResult>;
 }
 
 /** The channel a decision point without a claim domain offers: nothing settles. */
@@ -69,6 +79,7 @@ const NO_CLAIM_CHANNEL: ClaimChannel = {
   settle: async () => ({ accepted: false, reason: "no_claim_domain" }),
   listUnresolved: async () => [],
   reconcile: async () => ({ accepted: false, reason: "no_claim_domain" }),
+  releaseUnredeemed: async () => ({ accepted: false, reason: "no_claim_domain" }),
 };
 
 /**
@@ -87,6 +98,7 @@ export function claimChannelFor(
     settle: (record) => claims.settle(requester, record, redeemingExecution),
     listUnresolved: async () => claims.listUnresolved(requester),
     reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution, redeemingExecution),
+    releaseUnredeemed: (record) => claims.releaseUnredeemed(requester, record, redeemingExecution),
   };
 }
 

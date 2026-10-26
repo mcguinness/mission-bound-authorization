@@ -313,7 +313,7 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
-  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, the unredeemed permit's reservation staying charged (@spec mission-template#standing-payment-exception, runtime#execution-reverification, #813, D830 ruling 4)", async () => {
+  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)", async () => {
     const stack = await compose(15022, newFiles());
     try {
       const templateId = await consentTemplate(stack);
@@ -329,9 +329,8 @@ describe("standing-payment dispatch metered end to end through the composed stac
       // After the permit: the account changes between the decision and the
       // permit's use, without even a record version change, and execution
       // reverification suppresses the permit before it is redeemed. The PEP
-      // settles only a redeemed attempt, so the PDP is not told: the
-      // reservation stays charged until reconciliation, never released by
-      // the suppression or by time.
+      // sends its signed suppression, affirmative non-execution, and the PDP
+      // releases both reservations without settling the claim.
       seedAcmeInvoices(stack, [["inv-4", "125.00"]]);
       stack.onEnforce(({ tool, decision }) => {
         if (tool === "execute_wire_transfer" && decision.decision) {
@@ -341,10 +340,10 @@ describe("standing-payment dispatch metered end to end through the composed stac
       const suppressed = await wire(stack, instance, "inv-4");
       expect(suppressed).toEqual({ ok: false, refusal_reason: "target_drift" });
       const permit = commitDecisions(stack, instance).find((d) => d.decision === "permit");
-      expect(stack.pdpClaims.reservationsFor(String(permit?.evaluation_id)).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(stack.pdpClaims.reservationsFor(String(permit?.evaluation_id)).map((r) => r.state)).toEqual(["released", "released"]);
       expect(wires(stack)).toEqual([]);
-      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "125.00", held: "0.00", committed: "0.00" });
-      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "125.00", held: "0.00", committed: "0.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
     } finally {
       await closeStack(stack);
     }

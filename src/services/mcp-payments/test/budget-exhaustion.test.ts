@@ -16,6 +16,7 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { canonicalDigest } from "@mission/core";
 import {
+  budgetCounterId,
   CLAIM_SETTLEMENT_INTAKE,
   createDecisionChannel,
   createDecisionPoint,
@@ -31,7 +32,7 @@ import {
   stalenessBound,
 } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CANONICAL_RESOURCE,
   Connectors,
@@ -42,6 +43,7 @@ import {
   PaymentsStore,
   Pep,
   redemptionStatusFor,
+  type PepDeps,
   type TokenFacts,
   TransactionEngine,
 } from "../src/index.js";
@@ -58,6 +60,9 @@ const TOKEN: TokenFacts = {
   cnfJkt: "jkt-816",
   credentialAuthority: ALL_ACTIONS_CREDENTIAL,
 };
+
+/** The shared standing_consent counter of the declared budget. */
+const SHARED = budgetCounterId("standing_consent", { owner: "acme-treasury", budget_id: "vendor-payments-2026" });
 
 /** The committed Dispatch Policy the budget was approved under. */
 const DISPATCH_POLICY = { id: "dp_vendor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "v1" }) };
@@ -105,7 +110,7 @@ const BINDING: MissionBudgetBinding = {
   instance: { max_budget: { amount: "1000.00", currency: "USD" }, root_mission_id: "msn_816" },
 };
 
-const view = (): MissionView => ({
+const view = (bound = true): MissionView => ({
   id: "msn_816",
   issuer: "https://as.test",
   state: "active",
@@ -121,10 +126,11 @@ const view = (): MissionView => ({
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
-  budget: BINDING,
+  ...(bound ? { budget: BINDING } : {}),
 });
 
-async function harness() {
+async function harness(o: { bound?: boolean; observe?: PepDeps["observe"] } = {}) {
+  const bound = o.bound ?? true;
   let nowMs = BASE_MS;
   const now = () => new Date(nowMs);
   const payments = new PaymentsStore();
@@ -137,7 +143,7 @@ async function harness() {
   );
   const loadView = (ref: { id: string; issuer: string }) =>
     ref.id === "msn_816" && ref.issuer === "https://as.test"
-      ? { view: view(), observation: { state: view().state, version: view().version, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(bound), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
   const claims = openEphemeralClaimDomain({
@@ -156,7 +162,7 @@ async function harness() {
     },
     claims,
     resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
-    budgetBindings: (m) => (m.id === "msn_816" && m.issuer === "https://as.test" ? BINDING : undefined),
+    budgetBindings: (m) => (bound && m.id === "msn_816" && m.issuer === "https://as.test" ? BINDING : undefined),
   });
   const keys = createEphemeralEvidenceKeys({ decisionPoint: point });
   pepKeys = keys.resolver;
@@ -169,7 +175,7 @@ async function harness() {
     pepEpoch: redemption.epoch,
     consumptionStatus: redemption.status,
     redeemingExecution: redemption.redeemer,
-    getOptions: () => ({ view: view(), fga: alwaysAllowFga, modelId: "model-816", now, stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
+    getOptions: () => ({ view: view(bound), fga: alwaysAllowFga, modelId: "model-816", now, stalenessBound, relationForAction, stateSourcePlacement: "pep" as const }),
   });
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const connectors = new Connectors(now);
@@ -183,6 +189,7 @@ async function harness() {
     loadView,
     instanceEpoch: "epoch-816",
     now,
+    ...(o.observe ? { observe: o.observe } : {}),
   });
   const server = new McpPaymentsServer({
     writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
@@ -196,6 +203,7 @@ async function harness() {
   });
   return {
     server,
+    payments,
     claims,
     connectors,
     evidence,
@@ -229,5 +237,44 @@ describe("exact budget exhaustion through the executing PEP (@spec metering#aggr
       remaining: { amount: "75.00", currency: "USD" },
     });
     await h.close();
+  });
+});
+
+describe("a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e)", () => {
+  it("the PEP sends its signed suppression of a budget-bound permit it refused before redeeming it, the reservation is released and nothing executes, while a suppressed permit with no budget binding sends nothing new (@spec metering#settlement-states, runtime#execution-reverification, #813, #816, decision e)", async () => {
+    for (const bound of [true, false]) {
+      // The invoice's payee changes between the decision and the permit's use.
+      let payments: PaymentsStore | undefined;
+      const h = await harness({
+        bound,
+        observe: ({ tool, decision }) => {
+          if (tool === "execute_wire_transfer" && decision.decision) {
+            payments?.db.prepare("UPDATE invoices SET payee_account = ? WHERE id = ?").run("acct-other", "inv-1");
+          }
+        },
+      });
+      payments = h.payments;
+      const release = vi.spyOn(h.claims, "releaseUnredeemed");
+      const settle = vi.spyOn(h.claims, "settle");
+      const res = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+      expect(res, String(bound)).toEqual({ ok: false, refusal_reason: "target_drift" });
+      expect(h.connectors.ledgerEntries()).toEqual([]);
+      expect(settle).not.toHaveBeenCalled();
+      const permit = h.evidence
+        .all()
+        .flatMap((e) => (e.kind === "decision" ? [e.content as DecisionEvidenceObject] : []))
+        .find((d) => d.decision === "permit");
+      const evaluationId = String(permit?.evaluation_id);
+      if (bound) {
+        expect(release).toHaveBeenCalledTimes(1);
+        expect(await release.mock.results[0]?.value).toEqual({ accepted: true, released: 2 });
+        expect(h.claims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
+        expect(h.claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      } else {
+        expect(release).not.toHaveBeenCalled();
+        expect(h.claims.reservationsFor(evaluationId)).toEqual([]);
+      }
+      await h.close();
+    }
   });
 });

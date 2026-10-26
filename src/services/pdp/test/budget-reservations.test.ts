@@ -133,6 +133,7 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
+  over: { error?: string; role?: "pep" | "executor" } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
@@ -142,8 +143,8 @@ async function executionRecord(
     outcome,
     outcome_at: new Date(T0).toISOString(),
     sequence: 1,
-    emitter: { id: RESOURCE, role: outcome === "completed" ? "executor" : "pep" },
-    ...(outcome === "suppressed" ? { error: "kill_switch" } : {}),
+    emitter: { id: RESOURCE, role: over.role ?? (outcome === "completed" ? "executor" : "pep") },
+    ...(outcome === "suppressed" ? { error: over.error ?? "kill_switch" } : {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(content, EXECUTION_EVIDENCE_MEDIA_TYPE, {
     kid: "pep-exec-816",
@@ -1390,6 +1391,126 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
       );
       expectPermit(await evaluate(request(c, { phase, actionClass }), options(claims, c, v)));
     }
+    claims.close();
+  });
+});
+
+describe("a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e)", () => {
+  /** The redemption owner's answer for a permit no attempt redeemed. */
+  const notRedeemed = () => undefined;
+  const states = (claims: IdempotencyClaimDomain, evaluationId: string) => claims.reservationsFor(evaluationId).map((r) => r.state);
+
+  it("the permit holder's signed suppressed record for a permit no attempt redeemed releases both reservations without settling the claim, and the redeeming attempt's later completed settlement still commits them (@spec metering#settlement-states, #813, #816, decision e)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const evaluationId = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(evaluationId, "suppressed"), notRedeemed)).toEqual({
+      accepted: true,
+      released: 2,
+    });
+    expect(states(claims, evaluationId)).toEqual(["released", "released"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+    // The claim is not settled: a retransmitted permit can still be redeemed,
+    // and its completed record commits the spend from released.
+    expect(await claims.settle(REQUESTER, await executionRecord(evaluationId, "completed"))).toEqual({
+      accepted: true,
+      state: "completed",
+      duplicate: false,
+    });
+    expect(states(claims, evaluationId)).toEqual(["committed", "committed"]);
+    expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+    expect(claims.budgetCounter(instanceCounter("msn_a"))?.committed.amount).toBe("300.00");
+    claims.close();
+  });
+
+  it("the permit holder's suppression before redemption releases a reservation already held for its elapsed lease too (@spec metering#settlement-states, #813, #816, decision e)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const evaluationId = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    c.set(T0 + PAST_LEASE_MS);
+    claims.sweep();
+    expect(states(claims, evaluationId)).toEqual(["held", "held"]);
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(evaluationId, "suppressed"), notRedeemed)).toEqual({
+      accepted: true,
+      released: 2,
+    });
+    expect(states(claims, evaluationId)).toEqual(["released", "released"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" } });
+    claims.close();
+  });
+
+  it("a release on a suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds the reservations again (@spec metering#settlement-states, #813, #816, D830 ruling 10)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const evaluationId = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    expect((await claims.releaseUnredeemed(REQUESTER, await executionRecord(evaluationId, "suppressed"), notRedeemed)).accepted).toBe(true);
+    const redeeming = `exe_${randomUUID()}`;
+    expect(await claims.settle(REQUESTER, await executionRecord(evaluationId, "failed", redeeming), () => redeeming)).toEqual({
+      accepted: true,
+      state: "failed",
+      duplicate: false,
+    });
+    expect(states(claims, evaluationId)).toEqual(["held", "held"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" } });
+    claims.close();
+  });
+
+  it("a suppression is refused and releases nothing when the redemption owner names a redeeming attempt, the record marks a consumed permit or is not a PEP's suppressed record, another PEP or epoch presents it, the domain is bound to no redemption record, the claim is already settled, or the permit reserved no budget (@spec metering#settlement-states, runtime#idempotency, #813, #816)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const v = view("msn_a", binding("msn_a", { limit: "1000.00" }));
+    const permit = () => permitted(claims, c, v, { amount: "10.00" });
+    const cases: Array<[string, (id: string) => ReturnType<IdempotencyClaimDomain["releaseUnredeemed"]>, string]> = [
+      ["the redemption owner names a redeeming attempt", async (id) => claims.releaseUnredeemed(REQUESTER, await executionRecord(id, "suppressed"), () => "exe_redeemer"), "permit_redeemed"],
+      [
+        "the record marks a permit already consumed",
+        async (id) => claims.releaseUnredeemed(REQUESTER, await executionRecord(id, "suppressed", undefined, { error: "permit_consumed" }), notRedeemed),
+        "permit_consumed",
+      ],
+      [
+        "an executor's record",
+        async (id) => claims.releaseUnredeemed(REQUESTER, await executionRecord(id, "suppressed", undefined, { role: "executor" }), notRedeemed),
+        "not_a_pep_record",
+      ],
+      ["a failed record", async (id) => claims.releaseUnredeemed(REQUESTER, await executionRecord(id, "failed"), notRedeemed), "not_a_suppression"],
+      [
+        "another PEP",
+        async (id) => claims.releaseUnredeemed({ ...REQUESTER, pep_id: "another-pep" }, await executionRecord(id, "suppressed"), notRedeemed),
+        "not_the_permit_holder",
+      ],
+      [
+        "another epoch of the same PEP",
+        async (id) => claims.releaseUnredeemed({ ...REQUESTER, pep_epoch: "epoch-816-b" }, await executionRecord(id, "suppressed"), notRedeemed),
+        "not_the_permit_holder",
+      ],
+      ["no redemption record bound", async (id) => claims.releaseUnredeemed(REQUESTER, await executionRecord(id, "suppressed")), "no_redemption_record"],
+    ];
+    for (const [label, release, reason] of cases) {
+      const evaluationId = await permit();
+      expect(await release(evaluationId), label).toEqual({ accepted: false, reason });
+      expect(states(claims, evaluationId), label).toEqual(["reserved", "reserved"]);
+    }
+    // A claim the redeeming attempt already settled failed: held, and no
+    // later suppression releases it.
+    const settled = await permit();
+    const redeeming = `exe_${randomUUID()}`;
+    expect((await claims.settle(REQUESTER, await executionRecord(settled, "failed", redeeming), () => redeeming)).accepted).toBe(true);
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(settled, "suppressed"), notRedeemed)).toEqual({
+      accepted: false,
+      reason: "already_settled",
+    });
+    expect(states(claims, settled)).toEqual(["held", "held"]);
+    // A permit that reserved no budget has nothing to release, and its claim stays open.
+    const unmetered = await permitted(claims, c, view("msn_b"));
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(unmetered, "suppressed"), notRedeemed)).toEqual({
+      accepted: false,
+      reason: "no_open_reservation",
+    });
+    expect((await claims.settle(REQUESTER, await executionRecord(unmetered, "completed"))).accepted).toBe(true);
     claims.close();
   });
 });
