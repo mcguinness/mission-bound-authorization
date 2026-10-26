@@ -1175,22 +1175,24 @@ authenticates. It does not establish:
 ## Example {#portable-binding-example}
 
 A company approves a Mission to purchase office supplies within set
-limits. Approval event `E42` creates Mission `M17`. The Mission Issuer
-signs record `G42`, recording the governance assertions and the
-approval outcome, and later mints Mandate `D17`, which carries `M17`,
-`E42`, and the same `intent_hash` and `authority_hash`.
+limits. The approval event creates the Mission. The Mission Issuer
+signs an Approval Governance Record for that event, recording the
+governance assertions and the approval outcome, and later mints a
+Mandate that carries the Mission, the approval event, and the same
+`intent_hash` and `authority_hash`.
 
-The purchasing agent then submits purchase order `PO-9001`, and the
-company's ERP records its own business decision for that order as
-`BD-9001`, naming the order, the policy version it applied, the
-decision, and its time. `BD-9001` is an illustrative deployment
-record; this document defines no format for it.
+The purchasing agent then submits a purchase order, and the company's
+ERP records its own business decision for that order, naming the
+order, the policy version it applied, the decision, and its time. The
+ERP's decision record is illustrative; this document defines no
+format for it.
 
-An auditor receives `G42` and `D17` through an authorized evidence
-export ({{privacy-considerations}}), without the Mission Record or the
-evaluation's inputs. The check connects `G42` to the approval event
-`D17` identifies. It does not show that `PO-9001` was individually
-approved, within authority, or executed: relating `BD-9001` to the
+An auditor receives the governance record and the Mandate through an
+authorized evidence export ({{privacy-considerations}}), without the
+Mission Record or the evaluation's inputs. The check connects the
+governance record to the approval event the Mandate identifies. It
+does not show that the purchase order was individually approved,
+within authority, or executed: relating the ERP's decision to the
 order takes separate action evidence. A Mission scoped to approving
 one particular order could itself carry that business decision, but
 the auditor has to establish that scope, for example from the
@@ -1198,26 +1200,29 @@ Authority Set; an approval-event match never implies it.
 
 ## Example: An Approver's Transfer {#approver-transfer-example}
 
-Continuing the example above, the purchasing officer who approved
-`E42` transfers to another role before `PO-9001` is placed. `G42`
-records her approval in every deployment below; what her transfer
-changes depends on each deployment's policy:
+Continuing the example above, the purchasing officer who approved the
+Mission transfers to another role before the purchase order is
+placed. The governance record records her approval in every
+deployment below; what her transfer changes depends on each
+deployment's policy:
 
-- **An organizational decision.** `M17` commits the company to the
-  approved purchasing. It stays effective until fulfillment, expiry,
-  or withdrawal, and her transfer changes nothing the agent relies on.
-- **A personal delegation.** `M17` delegates the officer's own
+- **An organizational decision.** The Mission commits the company to
+  the approved purchasing. It stays effective until fulfillment,
+  expiry, or withdrawal, and her transfer changes nothing the agent
+  relies on.
+- **A personal delegation.** The Mission delegates the officer's own
   purchasing authority, and the deployment declares a dependency on
   her holding it. When the authoritative directory records her
   transfer, the dependency is withdrawn at its source; within the
-  deployment's declared bound, further orders under `M17` are
+  deployment's declared bound, further orders under the Mission are
   refused.
 - **A required accountable owner.** The deployment requires an
-  eligible owner for the work. Her transfer suspends `M17` until a
-  successor accepts responsibility through an authorized process,
-  recorded separately from `G42`. That acceptance permits an
-  authorized resumption, subject to the remaining checks; the
-  successor does not become the approver of `E42`.
+  eligible owner for the work. Her transfer suspends the Mission until
+  a successor accepts responsibility through an authorized process,
+  recorded separately from the governance record. That acceptance
+  permits an authorized resumption, subject to the remaining checks;
+  the successor does not become the approver of the original approval
+  event.
 
 # Governed Policy Approval {#governed-policy}
 
@@ -2263,6 +2268,11 @@ disclosed mismatch is definitive.
   organizational decision, a personal delegation, and a required
   accountable owner when the approver transfers. No requirement
   changed (#830).
+- The portable-binding example and the approver-transfer example name
+  each record by its role (the approval event, the Mission, the
+  governance record, the Mandate, the purchase order, the ERP's
+  decision) in place of identifiers such as `E42` and `M17`. No
+  requirement changed.
 
 - A separately named portable approval-binding check lets a Relying
   Auditor without the Mission Record establish that an authenticated
