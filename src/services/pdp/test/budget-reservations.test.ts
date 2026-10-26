@@ -95,6 +95,9 @@ const BUDGET_ID = "vendor-payments-2026";
 /** The committed Dispatch Policy the budget was approved under, and its re-consented successor. */
 const POLICY_V1: DispatchPolicyRef = { id: "dp_vendor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "v1" }) };
 const POLICY_V2: DispatchPolicyRef = { id: "dp_vendor_payments", version: "2", digest: canonicalDigest({ dispatch_policy: "v2" }) };
+/** Another template's committed policy for the same budget, and a policy that commits no declared budget. */
+const POLICY_EU: DispatchPolicyRef = { id: "dp_vendor_payments_eu", version: "1", digest: canonicalDigest({ dispatch_policy: "eu-v1" }) };
+const POLICY_UNLISTED: DispatchPolicyRef = { id: "dp_contractor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "contractor-v1" }) };
 
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
@@ -145,7 +148,7 @@ async function executionRecord(
   return { ...content, evidence_envelope };
 }
 
-function declaration(o: { limit?: string; policy?: DispatchPolicyRef } = {}): BudgetMeteringDeclaration {
+function declaration(o: { limit?: string; policies?: DispatchPolicyRef[] } = {}): BudgetMeteringDeclaration {
   return {
     unit: { currency: "USD", exponent: 2 },
     enforcement_profile: "exact",
@@ -160,7 +163,7 @@ function declaration(o: { limit?: string; policy?: DispatchPolicyRef } = {}): Bu
         counter_scope: "standing_consent",
         currency: "USD",
         limit: o.limit ?? "1000.00",
-        policy: o.policy ?? POLICY_V1,
+        policies: o.policies ?? [POLICY_V1],
       },
     ],
   };
@@ -366,6 +369,10 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       const claims = open();
       const v = view("msn_a", binding("msn_a", { maxBudget: "300.00" }));
       await permitted(claims, c, v, { amount: "200.00" });
+      // The decision itself, with no evidence emitter in the way.
+      const noEvidence = options(claims, c, v);
+      delete noEvidence.evidence;
+      expectDenied(await evaluate(request(c, { missionId: "msn_a", amount: "200.00" }), noEvidence), "quota_exceeded");
       const refused = await evaluate(request(c, { missionId: "msn_a", amount: "200.00" }), options(claims, c, v));
       expectDenied(refused, "quota_exceeded");
       expect(entry(refused, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a"), requested: { amount: "200.00" }, remaining: { amount: "100.00" } });
@@ -373,6 +380,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       // Neither counter moved for the refusal.
       expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("200.00");
       expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("200.00");
+      // At the boundary: a request for exactly the remaining 100.00 is permitted.
+      expectPermit(await evaluate(request(c, { missionId: "msn_a", amount: "100.00" }), options(claims, c, v)));
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
       claims.close();
     });
 
@@ -406,8 +416,39 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expectDenied(refused, "quota_exceeded");
       expect(entry(refused, "mission")?.counter_id).toBe(entry(first, "mission")?.counter_id);
       expect(entry(refused, "mission")?.remaining.amount).toBe("200.00");
-      expectPermit(await evaluate(request(c, { missionId: "msn_a2", amount: "200.00" }), options(claims, c, successor)));
+      // The successor's shared counter is the predecessor's, with the cumulative remainder.
+      expect(entry(refused, "standing_consent")?.counter_id).toBe(entry(first, "standing_consent")?.counter_id);
+      expect(entry(refused, "standing_consent")?.remaining.amount).toBe("700.00");
+      const permit = await evaluate(request(c, { missionId: "msn_a2", amount: "200.00" }), options(claims, c, successor));
+      expectPermit(permit);
+      expect(entry(permit, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "500.00" } });
       expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("500.00");
+      claims.close();
+    });
+
+    it("two instances under two different committed Dispatch Policies that commit one budget share its standing_consent counter, and a policy reference outside the budget's list is refused constraint_unsupported (@spec metering#aggregate-bounds, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open(budgetStatement(declaration({ policies: [POLICY_V1, POLICY_EU] })));
+      const a = await evaluate(request(c, { missionId: "msn_a", amount: "300.00" }), options(claims, c, view("msn_a", binding("msn_a", { policy: POLICY_V1 }))));
+      const b = await evaluate(request(c, { missionId: "msn_b", amount: "300.00" }), options(claims, c, view("msn_b", binding("msn_b", { policy: POLICY_EU }))));
+      expectPermit(a);
+      expectPermit(b);
+      expect(entry(a, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "700.00" } });
+      expect(entry(b, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "400.00" } });
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("600.00");
+      // An unlisted policy, and a reference mixing two listed ones, commit nothing this budget meters.
+      const outside: Array<[string, DispatchPolicyRef]> = [
+        ["unlisted policy", POLICY_UNLISTED],
+        ["listed id and version with another listed policy's digest", { ...POLICY_V1, digest: POLICY_EU.digest }],
+      ];
+      for (const [label, policy] of outside) {
+        const d = await evaluate(request(c, { missionId: "msn_c", amount: "100.00" }), options(claims, c, view("msn_c", binding("msn_c", { policy }))));
+        expect(d.decision, label).toBe(false);
+        expect(d.context.denial_reason, label).toBe("constraint_unsupported");
+        expect(claims.reservationsFor(d.context.evaluation_id as string), label).toEqual([]);
+      }
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("600.00");
       claims.close();
     });
 
@@ -826,7 +867,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.sweep();
       claims.close();
       // Re-consent: version 2 of the policy raises the limit to 1200.00.
-      claims = open(budgetStatement(declaration({ limit: "1200.00", policy: POLICY_V2 })));
+      claims = open(budgetStatement(declaration({ limit: "1200.00", policies: [POLICY_V2] })));
       expect(claims.reservationsFor(first).map((r) => r.state)).toEqual(["held", "held"]);
       const v2 = (id: string) => view(id, binding(id, { limit: "1200.00", policy: POLICY_V2 }));
       const refused = await evaluate(request(c, { missionId: "msn_b", amount: "700.00" }), options(claims, c, v2("msn_b")));
@@ -1089,10 +1130,13 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         ["lineage counter scope", { ...declaration(), budgets: [{ ...declaration().budgets[0], counter_scope: "lineage" }] }],
         ["budget in another currency", { ...declaration(), budgets: [{ ...declaration().budgets[0], currency: "EUR" }] }],
         ["limit the unit cannot count", { ...declaration(), budgets: [{ ...declaration().budgets[0], limit: "1000.001" }] }],
-        ["policy without a version", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { id: POLICY_V1.id, digest: POLICY_V1.digest } }] }],
-        ["policy without a digest", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { id: POLICY_V1.id, version: "1" } }] }],
-        ["policy digest not sha-256", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { ...POLICY_V1, digest: "md5:abc" } }] }],
-        ["policy in the template shape", { ...declaration(), budgets: [{ ...declaration().budgets[0], policy: { template_id: "tmpl_vendor_payments", template_version: "1" } }] }],
+        ["policy without a version", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [{ id: POLICY_V1.id, digest: POLICY_V1.digest }] }] }],
+        ["policy without a digest", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [{ id: POLICY_V1.id, version: "1" }] }] }],
+        ["policy digest not sha-256", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [{ ...POLICY_V1, digest: "md5:abc" }] }] }],
+        ["policy in the template shape", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [{ template_id: "tmpl_vendor_payments", template_version: "1" }] }] }],
+        ["no policies", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [] }] }],
+        ["a single policy, not a list", { ...declaration(), budgets: [{ ...(({ policies: _list, ...rest }) => rest)(declaration().budgets[0] as BudgetMeteringDeclaration["budgets"][number]), policy: POLICY_V1 }] }],
+        ["one policy version listed twice", { ...declaration(), budgets: [{ ...declaration().budgets[0], policies: [POLICY_V1, { ...POLICY_V1, digest: POLICY_V2.digest }] }] }],
         ["duplicate budget for one owner", { ...declaration(), budgets: [declaration().budgets[0], declaration().budgets[0]] }],
         ["unknown member", { ...declaration(), counter_owner: "mcp-payments-pdp" }],
       ];

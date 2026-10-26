@@ -81,7 +81,7 @@ function meteringStatement(): EnforcementScopeStatement {
         counter_scope: "standing_consent",
         currency: "USD",
         limit: "200.00",
-        policy: DISPATCH_POLICY,
+        policies: [DISPATCH_POLICY],
       },
     ],
   };

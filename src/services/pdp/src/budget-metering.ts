@@ -10,8 +10,8 @@
  *   names the unit, the Exact profile and the single-writer topology the
  *   reservation runs under, the reserve-then-commit posture, the settlement
  *   intake, the actions it meters, and each budget it meters: its owner and
- *   id, a disclosure copy of the approved policy's limit, and the committed
- *   Dispatch Policy that limit was approved under, by `id`, `version` and
+ *   id, a disclosure copy of the approved limit, and every committed
+ *   Dispatch Policy that commits the budget, each by `id`, `version` and
  *   `digest`.
  * - A Mission's {@link MissionBudgetBinding}, a PDP-local member of the
  *   loaded Mission view (`MissionView.budget`), derived from the committed
@@ -133,8 +133,10 @@ export const COVERED_PHASES: ReadonlySet<ActionPhase> = new Set<ActionPhase>(["p
 
 /**
  * One declared budget: its owner and id (the shared counter's key), its
- * counter class, the disclosure copy of the policy's limit, and the
- * committed Dispatch Policy it was approved under.
+ * counter class, the disclosure copy of the approved limit, and every
+ * committed Dispatch Policy that commits this budget. Every template that
+ * commits one budget shares its counter, so instances under any listed
+ * policy draw on the same `standing_consent` counter.
  */
 export interface BudgetDeclaration {
   /** The accounting domain that owns the budget. */
@@ -143,7 +145,8 @@ export interface BudgetDeclaration {
   counter_scope: "standing_consent";
   currency: string;
   limit: string;
-  policy: DispatchPolicyRef;
+  /** Non-empty and distinct: the committed Dispatch Policies whose approved limit is `limit`. */
+  policies: readonly DispatchPolicyRef[];
 }
 
 /**
@@ -186,7 +189,7 @@ const DECLARATION_MEMBERS = new Set([
   "metered_actions",
   "budgets",
 ]);
-const BUDGET_MEMBERS = new Set(["owner", "budget_id", "counter_scope", "currency", "limit", "policy"]);
+const BUDGET_MEMBERS = new Set(["owner", "budget_id", "counter_scope", "currency", "limit", "policies"]);
 /** The widest minor-unit exponent a counter takes; every count stays a safe integer. */
 const MAX_EXPONENT = 9;
 
@@ -350,8 +353,21 @@ export function budgetMeteringFindings(statement: unknown): EnforcementScopeFind
       } else if (!unitOk && (typeof raw.limit !== "string" || !isValidAmount(raw.limit))) {
         push(at, "limit must be a decimal amount");
       }
-      if (!isDispatchPolicyRef(raw.policy)) {
-        push(at, "policy must be exactly {id, version, digest} (a sha-256: digest), the committed Dispatch Policy the limit was approved under");
+      const policies = raw.policies;
+      if (!Array.isArray(policies) || policies.length === 0) {
+        push(at, "policies must be a non-empty list of the committed Dispatch Policies that commit this budget");
+      } else {
+        const seen = new Set<string>();
+        policies.forEach((ref, j) => {
+          if (!isDispatchPolicyRef(ref)) {
+            push(`${at}.policies[${j}]`, "must be exactly {id, version, digest} (a sha-256: digest), a committed Dispatch Policy");
+            return;
+          }
+          // One committed version is one reference: a second digest for it is a conflict.
+          const key = JSON.stringify([ref.id, ref.version]);
+          if (seen.has(key)) push(`${at}.policies[${j}]`, `duplicate policy ${ref.id} version ${ref.version}`);
+          seen.add(key);
+        });
       }
     });
   }
@@ -378,10 +394,12 @@ export type BudgetChargeResolution =
  * @spec metering#aggregate-bounds, metering#capacity-across-missions (#816,
  * D830 rulings 1, 2, 5): resolve one charge. The binding must name a budget
  * the declaration lists under the same (owner, budget id), in the declared
- * currency, with the declared limit (compared by value) and the declared
- * Dispatch Policy (`id`, `version` and `digest`, each exactly); the request's
- * amount must be in that currency too (no conversion). The instance counter
- * comes first, then the shared one.
+ * currency, with the declared limit (compared by value) and a Dispatch
+ * Policy the budget lists (`id`, `version` and `digest` of one listed
+ * reference, each exactly); the request's amount must be in that currency
+ * too (no conversion). The counter keys never include the policy, so every
+ * listed policy and every version draws on one shared counter. The instance
+ * counter comes first, then the shared one.
  */
 export function resolveBudgetCharge(
   declaration: BudgetMeteringDeclaration,
@@ -402,11 +420,8 @@ export function resolveBudgetCharge(
     return { kind: "unsupported" };
   }
   if (compareAmounts(binding.limit, declared.limit) !== 0) return { kind: "unsupported" };
-  if (
-    binding.policy.id !== declared.policy.id ||
-    binding.policy.version !== declared.policy.version ||
-    binding.policy.digest !== declared.policy.digest
-  ) {
+  const { policy } = binding;
+  if (!declared.policies.some((p) => p.id === policy.id && p.version === policy.version && p.digest === policy.digest)) {
     return { kind: "unsupported" };
   }
   const sharedLimit = minorUnits(declared.limit, exponent);

@@ -340,8 +340,8 @@ export interface EnforcementExtensionDeclarations {
    * @spec metering#topology, metering#retry, metering#aggregate-bounds
    * (#816): the budgets this PDP meters exactly, in the claim domain's own
    * transaction, each with its owner, the disclosure copy of its approved
-   * limit, and the committed Dispatch Policy (`id`, `version`, `digest`)
-   * ({@link budgetMeteringFindings}). A reference-statement representation,
+   * limit, and every committed Dispatch Policy (`id`, `version`, `digest`)
+   * that commits it ({@link budgetMeteringFindings}). A reference-statement representation,
    * not a Runtime wire member.
    */
   budget_metering?: BudgetMeteringDeclaration;
