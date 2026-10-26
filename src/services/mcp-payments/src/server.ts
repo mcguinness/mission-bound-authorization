@@ -83,6 +83,7 @@ import {
 import { defaultRemittanceAddress, type PaymentsStore } from "./payments-store.js";
 import type { CommitResult, Connectors } from "./connectors.js";
 import type { EvidenceStore, ExecutionEvidence, ExecutionEvidenceInput } from "./evidence.js";
+import type { OperatorAlertSink } from "./outcome-reconciler.js";
 import { operationKey, type TransactionEngine } from "./transaction.js";
 import { recordRedeemingAttempt } from "./redemption-status.js";
 import { buildEffectiveParams, type EffectiveParams, parameterDigest } from "./effective-params.js";
@@ -608,6 +609,13 @@ export interface McpServerDeps {
    * written refuses `consumption_unavailable` and executes nothing.
    */
   writeReservations?: WriteReservationStore;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#821): where an
+   * evidence emission failure on the transaction tier is alerted, the
+   * deployment's declared operator sink. Absent, the caller's `gap` is the
+   * only report.
+   */
+  alerts?: OperatorAlertSink;
 }
 
 /**
@@ -639,11 +647,12 @@ export interface TransactionToolResult {
   transaction_challenge?: string;
   insufficient_authorization?: InsufficientAuthorization;
   /**
-   * @spec runtime-evidence#execution-evidence-object (#1104): present only
-   * when the connector effect committed and its `completed` Execution
-   * Evidence could not be recorded after one retry. Never a refusal: `result`
-   * describes the effect that stands, and no `refusal_reason` or
-   * `denial_reason` is set.
+   * @spec runtime-evidence#execution-evidence-object (#1104, #821): a
+   * disposition record that could not be recorded after one retry. With no
+   * `refusal_reason`, the connector effect committed and its `completed`
+   * record is missing: `result` describes the effect that stands. Beside a
+   * `refusal_reason`, nothing executed and the refusal's `suppressed` record
+   * is missing. The operator is alerted either way.
    */
   gap?: "emission_failed";
   /** @spec authzen#obligation-processing (#1640, D770 ruling 6): a denial whose Decision Evidence did not verify. */
@@ -1961,7 +1970,7 @@ export class McpPaymentsServer {
     // checked after it would burn the claim and leave the legitimate crossing
     // reporting `permit_consumed`. Nothing here touches the store.
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (!admitted.ok) return this.surfaced(attempt, admitted.disposition, { ok: false, refusal_reason: admitted.error });
 
     // @spec runtime#execution-reverification — the connector operation this
     // crossing commits, resolved before any state is taken: an explicit
@@ -2014,14 +2023,13 @@ export class McpPaymentsServer {
       // operation row, so it is not a duplicate: the permit's own window had
       // closed by the time a lease was derived from it.
       if (redeem.reason === "lease_setup_failed") {
-        await this.deps.pep.suppressExecution(attempt, "permit_expired");
-        return { ok: false, refusal_reason: "permit_expired" };
+        return this.refuseSuppressed(attempt, "permit_expired", { refusal_reason: "permit_expired" });
       }
-      await this.deps.pep.suppressExecution(
+      return this.refuseSuppressed(
         attempt,
         redeem.reason === "operation_already_claimed" ? "operation_already_claimed" : "permit_consumed",
+        { refusal_reason: "permit_consumed" },
       );
-      return { ok: false, refusal_reason: "permit_consumed" };
     }
     // @spec runtime#idempotency (#917): this attempt now holds the single
     // use, so how it ends is the outcome of the permit's idempotency claim.
@@ -2041,7 +2049,7 @@ export class McpPaymentsServer {
     );
     if (!capability.ok) {
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: capability.error };
+      return this.surfaced(attempt, capability.disposition, { ok: false, refusal_reason: capability.error });
     }
     // The execution lease is its OWN gate with its own error. It used to sit
     // as an `||` operand ahead of reverification, so an expired lease
@@ -2052,9 +2060,9 @@ export class McpPaymentsServer {
     // still initiate an effect at all is the separate question the pre-effect
     // seam answers below and at admission above.
     if (!tx.engine.leaseValid(opKey)) {
-      await this.deps.pep.suppressExecution(attempt, "permit_expired");
+      const refused = await this.refuseSuppressed(attempt, "permit_expired", { refusal_reason: "permit_expired" });
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: "permit_expired" };
+      return refused;
     }
     // TOCTOU re-verify inside the lease, before commit. A compensate crossing
     // (#252) re-derives its form from the committed wire's record, not the
@@ -2064,7 +2072,7 @@ export class McpPaymentsServer {
       : await this.deps.pep.reverify(res.effective, digest, token, attempt);
     if (!bound.ok) {
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: bound.error };
+      return this.surfaced(attempt, bound.disposition, { ok: false, refusal_reason: bound.error });
     }
 
     // @spec runtime#execution-reverification — the last check of all, after
@@ -2076,7 +2084,7 @@ export class McpPaymentsServer {
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
     if (!live.ok) {
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: live.error };
+      return this.surfaced(attempt, live.disposition, { ok: false, refusal_reason: live.error });
     }
 
     // @spec txn-authorization#offline-verification — atomic first use of the
@@ -2090,9 +2098,11 @@ export class McpPaymentsServer {
       try {
         outcome = this.txnConsumption.consume(CANONICAL_RESOURCE, consumedTxn, opKey);
       } catch {
-        await this.deps.pep.suppressExecution(attempt, "consumption_unavailable");
+        const refused = await this.refuseSuppressed(attempt, "consumption_unavailable", {
+          refusal_reason: "consumption_unavailable",
+        });
         tx.engine.advance(opKey, "abandoned");
-        return { ok: false, refusal_reason: "consumption_unavailable" };
+        return refused;
       }
       if (!outcome.first) {
         const prior = outcome.record;
@@ -2111,12 +2121,13 @@ export class McpPaymentsServer {
         // profile mandates on the wire for this refusal, and it is NOT the
         // PDP denial reason of the same name.
         if (prior.state === "effect_committed" || prior.opKey !== opKey) {
-          await this.deps.pep.suppressExecution(
+          const refused = await this.refuseSuppressed(
             attempt,
             prior.opKey !== opKey ? "operation_identity_conflict" : "operation_already_claimed",
+            { refusal_reason: "duplicate_suppressed" },
           );
           tx.engine.advance(opKey, "abandoned");
-          return { ok: false, refusal_reason: "duplicate_suppressed" };
+          return refused;
         }
         // Otherwise this is THIS operation, consumed but never committed: a
         // crash landed in the window between taking the single use and the
@@ -2146,9 +2157,11 @@ export class McpPaymentsServer {
           decisionEvidence: attempt.decisionEvidence,
         });
       } catch {
-        await this.deps.pep.suppressExecution(attempt, EVIDENCE_UNAVAILABLE_ERROR);
+        const refused = await this.refuseSuppressed(attempt, EVIDENCE_UNAVAILABLE_ERROR, {
+          refusal_reason: "evidence_unavailable",
+        });
         tx.engine.advance(opKey, "abandoned");
-        return { ok: false, refusal_reason: "evidence_unavailable" };
+        return refused;
       }
     }
 
@@ -2172,9 +2185,9 @@ export class McpPaymentsServer {
     // error.
     if (!commit.committed) {
       const refusal = commit.refusal ?? "already_settled";
-      await this.deps.pep.suppressExecution(attempt, CONNECTOR_REFUSAL_ERRORS[refusal]);
+      const refused = await this.refuseSuppressed(attempt, CONNECTOR_REFUSAL_ERRORS[refusal], { refusal_reason: refusal });
       tx.engine.advance(opKey, "abandoned");
-      return { ok: false, refusal_reason: refusal };
+      return refused;
     }
     tx.engine.advance(opKey, "connector_committed");
     // The effect is durable, so the consumption row says so. A failure to write
@@ -2271,7 +2284,8 @@ export class McpPaymentsServer {
       // and its evidence is missing. Nothing here executes again. The
       // operation stays `connector_committed` and the PDP claim unsettled,
       // so the key stays refused and reconciliation settles the claim from
-      // the connector ledger (#1103).
+      // the connector ledger (#1103). The operator is alerted now (#821).
+      this.alertUnrecorded(attempt, "completed_disposition_unrecorded");
       return { ok: false, gap: "emission_failed", deduped: commit.deduped, result };
     }
     tx.engine.advance(opKey, "evidence_emitted");
@@ -2283,6 +2297,53 @@ export class McpPaymentsServer {
     tx.engine.advance(opKey, "reconciled");
 
     return { ok: true, deduped: commit.deduped, result };
+  }
+
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#786, #821): a
+   * transaction-tier refusal after the permit, disposed through the one
+   * post-permit writer. A suppressed record that could not be written is
+   * surfaced, never dropped ({@link surfaced}).
+   */
+  private async refuseSuppressed(
+    attempt: ExecutionAttempt,
+    error: string,
+    refusal: { refusal_reason: string },
+  ): Promise<TransactionToolResult> {
+    const disposition = await this.deps.pep.suppressExecution(attempt, error);
+    return this.surfaced(attempt, disposition, { ok: false, ...refusal });
+  }
+
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#821): a refusal whose
+   * suppressed disposition could not be recorded says so. The refusal stands
+   * and nothing executed; the caller's result also carries
+   * `gap: "emission_failed"`, and the operator is alerted, as for a completed
+   * record that could not be written after its effect.
+   */
+  private surfaced(
+    attempt: ExecutionAttempt,
+    disposition: SuppressOutcome,
+    result: TransactionToolResult,
+  ): TransactionToolResult {
+    if (disposition.recorded) return result;
+    this.alertUnrecorded(attempt, "suppressed_disposition_unrecorded");
+    return { ...result, gap: "emission_failed" };
+  }
+
+  /** One operator alert for a disposition record that could not be written: identifiers and a fixed cause only. */
+  private alertUnrecorded(attempt: ExecutionAttempt, cause: string): void {
+    try {
+      this.deps.alerts?.alert({
+        kind: "evidence_emission_failed",
+        evaluation_id: attempt.evaluationId,
+        mission_id: attempt.mission.id,
+        cause,
+        at: new Date(this.deps.transaction?.engine.nowMs() ?? Date.now()).toISOString(),
+      });
+    } catch {
+      /* a failing sink never changes the result */
+    }
   }
 
   /**

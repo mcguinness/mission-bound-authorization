@@ -29,6 +29,7 @@ import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it, vi } from "vitest";
 import {
   CANONICAL_RESOURCE,
+  CollectingAlertSink,
   Connectors,
   createEphemeralEvidenceKeys,
   EVIDENCE_UNAVAILABLE_ERROR,
@@ -126,6 +127,7 @@ async function harness(reservationsFile = tempFile("pep-attempts-", "write-reser
   const evidence = new EvidenceStore(keys.signing, keys.resolver);
   const connectors = new Connectors(now);
   const writeReservations: WriteReservationStore = openWriteReservationStore({ file: reservationsFile, owner: PEP_LOCATION });
+  const alerts = new CollectingAlertSink();
   const pep = new Pep({
     decide: channel.decide,
     claims: channel.claims,
@@ -146,9 +148,12 @@ async function harness(reservationsFile = tempFile("pep-attempts-", "write-reser
     keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
     issuer: ISSUER,
     transaction: { engine, connectors, evidence },
+    alerts,
   });
   return {
     reservationsFile,
+    alerts,
+    payments,
     connectors,
     evidence,
     writeReservations,
@@ -221,6 +226,103 @@ describe("the transaction tier records each attempt before its effect (@spec run
       expect(h.connectors.ledgerEntries()).toEqual([]);
       expect(executionsOf(h).map((r) => [r.outcome, r.error])).toEqual([["suppressed", EVIDENCE_UNAVAILABLE_ERROR]]);
       expect(h.writeReservations.attempts()).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+});
+
+/** Fail every Execution Evidence write under `role` until restored. */
+function failWrites(h: Harness, role: "pep" | "executor"): { restore: () => void } {
+  const original = h.evidence.recordExecution.bind(h.evidence);
+  const spy = vi.spyOn(h.evidence, "recordExecution").mockImplementation(async (emitterId, writeRole, input) => {
+    if (writeRole === role) throw new Error("evidence store unavailable");
+    return original(emitterId, writeRole, input);
+  });
+  return { restore: () => spy.mockRestore() };
+}
+
+describe("a transaction-tier disposition record that cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #821)", () => {
+  it("a refusal after the permit whose suppressed record cannot be written still refuses, says the record is missing, and alerts the operator once; nothing executes", async () => {
+    const h = await harness();
+    try {
+      // Another operation already settled the invoice, so the connector refuses this wire with no effect.
+      const other = { opKey: "op:msn_other:payments:payment.execute:other", invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: "evl_other", missionId: "msn_other" };
+      expect(h.connectors.postWire(other).committed).toBe(true);
+      const failing = failWrites(h, "pep");
+      const refused = await wire(h, key());
+      failing.restore();
+      expect(refused).toEqual({ ok: false, refusal_reason: "already_settled", gap: "emission_failed" });
+      const [decision] = decisionsOf(h);
+      expect(h.alerts.alerts).toEqual([
+        {
+          kind: "evidence_emission_failed",
+          evaluation_id: decision?.evaluation_id,
+          mission_id: MISSION,
+          cause: "suppressed_disposition_unrecorded",
+          at: expect.any(String),
+        },
+      ]);
+      expect(executionsOf(h)).toEqual([]);
+      expect(h.connectors.ledgerEntries().map((e) => e.op_key)).toEqual([other.opKey]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("an effect whose completed record cannot be written reports the gap with its result and alerts the operator once", async () => {
+    const h = await harness();
+    try {
+      const failing = failWrites(h, "executor");
+      const done = await wire(h, key());
+      failing.restore();
+      expect(done).toMatchObject({ ok: false, gap: "emission_failed" });
+      expect(done).not.toHaveProperty("refusal_reason");
+      const [decision] = decisionsOf(h);
+      expect(h.alerts.alerts.map((a) => [a.kind, a.evaluation_id, a.cause])).toEqual([
+        ["evidence_emission_failed", decision?.evaluation_id, "completed_disposition_unrecorded"],
+      ]);
+      expect(h.connectors.ledgerEntries()).toHaveLength(1);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("the same holds at a reverification refusal and at a failed attempt write: each refusal carries the gap and one alert, and nothing executes", async () => {
+    const h = await harness();
+    try {
+      // The invoice moves after the permit: reverification refuses target_drift.
+      const failing = failWrites(h, "pep");
+      const drifted = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN, () =>
+        h.payments.bumpInvoiceAmount("inv-1", "150.00"),
+      );
+      expect(drifted).toEqual({ ok: false, refusal_reason: "target_drift", gap: "emission_failed" });
+      // The attempt record cannot be written: refused evidence_unavailable.
+      h.payments.bumpInvoiceAmount("inv-1", "125.00");
+      vi.spyOn(h.writeReservations, "recordAttempt").mockImplementation(() => {
+        throw new Error("SQLITE_FULL: database or disk is full");
+      });
+      const unrecorded = await wire(h, key());
+      failing.restore();
+      expect(unrecorded).toEqual({ ok: false, refusal_reason: "evidence_unavailable", gap: "emission_failed" });
+      expect(h.alerts.alerts.map((a) => [a.kind, a.cause])).toEqual([
+        ["evidence_emission_failed", "suppressed_disposition_unrecorded"],
+        ["evidence_emission_failed", "suppressed_disposition_unrecorded"],
+      ]);
+      expect(h.connectors.ledgerEntries()).toEqual([]);
+    } finally {
+      await h.close();
+    }
+  });
+
+  it("a refusal whose suppressed record is written carries no gap and raises no alert", async () => {
+    const h = await harness();
+    try {
+      const other = { opKey: "op:msn_other:payments:payment.execute:other", invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: "evl_other", missionId: "msn_other" };
+      h.connectors.postWire(other);
+      expect(await wire(h, key())).toEqual({ ok: false, refusal_reason: "already_settled" });
+      expect(h.alerts.alerts).toEqual([]);
+      expect(executionsOf(h).map((r) => r.outcome)).toEqual(["suppressed"]);
     } finally {
       await h.close();
     }

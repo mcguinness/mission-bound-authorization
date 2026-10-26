@@ -1325,6 +1325,9 @@ export async function composeStack(opts: {
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,
+    // #821: a disposition record the transaction tier could not write is
+    // alerted on the declared operator sink, as an indeterminate claim is.
+    alerts: operatorAlerts,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
     ...(txnTokenJwks ? { txnTokenJwks } : {}),

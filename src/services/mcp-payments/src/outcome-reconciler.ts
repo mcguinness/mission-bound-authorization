@@ -55,7 +55,9 @@ export type OperatorAlertKind =
   /** `completed` Execution Evidence names an effect no connector committed. */
   | "orphaned_evidence"
   /** A `reserved` write reservation has no recorded outcome. */
-  | "reservation_unresolved";
+  | "reservation_unresolved"
+  /** A transaction-tier disposition record could not be written after one retry (#821). */
+  | "evidence_emission_failed";
 
 /**
  * One operator alert: a structured event carrying identifiers and a fixed
