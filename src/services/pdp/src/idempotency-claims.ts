@@ -201,6 +201,23 @@ export interface ClaimDomainOptions {
    * throws is ignored.
    */
   onBudgetOverspend?: (overspend: BudgetOverspend) => void;
+  /**
+   * @spec metering#settlement-states (#813, #816): told of every held
+   * reservation that is later released (the permit holder's suppression, an
+   * operator's `not_executed`), once, after the transaction that released it
+   * commits: the resolution of the alert {@link onReservationHeld} raised. A
+   * hook that throws is ignored.
+   */
+  onReservationReleased?: (released: ReleasedReservation) => void;
+}
+
+/** A held reservation since released, as the operator notice reports it: identifiers and the cause only. */
+export interface ReleasedReservation {
+  evaluation_id: string;
+  mission_id: string;
+  /** What released it: `suppressed_unredeemed`, `settled_suppressed`, or the operator's reconciliation. */
+  cause: string;
+  released_at: string;
 }
 
 /** A counter pushed past its limit by a late `completed`, as the operator alert reports it. */
@@ -951,6 +968,9 @@ export class IdempotencyClaimDomain {
       }
     }
     if (to === "held" && rows.length > 0) this.notifyHeld(evaluationId, rows, cause, nowMs);
+    // #813: a held reservation that is later released resolves its alert.
+    const resolved = rows.filter((r) => r.state === "held");
+    if (to === "released" && resolved.length > 0) this.notifyReleased(evaluationId, resolved, cause, nowMs);
     if (overspent.length > 0) this.notifyOverspend(overspent);
     return rows;
   }
@@ -1006,6 +1026,30 @@ export class IdempotencyClaimDomain {
     });
   }
 
+  /**
+   * @spec metering#settlement-states (#813, #816): queue
+   * {@link ClaimDomainOptions.onReservationReleased} for after the enclosing
+   * transaction commits, for a held reservation now released, as
+   * {@link notifyHeld} does for the hold.
+   */
+  private notifyReleased(evaluationId: string, rows: readonly ReservationRow[], cause: string, nowMs: number): void {
+    const hook = this.options.onReservationReleased;
+    if (!hook) return;
+    const released: ReleasedReservation = {
+      evaluation_id: evaluationId,
+      mission_id: rows[0]?.mission_id ?? "unknown",
+      cause,
+      released_at: new Date(nowMs).toISOString(),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(released);
+      } catch {
+        /* the alert sink's failure never reaches the claim domain */
+      }
+    });
+  }
+
   private logReservation(evaluationId: string, counterId: string, from: string | null, to: string, cause: string, atMs: number): void {
     this.db
       .prepare(
@@ -1037,6 +1081,9 @@ export class IdempotencyClaimDomain {
       if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
       if (resolution.kind !== "not_executed" && resolution.kind !== "executed") return { accepted: false, reason: "unknown_resolution" };
       if (typeof resolution.reference !== "string" || resolution.reference.length === 0) return { accepted: false, reason: "no_reference" };
+      // #813: an operator's not_executed on a reservation already released
+      // (by the permit holder's suppression, say) is an idempotent no-op.
+      if (resolution.kind === "not_executed" && rows.every((r) => r.state === "released")) return { accepted: true, state: "released" };
       if (!rows.some((r) => r.state === "held")) return { accepted: false, reason: `not_held_${rows[0]?.state}` };
       if (resolution.kind === "not_executed") {
         const claim = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
@@ -1208,7 +1255,8 @@ export class IdempotencyClaimDomain {
    * non-execution before redemption. The permit holder's own PEP-signed
    * `suppressed` Execution Evidence for a permit it refused before redeeming
    * it (execution reverification refusing it at admission, say) releases the
-   * permit's budget reservations, `reserved` or `held`.
+   * permit's budget reservations, `reserved` or `held`, once the redemption
+   * owner answers, affirmatively and in time, that the permit is unconsumed.
    *
    * It releases only; the claim itself is not settled and stays settleable,
    * so the permit (a retransmission under the same key included) can still be
@@ -1217,14 +1265,20 @@ export class IdempotencyClaimDomain {
    * release can never drop a spend. Refused, releasing nothing: a record that
    * does not verify, is not a PEP's `suppressed` record, or marks a permit
    * already consumed (`permit_consumed`); a requester other than the PEP and
-   * epoch the permit was issued to; a claim already settled; a domain bound
-   * to no redemption record; and a permit its redemption owner names any
-   * redeeming attempt for, whose own settlement governs instead.
+   * epoch the permit was issued to; a claim already settled or past its
+   * window; a domain bound to no redemption record; and any answer from the
+   * redemption owner but `unconsumed` (consumed, a failure, or no answer in
+   * time), as `retransmit` requires.
+   *
+   * Eligibility is read from the claim as it stands, without applying what
+   * time alone decides: a release that arrives after the lease never first
+   * holds the reservation (and alerts) only to release it. A reservation
+   * already held is released with a resolution notice.
    */
   async releaseUnredeemed(
     requester: ClaimRequester,
     record: unknown,
-    redeemingExecution?: RedeemingExecutionFn,
+    consumptionStatus?: ConsumptionStatusFn,
   ): Promise<ReservationReleaseResult> {
     const keys = this.options.settlementKeys;
     if (!keys) return { accepted: false, reason: "no_verification_keys" };
@@ -1236,26 +1290,27 @@ export class IdempotencyClaimDomain {
     if (NON_REDEEMING_ERRORS.has(String(content.error))) return { accepted: false, reason: "permit_consumed" };
     const evaluationId = content.evaluation_id;
     if (typeof evaluationId !== "string") return { accepted: false, reason: "malformed_record" };
-    const issuedTo = (): { accepted: false; reason: string } | ClaimRow => {
-      const found = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
-      const row = found ? this.advance(found, this.now().getTime()) : undefined;
+    const issuedTo = (nowMs: number): { accepted: false; reason: string } | ClaimRow => {
+      const row = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
       if (!row) return { accepted: false, reason: "unknown_evaluation" };
       if (row.pep_id !== requester.pep_id || row.pep_epoch !== requester.pep_epoch) return { accepted: false, reason: "not_the_permit_holder" };
       if (row.execution_id !== null || (row.state !== "permit_issued" && row.state !== "unresolved")) {
         return { accepted: false, reason: "already_settled" };
       }
+      if (nowMs >= this.windowCloseMs(row)) return { accepted: false, reason: "window_closed" };
       return row;
     };
-    const before = this.tx(issuedTo);
+    const before = this.tx(() => issuedTo(this.now().getTime()));
     if ("accepted" in before) return before;
-    if (!redeemingExecution) return { accepted: false, reason: "no_redemption_record" };
-    if ((await this.askRedeemer(evaluationId, before.pep_epoch, redeemingExecution)) !== undefined) {
-      return { accepted: false, reason: "permit_redeemed" };
-    }
+    if (!consumptionStatus) return { accepted: false, reason: "no_redemption_record" };
+    const status = await this.askConsumption({ evaluationId, pepEpoch: before.pep_epoch }, consumptionStatus);
+    if (status === "consumed") return { accepted: false, reason: "permit_redeemed" };
+    if (status !== "unconsumed") return { accepted: false, reason: "redemption_status_unknown" };
     return this.tx(() => {
-      const row = issuedTo();
+      const nowMs = this.now().getTime();
+      const row = issuedTo(nowMs);
       if ("accepted" in row) return row;
-      const released = this.transitionReservations(evaluationId, ["reserved", "held"], "released", UNREDEEMED_RELEASE, this.now().getTime());
+      const released = this.transitionReservations(evaluationId, ["reserved", "held"], "released", UNREDEEMED_RELEASE, nowMs);
       return released.length > 0 ? { accepted: true as const, released: released.length } : { accepted: false as const, reason: "no_open_reservation" };
     });
   }
@@ -1344,8 +1399,10 @@ export class IdempotencyClaimDomain {
     } else {
       this.transitionReservations(evaluationId, ["reserved"], "held", outcome === "failed" ? "failed" : outcome, nowMs);
       // #813: a release on a suppression before redemption does not outlive
-      // the redeeming attempt's own failure (D830 ruling 10).
-      this.transitionReservations(evaluationId, ["released"], "held", outcome === "failed" ? "failed" : outcome, nowMs, UNREDEEMED_RELEASE);
+      // the redeeming attempt's own failure (D830 ruling 10). The epoch
+      // owner's `unredeemed` proof confirms the non-execution instead, so it
+      // leaves the release standing.
+      if (outcome === "failed") this.transitionReservations(evaluationId, ["released"], "held", "failed", nowMs, UNREDEEMED_RELEASE);
     }
   }
 

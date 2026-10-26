@@ -82,7 +82,7 @@ export async function createDecisionChannel(point: DecisionPoint, config: {
   const claimsFor = point.claimsFor;
   if (config.mode === "co-resident") return {
     decide: decideAs ? decideAs(requester, config.consumptionStatus) : point.decide,
-    claims: claimsFor ? claimsFor(requester, config.redeemingExecution) : claimChannelFor(undefined, requester),
+    claims: claimsFor ? claimsFor(requester, config.redeemingExecution, config.consumptionStatus) : claimChannelFor(undefined, requester),
     remoteDecisionChannels: [],
     close: async () => {},
   };

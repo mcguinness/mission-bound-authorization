@@ -41,6 +41,7 @@ import {
   type EnforcementScopeStatement,
   type HeldReservation,
   type IndeterminateClaim,
+  type ReleasedReservation,
   retentionWindowSeconds,
 } from "@mission/pdp";
 import { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
@@ -67,6 +68,11 @@ export type OperatorAlertKind =
    * it.
    */
   | "budget_reservation_held"
+  /**
+   * @spec metering#settlement-states (#813, #816): a held reservation was
+   * later released; the resolution of its `budget_reservation_held` alert.
+   */
+  | "budget_reservation_released"
   /**
    * @spec metering#settlement-states (#816): a late `completed` settlement
    * committed a released reservation and pushed a counter past its limit.
@@ -127,6 +133,21 @@ export function heldReservationAlert(reservation: HeldReservation): OperatorAler
     mission_id: reservation.mission_id,
     cause: reservation.cause,
     at: reservation.held_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#813, #816): the resolution notice for a
+ * held reservation since released (the permit holder's suppression, or an
+ * operator's `not_executed`). Identifiers and the release's cause only.
+ */
+export function releasedReservationNotice(released: ReleasedReservation): OperatorAlert {
+  return {
+    kind: "budget_reservation_released",
+    evaluation_id: released.evaluation_id,
+    mission_id: released.mission_id,
+    cause: released.cause,
+    at: released.released_at,
   };
 }
 

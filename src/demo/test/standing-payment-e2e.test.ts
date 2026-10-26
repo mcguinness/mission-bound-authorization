@@ -313,7 +313,7 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
-  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)", async () => {
+  it("refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)", async () => {
     const stack = await compose(15022, newFiles());
     try {
       const templateId = await consentTemplate(stack);
@@ -340,7 +340,23 @@ describe("standing-payment dispatch metered end to end through the composed stac
       const suppressed = await wire(stack, instance, "inv-4");
       expect(suppressed).toEqual({ ok: false, refusal_reason: "target_drift" });
       const permit = commitDecisions(stack, instance).find((d) => d.decision === "permit");
-      expect(stack.pdpClaims.reservationsFor(String(permit?.evaluation_id)).map((r) => r.state)).toEqual(["released", "released"]);
+      const evaluationId = String(permit?.evaluation_id);
+      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
+      // Past the lease, the declared reconciler resolves the unconsumed permit
+      // unredeemed, which confirms the non-execution: the release stands and
+      // no held alert fires.
+      const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        vi.setSystemTime(Date.now() + 120_000);
+        expect((await stack.reconciler.runOnce()).claims?.unredeemed).toContain(evaluationId);
+        const alerts = stderr.mock.calls.map(([chunk]) => String(chunk)).filter((line) => line.startsWith('{"type":"operator_alert"'));
+        expect(alerts.filter((line) => line.includes("budget_reservation_held"))).toEqual([]);
+      } finally {
+        vi.useRealTimers();
+        stderr.mockRestore();
+      }
+      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
       expect(wires(stack)).toEqual([]);
       expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
       expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "0.00" });
@@ -444,7 +460,7 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
-  it("raises the operator alert when a wired payment's lost settlement leaves its reservation held, and again when its late completed settlement commits the reservation an operator released and pushes the shared counter past its limit (@spec metering#settlement-states, #813, #816, D830 rulings 7 and 10)", async () => {
+  it("raises the operator alert when a wired payment's lost settlement leaves its reservation held, a resolution notice when an operator releases it, and the overspend alert when its late completed settlement commits the released reservation and pushes the shared counter past its limit (@spec metering#settlement-states, #813, #816, D830 rulings 7 and 10)", async () => {
     const stack = await compose(15028, newFiles());
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const alerts = () =>
@@ -485,6 +501,12 @@ describe("standing-payment dispatch metered end to end through the composed stac
       expect((await stack.reconciler.runOnce()).claims?.settled).toContain(evaluationId);
       expect(alerts()).toEqual([
         expect.objectContaining({ kind: "budget_reservation_held", evaluation_id: evaluationId, mission_id: first, cause: "lease_elapsed" }),
+        expect.objectContaining({
+          kind: "budget_reservation_released",
+          evaluation_id: evaluationId,
+          mission_id: first,
+          cause: "operator_reconciled:not_executed:operator-ticket-813",
+        }),
         expect.objectContaining({ kind: "budget_overspend", evaluation_id: evaluationId, mission_id: first, cause: "standing_consent_limit_exceeded" }),
       ]);
       expect(wires(stack)).toEqual([

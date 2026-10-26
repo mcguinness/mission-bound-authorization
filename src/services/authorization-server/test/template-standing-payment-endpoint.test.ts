@@ -91,7 +91,14 @@ const POLICIES = { "sp-endpoint": spPolicy("sp-endpoint") };
  */
 const meteringStatement = (
   issuer: string,
-  over: { claims?: string[]; profile?: string; budget?: Record<string, unknown>; policies?: unknown[] } = {},
+  over: {
+    claims?: string[];
+    profile?: string;
+    unit?: unknown;
+    metered?: unknown[];
+    budget?: Record<string, unknown>;
+    policies?: unknown[];
+  } = {},
 ) => {
   const held = POLICIES["sp-endpoint"];
   const ref = { id: "sp-endpoint", version: held.version, digest: activationPolicyDigest(issuer, held) };
@@ -99,12 +106,12 @@ const meteringStatement = (
     claims: over.claims ?? ["budget_metering"],
     extensions: {
       budget_metering: {
-        unit: { currency: "USD", exponent: 2 },
+        unit: over.unit ?? { currency: "USD", exponent: 2 },
         enforcement_profile: over.profile ?? "exact",
         topology: "local-single-writer",
         reserve_posture: "reserve_then_commit",
         settlement_intake: "pdp-claim-settlement:execution-evidence",
-        metered_actions: [{ action: STANDING_PAYMENT_OPERATION, phase: "commit" }],
+        metered_actions: over.metered ?? [{ action: STANDING_PAYMENT_OPERATION, phase: "commit" }],
         budgets: [
           {
             owner: TERMS.budget.owner,
@@ -414,7 +421,7 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
     );
   });
 
-  it("refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)", async () => {
+  it("refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)", async () => {
     const issuer = "http://localhost:15002";
     const held = POLICIES["sp-endpoint"];
     const digest = activationPolicyDigest(issuer, held);
@@ -426,6 +433,21 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
         "another enforcement profile",
         meteringStatement(issuer, { profile: "bounded_overrun" }),
         "the Enforcement Scope Statement does not declare budget_metering under the exact enforcement profile",
+      ],
+      [
+        "another unit currency",
+        meteringStatement(issuer, { unit: { currency: "EUR", exponent: 2 } }),
+        "the Enforcement Scope Statement's budget_metering counts in another unit than the policy's USD",
+      ],
+      [
+        "the payment metered at another phase",
+        meteringStatement(issuer, { metered: [{ action: STANDING_PAYMENT_OPERATION, phase: "prepare" }] }),
+        "the Enforcement Scope Statement's budget_metering does not meter payments:payment.execute at commit",
+      ],
+      [
+        "another action metered",
+        meteringStatement(issuer, { metered: [{ action: "payments:payment.schedule", phase: "commit" }] }),
+        "the Enforcement Scope Statement's budget_metering does not meter payments:payment.execute at commit",
       ],
       [
         "another budget id",

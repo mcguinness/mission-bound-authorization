@@ -141,6 +141,7 @@ export {
   heldReservationAlert,
   indeterminateClaimAlert,
   type OperatorAlert,
+  releasedReservationNotice,
   type OperatorAlertKind,
   type OperatorAlertSink,
   type OutcomeReconciliationRun,

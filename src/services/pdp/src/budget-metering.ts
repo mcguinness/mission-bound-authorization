@@ -37,6 +37,18 @@
 import { type ActionPhase, canonicalDigest, compareAmounts, isActionPhase, isCurrencyCode, isValidAmount } from "@mission/core";
 import type { EnforcementScopeFinding } from "./enforcement-scope.js";
 
+/**
+ * @spec metering#metering (#813, #816, decision d): a decision point that
+ * would meter budgets without its own binding source, refused at
+ * construction.
+ */
+export class BudgetMeteringConfigError extends Error {
+  constructor(why: string) {
+    super(why);
+    this.name = "BudgetMeteringConfigError";
+  }
+}
+
 /** The extension's name in `claims` and under `extensions`. */
 export const BUDGET_METERING_EXTENSION = "budget_metering";
 
