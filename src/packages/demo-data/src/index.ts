@@ -431,6 +431,15 @@ function loadTopology(): Topology {
 /** The validated deployment topology; consumers inject these values (no cycles). */
 export const TOPOLOGY: Topology = loadTopology();
 
+/**
+ * @spec #831 C2 (D825): the topology's keys as `topology.json` holds them
+ * now, read from disk afresh, for a consumer's reload of its trusted kids
+ * while it runs. {@link TOPOLOGY} is the file as it was at startup.
+ */
+export function readTopologyKeys(): Topology["keys"] {
+  return loadTopology().keys;
+}
+
 /** The default (pre-env-override) payments resource, from topology.json. */
 const DEFAULT_PAYMENTS_RESOURCE = TOPOLOGY.resources.payments;
 

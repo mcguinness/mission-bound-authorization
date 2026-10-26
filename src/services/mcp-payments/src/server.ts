@@ -74,7 +74,15 @@ import {
 import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
 import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
-import { type KeyResolver, type KeyRoles, refreshingRoleKeyResolvers, roleKeyResolvers } from "./key-roles.js";
+import {
+  type KeyAlgorithms,
+  type KeyResolver,
+  type KeyRole,
+  type KeyRoles,
+  type RefreshingRoleKeys,
+  refreshingRoleKeyResolvers,
+  roleKeyResolvers,
+} from "./key-roles.js";
 import {
   openTxnStores,
   type TxnConsumeOutcome,
@@ -531,6 +539,12 @@ export interface McpServerDeps {
   /** Tests: the clock and fetch the `jwksUri` key holder uses. */
   issuerKeysOptions?: { now?: () => number; fetch?: IssuerKeysFetch };
   /**
+   * @spec #831 C2 (D825): the per-role algorithm policy, applied the same way
+   * to a fixed set and to a `jwksUri`. A role not listed accepts whatever its
+   * pinned key admits.
+   */
+  keyAlgorithms?: KeyAlgorithms;
+  /**
    * @spec runtime-oauth#token-validation (#825, D312) — the `kid`s trusted
    * for each token class, configured locally. Access tokens and attenuation
    * roots resolve from `jwks` (or `jwksUri`), transaction tokens from
@@ -656,11 +670,13 @@ export interface TransactionToolResult {
 export class McpPaymentsServer {
   get capabilityCatalog() { return this.deps.pep.capabilityCatalog; }
   /** Keys pinned to the access-token role (@spec runtime-oauth#token-validation, D312). */
-  private readonly resolveAccessKey: KeyResolver;
+  private resolveAccessKey: KeyResolver;
   /** Keys pinned to the attenuation-root role. */
-  private readonly resolveRootKey: KeyResolver;
+  private resolveRootKey: KeyResolver;
   /** Keys pinned to the transaction-token role; absent when the txn tier is off. */
-  private readonly resolveTxnKey?: KeyResolver;
+  private resolveTxnKey?: KeyResolver;
+  /** @spec #831 C2 (D825): the reload of a `jwksUri` server's trusted configuration, in place. */
+  private readonly refreshing?: RefreshingRoleKeys;
   /** @spec txn-authorization#offline-verification — the retained pending operations. */
   private readonly txnPending: TxnPendingStore;
   /** @spec txn-authorization#offline-verification — the `txn` consumption domain. */
@@ -669,6 +685,30 @@ export class McpPaymentsServer {
   private readonly dpopReplay: DpopProofReplay;
   /** @spec RFC 7662 (#818 slice 3): the estate route's introspection adapter, when configured. */
   private readonly introspector?: TokenIntrospector;
+  /** The snapshot path's pinned resolvers over the fixed key sets. */
+  private snapshotResolvers(roles: KeyRoles, algorithms: KeyAlgorithms | undefined): Record<KeyRole, KeyResolver> {
+    return roleKeyResolvers(
+      roles,
+      { jwks: this.deps.jwks as { keys: Record<string, unknown>[] }, txnTokenJwks: this.deps.txnTokenJwks },
+      algorithms,
+    );
+  }
+
+  /**
+   * @spec #831 C2 (D825): reload the trusted configuration while serving:
+   * the `kid`s pinned to each role, and the algorithm policy. It takes effect
+   * at the next verification; a configuration that pins one `kid` to two
+   * roles, or gives one key two roles, is refused and the one in force stays.
+   * A `jwksUri` server replaces its trust in place; a fixed-set server
+   * rebuilds its pins over the same sets.
+   */
+  reloadKeyRoles(roles: KeyRoles, algorithms?: KeyAlgorithms): void {
+    const pinned = this.refreshing ? (this.refreshing.setRoles(roles, algorithms), this.refreshing) : this.snapshotResolvers(roles, algorithms);
+    this.resolveAccessKey = pinned.accessToken;
+    this.resolveRootKey = pinned.attenuationRoot;
+    if (this.resolveTxnKey) this.resolveTxnKey = pinned.transactionToken;
+  }
+
   constructor(private readonly deps: McpServerDeps) {
     if (deps.enforcementScopeStatement) deps.enforcementScopeStatement = loadRuntimePosture(deps.enforcementScopeStatement);
     if ((deps.jwks === undefined) === (deps.jwksUri === undefined)) {
@@ -680,17 +720,14 @@ export class McpPaymentsServer {
     if ((deps.jwksUri === undefined) !== (deps.txnTokenJwksUri === undefined) && deps.txnTokenJwks !== undefined) {
       throw new Error("McpPaymentsServer: a jwksUri server takes txnTokenJwksUri, not txnTokenJwks");
     }
-    const pinned =
-      deps.jwksUri !== undefined
-        ? refreshingRoleKeyResolvers(
-            deps.keyRoles,
-            { jwksUri: deps.jwksUri, txnTokenJwksUri: deps.txnTokenJwksUri },
-            deps.issuerKeysOptions ?? {},
-          )
-        : roleKeyResolvers(deps.keyRoles, {
-            jwks: deps.jwks as { keys: Record<string, unknown>[] },
-            txnTokenJwks: deps.txnTokenJwks,
-          });
+    if (deps.jwksUri !== undefined) {
+      this.refreshing = refreshingRoleKeyResolvers(
+        deps.keyRoles,
+        { jwksUri: deps.jwksUri, txnTokenJwksUri: deps.txnTokenJwksUri },
+        { ...(deps.issuerKeysOptions ?? {}), ...(deps.keyAlgorithms ? { algorithms: deps.keyAlgorithms } : {}) },
+      );
+    }
+    const pinned = this.refreshing ?? this.snapshotResolvers(deps.keyRoles, deps.keyAlgorithms);
     this.resolveAccessKey = pinned.accessToken;
     this.resolveRootKey = pinned.attenuationRoot;
     if (deps.txnTokenJwks || deps.txnTokenJwksUri) this.resolveTxnKey = pinned.transactionToken;

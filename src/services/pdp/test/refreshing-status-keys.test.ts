@@ -20,7 +20,7 @@ describe("the declared Status keys over a jwks_uri (@spec #831 C2)", () => {
     let t = 0;
     let published = [status.jwk, token.jwk];
     const fetch = async () => new Response(JSON.stringify({ keys: published }), { headers: { "cache-control": "max-age=60" } });
-    const keys = refreshingStatusKeys("https://as.test/jwks", ["as-status"], { algs: ["ES256"], fetch, now: () => t });
+    const { keys, trust } = refreshingStatusKeys("https://as.test/jwks", ["as-status"], { algs: ["ES256"], fetch, now: () => t });
     await jwtVerify(await status.sign(), keys);
     // Published, but not a declared Status key.
     await expect(jwtVerify(await token.sign(), keys)).rejects.toMatchObject({ code: "untrusted_kid" });
@@ -29,5 +29,8 @@ describe("the declared Status keys over a jwks_uri (@spec #831 C2)", () => {
     await jwtVerify(await status.sign(), keys);
     t += 60_000;
     await expect(jwtVerify(await status.sign(), keys)).rejects.toMatchObject({ code: "unknown_kid" });
+    // Trusted while running (D825): the token key, now declared, verifies at the next use.
+    trust(["as-token"]);
+    await jwtVerify(await token.sign(), keys);
   });
 });

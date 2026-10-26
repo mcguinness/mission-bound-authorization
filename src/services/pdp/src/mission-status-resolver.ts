@@ -170,20 +170,25 @@ export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[])
  * rather than a snapshot, held through `IssuerKeys` (`@mission/core`): only
  * the declared `kid`s, refreshed within the freshness the issuer declares and
  * refused rather than reused when it cannot be revalidated, so a Status key
- * rotation is followed without a restart once `kids` lists the new `kid`.
+ * rotation is followed without a restart once the declared `kid`s list the
+ * new one: `trust` replaces them while the consumer runs (D825), taking
+ * effect at the next verification.
  */
 export function refreshingStatusKeys(
   jwksUri: string,
   kids: readonly string[],
   opts: { algs: readonly string[]; now?: () => number; fetch?: IssuerKeysFetch },
-): JWTVerifyGetKey {
-  const keys = new IssuerKeys({
+): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void } {
+  const held = new IssuerKeys({
     jwksUri,
     roles: { status: { kids, algs: opts.algs } },
     ...(opts.now ? { now: opts.now } : {}),
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
   });
-  return keys.resolver("status") as unknown as JWTVerifyGetKey;
+  return {
+    keys: held.resolver("status") as unknown as JWTVerifyGetKey,
+    trust: (next) => held.setRoles({ status: { kids: next, algs: opts.algs } }),
+  };
 }
 
 /**

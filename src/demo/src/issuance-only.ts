@@ -26,7 +26,7 @@ import {
   startupRemediationNotices,
 } from "@mission/authorization-server";
 import { IssuerKeys } from "@mission/core";
-import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, TOPOLOGY, trustedKids } from "@mission/demo-data";
+import { DEV_SERVICE_TOKEN, INTROSPECTION_PRINCIPALS, readTopologyKeys, TOPOLOGY, type Topology, trustedKids } from "@mission/demo-data";
 import { startPlainResourceServer } from "@mission/plain-rs";
 import { renderApproval } from "./approval-console.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole, requestLifecycle } from "./lifecycle-client.js";
@@ -106,8 +106,20 @@ export interface IssuanceOnlyCredentials {
 export interface IssuanceOnlyDeployment {
   as: BuiltAs;
   credentials: IssuanceOnlyCredentials;
+  /**
+   * @spec #831 C2 (D825): reload plain-rs's trusted access-token kids from
+   * `topology.json` as it is now, while serving: a rotation's next kid added
+   * during the pending window, a withdrawn one removed. A configuration that
+   * would give one key two roles is refused, and the one in force stays.
+   */
+  reloadTrust(): void;
   close(): Promise<void>;
 }
+
+/** plain-rs's trusted role: the access-token kids the topology's consumers trust. */
+const plainRsRoles = (keys: Topology["keys"]) => ({
+  accessToken: { kids: trustedKids(keys.asToken), algs: [keys.asToken.alg] },
+});
 
 /**
  * Boot the AS and `plain-rs`. The AS is the reference assembly
@@ -152,16 +164,14 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
   if (opts.introspection && !principal) {
     throw new Error("config/introspection.json names no rs-plain principal");
   }
+  // @spec #831 C2: the AS's access-token keys through its jwks_uri, the
+  // trusted kids only, refreshed within the freshness the AS declares.
+  const plainRsKeys = new IssuerKeys({ jwksUri: `${asUrl}/jwks`, roles: plainRsRoles(TOPOLOGY.keys) });
   const rsServer: Server = await startPlainResourceServer(
     {
       issuer: asUrl,
       audience: PLAIN_RS_AUDIENCE,
-      // @spec #831 C2: the AS's access-token keys through its jwks_uri, the
-      // trusted kids only, refreshed within the freshness the AS declares.
-      keys: new IssuerKeys({
-        jwksUri: `${asUrl}/jwks`,
-        roles: { accessToken: { kids: trustedKids(TOPOLOGY.keys.asToken), algs: [TOPOLOGY.keys.asToken.alg] } },
-      }).resolver("accessToken") as never,
+      keys: plainRsKeys.resolver("accessToken") as never,
       baseUrl: rsUrl,
       ...(opts.introspection && principal
         ? {
@@ -187,6 +197,7 @@ export async function startIssuanceOnly(opts: IssuanceOnlyOptions): Promise<Issu
       lifecycleConsole: lifecycleConsole.credentials,
       lifecycleServiceToken: DEV_SERVICE_TOKEN,
     },
+    reloadTrust: () => plainRsKeys.setRoles(plainRsRoles(readTopologyKeys())),
     close: async () => {
       // Stop accepting, then drop open keep-alive connections so the close
       // does not wait out a client's idle socket.

@@ -1,5 +1,5 @@
 import { createHash, createPublicKey, type JsonWebKey as NodeJwk } from "node:crypto";
-import { IssuerKeys, type IssuerKeysFetch } from "@mission/core";
+import { IssuerKeyError, IssuerKeys, type IssuerKeysFetch, keyThumbprint as materialThumbprint } from "@mission/core";
 import { createLocalJWKSet, type JWTHeaderParameters } from "jose";
 
 /**
@@ -26,6 +26,26 @@ export interface KeyRoles {
 }
 
 export type KeyResolver = ReturnType<typeof createLocalJWKSet>;
+
+/**
+ * @spec #831 C2 (D825): the deployment's per-role algorithm policy. A role
+ * listed here verifies only under the listed algorithms, whichever key source
+ * the server uses; a role not listed accepts whatever its pinned key admits,
+ * again under either source.
+ */
+export type KeyAlgorithms = Partial<Record<KeyRole, readonly string[]>>;
+
+/** A role's resolver, refusing a header algorithm the policy does not list. */
+function underPolicy(resolve: KeyResolver, role: KeyRole, algorithms: KeyAlgorithms | undefined): KeyResolver {
+  const allowed = algorithms?.[role];
+  if (!allowed) return resolve;
+  return ((header: JWTHeaderParameters, token: Parameters<KeyResolver>[1]) => {
+    if (typeof header.alg !== "string" || !allowed.includes(header.alg)) {
+      throw new Error(`token alg ${String(header.alg)} is not accepted for ${role}`);
+    }
+    return resolve(header, token);
+  }) as KeyResolver;
+}
 
 type Jwks = { keys: Record<string, unknown>[] };
 
@@ -76,6 +96,7 @@ function keyThumbprint(jwk: Record<string, unknown>, role: KeyRole, kid: string)
 export function roleKeyResolvers(
   roles: KeyRoles,
   sources: { jwks: Jwks; txnTokenJwks?: Jwks | undefined },
+  algorithms?: KeyAlgorithms,
 ): Record<KeyRole, KeyResolver> {
   const order = ["accessToken", "attenuationRoot", "transactionToken"] as const;
   const seen = new Map<string, KeyRole>();
@@ -129,14 +150,35 @@ export function roleKeyResolvers(
     }) as KeyResolver;
   };
   return {
-    accessToken: pinned("accessToken"),
-    attenuationRoot: pinned("attenuationRoot"),
-    transactionToken: pinned("transactionToken"),
+    accessToken: underPolicy(pinned("accessToken"), "accessToken", algorithms),
+    attenuationRoot: underPolicy(pinned("attenuationRoot"), "attenuationRoot", algorithms),
+    transactionToken: underPolicy(pinned("transactionToken"), "transactionToken", algorithms),
   };
 }
 
-/** The asymmetric algorithms a role's key may sign with; the `kid` pin, not this list, binds the key. */
-const REFRESHING_ALGS = ["RS256", "PS256", "ES256", "ES384", "EdDSA"];
+/** {@link refreshingRoleKeyResolvers}' resolvers, and the reload of the trusted configuration they resolve under. */
+export type RefreshingRoleKeys = Record<KeyRole, KeyResolver> & {
+  /**
+   * Replace the pinned `kid`s (and the algorithm policy) at once, taking
+   * effect at the next resolution: a reload of the deployment's trusted
+   * configuration. A replacement that pins one `kid` to two roles, or under
+   * which a key set would give one key to two roles, is refused, and the
+   * configuration in force stays.
+   */
+  setRoles(roles: KeyRoles, algorithms?: KeyAlgorithms): void;
+};
+
+/** Refuse a `kid` pinned to two roles. */
+function disjoint(roles: KeyRoles): void {
+  const seen = new Map<string, KeyRole>();
+  for (const role of ["accessToken", "attenuationRoot", "transactionToken"] as const) {
+    for (const kid of roles[role]) {
+      const other = seen.get(kid);
+      if (other) throw new Error(`key role pin: kid ${kid} is configured for both ${other} and ${role}`);
+      seen.set(kid, role);
+    }
+  }
+}
 
 /**
  * @spec #831 C2: {@link roleKeyResolvers} over the issuers' published key
@@ -146,43 +188,74 @@ const REFRESHING_ALGS = ["RS256", "PS256", "ES256", "ES384", "EdDSA"];
  * a snapshot allows (every pinned `kid` names a key; one key, one role) run
  * on each fetch instead: an unpublished pinned `kid` is refused when used,
  * and a set giving one key to two roles is refused whole. A `kid` pinned to
- * two roles still fails at startup.
+ * two roles still fails at startup. The algorithm policy is the snapshot
+ * path's: a listed role verifies only under its list, an unlisted one under
+ * whatever its published key admits.
+ *
+ * With two sources (a transaction-token `jwks_uri` apart from the access
+ * token's), one key must still serve one role across both (D825): each
+ * resolution compares its key with the other source's trusted keys, read
+ * fresh, so the check holds after either set refreshes. A resolution whose
+ * other source cannot be revalidated refuses, so an outage of the
+ * transaction-token issuer's key set refuses access tokens too, and the
+ * reverse.
  */
 export function refreshingRoleKeyResolvers(
   roles: KeyRoles,
   sources: { jwksUri: string; txnTokenJwksUri?: string | undefined },
-  opts: { now?: () => number; fetch?: IssuerKeysFetch } = {},
-): Record<KeyRole, KeyResolver> {
-  const order = ["accessToken", "attenuationRoot", "transactionToken"] as const;
-  const seen = new Map<string, KeyRole>();
-  for (const role of order) {
-    for (const kid of roles[role]) {
-      const other = seen.get(kid);
-      if (other) throw new Error(`key role pin: kid ${kid} is configured for both ${other} and ${role}`);
-      seen.set(kid, role);
-    }
-  }
-  const role = (r: KeyRole) => ({ kids: roles[r], algs: REFRESHING_ALGS });
-  const shared = sources.txnTokenJwksUri === undefined || sources.txnTokenJwksUri === sources.jwksUri;
-  const access = new IssuerKeys({
-    jwksUri: sources.jwksUri,
-    roles: {
-      accessToken: role("accessToken"),
-      attenuationRoot: role("attenuationRoot"),
-      ...(shared ? { transactionToken: role("transactionToken") } : {}),
-    },
-    ...opts,
+  opts: { now?: () => number; fetch?: IssuerKeysFetch; algorithms?: KeyAlgorithms } = {},
+): RefreshingRoleKeys {
+  disjoint(roles);
+  const { algorithms, ...held } = opts;
+  const roleOf = (r: KeyRole, pins: KeyRoles, policy: KeyAlgorithms | undefined) => ({
+    kids: pins[r],
+    ...(policy?.[r] ? { algs: policy[r] } : {}),
   });
+  const shared = sources.txnTokenJwksUri === undefined || sources.txnTokenJwksUri === sources.jwksUri;
+  const accessRoles = (pins: KeyRoles, policy: KeyAlgorithms | undefined) => ({
+    accessToken: roleOf("accessToken", pins, policy),
+    attenuationRoot: roleOf("attenuationRoot", pins, policy),
+    ...(shared ? { transactionToken: roleOf("transactionToken", pins, policy) } : {}),
+  });
+  const txnRoles = (pins: KeyRoles, policy: KeyAlgorithms | undefined) => ({
+    transactionToken: roleOf("transactionToken", pins, policy),
+  });
+  let current = { roles, algorithms };
+  const access = new IssuerKeys({ jwksUri: sources.jwksUri, roles: accessRoles(roles, algorithms), ...held });
   const txn = shared
     ? access
-    : new IssuerKeys({ jwksUri: sources.txnTokenJwksUri as string, roles: { transactionToken: role("transactionToken") }, ...opts });
-  const resolverOf = (keys: IssuerKeys, r: KeyRole): KeyResolver => {
+    : new IssuerKeys({ jwksUri: sources.txnTokenJwksUri as string, roles: txnRoles(roles, algorithms), ...held });
+  const resolverOf = (keys: IssuerKeys, r: KeyRole, other: IssuerKeys | undefined): KeyResolver => {
     const resolve = keys.resolver(r);
-    return ((header: JWTHeaderParameters) => resolve(header)) as unknown as KeyResolver;
+    return (async (header: JWTHeaderParameters) => {
+      const key = await resolve(header);
+      if (other) {
+        const print = materialThumbprint(key);
+        const holder = print === undefined ? undefined : (await other.trustedThumbprints()).get(print);
+        if (holder !== undefined) {
+          throw new IssuerKeyError("unavailable", `kid ${String(header.kid)} for ${r} is the same key as the other source's ${holder} key`);
+        }
+      }
+      return key;
+    }) as unknown as KeyResolver;
   };
   return {
-    accessToken: resolverOf(access, "accessToken"),
-    attenuationRoot: resolverOf(access, "attenuationRoot"),
-    transactionToken: resolverOf(txn, "transactionToken"),
+    accessToken: resolverOf(access, "accessToken", shared ? undefined : txn),
+    attenuationRoot: resolverOf(access, "attenuationRoot", shared ? undefined : txn),
+    transactionToken: resolverOf(txn, "transactionToken", shared ? undefined : access),
+    setRoles(next: KeyRoles, policy?: KeyAlgorithms) {
+      disjoint(next);
+      access.setRoles(accessRoles(next, policy));
+      if (!shared) {
+        // Both sources or neither: the access source's replacement is undone when the transaction source refuses.
+        try {
+          txn.setRoles(txnRoles(next, policy));
+        } catch (e) {
+          access.setRoles(accessRoles(current.roles, current.algorithms));
+          throw e;
+        }
+      }
+      current = { roles: next, algorithms: policy };
+    },
   };
 }

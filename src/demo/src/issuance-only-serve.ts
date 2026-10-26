@@ -37,6 +37,16 @@ console.log(`  signing keys: ${"ring" in signingKeys ? `key ring ${signingKeys.r
 console.log(`  kernel store: ${kernelStore ? `${kernelStore.file} (kept across restarts)` : "in memory (lost at restart)"}`);
 console.log(`  dev credentials: ${CREDENTIALS_PATH}`);
 console.log("  ready; run `pnpm issuance-only:walkthrough` in another shell. Ctrl-C to stop.");
+// @spec #831 C2 (D825): SIGUSR2 reloads plain-rs's trusted kids from
+// config/topology.json, so a key rotation's trust change reaches it running.
+process.on("SIGUSR2", () => {
+  try {
+    deployment.reloadTrust();
+    console.log("issuance-only: trusted kids reloaded from topology.json");
+  } catch (err) {
+    console.error(`issuance-only: trusted kids not reloaded: ${err instanceof Error ? err.message : String(err)}`);
+  }
+});
 // Close both servers once, on the first of SIGINT, SIGTERM or SIGHUP. A
 // terminal Ctrl-C reaches this process twice (from the terminal and forwarded
 // by the wrapper), so a repeat is ignored while the close runs.

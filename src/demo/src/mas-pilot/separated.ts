@@ -34,7 +34,7 @@
  *   `authority_contained` or `authority_discharged`.
  */
 
-import { TOPOLOGY, trustedKids } from "@mission/demo-data";
+import { readTopologyKeys, TOPOLOGY, trustedKids } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, joinAssertionClient, type JoinAssertionSource, type LoadedView, type MissionReference, type MissionViewSource } from "@mission/mcp-payments";
 import {
   acceptedJoinAssertionAlgorithms,
@@ -67,6 +67,12 @@ export interface SeparatedMasPilotOptions extends MasPilotOptions {
 /** The separated pilot: everything `composeMasPilot` assembles, and no kernel. */
 export interface SeparatedMasPilot extends MasPilotParts {
   resolver: MissionStatusResolver;
+  /**
+   * @spec #831 C2 (D825): reload the MAS Status kids this pilot trusts from
+   * `topology.json` as it is now, while serving; effective at the next
+   * verification.
+   */
+  reloadTrust(): void;
 }
 
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -176,7 +182,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   // @spec #831 C2: the MAS's Status keys, held through its jwks_uri: the
   // trusted Status kids only, refreshed within the freshness the MAS
   // declares, so a Status key rotation is followed without a restart.
-  const statusKeys = refreshingStatusKeys(metadata.jwks_uri, trustedKids(TOPOLOGY.keys.asStatus), {
+  const { keys: statusKeys, trust: trustStatusKids } = refreshingStatusKeys(metadata.jwks_uri, trustedKids(TOPOLOGY.keys.asStatus), {
     algs: [TOPOLOGY.keys.asStatus.alg],
     ...(resolverNow ? { now: () => resolverNow().getTime() } : {}),
   });
@@ -248,5 +254,5 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     },
     ...(joinAssertion ? { assertionSource: joinAssertion.source } : {}),
   });
-  return { ...parts, resolver };
+  return { ...parts, resolver, reloadTrust: () => trustStatusKids(trustedKids(readTopologyKeys().asStatus)) };
 }

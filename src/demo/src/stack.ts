@@ -31,7 +31,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
@@ -298,6 +298,15 @@ export interface DemoStack {
    * a test runs it with `runOnce()`. Every close path stops it first.
    */
   reconciler: OutcomeReconciler;
+  /**
+   * @spec #831 C2 (D825): reload the AS kids the stack's consumers trust
+   * from `topology.json` as it is now, while serving: the payments
+   * resource's pins and the RAS's continuation role. Each consumer replaces
+   * its trust atomically, refusing a configuration that would give one key
+   * two roles. With no AS, nothing AS-signed is verified, and this does
+   * nothing.
+   */
+  reloadTrust(): void;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -518,6 +527,8 @@ export async function composeStack(opts: {
   // Resolved after the RS is constructed; the discovery listener reads it
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
+  // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
+  let rasContinuationKeys: IssuerKeys | undefined;
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -748,10 +759,11 @@ export async function composeStack(opts: {
     // key: a grant naming the cross-domain kid resolves locally, and any other
     // kid resolves only through the AS's continuation role, never falling back.
     const asContinuationKey = TOPOLOGY.keys.asContinuation;
-    const asContinuationKeys = new IssuerKeys({
+    rasContinuationKeys = new IssuerKeys({
       jwksUri: `${asUrl}/jwks`,
       roles: { continuation: { kids: trustedKids(asContinuationKey), algs: [asContinuationKey.alg] } },
-    }).resolver("continuation");
+    });
+    const asContinuationKeys = rasContinuationKeys.resolver("continuation");
     const rasAnchorKey = composedTrustAnchor([xdPub as never], asContinuationKeys);
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
@@ -1399,6 +1411,18 @@ export async function composeStack(opts: {
     pdpClaims,
     writeReservations,
     reconciler,
+    reloadTrust: () => {
+      if (!rsAsIssuer) return;
+      const keys = readTopologyKeys();
+      server.reloadKeyRoles({
+        accessToken: trustedKids(keys.asToken),
+        attenuationRoot: [],
+        transactionToken: trustedKids(keys.asTxn),
+      });
+      rasContinuationKeys?.setRoles({
+        continuation: { kids: trustedKids(keys.asContinuation), algs: [keys.asContinuation.alg] },
+      });
+    },
     fga,
     modelId,
     payments,
