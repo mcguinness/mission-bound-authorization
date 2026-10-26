@@ -3483,13 +3483,13 @@ async function handleDeferredGrant(
       // their codes.
       if (e instanceof DeferralError) {
         if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
-        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862):
-        // only the Mission's own client reaches the store, so a Mission that
-        // is not active, suspension included, is refused as any grant other
-        // than a Token Exchange is, with the observed Mission's own
-        // mission_error: its termination reason, or Mission Status's
-        // `suspended`, never a termination reason for a suspension.
-        throw new MissionGrantError(e.message, lifecycleMissionError(e.observed));
+        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862,
+        // D863): only the Mission's own client reaches the store, so a Mission
+        // that is not active, suspension included, is refused invalid_grant,
+        // as any grant other than a Token Exchange is. The refusal carries no
+        // mission_error: that diagnostic goes only to a client presenting the
+        // Mission's grant, and this initiation presents none.
+        throw new errors.InvalidGrant(e.message);
       }
       throw e;
     }

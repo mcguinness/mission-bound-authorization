@@ -209,7 +209,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
     ["expired", 12],
     ["suspended", 13],
   ] as const)(
-    "opening a deferral on a Mission that is %s throws mission_not_active carrying the Mission as observed, its own expiry applied (@spec mission#issuance-gating, #1740, D862)",
+    "opening a deferral on a Mission that is %s throws mission_not_active, the Mission's own expiry applied (@spec mission#issuance-gating, #1740, D862)",
     (state, n) => {
       const mission = approveMission(n, ["acme"]);
       if (state === "expired") {
@@ -235,15 +235,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
         thrown = e;
       }
       expect(thrown).toBeInstanceOf(DeferralError);
-      const refusal = thrown as DeferralError;
-      expect(refusal.code).toBe("mission_not_active");
-      if (state === "suspended") {
-        expect(refusal.observed?.state).toBe("suspended");
-        expect(refusal.observed?.termination).toBeUndefined();
-      } else {
-        expect(refusal.observed?.state).toBe("terminated");
-        expect(refusal.observed?.termination?.reason).toBe(state);
-      }
+      expect((thrown as DeferralError).code).toBe("mission_not_active");
     },
   );
 
