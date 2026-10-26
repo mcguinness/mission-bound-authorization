@@ -2686,9 +2686,10 @@ client its `aud` names ({{token-claims}}). A designation carries only a
 permitted subset of the presented token's entries ({{subset}},
 {{delegation-constraints}}), each keeping its original approved
 audience ({{transformation-capabilities}}). An entry without an
-original approved audience is not carried. The delegated token issued
-at its redemption is subject to every rule of this section unchanged
-({{delegated-exchange}}).
+original approved audience is not carried, and a designation that
+would carry no entry is refused with `invalid_target`. The delegated
+token issued at its redemption is subject to every rule of this
+section unchanged ({{delegated-exchange}}).
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
