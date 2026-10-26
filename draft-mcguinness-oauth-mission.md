@@ -2584,7 +2584,10 @@ derivation request it answers after it has acknowledged a revocation
 of the Mission, with the same error code. The AS answers a request
 when it makes its final decision to release the result, not when
 network delivery of the response completes: a result prepared before
-the acknowledgment and released after it is refused.
+the acknowledgment and released after it is refused. A Token Exchange
+takes `invalid_request` because a presented token whose Mission is
+not `active` is unacceptable for the exchange, a case
+{{Section 2.2.2 of RFC8693}} assigns to that code.
 
 Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
