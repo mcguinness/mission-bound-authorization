@@ -34,6 +34,7 @@ import {
 } from "./evaluate.js";
 import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
+  BudgetMetering,
   ClaimRequester,
   ClaimResolution,
   ConsumptionStatusFn,
@@ -217,6 +218,8 @@ export interface DecisionPoint {
 interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
+  /** @spec metering#metering (#816, decision f): bound by {@link createDecisionPoint} only. */
+  budgets?: BudgetMetering | undefined;
   workItemAttributedClasses?: ReadonlySet<string> | undefined;
   resourcePolicy: ResourcePolicy | undefined;
   authorityDependency?: AuthorityDependencyEnforcement | undefined;
@@ -258,6 +261,8 @@ function bindDecide(
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.budgets;
+    if (bindings.budgets) forwarded.budgets = bindings.budgets;
     delete forwarded.workItemAttributedClasses;
     if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
     delete forwarded.resourcePolicy;
@@ -321,6 +326,11 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   const bindings: PointBindings = {
     emitter,
     claims: config.claims,
+    // @spec metering#metering, metering#topology (#816, decision f): the
+    // co-resident PDP meters budgets in its own claim domain, where that
+    // domain's statement claims `budget_metering`. The ephemeral decision
+    // point and the remote server never bind one.
+    budgets: config.claims?.budgetMetering(),
     workItemAttributedClasses: config.workItemAttributedClasses,
     resourcePolicy: config.resourcePolicy,
     authorityDependency: config.authorityDependency,

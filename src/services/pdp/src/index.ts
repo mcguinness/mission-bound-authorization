@@ -125,7 +125,27 @@ export {
   openIdempotencyClaimDomain,
   type SettlementResult,
   type UnresolvedClaim,
+  type BudgetChargeRequest,
+  type BudgetCounterState,
+  type BudgetMetering,
+  type HeldReservation,
+  type HeldReservationResolution,
+  type HeldReservationResult,
+  type ReservationRecord,
+  type ReservationState,
 } from "./idempotency-claims.js";
+export {
+  BUDGET_METERING_EXTENSION,
+  type BudgetAmount,
+  type BudgetCounterScope,
+  type BudgetDeclaration,
+  type BudgetMeteringDeclaration,
+  budgetCounterId,
+  budgetMeteringFindings,
+  isMissionBudgetBinding,
+  type MeteredAction,
+  type MissionBudgetBinding,
+} from "./budget-metering.js";
 export { authorizationBinding, decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 export {
   createDecisionEvidenceEmitter,
@@ -137,6 +157,10 @@ export {
   type DecisionEvidenceEmitter,
   type DecisionEvidenceEmitterConfig,
   type DecisionEvidenceObject,
+  type DecisionMeteringEntry,
+  METERING_COUNTER_SCOPES,
+  type MeteringCounterScope,
+  type MeteringQuantity,
   type RuntimeActionClass,
   type RuntimeActionRef,
   type RuntimeCapabilitySource,
