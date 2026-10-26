@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-25T22:48:03Z
-Source repository commit: 8a0bdf45210a4e332b68a120f1adb030ef8b6125
+Generated: 2026-10-26T16:02:21Z
+Source repository commit: 28377ed7419e4e69f1d54ecc458dde6b2073d94b
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           25 October 2026
-Expires: 28 April 2027
+Intended status: Informational                           26 October 2026
+Expires: 29 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -6000,8 +6000,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission Substrate Requirements
@@ -6059,7 +6059,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -7600,8 +7600,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7660,7 +7660,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -9717,6 +9717,11 @@ Table of Contents
    by itself, establish a separate business decision for each subsequent
    action.
 
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
+
 7.  Mission Lifecycle
 
    A Mission is in one of two states:
@@ -9828,6 +9833,24 @@ Table of Contents
    of possession of any token, by which a party its policy authorizes
    revokes a Mission by mission_id (so a Mission can be stopped even
    when no refresh token is held).
+
+   When the AS establishes that the principal identified by a Mission's
+   recorded subject (Section 14.3) has been deprovisioned, it SHOULD
+   terminate that Mission with termination reason revoked.  The rule
+   reaches every Mission not yet terminated, including one a companion
+   profile has suspended, and identifies the Subject by its recorded iss
+   and sub.  Temporary disablement, a source outage, or an unavailable
+   lookup does not by itself establish deprovisioning.  The departure or
+   disablement of an Approver, an accountable owner, or a client
+   triggers the rule only when that principal is the recorded Subject;
+   an organizational Mission records the organizational principal as its
+   Subject (Section 6.7), so an approving officer's departure does not
+   terminate it under this rule.  A deployment that does not follow this
+   rule documents why; that exception cannot bypass a continuing
+   dependency the deployment requires or rewrite the recorded Subject.
+   Termination stops further issuance (Section 8.2) but does not itself
+   recall tokens already issued; an earlier execution cutoff depends on
+   the deployment's enforcement mechanism.
 
    The wire shape of that operation is out of scope for this document.
    A deployment-defined authenticated surface satisfies this
@@ -15819,6 +15842,19 @@ Appendix G.  Document History
       revocation reason describes a revocation, not a completion
       (#1535).
 
+   *  Editorial, no requirement change: Single Accountable Approver
+      states that authenticating approval evidence does not establish
+      that conditions governing later reliance remain satisfied, and
+      that the effect of later changes to an Approver's role, a
+      delegation, or governing policy on an existing Mission is
+      deployment policy (#830).
+
+   *  When the AS establishes that a Mission's recorded Subject has been
+      deprovisioned, it SHOULD terminate the Mission with reason
+      revoked; temporary disablement, an outage, or another principal's
+      departure does not trigger the rule, and termination does not
+      recall issued tokens (Revocation; #830).
+
    -01
 
    *Breaking wire changes*
@@ -15968,8 +16004,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16021,7 +16057,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -18350,8 +18386,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18410,7 +18446,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -18445,9 +18481,10 @@ Table of Contents
        2.7.4.  Resource Policy
        2.7.5.  Parameters
        2.7.6.  Actor
-       2.7.7.  Time
-       2.7.8.  State
-       2.7.9.  History
+       2.7.7.  Authority Dependencies
+       2.7.8.  Time
+       2.7.9.  State
+       2.7.10. History
      2.8.  Parameter Digest
      2.9.  Permit Binding
      2.10. Compound Actions
@@ -18778,6 +18815,19 @@ Table of Contents
    credential lifetime, so it cannot host a class whose bound demands
    that.
 
+   These bounds run from a Mission state change.  A deployment that
+   claims a bound on how quickly an external authority change stops
+   dependent actions (Section 2.7.7) MUST state it from the time the
+   authoritative system records the change to the time a dependent
+   action can no longer begin an effect, and MUST state separately how
+   work already started is treated.  The claim accounts for detecting
+   the change, evaluating its effect, any resulting Mission or policy
+   state change, downstream reliance on earlier observations, and the
+   remaining validity of issued permits.  A bound measured from a
+   Mission state change does not establish a bound from the authority
+   change, and a measured successful disablement does not establish it
+   when an event is lost, a feed is disconnected, or a reconciler fails.
+
    *  The PDP MUST refuse a consequential action when it cannot
       establish, within the deployment's published staleness bound, that
       the Mission is active.
@@ -19012,7 +19062,7 @@ Table of Contents
 2.7.  Decision Inputs
 
    Runtime enforcement MUST evaluate every input below except the last:
-   History (Section 2.7.9) is OPTIONAL, evaluated where the deployment
+   History (Section 2.7.10) is OPTIONAL, evaluated where the deployment
    declares it.
 
 2.7.1.  Authority
@@ -19307,7 +19357,71 @@ Table of Contents
    credential never overrides a revoked agent or a non-active Mission
    ([I-D.draft-mcguinness-mission-architecture]).
 
-2.7.7.  Time
+2.7.7.  Authority Dependencies
+
+   A deployment's policy can make reliance on a Mission depend on an
+   external authority remaining effective: an entitlement, a delegation,
+   the approving principal's continuing role, an accountable owner's
+   sponsorship, or a governing policy.  Approval evidence does not by
+   itself establish that such a condition still holds
+   ([I-D.draft-mcguinness-oauth-mission], Section "Single Accountable
+   Approver"), and whether a later change affects an existing Mission is
+   the deployment's policy.  The agent-registry evaluation of
+   Section 2.7.6 is one such dependency.
+
+   A deployment that declares an authority dependency MUST state in its
+   Enforcement Scope Statement (Section 5.2):
+
+   *  the dependency, its authoritative source, and the state an
+      observation of it represents;
+
+   *  what it governs: future Mission activations, an existing Mission,
+      selected authority entries or actions, or reliance on one
+      particular business approval;
+
+   *  which changes at the source invalidate reliance;
+
+   *  its maximum staleness, separately from the Mission-state freshness
+      declaration (Section 2.5);
+
+   *  how it is enforced: by direct evaluation, by lifecycle-mediated
+      enforcement, or both; and
+
+   *  what restores reliance after it fails, and how responsibility
+      passes to a successor through an authorized process that leaves
+      the original approval's attribution unchanged.
+
+   Under direct evaluation, the PDP, or a composed resource-policy step
+   (Section 2.7.4), establishes the dependency for each decision it
+   governs from an acceptable authoritative observation.  Under
+   lifecycle-mediated enforcement, a trusted reconciler translates a
+   relevant change into a Mission restriction, such as a lifecycle
+   operation or a narrowing where a containment overlay runs, through an
+   upstream observation path whose delay is bounded and monitored.  A
+   current active state does not show that this reconciliation is
+   current: when upstream observation or reconciliation exceeds its
+   declared bound, the deployment MUST refuse the actions the dependency
+   governs until it is current again.
+
+   The deployment MUST refuse an action governed by a declared
+   dependency, through its declared enforcement route, when the
+   dependency is known to be withdrawn, when an applicable invalidation
+   has been observed, or when no acceptable authoritative observation
+   remains.  Unless the deployment requires an online check, an outage
+   alone does not invalidate an observation still within its accepted
+   validity.  That validity runs from the time the observation
+   represents, never from a later re-issue or re-signing
+   ([I-D.draft-mcguinness-mission-control-plane]).  A permit issued in
+   reliance on a dependency observation MUST expire no later than that
+   observation's accepted validity.
+
+   Retained evidence of such a refusal, from whichever component
+   enforces the dependency, distinguishes a known withdrawal, a stale
+   observation and an unavailable source.  A dependency enforced through
+   an existing mechanism keeps that mechanism's refusal: an inactive
+   Mission, contained authority, or a failed resource-policy condition.
+
+2.7.8.  Time
 
    The PDP MUST refuse if the decision context indicates the credential
    is expired.  The issuance-and-derivation layer caps a derived
@@ -19324,11 +19438,11 @@ Table of Contents
    the action actually executes within that window is the executing
    PEP's reverification, not a decision input (Section 8).
 
-2.7.8.  State
+2.7.9.  State
 
    The PDP MUST refuse unless the Mission is active (Section 2.5).
 
-2.7.9.  History
+2.7.10.  History
 
    The inputs above evaluate the request; this input evaluates where the
    undertaking stands.  A deployment MAY evaluate policy predicates over
@@ -19583,7 +19697,7 @@ Table of Contents
     | cannot be established, |                                        |
     | or the evidence store  |                                        |
     | cannot be consulted    |                                        |
-    | (Section 2.7.9)        |                                        |
+    | (Section 2.7.10)       |                                        |
     +------------------------+----------------------------------------+
     | PDP unreachable        | Fail closed for consequential actions; |
     |                        | do not proceed on cached permits past  |
@@ -20654,7 +20768,7 @@ Table of Contents
    An evidence-signing key is not an authorization credential, and its
    signature MUST NOT be accepted as a grant or as widening the
    Authority Set. Its compromise corrupts the record plane and, where
-   signed history is a decision input (Section 2.7.9), can also corrupt
+   signed history is a decision input (Section 2.7.10), can also corrupt
    later authorization outcomes within that envelope: a forged record is
    a forged precondition (Section 17).  The record plane is what a post-
    compromise investigation relies on, so the property that the agent
@@ -22564,7 +22678,8 @@ Table of Contents
       established;
 
    *  cross-PDP history composition other than through the deployment's
-      evidence store or registered transparency records (Section 2.7.9);
+      evidence store or registered transparency records
+      (Section 2.7.10);
 
    *  action-hierarchy and resource-containment subset extensions (this
       profile uses the flat subset rule of
@@ -22720,7 +22835,7 @@ Table of Contents
 
 17.7.  The History Input
 
-   The history input (Section 2.7.9) makes prior evidence load-bearing
+   The history input (Section 2.7.10) makes prior evidence load-bearing
    for later decisions, so it is attacker-adjacent wherever evidence
    producers are compromised: a forged record is a forged precondition,
    and a suppressed record denies the step that depends on it.  This is
@@ -23232,6 +23347,15 @@ Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Authority Dependencies: a deployment that makes reliance depend on
+      an external authority remaining effective declares the dependency,
+      its source, what it governs, invalidating changes, its staleness
+      bound, its enforcement route (direct evaluation, lifecycle-
+      mediated, or both) and its recovery; reliance stops when no
+      acceptable observation remains, and a permit does not outlive the
+      observation.  Mission State and Freshness states how a bound from
+      an external authority change is measured (#830).
+
    *  Evaluation-Context Binding (#773): the salt survives restart and
       is available to every replica that can use its bindings, or is
       held per epoch, so that a restart or a replica without the version
@@ -23464,8 +23588,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                         Mission Runtime Evidence
@@ -23515,7 +23639,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -26549,8 +26673,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -26599,7 +26723,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
