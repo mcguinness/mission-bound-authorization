@@ -1178,8 +1178,8 @@ A company approves a Mission to purchase office supplies within set
 limits. The approval event creates the Mission. The Mission Issuer
 signs an Approval Governance Record for that event, recording the
 governance assertions and the approval outcome, and later mints a
-Mandate that carries the Mission, the approval event, and the same
-`intent_hash` and `authority_hash`.
+Mandate that identifies the Mission and approval event and carries
+the same `intent_hash` and `authority_hash`.
 
 The purchasing agent then submits a purchase order, and the company's
 ERP records its own business decision for that order, naming the
