@@ -30679,9 +30679,27 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > a compensate phase of the metered action carrying an amount is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding and reserves and claims nothing (@spec metering#metering, #816, #813, decision d)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a Mission whose source answers the underivable marker, throws, or answers a malformed binding is denied constraint_unsupported for every action that would otherwise permit, a read included, and reserves and claims nothing (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The reference meters one consumption bound, max_budget, through the PDP-local budget binding (MissionView.budget) and the budget_metering declaration; AuthorityEntry.constraints stays a closed type. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a Mission carrying a max_budget binding this PDP cannot meter is denied constraint_unsupported and reserves and claims nothing: another currency, an undeclared budget, another owner, a limit that disagrees with the declaration, or a Dispatch Policy outside the budget's listed policies (dropping each comparison, E1, E8, E7, E2, E3a, E3, E3c, fails its case; leaving reservation rows on a refused binding, Z6, fails the zero-count alone); at a remote PDP or an ephemeral decision point (E4, E5); where no budget store is bound, the declaration is unclaimed, or the shipped statement declares none (E6, E9; moving the no-store refusal after the claim, Z3b, fails the no-claim count alone); and for an amount-bearing spend the declaration does not meter: another action outside the exempt read and non-consequential classes (N2 to N5, H1) or a compensate phase of the metered action (P4a, P4b). Partial: an Intent carrying max_calls, max_egress_volume, an accumulated max_duration, or a per-entry cumulative constraint has no MissionView member, so no witness shows it refused (#1660 remainder; the AS intake refusal is metering.consent.unmetered-bound-refused-at-intake)."
+   "notes": "#816, D830. The reference meters one consumption bound, max_budget, through the PDP-local budget binding (MissionView.budget) and the budget_metering declaration; AuthorityEntry.constraints stays a closed type. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a Mission carrying a max_budget binding this PDP cannot meter is denied constraint_unsupported and reserves and claims nothing: another currency, an undeclared budget, another owner, a limit that disagrees with the declaration, or a Dispatch Policy outside the budget's listed policies (dropping each comparison, E1, E8, E7, E2, E3a, E3, E3c, fails its case; leaving reservation rows on a refused binding, Z6, fails the zero-count alone); at a remote PDP or an ephemeral decision point (E4, E5); where no budget store is bound, the declaration is unclaimed, or the shipped statement declares none (E6, E9; moving the no-store refusal after the claim, Z3b, fails the no-claim count alone); and for an amount-bearing spend the declaration does not meter: another action outside the exempt read and non-consequential classes (N2 to N5, H1) or a compensate phase of the metered action (P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a decision point over a claim domain that meters budgets cannot be built without a budget source, so no metering point can evaluate a budget-bound Mission as unbound, and a Mission whose source answers the underivable marker, throws, or returns a malformed binding is denied constraint_unsupported for every otherwise-permitted action, a read included, reserving and claiming nothing; through the composed stack an instance whose committed snapshot is gone is refused with nothing wired or charged. Building a metering point without a source (V6) fails the construction witness; reading the marker or a throwing source as unbound (F1, F2) or removing the unreadable-binding guard (F3) fails the underivable witness, F1, F3, F4, F5 and F5b fail the snapshot one, and deferring the refusal past the claim (Z2) fails its zero-count alone. Partial: an Intent carrying max_calls, max_egress_volume, an accumulated max_duration, or a per-entry cumulative constraint has no MissionView member, so no witness shows it refused (#1660 remainder; the AS intake refusal is metering.consent.unmetered-bound-refused-at-intake)."
   },
   {
    "id": "runtime.metering.no-advertising-unperformed-enforcement",
@@ -36961,7 +36979,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the reference implements no max_budget."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the dispatch and expansion intakes admit max_budget under the standing-payment capability and check its currency as a currency code, but no test submits a malformed currency; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.bounds.max-budget-currency-exact",
@@ -37011,7 +37029,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form."
+   "notes": "#816, D830. Todo: the dispatch and expansion intakes refuse a max_budget whose amount is not a decimal string, but no test submits a malformed one, and PAR admits no max_budget at all; the capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form."
   },
   {
    "id": "metering.bounds.committed-by-intent-hash",
@@ -37033,7 +37051,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Also homes the Conformance section's Issuer duty to carry the consented bounds committed by intent_hash."
+   "notes": "#816, D830. Todo: no test recomputes intent_hash over an Intent carrying max_budget; the capability stays disabled and unclaimed. Also homes the Conformance section's Issuer duty to carry the consented bounds committed by intent_hash."
   },
   {
    "id": "metering.consent.bounds-in-authority-summary",
@@ -37055,7 +37073,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test renders the authority summary of a Mission carrying max_budget in recorded Consent Evidence (standing-payment instances are dispatched unattended); the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.consent.enforced-only-if-metered",
@@ -37075,9 +37093,16 @@
     "normative": "an approval page renders max_budget as an enforced limit only where the Enforcement Scope Statement's budget metering declaration covers the bound's currency and the governed action"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.'"
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.' Slice 3b (impl/813-budget-binding-3b at 62325958): the standing-payment consent page that renders the budget, and the per-instance maximum on max_budget, as limits runs only on an AS that started, and a capability-on AS starts only where its Enforcement Scope Statement declares the budget under budget_metering with the exact profile, in the policy's unit, metering payments:payment.execute at commit, with the policy's currency and limit and its committed policy reference; the composed stack hands the AS and the PDP the same statement, and the PDP meters both counters under it. dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial on level only: the witness is a startup refusal, not an approval page."
   },
   {
    "id": "metering.consent.unmetered-bound-refused-at-intake",
@@ -37103,9 +37128,15 @@
      "name": "standing-payment dispatch grant (@spec template#grant-type, #813) > refuses the payment dispatch_prohibited_class at the token endpoint with the capability off, and max_budget as an unknown member (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#816, D830. Unconditional: the duty binds exactly where metering.exact-budget is not claimed (the reference today), and where it is claimed it binds a max_budget the declaration does not cover. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the standing-payment capability off, a dispatch Intent carrying max_budget is refused 400 at /token with 'unknown top-level member: max_budget'. Mutations: capability always on, or removed from the opt-in list, fail the test (the report does not show which assertion). Partial: the row's surface is PAR and no PAR test submits max_budget; no assertion that no Mission is created. With the capability on the AS admits max_budget while nothing meters it (3b), so the capability stays unclaimed until 3b."
+   "notes": "#816, D830. Unconditional: the duty binds exactly where metering.exact-budget is not claimed (the reference today), and where it is claimed it binds a max_budget the declaration does not cover. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the standing-payment capability off, a dispatch Intent carrying max_budget is refused 400 at /token with 'unknown top-level member: max_budget'. Mutations: capability always on, or removed from the opt-in list, fail the test (the report does not show which assertion). Slice 3b (impl/813-budget-binding-3b at 62325958): with the capability on, the AS admits max_budget only at a standing-payment dispatch and at the expansion of such a lineage, and refuses to start unless its Enforcement Scope Statement meters each designating policy's budget under the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit; the one-currency rule holds every max_budget to that currency, and the composed stack's PDP meters it under the same statement. No statement, an unclaimed declaration, another unit or another currency refuses startup; dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails it. The capability stays disabled and unclaimed. Partial: the row's surface is PAR and no PAR test submits max_budget; no assertion that no Mission is created; with the capability on the refusal is at startup, not at intake."
   },
   {
    "id": "metering.metering.intent-bound-metered",
@@ -37144,9 +37175,33 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > two instances of one standing approval draw on one standing_consent counter and on two separate mission counters (@spec metering#aggregate-bounds, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a co-resident decision point meters the binding its own source derives, whether the caller's view omits the binding or carries another budget's, and a Mission its source does not bind stays unmetered whatever the caller's view carries (@spec metering#metering, #816, #813, decision d)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a Mission whose source answers the underivable marker, throws, or answers a malformed binding is denied constraint_unsupported for every action that would otherwise permit, a read included, and reserves and claims nothing (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > dispatches a standing payment unattended and executes it, committing the wire's amount on the instance counter and the shared standing_consent counter (@spec mission-template#standing-payment-exception, metering#metering, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance duty to meter every consumption bound a governed Mission carries. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): with a budget binding on the Mission view, every permit of the declared metered action at commit carries a reservation on both counters; removing the reservation from the claim (A1) fails all three witnesses. Partial: the binding is injected into the view, so metering a Mission because its Intent carries max_budget waits on the AS binding (slice 3b), and the refusal of a metered action in a class the claim domain does not claim is code no witness exercises."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance duty to meter every consumption bound a governed Mission carries. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): with a budget binding on the Mission view, every permit of the declared metered action at commit carries a reservation on both counters; removing the reservation from the claim (A1) fails all three witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): the co-resident decision point meters the binding its own source derives, whether the caller's view omits the binding or carries another budget's, and through the composed stack a dispatched instance whose Intent carries max_budget is metered on its instance counter and the shared counter; a Mission whose binding cannot be derived (the underivable marker, a throwing source, a malformed binding, a retained snapshot that is gone) is denied constraint_unsupported for every otherwise-permitted action and reserves and claims nothing. Consulting the source only when the caller supplies a binding (B2), keeping the caller's binding (B1), not attaching the source's (B4) or not binding the source (B5) fails the source witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered; reading the marker or a throwing source as unbound (F1, F2) or removing the unreadable-binding guard (F3) fails the underivable witness, F1 and F3 fail the snapshot one, and deferring that refusal past the claim (Z2) fails its zero-count alone. Partial: the refusal of a metered action in a class the claim domain does not claim is code no witness exercises."
   },
   {
    "id": "metering.metering.max-budget-reserve-per-action",
@@ -37481,7 +37536,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: the claim horizon is the action class's declared idempotency_horizon_seconds, and no test relates it to a Mission's expires_at by presenting a duplicate late in the Mission's life; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.capacity-across-missions.child-refused-without-accounting",
@@ -37510,7 +37565,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The reference meters no max_budget yet; the capability stays disabled and unclaimed. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: only the dispatched instance is exercised, not an expansion successor carrying max_budget; no assertion that nothing is created; no endpoint witness."
+   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: only the dispatched instance is exercised, not an expansion successor carrying max_budget; no assertion that nothing is created; no endpoint witness."
   },
   {
    "id": "metering.capacity-across-missions.child-charged-to-ancestors",
@@ -37626,9 +37681,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > a successor that shares its predecessor's first Mission draws on the same mission counter, never on a fresh one (@spec metering#capacity-across-missions, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Partial: predecessor and successor carry the same max_budget, so the successor's own bound capping the chain is not distinguished."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment draws on the dispatched instance's mission counter with its consumption to date (refused beyond the 25.00 left of 150.00, then permitted to exhaust it); keying the successor's binding by its own id (U2) or deriving it unbound (U1) opens a fresh balance or none, and dropping the instance limit (Q3p) lets the chain exceed its cap, each failing the witness. Partial: predecessor and successor carry the same max_budget, so the successor's own bound capping the chain is not distinguished."
   },
   {
    "id": "metering.capacity-across-missions.policy-successor-no-raise",
@@ -37650,7 +37711,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test drives a policy-adjudicated successor (such as a progressive drawdown) of a Mission carrying max_budget; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.capacity-across-missions.raised-bound-renders-consumption",
@@ -37672,7 +37733,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no successor approval renders the chain's consumption to date yet; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.capacity-across-missions.template-bound-rendered-per-instance",
@@ -37697,7 +37758,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: in the reference only a standing-payment template's instances carry max_budget, always under a metered standing-consent budget, so a template with no aggregate bound across its instances does not arise; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.capacity-across-missions.standing-consent-child-refused",
@@ -37729,7 +37790,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The reference meters no max_budget yet; the capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: no assertion that nothing is created; no endpoint witness."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Partial: no assertion that nothing is created; no endpoint witness."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -37777,9 +37838,15 @@
      "name": "exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire commits its 125.00 against a 200.00 standing-consent budget, and the next 125.00 wire is denied quota_exceeded with nothing executed (@spec metering#aggregate-bounds, metering#metering-evidence, #816)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses quota_exceeded the second instance's payment that would exhaust the shared budget, naming the standing_consent counter, with nothing wired for it (@spec metering#aggregate-bounds, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment exceeding the standing-consent budget's remaining is denied quota_exceeded, and its Decision Evidence metering entry carries counter_scope standing_consent and the budget's counter_id (also signed and verified, under concurrency, and through the executing PEP in the payments end-to-end test). Dropping the limit check (A2), checking only the instance counter (D2), or recording another denial reason (T8c) fails the concurrency and end-to-end witnesses by assertion."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment exceeding the standing-consent budget's remaining is denied quota_exceeded, and its Decision Evidence metering entry carries counter_scope standing_consent and the budget's counter_id (also signed and verified, under concurrency, and through the executing PEP in the payments end-to-end test). Dropping the limit check (A2), checking only the instance counter (D2), or recording another denial reason (T8c) fails the concurrency and end-to-end witnesses by assertion. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack the second instance's payment that would exhaust the shared budget is refused quota_exceeded, its Decision Evidence naming the standing_consent counter with 75.00 remaining, and nothing is wired for it; dropping the limit check (Q1p) or the shared limit (Q2p) lets it through and fails the witness."
   },
   {
    "id": "metering.aggregate-bounds.standing-consent-instances-share",
@@ -37854,9 +37921,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > a successor that shares its predecessor's first Mission draws on the same mission counter, never on a fresh one (@spec metering#capacity-across-missions, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's standing_consent counter: the refusal's entry carries the predecessor's counter_id with the cumulative 700.00 remaining, and the successor's permit leaves 500.00. Removing the reservation (A1) fails it, and keying the shared counter by policy version (T8g) fails its counter_id assertion; no mutant keys the shared counter by Mission."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's standing_consent counter: the refusal's entry carries the predecessor's counter_id with the cumulative 700.00 remaining, and the successor's permit leaves 500.00. Removing the reservation (A1) fails it, and keying the shared counter by policy version (T8g) fails its counter_id assertion; no mutant keys the shared counter by Mission. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payments draw on the dispatched instance's standing_consent counter (75.00, then 50.00 remaining of 200.00); deriving the successor unbound (U1) lets its payment run unmetered and fails the witness."
   },
   {
    "id": "metering.aggregate-bounds.owner-qualified-key",
@@ -38358,7 +38431,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed."
+   "notes": "#816, D830. Todo: the PEP's Execution Evidence carries no metering consumed entry; the PDP commits the reserved amount. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed."
   },
   {
    "id": "metering.metering-evidence.counter-scope-values",
@@ -38783,7 +38856,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test presents a settlement that fails verification for a budget-bound claim and asserts both counters unchanged; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-contract.ack-after-durable-apply",
@@ -38805,7 +38878,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test crashes the PDP between applying and acknowledging a budget settlement; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-contract.duplicate-no-reapply",
@@ -38856,7 +38929,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item."
+   "notes": "#816, D830. Todo: no test presents a conflicting settlement (another outcome, metering entry or execution_id) for a settled budget-bound claim; the capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item."
   },
   {
    "id": "metering.settlement-contract.reserved-commits-stated",
@@ -38878,7 +38951,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state that the reserved amount commits; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-states.suppressed-releases",
@@ -38917,9 +38990,27 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a suppressed settlement for a different evaluation releases nothing held under another (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's suppression before redemption releases a reservation already held for its elapsed lease too, with one resolution notice for the held alert (@spec metering#settlement-states, #813, #816, decision e)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/budget-exhaustion.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the PEP sends its signed suppression of a budget-bound permit it refused before redeeming it, the reservation is released and nothing executes, while a suppressed permit with no budget binding sends nothing new (@spec metering#settlement-states, runtime#execution-reverification, #813, #816, decision e)",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a suppressed settlement from the redeeming attempt releases its reservation on both counters, open or held, restoring the remaining (the next 1000.00 permits), and releases nothing held under another evaluation. Not releasing an open reservation (T8b) fails the open witness, not releasing a held one (M1) fails the held witness, and releasing every held reservation (M2) fails the other-evaluation witness alone."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a suppressed settlement from the redeeming attempt releases its reservation on both counters, open or held, restoring the remaining (the next 1000.00 permits), and releases nothing held under another evaluation. Not releasing an open reservation (T8b) fails the open witness, not releasing a held one (M1) fails the held witness, and releasing every held reservation (M2) fails the other-evaluation witness alone. Slice 3b (impl/813-budget-binding-3b at 62325958): a budget-bound permit suppressed before redemption releases both its reservations, open or already held for an elapsed lease, without settling the claim: the PEP sends its signed suppressed record over the claim channel with the redemption owner's unconsumed answer, and the PDP releases on it, restoring the remaining (through the composed stack both counters return to zero and stay there past the lease); a suppressed permit with no budget binding sends nothing. Not releasing a held reservation (S14) fails the held witness; the PEP never sending, never marking the permit budget-reserved, the PDP's channel offering no release, or the channel passing no consumption status (S1, S3, S4, V2c, V2d) fails the end-to-end and executing-PEP witnesses; sending for every unredeemed suppression (S2) fails the executing-PEP witness."
   },
   {
    "id": "metering.settlement-states.completed-commits",
@@ -38970,9 +39061,15 @@
      "name": "exact budget exhaustion through the executing PEP (@spec metering#aggregate-bounds, #816) > a completed wire commits its 125.00 against a 200.00 standing-consent budget, and the next 125.00 wire is denied quota_exceeded with nothing executed (@spec metering#aggregate-bounds, metering#metering-evidence, #816)",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's signed suppressed record for a permit no attempt redeemed releases both reservations without settling the claim, and the redeeming attempt's later completed settlement still commits them (@spec metering#settlement-states, #813, #816, decision e)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): after the permit holder's suppression before redemption released both reservations without settling the claim, the redeeming attempt's later completed settlement commits them from released on both counters; a release that settles the claim (S13) refuses the later settlement and fails the witness. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
   },
   {
    "id": "metering.settlement-states.failed-rule-defined",
@@ -38994,7 +39091,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state the commit-or-refund rule for a failed metered payment; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-states.failed-stays-charged",
@@ -39033,9 +39130,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a release on a suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds the reservations again (@spec metering#settlement-states, #813, #816, D830 ruling 10)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others. Slice 3b (impl/813-budget-binding-3b at 62325958): a release on the permit holder's suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds both reservations again; not holding them again (S12) fails the witness."
   },
   {
    "id": "metering.settlement-states.bounded-lease",
@@ -39057,7 +39160,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: a reservation records no lease of its own; it is bounded by its claim's permit lifetime and the class's execution lease, which the sweep enforces (lease_elapsed), and no test asserts a finite lease per reservation. The capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-states.lease-expiry-reconciles",
@@ -39075,7 +39178,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a reservation whose lease expires unsettled enters reconciliation and stays charged, never released by the expiry",
-    "local": "design decision e: the reservation is held and an operator alert is raised; release from held only by explicit operator reconciliation"
+    "local": "design decision e: the reservation is held and an operator alert is raised; release from held only by explicit operator reconciliation, or by the permit holder's signed suppression with the redemption owner's unconsumed answer (affirmative non-execution), each raising a resolution notice"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39097,9 +39200,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > raises the operator alert when a wired payment's lost settlement leaves its reservation held, a resolution notice when an operator releases it, and the overspend alert when its late completed settlement commits the released reservation and pushes the shared counter past its limit (@spec metering#settlement-states, #813, #816, D830 rulings 7 and 10)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack a wired payment whose settlement never reaches the PDP is held at the sweep past its permit and lease, still charged on the shared counter, with an operator alert of kind budget_reservation_held and cause lease_elapsed on the deployment's alert sink, until an operator reconciles it. Leaving the held alert unwired, naming another kind, or dropping its cause (A1, A2, A3) fails the witness at the alert; when the operator releases it a resolution notice follows, and raising no notice or not wiring it (V4, V4b) fails the witness there."
   },
   {
    "id": "metering.settlement-states.timeout-never-releases",
@@ -39152,7 +39261,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a held reservation is released only by a suppressed outcome or by a reconciliation establishing that the permit was never redeemed; any other input leaves it charged",
-    "local": "In the reference, an operator reconciliation recording non-execution, accepted only after the permit and its lease can no longer be used, is the reconciliation that establishes non-execution; the PEP's unredeemed report is not authoritative after a restart and leaves the reservation held."
+    "local": "In the reference two inputs establish non-execution. The permit holder's signed suppressed Execution Evidence, presented by the PEP and epoch the permit was issued to, with the redemption owner answering unconsumed in time, before the claim's reconciliation window closes and before any settlement, releases an open reservation or one held by an elapsed lease or by a PDP restart (D830 ruling 7: affirmative non-execution). An operator reconciliation recording non-execution, accepted only after the permit and its lease can no longer be used, releases a held one. Any other redemption answer (consumed, unknown, a throw, none in time), another PEP or epoch, a closed window, a settled claim, and the PEP's unredeemed report leave the reservation charged."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -39198,9 +39307,33 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a new policy version for the same budget leaves a held reservation held and reduces the next instance's headroom (@spec metering#capacity-across-missions, #816, D830 ruling 7)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > the permit holder's suppression before redemption releases a reservation already held for its elapsed lease too, with one resolution notice for the held alert (@spec metering#settlement-states, #813, #816, decision e)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > after a PDP restart holds a permit's reservation, the permit's own PEP's signed suppression with an unconsumed answer releases it, while one with no answer is refused and leaves it held (@spec metering#settlement-states, #813, #816, D830 ruling 7, decision e)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a suppression arriving after the claim's reconciliation window has closed is refused window_closed and releases nothing, as the closed claim's indeterminate outcome holds it (@spec metering#settlement-states, #813, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a suppression is refused and releases nothing unless the redemption owner answers unconsumed in time (consumed, a throw, no answer or unknown), and when the record marks a consumed permit or is not a PEP's suppressed record, another PEP or epoch presents it, the domain is bound to no redemption record, the claim is already settled, or the permit reserved no budget (@spec metering#settlement-states, runtime#idempotency, #813, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness. Slice 3b (impl/813-budget-binding-3b at 62325958) (owner ruling: a same-epoch suppression with a positive unconsumed answer is affirmative non-execution under D830 ruling 7): the permit holder's signed suppression with an unconsumed answer releases a reservation held for an elapsed lease or by a PDP restart, while one with no answer in time leaves the restart-held reservation held; a suppression after the window closes is refused window_closed; and a suppression releases nothing when the redemption owner answers consumed, throws, does not answer or answers unknown, the record marks a consumed permit, is an executor's or a failed record, another PEP or another epoch presents it, the domain is bound to no redemption record, the claim is already settled, or the permit reserved no budget. Accepting an answer other than unconsumed (V2) fails the restart and refusal witnesses; not checking the window (V3b) fails the window witness; accepting a consumed permit, an executor's record or another outcome, not checking the PEP or its epoch, or accepting a settled claim (S6 to S9b, S11) each fail their case, and a missing redemption record or a consumed answer by the reason assertion only (V2e, V2b); releasing on a refused suppression (SZ) fails the zero-count alone; not releasing a held reservation (S14) fails the held witness."
   },
   {
    "id": "metering.settlement-states.compensation-not-non-execution",
@@ -39222,7 +39355,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test checks that a retry or a compensating reversal leaves the original reservation or commitment in place (a compensate phase under a budget-bound Mission is refused constraint_unsupported); the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-states.contain-does-not-settle",
@@ -39247,7 +39380,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test contains a Mission holding an open budget reservation; the capability stays disabled and unclaimed."
   },
   {
    "id": "metering.settlement-states.reconciliation-cadence",
@@ -39269,7 +39402,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the reference meters no max_budget yet; the capability stays disabled and unclaimed. Design decision e holds a reservation indefinitely, with an alert, where no reconciliation path exists; a departure is recorded, not failed."
+   "notes": "#816, D830. Todo: no published cadence for budget-reservation reconciliation is asserted; the capability stays disabled and unclaimed. Design decision e holds a reservation indefinitely, with an alert, where no reconciliation path exists; a departure is recorded, not failed."
   },
   {
    "id": "metering.settlement-states.restart-never-releases",
@@ -50557,7 +50690,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the configured dispatch-prohibited set still lists the designated operation, so a Dispatch granting it from a template that does not admit the exception, or that fails any condition of the section, is refused dispatch_prohibited_class"
+    "normative": "the configured dispatch-prohibited set still lists the designated operation, so a Dispatch granting it from a template that does not admit the exception, or that fails any condition of the section, is refused dispatch_prohibited_class",
+    "local": "In the reference the Exact-profile condition is enforced at AS startup, which is stronger than refusing each Dispatch: with the capability on, the AS refuses to start unless its Enforcement Scope Statement declares each designating Dispatch Policy's budget under budget_metering with the exact profile, the policy's currency, limit and {id, version, digest}, and payments:payment.execute metered at commit. Every other failed condition is refused dispatch_prohibited_class at dispatch."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -50663,9 +50797,15 @@
      "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set. With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Partial: a budget-member defect is refused at consent, not at Dispatch, and the Exact-profile condition is not implemented (3b)."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set. With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Slice 3b (impl/813-budget-binding-3b at 62325958): the Exact-profile condition is refused at startup (observation.local, owner ruling); dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: a budget-member defect is refused at template consent, not at Dispatch."
   },
   {
    "id": "template.standing-payment.per-payment-max-amount",
@@ -50861,15 +51001,23 @@
     ]
    },
    "profiles": [],
-   "surface": "token-endpoint",
+   "surface": "deployment-documentation",
    "assertion": "refusal",
    "observation": {
-    "normative": "the exception is admitted only where the instance's max_budget counter and the standing-consent budget's counter are both enforced under the Exact enforcement profile; where the deployment's Enforcement Scope Statement does not declare the budget under the Exact profile, the Dispatch is refused dispatch_prohibited_class"
+    "normative": "the exception is admitted only where the instance's max_budget counter and the standing-consent budget's counter are both enforced under the Exact enforcement profile; where the deployment's Enforcement Scope Statement does not declare the budget under the Exact profile, the Dispatch is refused dispatch_prohibited_class",
+    "local": "In the reference this is enforced at AS startup, which is stronger than refusing each Dispatch: with the standing-payment capability on, the AS refuses to start unless its Enforcement Scope Statement claims budget_metering under the exact profile, counts in the policy's currency, meters payments:payment.execute at commit, and declares each designating Dispatch Policy's budget with the policy's currency and limit and a policies entry equal to its committed {id, version, digest}; no Dispatch is ever served against a budget the statement does not meter so."
    },
-   "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The declaration itself is metering.aggregate-bounds.statement-declares-budget and metering.topology.profile-named-per-counter. Todo after slice 3a (a7063aab): the AS reads no Enforcement Scope Statement budget declaration under the Exact profile (slice 3b)."
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "standing-payment startup checks (@spec template#prohibited-classes, #813) > refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The declaration itself is metering.aggregate-bounds.statement-declares-budget and metering.topology.profile-named-per-counter. Owner ruling (slice 3b review): the startup refusal satisfies the row, being stronger than refusing each Dispatch, so the row's level and surface are the startup check's. Slice 3b (impl/813-budget-binding-3b at 62325958): with the capability on, no statement, an unclaimed declaration, another profile, another unit currency, the payment metered at another phase or another action metered, another budget owner or id, another limit or currency, or a policy reference differing in digest, version or id each refuse startup, and the full declaration starts; dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails it."
   },
   {
    "id": "template.standing-payment.both-bounds-enforced",
@@ -50912,9 +51060,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > eight concurrent metered requests in flight at once against one shared counter of 1000.00 leave three permits of 300.00 and five quota_exceeded, and the counter never overshoots (@spec metering#topology, #816)",
      "level": "concurrency",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses quota_exceeded the second instance's payment that would exhaust the shared budget, naming the standing_consent counter, with nothing wired for it (@spec metering#aggregate-bounds, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Joint reservation and the no-charge refusal are homed by metering.aggregate-bounds.counters-reserve-together and metering.aggregate-bounds.refusal-charges-neither. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment within the shared budget but beyond the instance's max_budget remaining is denied quota_exceeded on the mission counter, with and without an evidence emitter, and one within the instance but beyond the shared remaining is denied on the standing_consent counter with the instance counter untouched. Checking only the shared counter (D1) fails the instance witness's no-emitter assertion; checking only the instance counter (D2) fails the concurrency witness by assertion."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Joint reservation and the no-charge refusal are homed by metering.aggregate-bounds.counters-reserve-together and metering.aggregate-bounds.refusal-charges-neither. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment within the shared budget but beyond the instance's max_budget remaining is denied quota_exceeded on the mission counter, with and without an evidence emitter, and one within the instance but beyond the shared remaining is denied on the standing_consent counter with the instance counter untouched. Checking only the shared counter (D1) fails the instance witness's no-emitter assertion; checking only the instance counter (D2) fails the concurrency witness by assertion. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack the second instance's payment that would exhaust the shared budget is refused quota_exceeded, its Decision Evidence naming the standing_consent counter with 75.00 remaining, and nothing is wired for it; dropping the limit check (Q1p) or the shared limit (Q2p) lets it through and fails the witness."
   },
   {
    "id": "template.standing-payment.governed-class-exceptions",
@@ -51073,9 +51227,22 @@
     "normative": "admission confers no execution: each designated-operation payment under an admitted instance is evaluated by a fresh runtime decision, and a request lacking parameter binding, failing its transaction-assurance tier, or missing an applicable action approval is refused as under any other Mission"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Todo after slice 3a (a7063aab): needs the PDP standing-payment decision (slice 3b)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a metered payment whose parameters do not recompute to its parameter_digest, or name another vendor, amount or currency than the request, is denied parameter_violation and reserves and claims nothing, so the payee compared is the one the permit binds (@spec authzen#parameter-digest, mission-template#standing-payment-exception, #813)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-budget-binding-3b at 62325958): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. Partial: the transaction-assurance tier and an applicable action-bound approval under an admitted instance are not exercised, and a request carrying no parameter_digest is not a case."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
@@ -51095,9 +51262,34 @@
     "normative": "a payment whose PEP-established payee account differs from the destination committed for its vendor, or whose vendor has no committed destination, is denied, and a payment above the per-payment max_amount is refused under the instance"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4. Todo after slice 3a (a7063aab): needs the PDP destination comparison (slice 3b)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a metered payment whose PEP-established payee is not the destination the policy commits for its vendor, whose vendor has no committed destination, or that carries no parameters is denied parameter_violation and reserves and claims nothing (@spec mission-template#standing-payment-exception, #813, D830 ruling 4)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a metered payment whose parameters do not recompute to its parameter_digest, or name another vendor, amount or currency than the request, is denied parameter_violation and reserves and claims nothing, so the payee compared is the one the permit binds (@spec authzen#parameter-digest, mission-template#standing-payment-exception, #813)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > the preflight and prepare phases of the metered action are held to the committed destination too: another payee is denied parameter_violation, the committed one permitted (@spec mission-template#standing-payment-exception, metering#metering, #813)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The out-of-band escalation to a freshly approved Mission is not observable at this surface. D830 ruling 4. Slice 3b (impl/813-budget-binding-3b at 62325958): for every crossing of the metered action (commit, preflight and prepare) the PDP recomputes parameter_digest over the PEP-disclosed parameters, requires their vendor, amount and currency to be the request's, and compares their payee_account with the destination the policy commits for that vendor: a changed bank account for an approved vendor, a vendor without a committed destination, or absent parameters is denied parameter_violation and reserves and claims nothing, at the decision point and through the composed stack. Removing the destination check (P1) fails all four witnesses; not comparing the payee (P2) fails the payee, phase and end-to-end witnesses; not holding the covered phases (P6) fails the phase witness; not recomputing the digest or not comparing vendor, amount or currency (P3, P4, P5, P5b) fails the consistency witness; deferring the payee refusal past the claim (Z1) fails the zero-counts alone. Partial (gap kept by owner ruling): no PDP-level refusal of a payment above the per-payment max_amount under a standing-payment instance is witnessed, because the PEP's credential bound refuses it out_of_authority before any decision; the PDP's max_amount step is witnessed only for an ordinary Mission."
   },
   {
    "id": "template.standing-payment.payee-bound-by-reverification",
@@ -51117,9 +51309,16 @@
     "normative": "a payee account that differs at execution from the payee the permit was decided on, including a changed bank account for an approved vendor, fails execution reverification and no payment effect occurs"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Todo after slice 3a (a7063aab): needs PEP execution reverification of the payee (slice 3b or later)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack, an approved vendor's account changed between the permit and its use suppresses the permit at admission with target_drift, and nothing is wired. Reverification binds the payee twice, through the effective parameters parameter_digest covers and through the evaluation-context payee fact: freezing the fact (Rb) turns the refusal into parameter_mismatch and fails the witness, and blinding both layers (Rab) lets the wire execute; keeping the decided payee in the fresh parameters alone (Ra) survives by design, since the evaluation-context layer still suppresses. Partial on level only: the witness is cross-component; no endpoint-level resource-operation witness."
   },
   {
    "id": "template.standing-payment.raise-needs-new-version",
@@ -51179,7 +51378,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release. Todo after slice 3a (a7063aab): the approval of a raise cannot render consumption to date or reservations until the shared counter exists (slice 3b)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release. Todo: the shared counter exists (slice 3b), but no approval of a new template_version renders its consumption to date or outstanding reservations yet."
   },
   {
    "id": "template.standing-payment.consent-disclosure",
@@ -51309,9 +51508,40 @@
     "local": "design decision d: the budget binding is PDP-local (MissionView.budget, derived from the kernel's committed policy snapshot) and never enters req.context"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Todo after slice 3a (a7063aab): the policy view's budget binding is slice 3b."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-binding.test.ts",
+     "name": "the budget binding the kernel derives for a standing payment (@spec metering#metering, mission-template#standing-payment-exception, #813, #816, decision d) > derives a dispatched instance's binding from the Dispatch Policy snapshot its activation retained: the budget, its limit, the committed policy and destinations, and the instance bound keyed by the instance itself (#813, #816)",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-binding.test.ts",
+     "name": "the budget binding the kernel derives for a standing payment (@spec metering#metering, mission-template#standing-payment-exception, #813, #816, decision d) > reports underivable, never unbound, a standing payment whose retained snapshot is gone or no longer reproduces its digest, whose admission names another Dispatch Policy or budget than the instance commits, whose Mission does not carry the instance's max_budget, a Mission recorded as a Child Mission anywhere in the lineage, or a successor or child whose predecessor or parent record the kernel no longer holds (#813, #816, decision d)",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > dispatches a standing payment unattended and executes it, committing the wire's amount on the instance counter and the shared standing_consent counter (@spec mission-template#standing-payment-exception, metering#metering, #813, #816)",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose signed suppression releases the unredeemed permit's reservation, a release the reconciler's unredeemed resolution past the lease leaves standing (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, decision e)",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-budget-binding-3b at 62325958): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack), and no Dispatch request carries a conflicting destination or budget, since the dispatch intake admits neither member."
   },
   {
    "id": "template.standing-payment.failed-remains-charged",
@@ -51347,9 +51577,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > operator reconciliation releases or commits a held reservation, a restart does not release it, and a reservation that is not held is refused unchanged (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e) > a release on a suppression before redemption does not outlive the redeeming attempt's later failed settlement, which holds the reservations again (@spec metering#settlement-states, #813, #816, D830 ruling 10)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 10. Fixes the commit-or-refund rule that metering.settlement-states.failed-rule-defined asks for; metering.settlement-states.failed-stays-charged covers the absent-rule default. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment settled failed stays held on both counters with the operator alert, and only operator reconciliation releases or commits a held reservation (a restart does not). Releasing on failed (C2) and releasing on restart (C1) fail their witnesses."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. D830 ruling 10. Fixes the commit-or-refund rule that metering.settlement-states.failed-rule-defined asks for; metering.settlement-states.failed-stays-charged covers the absent-rule default. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a payment settled failed stays held on both counters with the operator alert, and only operator reconciliation releases or commits a held reservation (a restart does not). Releasing on failed (C2) and releasing on restart (C1) fail their witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): a reservation released on the permit holder's suppression before redemption is held again on both counters when the redeeming attempt later settles failed; not holding it again (S12) fails the witness."
   },
   {
    "id": "template.instance-composition.child-refused",
@@ -51449,9 +51685,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > a successor that shares its predecessor's first Mission draws on the same mission counter, never on a fresh one (@spec metering#capacity-across-missions, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Shares witnesses with metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's instance counter and the same standing_consent counter with consumption to date; keying the instance counter by the successor's own id (T8f) fails it. Partial: carrying the budget binding to a successor, so it never runs unmetered, is the AS binding (slice 3b); the witness injects it."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Shares witnesses with metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's instance counter and the same standing_consent counter with consumption to date; keying the instance counter by the successor's own id (T8f) fails it. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment is metered on the dispatched instance's mission counter and the shared counter with consumption to date: refused quota_exceeded beyond the instance's remaining, then permitted to exhaust it, and no counter keyed by the successor exists. Deriving the successor unbound (U1) or keyed by its own id (U2) lets its payment run unmetered or on a fresh counter, and dropping the instance limit (Q3p) lets it through, each failing the witness. Partial on level only: the successor's binding reaches the PDP only through the composed stack; the endpoint witness injects it."
   },
   {
    "id": "template.instance-composition.successor-approval-renders-consumption",
@@ -51476,7 +51718,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Todo after slice 3a (a7063aab): the successor approval cannot render consumption to date or reservations until the shared counter exists (slice 3b)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Todo: the shared counter exists (slice 3b), but no successor approval renders its consumption to date or outstanding reservations yet."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
@@ -85701,9 +85943,21 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > a compensate phase of the metered action carrying an amount is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > a Mission whose source answers the underivable marker, throws, or answers a malformed binding is denied constraint_unsupported for every action that would otherwise permit, a read included, and reserves and claims nothing (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Partial: an unrecognized constraint other than a budget binding is not witnessed, and no witness reads denial_reason in the Decision Evidence of a constraint_unsupported denial. The unclaimed and shipped-statement witnesses show the duty also holds without the capability, so applicability may be unconditional."
+   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a binding the decision point's source answers underivable, throws on, or returns malformed is an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim, a read included; through the composed stack such an instance's payment is refused constraint_unsupported. F1, F2, F3 and Z2 fail the decision-point witness; F1, F3, F4, F5 and F5b fail the end-to-end one. Partial: an unrecognized constraint other than a budget binding is not witnessed, and no witness reads denial_reason in the Decision Evidence of a constraint_unsupported denial. The unclaimed and shipped-statement witnesses show the duty also holds without the capability, so applicability may be unconditional."
   },
   {
    "id": "evidence.refusal.work-item-invalid",
