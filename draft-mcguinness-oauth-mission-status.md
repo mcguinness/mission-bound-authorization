@@ -1026,8 +1026,11 @@ form-urlencoded body:
   transition the AS applies when `suspend_until` passes.
 
 `expected_version`:
-: OPTIONAL. A string, the decimal form of a state version
-  ({{mission-status-response}}): the version the caller last observed.
+: OPTIONAL. A string, the canonical decimal form of a positive state
+  version ({{mission-status-response}}): ASCII digits with no leading
+  zero, and no sign, whitespace, fraction or exponent. It is the
+  version the caller last observed, compared exactly, never rounded.
+  Any other form is malformed.
   The AS applies it as {{idempotency}} describes.
 
 `nonce`:
