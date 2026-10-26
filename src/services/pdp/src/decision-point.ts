@@ -23,7 +23,12 @@
 
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import type { AuthorityDependencyEnforcement, EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
-import { isMissionBudgetBinding, type MissionBudgetSource, UNDERIVABLE_BUDGET } from "./budget-metering.js";
+import {
+  BudgetMeteringConfigError,
+  isMissionBudgetBinding,
+  type MissionBudgetSource,
+  UNDERIVABLE_BUDGET,
+} from "./budget-metering.js";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "./decision-evidence.js";
 import type { DurationLeaseDomain } from "./duration-lease.js";
 import {
@@ -92,13 +97,19 @@ export function claimChannelFor(
   claims: IdempotencyClaimDomain | undefined,
   requester: ClaimRequester,
   redeemingExecution?: RedeemingExecutionFn,
+  /**
+   * @spec metering#settlement-states (#813): the requester's read-only
+   * consumption status, the positive `unconsumed` answer a release on a
+   * suppression before redemption requires. Absent, no release is accepted.
+   */
+  consumptionStatus?: ConsumptionStatusFn,
 ): ClaimChannel {
   if (!claims) return NO_CLAIM_CHANNEL;
   return {
     settle: (record) => claims.settle(requester, record, redeemingExecution),
     listUnresolved: async () => claims.listUnresolved(requester),
     reconcile: (evaluationId, resolution) => claims.reconcile(requester, evaluationId, resolution, redeemingExecution),
-    releaseUnredeemed: (record) => claims.releaseUnredeemed(requester, record, redeemingExecution),
+    releaseUnredeemed: (record) => claims.releaseUnredeemed(requester, record, consumptionStatus),
   };
 }
 
@@ -229,7 +240,11 @@ export interface DecisionPoint {
    */
   decideAs?: (requester: ClaimRequester, consumptionStatus?: ConsumptionStatusFn) => DecisionFn;
   /** @spec runtime#idempotency (#917): settlement and reconciliation for one authenticated requester. */
-  claimsFor?: (requester: ClaimRequester, redeemingExecution?: RedeemingExecutionFn) => ClaimChannel;
+  claimsFor?: (
+    requester: ClaimRequester,
+    redeemingExecution?: RedeemingExecutionFn,
+    consumptionStatus?: ConsumptionStatusFn,
+  ) => ClaimChannel;
   /**
    * @spec authzen#pdp-request consistency check 11 (#1276, D457): the decision
    * channel's seam for a target it refuses before evaluation (outside the
@@ -371,6 +386,15 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   if (!isResourcePolicy(config?.resourcePolicy)) {
     throw new ResourcePolicyConfigError("createDecisionPoint requires a Resource policy");
   }
+  // @spec metering#metering (#813, #816, decision d): a point that meters
+  // budgets takes every binding from its own source; without one, a caller's
+  // view that omits the binding would be evaluated unmetered.
+  const budgets = config.claims?.budgetMetering();
+  if (budgets !== undefined && config.budgetBindings === undefined) {
+    throw new BudgetMeteringConfigError(
+      "createDecisionPoint over a claim domain that meters budgets requires a budget binding source (budgetBindings)",
+    );
+  }
   const emitter = config.evidence
     ? createDecisionEvidenceEmitter({
         signer: config.evidence.signer,
@@ -386,7 +410,7 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
     // co-resident PDP meters budgets in its own claim domain, where that
     // domain's statement claims `budget_metering`. The ephemeral decision
     // point and the remote server never bind one.
-    budgets: config.claims?.budgetMetering(),
+    budgets,
     // @spec metering#metering (#816, #813, decision d): and takes each
     // Mission's budget binding from its own source, never from the caller.
     budgetBindings: config.budgetBindings,
@@ -402,7 +426,8 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
-    claimsFor: (requester, redeemingExecution) => claimChannelFor(config.claims, requester, redeemingExecution),
+    claimsFor: (requester, redeemingExecution, consumptionStatus) =>
+      claimChannelFor(config.claims, requester, redeemingExecution, consumptionStatus),
     recordTargetRefusal: (request) => recordPdpRefusal(config.refusals, "operation_target_invalid", request),
     ...(config.evidence
       ? {
@@ -500,7 +525,8 @@ export function createEphemeralDecisionPoint(options: {
   return {
     decide: bindDecide(bindings, unboundRequester()),
     decideAs: (requester, consumptionStatus) => bindDecide(bindings, requester, consumptionStatus),
-    claimsFor: (requester, redeemingExecution) => claimChannelFor(claims, requester, redeemingExecution),
+    claimsFor: (requester, redeemingExecution, consumptionStatus) =>
+      claimChannelFor(claims, requester, redeemingExecution, consumptionStatus),
     recordTargetRefusal: (request) => recordPdpRefusal(refusals, "operation_target_invalid", request),
     evidenceVerification: { kid, publicKey, emitterId, audience },
     emitter,

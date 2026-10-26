@@ -89,6 +89,7 @@ import {
   type PepDeps,
   type ReceiptIssuerScope,
   redemptionStatusFor,
+  releasedReservationNotice,
   type ResourceMetadataServer,
   startResourceMetadataServer,
   stderrAlertSink,
@@ -990,6 +991,8 @@ export async function composeStack(opts: {
     // move commits, a prior process's reservation included.
     onReservationHeld: (reservation) => operatorAlerts.alert(heldReservationAlert(reservation)),
     onBudgetOverspend: (overspend) => operatorAlerts.alert(budgetOverspendAlert(overspend)),
+    // #813: and a held reservation later released resolves its alert.
+    onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
   });
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
