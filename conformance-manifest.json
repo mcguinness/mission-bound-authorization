@@ -10395,11 +10395,11 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver or client who is not the recorded Subject",
+    "normative": "when the AS establishes that the principal identified by a Mission's recorded subject (iss, sub) is deprovisioned, every Mission of that Subject not yet terminated, a suspended one included, is terminated with reason revoked and further issuance is refused; temporary disablement, a source outage or an unavailable lookup terminates nothing, nor does the departure or disablement of an Approver, owner or client who is not the recorded Subject; already-issued tokens are not recalled by the termination itself",
     "local": "the reference's declared dependency (config/authority-dependencies.json, subject_deprovisioned mapped to revoke): the authorization server's reconciler (services/authorization-server/src/adapters/authority-reconciler.ts) evaluates each governed Mission's recorded subject against the identity source, matched by iss (the source's issuer) and sub, and commits revoke through the lifecycle operation for any Mission not yet terminated, a suspended one included; the Mission Status endpoint then reports it terminated with reason revoked and the issuance gates refuse it. A disabled Subject is suspended, not revoked; a source that cannot be read, or that holds no record of the principal, commits nothing; an Approver's or a client identifier's disablement or deprovisioning changes nothing unless that principal is the recorded Subject"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/authority-reconciler.test.ts",
@@ -10432,7 +10432,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#830 Q-e (D798); witnessed by #830 Q-d's reference reconciler (owner review of #1695). A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed). The witnessed observation omits two clauses of the earlier text: an owner's departure (the reference records no accountable owner apart from the Subject and the Approver) and already-issued tokens not being recalled by the termination itself (the reference's revocation is the lifecycle commit alone; no witness observes token storage). Mutation-proved: deprovisioning committing suspend instead of revoke, skipping a suspended Mission, evaluating the Approver in place of the recorded Subject, a source outage revoking, and matching the principal by sub alone, each failed its witness."
+   "notes": "#830 Q-e (D798); witnessed by #830 Q-d's reference reconciler (owner review of #1695). partial: two clauses of the observation have no witness. An owner's departure: the reference records no accountable owner apart from the Subject and the Approver. The non-recall of already-issued tokens: no witness observes token storage; the reference's revocation is the lifecycle commit alone. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed). Mutation-proved for the witnessed clauses: deprovisioning committing suspend instead of revoke, skipping a suspended Mission, evaluating the Approver in place of the recorded Subject, a source outage revoking, and matching the principal by sub alone, each failed its witness."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
