@@ -1622,8 +1622,10 @@ apparatus is type-agnostic toward every supported type:
 - narrowing and delegation use the subset and delegation semantics the
   type defines ({{subset}}, {{delegation-constraints}}), under the
   transformation capabilities the AS declares for the type (below); and
-- evaluating the entry against a concrete request is the runtime
-  layer's responsibility ({{runtime-boundary}}), not the AS's.
+- evaluating the entry against a concrete request is the
+  responsibility of the resource server, under the entry's type
+  ({{rs-requirements}}), or of a composing runtime layer
+  ({{runtime-boundary}}), not the AS's.
 
 ### Declared Transformation Capabilities {#transformation-capabilities}
 
@@ -5175,7 +5177,11 @@ or issuer-local resolution ({{introspected-consumption}}).
 
 In either form, it enforces each applicable entry its tokens carry
 under that entry's type, which for `mission_resource_access` is work
-a plain {{RFC9068}} resource server does not do.
+a plain {{RFC9068}} resource server does not do. Conformance in this
+role implies support for no particular type: an entry of a type the
+resource server does not implement provides no authority there
+({{rs-requirements}}), so interoperable enforcement needs a type that
+both the AS and the resource server implement.
 
 A **Mission Client** implements the client surfaces:
 
