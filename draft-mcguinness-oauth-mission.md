@@ -2940,6 +2940,30 @@ specification states when the mapping in step 3 is safe for that
 type's entries (for `mission_resource_access`,
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
+For example, a payments API at `https://pay.example.com` consumes only
+`scope`. Its trusted mapping states that `payments.small` stands for
+the `payments.create` action there, and that the API enforces a fixed
+500.00 USD ceiling on every operation `payments.small` permits.
+Consider this entry for the API:
+
+~~~ json
+{ "type": "mission_resource_access",
+  "resource": "https://pay.example.com",
+  "actions": ["payments.create"],
+  "constraints": {
+    "max_amount": { "amount": "500.00", "currency": "USD" } } }
+~~~
+
+The entry projects to `payments.small`, since the mapping shows that
+the target independently enforces its constraint. The same entry with
+a `max_amount` of 200.00 USD does not project, since `payments.small`
+does not convey the narrower value. With no other carried entry
+supplying a safe projection, step 5 then refuses issuance to the API,
+with `invalid_target`, or with `invalid_scope` where the request names
+`payments.small` ({{error-mapping}}). The Mission Resource Access
+Profile gives the same pair
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
 The runtime profile's enforcement-scope declarations
 ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
 mapping for the paths it covers; this rule does not depend on that
