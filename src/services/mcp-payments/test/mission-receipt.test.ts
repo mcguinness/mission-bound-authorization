@@ -125,7 +125,7 @@ const resolveEvidenceKey = buildEvidenceKeyResolver([
 ]);
 const KEY_SET = "https://deployment.example.com/receipt-jwks";
 const receiptScope = (): EnforcementScopeStatement => ({
-  mediated_scope: { resources: ["https://erp.example.com"], action_classes: ["consequential_read"], execution_paths: ["tools"], pep_locations: ["pep.example.com", "receipts.example.com"], excluded_paths: [], mission_establishment_mode: "token-claim" },
+  mediated_scope: { resources: ["https://erp.example.com"], action_classes: ["consequential_read"], execution_paths: ["tools"], pep_locations: ["pep.example.com", "receipts.example.com"], excluded_paths: [], mission_establishment_mode: ["credential_carried", "externally_established"] },
   authority_entry_types: [{ type: "mission_resource_access", evaluator: "fixture" }], pdps: ["pdp.example.com"],
   state_source: { source: "status", max_staleness_seconds: 30, pdp_unavailability_posture: "deny" },
   remote_decision_channels: [], record_integrity_mechanism: "signed-records", claims: ["evidence"],

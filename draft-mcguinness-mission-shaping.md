@@ -420,8 +420,9 @@ A shaper processes a request in the following order, which the
 remaining sections follow:
 
 1. Normalize and classify the task input.
-2. Separate facts the requester supplied, facts trusted context
-   supplied, and facts the shaper inferred.
+2. Separate facts the requester supplied, facts and constraints
+   trusted context supplied ({{context-constraints}}), and facts the
+   shaper inferred.
 3. Resolve candidate resources and actions against capability sources
    ({{capability-resolution}}).
 4. Apply deployment shaping policy, including any shaping ceiling and
@@ -667,6 +668,53 @@ emits a partial proposal only when both of the following hold:
 The Mission Issuer enforces its own ceiling whether or not a shaping
 ceiling is present.
 
+## Constraints from Trusted Context {#context-constraints}
+
+Trusted context can supply constraints the request does not state: a
+deployment policy, a preference the Subject recorded earlier, or a
+model's refusal to perform a step. Such a constraint narrows the
+proposal or is disclosed in it; it never widens it.
+
+The proposal satisfies every applicable mandatory constraint.
+Comparable bounds combine toward the narrower result. If the
+constraints cannot be satisfied together, the shaper requests
+clarification ({{clarifications}}), refuses ({{refusal}}), or produces
+an explicitly partial proposal under the existing rules
+({{ambiguity}}). A Subject's preference never widens deployment
+policy. An exception to deployment policy is the Mission Issuer's
+decision, and the Mission Issuer approves one only where the governing
+policy authorizes it; recording a broadening ambiguity resolution
+({{ambiguity}}) does not itself authorize an exception.
+
+The shaper carries each constraint through the mechanism that matches
+what the constraint requires:
+
+| Constraint | Carried as |
+|---|---|
+| A prohibition | Exclusion of the authority it forbids, recorded in `excluded_authority`, or a refusal ({{refusal}}) |
+| A machine-enforceable bound | A structured constraint in the Authority Proposal, restated in `task_bounds` ({{authority-ceiling}}) |
+| Confirmation before an action | The entry's `requires_action_approval` constraint ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), which requires an action-bound approval at the point of use ({{I-D.draft-mcguinness-mission-runtime}}, Section "Action-Bound Approval"); the deployment's approval policy establishes who may give it |
+| A preference | `task_bounds` prose, which nothing enforces |
+
+The `requires_action_approval` constraint requires an approval but
+does not name who gives it: an independent Approver or a policy
+authority can satisfy it. A confirmation the Subject must give
+therefore also needs an approval policy that requires the Subject's
+authenticated confirmation of the concrete action.
+
+A condition the Subject requires to hold is carried as a bound that
+enforces it, not as prose, and not as a confirmation: an approval at
+the point of use could permit an action the condition forbids. If no
+supported mechanism enforces a required condition, the shaper requests
+clarification, refuses, or produces an explicitly partial proposal
+under the existing rules. A model's refusal can remove a step from
+the proposal but never adds one ({{model-output}}). Shaping Evidence
+records each constraint and how the shaper carried it
+({{shaping-evidence}}). Whether a later change at the source affects
+an approved Mission is a declared authority dependency
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Authority
+Dependencies"), not something the evidence decides.
+
 ## Delegation and Child Missions {#delegation}
 
 The shaper does not author the `delegation` member of an Authority Set
@@ -858,6 +906,24 @@ to every outcome.
 `policy_decisions`:
 : Array of strings. Identifiers of the policy rules applied during
   shaping.
+
+`context_constraints`:
+: Array of objects, one per constraint trusted context supplied
+  ({{context-constraints}}), with the members `source` (string:
+  `deployment_policy`, `subject_preference`, `model_refusal`, or a
+  deployment-defined value), `description` (string, the constraint as
+  its source states it), `source_uri` (string, the source document
+  consulted, when there is one), `source_digest` (string, defined
+  below), `policy_rule` (string, the `policy_decisions` identifier
+  that applied the constraint, when one did), `applies_to` (object
+  naming the `resource` and `action` it bears on, as in
+  `entry_rationales`), `effect` (string: `prohibition`, `bound`,
+  `confirmation`, or `preference`), and `disposition` (string:
+  `excluded`, `constrained`, `action_approval`, `disclosed`,
+  `clarified`, or `refused`). It records how the shaper carried each
+  constraint. Consent Evidence's `constraint_provenance` attributes
+  the bounds the Mission Issuer approved
+  ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 `capability_resolutions`:
 : Array of objects, one per resource or action, with the members
@@ -1414,9 +1480,98 @@ invoices were unknown when the request was made. Had the request not
 named the tenant, the shaper would have asked the requester instead of
 guessing ({{clarifications}}).
 
+# Example: Constraints from Trusted Context {#example-context-constraints}
+
+A user asks an agent: "Book my flight to New York for Tuesday's
+customer meeting." The deployment's travel policy allows economy class
+only. The Subject's recorded preferences ask to confirm an itinerary
+before it is booked and to avoid overnight flights. In this example
+the travel service's operation contract defines a `cabin` constraint
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+The shaper proposes `flights.book` at `https://travel.example.com`
+with a `cabin` constraint of `economy` and the
+`requires_action_approval` constraint set to `true`. That constraint
+requires an approval before each booking; the deployment's trusted
+approval policy for `flights.book` requires the Subject's
+authenticated confirmation of the concrete itinerary, so the approval
+is the Subject's and no other approver can satisfy it. The shaper
+restates the cabin bound and the confirmation in `task_bounds`, with
+the overnight-flight preference ({{context-constraints}}). Shaping
+Evidence records the three constraints:
+
+~~~ json
+{
+  "context_constraints": [
+    {
+      "source": "deployment_policy",
+      "description": "economy class only",
+      "source_uri": "https://policy.example.com/travel/v4",
+      "source_digest":
+        "sha-256:ho9DC6mg1MieFrYZUP32XSHJpdawVeJXqcpcj366W-Y",
+      "policy_rule": "travel-v4-economy-only",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "bound",
+      "disposition": "constrained"
+    },
+    {
+      "source": "subject_preference",
+      "description": "confirm the itinerary before booking",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "confirmation",
+      "disposition": "action_approval"
+    },
+    {
+      "source": "subject_preference",
+      "description": "avoid overnight flights",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "preference",
+      "disposition": "disclosed"
+    }
+  ]
+}
+~~~
+
+Nothing enforces the overnight-flight preference; it guides which
+flight the agent selects. Had the Subject required it, the shaper would
+carry it as a bound only if the travel service's operation contract
+defines one that enforces it, such as a departure-time window;
+otherwise it would request clarification or refuse, and never leave
+the condition to an approval at the point of use. Had the request
+asked for business class, the
+travel policy would govern: the shaper excludes that authority and
+records it in `excluded_authority`. An exception is possible only
+where the travel policy authorizes the Mission Issuer to approve one.
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Constraints from Trusted Context ({{context-constraints}})
+  describes how the shaper carries a deployment policy, a preference
+  the Subject recorded, or a model's refusal into the proposal: the
+  proposal satisfies every applicable mandatory constraint, comparable
+  bounds combine toward the narrower result, constraints that cannot
+  be satisfied together lead to clarification, refusal, or a partial
+  proposal, and each kind of constraint maps to the mechanism that
+  carries it. Shaping Evidence gains a
+  `context_constraints` member among its recommended content, with an
+  example. No requirement keyword is added or changed.
 
 - Authority Proposal describes entries that correspond across
   resource servers: each pinned to the same reference in its own
