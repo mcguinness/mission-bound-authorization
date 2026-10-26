@@ -230,30 +230,48 @@ export function standingPaymentLines(
 
 /**
  * @spec mission-template#prohibited-classes, runtime#action-approval (#813):
- * whether each payment requires an action-bound approval, and from whom. It
- * is required where the deployment's action-approval predicate names the
- * designated operation, or where a Template Ceiling entry naming it carries
- * the `requires_action_approval` Common Constraint (every instance entry
- * then carries it too); the approver is the one the predicate declares.
+ * whether each payment requires an action-bound approval, and from whom,
+ * rendered as accurately as the runtime enforces it. A payment needs one
+ * where the deployment's action-approval predicate names the designated
+ * operation, or where the Template Ceiling entry that authorizes it carries
+ * the `requires_action_approval` Common Constraint; an entry without it
+ * authorizes a payment with no approval. So the requirement is universal
+ * only under the predicate, or where every ceiling entry that can authorize
+ * the payment carries the constraint. Where only some do, each entry is
+ * rendered with its resource, constraints and requirement; where none does,
+ * "none". The approver is the one the predicate declares.
  */
 export function actionApprovalLine(
   terms: StandingPaymentTerms,
   body: TemplateProposalBody,
   actionApproval?: ActionApprovalPolicy,
 ): string {
-  const byPredicate = actionApproval?.actions.includes(terms.operation) === true;
-  const byConstraint = body.ceiling.some(
-    (e) => e.actions.includes(terms.operation) && e.constraints?.requires_action_approval === true,
-  );
-  if (!byPredicate && !byConstraint) {
+  const from = actionApproval?.approver ?? "an Approver the deployment does not name";
+  if (actionApproval?.actions.includes(terms.operation) === true) {
+    return `Action-bound approval for each payment: required, from ${from}, bound to that payment's exact parameters (the deployment's action-approval predicate names ${terms.operation}).`;
+  }
+  const authorizing = body.ceiling
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.actions.includes(terms.operation));
+  const requiring = authorizing.filter(({ entry }) => entry.constraints?.requires_action_approval === true);
+  if (authorizing.length > 0 && requiring.length === authorizing.length) {
+    return `Action-bound approval for each payment: required, from ${from}, bound to that payment's exact parameters (every Template Ceiling entry that can authorize it sets requires_action_approval).`;
+  }
+  if (requiring.length === 0) {
     return "Action-bound approval for each payment: none. Each payment executes under this standing consent and a fresh runtime decision, with no per-payment human approval.";
   }
-  const why = [
-    ...(byPredicate ? [`the deployment's action-approval predicate names ${terms.operation}`] : []),
-    ...(byConstraint ? ["the Template Ceiling sets requires_action_approval"] : []),
-  ].join("; ");
-  const from = actionApproval?.approver ?? "an Approver the deployment does not name";
-  return `Action-bound approval for each payment: required, from ${from}, bound to that payment's exact parameters (${why}).`;
+  const parts = authorizing.map(({ entry, index }) => {
+    const cap = entry.constraints?.max_amount;
+    const scope = [
+      entry.resource,
+      ...(entry.constraints?.vendors ? [`vendors ${entry.constraints.vendors.join(", ")}`] : []),
+      ...(cap ? [`at most ${cap.amount} ${cap.currency} per payment`] : []),
+    ].join("; ");
+    return entry.constraints?.requires_action_approval === true
+      ? `ceiling[${index}] (${scope}) requires one, from ${from}, bound to that payment's exact parameters`
+      : `ceiling[${index}] (${scope}) requires none, so a payment it authorizes executes with no per-payment human approval`;
+  });
+  return `Action-bound approval for a payment depends on the Template Ceiling entry that authorizes it: ${parts.join("; and ")}.`;
 }
 
 /**
