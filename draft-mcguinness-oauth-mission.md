@@ -7572,6 +7572,15 @@ Cross-Domain:
   temporary disablement, an outage, or another principal's departure
   does not trigger the rule, and termination does not recall issued
   tokens (Revocation; #830).
+- Editorial, no requirement change: the AS answers a request at its
+  final decision to release the result, so a result prepared before an
+  acknowledged revocation and released after it is refused (Issuance
+  Gating); the Mission Record is a logical object with no required
+  storage form; the Authority types extension point lists what a
+  type's specification supplies; resource-server conformance implies
+  no particular type (Conformance Roles, Authorization Details Types);
+  each `mission_error` value is explained to the client (Issuance
+  Gating); and Scope Projection gains an example (#1722).
 
 -01
 
