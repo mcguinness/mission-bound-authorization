@@ -1040,7 +1040,11 @@ form-urlencoded body:
 `nonce`:
 : REQUIRED. A string of 1 to 255 Unicode code points. A
   client-generated nonce, the request's idempotency key
-  ({{idempotency}}).
+  ({{idempotency}}), not a fresh challenge per transmission as at the
+  Mission Status endpoint: a client MUST use a fresh `nonce` for each
+  new operation it requests on a Mission, unique among its `nonce`
+  values for that Mission within the deduplication window, and repeat
+  it only to retransmit that request.
 
 The request also carries the client authentication parameters of the
 mechanism it uses, as at the Mission Status endpoint
