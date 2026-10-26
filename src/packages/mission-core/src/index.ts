@@ -242,6 +242,17 @@ export {
   VOLATILE_SCOPE_MEMBERS,
 } from "./idempotency.js";
 export {
+  explicitFreshnessSeconds,
+  freshUntil,
+  IssuerKeyError,
+  type IssuerKeyRefusal,
+  type IssuerKeyRole,
+  IssuerKeys,
+  type IssuerKeysFetch,
+  type IssuerKeysOptions,
+  keyThumbprint,
+} from "./issuer-keys.js";
+export {
   type LocalApprovedSetRetrieval,
   LocalApprovedSetVerificationError,
   type LocalApprovedSetVerificationReason,
