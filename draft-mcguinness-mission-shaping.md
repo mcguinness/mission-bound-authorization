@@ -1464,6 +1464,76 @@ invoices were unknown when the request was made. Had the request not
 named the tenant, the shaper would have asked the requester instead of
 guessing ({{clarifications}}).
 
+# Example: Constraints from Trusted Context {#example-context-constraints}
+
+A user asks an agent: "Book my flight to New York for Tuesday's
+customer meeting." The deployment's travel policy allows economy class
+only. The Subject's recorded preferences ask to confirm an itinerary
+before it is booked and to avoid overnight flights. In this example
+the travel service's operation contract defines a `cabin` constraint
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+The shaper proposes `flights.book` at `https://travel.example.com`
+with a `cabin` constraint of `economy` and the
+`requires_action_approval` constraint set to `true`. It restates both
+in `task_bounds`, with the overnight-flight preference
+({{context-constraints}}). Shaping Evidence records the three
+constraints:
+
+~~~ json
+{
+  "context_constraints": [
+    {
+      "source": "deployment_policy",
+      "description": "economy class only",
+      "source_uri": "https://policy.example.com/travel/v4",
+      "source_digest":
+        "sha-256:ho9DC6mg1MieFrYZUP32XSHJpdawVeJXqcpcj366W-Y",
+      "policy_rule": "travel-v4-economy-only",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "bound",
+      "disposition": "constrained"
+    },
+    {
+      "source": "subject_preference",
+      "description": "confirm the itinerary before booking",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "confirmation",
+      "disposition": "action_approval"
+    },
+    {
+      "source": "subject_preference",
+      "description": "avoid overnight flights",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "preference",
+      "disposition": "disclosed"
+    }
+  ]
+}
+~~~
+
+Nothing enforces the overnight-flight preference; it guides which
+flight the agent selects. Had the Subject required it, the shaper would
+carry it as a bound. Had the request asked for business class, the
+travel policy would govern: the shaper excludes that authority, records
+it in `excluded_authority`, and leaves any exception to the Mission
+Issuer.
+
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
