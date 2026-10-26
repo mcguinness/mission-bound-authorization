@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-25T22:46:40Z
-Source repository commit: 5053240a9976d9fdf9bd8822ad85cde47423fd79
+Generated: 2026-10-26T03:41:14Z
+Source repository commit: d751793fbbe8a21641af66c20f66ef440f258ccb
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           25 October 2026
-Expires: 28 April 2027
+Intended status: Informational                           26 October 2026
+Expires: 29 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -723,8 +723,10 @@ Table of Contents
    rendered in that form.
 
    Attribution has the same limit at task-item grain: proving which
-   concurrent task item produced a permitted action needs a verified
-   cross-link that no family carrier supplies (Section 11.4).
+   concurrent task item produced a permitted action needs the verified
+   cross-link of the optional work-item-attributed composition
+   (Section 11.4); without it, a deployment attributes an action to its
+   Mission only.
 
 4.5.  Survivable Incorrectness
 
@@ -3361,21 +3363,31 @@ Table of Contents
 
    *  *mission-credential-bound*: credential-mission-bound plus
       presenter-key-bound, end to end; instance-bound strengthens the
-      claim where an instance identity exists and is verified; and
+      claim where an instance identity exists and is verified;
 
    *  *runtime-action-bound*: Mission binding establishment
       ([I-D.draft-mcguinness-mission-runtime], Section "Mission Binding
-      Establishment") plus action-bound.
+      Establishment") plus action-bound; and
 
-   The family defines no work-item-attribution composition.  Holding
-   work-item-bound and action-bound together does not prove the
-   permitted action came from that work item: concurrent items under one
-   Mission still substitute.  The composition becomes definable only
-   when a verified cross-link exists: the action permit, or its
-   authenticated request context, binds the same tamper-resistant work-
-   item identifier the harness recorded.  No family carrier supplies
-   that cross-link, so a deployment claims the two properties separately
-   and nothing more.
+   *  *work-item-attributed*: work-item-bound plus action-bound plus a
+      verified cross-link: the action permit, or its authenticated
+      request context, binds the same qualified work-item identifier the
+      harness recorded for that item and its Mission, and the executing
+      enforcement point refuses a permit whose work item differs from
+      the request it executes ([I-D.draft-mcguinness-mission-harness],
+      [I-D.draft-mcguinness-mission-authzen]).
+
+   Without the cross-link, holding work-item-bound and action-bound
+   together does not prove the permitted action came from that work
+   item: concurrent items under one Mission still substitute.  The
+   cross-link holds on a path only where the harness is the declared
+   attacher, the work item reaches the decision through the harness's
+   authenticated attachment and never from a value the agent supplies,
+   and the decision, its cache key, the permit, and the Decision and
+   Execution Evidence all carry it.  A path without the cross-link
+   claims Mission-level attribution only. work-item-attributed is
+   optional, and it proves neither that the action serves the work
+   item's purpose nor isolation between work items.
 
    The mechanism mapping is conservative:
 
@@ -5633,6 +5645,12 @@ Appendix H.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Mission Binding Properties: the work-item-attributed composition
+      is work-item-bound plus action-bound plus the verified cross-link
+      that binds the harness's qualified work-item identifier into the
+      decision, the permit, and the evidence; a path without it claims
+      Mission-level attribution only (#815).
+
    *  Deployment Profile Example Shapes: the first shape's illustrative
       revocation_exposure member states the inputs that size what can
       happen inside the revocation window, with units, as inputs rather
@@ -5984,8 +6002,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission Substrate Requirements
@@ -6043,7 +6061,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -7584,8 +7602,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7644,7 +7662,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -9701,6 +9719,11 @@ Table of Contents
    by itself, establish a separate business decision for each subsequent
    action.
 
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
+
 7.  Mission Lifecycle
 
    A Mission is in one of two states:
@@ -9812,6 +9835,24 @@ Table of Contents
    of possession of any token, by which a party its policy authorizes
    revokes a Mission by mission_id (so a Mission can be stopped even
    when no refresh token is held).
+
+   When the AS establishes that the principal identified by a Mission's
+   recorded subject (Section 14.3) has been deprovisioned, it SHOULD
+   terminate that Mission with termination reason revoked.  The rule
+   reaches every Mission not yet terminated, including one a companion
+   profile has suspended, and identifies the Subject by its recorded iss
+   and sub.  Temporary disablement, a source outage, or an unavailable
+   lookup does not by itself establish deprovisioning.  The departure or
+   disablement of an Approver, an accountable owner, or a client
+   triggers the rule only when that principal is the recorded Subject;
+   an organizational Mission records the organizational principal as its
+   Subject (Section 6.7), so an approving officer's departure does not
+   terminate it under this rule.  A deployment that does not follow this
+   rule documents why; that exception cannot bypass a continuing
+   dependency the deployment requires or rewrite the recorded Subject.
+   Termination stops further issuance (Section 8.2) but does not itself
+   recall tokens already issued; an earlier execution cutoff depends on
+   the deployment's enforcement mechanism.
 
    The wire shape of that operation is out of scope for this document.
    A deployment-defined authenticated surface satisfies this
@@ -15803,6 +15844,19 @@ Appendix G.  Document History
       revocation reason describes a revocation, not a completion
       (#1535).
 
+   *  Editorial, no requirement change: Single Accountable Approver
+      states that authenticating approval evidence does not establish
+      that conditions governing later reliance remain satisfied, and
+      that the effect of later changes to an Approver's role, a
+      delegation, or governing policy on an existing Mission is
+      deployment policy (#830).
+
+   *  When the AS establishes that a Mission's recorded Subject has been
+      deprovisioned, it SHOULD terminate the Mission with reason
+      revoked; temporary disablement, an outage, or another principal's
+      departure does not trigger the rule, and termination does not
+      recall issued tokens (Revocation; #830).
+
    -01
 
    *Breaking wire changes*
@@ -15952,8 +16006,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16005,7 +16059,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -18334,8 +18388,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18394,7 +18448,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -23536,8 +23590,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                         Mission Runtime Evidence
@@ -23587,7 +23641,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -24142,8 +24196,8 @@ Table of Contents
    A Decision Evidence Object is closed to uncoordinated extension; see
    Section 9 for the extension rule and the coordinated extension
    members a deployment following the AuthZEN profile commonly carries
-   (taint, mission_history, authority_bound, capability_source,
-   hop_reference, principal_mapping, join_view_id).
+   (taint, work_item, mission_history, authority_bound,
+   capability_source, hop_reference, principal_mapping, join_view_id).
 
 4.2.  Refusal Record
 
@@ -24242,20 +24296,22 @@ Table of Contents
       declaration requires a phase, phase_invalid; for a compensate-
       phase request with no compensates_evaluation_id, or a request
       whose compensates_evaluation_id is malformed,
-      compensation_link_invalid; and for one whose evaluation-context
+      compensation_link_invalid; for one whose evaluation-context
       binding inputs are missing, malformed, or incompatible with the
       declared binding, for an operation the runtime profile's
       Evaluation-Context Binding extension covers,
-      evaluation_context_invalid.  The last three describe decision
-      inputs the PDP cannot use, not an evaluated policy denial;
-      evaluation_context_unresolvable is instead the PEP's own failure
-      to capture the context, before any decision request.  These name
-      pre-evaluation conditions, PEP-side or PDP-side, and are disjoint
-      from the runtime profile's PDP denial reasons for an evaluated
-      decision (for example, as carried by the AuthZEN profile,
-      [I-D.draft-mcguinness-mission-authzen]); a record that can
-      populate the PDP-derived members of an evaluated decision is a
-      Decision Evidence Object instead.
+      evaluation_context_invalid; and for one carrying a work-item
+      context that is not well-formed (the harness profile,
+      [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
+      last four describe decision inputs the PDP cannot use, not an
+      evaluated policy denial; evaluation_context_unresolvable is
+      instead the PEP's own failure to capture the context, before any
+      decision request.  These name pre-evaluation conditions, PEP-side
+      or PDP-side, and are disjoint from the runtime profile's PDP
+      denial reasons for an evaluated decision (for example, as carried
+      by the AuthZEN profile, [I-D.draft-mcguinness-mission-authzen]); a
+      record that can populate the PDP-derived members of an evaluated
+      decision is a Decision Evidence Object instead.
 
       This member carries an enumerated value, never a deployment's own
       diagnostic string.  A deployment that surfaces a finer reason to
@@ -24760,13 +24816,15 @@ Table of Contents
       the contract the operation would be performed under),
       obligation_unfulfilled (a permit suppressed before release because
       an attached obligation could not be fulfilled; the failing entry
-      is named in obligation_outcomes), and kill_switch (execution
-      suppressed by an operator or safety control).  A deployment MAY
-      define additional values, which MUST be collision-resistant names
-      (a short name within a namespace the deployment controls,
-      following the Collision-Resistant Name guidance of [RFC7519]
-      Section 4.2) so they cannot collide with this set or another
-      deployment's.
+      is named in obligation_outcomes), work_item_mismatch (the permit's
+      work-item condition differs from the work item the executing PEP
+      attributes to the request, or one is present without the other),
+      and kill_switch (execution suppressed by an operator or safety
+      control).  A deployment MAY define additional values, which MUST
+      be collision-resistant names (a short name within a namespace the
+      deployment controls, following the Collision-Resistant Name
+      guidance of [RFC7519] Section 4.2) so they cannot collide with
+      this set or another deployment's.
 
       The three duplicate identifiers are distinct and MUST NOT be
       substituted for one another. permit_consumed is the same
@@ -25805,6 +25863,19 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-authority-server]), which defines
       what the commitment distinguishes.
 
+   work_item:  OPTIONAL.  An object with issuer and id, recorded at the
+      top level of Decision Evidence and Execution Evidence: the
+      qualified work-item identifier of the harness profile
+      ([I-D.draft-mcguinness-mission-harness]), which owns this member.
+      REQUIRED on Decision Evidence when the decision request carried a
+      well-formed work-item context, recorded as presented, and on
+      Execution Evidence when the request the disposition concerns
+      carried one, recorded as the executing PEP attributed it.  It
+      joins the Harness Evidence of the same work item, whose
+      work_item_issuer and work_item carry the same pair.  The AuthZEN
+      profile is one wire carrier
+      ([I-D.draft-mcguinness-mission-authzen]).
+
 10.  Conformance
 
    This document defines conformance for four roles: a PRODUCER that
@@ -26470,6 +26541,15 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Extension Members, Refusal Record and Execution Evidence:
+      work_item, owned by the harness profile, records the qualified
+      work-item identifier on Decision and Execution Evidence, joining
+      Harness Evidence; the Refusal Record work_item_invalid records a
+      PDP refusal, before evaluation, of a malformed work-item context;
+      and the Execution Evidence error work_item_mismatch records a
+      permit whose work-item condition differs from the request it would
+      execute (#815).
+
    *  Refusal Record: evaluation_context_unresolvable records a PEP that
       cannot capture the authoritative evaluation context of an
       operation Evaluation-Context Binding covers before requesting a
@@ -26595,8 +26675,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -26645,7 +26725,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -26683,14 +26763,15 @@ Table of Contents
        5.11.1.  Observation Modes
      5.12. External-Communication Context
      5.13. Taint Context
-     5.14. Approval Context
-     5.15. History Context
-     5.16. Canonical Projections
-     5.17. PDP Request Examples
-     5.18. PDP-Side Consistency Checks
-     5.19. Clock Skew
-     5.20. Batch Evaluations
-     5.21. Timeouts, Retries, and Overload
+     5.14. Work-Item Context
+     5.15. Approval Context
+     5.16. History Context
+     5.17. Canonical Projections
+     5.18. PDP Request Examples
+     5.19. PDP-Side Consistency Checks
+     5.20. Clock Skew
+     5.21. Batch Evaluations
+     5.22. Timeouts, Retries, and Overload
    6.  PDP Response
      6.1.  Response Decision Context
        6.1.1.  Decision Conditions
@@ -26793,10 +26874,10 @@ Table of Contents
       Approval Profile [ARAP] (Section 6.6);
 
    *  *History*: policy-selected predicates over prior Decision and
-      Execution Evidence (Section 5.15);
+      Execution Evidence (Section 5.16);
 
    *  *Batch*: evaluations over the AuthZEN evaluations endpoint
-      (Section 5.20).
+      (Section 5.21).
 
    Two companions extend the request without changing the base.  Mission
    Capability Binding
@@ -26959,7 +27040,7 @@ Table of Contents
       *  Roles: the PDP evaluates a policy-selected predicate against
          its evidence store; the PEP optionally supplies
          evidence_reference or attribute_values in
-         context.mission_history (Section 5.15).
+         context.mission_history (Section 5.16).
 
       *  Required members: the optional request object
          context.mission_history and the Decision Evidence
@@ -26979,7 +27060,7 @@ Table of Contents
       *  Prerequisites: the Decision Base.
 
       *  Roles: the PEP submits a boxcar; the PDP evaluates every item
-         under execute_all semantics (Section 5.20).
+         under execute_all semantics (Section 5.21).
 
       *  Required members: the AuthZEN evaluations array; this feature
          profile defines no member of its own.
@@ -27016,7 +27097,7 @@ Table of Contents
    encoded in the integrity-anchor encoded form of
    [I-D.draft-mcguinness-oauth-mission]: sha-256: followed by the
    base64url, no-padding encoding of the digest.  The canonical
-   projections of Section 5.16 are canonical-object digests under the
+   projections of Section 5.17 are canonical-object digests under the
    substrate's default commitment construction, which this document
    imports normatively ([I-D.draft-mcguinness-mission-substrate]).
 
@@ -27073,7 +27154,7 @@ Table of Contents
    between a decision request and the loaded view is an equality test on
    mission_id and issuer alone, with policy_view_id as the optional,
    stronger content check where the requesting PEP holds it
-   (Section 5.18).
+   (Section 5.19).
 
    This profile carries policy_view_id only in the request, at
    context.mission.policy_view_id (Section 5.4).  The PDP does not echo
@@ -27191,14 +27272,14 @@ Table of Contents
    caller asserts.  A PEP that cannot establish one unambiguous target
    MUST refuse the operation before requesting a decision (Section 6.8).
 
-   The PDP checks the target's syntax (Section 5.18) and passes the
+   The PDP checks the target's syntax (Section 5.19) and passes the
    received string to the matcher unchanged: an exact match compares
    that string, never a parsed and reserialized form, and a prefix match
    applies only the comparison normalization of
    [I-D.draft-mcguinness-oauth-mission-resource-access].
 
    The operation target is part of the operation identity, the
-   authorization binding and the cache key (Section 5.16).  A permit is
+   authorization binding and the cache key (Section 5.17).  A permit is
    therefore never reused for another target, even when the audience,
    the action, resource.type and resource.id are equal, and the PEP
    executes the operation only on the target the permit was evaluated
@@ -27223,9 +27304,9 @@ Table of Contents
    way.
 
    The reference is part of the authorization binding and the cache key
-   (Section 5.16), so a permit is never reused under another contract.
+   (Section 5.17), so a permit is never reused under another contract.
    Because it is a member of the resource object, it is also part of the
-   approved Resource an ARAP approval binds (Section 5.14).
+   approved Resource an ARAP approval binds (Section 5.15).
 
 5.4.  Mission Decision Context
 
@@ -27254,7 +27335,7 @@ Table of Contents
       ([I-D.draft-mcguinness-oauth-mission-approved-set-verification],
       Section "Local Approved-Set Verification") or introspection's
       disclosure privilege ([I-D.draft-mcguinness-oauth-mission]).  The
-      mandatory identity check (Section 5.18) does not depend on it; a
+      mandatory identity check (Section 5.19) does not depend on it; a
       PDP that receives it and independently verifies it MAY use it as a
       further audit correlator, never as a substitute for that check.
 
@@ -27268,7 +27349,7 @@ Table of Contents
    policy_view_id:  OPTIONAL.  A string.  The materialized view
       identifier (Section 4).  The PDP is authoritative for the current
       view, so a PEP need not supply it; a PEP that has the value
-      supplies it, and the PDP checks it as Section 5.18 specifies.
+      supplies it, and the PDP checks it as Section 5.19 specifies.
 
    subject:  OPTIONAL.  A closed object with exactly iss and sub: the
       Mission's origin principal, value-unchanged from the Mission
@@ -27278,7 +27359,7 @@ Table of Contents
       verified token or delegation chain, or from trusted local token
       metadata, never from an unverified request value.  The PDP relates
       it to the request subject only through the origin-principal
-      mapping check (Section 5.18), never by direct comparison.  The
+      mapping check (Section 5.19), never by direct comparison.  The
       AuthZEN subject (the authenticated local token subject), this
       member (the origin principal), and context.actor (the acting
       lineage) remain distinct roles even when two identifiers are
@@ -27401,7 +27482,7 @@ Table of Contents
    *  A condition on that entry that the PDP cannot establish from its
       own state does not permit, and an action-approval requirement on
       it applies as one on the matched Mission entry does
-      (Section 5.14).
+      (Section 5.15).
 
    *  An action that no entry of authority names by resource and action
       is denied out_of_authority.  An action that entries name, but
@@ -27473,7 +27554,7 @@ Table of Contents
    *  For a key in the irreversible-action, external-commitment, or
       privileged-administration classes, the PDP atomically claims the
       pair (idempotency scope, idempotency_key) together with the
-      request's operation identity (Section 5.16) before issuing a
+      request's operation identity (Section 5.17) before issuing a
       permit ([I-D.draft-mcguinness-mission-runtime]).
 
    *  For a reversible consequential write's key, the PDP makes no
@@ -27544,7 +27625,7 @@ Table of Contents
    evidence.  A PEP that cannot establish the link MUST refuse before
    requesting a decision (Section 6.8).
 
-   The PDP checks the member (Section 5.18) and records the validated
+   The PDP checks the member (Section 5.19) and records the validated
    value as Decision Evidence's compensates_evaluation_id, on a permit
    or a denial, omitting malformed input
    ([I-D.draft-mcguinness-mission-runtime-evidence]).  The member is not
@@ -27598,11 +27679,11 @@ Table of Contents
       deployment's declared state-source placement has the PEP supply
       state; absent where state establishment is placed with the PDP,
       whose obligation the PDP-side consistency checks state
-      (Section 5.18).  It consolidates the PEP's Mission-state
+      (Section 5.19).  It consolidates the PEP's Mission-state
       observation and its freshness into one snapshot, conveying the
       runtime profile's state and freshness inputs on the wire.  It is
       the carrier for a PEP-supplied observation, never a substitute for
-      a state source the PDP can itself consult (Section 5.18).
+      a state source the PDP can itself consult (Section 5.19).
       Members:
 
       state:  REQUIRED.  A string.  The current Mission lifecycle state
@@ -27617,7 +27698,7 @@ Table of Contents
          the status profile defines it
          ([I-D.draft-mcguinness-oauth-mission-status]), populated where
          the PEP holds it.  The PDP compares it with its own tracked
-         state version (Section 5.18).
+         state version (Section 5.19).
 
       mode:  REQUIRED.  A string.  One of fresh, cached, or event_driven
          (Section 5.11.1).
@@ -27632,7 +27713,7 @@ Table of Contents
          the RFC 3339 representation of its iat, a NumericDate
          ([I-D.draft-mcguinness-oauth-mission-status]). freshness_at can
          precede this value by no more than the published maximum clock
-         skew (Section 5.19).
+         skew (Section 5.20).
 
       mission_status_expires_at:  REQUIRED for cached and event_driven,
          OPTIONAL for fresh.  An RFC 3339 timestamp.  When reliance on
@@ -27697,7 +27778,40 @@ Table of Contents
       taint_context_missing (Section 6.5) when context.taint is absent
       from an in-scope decision.
 
-5.14.  Approval Context
+5.14.  Work-Item Context
+
+   work_item:  OPTIONAL, carried at context.work_item.  A registered
+      extension point owned by the harness profile
+      ([I-D.draft-mcguinness-mission-harness]), which defines the
+      qualified work-item identifier and its attacher.  An object with
+      exactly two members, both strings: issuer, the URI of the harness
+      that issued the identifier, and id, that harness's identifier for
+      the work item.
+
+   The PEP populates context.work_item only from the harness's
+   authenticated attachment: the work item a verified Mission reference
+   carries, for the attacher the Enforcement Scope Statement declares
+   for the authenticated client
+   ([I-D.draft-mcguinness-mission-harness]).  A reference that verifies
+   does not by itself establish that attachment, and the PEP never takes
+   a work item from tool arguments or another value the agent supplies.
+
+   The PDP MUST refuse, before evaluation, a request whose
+   context.work_item is present but not of that shape: an unusable
+   input, recorded as the Refusal Record work_item_invalid
+   (Section 6.8), never an evaluated denial.  Where the deployment's
+   Enforcement Scope Statement claims work-item attribution for the
+   action's class, the PDP MUST deny with work_item_context_missing
+   (Section 6.5) a decision from which context.work_item is absent.
+   Elsewhere its absence relaxes nothing, and the deployment claims
+   Mission-level attribution only.
+
+   The member is part of the authorization binding and the cache key
+   (Section 5.17), so no cached decision or resumed execution crosses
+   work items, and a permit for a decision that carried it binds it as
+   the work_item condition (Section 6.1.1).
+
+5.15.  Approval Context
 
    The OPTIONAL approval member is carried at context.approval on a
    fresh evaluation after an access request is approved.  The PEP
@@ -27759,7 +27873,7 @@ Table of Contents
    These are ARAP-owned values carried under its extensibility rule
    [ARAP], not values this profile defines.
 
-5.15.  History Context
+5.16.  History Context
 
    Which history predicates a decision requires is a policy decision:
    the materialized policy view, or the PDP's own policy, names the
@@ -27827,7 +27941,7 @@ Table of Contents
    PDP MUST record the evaluated predicates and their outcomes in
    Decision Evidence ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
-5.16.  Canonical Projections
+5.17.  Canonical Projections
 
    The idempotency claim (Section 5.7.1), permit retransmission and
    reuse, and this profile's permit-binding rules each turn on a
@@ -27848,13 +27962,14 @@ Table of Contents
       (Section 5.11), the operation target, the resource contract
       reference (Section 5.3), credential-derived facts, the Mission
       reference, the authority and view identity, the approval, and
-      every policy-relevant context input, including taint, the Mission
-      history reference, the capability source, and any extension member
-      a companion profile adds.  This is what a permit is bound to.  A
-      new companion context member is part of the authorization binding
-      by default; a companion narrows it only by amending this
-      enumeration.  It excludes only the request's volatile machinery:
-      the supported_obligations declaration and transport metadata.
+      every policy-relevant context input, including taint, work_item,
+      the Mission history reference, the capability source, and any
+      extension member a companion profile adds.  This is what a permit
+      is bound to.  A new companion context member is part of the
+      authorization binding by default; a companion narrows it only by
+      amending this enumeration.  It excludes only the request's
+      volatile machinery: the supported_obligations declaration and
+      transport metadata.
 
    Cache key:  The authorization binding plus the explicit state
       generation the decision consulted (the PDP's tracked
@@ -27877,7 +27992,7 @@ Table of Contents
    differ only in their target differ in all three, including cacheable
    reads that carry no parameter_digest.
 
-5.17.  PDP Request Examples
+5.18.  PDP Request Examples
 
    In this document's ERP examples, the operation contract identifies
    https://erp.example.com as the operation target
@@ -28028,7 +28143,7 @@ Table of Contents
      }
    }
 
-5.18.  PDP-Side Consistency Checks
+5.19.  PDP-Side Consistency Checks
 
    A PDP that also serves non-Mission AuthZEN traffic MUST NOT
    downgrade: for an action within a runtime enforcement scope it
@@ -28170,13 +28285,13 @@ Table of Contents
         compensation_link_invalid
         ([I-D.draft-mcguinness-mission-runtime-evidence]).
 
-5.19.  Clock Skew
+5.20.  Clock Skew
 
    The following time comparisons MAY allow a small leeway to absorb
    clock skew between the components: the permit's valid_until at the
    PEP (Section 6.1.1); the context.mission_state_observation freshness
    window and context.credential.expires_at at the PDP; and the approval
-   maximum age (Section 5.14).
+   maximum age (Section 5.15).
 
    Any leeway MUST NOT exceed the deployment's maximum clock skew, and
    the deployment MUST publish that maximum-skew assumption in its
@@ -28186,7 +28301,7 @@ Table of Contents
    expired credential is refused, and the leeway never extends a permit
    lease or freshness lease beyond its bound plus the published skew.
 
-5.20.  Batch Evaluations
+5.21.  Batch Evaluations
 
    The AuthZEN evaluations (boxcar) endpoint MAY be used to submit
    several Mission-bound decisions in one request.  Batching is a
@@ -28358,7 +28473,7 @@ Table of Contents
      ]
    }
 
-5.21.  Timeouts, Retries, and Overload
+5.22.  Timeouts, Retries, and Overload
 
    An evaluation exchange carries metered and single-use consequences.
    Its transport behavior is as follows:
@@ -28481,7 +28596,7 @@ Table of Contents
          context.credential.expires_at (Section 5.6), when present;
 
       *  the approval's approved_until, where the permit satisfies
-         approval_required (Section 5.14);
+         approval_required (Section 5.15);
 
       *  the state valid-through; and
 
@@ -28554,6 +28669,14 @@ Table of Contents
       A missing condition where a contract applies, an unresolvable
       reference, or an unequal one is Execution Evidence suppressed /
       resource_contract_unresolvable, not a PDP denial.
+
+   work_item:  CONDITIONAL.  An object; REQUIRED on a permit for a
+      decision whose request carried context.work_item (Section 5.14),
+      and equal to it.  At every use, the executing PEP MUST compare it
+      with the work item it attributes to the request it is executing,
+      and MUST NOT release an effect when they differ or when either is
+      present without the other.  Such a refusal is Execution Evidence
+      suppressed / work_item_mismatch, not a PDP denial.
 
    The PEP MUST honor every condition present, at every use of the
    permit.  A permit carrying a condition member the PEP does not
@@ -28729,7 +28852,7 @@ Table of Contents
    Malformed requests, authentication failures, or PDP processing errors
    that prevent evaluation MAY be returned as AuthZEN or transport-level
    errors; so is an in-scope request refused for missing Mission context
-   (Section 5.18).  A deployment MAY additionally carry [RFC9457]
+   (Section 5.19).  A deployment MAY additionally carry [RFC9457]
    problem details for structured error information when the PDP is
    consumed over HTTP outside the AuthZEN envelope.
 
@@ -28749,7 +28872,7 @@ Table of Contents
       ([I-D.draft-mcguinness-mission-runtime]) and no context.approval
       is presented.  This is the first-evaluation reason.  The runtime
       profile owns the approval artifact; the PEP carries a presented
-      approval in context.approval (Section 5.14).  This profile defines
+      approval in context.approval (Section 5.15).  This profile defines
       the value; [ARAP] uses the same spelling only in non-normative
       examples.  The value alone does not make a denial requestable
       (Section 6.6).
@@ -28758,18 +28881,23 @@ Table of Contents
       approval_unverifiable: ARAP's five registered re-evaluation
       reasons [ARAP], returned when a re-evaluation that presented
       context.approval fails a Mission or ARAP check, with the default
-      next_action values Section 5.14 lists.
+      next_action values Section 5.15 lists.
 
    *  taint_context_missing: the deployment declares PDP-enforced taint
       for the action's class, as the harness profile defines
       ([I-D.draft-mcguinness-mission-harness]), and the decision request
       carries no context.taint (Section 5.13).
 
+   *  work_item_context_missing: the deployment claims work-item
+      attribution for the action's class and the decision request
+      carries no context.work_item (Section 5.14).  A malformed one is
+      the pre-evaluation refusal work_item_invalid instead.
+
    *  stale_state: the Mission state the decision relies on is not
       current: the PEP-supplied freshness is outside the deployment's
       staleness bound (a freshness-bound violation), the PDP cannot
       establish the state it is required to establish, or the request's
-      state version differs from the PDP's (Section 5.18).  A Mission
+      state version differs from the PDP's (Section 5.19).  A Mission
       the PDP knows is not active is mission_inactive instead.  Where a
       fresh read or reconciliation is expected to resolve the condition,
       the PDP SHOULD mark the denial transient with next_action: retry
@@ -28802,13 +28930,13 @@ Table of Contents
       parameter_digest is absent for a parameter-bound action.
 
    *  duplicate_suppressed: the request's idempotency_key and operation
-      identity (Section 5.16) match a prior claim whose outcome is
+      identity (Section 5.17) match a prior claim whose outcome is
       unresolved (transient) or completed (terminal), so the PDP
       suppresses a duplicate execution of the same normalized action
       rather than issue a second permit (Section 5.7.1).
 
    *  idempotency_conflict: the request reused an idempotency_key with a
-      different operation identity (Section 5.16) than the prior claim
+      different operation identity (Section 5.17) than the prior claim
       it was made under (Section 5.7.1).  This condition is terminal in
       every claim state, carries next_action: none (Section 6.1), and is
       never marked requestable (Section 6.6).
@@ -28844,7 +28972,7 @@ Table of Contents
       capability's extracted definition.
 
    *  history_not_satisfied: a deployment- or Resource-policy-required
-      history predicate (Section 5.15) is not satisfied: the PDP
+      history predicate (Section 5.16) is not satisfied: the PDP
       established it false, could not establish it, could not consult
       its evidence store within the declared staleness bound, or does
       not recognize the presented predicate value.  The per-predicate
@@ -28981,7 +29109,7 @@ Table of Contents
       nothing conferred.  Partial evaluation is a non-goal: this profile
       returns decisions and instructions, never executable residual
       policy. parameter_attributes (Section 5.7),
-      context.mission_history (Section 5.15), materialized policy views
+      context.mission_history (Section 5.16), materialized policy views
       (Section 4), and embedded PDPs are inputs or deployment shapes,
       not residual evaluation.  Composition with a future AuthZEN
       partial-evaluation profile is reserved, and a PDP MUST NOT return
@@ -29146,6 +29274,12 @@ Table of Contents
    |binding, for a covered   |           |                                 |
    |operation, at the PDP    |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |context.work_item present|Refusal    |work_item_invalid                |
+   |but not an object with   |Record     |                                 |
+   |exactly the string       |           |                                 |
+   |members issuer and id, at|           |                                 |
+   |the PDP                  |           |                                 |
+   +-------------------------+-----------+---------------------------------+
    |Action outside the       |PDP denial |out_of_authority                 |
    |Authority Set (including |           |                                 |
    |an invoked identity      |           |                                 |
@@ -29211,6 +29345,11 @@ Table of Contents
    +-------------------------+-----------+---------------------------------+
    |External Mission-binding |PDP denial |mission_binding_failed           |
    |join verification fails  |           |                                 |
+   +-------------------------+-----------+---------------------------------+
+   |Work-item context absent |PDP denial |work_item_context_missing        |
+   |where work-item          |           |                                 |
+   |attribution is claimed   |           |                                 |
+   |for the action's class   |           |                                 |
    +-------------------------+-----------+---------------------------------+
    |Required act chain       |PDP denial |actor_invalid                    |
    |missing or malformed     |           |                                 |
@@ -29360,6 +29499,13 @@ Table of Contents
    |control suppressed       |Evidence   |                                 |
    |execution                |           |                                 |
    +-------------------------+-----------+---------------------------------+
+   |Permit's work-item       |Execution  |work_item_mismatch               |
+   |condition differs from   |Evidence   |                                 |
+   |the work item attributed |           |                                 |
+   |to the executing request,|           |                                 |
+   |or one is present without|           |                                 |
+   |the other                |           |                                 |
+   +-------------------------+-----------+---------------------------------+
 
                                   Table 2
 
@@ -29383,11 +29529,11 @@ Table of Contents
       its phase binding, phase_mismatch as Execution Evidence, never a
       Refusal Record.
 
-   *  Unusable inputs: phase_invalid, compensation_link_invalid, and
-      evaluation_context_invalid are PDP refusals before evaluation.
-      They describe decision inputs the PDP cannot use, not an evaluated
-      policy denial, and a PDP claiming only the Decision Base records
-      them in its own internal form (Section 2).
+   *  Unusable inputs: phase_invalid, compensation_link_invalid,
+      evaluation_context_invalid, and work_item_invalid are PDP refusals
+      before evaluation.  They describe decision inputs the PDP cannot
+      use, not an evaluated policy denial, and a PDP claiming only the
+      Decision Base records them in its own internal form (Section 2).
 
    *  Target: A target-determining argument that changed under a
       parameter-bound permit is a parameter deviation,
@@ -29406,7 +29552,7 @@ Table of Contents
    *  Duplicates: The duplicate_suppressed and idempotency_conflict rows
       key on the same (idempotency scope, idempotency_key) claim
       (Section 5.7.1), and whether the new request's operation identity
-      (Section 5.16) equals the claim's decides between them.  Both are
+      (Section 5.17) equals the claim's decides between them.  Both are
       PDP denials, refused before a permit exists.  Their post-permit
       counterparts, reached at use under a permit the PEP already holds,
       are operation_already_claimed and operation_identity_conflict,
@@ -29455,7 +29601,7 @@ Table of Contents
    executed twice or after its lease.
 
    A PEP permit cache MUST key on the request's cache key
-   (Section 5.16), which already excludes observation telemetry by
+   (Section 5.17), which already excludes observation telemetry by
    definition, so a per-request timestamp cannot prevent a cache hit.
    The materialized view identifier is not echoed on the response
    (Section 4), so a cache cannot key on it; the permit's own
@@ -29522,10 +29668,10 @@ Table of Contents
    every core Decision Evidence and Execution Evidence member.  Under
    that companion's coordinated-extension rule, this profile defines two
    Decision Evidence extension members: mission_history, the policy-
-   selected history predicates and their outcomes (Section 5.15), and
+   selected history predicates and their outcomes (Section 5.16), and
    authority_bound (below).  It also carries coordinated extension
-   members owned elsewhere, for example taint (owned by the harness
-   profile, [I-D.draft-mcguinness-mission-harness]) and
+   members owned elsewhere, for example taint and work_item (owned by
+   the harness profile, [I-D.draft-mcguinness-mission-harness]) and
    capability_source (owned by Mission Capability Binding,
    [I-D.draft-mcguinness-mission-capability-binding]).
 
@@ -29542,12 +29688,12 @@ Table of Contents
    in addition to the members other sections require the PDP to record:
 
    *  mission, subject, resource, action, audience, credential,
-      parameter_digest, obligations, and taint are populated from the
-      correspondingly named members of the PDP request and response
-      (Section 5, Section 6).
+      parameter_digest, obligations, taint, and work_item are populated
+      from the correspondingly named members of the PDP request and
+      response (Section 5, Section 6).
 
    *  mission_history records the predicates the PDP evaluated and their
-      outcomes (Section 5.15); the PDP computes it, never copying it
+      outcomes (Section 5.16); the PDP computes it, never copying it
       from context.mission_history.
 
    *  conditions is populated from the response context.conditions
@@ -29581,7 +29727,7 @@ Table of Contents
    order and whitespace do not change it, while an omitted member and a
    member set to null yield different digests.
 
-   For a batch (Section 5.20), the input is the batch request body as
+   For a batch (Section 5.21), the input is the batch request body as
    submitted, before its default members are merged into the items; each
    item's Decision Evidence carries that one digest.
 
@@ -29660,7 +29806,8 @@ Table of Contents
    profile ([I-D.draft-mcguinness-mission-harness]) are normative
    references.  The requirements that cite them bind only a deployment
    that adopts Capability Binding, or the harness capability the
-   requirement names (PDP-enforced taint, for the taint members).
+   requirement names (PDP-enforced taint, for the taint members, and
+   work-item attribution, for the work-item member).
 
    A PEP conforming to the Decision Base MUST:
 
@@ -29679,9 +29826,9 @@ Table of Contents
 
    *  honor every decision condition present (parameter_digest,
       valid_until, use_limit, action_phase, evaluation_context_digest,
-      resource_contract) at every use of the permit, applying its own
-      deployment classification floor to that duty independent of any
-      class the PDP applied internally (Section 6.1.1);
+      resource_contract, work_item) at every use of the permit, applying
+      its own deployment classification floor to that duty independent
+      of any class the PDP applied internally (Section 6.1.1);
 
    *  be the same enforcement identity as the requesting component, on
       the same mutually authenticated channel, and never relay a permit
@@ -29705,7 +29852,7 @@ Table of Contents
 
    *  refuse an in-scope consequential request that lacks the Mission
       decision context, and perform the PDP-side consistency checks
-      (Section 5.18);
+      (Section 5.19);
 
    *  match mission_resource_access entries against
       resource.properties.operation_target, never against audience, type
@@ -29724,7 +29871,7 @@ Table of Contents
    MUST emit the records of
    [I-D.draft-mcguinness-mission-runtime-evidence] for every decision,
    and a Refusal Record for an in-scope request it refuses before
-   evaluation (Section 5.18).  A PDP claiming only the Decision Base
+   evaluation (Section 5.19).  A PDP claiming only the Decision Base
    records a decision or refusal in its own internal form, sufficient to
    satisfy the runtime profile's baseline evidence duty
    ([I-D.draft-mcguinness-mission-runtime]) without this profile's
@@ -29782,7 +29929,7 @@ Table of Contents
    context (a PEP defect, or a path an attacker can influence) were
    evaluated against the non-Mission surface, a generic allow rule would
    stand in for the Mission evaluation this profile requires.  The
-   consistency requirement of Section 5.18 refuses such a request
+   consistency requirement of Section 5.19 refuses such a request
    outright; deployments SHOULD additionally alert on in-scope requests
    arriving without Mission context, since each one is a PEP defect or a
    probe.
@@ -29817,7 +29964,7 @@ Table of Contents
    The id and issuer check, and policy_view_id where the PEP supplies
    it, let the PDP detect that the view it loaded does not match the
    Mission the PEP referenced and deny with view_inconsistent
-   (Section 5.18).
+   (Section 5.19).
 
 9.5.  Transport
 
@@ -29858,7 +30005,8 @@ Table of Contents
    Members a companion adds are that companion's:
    context.capability_source
    ([I-D.draft-mcguinness-mission-capability-binding]), and
-   context.taint and action.properties.external_communication
+   context.taint, context.work_item, and
+   action.properties.external_communication
    ([I-D.draft-mcguinness-mission-harness]).  The Mission-bound token
    claims this profile consumes are registered by
    [I-D.draft-mcguinness-oauth-mission].  This document registers no
@@ -30141,6 +30289,16 @@ Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Work-Item Context: context.work_item is a harness-owned extension
+      point the PEP populates only from the harness's authenticated
+      attachment.  A malformed member is refused before evaluation as
+      work_item_invalid, and an absent one where work-item attribution
+      is claimed for the action's class is denied
+      work_item_context_missing.  The member is part of the
+      authorization binding and the cache key, a permit binds it as the
+      work_item condition, and a permit for another work item is
+      Execution Evidence suppressed / work_item_mismatch (#815).
+
    *  Failure-Condition Coverage maps a covered operation's evaluation
       context not capturable at the PEP to the Refusal Record
       evaluation_context_unresolvable, and limits the parameter_mismatch
@@ -30299,8 +30457,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -30352,7 +30510,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -30379,6 +30537,7 @@ Table of Contents
      5.1.  Destination-Set Matching
    6.  Mission Binding
      6.1.  Binding Inheritance
+     6.2.  Work-Item Identity
    7.  Resume Checks
      7.1.  Resume Algorithm
      7.2.  Interaction with the Orchestration Profile
@@ -30466,6 +30625,8 @@ Table of Contents
 
    *  the Mission binding a harness records on sessions and task graph
       nodes (Section 6);
+
+   *  qualified work-item identity and its attachment (Section 6.2);
 
    *  resume-time checks (Section 7);
 
@@ -30871,6 +31032,79 @@ Table of Contents
    record the distinct Mission binding and the relationship to the
    parent item.
 
+6.2.  Work-Item Identity
+
+   A qualified work-item identifier names one unit of governed work.  It
+   is the pair of work_item_issuer, a URI the deployment assigns to the
+   harness that issued the identifier, and work_item, that harness's own
+   string identifier for the item, unique within its issuer.  Harness
+   Evidence's work_item (Section 15.1) is the second member of the pair,
+   and work_item_issuer qualifies it.
+
+   The harness is the attacher.  When it creates a governed work item,
+   it assigns the identifier and binds the item to exactly one Mission,
+   the item's Mission binding (Section 6).  A queue or scheduler that
+   dispatches work is a deployment variant of this attacher, never a
+   second one: it authenticates to the harness, which assigns, records,
+   and attaches the identifier under this section.  A value the governed
+   agent can supply, such as a tool argument or model output, never
+   establishes, selects, or changes a work item, and the harness MUST
+   NOT merge one into what it attaches.
+
+   The harness MUST keep these properties of the identifier:
+
+   *  Mapping: a work item's Mission does not change, except by explicit
+      successor rebinding (Section 13.2).
+
+   *  Inheritance: a child node, job, or sub-agent handle created from
+      the item under the same Mission inherits its identifier
+      (Section 6.1); a child governed by a different Mission receives
+      its own identifier, bound to that Mission, never the parent's.
+
+   *  Retry: a retry or resumed dispatch keeps the identifier and is
+      still a new continuation point (Section 9).
+
+   *  Concurrency: concurrent work items, under one Mission or several,
+      have distinct identifiers, and the harness attaches each only to
+      the requests it originates for that item, under that item's
+      Mission.
+
+   Where the deployment's Enforcement Scope Statement
+   ([I-D.draft-mcguinness-mission-runtime]) names the harness as a work-
+   item attacher, the harness attaches the identifier to each governed
+   request it originates for the item, in the Mission reference it
+   propagates (Section 6). work_item_issuer and work_item are extension
+   members of the Mission reference tuple, defined here under that
+   tuple's extension rule
+   ([I-D.draft-mcguinness-mission-authority-server]).  Both are Strings,
+   carried together or not at all, in the HTTP and MCP carriages alike.
+
+   A PEP implementing this profile MUST take a work item only from these
+   members, once the reference itself verifies, and only where the
+   statement names the harness that work_item_issuer identifies as the
+   attacher for the client the PEP authenticated on that request.  A
+   reference that verifies shows only that it names the request's
+   Mission, not which component attached the work item, so verification
+   alone never establishes the attachment.  It MUST NOT read a work item
+   from tool arguments or any other value the agent supplies, and MUST
+   NOT carry one it cannot attribute to that attacher.  It carries the
+   work item to the decision as context.work_item
+   ([I-D.draft-mcguinness-mission-authzen]), an object whose issuer is
+   work_item_issuer and whose id is work_item.
+
+   Where the statement claims work-item attribution for an action class,
+   the work-item-attributed composition of
+   [I-D.draft-mcguinness-mission-architecture], the decision for each
+   action in that class requires the work item, the permit binds it, and
+   the executing PEP refuses a permit for another work item
+   ([I-D.draft-mcguinness-mission-authzen]).  Decision and Execution
+   Evidence carry it ([I-D.draft-mcguinness-mission-runtime-evidence]),
+   joining the item's Harness Evidence.  Elsewhere the deployment claims
+   Mission-level attribution only, and an attached work item is carried
+   but never required.  Attribution says which work item an action was
+   requested for.  It proves neither that the action serves the item's
+   purpose nor isolation between items in one process.
+
 7.  Resume Checks
 
    Before resuming governed work, a Mission-aware harness MUST establish
@@ -31094,6 +31328,13 @@ Table of Contents
 
    retry_of:  OPTIONAL.  Identifier of the prior attempt.
 
+   work_item, work_item_issuer:  REQUIRED where the Enforcement Scope
+      Statement claims work-item attribution for the item's class,
+      OPTIONAL otherwise.  The qualified work-item identifier of the
+      work the item performs (Section 6.2).  It is the same across
+      retries: queue_item_id names the attempt and retry_of the attempt
+      before it, while work_item names the work every attempt performs.
+
    idempotency_key:  REQUIRED when retrying an action whose runtime
       profile requires one.
 
@@ -31128,6 +31369,8 @@ Table of Contents
      "not_before": "2026-11-02T02:00:00Z",
      "expires_at": "2026-11-02T06:00:00Z",
      "retry_of": "queue_journal_post_6",
+     "work_item": "work_jrnl_2026q3_0042",
+     "work_item_issuer": "https://harness.example.com",
      "idempotency_key": "idem_jrnl_2026q3_0042"
    }
 
@@ -31403,7 +31646,9 @@ Table of Contents
    authority, not a credential or a permit carried over from the
    predecessor.  The harness records the rebinding as Harness Evidence
    with event_type mission_superseded (Section 15), naming both the
-   predecessor and the successor, so the continuity is auditable.  A
+   predecessor and the successor, so the continuity is auditable.  That
+   record carries the item's qualified work-item identifier, and the
+   rebinding is the only change to the item's Mission (Section 6.2).  A
    harness that cannot establish the successor state, whose superseded
    termination names no successor, or for which the item's actions are
    not within the successor, suppresses per the matrix above.
@@ -31656,7 +31901,8 @@ Table of Contents
 
    *  session_id;
 
-   *  task graph node or queue item identifier;
+   *  task graph node or queue item identifier, qualified by the harness
+      that issued it (Section 6.2);
 
    *  prior and resulting harness state;
 
@@ -31731,7 +31977,13 @@ Table of Contents
    session_id:  OPTIONAL.  Harness session identifier.
 
    work_item:  OPTIONAL.  Task graph node, queue item, background job,
-      or child handle identifier.
+      or child handle identifier: for a work item with a qualified work-
+      item identifier, its work_item (Section 6.2).
+
+   work_item_issuer:  OPTIONAL.  A string.  The work_item_issuer of the
+      record's work item (Section 6.2).  REQUIRED with work_item where
+      the Enforcement Scope Statement claims work-item attribution for
+      that work.
 
    actor:  OPTIONAL.  The actor or sub-agent identifier the record
       concerns, when applicable (for example, the child whose work was
@@ -31932,6 +32184,9 @@ Table of Contents
 
    *  prevent sub-agent authority by session ancestry;
 
+   *  where named as a work-item attacher, keep and attach qualified
+      work-item identifiers (Section 6.2);
+
    *  emit Harness Evidence for stop and resume decisions; and
 
    *  apply the stop behavior for stale state under the per-action-class
@@ -32073,7 +32328,10 @@ Table of Contents
    workspace identifiers, tool usage, agent topology, and Mission
    relationships.  Deployments SHOULD minimize retained harness state,
    control access to evidence, and avoid storing raw workspace content
-   in Harness Evidence unless required for audit.
+   in Harness Evidence unless required for audit.  A qualified work-item
+   identifier is a stable correlator across an item's requests and
+   records, and the Mission reference's forwarding rules apply to it
+   ([I-D.draft-mcguinness-mission-authority-server]).
 
 20.  IANA Considerations
 
@@ -32133,6 +32391,12 @@ Table of Contents
               <https://www.rfc-editor.org/rfc/rfc8785>.
 
 21.2.  Informative References
+
+   [I-D.draft-mcguinness-mission-architecture]
+              McGuinness, K., "An Architecture for Mission-Bound
+              Authorization", 2026, <https://mcguinness.github.io/
+              mission-bound-authorization/draft-mcguinness-mission-
+              architecture.html>.
 
    [I-D.draft-mcguinness-mission-audit]
               McGuinness, K., "Mission Audit Transparency", 2026,
@@ -32265,6 +32529,14 @@ Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Work-Item Identity: the harness assigns a qualified work-item
+      identifier (work_item_issuer and work_item), binds it to one
+      Mission, and attaches it as extension members of the propagated
+      Mission reference, with mapping, inheritance, retry, and
+      concurrency rules.  A PEP carries it to the decision only from
+      that attachment.  The Queue Item Object and Harness Evidence carry
+      it, and a mission_superseded record names it (#815).
+
    *  The taint baseline, taint reset and egress direction no longer key
       on the Subject.  Content from the Approver or from the delegating
       person of a user-delegated Mission does not taint, and a workload
@@ -32324,8 +32596,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -32380,7 +32652,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
