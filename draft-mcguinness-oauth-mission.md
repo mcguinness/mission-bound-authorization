@@ -1720,11 +1720,11 @@ preference:
    ({{discovery}}).
 
 Deployment documentation is always a sufficient carrier; a
-machine-readable carrier is additive. A
-`mission_transformation_capabilities` value is a JSON object with
-three OPTIONAL boolean members, `narrowing`, `delegation`, and
-`projection`; an absent member leaves that capability undeclared by
-this carrier, falling through to the next carrier in the order
+machine-readable carrier is optional, and the first declaring carrier
+governs. A `mission_transformation_capabilities` value is a JSON
+object with three OPTIONAL boolean members, `narrowing`, `delegation`,
+and `projection`; an absent member leaves that capability undeclared
+by this carrier, falling through to the next carrier in the order
 above. For each capability, the first carrier in that order that
 declares the member governs, whether it declares `true` or `false`; a
 later carrier does not override it. A declared capability permits a
