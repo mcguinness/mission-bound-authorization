@@ -705,17 +705,19 @@ Table of Contents
       target is absent, malformed, or outside the enforcement scope the
       requesting PEP is authorized for
       ([I-D.draft-mcguinness-mission-authzen]),
-      operation_target_invalid; for one whose action phase is outside
-      the defined set, or is absent where the PDP's trusted operation
-      declaration requires a phase, phase_invalid; for a compensate-
-      phase request with no compensates_evaluation_id, or a request
-      whose compensates_evaluation_id is malformed,
-      compensation_link_invalid; for one whose evaluation-context
-      binding inputs are missing, malformed, or incompatible with the
-      declared binding, for an operation the runtime profile's
-      Evaluation-Context Binding extension covers,
-      evaluation_context_invalid; and for one carrying a work-item
-      context that is not well-formed (the harness profile,
+      operation_target_invalid; for a mediated request with no action
+      class established, where the runtime Enforcement Scope Statement
+      declares action classes, action_class_missing, recorded with no
+      class; for one whose action phase is outside the defined set, or
+      is absent where the PDP's trusted operation declaration requires a
+      phase, phase_invalid; for a compensate-phase request with no
+      compensates_evaluation_id, or a request whose
+      compensates_evaluation_id is malformed, compensation_link_invalid;
+      for one whose evaluation-context binding inputs are missing,
+      malformed, or incompatible with the declared binding, for an
+      operation the runtime profile's Evaluation-Context Binding
+      extension covers, evaluation_context_invalid; and for one carrying
+      a work-item context that is not well-formed (the harness profile,
       [I-D.draft-mcguinness-mission-harness]), work_item_invalid.  The
       last four describe decision inputs the PDP cannot use, not an
       evaluated policy denial; evaluation_context_unresolvable is
@@ -2954,6 +2956,11 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Refusal Record: action_class_missing records a PDP refusal of a
+      mediated request with no action class established, where the
+      runtime Enforcement Scope Statement declares classes, with no
+      class recorded (#956, D814).
 
    *  Extension Members, Refusal Record and Execution Evidence:
       work_item, owned by the harness profile, records the qualified
