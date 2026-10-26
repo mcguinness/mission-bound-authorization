@@ -80,6 +80,7 @@ const EXECUTE = "payments:payment.execute";
 const SCHEDULE = "payments:payment.schedule";
 const REVERSE = "payments:payment.reverse";
 const READ = "payments:invoice.read";
+const REMIT = "payments:remittance.send";
 const T0 = Date.parse("2026-10-25T12:00:00Z");
 /** irreversible_action: the 30 s staleness bound caps the permit; the published lease is 30 s more. */
 const PAST_LEASE_MS = 61_000;
@@ -222,7 +223,7 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ] }],
+    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] }],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
     ...(budget ? { budget } : {}),
@@ -231,7 +232,8 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
 
 interface RequestOptions {
   action?: string;
-  actionClass?: string;
+  /** The deployment class; `null` sends an unclassified request. */
+  actionClass?: string | null;
   missionId?: string;
   key?: string;
   amount?: string;
@@ -249,7 +251,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
     context: {
       mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
       actor: { client_id: "ap-agent" },
-      action_class: o.actionClass ?? "irreversible_action",
+      ...(o.actionClass === null ? {} : { action_class: o.actionClass ?? "irreversible_action" }),
       parameter_digest: o.digest ?? `sha-256:pay-${amount}`,
       amount: { amount, currency: o.currency ?? "USD" },
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
@@ -803,18 +805,21 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(countsOf(file)).toEqual({ claims: 3, reservations: 2, counters: 2 });
     });
 
-    it("an amount-bearing consequential_write or irreversible_action other than the metered action under a budget-bound Mission is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
+    it("an amount-bearing action other than the metered action under a budget-bound Mission, whether consequential_write, irreversible_action, external_commitment or unclassified, is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
       const claims = open();
-      const others: Array<[string, string]> = [
+      const others: Array<[string, string | null]> = [
         [SCHEDULE, "consequential_write"],
         [REVERSE, "irreversible_action"],
+        [REMIT, "external_commitment"],
+        [SCHEDULE, null],
       ];
       for (const [action, actionClass] of others) {
+        const label = `${action} (${actionClass ?? "unclassified"})`;
         const d = await evaluate(request(c, { action, actionClass, phase: null }), options(claims, c, view("msn_a", binding("msn_a"))));
-        expect(d.decision, action).toBe(false);
-        expect(d.context.denial_reason, action).toBe("constraint_unsupported");
+        expect(d.decision, label).toBe(false);
+        expect(d.context.denial_reason, label).toBe("constraint_unsupported");
       }
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });

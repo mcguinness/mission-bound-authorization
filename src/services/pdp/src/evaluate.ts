@@ -137,12 +137,15 @@ export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, Prin
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
 
 /**
- * @spec metering#metering (#816, decision h): the state-changing classes in
- * which an action carrying an amount spends under a budget-bound Mission. An
- * amount-bearing action in one of them that the statement does not meter is
- * refused `constraint_unsupported`; a read spends nothing.
+ * @spec metering#metering (#816, decision h): the only classes in which an
+ * amount-bearing action spends nothing under a budget-bound Mission: reads
+ * and the non-consequential postures. Fail closed: an amount-bearing action
+ * the statement does not meter, in any other class (`external_commitment`,
+ * `privileged_administration`, `consequential_write`, `irreversible_action`,
+ * a class this PDP does not recognize) or with no class at all, is refused
+ * `constraint_unsupported`.
  */
-const BUDGET_SPENDING_CLASSES = new Set(["consequential_write", "irreversible_action"]);
+const BUDGET_EXEMPT_CLASSES = new Set(["consequential_read", "non_consequential", "audit_only"]);
 
 /**
  * @spec runtime#state-freshness: the default allowed future skew for
@@ -2685,11 +2688,11 @@ async function evaluateInner(
   // is charged the request's amount, the same `context.amount` the
   // `max_amount` step reads, against both counters inside the claim (step
   // 9). The declared action's other phases (preflight, prepare) are covered
-  // by that charge and charge nothing; any other state-changing action
-  // ({@link BUDGET_SPENDING_CLASSES}) carrying an amount is a spend this PDP
-  // does not meter, refused `constraint_unsupported` rather than passed
-  // through unmetered (decision h). A read spends nothing and is neither
-  // charged nor refused on budget grounds. A view without a binding is
+  // by that charge and charge nothing; any other action carrying an amount,
+  // unless its class is exempt ({@link BUDGET_EXEMPT_CLASSES}: reads and the
+  // non-consequential postures), is a spend this PDP does not meter, refused
+  // `constraint_unsupported` rather than passed through unmetered (decision
+  // h). An unclassified action is not exempt. A view without a binding is
   // unmetered and reaches none of this.
   let budgetCharge: BudgetChargeRequest | undefined;
   if (view.budget !== undefined) {
@@ -2716,7 +2719,7 @@ async function evaluateInner(
     } else if (
       !budgets.declaresAction(req.action.name) &&
       req.context.amount !== undefined &&
-      BUDGET_SPENDING_CLASSES.has(actionClass ?? "")
+      (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass))
     ) {
       return deny("constraint_unsupported");
     }
