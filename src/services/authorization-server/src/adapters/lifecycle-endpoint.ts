@@ -57,7 +57,10 @@ const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-b
  */
 export const CLIENT_AUTHENTICATION_TYP = "client-authentication+jwt";
 
-/** @spec status#mission-lifecycle-endpoint ("Operations"): `reason`'s bound. */
+/**
+ * @spec status#mission-lifecycle-endpoint ("Operations") (#1724 C11, D847):
+ * `reason`'s bound, in Unicode code points, as the `nonce`'s is.
+ */
 export const REASON_MAX_CHARS = 1024;
 
 /** The request body this endpoint will read at all (bytes). */
@@ -335,19 +338,26 @@ export function parseTransitionMembers(
   }
   const reason = body.reason;
   if (reason !== undefined && operation !== "discharge") {
-    if (typeof reason !== "string" || reason.length > REASON_MAX_CHARS) {
-      return { ok: false, description: `reason must be a string of at most ${REASON_MAX_CHARS} characters` };
+    // Code points, not UTF-16 units: past 2 x 1024 units the bound is
+    // exceeded without counting.
+    if (typeof reason !== "string" || reason.length > 2 * REASON_MAX_CHARS || [...reason].length > REASON_MAX_CHARS) {
+      return { ok: false, description: `reason must be a string of at most ${REASON_MAX_CHARS} Unicode code points` };
     }
     value.reason = reason;
   }
   const expected = body.expected_version;
   if (expected !== undefined) {
-    // The decimal form of a positive integer state version.
-    const parsed = typeof expected === "string" && /^[1-9][0-9]*$/.test(expected) ? Number(expected) : Number.NaN;
-    if (!Number.isSafeInteger(parsed)) {
-      return { ok: false, description: "expected_version must be the decimal form of a state version" };
+    // @spec status#mission-lifecycle-endpoint (#1724 C6, D847): the canonical
+    // decimal form of a positive state version (ASCII digits, no leading
+    // zero, sign, whitespace, fraction or exponent); anything else is
+    // malformed. A canonical numeral is compared exactly, never rounded: one
+    // beyond any representable state version can equal none, so it is
+    // carried as a value no version takes and answers stale_version.
+    if (typeof expected !== "string" || !/^[1-9][0-9]*$/.test(expected)) {
+      return { ok: false, description: "expected_version must be the canonical decimal form of a positive state version" };
     }
-    value.expectedVersion = parsed;
+    const parsed = Number(expected);
+    value.expectedVersion = Number.isSafeInteger(parsed) ? parsed : Number.POSITIVE_INFINITY;
   }
   const schedule = parseSuspendSchedule(operation, body);
   if (!schedule.ok) return schedule;
