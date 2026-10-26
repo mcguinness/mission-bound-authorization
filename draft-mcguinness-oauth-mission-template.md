@@ -84,6 +84,14 @@ normative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-metering:
+    title: "Mission Consumption Metering"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 informative:
   I-D.draft-mcguinness-oauth-mission-progressive:
@@ -121,14 +129,6 @@ informative:
   I-D.draft-mcguinness-mission-architecture:
     title: "An Architecture for Mission-Bound Authorization"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
-  I-D.draft-mcguinness-mission-metering:
-    title: "Mission Consumption Metering"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html
     author:
       -
         ins: K. McGuinness
@@ -1415,9 +1415,10 @@ class is within the Template Ceiling:
 
 Progressive holds back the same set from its own policy adjudication
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}); this document
-applies it to dispatch. To make the rule testable, a deployment MUST
-publish in the Mission Deployment Profile a mapping from its action
-identifiers to the runtime profile's action classes
+applies it to dispatch, with the one exception of
+{{standing-payment-exception}}. To make the rule testable, a
+deployment MUST publish in the Mission Deployment Profile a mapping
+from its action identifiers to the runtime profile's action classes
 ({{I-D.draft-mcguinness-mission-runtime}}), or an equivalent declared
 classification.
 
@@ -1471,67 +1472,73 @@ that {{standing-payment-exception}} does not admit.
 ## Standing Payment Exception {#standing-payment-exception}
 
 A Mission Issuer MAY admit one exception to the prohibited-class rule:
-the dispatch of one designated payment-execution operation, for
-recurring payment of approved invoices, whose only prohibited class is
-the irreversible class. Nothing else is admitted. External-commitment,
-privileged-administration and cross-domain authority, and authority
-satisfying the external-communication predicate, stay prohibited, and
-the exception never waives another prohibited predicate the operation
-satisfies under the published mapping. The designated operation stays
-in the configured dispatch-prohibited set: the exception admits it
-only where every condition below holds, and otherwise the Dispatch is
-refused with `dispatch_prohibited_class` ({{denial-reasons}}).
+dispatch of one designated payment-execution operation, for recurring
+payment of approved invoices. The exception never admits
+external-commitment, privileged-administration, or cross-domain
+authority, or authority satisfying the external-communication
+predicate, and never waives another prohibited predicate the operation
+satisfies. The operation stays in the configured dispatch-prohibited
+set: the Mission Issuer admits it only where every condition below
+holds, and otherwise refuses the Dispatch with
+`dispatch_prohibited_class` ({{denial-reasons}}).
 
-- **One operation.** The published mapping designates the operation
-  and states every prohibited predicate it satisfies; the irreversible
-  class is the only one.
-- **A bounded ceiling.** The ceiling entry granting it names one
-  resource, the approved vendors, and a per-payment `max_amount` in
-  one currency. It grants no delegation authority.
-- **Committed destinations.** The Dispatch Policy commits, for each
-  approved vendor, the payee account approved for it.
-- **An exact budget.** The Dispatch Policy commits a budget: an
-  identifier qualified within the budget owner's accounting domain,
-  its currency, its limit, and a per-instance maximum. Each instance's
-  Mission Intent carries a `max_budget` no larger than the per-instance
-  maximum. Both are enforced under the metering profile's Exact
-  profile, the instance's bound on its own counter and the budget on
-  one counter shared by every instance dispatched under it and their
-  successors ({{I-D.draft-mcguinness-mission-metering}}); neither
-  substitutes for the other.
-- **Governed approval.** The template approval's retained policy
-  snapshot commits the class-named exceptions for the irreversible
-  class and the consumption-bound class, each with its recency
-  ceiling, under Approval Governance
+- **One operation.** The Dispatch Policy names the designated
+  operation, and the published mapping classifies it as irreversible
+  and as no other prohibited class.
+- **Committed destinations.** The Dispatch Policy commits the approved
+  vendors, each with the payee account approved for it, and the
+  ceiling entry granting the operation carries a per-payment
+  `max_amount`.
+- **An exact budget.** The Dispatch Policy commits a budget: its owner,
+  an identifier qualified within that owner's accounting domain, its
+  limit, and a per-instance maximum. Each instance's Mission Intent
+  carries a `max_budget` no larger than the per-instance maximum. The
+  per-payment `max_amount`, the budget, and every `max_budget` share
+  one currency. Both bounds are enforced under the metering profile's
+  Exact profile: the instance's `max_budget` on its own counter, and
+  the budget on one counter keyed by its owner and identifier, shared
+  by every instance of any template committing that budget and by
+  their successors ({{I-D.draft-mcguinness-mission-metering}}).
+  Neither substitutes for the other.
+- **Governed approval.** Where the deployment records an Approval
+  Governance Record for an instance, its retained `approval_policy`
+  snapshot commits class-named exceptions for the irreversible class
+  and the consumption-bound class, each with its recency ceiling
   ({{I-D.draft-mcguinness-mission-approval-governance}}).
-- **A human approver.** The template consent meets the issuance
-  profile's approval-authentication floor for the irreversible class,
-  and the consenting principal is neither a Dispatcher nor the
-  instance's Agent, nor a key or assertion the Agent holds.
+- **A human approver.** The consenting principal is a human Approver
+  authenticated at the issuance profile's approval-authentication
+  floor for the irreversible class
+  ({{I-D.draft-mcguinness-oauth-mission}}), and is neither a
+  Dispatcher nor the instance's Agent.
 
-Admission authorizes no execution. Each payment still takes a fresh
-runtime decision, with parameter binding, execution reverification,
-transaction assurance, and every applicable action-approval
-requirement ({{I-D.draft-mcguinness-mission-runtime}}). The PDP
-compares the payee the enforcing PEP establishes for the effect with
-the destination committed for the vendor, and execution
-reverification binds that payee: a payee account other than the
-committed one, including a changed bank account for an approved
-vendor, inherits no approval. Work outside the committed envelope is
-refused and escalates out of band to an ordinary, freshly approved
-Mission.
+The Mission Issuer conveys the committed destinations and the budget to
+the runtime with each instance's policy view, bound to the template's
+`dispatch_policy` digest. Admission authorizes no execution. Each
+payment still takes a fresh runtime decision, with parameter binding,
+execution reverification, the transaction-assurance tier, and every
+applicable action-approval requirement
+({{I-D.draft-mcguinness-mission-runtime}}). The PDP compares the payee
+the enforcing PEP establishes for the effect with the destination
+committed for its vendor, and execution reverification binds that
+payee: a vendor without a committed destination, or a payee account
+other than the committed one, including a changed bank account for an
+approved vendor, inherits no approval. A payment whose outcome is
+`failed` remains charged until reconciliation. Work outside the
+committed envelope is refused and escalates out of band to an
+ordinary, freshly approved Mission.
 
-Raising the budget, the per-payment bound, or the destinations is a
-new `template_version` and a fresh human approval. Its disclosure
-renders the budget's consumption to date and its outstanding
-reservations, and the approval neither releases a held reservation nor
-resets consumption ({{I-D.draft-mcguinness-mission-metering}}).
+Changing the destinations, or raising the budget or the per-payment
+bound, is a new `template_version` and a fresh human approval, whose
+disclosure MUST render the budget's consumption to date and its
+outstanding reservations. The approval neither releases a reservation
+that remains charged nor resets consumption
+({{I-D.draft-mcguinness-mission-metering}}).
 
 The consent disclosure of a template admitting the exception MUST
 render, beside the minimum of {{template-consent}}, the designated
 operation, the committed destinations, the per-payment bound, the
-budget with its per-instance maximum, and that each payment executes
-without a per-payment human approval.
+budget with its per-instance maximum, and whether each payment
+requires an action-bound approval, and from whom.
 
 # The Denial Reasons {#denial-reasons}
 
@@ -1611,11 +1618,14 @@ creation and then steps out of the way.
   Child Mission is a strict subset of the instance's Authority Set,
   which is itself within the Template Ceiling, so the whole delegation
   tree stays within the ceiling without any new rule here. An instance
-  holding authority admitted under {{standing-payment-exception}} is
-  the exception: its Mission Issuer refuses to create a Child Mission,
-  or any cross-organization or cross-domain derivation, under it, and
-  its successors continue its budget counters
-  ({{I-D.draft-mcguinness-mission-metering}}).
+  holding authority admitted under {{standing-payment-exception}}
+  differs: its Mission Issuer MUST refuse to create a Child Mission
+  under it unless the child is charged to the budget's counters, and
+  MUST refuse any cross-organization or cross-domain derivation from
+  it ({{I-D.draft-mcguinness-mission-metering}}). An expansion
+  successor of such an instance carries the budget forward and
+  continues both counters, and its approval renders the budget's
+  consumption to date and outstanding reservations.
 
 # Audit Linkage {#audit-linkage}
 
@@ -1681,6 +1691,15 @@ document adds the dispatch surface.
   and every instance it dispatched is independently gated, revocable,
   and enforced per action by the runtime layer
   ({{I-D.draft-mcguinness-mission-runtime}}).
+
+- **A standing payment spends only within its envelope.** Under
+  {{standing-payment-exception}}, a compromised Dispatcher or Agent can
+  pay only committed destinations, up to the per-payment bound and the
+  budget. The exception does not stop one invoice being paid twice;
+  the operation's settlement identity does. A reservation that remains
+  charged after an unknown outcome reduces the headroom of every
+  instance sharing the budget until it is reconciled, so a lossy
+  evidence channel stalls the template rather than overspending.
 
 - **The Dispatch Policy is authority-bearing governance.** A
   misconfigured policy can over-instantiate within the ceiling, so it is
@@ -1858,13 +1877,16 @@ IANA action. Following the restraint of the sibling profiles:
 - Changes a requirement (#813, D814, D830): Standing Payment Exception
   admits, as an option, dispatch of one designated payment-execution
   operation whose only prohibited class is the irreversible class,
-  under a bounded ceiling, committed destinations, an exact budget
-  shared across the template's instances and their successors with a
-  per-instance `max_budget`, governed class-named exceptions and a human
-  approver. Every other prohibited class and predicate stays
-  prohibited, a Child Mission is refused under such an instance, and
-  each payment still takes a fresh runtime decision with its payee
-  bound through execution reverification.
+  under committed destinations per vendor, a per-payment bound, an
+  exact budget shared across every instance of any template committing
+  it and their successors with a per-instance `max_budget` in one
+  currency, Approval Governance's class-named exceptions where a
+  Governance Record is kept, and an authenticated human approver.
+  Every other prohibited class and predicate stays prohibited, a Child
+  Mission is refused under such an instance unless charged to the
+  budget, and each payment still takes a fresh runtime decision with
+  its payee bound through execution reverification. Metering becomes a
+  normative reference.
 - Clarification (#1661, D793): a Dispatch performs exactly one creation
   derivation per `dispatch_event_id`, and a retry is recovery of its
   delivery. Returning the delivered access token, while it is valid and

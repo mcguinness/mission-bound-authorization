@@ -849,8 +849,8 @@ template's consent rendering MUST present the bound as per instance,
 together with `max_active` and `dispatch_rate`. A standing-consent
 budget ({{aggregate-bounds}}) is such an aggregate: the consent renders
 it beside the per-instance bound, and a Mission Issuer MUST refuse to
-create a Child Mission under an instance it meters unless the child is
-charged to that budget's counter.
+create a Child Mission under an instance the budget meters unless the
+child is charged to that budget's counter.
 
 # Aggregate Bounds {#aggregate-bounds}
 
@@ -891,28 +891,34 @@ the aggregate key class in `counter_scope` and the counter in
 `counter_id` ({{metering-evidence}}).
 
 A standing-consent budget is the one aggregate a human approves rather
-than the deployment: a Mission Template's Dispatch Policy commits a
-budget identifier, qualified within the budget owner's accounting
-domain, with its currency and limit
-({{I-D.draft-mcguinness-oauth-mission-template}}), and every Mission
-dispatched under the template, and every successor of one, draws on
-one shared counter keyed by that identifier, recorded with
-`counter_scope` `standing_consent`. The committed policy is the
-limit's authoritative home. The Enforcement Scope Statement MAY
-reference the policy rather than repeat its numbers, but it identifies
-the policy's committed version and makes the budget's scope, currency,
-and limit discoverable; the identifier alone does not disclose the
-bound. A restart, a replacement template, a policy successor, or a
-fresh consent continues the counter and never creates a fresh one.
-Fresh consent is not evidence of non-execution: it neither releases a
-held reservation nor resets consumption ({{settlement-states}}), and a
-limit it raises is measured against consumption to date and the
+than the deployment: a Mission Template's Dispatch Policy commits the
+budget's owner, an identifier qualified within that owner's accounting
+domain, its currency, and its limit
+({{I-D.draft-mcguinness-oauth-mission-template}}). Every Mission
+dispatched under any template committing that budget, and every
+successor of one, draws on one shared counter keyed by the owner and
+identifier, recorded with `counter_scope` `standing_consent`. A metered
+action is reserved against that counter and the Mission's own
+`max_budget` counter together: where either would be exceeded, the PDP
+refuses with `quota_exceeded` and charges neither. The committed
+Dispatch Policy is the limit's authoritative home. The Enforcement
+Scope Statement MUST declare each standing-consent budget the
+deployment meters, with its enforcement profile; where it references
+the Dispatch Policy rather than repeating its numbers, it MUST identify
+the policy by its `id`, `version`, and `digest` and make the budget's
+scope, currency, and limit discoverable, since the identifier alone
+does not disclose the bound. A restart, a successor policy version, or
+a fresh consent continues the counter; only a new budget identifier,
+which a human approves as a new budget, starts another. Fresh consent
+is not evidence of non-execution: it neither releases a reservation
+that remains charged nor resets consumption ({{settlement-states}}),
+and a limit it raises is measured against consumption to date and the
 outstanding reservations.
 
 Aggregate keying crosses the family's per-Mission consistency
-domains: a subject-keyed or lineage-keyed counter is shared by every
-Mission the key spans, so it cannot be sharded by Mission Identifier
-and is provisioned as its own consistency domain
+domains: a subject-keyed, lineage-keyed, or standing-consent counter
+is shared by every Mission the key spans, so it cannot be sharded by
+Mission Identifier and is provisioned as its own consistency domain
 ({{I-D.draft-mcguinness-mission-runtime}}).
 
 # Metering Evidence {#metering-evidence}
@@ -925,7 +931,7 @@ companion's extension conventions
 ({{I-D.draft-mcguinness-mission-runtime-evidence}}).
 
 `metering`:
-: An array of one or more entries, one per bound the evaluation
+: An array of one or more entries, one per counter the evaluation
   metered. In a deployment claiming this profile, a Decision
   Evidence record emitted for a metered evaluation, permit or
   refusal, MUST carry it, and an Execution Evidence record MUST
@@ -1118,10 +1124,10 @@ failure signal:
   ({{I-D.draft-mcguinness-mission-runtime}}), which queries the
   resource and matches evidence. An unsettled reservation remains
   charged against the bound until it is reconciled, and is released
-  only on affirmative evidence of non-execution; timeout alone never
-  releases a reservation, in any action class. An idempotent action
-  class makes a retry safe, not the first attempt void, and reversing
-  a reversible action is a compensation action
+  only on affirmative evidence of non-execution; neither a timeout nor
+  a restart releases a reservation, in any action class. An idempotent
+  action class makes a retry safe, not the first attempt void, and
+  reversing a reversible action is a compensation action
   ({{I-D.draft-mcguinness-mission-orchestration}}), not evidence that
   the original did not execute.
 - **Conflicting settlement**: fail closed per
@@ -1379,14 +1385,19 @@ this registry.
 
 - Changes a requirement (#813, #816, D830): a standing-consent budget
   is an aggregate a human approves in a Mission Template's Dispatch
-  Policy, metered on one counter shared by the template's instances and
-  their successors and recorded with `counter_scope`
-  `standing_consent`. The Enforcement Scope Statement identifies the
-  committed policy version and discloses scope, currency and limit;
-  restarts, replacement templates, policy successors and fresh consent
-  continue the counter, and fresh consent neither releases a held
-  reservation nor resets consumption. A Child Mission is refused under
-  an instance the budget meters unless charged to it.
+  Policy, keyed by its owner and identifier, metered on one counter
+  shared by every instance of any template committing it and their
+  successors, and recorded with `counter_scope` `standing_consent`. A
+  metered action reserves that counter and the Mission's `max_budget`
+  counter together, charging neither on a refusal. The Enforcement
+  Scope Statement declares each such budget and, when referencing the
+  Dispatch Policy, identifies it by `id`, `version` and `digest` and
+  discloses scope, currency and limit. A restart, a successor policy
+  version or a fresh consent continues the counter, and fresh consent
+  neither releases a reservation that remains charged nor resets
+  consumption. A Child Mission is refused under an instance the budget
+  meters unless charged to it. A `metering` entry is one per counter,
+  and a restart never releases a reservation.
 - `max_budget`'s `currency` takes the form Resource Access gives
   `max_amount`'s `currency`: exactly three upper-case ASCII letters,
   compared exactly.
