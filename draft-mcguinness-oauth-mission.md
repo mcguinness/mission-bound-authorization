@@ -2564,7 +2564,10 @@ request to derive a token at the token endpoint: a Token Exchange
 ({{Section 2.2.2 of RFC8693}}), and any other grant, refresh
 included, with the `invalid_grant` error code. The AS MUST refuse a
 derivation request it answers after it has acknowledged a revocation
-of the Mission, with the same error code.
+of the Mission, with the same error code. The AS answers a request
+when it makes its final decision to release the result, not when
+network delivery of the response completes: a result prepared before
+the acknowledgment and released after it is refused.
 
 Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
