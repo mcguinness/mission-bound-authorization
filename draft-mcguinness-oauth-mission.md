@@ -6755,8 +6755,9 @@ The alternative, fixing `client_id` to the approved agent on every
 derived token, would lead a generic {{RFC9068}} resource server or
 logging pipeline to misattribute a delegate's action to the approved
 agent, with no error to surface the mismatch. It would be safe only
-where every resource server already processes the `act` chain, as a
-Mission-aware Resource Server does ({{rs-enforcement}}).
+where every resource server already processes the `act` chain, and
+Mission awareness alone does not establish that
+({{rs-mission-unaware}}).
 
 The routing rule of {{rs-enforcement}} does not depend on this
 choice. The `mission` claim's presence signals that a token may carry
