@@ -4891,7 +4891,24 @@ This document's extension points are:
 - **Authority types.** The Authority Set is open to any AS-supported
   `authorization_details` type ({{other-types}}); the Mission
   apparatus (commitment, gating, delegation) is type-agnostic, subject
-  to the delegation and projection limits in {{other-types}}.
+  to the delegation and projection limits in {{other-types}}. A type's
+  specification supplies what the apparatus relies on for its entries:
+  - the definition a proposed entry is validated against, alongside
+    any schema advertised for the type or established out of band
+    ({{submission-processing}});
+  - the enforcement semantics a resource server applies to an entry
+    ({{rs-requirements}});
+  - the subset relation, which the AS applies only where it declares
+    `narrowing` for the type; otherwise an entry is carried as approved
+    ({{subset}}, {{transformation-capabilities}});
+  - the delegation policy, which the AS applies only where it declares
+    `delegation`; an entry with no type-defined policy is non-delegable
+    ({{delegation-constraints}});
+  - when a scope-projection mapping is safe for the type's entries,
+    which the AS relies on only where it declares `projection`
+    ({{scope-projection}}); and
+  - any normalization a comparison of its members uses; without one,
+    URI-valued members compare byte for byte ({{canonicalization}}).
 - **Intent Submission Evidence types.** The `evidence` array of the
   Submission envelope is open to evidence types defined by companion
   profiles: each type is a collision-resistant name whose owning
