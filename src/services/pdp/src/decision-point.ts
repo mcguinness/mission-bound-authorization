@@ -240,6 +240,12 @@ interface PointBindings {
  * rather than merely overwritten. None of them can be supplied, replaced, or
  * suppressed from the enforcement side. A decision point bound to no Resource
  * policy forwards none, and `evaluate` refuses to decide.
+ *
+ * #816 (decision d), owed by slice 3b: `opts.view` is forwarded as the caller
+ * built it, so the view's budget binding (`MissionView.budget`) is still the
+ * caller's here. Before anything populates it, the binding must be attached
+ * on the PDP side (a PDP-owned view load), and a `budget` the caller supplies
+ * ignored: a caller that drops it would otherwise make every spend unmetered.
  */
 function bindDecide(
   bindings: PointBindings,

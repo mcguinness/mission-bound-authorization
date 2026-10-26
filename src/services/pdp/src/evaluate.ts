@@ -103,6 +103,7 @@ import {
   vendorConstraintSatisfied,
   viewHoldsCommittedSet,
 } from "./policy-view.js";
+import { COVERED_PHASES } from "./budget-metering.js";
 import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
@@ -2687,10 +2688,12 @@ async function evaluateInner(
   // consume the budget. Where it can meter, an action the statement meters
   // is charged the request's amount, the same `context.amount` the
   // `max_amount` step reads, against both counters inside the claim (step
-  // 9). The declared action's other phases (preflight, prepare) are covered
-  // by that charge and charge nothing; any other action carrying an amount,
-  // unless its class is exempt ({@link BUDGET_EXEMPT_CLASSES}: reads and the
-  // non-consequential postures), is a spend this PDP does not meter, refused
+  // 9). The declared action's preflight and prepare phases
+  // ({@link COVERED_PHASES}) are covered by that charge and charge nothing;
+  // any other action or phase carrying an amount (the declared action's
+  // `compensate` included), unless its class is exempt
+  // ({@link BUDGET_EXEMPT_CLASSES}: reads and the non-consequential
+  // postures), is a spend this PDP does not meter, refused
   // `constraint_unsupported` rather than passed through unmetered (decision
   // h). An unclassified action is not exempt. A view without a binding is
   // unmetered and reaches none of this.
@@ -2717,9 +2720,9 @@ async function evaluateInner(
         amount: { amount: amount.amount, currency: amount.currency },
       };
     } else if (
-      !budgets.declaresAction(req.action.name) &&
       req.context.amount !== undefined &&
-      (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass))
+      (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass)) &&
+      !(budgets.declaresAction(req.action.name) && phase !== undefined && COVERED_PHASES.has(phase))
     ) {
       return deny("constraint_unsupported");
     }
