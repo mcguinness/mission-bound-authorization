@@ -74,14 +74,7 @@ informative:
       org: "OpenID Foundation"
     date: 2025
     target: "https://openid.net/specs/openid-caep-1_0.html"
-  I-D.draft-mcguinness-mission-mandate:
-    title: "Mission Mandate"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-mandate.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
+
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-mission-resource-access-00
@@ -1888,9 +1881,7 @@ keeps an archived response verifiable for audit; it is not trust. A
 consumer MUST NOT accept, for a current reliance decision, a response
 signed under a key the AS has published as compromised. An auditor
 examining an archived response signed under such a key classifies it
-by the published compromise information; the Mandate profile's
-compromise-time rule is one such classification
-({{I-D.draft-mcguinness-mission-mandate}}).
+by the published compromise information.
 
 ## General OAuth Security
 
