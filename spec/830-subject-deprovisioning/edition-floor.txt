@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-25T22:59:57Z
-Source repository commit: d295ae31ae1a2bfdd9467cb1efccf6df925af94c
+Generated: 2026-10-26T03:33:27Z
+Source repository commit: 895589a9d64d768fbef6dd28d016ee7ca4ae5db8
 Member count: 7
 
 Reading order:
@@ -28,8 +28,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           25 October 2026
-Expires: 28 April 2027
+Intended status: Informational                           26 October 2026
+Expires: 29 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -82,7 +82,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -6000,8 +6000,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                      Mission Substrate Requirements
@@ -6059,7 +6059,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -7600,8 +7600,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7660,7 +7660,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -9716,6 +9716,11 @@ Table of Contents
    governance evaluation to the Mission's approval event.  It does not,
    by itself, establish a separate business decision for each subsequent
    action.
+
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
 
 7.  Mission Lifecycle
 
@@ -15837,6 +15842,13 @@ Appendix G.  Document History
       revocation reason describes a revocation, not a completion
       (#1535).
 
+   *  Editorial, no requirement change: Single Accountable Approver
+      states that authenticating approval evidence does not establish
+      that conditions governing later reliance remain satisfied, and
+      that the effect of later changes to an Approver's role, a
+      delegation, or governing policy on an existing Mission is
+      deployment policy (#830).
+
    *  When the AS establishes that a Mission's recorded Subject has been
       deprovisioned, it SHOULD terminate the Mission with reason
       revoked; temporary disablement, an outage, or another principal's
@@ -15992,8 +16004,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16045,7 +16057,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -18374,8 +18386,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18434,7 +18446,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -23488,8 +23500,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                         Mission Runtime Evidence
@@ -23539,7 +23551,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -26573,8 +26585,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -26623,7 +26635,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 

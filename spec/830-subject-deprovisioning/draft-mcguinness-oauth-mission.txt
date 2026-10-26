@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         25 October 2026
-Expires: 28 April 2027
+Intended status: Standards Track                         26 October 2026
+Expires: 29 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 April 2027.
+   This Internet-Draft will expire on 29 April 2027.
 
 Copyright Notice
 
@@ -2120,6 +2120,11 @@ Table of Contents
    governance evaluation to the Mission's approval event.  It does not,
    by itself, establish a separate business decision for each subsequent
    action.
+
+   Authenticating approval evidence does not, by itself, establish that
+   conditions governing later reliance remain satisfied.  Whether
+   subsequent changes to an Approver's role, a delegation, or governing
+   policy affect an existing Mission depends on the deployment's policy.
 
 7.  Mission Lifecycle
 
@@ -8240,6 +8245,13 @@ Appendix G.  Document History
    *  Editorial, no requirement change: the Mission Status variation's
       revocation reason describes a revocation, not a completion
       (#1535).
+
+   *  Editorial, no requirement change: Single Accountable Approver
+      states that authenticating approval evidence does not establish
+      that conditions governing later reliance remain satisfied, and
+      that the effect of later changes to an Approver's role, a
+      delegation, or governing policy on an existing Mission is
+      deployment policy (#830).
 
    *  When the AS establishes that a Mission's recorded Subject has been
       deprovisioned, it SHOULD terminate the Mission with reason
