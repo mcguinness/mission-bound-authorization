@@ -3103,13 +3103,12 @@ A resource server:
    type it does not implement, or whose type-defined enforcement it
    cannot complete (an unrecognized member, an unenforceable
    constraint, or an unrecognized matching mode). It MUST refuse the
-   request (for example, a `403` with the `insufficient_scope` error
-   code {{RFC6750}}, or the deployment's usual insufficient-authority
-   error) unless another applicable entry that it can fully enforce
-   authorizes the whole request on its own, and MUST NOT combine parts
-   of several entries to authorize one request. A failure of the
-   token's own validation (above) rejects the token whatever its
-   entries carry.
+   request, with `insufficient_scope` ({{RFC6750}}) or the
+   RAR-remediation challenge as {{rs-denials}} states, unless another
+   applicable entry that it can fully enforce authorizes the whole
+   request on its own, and MUST NOT combine parts of several entries
+   to authorize one request. A failure of the token's own validation
+   (above) rejects the token whatever its entries carry.
 3. MUST NOT, when a token also carries `scope`, grant on the basis of
    a scope value any access broader than the corresponding
    `authorization_details` entry permits, including access that
