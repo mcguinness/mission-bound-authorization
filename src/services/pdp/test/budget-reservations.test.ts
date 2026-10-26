@@ -1487,6 +1487,24 @@ describe("a budget-bound permit suppressed before redemption (@spec metering#set
     claims.close();
   });
 
+  it("a suppression arriving after the claim's reconciliation window has closed is refused window_closed and releases nothing, as the closed claim's indeterminate outcome holds it (@spec metering#settlement-states, #813, #816)", async () => {
+    const c = clock();
+    const released: ReleasedReservation[] = [];
+    const { open } = domainOnFile(c, { released });
+    const claims = open();
+    const evaluationId = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    c.set(T0 + PAST_WINDOW_MS);
+    expect(await claims.releaseUnredeemed(REQUESTER, await executionRecord(evaluationId, "suppressed"), unconsumed)).toEqual({
+      accepted: false,
+      reason: "window_closed",
+    });
+    expect(states(claims, evaluationId)).toEqual(["reserved", "reserved"]);
+    claims.sweep();
+    expect(states(claims, evaluationId)).toEqual(["held", "held"]);
+    expect(released).toEqual([]);
+    claims.close();
+  });
+
   it("an operator's not_executed on a reservation the permit holder's suppression already released is an idempotent no-op (@spec metering#settlement-states, #813, #816)", async () => {
     const c = clock();
     const released: ReleasedReservation[] = [];
