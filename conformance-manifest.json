@@ -17103,7 +17103,7 @@
     "local": "the transition, its status observation and the nonce claim commit in one transaction (provider.ts withTransaction around kernel.transition, observeInCallerTx, claimInCallerTx); the signed 200 is written after it returns, and send() retains the bytes before delivering them"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
@@ -17119,12 +17119,36 @@
     },
     {
      "file": "src/services/authorization-server/test/lifecycle-commit-ordering.test.ts",
-     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > runs on a WAL store with synchronous NORMAL, under which a committed transaction survives a process crash",
+     "name": "a lifecycle transition is committed before its acknowledgement is released (@spec status#lifecycle-processing, #1659 D771) > runs on a WAL store with synchronous FULL under normal locking",
      "level": "unit",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-crash-restart.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "a lifecycle transition survives an abrupt process exit (@spec status#lifecycle-processing, #1684, D826) > after an acknowledged revocation, an abrupt kill leaves the terminal state, its version and the retained response: the retransmit replays the same bytes, with no second transition"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-crash-restart.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "a lifecycle transition survives an abrupt process exit (@spec status#lifecycle-processing, #1684, D826) > a kill between the commit and the response's retention is recovered by finalizing the committed revocation from its retained observation, with its original timestamps, never executing it again"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-store-durability.test.ts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint",
+     "name": "the kernel store's durability, independent of its locking (@spec status#lifecycle-processing, #1684, D826) > runs an ordinary file-backed kernel at WAL with synchronous=FULL and normal locking, on its first open and after reopening"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-store-durability.test.ts",
+     "level": "unit",
+     "surface": "lifecycle-endpoint",
+     "name": "the kernel store's durability, independent of its locking (@spec status#lifecycle-processing, #1684, D826) > runs a witnessed kernel at synchronous=FULL with the exclusive locking it requires, on its first open and after reopening"
     }
    ],
-   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review; #1659, D771): the failure path is the first cited test. The ordering witness, on a file-backed store, reads at response release (where send() retains the bytes it delivers), not at signing, through a second connection rather than the writing one: the writing connection holds no open transaction, and the second connection already sees the transition, its version and the claimed nonce. Mutation: releasing the acknowledgement inside the transition's transaction fails it on the open transaction, and, with that assertion removed, on the second connection's read (state active, version 1). The configuration witness asserts WAL with synchronous at least NORMAL (the store runs NORMAL), under which a committed transaction survives a process crash but an operating-system crash or power loss can lose the most recent commits; it is process-crash evidence, not proof against arbitrary hardware failure. A file-backed crash/restart witness is required before tested."
+   "notes": "#1535 finding 9 (D649, -01). Mutation: answering a failed commit with 200 fails the cited test (expected 200 to be 503). Partial (#1638 review; #1659, D771): the failure path is the first cited test. The ordering witness, on a file-backed store, reads at response release (where send() retains the bytes it delivers), not at signing, through a second connection rather than the writing one: the writing connection holds no open transaction, and the second connection already sees the transition, its version and the claimed nonce. Mutation: releasing the acknowledgement inside the transition's transaction fails it on the open transaction, and, with that assertion removed, on the second connection's read (state active, version 1). Configuration (#1684, D826): every file-backed kernel writer connection runs WAL with synchronous=FULL, set and read back on its first open and after reopening (a reopened WAL file otherwise runs at WAL's default, NORMAL), under normal locking, or exclusive under a recovery witness. FULL adds a WAL synchronization at each commit, which supports power-loss durability where the storage stack honors synchronization; no test here proves that. Crash/restart witnesses (#1684): the AS runs in a child process on a file-backed store, is killed with SIGKILL at a deterministic barrier, and is reopened on the same files with the WAL preserved. After an acknowledged revocation, the terminal state, its version and the retained response survive, and the retransmit replays the same bytes with no second transition; killed between the commit and the response's retention, the retransmit is finalized from the retained observation with its original iat, exp and fresh_until, never executed again. Mutations: dropping the response's retention fails both witnesses; dropping FULL fails both on the reopened writer connection; re-dating the finalized observation, or executing the committed row again, fails the commit-to-retention witness. Tested after the owner's review (#1707 at 8ee2069e): process-crash evidence plus asserted durability configuration; survival of an operating-system crash or power loss rests on synchronous=FULL and the storage stack, which no test proves."
   },
   {
    "id": "status.lifecycle.final-check-not-suspension",
