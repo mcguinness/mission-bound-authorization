@@ -3345,6 +3345,16 @@ token endpoint. {{Section 2.3 of RFC9126}} permits an
 authorization-request error at PAR, and returning it there does not
 change which row applies.
 
+Where a token request fails more than one check, this document
+defines no general precedence among the resulting errors; as under
+{{RFC6749}}, which defines none, the AS returns any applicable one.
+The orders this document does state still apply: a submission's
+processing order ({{submission-processing}}), and the Mission-governed
+refusal, which applies only to an otherwise processable request
+({{authority-proposal}}). The choice relaxes neither client
+authentication nor any rule that limits who receives a detail, such
+as `mission_error` ({{issuance-gating}}).
+
 The tables are grouped by surface. The first table holds each
 failure whose rule is not confined to the surface of one of the other
 three tables (PAR and the authorization endpoint, Token Exchange, or a
