@@ -681,8 +681,9 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
   });
 
   it("the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request", async () => {
-    const { accessToken } = await baseMission(on);
+    const { missionId, accessToken } = await baseMission(on);
     const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const before = derivations(on, missionId);
     const res = await redeem(on, designation, SUBAGENT, undefined, {
       actor_token: designation,
       actor_token_type: "urn:ietf:params:oauth:token-type:jwt",
@@ -690,6 +691,8 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_request");
     expect(res.body.error_description).toMatch(/actor_token is not supported/);
+    expect(res.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
   });
 
   it("a redemption names its target: without a resource it is refused invalid_request", async () => {
@@ -1680,6 +1683,30 @@ describe("the delegated exchange authenticates the designated client (@spec miss
     });
     expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
     expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const subject = designation.body.access_token as string;
+    const withActor = { ...redemption(subject), actor_token: subject, actor_token_type: "urn:ietf:params:oauth:token-type:jwt" };
+    const before = derivations(on, missionId);
+
+    // Not authenticated: the client authentication refusal comes first.
+    const fresh = await generateKeyPair("ES256", { extractable: true });
+    const unauthenticated = await unauthenticatedToken(on, SUBAGENT, fresh, withActor);
+    expect(unauthenticated.body.error, JSON.stringify(unauthenticated.body)).toBe("invalid_client");
+    expect(unauthenticated.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+
+    // Authenticated: the actor_token is refused.
+    const authenticated = await token(on, SUBAGENT, dpop.get(SUBAGENT) as Keys, withActor);
+    expect(authenticated.status, JSON.stringify(authenticated.body)).toBe(400);
+    expect(authenticated.body.error).toBe("invalid_request");
+    expect(authenticated.body.error_description).toMatch(/actor_token is not supported/);
+    expect(authenticated.body.access_token).toBeUndefined();
     expect(derivations(on, missionId)).toBe(before);
   });
 });
