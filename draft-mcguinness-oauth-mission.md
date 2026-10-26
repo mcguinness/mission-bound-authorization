@@ -7543,6 +7543,19 @@ Cross-Domain:
   temporary disablement, an outage, or another principal's departure
   does not trigger the rule, and termination does not recall issued
   tokens (Revocation; #830).
+- A direct approval whose commit finds the effective expiry passed is
+  refused with `access_denied`, with no Mission or authorization code
+  (Committing the Mission). A token request that fails several checks
+  gets any applicable error, subject to the orders this document
+  states. A state a companion defines takes that companion's
+  `mission_error` value, never a termination reason (Issuance Gating).
+  A resource server answers an opaque Mission-bound token resolved as
+  inactive with `invalid_token`, and a resolution it cannot complete
+  with HTTP 503 and no token error (Introspected Token Consumption).
+  Enforcement Requirements refuses an entry it cannot enforce only with
+  the codes of the error table, and Mission awareness alone does not
+  imply `act` processing (Error and Challenge Mapping, Client
+  Identification in Delegated Tokens; #1721, D845).
 
 -01
 
