@@ -11,7 +11,9 @@
  *    committed, whatever else was recorded;
  * 2. for a consumed permit, the connector ledger by operation key: a
  *    committed effect is an effect, so it takes precedence over any failed
- *    or suppressed record, and a completed record is emitted for it now;
+ *    or suppressed record, and a completed record is emitted for it now,
+ *    under the redeeming attempt's own `execution_id` and `attempted_at`
+ *    (#821);
  * 3. for a consumed permit with no committed effect, a failed or suppressed
  *    record from the attempt the redemption store names as the one that
  *    took the single use (#1016 review round 2). A record from any other
@@ -32,6 +34,7 @@ import type { Connectors } from "./connectors.js";
 import type { EvidenceStore, ExecutionEvidenceObject } from "./evidence.js";
 import { CANONICAL_RESOURCE } from "./pep.js";
 import type { RedemptionStatus } from "./redemption-status.js";
+import type { ExecutionAttemptRecord } from "./write-reservations.js";
 
 export interface ClaimReconciliationReport {
   /** Settled from Execution Evidence, retained or recovered from the ledger. */
@@ -50,12 +53,23 @@ export interface ClaimReconciliationReport {
   errors: Array<{ evaluation_id: string; error: string }>;
 }
 
-export async function reconcileClaims(input: {
+/**
+ * @spec runtime#evidence (pre-effect durability) (#821): the PEP's pre-effect
+ * attempt records, read-only (`WriteReservationStore.attemptFor`).
+ */
+export interface AttemptRecords {
+  attemptFor(evaluationId: string): ExecutionAttemptRecord | undefined;
+}
+
+interface ReconcileInput {
   claims: ClaimChannel;
   evidence: EvidenceStore;
   redemption: RedemptionStatus;
   connectors?: Connectors;
-}): Promise<ClaimReconciliationReport> {
+  attempts?: AttemptRecords;
+}
+
+export async function reconcileClaims(input: ReconcileInput): Promise<ClaimReconciliationReport> {
   const report: ClaimReconciliationReport = { settled: [], unredeemed: [], open: [], states: {}, errors: [] };
   for (const claim of await input.claims.listUnresolved()) {
     // One claim's failure (an evidence write that throws, a settlement the
@@ -72,11 +86,7 @@ export async function reconcileClaims(input: {
 }
 
 /** Resolve one unresolved claim into `report`, in the order the module header gives. */
-async function reconcileClaim(
-  input: { claims: ClaimChannel; evidence: EvidenceStore; redemption: RedemptionStatus; connectors?: Connectors },
-  id: string,
-  report: ClaimReconciliationReport,
-): Promise<void> {
+async function reconcileClaim(input: ReconcileInput, id: string, report: ClaimReconciliationReport): Promise<void> {
   const records = input.evidence
     .all()
     .flatMap((e) => (e.kind === "execution" && e.content.evaluation_id === id ? [e.content] : []));
@@ -117,10 +127,7 @@ async function offer(
   return undefined;
 }
 
-async function fromLedger(
-  input: { claims: ClaimChannel; evidence: EvidenceStore; connectors?: Connectors },
-  evaluationId: string,
-): Promise<"completed" | "failed" | undefined> {
+async function fromLedger(input: ReconcileInput, evaluationId: string): Promise<"completed" | "failed" | undefined> {
   const opKey = input.connectors?.committedFor(evaluationId);
   if (opKey === undefined) return undefined;
   const decision = input.evidence
@@ -128,10 +135,19 @@ async function fromLedger(
     .find((e) => e.kind === "decision" && e.content.evaluation_id === evaluationId);
   if (!decision || decision.kind !== "decision") return undefined;
   const digest = decision.content.parameter_digest;
+  // @spec runtime-evidence#execution-evidence-object `execution_id` (#821):
+  // the late record is the disposition of the attempt that released the
+  // effect, so it carries that attempt's identity and timing, read from the
+  // record the attempt wrote before its release. Not the redemption store's
+  // link: a redeeming attempt can dispose of itself before release, and its
+  // identity then already names that disposition. Only an effect no
+  // pre-effect record names takes a fresh identity.
+  const recorded = input.attempts?.attemptFor(evaluationId);
   const executed = await input.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
     permitId: evaluationId,
     opKey,
-    execution_id: newRecordId("exe"),
+    execution_id: recorded?.executionId ?? newRecordId("exe"),
+    ...(recorded ? { attempted_at: new Date(recorded.attemptedAtMs).toISOString() } : {}),
     evaluation_id: evaluationId,
     mission_id: decision.content.mission.id,
     // @spec runtime-evidence#evidence-extensions `work_item` (#815): a late
