@@ -1433,10 +1433,13 @@ The window MUST be at least the validity
 span of the signed response the AS would replay (its `iat` to `exp`,
 {{mission-status-response}}), so any retransmit that could still
 present a live response is deduplicated. A deployment MAY use a longer
-window. This makes a retransmit safe against reordering: a
+window. Within the window a retransmit is safe against reordering: a
 delayed `suspend` retry that arrives after a `resume` is recognized as
 a duplicate and replays the original `suspend` response, so it cannot
-re-suspend an already-resumed Mission.
+re-suspend an already-resumed Mission. A retransmit that arrives after
+the window is processed as a new request; past that point only an
+`expected_version` the client supplied (below) keeps it from acting on
+state its sender has not observed.
 
 Deduplication guards a retransmitted request; it does not guard a
 valid request decided over stale state, a fresh `suspend` issued from
