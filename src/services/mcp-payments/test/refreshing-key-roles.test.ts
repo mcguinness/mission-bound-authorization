@@ -132,6 +132,11 @@ describe("one key, one role, across two key sources (@spec #831 C2, D825)", () =
     await jwtVerify(await txn.sign("txn+jwt"), split.transactionToken);
     expect(() => split.setRoles({ accessToken: ["k"], attenuationRoot: [], transactionToken: ["k"] })).toThrow(/configured for both/);
     await jwtVerify(await token2.sign("at+jwt"), split.accessToken);
+    // The access source takes a change the transaction source then refuses: the access source's change is undone.
+    expect(() =>
+      split.setRoles({ accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] }, { transactionToken: [] }),
+    ).toThrow(/accepts no algorithm/);
+    await jwtVerify(await token2.sign("at+jwt"), split.accessToken);
   });
 });
 
