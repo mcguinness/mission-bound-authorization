@@ -2081,36 +2081,6 @@ Mission Termination Reasons registry
 
 \[\[ To be removed from the final specification ]]
 
--01
-
-- A transition is durably committed before any response acknowledges
-  it, and the OAuth binding's final issuance check is not extended to
-  suspension.
-- A schedule's deadline governs later decisions, and expiry governs
-  when the first decision after the deadline comes at or after
-  `expires_at`; a revoke schedule terminates at its `suspend_until`,
-  and a past `suspend_until` is refused only on a new request.
-- An RFC 7009 revocation does not by itself revoke a Mission, and a
-  revocation that a deployment's policy couples to it commits the same
-  `revoke` transition, state version and event.
-- Editorial, no requirement change: in the audience-scoped Mission
-  Status example, the consumer is the ERP resource server; no example
-  response shows `authority_hash` to a caller the example does not
-  show holding its disclosure privilege; and the revocation's `reason`
-  describes a revocation, not a completion (#1535).
-- The `nonce` is a string of 1 to 255 Unicode code points at both
-  endpoints, a constraint the Mission Status request now states
-  (#1535).
-- Conformance's introspection-signing and TTL-sizing items defer to
-  the sections that state those rules, resolving language that
-  conflicted with them; each lifecycle value arrives with the
-  operation that introduces it; an otherwise-valid access token
-  without the `mission_status` scope receives the not-found response,
-  not `insufficient_scope`; a 401's challenge errors are distinct from
-  its JSON body's `unauthorized`; and a companion registers an
-  extension operation by defining it in its own specification
-  (#1535).
-
 -00
 
 - Initial individual draft.
