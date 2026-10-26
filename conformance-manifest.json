@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc2eabb1398ab0229f72b60f4bb7899b96039d0a",
-    "content_sha256": "510aa2b7589242e78495474cfbc6d6c8edb3d1aa21bcd1359cc98b2f07927e66"
+    "revision": "6fbb2ac1ecb50b81e78b3bc6bc5b7bf04c1854e3",
+    "content_sha256": "635c33e5da7c8fe695357491d8361fb101721059e50e93ca564d558715520fec"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
@@ -14503,6 +14503,28 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#869 (D449) implements the delegated exchange, but no `authorization_details` type that declares delegation without narrowing is configured, so this row has no witness."
+  },
+  {
+   "id": "core.other-types.designation-equal-entry-issued",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "A designation's `aud` names its redeemer ({{designation}}) and reassigns no entry's original approved audience",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a type that declares `delegation` without `narrowing`, a designation carrying an entry equal ({{subset}}) to an entry of the presented token, that entry keeping its original approved audience, is issued: the designated client its `aud` names is not tested as the entry's audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1717 (D845) witness (a), moved to #1377 by D859 (option (ii), which relaxes D845's all-three-witnesses requirement): this row stays todo until #1377's `delegation` audit supplies the declaration and the equal-only carriage it needs. The reference cannot express its precondition. (1) No declaration: it declares no transformation capability for its only supported type, `mission_resource_access` (no `mission_transformation_capabilities` member in AUTHORIZATION_DETAILS_TYPES_METADATA, none in its documentation: src/docs/resource-access-transformation-capabilities.md section 1), and has no per-type configuration that could declare `delegation` without `narrowing`; the `delegation` provider capability switches the exchanges on, it declares nothing for a type. (2) No behavior keyed on one: the designation and delegated exchanges narrow entries through the effective set whatever is declared, where this case needs them to carry only entries equal to the presented token's (row core.other-types.delegation-only-unchanged, todo; #1377 owns the `delegation` audit). The outcome without the precondition, an equal entry with its association kept carried by an issued designation, is asserted by row core.tokens.designation-permitted-subset-kept-audience."
   },
   {
    "id": "core.other-types.no-narrowing-original-audience",
@@ -69143,6 +69165,138 @@
     }
    ],
    "notes": "#1503 finding 7, D733 (owner rulings on #1604). Proved by disabling the explicit-request refusal, by never detecting a requested authorization_details, and by removing the AROP admission check."
+  },
+  {
+   "id": "core.tokens.designation-entry-audiences-tested",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "For a designation ({{designation}}), these rules test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation is issued although its `aud`, the designated client, is the original approved audience of none of the entries it carries; the designated client is never tested as an entry's audience",
+    "local": "the designation exchange computes no audience projection for the designated client, and the save-time audience check (unapprovedCarriage) is skipped for a token marked as a delegation handle (markDelegationHandle), as a designation is"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (b). Mutation-proved: applying the audience projection to the designated client at the designation, and running the save-time audience check on a designation's `aud`, each refused the witness's designation invalid_target."
+  },
+  {
+   "id": "core.tokens.designation-permitted-subset-kept-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "A designation carries only a permitted subset of the presented token's entries ({{subset}}, {{delegation-constraints}}), each keeping its original approved audience ({{transformation-capabilities}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation, and its token response, carry only the presented token's entries whose delegation policy permits the designated client, each equal to its presented entry; each keeps the original approved audience the Mission retained for it, so the designation's redemption for that audience is issued carrying the entry",
+    "local": "the reference computes associations from the Mission record at each issuance, never from a designation, so a designation cannot reassign one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (b). Mutation-proved: carrying the presented authority whole at the designation failed the subset assertion; testing the carried entries against the designation's `aud` as their association at redemption refused the redemption invalid_target."
+  },
+  {
+   "id": "core.tokens.designation-unassociated-entry-not-carried",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "An entry without an original approved audience is not carried",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation leaves out a presented entry that has no original approved audience and carries the presented token's other permitted entries, in the designation and its token response alike; where no permitted entry has one, the designation is refused invalid_target and none is issued",
+    "local": "the designation exchange keeps only the entries whose retained association (derivedAudiences) names an audience, before settlement, and refuses an empty result there, so the refusal records no accounting and counts no derivation; an issued designation's accounting carries the same set; an entry the record retains an empty association for, and every entry of a record that stores no association, each have none"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation whose presented token carries one entry with an original approved audience and one without carries only the first, in the designation, its response and its accounting (#1717, D859)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation whose every carried entry lacks an original approved audience is refused invalid_target, issuing nothing and counting no derivation (#1717, D859)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D859): the issuance fix for the owner's probe, in which a designation was issued, and a derivation counted, for a Mission whose recorded association had been removed. Redemption's audience limit stays (row core.tokens.designation-redemption-audience-rules). The invalid_target refusal of an empty designation applies this section's refusal of a request approved for none of the entries the token would carry, read for a designation as the paragraph directs (its entries' associated audiences), and agrees with delegation-constraints' Empty result. Mutation-proved: removing the exclusion carried the unassociated entry (the first witness) and issued the second witness's designation 200; removing the empty refusal alone issued that designation 200 with empty authorization_details."
+  },
+  {
+   "id": "core.tokens.designation-redemption-audience-rules",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "The delegated token issued at its redemption is subject to every rule of this section unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the delegated token issued at a designation's redemption carries only the designation's entries whose original approved audience includes its audience; a redemption for an audience that is the original approved audience of none of them is refused invalid_target and issues no token, while the same designation is redeemed for an audience its entries are approved for",
+    "local": "the delegated exchange limits its entries with audienceCarriedEntries before the derivation count and refuses there, so a refusal counts nothing; the save-time audience check (unapprovedCarriage) is the backstop and refuses with a different description"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a redemption for a resource audience the carried entry is not approved for is refused invalid_target, issuing nothing and counting nothing, while the same designation redeems for its approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (c). Mutation-proved: removing the delegated exchange's audience limit alone failed the witness on its description (the save-time backstop still refused invalid_target); removing it together with the backstop issued the refused redemption. The carriage-only witness is #1604's (D733)."
   },
   {
    "id": "core.other-types.derived-mission-audience",

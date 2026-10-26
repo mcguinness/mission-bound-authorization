@@ -1486,3 +1486,158 @@ describe("the delegated exchange carries only the entries approved for the reque
     }
   });
 });
+
+/**
+ * @spec mission#token-response, mission#transformation-capabilities (#1717,
+ * D845): a designation's `aud` names its redeemer and reassigns no entry's
+ * original approved audience. The audience rules test the resource audiences
+ * associated with the entries it carries, never the designated client; the
+ * delegated token issued at its redemption is subject to every audience rule.
+ */
+describe("a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845)", () => {
+  /** An audience the mapping names only after the Mission's approval: the whole payments origin. */
+  const ORIGIN_AUDIENCE = "http://localhost:4403/";
+  const mapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
+  let h: Harness;
+  beforeAll(async () => {
+    h = await harness(14877, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      scopeProjection: mapping,
+    });
+  });
+  afterAll(() => {
+    h?.server.close();
+  });
+
+  /** A payments entry whose delegation policy admits no delegate (max_depth 0), so it narrows out of every designation. */
+  const vendorRead = () => ({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:vendor.read"],
+    constraints: { vendors: ["acme"] },
+    delegation: { max_depth: 0, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+  });
+  /** The original approved audience the Mission retains for the entry granting `action`. */
+  const approvedAudiencesOf = (missionId: string, action: string) => {
+    const record = h.as.kernel.get(missionId);
+    return record?.approved_audiences?.[record.authority_set.findIndex((e) => e.actions.includes(action))];
+  };
+  const entriesOf = (jwt: string) => (decodeJwt(jwt) as { authorization_details: Body[] }).authorization_details;
+
+  it("a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued", async () => {
+    const { missionId, accessToken } = await baseMission(h, [delegable(), vendorRead()]);
+    expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    const presentedRead = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:invoice.read"));
+    expect(presentedRead).toBeDefined();
+
+    // The designation is issued although its aud, the designated client, is
+    // approved for no entry: the audience rules test its entries' associations.
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect((decodeJwt(designation.body.access_token as string) as Body).aud).toBe(SUBAGENT);
+    // The permitted subset: the delegable entry, equal to the presented token's;
+    // the entry no delegate may receive at depth 1 narrows out.
+    expect(entriesOf(designation.body.access_token as string)).toEqual([presentedRead]);
+    expect(designation.body.authorization_details).toEqual([presentedRead]);
+    // The entry keeps the association the Mission retained for it.
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect((decodeJwt(delegated.body.access_token as string) as Body).aud).toBe(RESOURCE);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presentedRead]);
+    expect(delegated.body.authorization_details).toEqual([presentedRead]);
+  });
+
+  it("a redemption for a resource audience the carried entry is not approved for is refused invalid_target, issuing nothing and counting nothing, while the same designation redeems for its approved audience", async () => {
+    const { missionId, accessToken } = await baseMission(h);
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    const payments = mapping.audiences[RESOURCE] as Record<string, unknown>;
+    // The mapping then names the payments origin, Mission-aware: the read
+    // overlaps it but was not approved for it.
+    (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE] = { ...payments, version: "1717-origin-1", mission_aware: true };
+    try {
+      const designation = await designate(h, accessToken, SUBAGENT);
+      expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+      const before = derivations(h, missionId);
+
+      const refused = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: ORIGIN_AUDIENCE });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      // The exchange's own audience rule refuses it, before any count, not
+      // the save-time backstop.
+      expect(refused.body.error_description).toMatch(/is not an original approved audience of any entry the token would carry/);
+      expect(refused.body.access_token).toBeUndefined();
+      expect(derivations(h, missionId)).toBe(before);
+
+      // Control: the same designation redeems for the audience its entry is approved for.
+      const control = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+      expect(control.status, JSON.stringify(control.body)).toBe(200);
+      expect((decodeJwt(control.body.access_token as string) as Body).aud).toBe(RESOURCE);
+      expect(actionsOf(control.body.access_token as string)).toEqual(["payments:invoice.read"]);
+    } finally {
+      delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
+    }
+  });
+
+  /** A second delegable payments entry, approved for the same audience as the invoice read. */
+  const delegableVendorRead = () => ({ ...vendorRead(), delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
+  /** Replace the Mission's stored original approved audiences (null: the record retains none). */
+  const storeAudiences = (missionId: string, retained: string[][] | null) =>
+    h.as.kernel.db
+      .prepare("UPDATE missions SET approved_audiences_json = ? WHERE id = ?")
+      .run(retained === null ? null : JSON.stringify(retained), missionId);
+
+  it("a designation whose presented token carries one entry with an original approved audience and one without carries only the first, in the designation, its response and its accounting (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h, [delegable(), delegableVendorRead()]);
+    expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    const presentedRead = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:invoice.read"));
+    expect(presentedRead).toBeDefined();
+    // After the token is issued, the vendor read loses its recorded
+    // association: the Mission retains no audience for it.
+    const record = h.as.kernel.get(missionId);
+    expect(record?.authority_set).toHaveLength(2);
+    storeAudiences(
+      missionId,
+      (record?.authority_set ?? []).map((e) => (e.actions.includes("payments:vendor.read") ? [] : [RESOURCE])),
+    );
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    expect(approvedAudiencesOf(missionId, "payments:vendor.read")).toEqual([]);
+    const before = derivations(h, missionId);
+
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const jwt = designation.body.access_token as string;
+    expect(entriesOf(jwt)).toEqual([presentedRead]);
+    expect(designation.body.authorization_details).toEqual([presentedRead]);
+    expect(h.as.tokenIssuanceStore.resolve(h.issuer, jtiOf(jwt))?.authorizationDetails).toEqual([presentedRead]);
+    expect(derivations(h, missionId)).toBe(before + 1);
+
+    // Its redemption for the read's approved audience carries the read alone.
+    const delegated = await redeem(h, jwt, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presentedRead]);
+  });
+
+  it("a designation whose every carried entry lacks an original approved audience is refused invalid_target, issuing nothing and counting no derivation (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h);
+    // The owner's probe: the Mission's recorded association is removed, so
+    // no entry's original approved audience can be established.
+    storeAudiences(missionId, null);
+    expect(h.as.kernel.get(missionId)?.approved_audiences).toBeUndefined();
+    const before = derivations(h, missionId);
+    const recorded = vi.spyOn(h.as.tokenIssuanceStore, "recordDelegation");
+    try {
+      const refused = await designate(h, accessToken, SUBAGENT);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toBe("no entry the designation would carry has an original approved audience");
+      expect(refused.body.access_token).toBeUndefined();
+      expect(recorded).not.toHaveBeenCalled();
+      expect(derivations(h, missionId)).toBe(before);
+    } finally {
+      recorded.mockRestore();
+    }
+  });
+});
