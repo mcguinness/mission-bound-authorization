@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "977aa6db4729fde2908eba5116db907d491e930c",
-    "content_sha256": "416d82b2491b55b8b979fcee4653e1460215de048eadd6821598c49382036672"
+    "revision": "ccf2b1c76732a049af05196b575623cf3e892a6b",
+    "content_sha256": "93ab66b6231d691996e3f8d012a649b5e1e20b47596b2eff953ac7dcb7899f78"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
@@ -14875,6 +14875,119 @@
    "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses. #250: by the owner's review of #1488, the restart witness's refused redemption is not cited here. It presents a designation this AS issued to the client it names, so it shows the deployment's per-boot restart policy, not this row's refusal of another token kind or recipient; the restart inventory in src/docs/control-plane-deployment.md records it. #831 A: a transaction token this AS signed under another role's key is refused invalid_request with no token issued, at the credential-class check (the access-token key alone and typ at+jwt); disabling both the key-role and token-type checks makes it pass that check."
   },
   {
+   "id": "core.delegation.delegate-client-authenticated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The AS MUST authenticate the requesting client, whether or not the request carries an `actor_token`, by a method it relies on to identify the client ({{Section 2.3 of RFC6749}}), and MUST refuse a client it does not so authenticate with `invalid_client` ({{Section 5.2 of RFC6749}}), issuing no token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS does not authenticate by a method it relies on to identify the client is refused invalid_client, with no token issued and no derivation counted: a confidential client's client_id presented without its client authentication, with a DPoP key of the presenter's choosing, and a public client registered for no client authentication; the designated client that authenticates and proves its own key is issued the delegated token; an actor_token does not take the place of client authentication",
+    "local": "The reference AS refuses with HTTP 401, the status of the token endpoint's own client-authentication refusals. A confidential client's missing or failed authentication is refused by the token endpoint's client authentication (oidc-provider), before the exchange handler runs; a client registered with token_endpoint_auth_method none, which that step admits on its client_id alone, is refused by the delegated-exchange handler's first check. The reference refuses any actor_token at this exchange (D449, D470); its delegates authenticate by private_key_jwt, and no other method is exercised."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Each refusal is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's check of the registered method fails only the public-client witness (a delegated token is issued to the public client on its client_id and its own DPoP key, which is what the reference did before #1718). The confidential case is enforced by the token endpoint's client authentication, so no handler mutation reaches it: a temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails only the stolen-designation witness. Making the handler's check refuse every client fails the positive witness and the stolen-designation witness's control. Removing the actor_token refusal fails the actor_token witness, which shows an actor_token is not accepted in place of, or beside, client authentication."
+  },
+  {
+   "id": "core.delegation.delegate-authentication-insufficient",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "A claimed `client_id`, possession of the designation, or proof of an independently chosen key, such as a DPoP key, does not authenticate a client",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange that names the designated client's client_id, presents a valid designation naming that client, and proves a DPoP key of the presenter's choosing, but carries no client authentication the AS relies on to identify the client, is refused invalid_client, with no token issued and no derivation counted, whether the named client is confidential or public"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). The stolen-designation witness presents all three for a confidential client; the public-client witness presents all three for a client registered for no client authentication. Proven by the mutations core.delegation.delegate-client-authenticated records: accepting a claimed client_id at the token endpoint fails the first, and removing the handler's registered-method check fails the second."
+  },
+  {
+   "id": "core.delegation.public-client-not-delegate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "This document does not support a public client as a delegate",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a public client, registered for no client authentication and otherwise designable and eligible, that redeems a designation naming itself and proves its own DPoP key is refused invalid_client at the delegated exchange, with no token issued and no derivation counted",
+    "local": "The reference still issues a designation naming a public client; the binding places the refusal at the delegated exchange. The refusal is unconditional: the reference has no configuration that admits a public delegate."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by disabling the code it covers: removing the delegated-exchange handler's check of the registered method fails the witness, a delegated token being issued to the public client."
+  },
+  {
    "id": "core.delegation.redemption-evaluated-afresh",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegated-exchange",
@@ -15500,6 +15613,35 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: applying the no-actor rule to a designation fails the depth-2 witness."
+  },
+  {
+   "id": "core.self-exchange.designation-redemption-is-delegated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "An exchange whose `subject_token` is a designation is a delegated exchange ({{delegated-exchange}}), not a no-actor exchange, even when it carries no `actor_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegate that is not the Mission's approved agent redeems a designation naming it, with no actor_token, and is issued a delegated token whose act names it, not refused under the no-actor rule"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by disabling the code it covers: applying the no-actor rule to the redemption (refusing invalid_request unless the authenticated client is the Mission Record's client_id) fails the witness. A designation presented to the reference's no-actor exchanges (the delegation handle, the async-delegation transport) is refused because it carries no key its holder could prove; that refusal is cited under the designation's possession rows, not here."
   },
   {
    "id": "core.introspection.designation-inactive",
@@ -68189,6 +68331,41 @@
     }
    ],
    "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught."
+  },
+  {
+   "id": "core.error-mapping.delegated-exchange-unauthenticated-client",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the AS does not authenticate the requesting client by a method it relies on to identify the client, which no public client meets | `invalid_client` ({{Section 5.2 of RFC6749}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange whose requesting client the AS does not authenticate by a method it relies on to identify the client, a confidential client presenting only its client_id or a public client, is refused with the error code invalid_client, with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by the mutations core.delegation.delegate-client-authenticated records: accepting a claimed client_id at the token endpoint fails the first witness, and removing the handler's registered-method check fails the second."
   },
   {
    "id": "core.error-mapping.token-rar-exceeds-granted",
