@@ -416,6 +416,18 @@ export async function handleDelegatedExchange(
   const params = ctx.oidc.params as Record<string, unknown>;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
 
+  // 0. @spec mission#delegated-exchange (#1718, D845): the delegate is a
+  // client the AS authenticates by a method it relies on to identify the
+  // client. The token endpoint has authenticated the request by the client's
+  // registered method, so every method but `none` qualifies; a public client
+  // (`none`) offers only its claimed client_id and is not a delegate. Refused
+  // before anything is read or counted, with the status the endpoint's own
+  // client-authentication refusals use.
+  if (client.clientAuthMethod === undefined || client.clientAuthMethod === "none") {
+    txError(ctx, 401, "invalid_client", "a delegated exchange requires client authentication; a public client is not a delegate");
+    return;
+  }
+
   // 1. Parse.
   if (params.subject_token_type !== ACCESS_TOKEN_TOKEN_TYPE) {
     txError(ctx, 400, "invalid_request", "subject_token_type MUST be the access_token token type");

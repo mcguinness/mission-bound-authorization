@@ -43,6 +43,8 @@ const ISSUED_AUDIENCE = TOPOLOGY.resources.hrFiles;
 const ALIAS_CLIENT = "test-alias-client";
 const UNDECLARED = "test-undeclared-delegate";
 const INELIGIBLE = "test-ineligible-delegate";
+/** A public client (`token_endpoint_auth_method` `none`), designable and eligible, so only its missing client authentication refuses its redemption (#1718). */
+const PUBLIC = "test-public-delegate";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 const RS_ALIAS = ["rs-alias", "dev-introspection-rs-alias"] as const;
 const RS_LATE = ["rs-late", "dev-introspection-rs-late"] as const;
@@ -86,6 +88,14 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     jwks: { keys: [{ ...(await exportJWK(secondKeys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
     authorization_details_types: ["mission_resource_access"],
   });
+  const publicClient = {
+    client_id: PUBLIC,
+    grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+    response_types: [],
+    redirect_uris: [],
+    token_endpoint_auth_method: "none",
+    authorization_details_types: ["mission_resource_access"],
+  };
   const as = await buildAuthorizationServer({
     issuer,
     allowHeadlessAdjudication: true,
@@ -93,10 +103,11 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     approvalSessions: sessions,
     // A second ai_agent delegate; a client whose identifier is an audience
     // the AS issues; one a registered resource server accepts as an alias;
-    // and an eligible client the deployment does not list as designable.
-    testClients: await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED, INELIGIBLE].map(testClient)),
-    actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent" },
-    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, INELIGIBLE],
+    // an eligible client the deployment does not list as designable; and a
+    // designable, eligible public client.
+    testClients: [...(await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED, INELIGIBLE].map(testClient))), publicClient],
+    actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent", [PUBLIC]: "ai_agent" },
+    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, INELIGIBLE, PUBLIC],
     ...options,
   } as never);
   const server = as.provider.listen(port);
@@ -139,6 +150,24 @@ async function token(h: Harness, client: Client, keys: Keys, params: Record<stri
         client_assertion: await assertion(h, client),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return { status: res.status, body: (await res.json()) as Body };
+}
+
+/**
+ * A token request that names `clientId` by the `client_id` parameter alone,
+ * with no client authentication, proving `keys` by DPoP: what a public client
+ * sends, and what a party holding only another client's identifier can send.
+ */
+async function unauthenticatedToken(h: Harness, clientId: string, keys: Keys, params: Record<string, string>): Promise<{ status: number; body: Body }> {
+  const send = async (extra: Record<string, unknown> = {}) =>
+    fetch(`${h.issuer}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(h, keys, extra) },
+      body: new URLSearchParams({ ...params, client_id: clientId }).toString(),
     });
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
@@ -1579,5 +1608,61 @@ describe("a designation keeps its entries' resource-audience associations, and i
     } finally {
       delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
     }
+  });
+});
+
+/**
+ * @spec mission#delegated-exchange (#1718, D845): the AS authenticates the
+ * requesting client at a delegated exchange, by a method it relies on to
+ * identify the client, and refuses any other with `invalid_client`, issuing
+ * no token. A claimed `client_id`, the designation, and an independently
+ * chosen DPoP key do not authenticate a client, and a public client is not a
+ * delegate.
+ */
+describe("the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845)", () => {
+  const redemption = (designation: string): Record<string, string> => ({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: designation,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    resource: RESOURCE,
+  });
+
+  it("a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const before = derivations(on, missionId);
+
+    // The presenter holds the designation and the sub-agent's client_id, and
+    // proves a key of its own choosing.
+    const fresh = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, SUBAGENT, fresh, redemption(designation.body.access_token as string));
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+
+    // Control: the same designation, redeemed by the sub-agent authenticating
+    // and proving its own key, is issued.
+    const control = await redeem(on, designation.body.access_token as string);
+    expect(control.status, JSON.stringify(control.body)).toBe(200);
+    expect((decodeJwt(control.body.access_token as string) as Body).act).toMatchObject({ sub: SUBAGENT });
+    expect(derivations(on, missionId)).toBe(before + 1);
+  });
+
+  it("a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    // The designation is issued: the public client is registered, designable
+    // and eligible.
+    const designation = await designate(on, accessToken, PUBLIC);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect((decodeJwt(designation.body.access_token as string) as Body).aud).toBe(PUBLIC);
+    const before = derivations(on, missionId);
+
+    const own = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, PUBLIC, own, redemption(designation.body.access_token as string));
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
   });
 });
