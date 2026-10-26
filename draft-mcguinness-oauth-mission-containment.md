@@ -565,7 +565,11 @@ policy ({{I-D.draft-mcguinness-mission-harness}}), an anomaly signal
 from the deployment's monitoring, and a `routed_to_approval` outcome
 or a `tainted` Discovery Evidence record from open-world discovery
 ({{I-D.draft-mcguinness-mission-discovery}}, Section "Discovery
-Evidence"). Event-to-policy mapping stays deployment-defined: neither
+Evidence"), and a change an authority source reports, such as a
+delegation withdrawn or an entitlement removed, where the deployment
+declares a continuing authority dependency
+({{I-D.draft-mcguinness-mission-runtime}}, Section "Authority
+Dependencies"). Event-to-policy mapping stays deployment-defined: neither
 the outcome nor the evidence field is, by itself, this document's
 protected event.
 
@@ -1229,6 +1233,9 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Protected Events names a change an authority source reports, under
+  a declared continuing authority dependency, as a representative
+  event class; the mapping stays deployment-defined (#830).
 - The authority_contained Denial Reason ({{denial-reason}}) now holds
   the causal-attribution rule that the Mission Issuance Grant profile
   stated: a token endpoint's refusal carries `authority_contained`
