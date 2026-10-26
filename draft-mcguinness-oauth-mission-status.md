@@ -42,6 +42,7 @@ normative:
   RFC8693:
   RFC8705:
   RFC9068:
+  RFC9110:
   RFC9325:
   RFC9449:
   RFC9701:
@@ -60,7 +61,6 @@ normative:
 
 informative:
   RFC8725:
-  RFC9110:
   RFC9457:
   OIDC-SSF:
     title: "OpenID Shared Signals Framework Specification 1.0"
@@ -230,12 +230,11 @@ The dedicated Mission Status operation is the canonical status surface
 the issuance profile defers. Unlike token introspection
 ({{introspection-projection}}), which answers "is this
 token's authorization still good," the Mission Status operation answers
-"what is the state of this Mission" keyed by the `mission_id` alone. Any
-consumer holding a `mission_id` (including an auditor or an
-authorization server in another trust domain) resolves it without
-holding a token the
-authorization server (AS)
-issued.
+"what is the state of this Mission" keyed by the `mission_id` alone.
+An authenticated, authorized consumer holding a `mission_id`
+(including an auditor or an authorization server in another trust
+domain) resolves it without holding a token the authorization server
+(AS) issued.
 
 The Mission Issuer serves the operation at its Mission Status
 endpoint, whose URL it publishes in authorization server metadata
@@ -660,7 +659,9 @@ The members are:
   introspection response). Entries addressed to other audiences MUST
   NOT be disclosed. When the request names an `audience`, the response
   MUST carry `authorization_details`, as an empty array when no entry
-  is relevant to that audience. When the request omits `audience`
+  is relevant to that audience. The entries are carried whatever the
+  Mission's `state`; a non-active state permits no reliance on them
+  ({{mission-status-failures}}). When the request omits `audience`
   ({{mission-status-request}}), there is no requesting audience: the
   response is state-only and MUST NOT carry `authorization_details`.
 
@@ -720,9 +721,11 @@ reversibility: the response's `exp`, the Mission's expiry and the
 advertised ceiling are hard bounds that no allowance extends. The
 clock-skew tolerance of the response checks
 ({{mission-status-response}}) decides only whether a response is
-accepted, never how long it is relied on. The reliance bound is
-absolute for non-`active` states because a suspended Mission may be
-resumed to `active`.
+accepted, never how long it is relied on, so a response accepted
+after its `exp` supports no decision ({{mission-status-failures}}).
+The reliance bound holds for non-`active` states too, so a consumer
+re-reads a `suspended` Mission, which can be resumed, rather than
+refusing on an outdated observation.
 
 ## Failed Status Checks {#mission-status-failures}
 
@@ -763,7 +766,8 @@ The AS MUST process a Mission Status request in this order, refusing
 it at the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
-   parsing the request body only as far as authentication needs. A
+   parsing the request body only as far as authentication and the
+   `nonce` echo of {{mission-status-errors}} need. A
    body that cannot be parsed is refused `invalid_request`, whatever
    credential the request presents; a client authentication parameter
    included more than once fails authentication, and no occurrence of
@@ -1679,6 +1683,8 @@ prerequisites.
 A deployment declaring revocation propagation SHOULD publish the recovery
 objective considered when choosing `mission_max_stale_seconds` and the
 availability consequence when recovery takes longer than that bound.
+The documentation its `service_documentation` metadata {{RFC8414}}
+names is one place to publish them.
 
 The security ceiling governs the choice: an operational recovery objective
 never authorizes extending a reliance bound
@@ -1917,12 +1923,11 @@ covers threats specific to the extensions defined here.
 
 ## Mission Status Enumeration
 
-Per the anti-oracle property ({{mission-status-anti-oracle}}), the AS
-MUST NOT let a caller readily distinguish an unknown `mission_id` from a
-known-but-unauthorized one at the Status or Lifecycle endpoint.
-{{mission-status-anti-oracle}} requires identical body content,
-identical HTTP status, and identical headers between the two
-cases, and the AS SHOULD additionally suppress timing side channels
+Per the anti-oracle property ({{mission-status-anti-oracle}}), an
+unknown `mission_id` and a known-but-unauthorized one receive an
+identical HTTP status, body and headers at the Status and Lifecycle
+endpoints ({{lifecycle-authorization}}, {{lifecycle-processing}}),
+and the AS SHOULD additionally suppress timing side channels
 (for example by padding response time or by taking a uniform lookup
 path). An implementation that leaks the distinction exposes the Mission
 space to enumeration.
@@ -1930,9 +1935,10 @@ space to enumeration.
 ## Mission Status Response Replay
 
 A Mission Status Response is bound to (caller `sub`, audience,
-`nonce`, issuance time). Replay against a different caller or audience,
-or beyond `mission.fresh_until`, is detectable by signature
-verification and by verifying the bindings; a consumer MUST verify all
+`nonce`, issuance time). Replay against a different caller, audience
+or request fails the `sub`, `aud` and `nonce` checks, which the
+signature protects, and replay after the reliance bound fails the
+caching rule ({{mission-status-caching}}); a consumer MUST verify all
 the checks of {{mission-status-response}} before honoring a response. A
 response cached and replayed by the same caller within its reliance
 bound ({{mission-status-caching}}) is equivalent to a fresh response; a
@@ -2000,11 +2006,14 @@ introspection projection ({{introspection-projection}}) disclose
 Mission state and the audience-scoped `authorization_details` to the
 authenticated, authorized requester, and MAY additionally disclose
 `authority_hash` to a requester authorized for it. A deployment MUST
-treat both as Mission information-disclosure surfaces with the same
-privacy posture, audience-filtering the disclosed authority so a
-consumer never sees entries addressed to audiences it is not
-authorized to request ({{mission-status-request}},
-{{mission-status-response}}).
+treat both as Mission information-disclosure surfaces,
+audience-filtering the disclosed authority so a consumer never sees
+entries addressed to audiences it is not authorized to request
+({{mission-status-request}}, {{mission-status-response}}). A Mission
+Status Response also discloses `version`, `expires_at`, any schedule
+and the termination reason to every holder of the read
+authorization; a deployment can narrow that authorization
+({{mission-status-authentication}}) where they are sensitive.
 
 ## Status Audit Logging
 
