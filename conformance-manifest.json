@@ -22758,7 +22758,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "governed work with no establishable Mission reference is refused before evaluation, on both arms. On the MAS Join path the propagated reference is the ONLY source: an absent or stripped field refuses unknown_mission and a malformed one refuses mission_reference_conflict, so governed work never runs ungoverned. On the credential-carried path an absent field correctly leaves the credential-established reference in force, and a malformed field still refuses"
+    "normative": "governed work with no usable Mission reference is refused before evaluation, never run ungoverned: where the propagated reference is the only source (the MAS Join path), an absent, stripped or malformed reference refuses; where the credential carries the Mission, an absent field leaves the credential-carried reference in force and a malformed one still refuses",
+    "local": "the reference PEP refuses each of these with mission_reference_conflict, the reason Verification and Conflict assigns to a malformed or missing reference where governance requires one, before any decision (#972 item 13, D289); unknown_mission is kept for a well-formed reference whose Mission does not resolve"
    },
    "level": "unit",
    "coverage": "tested",
@@ -22800,7 +22801,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses unknown_mission and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
+   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses mission_reference_conflict (unknown_mission before #972 item 13, D289) and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
   },
   {
    "id": "mas.reference.reject-extra-data",
