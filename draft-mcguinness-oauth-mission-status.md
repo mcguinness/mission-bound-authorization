@@ -1990,8 +1990,15 @@ by the published compromise information.
 ## General OAuth Security
 
 This document inherits OAuth 2.0 Best Current Practice {{RFC9700}} for
-the OAuth surfaces it composes with; implementers MUST follow current
-OAuth security guidance.
+the OAuth surfaces it composes with, and implementers MUST follow it.
+
+A private-key JWT client assertion names the AS's issuer identifier
+as its audience ({{mission-status-authentication}}), so it is
+acceptable at every AS endpoint that accepts that method.
+{{Section 3 of RFC7523}} makes `jti` replay protection optional; an
+AS that applies it across those endpoints, with short assertion
+lifetimes, keeps an assertion captured at one endpoint from
+authenticating at another.
 
 # Privacy Considerations {#privacy-considerations}
 
