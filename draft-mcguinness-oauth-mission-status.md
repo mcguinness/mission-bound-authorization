@@ -344,6 +344,16 @@ response, not the `insufficient_scope` error of
 audience, or a failed sender constraint is instead an access-token
 authentication failure ({{mission-status-auth-failures}}).
 
+Read authorization identifies the Missions the caller may inspect
+under deployment policy: all Missions at the issuer, those of a
+tenant, or a narrower set. Possession of the `mission_status` scope
+alone does not establish which Missions it covers. That
+authorization, with the audience entitlement of
+{{mission-status-request}} when the request names an `audience`, is
+the authorization for the `mission_id` and audience that
+{{mission-status-anti-oracle}} requires, and a Mission it does not
+cover receives the not-found response.
+
 A presented access token (mechanism 2) MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
 AS publishes for this endpoint in its Protected Resource Metadata
