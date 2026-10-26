@@ -7618,6 +7618,16 @@ Cross-Domain:
   no particular type (Conformance Roles, Authorization Details Types);
   each `mission_error` value is explained to the client (Issuance
   Gating); and Scope Projection gains an example (#1722).
+- Editorial, no requirement change: Adjacent Work distinguishes the
+  `mission` claim from AAuth's `mission_s256` claim and the WIMSE AIMS
+  agent mission; `target_resources`, like `purpose`, grants no
+  authority as a configured-mapping key; Terminology defines
+  "Mission-governed client"; and Issuance Gating gives the reason a
+  Token Exchange refusal uses `invalid_request` (#1532).
+- The consent rendering attributes client-supplied text to the client,
+  identified from client identity information the AS trusts, and an AS
+  that judges goal text misleading refuses the submission rather than
+  truncating the text (Rendering Safeguards; #1532).
 
 -01
 
