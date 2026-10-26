@@ -1641,14 +1641,6 @@ export interface ExecutionAttempt {
    * nothing about what the permit did.
    */
   redeemed?: boolean;
-  /**
-   * @spec metering#settlement-states (#813, #816, decision e): the permit's
-   * retained, PDP-signed Decision Evidence records a budget reservation for
-   * it (a `metering` entry `reserved`). Such a permit this PEP suppresses
-   * before redeeming it sends its suppression to the PDP to release the
-   * reservation; no other unredeemed suppression is sent.
-   */
-  budgetReserved?: boolean;
   /** Payments-domain join keys (reconcile.ts), not spec members. */
   permitId: string;
   joinKey: string;
@@ -3438,7 +3430,6 @@ export class Pep {
       ...(retained?.parameter_digest !== undefined
         ? { authorizedParameterDigest: retained.parameter_digest }
         : {}),
-      ...(retained?.metering?.some((m) => m.settlement_state === "reserved") ? { budgetReserved: true } : {}),
       // @spec runtime#evaluation-context-binding (#773): the binding this PEP
       // captured and sent, held for the attempt with the decided parameters,
       // so the permit is never reinterpreted through a changed declaration.
@@ -3924,12 +3915,14 @@ export class Pep {
         // A disposition after redemption is the redeeming attempt's proof of
         // how it ended: it settles the claim (a suppression settles it
         // `failed`). No path that completes here redeems.
+        //
+        // @spec metering#settlement-states (#813, #816, owner ruling): a
+        // budget-reserved permit suppressed before redemption sends nothing
+        // either. Releasing its reservation would need durable proof that the
+        // permit can no longer be redeemed, and this PEP's transaction-tier
+        // redemption store is in memory, so it cannot durably cancel one. The
+        // reservation stays charged until the permit and its lease elapse.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
-        // @spec metering#settlement-states (#813, #816, decision e): a
-        // budget-reserved permit suppressed before redemption is affirmative
-        // non-execution: its signed record releases the reservation. The
-        // claim stays open, so a later redemption still settles it.
-        else if (disposition.outcome === "suppressed" && attempt.budgetReserved) await this.releaseUnredeemed(recorded.content);
         return { recorded: true };
       } catch {
         /* one retry, on the SAME execution identity: a retained record is
@@ -3954,22 +3947,6 @@ export class Pep {
       await this.deps.claims.settle(record);
     } catch {
       /* resolved by reconciliation */
-    }
-  }
-
-  /**
-   * @spec metering#settlement-states (#813, #816, decision e): tell the PDP's
-   * claim domain that a budget-reserved permit was suppressed before this PEP
-   * redeemed it, with the attempt's own PEP-signed `suppressed` Execution
-   * Evidence, so the permit's reservation is released. The claim is not
-   * settled. Best effort: one that fails to arrive leaves the reservation
-   * charged until reconciliation.
-   */
-  async releaseUnredeemed(record: ExecutionEvidenceObject): Promise<void> {
-    try {
-      await this.deps.claims?.releaseUnredeemed?.(record);
-    } catch {
-      /* the reservation stays charged until reconciliation */
     }
   }
 

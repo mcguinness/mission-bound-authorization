@@ -240,8 +240,8 @@ describe("exact budget exhaustion through the executing PEP (@spec metering#aggr
   });
 });
 
-describe("a budget-bound permit suppressed before redemption (@spec metering#settlement-states, #813, #816, decision e)", () => {
-  it("the PEP sends its signed suppression of a budget-bound permit it refused before redeeming it, the reservation is released and nothing executes, while a suppressed permit with no budget binding sends nothing new (@spec metering#settlement-states, runtime#execution-reverification, #813, #816, decision e)", async () => {
+describe("a budget-bound wire permit suppressed before redemption (@spec metering#settlement-states, #813, #816, owner ruling)", () => {
+  it("the PEP sends nothing to the PDP for a wire permit it refused before redeeming it, so a budget-bound permit's reservation stays charged and nothing executes, with or without a budget binding (@spec metering#settlement-states, runtime#execution-reverification, #813, #816, owner ruling)", async () => {
     for (const bound of [true, false]) {
       // The invoice's payee changes between the decision and the permit's use.
       let payments: PaymentsStore | undefined;
@@ -254,7 +254,6 @@ describe("a budget-bound permit suppressed before redemption (@spec metering#set
         },
       });
       payments = h.payments;
-      const release = vi.spyOn(h.claims, "releaseUnredeemed");
       const settle = vi.spyOn(h.claims, "settle");
       const res = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
       expect(res, String(bound)).toEqual({ ok: false, refusal_reason: "target_drift" });
@@ -266,12 +265,9 @@ describe("a budget-bound permit suppressed before redemption (@spec metering#set
         .find((d) => d.decision === "permit");
       const evaluationId = String(permit?.evaluation_id);
       if (bound) {
-        expect(release).toHaveBeenCalledTimes(1);
-        expect(await release.mock.results[0]?.value).toEqual({ accepted: true, released: 2 });
-        expect(h.claims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["released", "released"]);
-        expect(h.claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+        expect(h.claims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+        expect(h.claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "125.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
       } else {
-        expect(release).not.toHaveBeenCalled();
         expect(h.claims.reservationsFor(evaluationId)).toEqual([]);
       }
       await h.close();
