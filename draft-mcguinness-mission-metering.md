@@ -846,7 +846,11 @@ instance's bound at once, and more over time at the template's
 `dispatch_rate`. Unless the deployment meters an aggregate bound
 spanning the template's instances ({{aggregate-bounds}}), the
 template's consent rendering MUST present the bound as per instance,
-together with `max_active` and `dispatch_rate`.
+together with `max_active` and `dispatch_rate`. A standing-consent
+budget ({{aggregate-bounds}}) is such an aggregate: the consent renders
+it beside the per-instance bound, and a Mission Issuer MUST refuse to
+create a Child Mission under an instance it meters unless the child is
+charged to that budget's counter.
 
 # Aggregate Bounds {#aggregate-bounds}
 
@@ -885,6 +889,25 @@ approval event. A refusal under an aggregate bound is carried as
 the aggregate key class in `counter_scope` and the counter in
 `counter_id` ({{metering-evidence}}).
 
+A standing-consent budget is the one aggregate a human approves rather
+than the deployment: a Mission Template's Dispatch Policy commits a
+budget identifier, qualified within the budget owner's accounting
+domain, with its currency and limit
+({{I-D.draft-mcguinness-oauth-mission-template}}), and every Mission
+dispatched under the template, and every successor of one, draws on
+one shared counter keyed by that identifier, recorded with
+`counter_scope` `standing_consent`. The committed policy is the
+limit's authoritative home. The Enforcement Scope Statement MAY
+reference the policy rather than repeat its numbers, but it identifies
+the policy's committed version and makes the budget's scope, currency,
+and limit discoverable; the identifier alone does not disclose the
+bound. A restart, a replacement template, a policy successor, or a
+fresh consent continues the counter and never creates a fresh one.
+Fresh consent is not evidence of non-execution: it neither releases a
+held reservation nor resets consumption ({{settlement-states}}), and a
+limit it raises is measured against consumption to date and the
+outstanding reservations.
+
 Aggregate keying crosses the family's per-Mission consistency
 domains: a subject-keyed or lineage-keyed counter is shared by every
 Mission the key spans, so it cannot be sharded by Mission Identifier
@@ -915,8 +938,9 @@ companion's extension conventions
 
   `counter_scope`:
   : REQUIRED. A string. The counter's key class: `mission` for the
-    Mission-keyed bounds of this document, or `subject`, `client`,
-    or `lineage` for an aggregate bound ({{aggregate-bounds}}).
+    Mission-keyed bounds of this document, `subject`, `client`, or
+    `lineage` for an aggregate bound, or `standing_consent` for a
+    standing-consent budget ({{aggregate-bounds}}).
 
   `counter_id`:
   : REQUIRED. A string. A stable identifier of the counter, the same
@@ -1352,6 +1376,16 @@ this registry.
 
 \[\[ To be removed from the final specification ]]
 
+- Changes a requirement (#813, #816, D830): a standing-consent budget
+  is an aggregate a human approves in a Mission Template's Dispatch
+  Policy, metered on one counter shared by the template's instances and
+  their successors and recorded with `counter_scope`
+  `standing_consent`. The Enforcement Scope Statement identifies the
+  committed policy version and discloses scope, currency and limit;
+  restarts, replacement templates, policy successors and fresh consent
+  continue the counter, and fresh consent neither releases a held
+  reservation nor resets consumption. A Child Mission is refused under
+  an instance the budget meters unless charged to it.
 - `max_budget`'s `currency` takes the form Resource Access gives
   `max_amount`'s `currency`: exactly three upper-case ASCII letters,
   compared exactly.
