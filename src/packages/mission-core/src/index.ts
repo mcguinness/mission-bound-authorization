@@ -211,6 +211,7 @@ export {
   IssuerKeys,
   type IssuerKeysFetch,
   type IssuerKeysOptions,
+  keyThumbprint,
 } from "./issuer-keys.js";
 export {
   type LocalApprovedSetRetrieval,
