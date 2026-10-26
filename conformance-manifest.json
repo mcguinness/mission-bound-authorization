@@ -31997,12 +31997,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment declaring an authority dependency states the dependency, its authoritative source and the state an observation represents; what it governs; the invalidating changes; its maximum staleness, separately from the Mission-state freshness declaration; its enforcement route; and how reliance is restored and responsibility passes to a successor"
+    "normative": "a deployment declaring an authority dependency states the dependency, its authoritative source and the state an observation represents; what it governs; the invalidating changes; its maximum staleness, separately from the Mission-state freshness declaration; its enforcement route; and how reliance is restored and responsibility passes to a successor",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; a composition that enforces it states it under extensions.authority_dependencies (withAuthorityDependencies), and the statement's loader refuses a declaration missing any element"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > states every element the Runtime requires, the staleness bound apart from the Mission-state freshness declaration",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/authority-dependency-declaration.test.ts",
+     "name": "the deployment's Enforcement Scope Statement declares its authority dependency (@spec runtime#input-authority-dependency, #830) > refuses at load a declaration missing any element, or one that names no enforcement route or a non-positive staleness",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: accepting a declaration with a missing member, and loading a statement without validating its declarations, each failed the refusal witness."
   },
   {
    "id": "runtime.authority-dependency.reconciliation-lag-refuses",
@@ -32041,12 +32055,68 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage"
+    "normative": "where the PDP enforces a declared dependency, an action it governs is refused on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated in the PDP's Resource-policy step (services/pdp/src/evaluate.ts step 6b) where the declaration routes direct evaluation to the PDP; a stale observation and a source that never answered are each a case of no acceptable observation remaining. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on an observed invalidation: the Subject disabled, or deprovisioned",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy once the observation is older than its bound, the source still answering: a stale observation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > keeps serving through a source outage while the cached observation is within its validity, and refuses once no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses through an outage within the observation's validity where the declaration requires an online check",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy when no observation was ever acceptable: the source never answered",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > permits while an observation within its bound shows the Subject active and the delegation held",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > does not let an older read completing late replace a newer read's known withdrawal",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > publishes reads that complete in issue order in that order, the newer last",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: dropping the PDP's check, the withdrawal check, the invalidation check, the staleness check, or the online check, accepting no observation, and letting an outage invalidate a still-valid observation, each failed its witness. D813 review (PR A): publishing an older read over a newer one failed the ordering witness."
   },
   {
    "id": "runtime.authority-dependency.refuse-when-not-established-local",
@@ -32063,12 +32133,68 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage"
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, an action it governs is refused there on a known withdrawal, on an observed applicable invalidation, and when no acceptable authoritative observation remains, even when the PDP permits within Mission authority; unless the deployment requires an online check, an observation still within its accepted validity keeps serving through a source outage",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; evaluated as a composed resource-policy step in the payments PEP (services/mcp-payments/src/pep.ts) after the PDP's permit and before any obligation or effect, where the declaration routes direct evaluation to the PEP; the decision point evaluates no dependency then and permits within Mission authority. The PEP rechecks the dependency at every use of the permit, release included, on every dispatch path (reads, unkeyed and keyed reversible writes, the transaction tier): the `authority_dependency` use check refuses resource_policy once the ceiling the composed step carried from admission is reached, whatever a later read shows, and once a known withdrawal, an observed invalidation or a lost observation reaches the PEP; routed to the PDP, a PEP holding the dependency rechecks it at release too (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > keeps serving through a source outage while the cached observation is within its validity",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > permits the read while an observation within its bound establishes the dependency",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect once the observation the step relied on has passed its validity, on a read, an unkeyed write, a keyed write and the transaction tier",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a permit is held to the observation it was admitted on, and a PEP holding a dependency routed to the PDP rechecks it at release (@spec runtime#input-authority-dependency, #830, D813) > releases no effect after the admission observation's validity though a newer read re-established the dependency before release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a permit is held to the observation it was admitted on, and a PEP holding a dependency routed to the PDP rechecks it at release (@spec runtime#input-authority-dependency, #830, D813) > refuses at release, routed to the PDP, a permit the PDP issued before a known withdrawal reached the PEP, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's ceiling on a read admitted at the edge of the observation's validity (@spec runtime#input-authority-dependency, #830, D813) > refuses a read admitted at 299 s of a 300 s validity and reaching release at 300 s",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: dropping the PEP's composed step failed the refusal witnesses, and letting an outage invalidate a still-valid observation failed the outage witness. D813 review (PR A): removing the release check, skipping it on any one dispatch path (each of the four separately), not carrying the admission ceiling, refusing only past the ceiling rather than at it, not rechecking known invalidations at release, and not rechecking a PDP-routed dependency, each failed its witness."
   },
   {
    "id": "runtime.authority-dependency.permit-cap",
@@ -32085,12 +32211,26 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents"
+    "normative": "a permit issued in reliance on a dependency observation expires no later than the observation's accepted validity, measured from the time the observation represents",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the observation's validity is a ceiling of the PDP's one permit-deadline calculation (authority_dependency_valid_until), measured from the time the observation represents. The resolver dates each observation from when its read was issued, not when it completed, and publishes overlapping reads (a scheduled refresh, a reconciliation pass) in issue order, so a slow read never renews an old state's validity and an older read never replaces a newer one, a known withdrawal included (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > issues a permit that expires no later than the observation's accepted validity",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > dates an observation from when its read was issued, so a slow read does not renew an old state's validity",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. #830 Q-d reference PR A (D798). Mutation-proved: dropping the ceiling, and measuring the validity from the decision instant instead of the observation, each failed the witness. D813 review (PR A): dating an observation from its read's completion failed the slow-read witness."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes",
@@ -32107,12 +32247,32 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable"
+    "normative": "where the PDP enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PDP records each refusal in the deployment's dependency evidence (AuthorityDependencyEvidence: enforcer, dependency, failure withdrawn, invalidated, stale or unavailable, Mission, subject, client, action, observation time); a deployment record, not a Runtime Evidence object (the wire form is #830 Q-c's). Source availability is the outcome of the latest-issued read that completed, so a late failure of an older read does not turn a stale observation into an unavailable source (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > retains each refusal's cause so a known withdrawal, a stale observation and an unavailable source stay distinguishable",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/packages/mission-core/test/authority-dependency-resolver.test.ts",
+     "name": "the identity-state resolver orders overlapping reads and keeps each observation's own time (@spec runtime#input-authority-dependency, #830) > reports the source's availability from the latest-issued read that completed, not the last to complete",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale, whether or not the source answered, failed the witness. D813 review (PR A): taking availability from the last read to complete failed the availability witness."
   },
   {
    "id": "runtime.authority-dependency.evidence-distinguishes-local",
@@ -32129,12 +32289,38 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable"
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a declared dependency, the retained evidence of its refusal records whether the dependency was known withdrawn, its observation stale, or its source unavailable",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PEP's composed step records each refusal in the deployment's dependency evidence, as the PDP does, and disposes the permit suppressed with error resource_policy. A refusal at release is recorded too: a reached admission ceiling as stale, a known withdrawal as withdrawn (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect once the observation the step relied on has passed its validity, on a read, an unkeyed write, a keyed write and the transaction tier",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: classifying every expired observation as stale failed the witness. D813 review (PR A): removing the release check failed both witnesses."
   },
   {
    "id": "runtime.authority-dependency.mechanism-refusal-kept",
@@ -32151,12 +32337,38 @@
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
-    "normative": "where the PDP enforces a dependency through an existing mechanism, it refuses as that mechanism refuses (an inactive Mission, contained authority, a failed resource-policy condition)"
+    "normative": "where the PDP enforces a declared dependency through its Resource-policy step, a dependency not established refuses as that mechanism refuses, `resource_policy`, never a Mission-state code",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the reference enforces the dependency at the PDP through the Resource-policy step only, so an inactive Mission and contained authority keep their own existing refusals unchanged"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on a known withdrawal of the delegation, and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy on an observed invalidation: the Subject disabled, or deprovisioned",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy once the observation is older than its bound, the source still answering: a stale observation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-authority-dependency.test.ts",
+     "name": "a declared authority dependency evaluated directly at the PDP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy when no observation was ever acceptable: the source never answered",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where the PDP enforces the dependency (direct evaluation), its `-local` twin where a composed resource-policy step at the PEP or resource server does. #830 Q-d reference PR A (D798). Mutation-proved: refusing stale_state instead failed the witnesses."
   },
   {
    "id": "runtime.authority-dependency.mechanism-refusal-kept-local",
@@ -32173,12 +32385,32 @@
    "surface": "resource-operation",
    "assertion": "refusal",
    "observation": {
-    "normative": "where a composed resource-policy step at the PEP or resource server enforces a dependency, its refusal is that mechanism's failed resource-policy condition"
+    "normative": "where a composed resource-policy step at the PEP or resource server enforces a dependency, its refusal is that mechanism's failed resource-policy condition",
+    "local": "the reference's one declared dependency (config/authority-dependencies.json: the Mission Subject's continuing delegation to the client acting under the Mission, governing user-delegated Missions, maximum staleness 300 s), observed by the identity-state resolver (packages/mission-core/src/authority-dependency.ts) over the configuration-backed identity source (config/identity.json's status and withdrawn_delegations), re-read without a restart; the PEP's composed step refuses resource_policy. A refusal at release is the same resource_policy (D813)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#830 (D789): specification slice. The reference implements no general authority dependency; its agent-registry evaluation ({{input-actor}}) is the closest precedent, and #830's reference steps (resolver, gate checks, reconciler) would witness one declared dependency by both routes. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on a known withdrawal though the PDP permits within Mission authority (D794), and retains it as withdrawn",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a declared authority dependency enforced as a composed resource-policy step at the PEP (@spec runtime#input-authority-dependency, #830) > refuses resource_policy at the PEP on an observed invalidation (the Subject disabled), on a stale observation, and when no acceptable observation remains",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "the composed step's dependency ceiling and recheck hold at release on every dispatch path (@spec runtime#input-authority-dependency, #830, D813) > releases no effect when a known withdrawal reaches the PEP between admission and release, on every dispatch path",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#830 (D789): specification slice. D794: placement-neutral; twin rows by holder: this row where a composed resource-policy step at the PEP or resource server enforces the dependency, its PDP twin (the same id without `-local`) where the PDP does (direct evaluation). #830 Q-d reference PR A (D798). Mutation-proved: refusing out_of_authority instead failed the witnesses. D813 review (PR A): removing the release check failed the witness."
   },
   {
    "id": "runtime.state-freshness.external-change-bound",
