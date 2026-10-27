@@ -98,7 +98,7 @@
           "action_class": "irreversible_action",
           "phases": ["compensate"],
           "property": "verified",
-          "descriptor": {"id": "https://payments.example/evaluation-context/payment-reverse", "version": "2026-10-25", "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E"}
+          "descriptor": {"id": "https://payments.example/evaluation-context/payment-reverse", "version": "2026-10-26", "digest": "sha-256:ELN9R2UG9gCg8MnbaBTgg0xRSc0FRjX14cDUpivPbYI"}
         }
       ],
       "descriptors": [
@@ -139,11 +139,11 @@
         },
         {
           "id": "https://payments.example/evaluation-context/payment-reverse",
-          "version": "2026-10-25",
-          "digest": "sha-256:_Lrssy2jXGLmYZEqNl5UIiWQ5WTBvUMt9TN_wFGn-8E",
+          "version": "2026-10-26",
+          "digest": "sha-256:ELN9R2UG9gCg8MnbaBTgg0xRSc0FRjX14cDUpivPbYI",
           "document": {
             "id": "https://payments.example/evaluation-context/payment-reverse",
-            "version": "2026-10-25",
+            "version": "2026-10-26",
             "targets": ["invoice", "vendor"],
             "facts": [
               {"name": "vendor_id", "resolver": "ledger:wire.vendor_id", "granularity": "effective_values", "normalization": "string", "parameter": "vendor_id"},
@@ -152,7 +152,7 @@
               {"name": "reversed_operation", "resolver": "ledger:wire.op_key", "granularity": "effective_values", "normalization": "string", "parameter": "reverses"},
               {"name": "invoice_issued_at", "resolver": "payments-store:invoice.issued_at", "granularity": "effective_values", "normalization": "string-or-null"},
               {"name": "invoice_classification", "resolver": "payments-store:invoice.classification", "granularity": "effective_values", "normalization": "string-or-null"},
-              {"name": "vendor_tenant", "resolver": "payments-store:vendor.tenant", "granularity": "effective_values", "normalization": "string-or-null"}
+              {"name": "vendor_tenant", "resolver": "payments-store:paid-vendor.tenant", "granularity": "effective_values", "normalization": "string-or-null"}
             ]
           }
         }

@@ -1429,9 +1429,11 @@ export interface EnforceResult {
  * @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
  * (#1266, #773): the live resource facts a decision request carries for an
  * invoice-scoped crossing, from one observation of the store records: the
- * vendor the invoice names, the invoice's issuance instant (an invoice with
- * none carries no fact, which satisfies no issuance bound), the tenant that
- * owns it (its vendor's), and its own classification label. The context
+ * vendor the records name (the vendor the invoice names now, or on a
+ * compensate crossing the vendor the committed wire paid, #1693), the
+ * invoice's issuance instant (an invoice with none carries no fact, which
+ * satisfies no issuance bound), that vendor's current tenant, and the
+ * invoice's own classification label. The context
  * capture commits the same records, so the facts the decision evaluates and
  * the facts its binding commits are one observation, with no await between
  * them (the owner's #1663 review 3).
@@ -2843,18 +2845,28 @@ export class Pep {
       // establishment, is what both the decision's live properties and the
       // context capture below are built from, with no await between them.
       // A record gone by now is the same pre-decision refusal as above.
+      //
+      // @spec resource-access#initial-common-constraints, runtime#compound-actions
+      // (#1693, D873): the vendor record read is the vendor the committed wire
+      // paid, never the vendor the invoice names now. The wire fixes which
+      // vendor the reversal concerns, and that vendor's record supplies its
+      // current tenant, so `vendor_id`, the tenant bound and the offset
+      // effect name one vendor. An invoice reassigned since neither blocks
+      // nor widens the reversal; a paid vendor the store no longer holds is
+      // refused here, before the decision request.
       const snapshotInvoice = this.deps.payments.getInvoice(established.wire.invoiceId);
       if (!snapshotInvoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
-      const snapshotVendor = this.deps.payments.getVendor(snapshotInvoice.vendor_id);
+      const snapshotVendor = this.deps.payments.getVendor(established.wire.vendorId);
       if (!snapshotVendor) {
         return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
           resource: { type: "invoice", id: snapshotInvoice.id },
         });
       }
       const snapshot: StoreRecords = { invoice: snapshotInvoice, vendor: snapshotVendor, payments: this.deps.payments };
-      // The vendor the decision evaluates stays the wire's: only the live
-      // facts are read from the store (the owner's ruling: the existing
-      // decision semantics are preserved).
+      // The vendor the decision evaluates is the wire's, the vendor the
+      // snapshot read, so the explicit `vendor_id` below repeats what the
+      // live properties already carry: only the live facts come from the
+      // store.
       resourceObj = {
         type: "invoice",
         id: snapshotInvoice.id,

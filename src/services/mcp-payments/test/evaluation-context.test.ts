@@ -49,6 +49,7 @@ import {
   type TokenFacts,
   TOOL_ACTIONS,
   TransactionEngine,
+  type Vendor,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
@@ -153,6 +154,8 @@ interface Harness {
   restart: () => void;
   /** Rewrite each decision after the PDP returns it, before the PEP sees it. */
   rewrite: (fn: ((d: Decision) => Decision) | undefined) => void;
+  /** Replace the Common Constraints on the Mission's entry from the next view on. */
+  constrain: (c: Record<string, unknown> | undefined) => void;
 }
 
 function harness(
@@ -186,9 +189,10 @@ function harness(
       { id: "inv-2", vendor_id: "acme", amount: "75.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
     ],
   );
+  let constraints = o.constraints;
   const loadView = (ref: { id: string; issuer: string }) =>
     (ref.id === "msn_773" || ref.id === "msn_773b") && ref.issuer === ISSUER
-      ? { view: view(ref.id, o.constraints), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(ref.id, constraints), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
   const claims = openEphemeralClaimDomain({
@@ -263,6 +267,9 @@ function harness(
     },
     rewrite: (fn) => {
       rewrite = fn;
+    },
+    constrain: (c) => {
+      constraints = c;
     },
   };
 }
@@ -1006,6 +1013,234 @@ describe("a compensating decision and its context are one observation of the liv
       expect(request?.context.evaluation_context_digest).toBe(sameObservation.digest);
     });
   }
+});
+
+/** Add a vendor record: a direct store edit (#1693). */
+function addVendor(payments: PaymentsStore, id: string, tenant: string): void {
+  payments.db.prepare("INSERT INTO vendors (id, name, status, tenant) VALUES (?, ?, 'approved', ?)").run(id, id, tenant);
+}
+
+/**
+ * Reassign `inv-1` to another vendor: a direct store edit, since the
+ * reference store has no operation that moves an invoice (#1693). A changed
+ * authoritative fact, so it bumps the invoice's version.
+ */
+function reassignInvoice(payments: PaymentsStore, vendorId: string): void {
+  payments.db.prepare("UPDATE invoices SET vendor_id = ?, version = version + 1 WHERE id = 'inv-1'").run(vendorId);
+}
+
+/** The committed wire's ledger record for `inv-1`: its operation key and the vendor it paid. */
+const ledgerWire = (h: Harness) =>
+  h.connectors.db.prepare("SELECT op_key, vendor_id FROM ledger WHERE invoice_id = 'inv-1'").get() as
+    | { op_key: string; vendor_id: string }
+    | undefined;
+
+const reverseArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+
+describe("the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693)", () => {
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (${mode})`, async () => {
+      // The wire pays acme (tenant-a); the invoice then moves to globex (tenant-b).
+      const h = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      expect(wire?.vendor_id).toBe("acme");
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      // The decision evaluated the vendor the wire paid and that vendor's tenant.
+      expect(h.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      // The reversal offsets the paid vendor's wire.
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([
+        expect.objectContaining({ reversed_op_key: wire?.op_key, amount: "125.00", currency: "USD" }),
+      ]);
+
+      // The same move under a bound naming the new vendor's tenant: the
+      // PDP's own bound denies it at the decision, and nothing is offset.
+      const other = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(other, COMMIT)).ok).toBe(true);
+      addVendor(other.payments, "globex", "tenant-b");
+      reassignInvoice(other.payments, "globex");
+      other.constrain({ tenant: "tenant-b" });
+      const denied = await other.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(denied).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+      expect(denied).not.toHaveProperty("refusal_reason");
+      expect(other.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      expect(compensating(other)?.decision).toBe("deny");
+      expect(executions(other).filter((r) => r.outcome === "suppressed")).toHaveLength(0);
+      expect(other.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    });
+  }
+
+  it("with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is refused target_drift with zero reversal entries", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    addVendor(h.payments, "globex", "tenant-b");
+    reassignInvoice(h.payments, "globex");
+    expectLiveFactDrift(h, await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => h.payments.setVendorTenant("acme", "tenant-c")));
+  });
+
+  it("an invoice reassigned to another vendor between the decision and release still releases the reversal of the paid vendor's wire: the context re-established at release is the paid vendor's and equal", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    const wire = ledgerWire(h);
+    addVendor(h.payments, "globex", "tenant-b");
+    const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => reassignInvoice(h.payments, "globex"));
+    expect(done.ok, JSON.stringify(done)).toBe(true);
+    const decision = compensating(h);
+    const completed = executions(h).filter((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(completed[0]?.effective_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ reversed_op_key: wire?.op_key })]);
+  });
+
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`the paid vendor's record gone before the decision is refused unknown_vendor with no decision request, though the invoice's current vendor resolves (${mode})`, async () => {
+      const h = harness({ pep: declarations, pdp: declarations });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run();
+      const sent = h.requests.length;
+      const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(refused).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+      expect(h.requests).toHaveLength(sent);
+      expect(compensating(h)).toBeUndefined();
+      expect(refusals(h).at(-1)).toMatchObject({
+        denial_reason: "target_unresolvable",
+        action: { name: "payments:payment.reverse" },
+      });
+      expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    });
+  }
+
+  it("the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest", async () => {
+    const h = harness();
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    addVendor(h.payments, "globex", "tenant-b");
+    reassignInvoice(h.payments, "globex");
+    const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => {
+      h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run();
+    });
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const decision = compensating(h);
+    expect(decision?.decision).toBe("permit");
+    const [suppressed] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(suppressed?.error).toBe("target_drift");
+    expect(suppressed?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+    expect(suppressed?.effective_parameter_digest).toBe(suppressed?.authorized_parameter_digest);
+    expect(suppressed?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(suppressed).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
+  it("a compensate capture resolves the invoice and the vendor the committed wire paid: read from the store it takes the paid vendor, never the invoice's current vendor, and records handed in naming another vendor do not capture", () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [
+        { id: "acme", name: "Acme", status: "approved", tenant: "tenant-a" },
+        { id: "globex", name: "Globex", status: "approved", tenant: "tenant-b" },
+      ],
+      // The invoice names globex now; its wire paid acme.
+      [{ id: "inv-1", vendor_id: "globex", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const wire = connectors.committedWire("op-wire", "evl-wire");
+    const invoice = payments.getInvoice("inv-1");
+    if (!wire || !invoice) throw new Error("fixture");
+    const salts = new EvaluationContextSalts();
+    const capture = (vendorId?: string) =>
+      captureEvaluationContext({
+        declarations: CLAIMED,
+        salts,
+        mission: { issuer: ISSUER, id: "msn_773" },
+        operation: reverseOperation,
+        invoiceId: "inv-1",
+        payments,
+        compensates: { opKey: "op-wire", evaluationId: "evl-wire" },
+        committedEffects: connectors,
+        ...(vendorId !== undefined
+          ? { records: { invoice, vendor: payments.getVendor(vendorId) as Vendor, payments }, wire }
+          : {}),
+      });
+    const paid = capture("acme");
+    if (!paid.ok) throw new Error(JSON.stringify(paid));
+    // Read from the store, the vendor is the one the wire paid.
+    const read = capture();
+    if (!read.ok) throw new Error(JSON.stringify(read));
+    expect(read.digest).toBe(paid.digest);
+    // Records naming the invoice's current vendor are not the paid vendor's.
+    expect(capture("globex")).toEqual({ ok: false, reason: "target_unresolvable" });
+  });
+
+  it("the resolver of the tenant of the vendor an invoice names does not serve the compensate crossing: a descriptor naming it there does not capture", () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved", tenant: "tenant-a" }],
+      [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const invoiceVendorTenant = new EvaluationContextBindingDeclarations(
+      claimedStatement((st) => {
+        const ecb = st.extensions.evaluation_context_binding as {
+          operations: Array<{ operation: string; descriptor: { id: string; version: string; digest: string } }>;
+          descriptors: DescriptorEntry[];
+        };
+        const current = ecb.descriptors.find((d) => d.id.endsWith("/payment-reverse")) as DescriptorEntry;
+        const facts = (current.document.facts as Array<Record<string, unknown>>).map((f) =>
+          f.name === "vendor_tenant" ? { ...f, resolver: "payments-store:vendor.tenant" } : f,
+        );
+        const document = { ...current.document, version: "2026-10-26-invoice-vendor-tenant", facts };
+        const digest = canonicalDigest(document as JsonValue);
+        ecb.descriptors.push({ id: current.id, version: "2026-10-26-invoice-vendor-tenant", digest, document });
+        for (const op of ecb.operations) {
+          if (op.operation === "payments:payment.reverse") op.descriptor = { id: current.id, version: "2026-10-26-invoice-vendor-tenant", digest };
+        }
+        return st;
+      }),
+    );
+    const capture = (declarations: EvaluationContextBindingDeclarations) =>
+      captureEvaluationContext({
+        declarations,
+        salts: new EvaluationContextSalts(),
+        mission: { issuer: ISSUER, id: "msn_773" },
+        operation: reverseOperation,
+        invoiceId: "inv-1",
+        payments,
+        compensates: { opKey: "op-wire", evaluationId: "evl-wire" },
+        committedEffects: connectors,
+      });
+    expect(capture(CLAIMED).ok).toBe(true);
+    expect(capture(invoiceVendorTenant)).toEqual({ ok: false, reason: "fact_unresolvable" });
+  });
 });
 
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
