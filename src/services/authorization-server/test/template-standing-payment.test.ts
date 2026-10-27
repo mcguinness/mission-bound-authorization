@@ -43,6 +43,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -843,7 +844,8 @@ describe("standing-payment derivations refused (@spec mission-template#prohibite
         missionId: mission.id,
         aud: RESOURCE,
         clientId: "worker",
-        cnfJkt: "jkt-3",
+        cnfJwk: HOLDER_JWK,
+        operations: TEST_OPERATIONS,
       }),
     ).rejects.toThrow(
       new StandingPaymentLineageError(

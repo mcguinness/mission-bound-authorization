@@ -1365,8 +1365,10 @@ export class McpPaymentsServer {
         algorithms: [...AAT_ALGORITHMS],
       });
       anchorJwk = (await exportJWK(key)) as Record<string, unknown>;
-    } catch {
-      throw new AatPresentationRefused("the root does not verify under this resource's attenuation-root keys");
+    } catch (e) {
+      throw new AatPresentationRefused(
+        `the root does not verify under this resource's attenuation-root keys: ${(e as Error).message}`,
+      );
     }
 
     const nowS = Math.floor(Date.now() / 1000);

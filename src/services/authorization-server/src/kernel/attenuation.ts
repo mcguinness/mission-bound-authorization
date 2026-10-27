@@ -45,6 +45,7 @@ import {
   type MissionConstraints,
   missionConstraintsNarrowingProblem,
   type MissionToolConstraints,
+  MissionAatError,
   missionToolEntry,
   parHash,
   parseAatJson,
@@ -229,9 +230,14 @@ function requestedWithinCeiling(
     } else {
       // Shape-checked as a token's member is, then held within one entry's
       // restrictions: the tool takes them from that entry alone.
-      value = readMissionConstraints({ tools: { [toolId]: args }, [MISSION_CONSTRAINTS_MEMBER]: { [toolId]: asked } })[
-        toolId
-      ] as MissionToolConstraints;
+      try {
+        value = readMissionConstraints({ tools: { [toolId]: args }, [MISSION_CONSTRAINTS_MEMBER]: { [toolId]: asked } })[
+          toolId
+        ] as MissionToolConstraints;
+      } catch (e) {
+        if (e instanceof MissionAatError) throw beyond(e.message);
+        throw e;
+      }
       const within = tool.values.some((v) => isSubsetEntry(missionToolEntry(toolId, value), missionToolEntry(toolId, v)));
       if (!within) throw beyond(`mission_constraints for ${JSON.stringify(toolId)} is not within the mapping entry's`);
     }
