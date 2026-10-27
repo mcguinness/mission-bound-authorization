@@ -2,5 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../../services/authorization-server" }, { "path": "../mission-core" }]
+  "references": [
+    { "path": "../../services/authorization-server" },
+    { "path": "../../services/pdp" },
+    { "path": "../mission-core" }
+  ]
 }

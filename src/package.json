@@ -29,6 +29,7 @@
     "keys": "node scripts/keys.mjs",
     "evidence-keys": "node scripts/evidence-keys.mjs",
     "kernel-recovery": "node scripts/kernel-recovery.mjs",
+    "ras-redemptions": "node scripts/ras-redemptions.mjs",
     "measure:evidence": "node scripts/measure-evidence.mjs"
   },
   "devDependencies": {
