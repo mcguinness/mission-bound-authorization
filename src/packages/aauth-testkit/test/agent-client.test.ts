@@ -390,6 +390,34 @@ describe("following requirements (@spec aauth#section-11.6.2)", () => {
     expect((await refusal(w.agent.call(RESOURCE, "/b"))).code).toBe("requirement_unsupported");
   });
 
+  it("surfaces a deferred (202) auth-token requirement as unsupported, reaching no PS", async () => {
+    w = await world();
+    w.resource.routes["GET /a"] = () => ({
+      status: 202,
+      headers: { "aauth-requirement": 'requirement=auth-token; resource-token="x.y.z"' },
+    });
+    expect((await refusal(w.agent.call(RESOURCE, "/a"))).code).toBe("requirement_unsupported");
+    expect(w.agent.sent.map((s) => s.url)).toEqual([`${RESOURCE}/a`]);
+  });
+
+  it("stops when a person token it just presented is asked for again", async () => {
+    w = await world();
+    w.ps.routes["POST /person"] = async () => ({
+      status: 200,
+      body: { person_token: await personToken(w) },
+    });
+    w.resource.routes["GET /a"] = () => ({
+      status: 401,
+      headers: { "aauth-requirement": "requirement=person-token" },
+    });
+    expect((await refusal(w.agent.call(RESOURCE, "/a"))).code).toBe("requirement_unsatisfiable");
+    expect(w.agent.sent.map((s) => s.url)).toEqual([
+      `${RESOURCE}/a`,
+      `${PS}/person`,
+      `${RESOURCE}/a`,
+    ]);
+  });
+
   it("refuses an auth-token requirement without a resource token", async () => {
     w = await world();
     w.resource.routes["GET /a"] = () => ({
