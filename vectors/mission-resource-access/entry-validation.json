@@ -408,6 +408,253 @@
       ]
     },
     {
+      "id": "ev-tw-04",
+      "description": "A time_window whose not_after is an actual leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_after": "2016-12-31T23:59:60Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field, though RFC 3339 permits an actual leap second",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-tw-05",
+      "description": "A time_window whose not_before is an actual leap second in an offset form",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2017-01-01T00:59:60+01:00"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field, in any offset",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-tw-06",
+      "description": "A time_window whose not_after uses :60 at no leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_after": "2026-09-01T12:00:60Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-tw-07",
+      "description": "A time_window bounded by the instants either side of a leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.time_window"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "time_window": {
+              "not_before": "2016-12-31T23:59:59Z",
+              "not_after": "2017-01-01T00:00:00Z"
+            }
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "ordinary timestamps, and not_before is before not_after"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-iss-01",
+      "description": "A resource_issued_after that is an actual leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.resource_issued_after"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2016-12-31T23:59:60Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field, though RFC 3339 permits an actual leap second",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-iss-02",
+      "description": "A resource_issued_before that is an actual leap second in an offset form",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.resource_issued_before"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2017-01-01T00:59:60+01:00"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field, in any offset",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-iss-03",
+      "description": "A resource_issued_after that uses :60 at no leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.resource_issued_after"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_after": "2026-09-01T12:00:60Z"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "Common Constraint date-time values do not use 60 for the seconds field",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-iss-04",
+      "description": "A resource_issued_before that is an ordinary timestamp beside a leap second",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.resource_issued_before"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "resource_issued_before": "2017-01-01T00:59:59+01:00"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "an ordinary timestamp in an offset form"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
       "id": "ev-rd-01",
       "description": "A recipient_domain with a trailing dot",
       "role": "authorization-server",
@@ -491,6 +738,245 @@
       },
       "refs": [
         "#1376"
+      ]
+    },
+    {
+      "id": "ev-rd-04",
+      "description": "A recipient_domain whose xn-- label does not decode under Punycode (a truncated integer)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--9.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); xn--9 decodes to nothing",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-05",
+      "description": "A recipient_domain whose xn-- label decodes past U+10FFFF",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--rf96i.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); xn--rf96i decodes to code point 1415195",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-06",
+      "description": "A recipient_domain whose xn-- label decodes to a form not in lower case (mÜnchen)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--mnchen-psa.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); the decoded form is checked as decoded, never case-folded",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-07",
+      "description": "A recipient_domain whose xn-- label decodes to a form not in NFC (me, U+0301, nchen)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--menchen-uge.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); the decoded form is checked as decoded, never normalized",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-08",
+      "description": "A recipient_domain whose xn-- label decodes to a form beginning with a combining mark (U+0301, mnchen)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--mnchen-hxd.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); a U-label does not begin with a combining mark (RFC 5891 Section 4.2.3.2)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-09",
+      "description": "A recipient_domain whose xn-- label decodes to a form beginning with a hyphen (-münchen)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn---mnchen-o2a.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); a U-label does not begin or end with a hyphen (RFC 5891 Section 4.2.3.1)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-10",
+      "description": "A recipient_domain whose xn-- label decodes to a form with hyphens in its third and fourth positions (mü--nchen)",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "xn--m--nchen-65a.example"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an internationalized label is an A-label (RFC 5890 Section 2.3.2.1); a U-label has no hyphens in its third and fourth positions (RFC 5891 Section 4.2.3.1)",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#1376",
+        "D858"
+      ]
+    },
+    {
+      "id": "ev-rd-11",
+      "description": "A recipient_domain whose A-label (münchen) is in upper case throughout",
+      "role": "authorization-server",
+      "requires": [
+        "constraint.recipient_domain"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://erp.example.com",
+          "actions": [
+            "invoices.read"
+          ],
+          "constraints": {
+            "recipient_domain": "MAIL.XN--MNCHEN-3YA.EXAMPLE"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "the ASCII A-label compares case-insensitively, so it is read in lower case before decoding"
+      },
+      "refs": [
+        "#1376",
+        "D858"
       ]
     },
     {
@@ -1750,6 +2236,336 @@
       "refs": [
         "#1596",
         "D727"
+      ]
+    },
+    {
+      "id": "ev-rc-01",
+      "description": "An entry on the payments resource referencing the contract configuration names as current for it",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-24",
+            "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-24",
+              "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "the reference equals, member for member, the one configuration names as current for the entry's resource, and that version defines payments:invoice.read"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865"
+      ]
+    },
+    {
+      "id": "ev-rc-02",
+      "description": "An entry on an unrelated resource referencing the payments contract",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://ledger.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-24",
+            "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-24",
+              "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "configuration names the payments contract current for https://payments.example/mcp only; no contract is current for this resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865"
+      ]
+    },
+    {
+      "id": "ev-rc-03",
+      "description": "An entry on the payments resource referencing a version configuration does not name as current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-20",
+            "digest": "sha-256:JOUSo-Axu_CQ7BktLeK9cp4dVJOtCKLLcAG4IKPW2bQ"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-24",
+              "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference is not the version configuration names as current for the entry's resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865"
+      ]
+    },
+    {
+      "id": "ev-rc-04",
+      "description": "An entry referencing the payments contract with no configuration naming any contract current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-24",
+            "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an absent contracts names no contract current for any resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865"
+      ]
+    },
+    {
+      "id": "ev-rc-05",
+      "description": "An entry on the payments resource referencing the version the v15 configuration names as current for it (2026-10-26)",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "the reference equals, member for member, the one configuration names as current for the entry's resource, and that version defines payments:invoice.read"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-06",
+      "description": "An entry on an unrelated resource referencing the payments contract version the v15 configuration names as current for the payments resource",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://ledger.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "configuration names the payments contract current for https://payments.example/mcp only; no contract is current for this resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-07",
+      "description": "An entry on the payments resource referencing 2026-10-24, a version the v15 configuration does not name as current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-24",
+            "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference is not the version configuration names as current for the entry's resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-08",
+      "description": "An entry referencing the payments contract's 2026-10-26 version with no configuration naming any contract current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an absent contracts names no contract current for any resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
       ]
     }
   ]

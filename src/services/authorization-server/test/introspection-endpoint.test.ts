@@ -527,6 +527,37 @@ describe("strict token resolution: bare active:false, no Mission or token detail
   });
 });
 
+describe("the issuer's projection carries fresh_until no later than the response time plus the advertised mission_max_stale_seconds (@spec status#introspection-projection, #1724 C4)", () => {
+  it("an active and a non-active projection each carry a fresh_until within the advertised ceiling of the response time", async () => {
+    const metadata = (await (await fetch(`${ISSUER}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+    const ceiling = metadata.mission_max_stale_seconds;
+    expect(Number.isSafeInteger(ceiling)).toBe(true);
+    const flowX = await runFlow({
+      intent: {
+        goal: "Pay Acme invoices for Q3 (fresh_until fixture)",
+        target_resources: [PAYMENTS],
+        expires_at: "2027-01-01T00:00:00Z",
+      },
+      proposal: PAYMENTS_PROPOSAL,
+      resource: PAYMENTS,
+    });
+    const answers: Array<Record<string, unknown>> = [];
+    for (const revoke of [false, true]) {
+      if (revoke) as.kernel.transition(flowX.missionId, "revoke");
+      const sentS = Math.floor(Date.now() / 1000);
+      const res = await introspect(flowX.at, { principal: RS_PAYMENTS_BASIC });
+      const receivedS = Math.ceil(Date.now() / 1000);
+      const mission = res.body.mission as Record<string, unknown>;
+      expect(mission.state).toBe(revoke ? "terminated" : "active");
+      const freshUntilS = Date.parse(mission.fresh_until as string) / 1000;
+      expect(freshUntilS).toBeGreaterThanOrEqual(sentS);
+      expect(freshUntilS).toBeLessThanOrEqual(receivedS + (ceiling as number));
+      answers.push(mission);
+    }
+    expect(answers.length).toBe(2);
+  });
+});
+
 describe("RFC 9068 + Mission claim-set enforcement (@spec mission#introspection — issue #541 P1-3)", () => {
   // A crafted baseline reusing flow1's REAL jti/missionId (so the P1-2
   // issuance-index/grant-liveness check resolves against flow1's live
@@ -774,12 +805,14 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     // approval_basis, authority_source (all provenance privilege). NO
     // authorization_details: it now lives at the top level only (@spec
     // mission#541 P1-1). NO expires_at: introspection never carries it (@spec
-    // mission#introspection).
+    // mission#introspection). fresh_until: the issuer's reliance horizon
+    // (@spec status#introspection-projection).
     expect(Object.keys(mission).sort()).toEqual([
       "approval_basis",
       "authority_hash",
       "authority_source",
       "derivations_remaining",
+      "fresh_until",
       "id",
       "issuer",
       "proposal_hash",
@@ -820,7 +853,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     // (#702) `authority_hash`/`approval_basis` share the same "provenance"
     // disclosure privilege as `proposal_hash`; a privilege-less principal
     // sees none of them.
-    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
+    expect(Object.keys(mission).sort()).toEqual(["fresh_until", "id", "issuer", "state", "version"]);
   });
 
   it("an active response carries the mission member to every caller authorized for the token, a resource server with no disclosure privilege included (@spec mission#introspection, #1503)", async () => {
@@ -843,7 +876,7 @@ describe("active composite + projection matrix (@spec mission#composite-active)"
     const res = await introspect(flow3.at, { principal: RS_SAAS });
     expect(res.body.active).toBe(true);
     const mission = res.body.mission as Record<string, unknown>;
-    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "version"]);
+    expect(Object.keys(mission).sort()).toEqual(["fresh_until", "id", "issuer", "state", "version"]);
     for (const entry of res.body.authorization_details as AuthorityEntry[]) {
       expect(entry.resource).toBe(SAAS);
     }
@@ -1009,7 +1042,7 @@ describe("composite non-active: active:false WITH mission.state (@spec mission#c
     expect("authority_hash" in mission).toBe(false);
     expect("approval_basis" in mission).toBe(false);
     expect(mission.state).toBe("terminated");
-    expect(Object.keys(mission).sort()).toEqual(["id", "issuer", "state", "termination", "version"]);
+    expect(Object.keys(mission).sort()).toEqual(["fresh_until", "id", "issuer", "state", "termination", "version"]);
   });
 
   it("@spec mission#introspection (#1531, D741): a correctly signed token with no issuance record is bare active:false whatever its Mission's state, while the token the AS issued on its own path still reports the Mission's state", async () => {

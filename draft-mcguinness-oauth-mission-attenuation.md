@@ -32,6 +32,14 @@ normative:
   RFC8693:
   RFC9396:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+    title: "Attenuating Authorization Tokens for Agentic Delegation Chains"
+    author:
+      -
+        ins: N. A. Niyikiza
+        name: Niki Aimable Niyikiza
+    date: 2026-10-26
+    seriesinfo:
+      Internet-Draft: draft-niyikiza-oauth-attenuating-agent-tokens-02
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -252,7 +260,8 @@ are distinct.
 A Mission-bound attenuation root is a Mission-bound token
 ({{I-D.draft-mcguinness-oauth-mission}}) whose carried authority is an
 `attenuating_agent_token` authorization detail
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{RFC9396}}).
+({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+{{RFC9396}}).
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of {{root-mapping}}. The root carries the `mission`
 claim ({{I-D.draft-mcguinness-oauth-mission}}) and the holder's
@@ -268,6 +277,16 @@ The root's `iss` MUST equal its
 and it signs the root with its own keys. It MUST carry `aud` per the
 issuance profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
 identifying the resource server(s) authorized to consume its authority.
+
+The root is an attenuation-substrate token, not a JWT access token: its
+JWS header carries the substrate's `typ` value `aat+jwt`
+({{Section 3.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}})
+in place of the issuance profile's `at+jwt`, its `cnf` carries the
+holder's public key as `jwk`
+({{Section 3.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+and the token endpoint returns it with the substrate's `token_type`
+value `aat`
+({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 
 A Mission-bound attenuation root is one shape of Mission-bound token. A
 deployment MAY also issue ordinary `mission_resource_access` tokens for
@@ -337,42 +356,45 @@ authorization server metadata {{RFC8414}}:
   attenuation roots ({{root}}) and derives their authority from the
   Mission's Authority Set ({{root-mapping}}).
 
+Such an issuer also lists `attenuating_agent_token` in
+`authorization_details_types_supported`, the substrate's root issuer
+discovery
+({{Section 6.1.1 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+
 A client requests a Mission-bound attenuation root at the token
-endpoint, on any grant the issuance profile uses to issue a
-Mission-bound token (for example, the Mission's `refresh_token` grant).
-The request combines a selector, a confirmation key, and an optional
-narrowing detail, each with a distinct role:
+endpoint with the substrate's root request
+({{Section 6.1.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+on any grant the issuance profile uses to issue a Mission-bound token
+(for example, the Mission's `refresh_token` grant). The request
+carries an `attenuating_agent_token` authorization detail {{RFC9396}}
+whose tools and argument constraints are the requested root
+authority; that detail on a Mission-bound token request selects root
+issuance ({{root}}) rather than an ordinary `mission_resource_access`
+token.
 
-`mission_attenuation_root`:
-: OPTIONAL boolean. When `true` on a Mission-bound token request it
-  selects root issuance: the Mission Issuer issues the token as a
-  Mission-bound attenuation root ({{root}}) rather than an ordinary
-  `mission_resource_access` token. A request that omits it or sets it
-  `false` is an ordinary Mission-bound token request. The attenuation
-  substrate defines no OAuth Token Exchange {{RFC8693}}
-  requested-token-type for asking for a root, so this boolean, not a
-  token-type identifier, is what asks for one.
+The client MUST carry the holder's public key in the substrate's
+`req_cnf` parameter
+({{Section 6.1.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The Mission Issuer verifies that the client possesses the
+corresponding private key and binds that key as the root's `cnf.jwk`
+({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+{{root}}).
 
-The client MUST carry the holder's confirmation key, which binds the
-root to the holder as both profiles require
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{root}}).
-
-The client MAY carry an `attenuating_agent_token` authorization detail
-{{RFC9396}} to request a root narrower than the full mapped Authority
-Set: its tools and argument constraints are the requested subset.
-
-When the detail is present, the Mission Issuer MUST validate it against
-the root mapping ({{root-mapping}}). It MUST reject, with
-`invalid_request`, any tool or argument constraint not within the
-mapped Authority Set. When the detail is absent, the Mission Issuer
-derives the full mapped root from the Mission's delegable Authority Set
-entries ({{root-mapping}}). A client-requested root is therefore always
-at most the mapped Authority Set, never broader.
+The Mission Issuer MUST validate the detail against the root mapping
+({{root-mapping}}). It MUST refuse the request with
+`invalid_authorization_details` when any tool or argument constraint
+is not within the mapped Authority Set, rather than issue a root for
+the rest, as the issuance profile refuses a requested subset beyond
+the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}). A
+client-requested root is therefore always at most the mapped Authority
+Set, never broader.
 
 # Offline Attenuation {#attenuation}
 
 The holder of a Mission-bound attenuation token mints a narrower child
-offline, by the attenuation substrate's derivation. The holder:
+offline, by the attenuation substrate's derivation
+({{Section 6.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The holder:
 
 - selects a narrower tool and constraint set;
 - increments `del_depth`;
@@ -383,9 +405,9 @@ No Mission Issuer contact occurs.
 
 `par_hash` commits to the exact parent token bytes, per the attenuation
 substrate's cryptographic linkage rule
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}): its value is
-the base64url encoding, without padding, of the SHA-256 digest of the
-parent token's JWS Signing Input.
+({{Section 4.6 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+its value is the base64url encoding, without padding, of the SHA-256
+digest of the parent token's JWS Signing Input.
 
 The child's `aud` MUST equal its parent's `aud` or be a subset of it.
 For this comparison the `aud` is treated as a set of audience values: a
@@ -395,8 +417,11 @@ byte-exact strings, with no URI normalization; a single-string `aud`
 and a one-element array carrying the same value are therefore
 equivalent.
 
-The child's `exp` MUST NOT exceed its parent's `exp`. Because the
-Mission Issuer caps the root's `exp` at the Mission's `expires_at`
+The child's `exp` MUST NOT exceed its parent's `exp`, the substrate's
+TTL monotonicity
+({{Section 4.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+Because the Mission Issuer caps the root's `exp` at the Mission's
+`expires_at`
 ({{I-D.draft-mcguinness-oauth-mission}}), the per-hop `exp` rule bounds
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.
@@ -404,7 +429,9 @@ none outlives the Mission.
 The `mission` claim rides the chain unchanged: every token in the chain
 carries the same `id`, `issuer`, and `authority_hash` as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
-capability monotonicity, which is the subset relation a consumer checks;
+capability monotonicity
+({{Section 4.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
 without holding the Mission's full Authority Set.
@@ -420,11 +447,17 @@ from the narrowed leaf, exactly as for any narrowed Mission-bound token
 # Verifying the Mission Binding {#mission-binding-check}
 
 A consumer verifies the chain linkage, capability monotonicity, depth,
-and proof-of-possession under the attenuation substrate
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}). This profile
+and proof-of-possession under the attenuation substrate's chain
+verification algorithm
+({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+This profile
 adds checks on the `mission` claim, which the substrate does not define
-because it has no concept of the Mission binding. In addition to the
-substrate's chain verification, a consumer MUST:
+because it has no concept of the Mission binding. The substrate gives a
+claim it does not define no authority in a derived token unless a
+profile defines how it carries across derivation
+({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
+this profile defines that for `mission`: it is carried unchanged. In
+addition to the substrate's chain verification, a consumer MUST:
 
 - reject the chain unless every token in it carries a `mission` claim
   and every claim carries the same `id`, `issuer`, and `authority_hash`
@@ -433,8 +466,10 @@ substrate's chain verification, a consumer MUST:
   root's, or that omits it, MUST cause the whole chain to be refused,
   not treated as a narrower grant; and
 - reject the chain unless the root's `iss` equals its `mission.issuer`,
-  and verify the root's signature under the Mission Issuer's published
-  keys (those of that `iss`). A root whose `iss` is not its
+  and verify the root's signature under the Mission Issuer's keys, the
+  consumer's trust anchor for that `iss`
+  ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+  step 3). A root whose `iss` is not its
   `mission.issuer`, or whose signature does not verify under the Mission
   Issuer's keys, MUST cause the whole chain to be refused: only the
   Mission Issuer mints a Mission-bound root; and
@@ -453,10 +488,12 @@ its parent's is refused, not evaluated against a guessed Mission.
 
 Verification cost scales with the chain: a consumer performs one
 signature verification per link, the proof-of-possession check, and
-the Mission-state check ({{kill-switch}}) on every presentation. A
-consumer SHOULD bound the chain length it accepts, independently of
-the `del_max_depth` the chain carries, so an adversarially deep chain
-is refused rather than verified.
+the Mission-state check ({{kill-switch}}) on every presentation. The
+substrate's implementation depth limit bounds the chain length a
+consumer accepts independently of the `del_max_depth` the chain
+carries
+({{Section 4.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+so an adversarially deep chain is refused rather than verified.
 
 ## Edge Validation {#edge-validation}
 
@@ -491,7 +528,9 @@ actions whose consequences warrant it.
 
 # The Kill Switch Requires Runtime Enforcement {#kill-switch}
 
-The attenuation substrate defines no revocation: a child, once minted,
+The attenuation substrate defines no revocation
+({{Section 9.8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+a child, once minted,
 is valid by its signature chain until its `exp`, and no issuer can reach
 it. The Mission kill switch is therefore not automatic for offline
 children; it is delivered only by the runtime enforcement layer.
@@ -631,7 +670,9 @@ Set extends the single-domain walkthrough's, its write entry also
 carrying a `delegation` member with `max_depth` 2, so both mapped
 entries are delegable to depth 2 under the root-shaping rules of
 {{root-mapping}} and its `authority_hash` differs from that example's).
-Decoded root token:
+The Mission Issuer signs the root with protected header
+`{"alg":"ES256","kid":"as-2026-10","typ":"aat+jwt"}`. Decoded root
+claims:
 
 ~~~ json
 {
@@ -641,8 +682,10 @@ Decoded root token:
   "aud": "https://erp.example.com",
   "iat": 1793609400,
   "exp": 1793609700,
-  "jti": "aat_root_7M2R4kP9sT1x",
-  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "jti": "01a19b73-7ec0-7404-b47d-da1f4f13688c",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "13PnaI27qUjjjxZ7rW0Ls-iTo5F_c_hMNN3K4aLGv2g" } },
   "del_depth": 0,
   "del_max_depth": 2,
   "mission": {
@@ -676,21 +719,24 @@ names that resource server. The ERP's operation contract identifies
 The orchestrator spawns a read-only extraction sub-agent and, with no
 authorization server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
-root's `cnf` binds, sets `iss` to that key's thumbprint, increments
-`del_depth`, and commits the parent by `par_hash` (the `iss` value
-is one line, wrapped here for display):
+root's `cnf.jwk` carries (protected header
+`{"alg":"Ed25519","typ":"aat+jwt"}`), sets `iss` to the JWK Thumbprint
+({{RFC7638}}) URI of that key, increments `del_depth`, and commits the
+parent by `par_hash` (the `iss` value is one line, wrapped here for
+display):
 
 ~~~
 {
   "iss":
-    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
-     DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
-  "sub": "user_3p2q8mN1a0kV7tR",
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:gmukbzuLQoEbUSbOF
+     xbiOyvNwWCaCXdeii24v-xRahg",
   "aud": "https://erp.example.com",
   "iat": 1793609430,
   "exp": 1793609640,
-  "jti": "aat_child_2Yt7Qv9Lq",
-  "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s" },
+  "jti": "01a19b73-f3f0-76a5-bdf3-fe39a8c43247",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "l3TlQp7m4AFPndPII7gkG2jxttodVKaGrm58SEi2AF4" } },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
   "del_depth": 1,
   "del_max_depth": 2,
@@ -713,18 +759,22 @@ is one line, wrapped here for display):
 The `mission` claim is unchanged, the child's `aud` equals the root's,
 its `exp` (1793609640) ends before the root's (1793609700), within the
 per-hop bound, the write tool is gone, and the read constraint is
-unchanged (a permitted narrowing). The child's `cnf.jkt` is the JWK
-thumbprint {{RFC7638}} of the delegate extractor's own key, which its
-per-invocation proof-of-possession must match. The child's `par_hash`
+unchanged (a permitted narrowing). The child's `cnf.jwk` is the
+extractor's own public key, not the orchestrator's, as the substrate
+requires for a child handed across a process boundary
+({{Section 6.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The child's `par_hash`
 derives as {{attenuation}} states, the base64url SHA-256 digest, without
 padding, of the root token's JWS Signing Input; the value shown is
 illustrative, since the example gives the root's decoded claims rather
 than its serialized bytes. To read an invoice
-the extractor presents the chain `[root, child]` and a per-invocation
-proof-of-possession to the gateway. The gateway verifies the chain (the
-child's signature under the root's `cnf` key, `par_hash`, the depth,
-capability monotonicity, and the `aud` and `exp` bounds), verifies the
-proof-of-possession under the child's `cnf` key, and, because this is
+the extractor sends the gateway a presentation, the chain
+`[root, child]` and a PoP JWT for that invocation
+({{Section 7.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The gateway verifies the chain (the child's signature under the root's
+`cnf.jwk`, `par_hash`, the depth, capability monotonicity, and the
+`aud` and `exp` bounds), verifies the PoP JWT under the child's
+`cnf.jwk`, and, because this is
 Mission-bound, checks on this presentation that
 `msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns` is `active` within the
 deployment's declared freshness bound ({{kill-switch}}). A write attempt
@@ -756,12 +806,14 @@ An Attenuating Holder conforming to this profile:
 - MUST keep each child's `aud` within its parent's and its `exp`
   within its parent's; and
 - MUST increment the depth member the attenuation substrate defines
-  (`del_depth`, {{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+  (`del_depth`,
+  {{Section 4.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 
 A consumer conforming to this profile:
 
 - MUST verify the attenuation chain and proof-of-possession per the
-  attenuation substrate;
+  attenuation substrate
+  ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
 - MUST verify that the `mission` claim is unchanged across the chain
   and that each child's `aud` and `exp` are within its parent's
   ({{mission-binding-check}}); and
@@ -870,9 +922,9 @@ record of offline derivations and protect it accordingly.
 A Mission-bound attenuation root carries the `mission` claim, which the
 issuance profile registers as an open object, and the
 `attenuating_agent_token` authorization detail, which the attenuation
-substrate registers; this profile combines them by reference and defines
-no new claim or registry. It registers one metadata member and one
-request parameter.
+substrate defines ({{RFC9396}} establishes no registry of types); this
+profile combines them by reference and defines no new claim or
+registry. It registers one metadata member.
 
 This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry {{RFC8414}}: Change Controller IETF; Reference
@@ -880,17 +932,42 @@ this document, {{request-discovery}}.
 
 - `mission_attenuation_supported`
 
-This document registers one parameter in the "OAuth Parameters" registry:
-Parameter Usage Location token request; Change Controller IETF; Reference
-this document, {{request-discovery}}.
-
-- `mission_attenuation_root`
-
 --- back
 
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Worked Example: the tokens carry `typ` `aat+jwt` and `cnf.jwk`, the
+  child binds the extractor's own key, and the extractor presents a
+  PoP JWT.
+
+- Verifying the Mission Binding: the chain-length bound is the
+  substrate's `MAX_DELEGATION_DEPTH`, a requirement there, in place of
+  this profile's own recommendation.
+
+- Requesting a Root and Discovery: the substrate's root request, which
+  always carries an `attenuating_agent_token` detail, selects root
+  issuance; the `mission_attenuation_root` parameter and the full
+  mapped root for a request without a detail are withdrawn.
+
+- Requesting a Root and Discovery: the holder key travels in the
+  substrate's `req_cnf`, and the Mission Issuer verifies possession
+  before binding it as `cnf.jwk`; a Mission Issuer that advertises this
+  profile also lists `attenuating_agent_token` in
+  `authorization_details_types_supported`.
+
+- Requesting a Root and Discovery: a requested tool or argument
+  constraint beyond the mapped Authority Set refuses the request with
+  `invalid_authorization_details` (was `invalid_request`), as in the
+  issuance profile and the substrate.
+
+- Mission-Bound Attenuation Roots: the root carries the substrate's
+  `typ` (`aat+jwt`, not `at+jwt`) and a `cnf.jwk`, and is returned
+  with `token_type` `aat`.
+
+- Profiles revision -02 of Attenuating Agent Tokens and cites it by
+  section.
 
 - Mission-Binding Profile states the root, chain, authority bound,
   state check, and consumer checks under which every token in a chain
