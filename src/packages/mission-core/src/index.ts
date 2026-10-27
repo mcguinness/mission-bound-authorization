@@ -290,6 +290,7 @@ export {
 } from "./mission-reference.js";
 export {
   type ArgumentDerivedContract,
+  carriesHttpUserinfo,
   contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,
