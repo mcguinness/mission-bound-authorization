@@ -468,7 +468,8 @@ for (const row of rows) {
 // so the two cannot disagree; the test is the ledger's witness, this check is
 // the one a manifest-only change runs.
 
-{
+// A manifest with no control-plane row (a fixture tree) has nothing to declare.
+if (rows.some((r) => nonEmptyString(r.id) && r.id.startsWith("control-plane."))) {
   const doc = path.join(ROOT, "src/docs/control-plane-deployment.md");
   const text = fs.existsSync(doc) ? fs.readFileSync(doc, "utf8") : "";
   const start = text.indexOf("\n## Deployment declaration\n");
