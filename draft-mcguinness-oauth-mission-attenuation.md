@@ -740,7 +740,7 @@ closed.
 
 An orchestrator agent (`s6BhdRkqt3`), acting for `alice` under Mission
 `msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns` to reconcile Q3 invoices, holds a
-Mission-bound attenuation root. Its authority covers reading Q3 invoices
+Mission-bound attenuation root. Its authority covers reading invoices
 and posting journal entries of at most USD 500; `del_max_depth` allows
 two levels of offline narrowing (illustrative; this Mission's Authority
 Set extends the single-domain walkthrough's, its write entry also
@@ -775,19 +775,27 @@ claims:
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period":
-            { "constraint_type": "exact", "value": "2026-Q3" } },
+          "period": { "constraint_type": "wildcard" } },
         "erp.journal-entries.write": {
-          "amount_usd":
-            { "constraint_type": "range", "max": 500 } } } }
+          "account": { "constraint_type": "wildcard" },
+          "amount": { "constraint_type": "wildcard" } } },
+      "mission_constraints": {
+        "erp.invoices.read": { "constraints": {} },
+        "erp.journal-entries.write": {
+          "constraints": {
+            "max_amount": { "amount": "500.00", "currency": "USD" }
+          } } } }
   ]
 }
 ~~~
 
 The root's `erp.invoices.read` and `erp.journal-entries.write` tools map
 to the `invoices.read` and `journal-entries.write` actions on
-`https://erp.example.com`, and the `amount_usd` argument maps to the
-Mission Common Constraint `max_amount` ({{root-mapping}}); its `aud`
+`https://erp.example.com`. Their argument constraints admit each
+argument the ERP's operation definitions declare, and the write entry's
+`max_amount` rides `mission_constraints`, which the ERP enforces
+against the amount of the journal entry it posts
+({{mission-constraints}}). The root's `aud`
 names that resource server. The ERP's operation contract identifies
 `https://erp.example.com` as the operation target of both tools
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}), so the
@@ -828,15 +836,18 @@ display):
       "tools": {
         "erp.invoices.read": {
           "period":
-            { "constraint_type": "exact", "value": "2026-Q3" } } } }
+            { "constraint_type": "exact", "value": "2026-Q3" } } },
+      "mission_constraints": {
+        "erp.invoices.read": { "constraints": {} } } }
   ]
 }
 ~~~
 
 The `mission` claim is unchanged, the child's `aud` equals the root's,
 its `exp` (1793609640) ends before the root's (1793609700), within the
-per-hop bound, the write tool is gone, and the read constraint is
-unchanged (a permitted narrowing). The child's `cnf.jwk` is the
+per-hop bound, the write tool and its `mission_constraints` member are
+gone, and the read tool's `period` argument narrows from any value to
+`2026-Q3` (a permitted narrowing). The child's `cnf.jwk` is the
 extractor's own public key, not the orchestrator's, as the substrate
 requires for a child handed across a process boundary
 ({{Section 6.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
@@ -868,7 +879,10 @@ or Mission-state evaluation: a child that outlives its parent breaks
 the chain's transitive expiry bound, so the gateway refuses the whole
 chain. A chain whose child carried a `mission` claim differing from the
 root's is refused the same way, as a re-bound chain, not read as a
-narrower grant.
+narrower grant. So is a chain whose child keeps the write tool but
+drops its `max_amount`, or omits `mission_constraints`: removing a
+restriction never reads as unrestricted authority
+({{mission-constraints}}).
 
 # Conformance {#conformance}
 
