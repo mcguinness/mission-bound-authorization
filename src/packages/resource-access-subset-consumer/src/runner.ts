@@ -3,7 +3,10 @@
 
 import {
   type ConsumerConfig,
+  type ContractDefinition,
+  type CurrentContract,
   contractApprovalRefusal,
+  parseContractReference,
   parseEntry,
   REFUSAL_ERROR,
 } from "./entry.js";
@@ -106,14 +109,48 @@ export function entryValidationCheck(entry: unknown, config: ConsumerConfig): Ca
   return { outcome: "valid", reason: "admitted at proposal intake" };
 }
 
-/** Run one selected case. */
-export function runCase(c: VectorCase, config: ConsumerConfig): CaseResult {
+/**
+ * An entry-validation case's `contracts` (vectors README, Format and Checks,
+ * `entry-validation`): the authorization server's trusted configuration, a
+ * list of objects, each a `resource` and the `reference` of the contract
+ * version configuration names as current for exactly that resource. An absent
+ * `contracts` names no contract current for any resource. Configuration is
+ * trusted input, so a malformed one is a malformed case and throws.
+ */
+export function parseCurrentContracts(value: unknown): readonly CurrentContract[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("contracts is not an array");
+  return value.map((item: unknown, i) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`contracts[${i}] is not an object`);
+    }
+    const members = Object.keys(item);
+    if (members.length !== 2 || !members.includes("resource") || !members.includes("reference")) {
+      throw new Error(`contracts[${i}] does not have exactly the members resource and reference`);
+    }
+    const { resource, reference } = item as { resource: unknown; reference: unknown };
+    if (typeof resource !== "string") throw new Error(`contracts[${i}].resource is not a string`);
+    const parsed = parseContractReference(reference);
+    if ("refusal" in parsed) throw new Error(`contracts[${i}].reference: ${parsed.refusal}`);
+    return { resource, reference: parsed.contract };
+  });
+}
+
+/**
+ * Run one selected case. `definitions` are the contract versions whose
+ * documents the consumer holds; which version is current for which resource
+ * comes from the case alone.
+ */
+export function runCase(c: VectorCase, definitions: readonly ContractDefinition[]): CaseResult {
   const input = c.input;
   switch (c.check) {
     case "subset":
       return subsetCheck(input.candidate, input.reference);
     case "entry-validation":
-      return entryValidationCheck(input.entry, config);
+      return entryValidationCheck(input.entry, {
+        currentContracts: parseCurrentContracts(input.contracts),
+        definitions,
+      });
     case "resource-match":
       return resourceMatchCheck(input);
     case "target-resolution":

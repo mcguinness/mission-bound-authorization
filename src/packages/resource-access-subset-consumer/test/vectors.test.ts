@@ -4,6 +4,7 @@
 // differs must be listed in disagreements.json, and a listed case must still
 // differ.
 
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,8 +12,12 @@ import { describe, expect, it } from "vitest";
 import {
   type CaseResult,
   CONSTRAINT_RULES,
-  type ConsumerConfig,
+  type ContractDefinition,
+  type ContractReference,
+  contractDefinition,
   IMPLEMENTED_CHECKS,
+  parseCurrentContracts,
+  parseEntry,
   runCase,
   type Selection,
   SUBSET_MEMBERS,
@@ -43,8 +48,17 @@ interface SubsetFixture {
 
 interface ContractFile {
   format: string;
-  reference: { id: string; version: string; digest: string };
-  document: { operations: Record<string, { action: string }> };
+  reference: ContractReference;
+  document: unknown;
+}
+
+interface ApplicabilityFile {
+  format: string;
+  contracts: {
+    resource: string;
+    resource_match: string;
+    current: { file: string; reference: ContractReference };
+  }[];
 }
 
 interface Disagreement {
@@ -54,22 +68,50 @@ interface Disagreement {
 }
 
 const fixture = readJson(join(subsetDir, "supported-subset.json")) as SubsetFixture;
-const contract = readJson(join(subsetDir, fixture.contract.file)) as ContractFile;
+
+// Every frozen file in the subset directory, by name.
+const subsetFiles = new Map<string, { format?: unknown }>(
+  readdirSync(subsetDir)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .map((f) => [f, readJson(join(subsetDir, f)) as { format?: unknown }]),
+);
+const contractFiles = new Map<string, ContractFile>();
+const applicabilityFiles: ApplicabilityFile[] = [];
+for (const [name, file] of subsetFiles) {
+  if (file.format === "mission-resource-contract/1") contractFiles.set(name, file as ContractFile);
+  if (file.format === "mission-resource-contract-applicability/1") {
+    applicabilityFiles.push(file as ApplicabilityFile);
+  }
+}
+const contract = contractFiles.get(fixture.contract.file);
+if (contract === undefined) throw new Error(`no contract file ${fixture.contract.file}`);
 
 // The consumer's declared capability set is the fixture's.
 const declared = new Set(fixture.capabilities);
 
-// The consumer's trusted configuration: the frozen contract is the one
-// current contract. The fixture names no resource URI for it, so it is
-// configured as current for every resource.
-const config: ConsumerConfig = {
-  currentContracts: [
-    {
-      reference: contract.reference,
-      actions: Object.values(contract.document.operations).map((op) => op.action),
-    },
-  ],
-};
+// The contract versions whose documents the consumer holds: every frozen
+// contract file. Which version is current for which resource is the trusted
+// configuration each entry-validation case carries in `contracts`; no contract
+// is configured as current for every resource.
+const definitions: ContractDefinition[] = [...contractFiles.values()].map(contractDefinition);
+
+function sameReference(a: ContractReference, b: ContractReference): boolean {
+  return a.id === b.id && a.version === b.version && a.digest === b.digest;
+}
+
+// RFC 8785 for the values JSON.parse yields: object members sorted by the
+// UTF-16 code units of their names, no whitespace, and the ECMAScript
+// serialization of strings, numbers and literals.
+function jcs(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(jcs).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    const members = value as Record<string, unknown>;
+    const names = Object.keys(members).sort();
+    return `{${names.map((n) => `${JSON.stringify(n)}:${jcs(members[n])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
 
 const caseFiles = readdirSync(casesDir)
   .filter((f) => f.endsWith(".json"))
@@ -101,7 +143,7 @@ function agrees(c: VectorCase, result: CaseResult): boolean {
 const outcomes: Outcome[] = cases.map((c) => {
   const selection = selectCase(c, declared);
   if (!selection.run) return { c, selection };
-  const result = runCase(c, config);
+  const result = runCase(c, definitions);
   return { c, selection, result, agrees: agrees(c, result) };
 });
 
@@ -118,8 +160,59 @@ describe("the subset fixture as this consumer reads it", () => {
 
   it("names the reference its contract file carries, and the contract defines the subset actions", () => {
     expect(contract.reference).toEqual(fixture.contract.reference);
-    const defined = new Set(config.currentContracts[0]?.actions);
-    expect([...defined].sort()).toEqual([...fixture.actions].sort());
+    const definition = definitions.find((d) => sameReference(d.reference, contract.reference));
+    expect([...(definition?.actions ?? [])].sort()).toEqual([...fixture.actions].sort());
+  });
+
+  it("holds frozen contracts whose digests commit their documents (JCS, RFC 8785)", () => {
+    expect(contractFiles.size).toBeGreaterThan(1);
+    for (const [name, file] of contractFiles) {
+      const digest = createHash("sha256").update(jcs(file.document), "utf8").digest("base64url");
+      expect(`sha-256:${digest}`, name).toBe(file.reference.digest);
+    }
+  });
+
+  it("names, in its applicability configuration, a frozen contract current for one exact resource", () => {
+    expect(applicabilityFiles.length).toBeGreaterThan(0);
+    for (const file of applicabilityFiles) {
+      expect(file.contracts.length).toBeGreaterThan(0);
+      for (const item of file.contracts) {
+        expect(item.resource_match).toBe("exact");
+        expect(contractFiles.get(item.current.file)?.reference).toEqual(item.current.reference);
+      }
+    }
+  });
+});
+
+describe("the entry-validation configurations", () => {
+  const configured = cases.filter((c) => c.check === "entry-validation");
+
+  it("list only frozen contract versions the consumer holds", () => {
+    const lists = configured.filter((c) => c.input.contracts !== undefined);
+    expect(lists.length).toBeGreaterThan(0);
+    for (const c of lists) {
+      for (const current of parseCurrentContracts(c.input.contracts)) {
+        expect(
+          definitions.some((d) => sameReference(d.reference, current.reference)),
+          `${c.id}: ${JSON.stringify(current.reference)}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("propose only actions the referenced version defines, so the every-action condition decides none", () => {
+    // vectors README, Checks, entry-validation: "every action these cases list
+    // is one the referenced version defines".
+    for (const c of configured) {
+      const parsed = parseEntry(c.input.entry);
+      if (!parsed.ok || parsed.entry.contract === undefined) continue;
+      const proposed = parsed.entry.contract;
+      const definition = definitions.find((d) => sameReference(d.reference, proposed));
+      expect(definition, c.id).toBeDefined();
+      for (const action of parsed.entry.actions) {
+        expect(definition?.actions, `${c.id}: ${action}`).toContain(action);
+      }
+    }
   });
 });
 
