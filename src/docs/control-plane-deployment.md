@@ -214,8 +214,8 @@ observation whose commit point advanced is available as an optional declared
 policy (`strictObservationWatermark`), off by default: the governing rule
 permits delivering an authenticated authoritative observation inside its own
 validity, and refusal costs churn on a busy Mission and reader starvation under
-sustained writes. The Status conditional-request surface remains follow-on
-work, so the fresh-observation claim stays partial.
+sustained writes. The fresh-observation claim stays partial until the other
+signed state observations are inventoried and witnessed (#1750).
 
 A terminal transition writes its tombstone in that same transaction: canonical
 issuer and Mission identity, terminal state, final version, transition time and
@@ -360,16 +360,18 @@ forbids, is therefore shown that Mission's state, a residual that stays
 until the accounting is kept with the provider's tokens.
 
 The derivation counter and artifact issuance stay outside one transaction
-(the provider access-token hook has no acceptance boundary), and the kernel's
-file mode adds no owner, lock or schema version; both remain open.
+(the provider access-token hook has no acceptance boundary), which remains
+open. Without a recovery witness the kernel's file takes no lock; with one it
+is held exclusively ([Restore admission](#restore-admission)). The file carries
+no schema version.
 
 Rollback resistance is partial. A restart on the file-backed store keeps the
 state version and the terminal tombstone, so no lower version is served after
-recovery. Refusing state-dependent service while a durable version is uncertain
-after an out-of-band restore, and the fenced reconciliation policy that would
-decide when it is certain again, remain follow-on work. Multi-process
-serialization and claiming remain under #641's explicit deployment trigger;
-this slice adds no such claim.
+recovery. With a recovery witness, a restored older store is refused and
+state-dependent service is refused while the durable version is uncertain
+([Restore admission](#restore-admission)), for one writer on one host.
+Multi-process serialization and claiming remain under #641's explicit
+deployment trigger.
 
 ## Restore admission
 
@@ -464,8 +466,169 @@ a check at the next guarded transaction, after that write committed.
 | `recovery_marker` | `recovery-witness.ts` | managed (every guarded transaction; reconciliation) |
 
 Not supported: a way back from an older store by invalidating its authority under
-a new generation (#250, slice B), more than one writer, and more than one host
+a new generation (deferred, D820), more than one writer, and more than one host
 (#641).
+
+## Deployment declaration
+
+Control Plane's Deployment Declaration for the reference deployment, one item
+per heading. The reference does not claim Mission Control-Plane Consistency: a
+claiming deployment satisfies every applicable requirement for the roles it
+runs, and the rows under [Residual risks](#residual-risks) are not yet
+satisfied. Each item states demonstrated behavior and points to the section
+that details it.
+
+### Serialization domains
+
+One issuer's kernel database, with one writer in one process, serializes every
+Mission of that issuer. Each of these commits as one transaction or not at all:
+
+- a lifecycle transition, its state version and its durable lifecycle event and
+  delivery rows, and on a terminal transition the tombstone and the termination
+  of the Mission's continuation lineages and delegation families;
+- a containment, as a metadata-only commit at a new version;
+- a Child Mission and its parent's fan-out accounting;
+- an expansion's successor activation and the predecessor's supersession, and
+  with carryover every replacement, the cascade of the old subtree and the final
+  map ([Carryover compositions](#carryover-compositions));
+- a counted derivation and its reservation;
+- a lifecycle nonce claim and its committed outcome, and a creation idempotency
+  claim and its Mission.
+
+Outside any one transaction: the provider access-token hook's count and the
+token it pays for (#935), and the provider's Grants and refresh tokens, which
+oidc-provider keeps in memory ([Restart inventory](#restart-inventory)).
+
+### Authoritative observation mechanism
+
+The kernel database is the only copy of Mission state, so every read of it is
+authoritative. A signed Mission Status observation is one transactional read of
+the record, with the expiry clock materialized in that read, and it carries its
+`(version, commit)` watermark. Its `iat`, `exp` and `fresh_until` belong to that
+read and are never restamped; its freshness is 60 seconds, within
+`mission_max_stale_seconds` (300). Introspection reads the same record, the
+Mission Status List is rebuilt from the record set, and the Signals event is
+the committed lifecycle event, published after its commit. These four are the
+deployment's whole set of state-observation surfaces: it defines no parallel
+signed state-snapshot protocol (a deployment-inventory conclusion, D874).
+Refusing an
+observation whose commit point advanced is an optional policy
+(`strictObservationWatermark`), off. There is no lease and no replica read.
+
+### Replication and recovery model
+
+- **Replication:** none. The Enforcement Scope Statement declares
+  `replication: "none"`, and the PEP and PDP refuse another value at load.
+- **Topology:** one writer on one host. With a recovery witness, a second
+  kernel on the same store, or on a copy of it, is refused while one runs. More
+  than one writer or host is not supported (#641).
+- **Recovery:** a restart on the file-backed kernel with its recovery witness
+  ([Restore admission](#restore-admission)). The [Restart
+  inventory](#restart-inventory) lists what survives a restart and what is
+  deliberately invalidated. The in-memory default keeps nothing.
+- **Admission:** boot is closed. A store that does not match its witness exactly
+  does not open, and the AS does not start. A running kernel that loses
+  certainty refuses every write, and the AS answers 503
+  `temporarily_unavailable` to every request but discovery metadata and the key
+  set. Reconciliation is offline (`pnpm kernel-recovery`) and never lowers the
+  witness. Taking an older store by invalidating its authority under a new
+  generation is not offered (D820).
+- **Partitions:** with no replica there is no partitioned copy to read. An
+  operation that cannot establish current state, because the kernel is
+  uncertain, is refused rather than served from what the process last knew.
+
+### Recovery objectives
+
+- **Recovery point:** two cases, kept apart.
+  - *Crash:* on the witnessed file-backed kernel, under the declared storage
+    assumptions (the store opened with `synchronous=FULL`, on storage that
+    honors its flushes), a committed transaction survives a crash. The witness
+    records an intent before every commit, so a crash between the intent and
+    its finalization leaves a pending intent that refuses the restart until
+    `acknowledge` records the commit the store holds or `abandon` clears one it
+    does not.
+  - *Backup or media loss:* no zero-loss guarantee is made. The witness detects
+    a store restored from an older backup and refuses it, but it cannot
+    reconstruct the transactions the backup lacks; the way back is restoring
+    the witnessed store.
+  - On the in-memory default a restart loses the whole store. The provider's
+    Grants, refresh tokens, sessions and interactions have no recovery point: a
+    restart loses them.
+- **Recovery time:** no bound is declared. A restart on a matching store and
+  witness serves once boot recovery has published unpublished commits and
+  drained the outbox. A restored older store, a lost witness, a commit in flight
+  or a recorded uncertainty waits for an operator's offline reconciliation, and
+  the AS does not start until then.
+- The Enforcement Scope Statement's per-class `recovery_objective_seconds` (60)
+  belongs to the runtime state source. It extends no staleness bound: stale
+  state is refused even when recovery takes longer.
+
+### Tenant isolation
+
+Each kernel database belongs to one issuer and refuses another issuer's record.
+Every mutable seam is keyed on the canonical issuer and Mission identity, or is
+owned by that one-issuer database (the namespace inventory under
+[Control-plane implementation boundary](#control-plane-implementation-boundary)).
+A Lifecycle client's grant can be scoped to a tenant's Subjects, or to Subjects
+and requesting clients, and any other Mission answers that client as unknown.
+Shared services bind each operation to its issuer: the Signals outbox keys on
+issuer and event identity plus audience, and each AS signs with its own keys.
+The inventory is not an audit of every cross-issuer service or quota.
+
+### Emergency narrowing and emergency authority
+
+- **Narrowing:** `suspend`, `revoke` and `contain` on the Lifecycle endpoint (a
+  client authenticated with the lifecycle grant, a nonce retry key, the optional
+  `expected_version`), and containment from a protected event: a JWS from a
+  source the trusted-source registry trusts for that event type, applied through
+  the issuer's own ContainmentPolicy, so the caller supplies only the event. A
+  containment commits the narrower effective set at a new state version and
+  containment version, with the event's source and the policy rule in its
+  Containment Evidence. It moves no state, expiry or derivation limit, and its
+  answer carries no observation. It has no expiry: authority it removed returns
+  only through a new approval, an expansion successor, which is another Mission
+  and not a reconciliation of this one. The AS keeps no deny cache.
+- **Positive emergency authority:** absent. The Enforcement Scope Statement
+  declares `break_glass: "absent"`, and the PEP does not start under a statement
+  declaring another mode.
+
+### Residual risks
+
+The control-plane ledger rows not yet `tested`, which are why the reference
+makes no claim:
+
+- `control-plane.consistency.serialization`: a counted derivation and the
+  provider token it pays for are not one transaction (#935); no multi-process
+  serialization (#641).
+- `control-plane.consistency.fresh-observation`: the other signed state
+  observations are not yet inventoried and witnessed (#1750).
+- `control-plane.consistency.state-surfaces`: the consumer-side reconciliation
+  clauses are not witnessed (#1747); the absence of a parallel snapshot protocol
+  is a documented inventory conclusion (D874).
+- `control-plane.consistency.rollback`: one writer on one host only, and no way
+  back from an older store but restoring the witnessed one (D820).
+- `control-plane.consistency.rollback-retaining-consumer`: the Signals receiver
+  keeps its high-water mark across a restart, but a restore of its store from an
+  older backup loses the marks taken since; the receiver has no recovery
+  admission (#1749).
+- `control-plane.consistency.partitions`: the refusal is witnessed in the
+  single-writer topology; the multi-node cases cannot be constructed here, an
+  accepted declared limitation (D874).
+- `control-plane.consistency.emergency-deny`: the deny-entry clauses have no
+  subject, since the AS keeps no deny cache, an accepted declared limitation
+  (D874).
+- `control-plane.consistency.emergency-authority`: the refusal of positive
+  emergency configuration is witnessed; excluding actions that rely on it has no
+  subject, an accepted declared limitation (D874).
+- `control-plane.consistency.isolation`: the cross-issuer seam and
+  resource-isolation inventory is incomplete (#1748).
+- `control-plane.consistency.claim`: the reference makes no claim.
+
+Outside those rows: the provider's Grants and refresh tokens do not survive a
+restart; the delegation accounting and the Dispatch Handoff consumption records
+are invalidated by one; an ambiguous delivery after a crash stays counted
+(#935); and the #914 refresh pre-check window is an accepted single-process
+residual (D772).
 
 ## Upgrading a kernel written before #1340
 

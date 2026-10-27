@@ -983,6 +983,43 @@ describe("Mission Lifecycle endpoint extension operations and the common guard (
   });
 });
 
+/**
+ * @spec control-plane#emergency-deny (#250 step 4): `contain` is the
+ * deployment's operator-driven emergency narrowing. Its answer is the commit
+ * alone, never an observation, and it moves no state, expiry or freshness.
+ */
+describe("Mission Lifecycle containment creates no authority and no freshness (@spec control-plane#emergency-deny, #250)", () => {
+  it("contain answers its commit alone, leaves an active and a suspended Mission in their state with their expiry, and the next observation is a new read with the ordinary freshness span", async () => {
+    const active = approve();
+    const suspended = approve();
+    as.kernel.transition(suspended.id, "suspend");
+    for (const id of [active.id, suspended.id]) {
+      const before = as.kernel.get(id) as MissionRecord;
+      expect(as.kernel.effectiveAuthoritySet(before)).toHaveLength(1);
+      const prior = as.kernel.statusObservation(id, { requester: "svc:reader" });
+      const answer = await op({
+        mission_id: id,
+        nonce: nonce(),
+        operation: "contain",
+        event: JSON.stringify({ type: "incident", source: "soc", observed_at: new Date().toISOString(), event_id: crypto.randomUUID() }),
+        remove: JSON.stringify([{ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
+      });
+      expect(answer.status, answer.text).toBe(200);
+      expect(answer.contentType).toMatch(/^application\/json/);
+      // No signed observation, no fresh_until, iat or exp: the commit alone.
+      expect(answer.json).toEqual({ id, state: before.state, version: before.version + 1, containment_version: 1 });
+      const after = as.kernel.get(id) as MissionRecord;
+      expect(after.state).toBe(before.state);
+      expect(after.expires_at).toBe(before.expires_at);
+      expect(as.kernel.effectiveAuthoritySet(after)).toEqual([]);
+      const next = as.kernel.statusObservation(id, { requester: "svc:reader" });
+      expect(next.watermark.version).toBe(before.version + 1);
+      expect(next.exp - next.iat).toBe(prior.exp - prior.iat);
+      expect(next.payload.mission).toMatchObject({ state: before.state, containment_version: 1 });
+    }
+  });
+});
+
 describe("the dev-only path route runs the same engine (@spec status#mission-lifecycle-endpoint, #1191)", () => {
   const dev = async (missionId: string, body: Record<string, unknown>): Promise<LifecycleAnswer> =>
     readAnswer(

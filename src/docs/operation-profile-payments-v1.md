@@ -800,6 +800,16 @@ carrying it is issued outside the shipped approval paths.
   Refusal Record of that value and no decision request. The PDP refuses a
   compensate-phase request without a well-formed link before evaluation
   (`compensation_link_invalid`).
+- **Challenged retry.** Where the deployment gates the reversal on an
+  action-bound approval, its challenge binds the reversal form's
+  `parameter_digest`. On the transaction-token retry the resource
+  recomputes that digest itself: it establishes the link again from its
+  own retained evidence for the challenged Mission and reads the wire's
+  ledger record through it, never the invoice form, the invoice's current
+  vendor, or a digest the token or the pending operation carries. A ledger
+  record that changed, or a link that no longer establishes, between the
+  challenge and the retry is refused `txn_parameter_mismatch`, and a second
+  retry under the same token releases no second reversal.
 - **At use.** The wire's own permit presented at this crossing is refused
   by the phase binding (`phase_mismatch`), with suppressed Execution
   Evidence and no effect.
