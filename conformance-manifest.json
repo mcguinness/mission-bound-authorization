@@ -5223,7 +5223,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a retaining consumer keys its high-water mark by (issuer, mission_id), rejects an event at a lower version, and keeps the high-water mark across its own recovery",
-    "local": "the Signals receiver (#1323) keys its state by (issuer, audience, mission_id), finer than the tuple, and keeps it in the consumer's store across a restart. A SET with a fresh jti at an equal or lower version is answered stale, before and after a restart; a redelivery of a SET whose jti it has seen is answered duplicate, before and after a restart; and the same Mission identifier at another issuer keeps its own sequence. A restore of the consumer's store from an older backup is not detected"
+    "local": "the Signals receiver (#1323) keys its state by (issuer, audience, mission_id), finer than the tuple, and keeps it in the consumer's store across a restart. A SET with a fresh jti at an equal or lower version is answered stale, before and after a restart; a redelivery of a SET whose jti it has seen is answered duplicate, before and after a restart; and the same Mission identifier at another issuer keeps its own sequence. With a recovery witness (#1749), a file outside the store's directory tree advanced before every commit, a store restored from an older backup or replaced by an empty one is detected when the receiver opens: every Mission, retained or not, is held (no event applied or recorded, no lease, no view) until a Mission Status response to a nonce the receiver issued under the current recovery generation verifies and reports a version no lower than the store's, and that state, the high-water mark and the release commit in one transaction. The response must also be inside its reliance bound (its fresh_until, exp, and for an active Mission its expires_at). One witnessed writer: the witness's lock is held while the receiver is open, the store records the witness's path, the witness is read back before every write, and a store this receiver witnesses refuses an unwitnessed open. A missing, unreadable, foreign, copied or behind witness refuses to open and is never re-created. A receiver configured without a witness on a store it never witnessed does not detect a restore"
    },
    "level": "unit",
    "coverage": "partial",
@@ -5245,9 +5245,81 @@
      "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > holds every Mission after an older backup is restored, so a replayed old event is never applied, and the Status read re-establishes the termination",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > holds a Mission the restored store never held, and a store replaced by an empty one holds every Mission",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > leaves a Mission held while Mission Status is unavailable or its response does not verify",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > keeps a Mission held across an interrupted recovery: a restart before resynchronizing, and a storage failure inside the resynchronizing transaction",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > releases nothing for a response to a request made before a later restore, or one reporting a version below the store's",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > refuses to open over a missing, unreadable, foreign or behind witness, and never re-creates it",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > commits nothing when the witness write fails: the SET is not acknowledged, and its redelivery is applied",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > the in-process emitter keeps a held SET pending under its backoff, and redelivers it once Mission Status has resynchronized the Mission",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910) > refuses an unwitnessed open of a store this receiver witnesses, so no write escapes the witness, while another audience's receiver still shares the file",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910) > admits one witnessed writer: a second handle on the same witness is refused, and so is a handle on a copy of the witness at another path",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910) > releases nothing for a response past its freshness bound, though its exp is still ahead",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910) > stops writing when the witness changes underneath a running receiver",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested (#1749). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
+   "notes": "Partial (D898, D910): for a receiver configured with its recovery witness, recovery from an older backup of the consumer's store is witnessed: the owner's reproduction is held and the Status read re-establishes the termination; a Mission absent from the restored store is held; an unavailable or unverifiable Status response, one past its freshness bound, an interrupted recovery, a response to a request made before a later restore and one behind the store release nothing; a store it witnesses refuses an unwitnessed open; one witnessed writer is admitted; each proved by removing its check. The owner's ruling (D910): the row stays partial, because the package also supports a receiver configured without a witness, which does not detect a restore; explicitly scoped coverage for witnessed receivers can be tested separately, and qualifying only this row's local observation does not remove that residual. No shipped service runs a receiver. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
