@@ -23606,7 +23606,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; a revoke schedule no longer passes without authorization of its own (management.bulk.scheduled-revoke-authorization-dry-run)."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; a revoke schedule no longer passes without authorization of its own (management.bulk.scheduled-revoke-authorization-dry-run). #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-execute",
@@ -23627,7 +23627,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; the revoke half is management.bulk.scheduled-revoke-authorization-execute."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; the revoke half is management.bulk.scheduled-revoke-authorization-execute. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.scheduled-revoke-authorization-dry-run",
@@ -23690,7 +23690,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.schedule-committing-party",
@@ -23711,7 +23711,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.schedule-omission-preserves",
@@ -23732,7 +23732,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.already-terminal-no-revocation",
