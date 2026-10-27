@@ -4884,7 +4884,7 @@ export class MissionKernel {
   }
 
   /**
-   * @spec status#mission-status-caching, status#introspection-projection —
+   * @spec status#mission-status-caching, status#introspection-projection:
    * the reliance horizon, in seconds from the response, of a report of Mission
    * state: the requested lifetime or the default, never more than the
    * advertised `mission_max_stale_seconds`. The ONE cap for both surfaces that
