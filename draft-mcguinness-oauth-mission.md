@@ -2539,34 +2539,40 @@ changes nothing.
 
 ### Mission Identifier and Expiry in Responses {#mission-response-parameters}
 
-A client learns its `mission_id` from the `mission` claim's `id` on
-each issued token ({{mission-claim}}) or from the token response.
-
 This document defines `mission_id` as a token-endpoint response
 parameter: a string carrying the Mission Identifier, returned
-alongside the issued token. An AS SHOULD return it, because a client
-need not parse the access token and cannot read the `mission` claim
-of a token that is encrypted or opaque to it. It is an informational
-reference only: presenting it authorizes nothing
-({{grant-binding-resolution}}), and a client MUST NOT derive
-authority from it.
+alongside the issued token. It is an informational reference only:
+presenting it authorizes nothing ({{grant-binding-resolution}}), and a
+client MUST NOT derive authority from it.
 
 Alongside it, this document defines `mission_expires_at`: the exact
 RFC 3339 string recorded as the Mission Record's effective
 `expires_at` ({{mission-record}}), the common member of every
 Mission-creating success response, whatever surface completes the
-creation. The success response that first delivers a newly created
-Mission's identifier or credential MUST carry it, and a Mission-bound
-token response SHOULD carry it beside `mission_id`: `expires_in`
-describes the access token's lifetime, not the Mission's, and the
-effective expiry can be shorter than the requested
+creation. `expires_in` describes the access token's lifetime, not the
+Mission's, and the effective expiry can be shorter than the requested
 `intent.expires_at`.
+
+A client learns both values from these members, not from the access
+token, which it treats as opaque ({{Section 6 of RFC9068}}). The AS
+returns them as follows:
+
+- The success response that first delivers a newly created Mission's
+  identifier or credential MUST carry both. On the authorization-code
+  path, the authorization response carrying only the code is not that
+  response; the token response redeeming the code is.
+- A delegated exchange response ({{delegated-exchange}}) MUST carry
+  both, because the delegate did not receive the response that
+  created the Mission.
+- Any other Mission-bound token response, including a refresh,
+  designation ({{designation}}), or self-exchange ({{self-exchange}})
+  response, SHOULD carry both.
 
 A creation replay deduplicated under the applicable operation
 identifier (`approval_event_id` for direct approval
 ({{mission-record}}), or the identifier a Mission-creating profile
 defines) returns the committed effective value unchanged. On OAuth
-token responses the member is additionally registered as a
+token responses `mission_expires_at` is additionally registered as a
 token-endpoint response parameter ({{oauth-parameters-registration}}).
 It is informational in the same way: presenting it authorizes nothing.
 
@@ -2747,9 +2753,12 @@ response, including refresh and Token Exchange responses
 the AS MUST NOT omit values from it: the response states exactly the
 (possibly narrowed) set assigned to the issued token, and it is the
 authoritative statement of what was granted, which the client
-compares with its proposal ({{authority-proposal}}). The
-`mission_id` response parameter carries the Mission reference beside
-it ({{mission-response-parameters}}).
+compares with its proposal ({{authority-proposal}}). A client MUST NOT
+assume authority absent from the granted set. An entry the echo
+narrows grants the narrower authority it states, and a client need
+not reject a grant narrower than its proposal. The `mission_id` and
+`mission_expires_at` response parameters carry the Mission reference
+and expiry beside it ({{mission-response-parameters}}).
 
 The following is an example of a refresh request that narrows the
 canonical ERP Mission (the worked example of {{mission-record}}) to a
@@ -5270,9 +5279,10 @@ A **Mission Client** implements the client surfaces:
   does, on the `authorization_details` parameter pushed alongside
   `mission_intent` ({{authority-proposal}});
 - reading its granted authority from the token-response
-  `authorization_details` echo ({{token-response}}); and
+  `authorization_details` echo, and assuming none absent from it
+  ({{token-response}}); and
 - obtaining `mission_id` from the `mission_id` token-response parameter
-  or the `mission` claim's `id` ({{mission-response-parameters}}),
+  ({{mission-response-parameters}}), never from the access token,
   treating it as a reference, not a credential.
 
 ## Optional Capabilities {#optional-capabilities}
@@ -7665,6 +7675,16 @@ Cross-Domain:
   the codes of the error table, and Mission awareness alone does not
   imply `act` processing (Error and Challenge Mapping, Client
   Identification in Delegated Tokens; #1721, D845).
+- `mission_id` and `mission_expires_at` are required on the response
+  that first delivers a newly created Mission's identifier or
+  credential (on the authorization-code path, the token response, not
+  the code-only authorization response) and on a delegated exchange
+  response, and recommended on every other Mission-bound token
+  response; a client learns them from the response, not from the
+  access token. A client assumes no authority absent from the granted
+  `authorization_details` and need not reject a narrower grant
+  (Mission Identifier and Expiry in Responses, Audience and Token
+  Response, Conformance Roles; #1719, D845).
 
 -01
 

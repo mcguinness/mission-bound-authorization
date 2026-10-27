@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b81f60f0e78b1777d8eb2a4cc5ad265e571fb912",
-    "content_sha256": "e8b6b3f1e8766757e5eab12f39315a30348356953eac5963d815e36cadb3ed6f"
+    "revision": "e14ed3fbad8203863dee5867820bda632fb8ccdf",
+    "content_sha256": "eb99c8005c941524c922a5faefcbb15b6c30458ea79e9cd4599ea572e4123c21"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
@@ -11795,8 +11795,8 @@
   {
    "id": "core.response.mission-expires-at-on-creation",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "grant-binding",
-   "text": "The success response that first delivers a newly created Mission's identifier or credential MUST carry it",
+   "anchor": "mission-response-parameters",
+   "text": "The success response that first delivers a newly created Mission's identifier or credential MUST carry both",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11809,7 +11809,8 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every Mission-creating success response carries mission_expires_at with the committed effective value"
+    "normative": "every Mission-creating success response carries mission_expires_at with the committed effective value; on the authorization-code path the token response redeeming the code carries it, not the code-only authorization response",
+    "local": "witnessed on every implemented creating body: the authorization_code token response, the device access token response, the Deferred Mission Approval resolving poll, the template-dispatch grant, the child-creation exchange, the Expansion deferred poll, the Progressive drawdown completion, and the carryover replacement retrieval"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11837,9 +11838,192 @@
      "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > returns the Mission-bound token with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "All four Mission-creating success bodies carry it: the direct-creation authorization_code token response, the template-dispatch grant, the child-creation exchange, and the expansion completion. Each stamps the committed record value verbatim, never a value recomputed while rendering. The member is additionally registered for OAuth token responses."
+   "notes": "#1719, D845: re-anchored at mission-response-parameters, where the rule sits, and re-quoted for the clause that names both members (the mission_id half is core.response.mission-id-on-creation). Each body stamps the committed record value verbatim, never a value recomputed while rendering. The deferred poll, drawdown and carryover witnesses gained explicit assertions in #1719; proved by removing the member on each of those bodies and on the code and device stamp (the cited test fails on its assertion). Carryover retrieval is the response that first delivers the replacement Child Mission's credential to its own child actor; the parent's Expansion completion body lists the replacement's identifier and expiry earlier, in the companion-defined carryover_replacements member. Not implemented in the reference, so not witnessed: the Mission Authority Server submission status, Issuance Grant redemption, Expansion interactive completion, and Approval Revision. The member is additionally registered for OAuth token responses."
+  },
+  {
+   "id": "core.response.mission-id-on-creation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-response-parameters",
+   "text": "The success response that first delivers a newly created Mission's identifier or credential MUST carry both",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mission-creating success response carries mission_id naming the created Mission; on the authorization-code path the token response redeeming the code carries it, not the code-only authorization response",
+    "local": "witnessed on every implemented creating body: the authorization_code token response, the device access token response, the Deferred Mission Approval resolving poll, the template-dispatch grant, the child-creation exchange, the Expansion deferred poll, the Progressive drawdown completion, and the carryover replacement retrieval; each test ties the member to the created Mission (its record, or the issued token's mission claim)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "Mission Device Authorization issuance (@spec device-authorization#issuance, #1202) > returns the Mission-bound token with mission_id, mission_expires_at and the granted authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
+     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > defers a PAR-submitted Mission to a deferral code, creates no Mission while pending, and delivers the Mission-bound token on the resolving poll",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > happy path: dispatch mints a DPoP-bound mission token, and a repeated dispatch_event_id is idempotent",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation-endpoint.test.ts",
+     "name": "child Mission creation on the AS surface (@spec child-delegation#child-creation) > token exchange (subject_token = parent access token) creates a Child Mission and returns a child-bound grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a widening request defers (authorization_pending + deferral_code); after async approval a poll (no subject_token) mints the successor and supersedes the predecessor",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > retrieves the committed replacement result idempotently for its own child actor, and refuses another authenticated client",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1719, D845: mission_id joins mission_expires_at in the creation MUST (formerly a SHOULD on every token response). Proved by removing mission_id from the code and device stamp (the rar-carriage and device tests fail), the deferred poll, the shared Expansion and drawdown mint (both tests fail), the carryover retrieval, the dispatch grant and the child-creation exchange: each cited test fails on its assertion. Carryover retrieval is the response that first delivers the replacement Child Mission's credential to its own child actor; the parent's Expansion completion body lists the replacement's identifier and expiry earlier, in the companion-defined carryover_replacements member. Not implemented in the reference, so not witnessed: the Mission Authority Server submission status, Issuance Grant redemption, Expansion interactive completion, and Approval Revision."
+  },
+  {
+   "id": "core.response.mission-members-on-delegated-exchange",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-response-parameters",
+   "text": "A delegated exchange response ({{delegated-exchange}}) MUST carry both",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegated exchange success response carries mission_id naming the Mission and mission_expires_at equal to its committed effective expiry"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "both exchange responses carry the Mission's identifier and expiry (@spec mission#mission-response-parameters, #1719, D845) > the delegated exchange response carries mission_id and mission_expires_at, each the committed record value: the delegate never received the creating response",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1719, D845. The delegate never received the creating response and treats the access token as opaque (RFC 9068 Section 6), so the response is its only conforming source. Proved by removing either member from the delegated exchange body (the cited test fails on that member's assertion)."
+  },
+  {
+   "id": "core.response.mission-members-on-other-token-responses",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-response-parameters",
+   "text": "Any other Mission-bound token response, including a refresh, designation ({{designation}}), or self-exchange ({{self-exchange}}) response, SHOULD carry both",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound token response that neither first delivers a new Mission nor answers a delegated exchange carries mission_id and mission_expires_at",
+    "local": "the reference takes the SHOULD up on the designation response; its refresh responses (the provider stamp is gated on authorization_code and the device grant) and its no-actor self-exchange (the async-delegation handle) carry neither, a recorded SHOULD departure, not a failure"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "both exchange responses carry the Mission's identifier and expiry (@spec mission#mission-response-parameters, #1719, D845) > the designation response carries mission_id and mission_expires_at, each the committed record value (the SHOULD taken up)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1719, D845: the graduated rule keeps the SHOULD on every other Mission-bound token response, naming the refresh, designation and self-exchange responses. Partial: witnessed on the designation response only (proved by removing either member there); the refresh and self-exchange departures are recorded in observation.local. Companion surfaces that deliver a Mission-bound token to a client that never received the creating response state their own keyword in follow-ups."
+  },
+  {
+   "id": "core.response.client-learns-from-response",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-response-parameters",
+   "text": "A client learns both values from these members, not from the access token, which it treats as opaque ({{Section 6 of RFC9068}})",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a client takes the Mission identifier and expiry from the response members and reads neither from the access token's content"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1719, D845: access-token inspection is removed as a client source. Observable only at a client; an AS test never witnesses a client rule. Todo until a reference Mission client consumes the response members."
   },
   {
    "id": "core.response.replay-returns-committed-value",
@@ -13220,6 +13404,31 @@
     }
    ],
    "notes": "Witnessed on a refresh, an authorization code exchange and the async-delegation exchange, each comparing the response with the issued token's own claim. The other Token Exchange responses (designation and redemption, child creation, expansion, dispatch, deferred redemption) are not cited here. Proved by mutation: dropping a value from every token-endpoint response body fails the refresh and code witnesses, and dropping one from the async-delegation response alone fails its witness."
+  },
+  {
+   "id": "core.tokens.client-no-authority-beyond-grant",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "A client MUST NOT assume authority absent from the granted set.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "given a token response whose granted authorization_details narrows or omits a proposed entry, the authority the client records as available to it is the granted set: no omitted entry is recorded as granted, and a narrowed entry is recorded at its stated narrower authority; the client need not reject the partial grant",
+    "local": "The row observes the client's account of its own authority, nothing more. It does not forbid the client from attempting a request outside the granted set: the resource server decides such a request, and an authorization challenge is a permitted outcome (D859)."
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1719, D845. The AS side (the exact echo) is core.tokens.response-authorization-details-exact. No reference Mission client consumes the echo, and an AS test never witnesses a client obligation, so this row stays todo until a client witness. A partial grant creates no refusal duty: the client need not reject it. D859: the observation tests the MUST NOT's text (no assumed authority), not a prohibition on any operation."
   },
   {
    "id": "core.scope-projection.semantic-subset-condition",
