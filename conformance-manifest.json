@@ -88768,12 +88768,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request"
+    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts) draws a random UUID per new operation (newLifecycleRequest) and retransmits only from the retained record (transmitLifecycle); the MAS pilot operator console draws its nonces through it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D9 (D847), a client duty; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's nonces (@spec status#lifecycle-operations, status#idempotency) > draws a fresh nonce for each new operation on a Mission and repeats it only to retransmit that request, so the AS replays the original response with no second transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 D9 (D847), a client duty. Proved by two defects: a constant nonce, and a transmission that draws a new nonce instead of repeating the record's (the retry re-suspends the Mission)."
   },
   {
    "id": "status.introspection.fresh-until-cap",

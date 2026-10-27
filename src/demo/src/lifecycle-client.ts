@@ -93,3 +93,43 @@ export async function requestLifecycle(
   });
   return { status: res.status, contentType: res.headers.get("content-type") ?? "", text: await res.text() };
 }
+
+/**
+ * @spec status#lifecycle-operations, status#idempotency: one operation the
+ * console requested, retained so that a retry retransmits it: the Mission, the
+ * operation's members and the `nonce` drawn for it. A retransmission comes only
+ * from this record, so it repeats the members and the `nonce` exactly.
+ */
+export interface LifecycleRequestRecord {
+  missionId: string;
+  /** The operation's members (`operation`, `reason` and any others); never `mission_id` or `nonce`. */
+  members: Readonly<Record<string, string>>;
+  nonce: string;
+}
+
+/**
+ * @spec status#lifecycle-operations: a NEW operation on a Mission, under a
+ * fresh `nonce`. A random UUID carries 122 random bits, so the value is unique
+ * among the console's nonces for that Mission within any deduplication
+ * window. A retry never draws one: it retransmits the record
+ * ({@link transmitLifecycle}).
+ */
+export function newLifecycleRequest(missionId: string, members: Record<string, string>): LifecycleRequestRecord {
+  if ("mission_id" in members || "nonce" in members) {
+    throw new Error("the record sets mission_id and nonce itself");
+  }
+  return { missionId, members: Object.freeze({ ...members }), nonce: crypto.randomUUID() };
+}
+
+/**
+ * @spec status#idempotency: transmit a retained request, its first
+ * transmission and every retransmission alike: the same members and the same
+ * `nonce`, under a fresh client assertion, which the AS's comparison excludes.
+ */
+export function transmitLifecycle(
+  issuer: string,
+  client: LifecycleConsoleCredentials,
+  request: LifecycleRequestRecord,
+): Promise<{ status: number; contentType: string; text: string }> {
+  return requestLifecycle(issuer, client, { ...request.members, mission_id: request.missionId, nonce: request.nonce });
+}
