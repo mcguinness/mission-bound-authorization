@@ -295,8 +295,9 @@ gated on the same Mission state.
 
 ## Deriving the Root from the Authority Set {#root-mapping}
 
-The Mission Issuer derives the root's `attenuating_agent_token`
-authority from `mission_resource_access` entries
+The Mission Issuer derives the maximum `attenuating_agent_token`
+authority a root can carry, the mapped ceiling, from
+`mission_resource_access` entries
 ({{I-D.draft-mcguinness-oauth-mission}}) by this mapping:
 
 - each tool identifier in the root maps to an `actions` value at the
@@ -318,8 +319,9 @@ authority from `mission_resource_access` entries
   maps it with the restriction removed; a requested root that needs
   such a tool is rejected ({{request-discovery}});
 - the entry's `constraints`, and its `resource_contract` when it
-  carries one, become the tool's `mission_constraints` value unchanged
-  ({{mission-constraints}}). A tool takes its restrictions from exactly
+  carries one, are the tool's `mission_constraints` value in the
+  mapped ceiling ({{mission-constraints}}). A tool takes its
+  restrictions from exactly
   one entry: where more than one entry maps to a tool identifier, the
   issuer carries one entry's restrictions for that tool or mints
   separate roots, and never merges them. The issuer MUST NOT map an
@@ -332,11 +334,22 @@ authority from `mission_resource_access` entries
   ({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
   An argument that only some of those operations take is `optional` in
   the map, which leaves its requiredness to each operation's own
-  definition. Argument constraints narrower than a wildcard come only
-  from the target restriction above, never from the entry's
-  `constraints`; and
+  definition. In the mapped ceiling, argument constraints narrower than
+  a wildcard come only from the target restriction above, never from
+  the entry's `constraints`; and
 - the root MUST derive only from entries whose `delegation` permits the
   intended holder ({{I-D.draft-mcguinness-oauth-mission}}).
+
+The issued root carries the mapped ceiling or narrows it within the
+client's request ({{request-discovery}}): each tool's argument
+constraints no broader than the ceiling's under the substrate's
+capability monotonicity
+({{Section 4.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+and each tool's `mission_constraints` `constraints` a subset of the
+ceiling's under step 3 of the Resource Access subset rule, with its
+`resource_contract` unchanged ({{mission-constraints}}). A root capped
+at USD 100 under an entry permitting USD 500, or admitting only one
+`period` where the tool admits any, is such a narrowing.
 
 Root issuance is the only moment the Mission Issuer is present in the
 chain, so per-entry delegation policy is enforced by shaping the root:
@@ -445,6 +458,18 @@ the rest, as the issuance profile refuses a requested subset beyond
 the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}). A
 client-requested root is therefore always at most the mapped Authority
 Set, never broader.
+
+The issued root is also no broader than the request in either layer.
+Its tools and argument constraints attenuate the requested ones, as
+the substrate's root issuance requires
+({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+step 7). The substrate gives `mission_constraints` no authority, so
+that check does not cover it: the Mission Issuer MUST issue each
+tool's `mission_constraints` no broader than the requested value under
+step 3 of the Resource Access subset rule, with `resource_contract`
+unchanged ({{mission-constraints}}). A request that carries no
+`mission_constraints` value for a requested tool asks for the
+ceiling's.
 
 # Offline Attenuation {#attenuation}
 
@@ -1048,8 +1073,9 @@ this document, {{request-discovery}}.
   member of the `attenuating_agent_token` entry, required in every
   token and narrowed per hop under the Resource Access subset rule,
   instead of argument constraints; argument constraints admit each
-  declared argument explicitly; a consumer enforces both layers
-  (#1756).
+  declared argument explicitly; the mapping yields a ceiling that the
+  issued root narrows within the request in both layers; a consumer
+  enforces both layers (#1756).
 
 - Worked Example: the tokens carry `typ` `aat+jwt` and `cnf.jwk`, the
   child binds the extractor's own key, and the extractor presents a
