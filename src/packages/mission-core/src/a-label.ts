@@ -112,7 +112,8 @@ export function punycodeEncode(input: readonly number[]): string {
   let h = b;
   if (b > 0) output += "-";
   while (h < input.length) {
-    let m = MAX_CODE_POINT + 1;
+    // The smallest code point at or above n; it terminates for any input.
+    let m = Number.POSITIVE_INFINITY;
     for (const c of input) if (c >= n && c < m) m = c;
     delta += (m - n) * (h + 1);
     n = m;
