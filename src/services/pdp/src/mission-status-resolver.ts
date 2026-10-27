@@ -222,6 +222,8 @@ export interface MissionStatusIssuer {
   /** The declared Status keys at its `jwks_uri`, and the means to replace the declared `kid`s ({@link refreshingStatusKeys}). */
   keys: JWTVerifyGetKey;
   trust: (kids: readonly string[]) => void;
+  /** Its historical key set, held for audit verification, when its metadata advertises one. */
+  historical?: HistoricalKeySetHolder;
 }
 
 /**
@@ -238,6 +240,11 @@ export interface MissionStatusIssuer {
  * elsewhere (the MAS pilot names its MAS by URL). `read` fetches one JSON
  * document. Metadata for another issuer, or advertising no
  * `mission_status_endpoint` or no `jwks_uri`, is refused, naming why.
+ *
+ * @spec status#historical-key-set (#831 B3, D901): where the validated
+ * metadata advertises `mission_historical_jwks_uri`, `keys` refuses a key the
+ * set it holds lists, though the cached `jwks_uri` still carries it; a member
+ * that is present but not a URL is refused rather than ignored.
  */
 export async function missionStatusIssuer(
   expected: string,
@@ -260,12 +267,23 @@ export async function missionStatusIssuer(
     throw new Error(`the issuer at ${at} advertises no mission_status_endpoint`);
   }
   if (typeof metadata.jwks_uri !== "string") throw new Error(`the issuer at ${at} advertises no jwks_uri`);
-  const { keys, trust } = refreshingStatusKeys(metadata.jwks_uri, opts.kids, {
+  const historicalUri = metadata.mission_historical_jwks_uri;
+  if (historicalUri !== undefined && (typeof historicalUri !== "string" || !URL.canParse(historicalUri))) {
+    throw new Error(`the issuer at ${at} advertises a mission_historical_jwks_uri that is not a URL`);
+  }
+  const { keys, trust, historical } = refreshingStatusKeys(metadata.jwks_uri, opts.kids, {
     algs: opts.algs,
     ...(opts.now ? { now: opts.now } : {}),
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
+    ...(historicalUri !== undefined ? { historical: { uri: historicalUri, issuer: expected } } : {}),
   });
-  return { metadata, statusEndpoint: metadata.mission_status_endpoint, keys, trust };
+  return {
+    metadata,
+    statusEndpoint: metadata.mission_status_endpoint,
+    keys,
+    trust,
+    ...(historical ? { historical } : {}),
+  };
 }
 
 /**

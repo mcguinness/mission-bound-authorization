@@ -9,7 +9,13 @@
 
 import { exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { auditKeys, HistoricalKeySetHolder, refreshingStatusKeys, verifyHistoricalKeySet } from "../src/index.js";
+import {
+  auditKeys,
+  HistoricalKeySetHolder,
+  missionStatusIssuer,
+  refreshingStatusKeys,
+  verifyHistoricalKeySet,
+} from "../src/index.js";
 
 const ISSUER = "https://as.test";
 const JWKS = `${ISSUER}/jwks`;
@@ -237,5 +243,46 @@ describe("the historical key set's refresh, bounded and shared (@spec status#his
     t += 60_000;
     await holder.keys();
     expect(fetched).toBe(2);
+  });
+});
+
+describe("the historical key set through the configured issuer (@spec status#historical-key-set, status#mission-status, #831 B3, D901)", () => {
+  const metadata = (extra: Record<string, unknown> = {}) => ({
+    issuer: ISSUER,
+    jwks_uri: JWKS,
+    mission_status_endpoint: `${ISSUER}/status`,
+    ...extra,
+  });
+
+  it("refuses, through missionStatusIssuer, a key the advertised set lists while the cached jwks_uri still carries it", async () => {
+    const status = await key("as-status-2");
+    const compromised = await key("as-status");
+    const state = { published: [status.jwk, compromised.jwk], historical: await status.signSet([revoked(compromised.jwk)]) };
+    const { fetch } = issuer(state);
+    const configured = await missionStatusIssuer(ISSUER, {
+      read: async () => metadata({ mission_historical_jwks_uri: HISTORICAL }),
+      kids: ["as-status", "as-status-2"],
+      algs: ["ES256"],
+      fetch,
+    });
+    await jwtVerify(await status.sign(), configured.keys);
+    await expect(jwtVerify(await compromised.sign(), configured.keys)).rejects.toThrow(/withdrawn as compromised/);
+    expect((await configured.historical?.keys())?.map((k) => k.kid)).toEqual(["as-status"]);
+    // The same issuer advertising no set: the cached jwks_uri's key verifies, so the set is what refuses it.
+    const unadvertised = await missionStatusIssuer(ISSUER, { read: async () => metadata(), kids: ["as-status", "as-status-2"], algs: ["ES256"], fetch });
+    await jwtVerify(await compromised.sign(), unadvertised.keys);
+  });
+
+  it("refuses an issuer whose metadata advertises a mission_historical_jwks_uri that is not a URL", async () => {
+    for (const value of [42, "not a url", ""]) {
+      await expect(
+        missionStatusIssuer(ISSUER, {
+          read: async () => metadata({ mission_historical_jwks_uri: value }),
+          kids: ["as-status"],
+          algs: ["ES256"],
+          fetch: issuer({ published: [], historical: undefined }).fetch,
+        }),
+      ).rejects.toThrow(/mission_historical_jwks_uri that is not a URL/);
+    }
   });
 });
