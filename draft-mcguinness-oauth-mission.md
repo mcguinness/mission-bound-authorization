@@ -3459,27 +3459,15 @@ row names a type specification, it is the one for
 
 A denial can carry independent remediation grains: separate
 remediation mechanisms, each naming a next step without granting
-anything. The three remediation grains are:
-
-`mission_denial`:
-: - Carriage: `WWW-Authenticate` attribute
-  - Defined by: This document ({{rs-denials}})
-
-`insufficient_authorization` with `authorization_remediation`:
-: - Carriage: `WWW-Authenticate` error code and parameter
-  - Defined by: {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
-
-Requestable denial:
-: - Carriage: AuthZEN denial response: `context.access_request` with
-    `next_action: request`
-  - Defined by: {{AuthZEN.ARAP}}, profiled by
-    {{I-D.draft-mcguinness-mission-authzen}}
-
-A resource server can also respond with the
-`insufficient_authorization` error code and the
+anything. There are three: the `mission_denial` attribute of the
+`WWW-Authenticate` challenge ({{rs-denials}}); the
+`insufficient_authorization` error code with the
 `authorization_remediation` parameter
-({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names
-what `mission_denial: insufficient_authority` only points at. Each
+({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names what
+`mission_denial: insufficient_authority` only points at; and the
+requestable denial of {{AuthZEN.ARAP}}, profiled by
+{{I-D.draft-mcguinness-mission-authzen}}, which routes the same denial
+into a governed access request rather than a fresh derivation. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
@@ -3500,10 +3488,6 @@ an expansion where that companion is deployed
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
-
-A third grain, the requestable denial of {{AuthZEN.ARAP}}, profiled by
-{{I-D.draft-mcguinness-mission-authzen}}, routes the same denial into a
-governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
