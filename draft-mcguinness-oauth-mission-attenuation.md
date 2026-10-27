@@ -362,20 +362,15 @@ discovery
 ({{Section 6.1.1 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 
 A client requests a Mission-bound attenuation root at the token
-endpoint, on any grant the issuance profile uses to issue a
-Mission-bound token (for example, the Mission's `refresh_token` grant).
-The request combines a selector, a confirmation key, and an optional
-narrowing detail, each with a distinct role:
-
-`mission_attenuation_root`:
-: OPTIONAL boolean. When `true` on a Mission-bound token request it
-  selects root issuance: the Mission Issuer issues the token as a
-  Mission-bound attenuation root ({{root}}) rather than an ordinary
-  `mission_resource_access` token. A request that omits it or sets it
-  `false` is an ordinary Mission-bound token request. The attenuation
-  substrate defines no OAuth Token Exchange {{RFC8693}}
-  requested-token-type for asking for a root, so this boolean, not a
-  token-type identifier, is what asks for one.
+endpoint with the substrate's root request
+({{Section 6.1.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+on any grant the issuance profile uses to issue a Mission-bound token
+(for example, the Mission's `refresh_token` grant). The request
+carries an `attenuating_agent_token` authorization detail {{RFC9396}}
+whose tools and argument constraints are the requested root
+authority; that detail on a Mission-bound token request selects root
+issuance ({{root}}) rather than an ordinary `mission_resource_access`
+token.
 
 The client MUST carry the holder's public key in the substrate's
 `req_cnf` parameter
@@ -385,20 +380,14 @@ corresponding private key and binds that key as the root's `cnf.jwk`
 ({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
 {{root}}).
 
-The client MAY carry an `attenuating_agent_token` authorization detail
-{{RFC9396}} to request a root narrower than the full mapped Authority
-Set: its tools and argument constraints are the requested subset.
-
-When the detail is present, the Mission Issuer MUST validate it against
-the root mapping ({{root-mapping}}). It MUST refuse the request with
+The Mission Issuer MUST validate the detail against the root mapping
+({{root-mapping}}). It MUST refuse the request with
 `invalid_authorization_details` when any tool or argument constraint
 is not within the mapped Authority Set, rather than issue a root for
 the rest, as the issuance profile refuses a requested subset beyond
-the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}).
-When the detail is absent, the Mission Issuer
-derives the full mapped root from the Mission's delegable Authority Set
-entries ({{root-mapping}}). A client-requested root is therefore always
-at most the mapped Authority Set, never broader.
+the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}). A
+client-requested root is therefore always at most the mapped Authority
+Set, never broader.
 
 # Offline Attenuation {#attenuation}
 
@@ -916,8 +905,7 @@ issuance profile registers as an open object, and the
 `attenuating_agent_token` authorization detail, which the attenuation
 substrate defines ({{RFC9396}} establishes no registry of types); this
 profile combines them by reference and defines no new claim or
-registry. It registers one metadata member and one
-request parameter.
+registry. It registers one metadata member.
 
 This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry {{RFC8414}}: Change Controller IETF; Reference
@@ -925,17 +913,16 @@ this document, {{request-discovery}}.
 
 - `mission_attenuation_supported`
 
-This document registers one parameter in the "OAuth Parameters" registry:
-Parameter Usage Location token request; Change Controller IETF; Reference
-this document, {{request-discovery}}.
-
-- `mission_attenuation_root`
-
 --- back
 
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Requesting a Root and Discovery: the substrate's root request, which
+  always carries an `attenuating_agent_token` detail, selects root
+  issuance; the `mission_attenuation_root` parameter and the full
+  mapped root for a request without a detail are withdrawn.
 
 - Requesting a Root and Discovery: the holder key travels in the
   substrate's `req_cnf`, and the Mission Issuer verifies possession
