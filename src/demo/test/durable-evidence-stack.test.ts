@@ -12,12 +12,13 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
-import { CANONICAL_RESOURCE, credentialAuthorityFrom, type TokenFacts } from "@mission/mcp-payments";
+import { CANONICAL_RESOURCE, credentialAuthorityFrom, type DecisionEvidence, type TokenFacts } from "@mission/mcp-payments";
 import { type DecisionEvidenceObject, Fga } from "@mission/pdp";
+import { initEvidenceKeyFile } from "../src/evidence-key-files.js";
 import { approveDemoMission, composeStack, type DemoStack } from "../src/stack.js";
 
 const tempClaimsFile = (): string => join(mkdtempSync(join(tmpdir(), "demo-claims-")), "claims.sqlite");
@@ -32,6 +33,7 @@ async function closeStack(stack: DemoStack): Promise<void> {
   stack.pdpClaims.close();
   stack.writeReservations.close();
   stack.evidenceRetention.close();
+  stack.evidenceKeySets.close();
   stack.payments.db.close();
   stack.kernel.db.close();
 }
@@ -104,5 +106,97 @@ describe("the composed stack's PEP evidence retention across a restart (@spec ru
     } finally {
       await closeStack(after);
     }
+  });
+
+  /** One boot: a wire transfer's permit Decision Evidence and completed Execution Evidence, by id. */
+  async function wire(stack: DemoStack): Promise<{ decision: string; execution: string }> {
+    const mission = approveDemoMission(stack);
+    const view = stack.viewFor(mission.id);
+    if (!view) throw new Error("no view");
+    const token: TokenFacts = {
+      sub: "alice",
+      iss: stack.issuer,
+      clientId: "ap-agent",
+      cnfJkt: "jkt",
+      mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
+      credentialAuthority: credentialAuthorityFrom(view.authority_set),
+    };
+    const sent = await stack.server.callTransactionTool(
+      "execute_wire_transfer",
+      { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+      token,
+    );
+    expect(sent.ok, JSON.stringify(sent)).toBe(true);
+    const records = stack.evidence.forMission(view.id);
+    const decision = records.find(
+      (e): e is DecisionEvidence => e.kind === "decision" && e.content.decision === "permit" && e.content.action_phase === "commit",
+    );
+    const execution = records.find((e) => e.kind === "execution" && e.content.outcome === "completed");
+    if (!decision || execution?.kind !== "execution") throw new Error("the wire left no permit or completed record");
+    // Under this boot's keys, both verify.
+    expect(await stack.evidence.verifyRetained(decision)).toBe(true);
+    expect(await stack.evidence.verifyRetained(execution)).toBe(true);
+    return { decision: decision.content.evidence_id, execution: execution.content.evidence_id };
+  }
+
+  /** Whether the first boot's two records verify on a second boot of the same store files. */
+  async function verifiedAfterRestart(evidenceKeys?: { pep: string; pdp: string }): Promise<{ decision: boolean; execution: boolean }> {
+    const options = {
+      openfgaUrl: "http://unused.test",
+      presharedKey: "unused",
+      claimsFile: tempClaimsFile(),
+      writeReservationsFile: tempReservationsFile(),
+      resourcePolicyStore: { bootstrap: "development" } as const,
+      ...(evidenceKeys ? { evidenceKeys } : {}),
+    };
+    const before = await composeStack(options);
+    let ids: { decision: string; execution: string };
+    try {
+      ids = await wire(before);
+    } finally {
+      await closeStack(before);
+    }
+    const after = await composeStack(options);
+    try {
+      const retained = after.evidence.all();
+      const decision = retained.find((e) => e.kind === "decision" && e.content.evidence_id === ids.decision);
+      const execution = retained.find((e) => e.kind === "execution" && e.content.evidence_id === ids.execution);
+      if (decision?.kind !== "decision" || execution?.kind !== "execution") throw new Error("the first boot's records did not come back");
+      return { decision: await after.evidence.verifyRetained(decision), execution: await after.evidence.verifyRetained(execution) };
+    } finally {
+      await closeStack(after);
+    }
+  }
+
+  function keyFiles(): { pep: string; pdp: string } {
+    const dir = mkdtempSync(join(tmpdir(), "evidence-keys-"));
+    const files = { pep: join(dir, "pep.json"), pdp: join(dir, "pdp.json") };
+    initEvidenceKeyFile(files.pep, "pep");
+    initEvidenceKeyFile(files.pdp, "pdp");
+    return files;
+  }
+
+  it("verifies, after a restart, the Decision and Execution Evidence an earlier boot signed under durable evidence keys, and not under keys generated per boot (#831)", { timeout: 60_000 }, async () => {
+    expect(await verifiedAfterRestart(keyFiles())).toEqual({ decision: true, execution: true });
+    expect(await verifiedAfterRestart()).toEqual({ decision: false, execution: false });
+  });
+
+  it("refuses to boot on a regenerated evidence key file: the durable key set takes no new material under a published kid (#831)", { timeout: 60_000 }, async () => {
+    const files = keyFiles();
+    const options = {
+      openfgaUrl: "http://unused.test",
+      presharedKey: "unused",
+      claimsFile: tempClaimsFile(),
+      writeReservationsFile: tempReservationsFile(),
+      resourcePolicyStore: { bootstrap: "development" } as const,
+      evidenceKeys: files,
+    };
+    await closeStack(await composeStack(options));
+    // The same files boot again.
+    await closeStack(await composeStack(options));
+    // The PEP's file lost and created anew: new material under the same kids.
+    rmSync(files.pep);
+    initEvidenceKeyFile(files.pep, "pep");
+    await expect(composeStack(options)).rejects.toThrow(/already published .* different key material/);
   });
 });
