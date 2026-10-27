@@ -51,6 +51,7 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
+import type { BudgetExposurePort } from "./kernel/budget-exposure.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
 export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
@@ -758,6 +759,13 @@ export {
 } from "./kernel/template.js";
 export { prohibitedPredicateMappingOf } from "./adapters/provider.js";
 export {
+  type BudgetCounterKey,
+  type BudgetCounterTotals,
+  type BudgetExposurePort,
+  BudgetExposureUnavailableError,
+  type CounterExposure,
+} from "./kernel/budget-exposure.js";
+export {
   ALL_PROHIBITED_PREDICATES,
   assertDispatchProhibitedCoverage,
   assertNotStandingPaymentLineage,
@@ -1086,6 +1094,14 @@ export async function buildAuthorizationServer(opts: {
    * declaration the runtime decision policy also reads.
    */
   actionApprovalPolicy?: ActionApprovalPolicy;
+  /**
+   * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+   * (#813, #816, D830 ruling 7, D877): the read port onto the co-resident
+   * PDP's budget counters (`BudgetCounterState`), which the standing-payment
+   * consent and successor approval pages render. Required where the
+   * `standing-payment-dispatch` capability is on; the deployment wires it.
+   */
+  budgetExposure?: BudgetExposurePort;
   /**
    * @spec mission-template#standing-payment-exception (#813, #816): the
    * deployment's Enforcement Scope Statement, the one its PDP meters under.
@@ -2180,6 +2196,7 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     dispatchPolicies,
     actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
+    ...(opts.budgetExposure ? { budgetExposure: opts.budgetExposure } : {}),
     ...(opts.enforcementScopeStatement !== undefined ? { enforcementScopeStatement: opts.enforcementScopeStatement } : {}),
     protectedEventSources,
     issuerEvidence,

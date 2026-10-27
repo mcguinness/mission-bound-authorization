@@ -21,6 +21,13 @@ import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
 import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
 import type { ActionApprovalPolicy } from "@mission/demo-data";
+import {
+  type BudgetExposurePort,
+  BudgetExposureUnavailableError,
+  exposureLines,
+  readCounterExposure,
+  standingConsentKey,
+} from "../kernel/budget-exposure.js";
 import { contentDigest } from "./approval-render-revision.js";
 import { type DispatchPolicies, type TemplateProposalBody, templateCeiling } from "../kernel/template.js";
 
@@ -122,6 +129,11 @@ export function templateConsentDisclosure(
     standingPayment?: boolean;
     /** @spec runtime#action-approval (#813): the deployment's action-approval predicate. */
     actionApprovalPolicy?: ActionApprovalPolicy;
+    /**
+     * @spec mission-template#standing-payment-exception (#813, D830 ruling 7,
+     * D877): the deployment's read port onto the budget counters.
+     */
+    budgetExposure?: BudgetExposurePort;
   },
 ): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
   const { body } = proposal;
@@ -138,13 +150,33 @@ export function templateConsentDisclosure(
   // the consumption product, or refuses a statement it cannot render.
   let standing: string[] = [];
   if (opts.standingPayment) {
+    let terms: StandingPaymentTerms | undefined;
     try {
-      const terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
+      terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
       standing = terms ? standingPaymentLines(terms, body, opts.actionApprovalPolicy) : [];
     } catch (e) {
       return {
         refusal: `The Dispatch Policy ${body.dispatch_policy.id} states standing-payment terms that cannot be shown (${(e as Error).message}). This consent is refused.`,
       };
+    }
+    // @spec mission-template#standing-payment-exception (#813, D830 ruling 7,
+    // D877): the budget's consumption to date and outstanding reservations,
+    // read now, so a consent that raises a bound or changes destinations is
+    // given against the exposure it adds to; a reading that cannot be made
+    // refuses the consent rather than rendering none.
+    if (terms) {
+      try {
+        const exposure = readCounterExposure(opts.budgetExposure, standingConsentKey(terms.budget), terms.budget.currency);
+        standing = [
+          ...standing,
+          ...exposureLines([{ label: `Budget ${terms.budget.owner}/${terms.budget.id} exposure`, exposure }]),
+        ];
+      } catch (e) {
+        if (!(e instanceof BudgetExposureUnavailableError)) throw e;
+        return {
+          refusal: `The consumption and outstanding reservations of budget ${terms.budget.owner}/${terms.budget.id} cannot be read (${e.message}), so this consent cannot account for them. This consent is refused.`,
+        };
+      }
     }
   }
   // @spec capability-binding#conformance: the page renders the ceiling the

@@ -606,4 +606,47 @@ describe("standing-payment dispatch metered end to end through the composed stac
       await closeStack(stack);
     }
   });
+
+  it("renders on a later template consent the budget's consumption to date that the composed stack's claim domain committed for an executed payment, through the AS's budget exposure port (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816, D877)", async () => {
+    const stack = await compose(15029, newFiles());
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      expect((await wire(stack, instance, "inv-1")).ok).toBe(true);
+      const as = authServer(stack);
+      const proposed = await fetch(`${as.asUrl}/templates/proposals`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+        body: JSON.stringify({
+          template_version: `sp-e2e-${randomUUID()}`,
+          ceiling: [
+            {
+              type: "mission_resource_access",
+              resource: CANONICAL_RESOURCE,
+              actions: ["payments:payment.execute"],
+              constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+            },
+          ],
+          dispatch_policy: { id: POLICY_ID, version: "1" },
+          dispatchers: ["ap-agent"],
+          recipients: { subjects: [{ iss: as.asUrl, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+          per_instance_lifetime_s: 900,
+          max_active: 3,
+          rate_per_min: 30,
+          review_cadence_s: 86400,
+          expires_at: FAR_FUTURE,
+        }),
+      });
+      const { proposal_id } = (await proposed.json()) as { proposal_id: string };
+      const { sessions } = as.approverConsole as ApprovalConsole;
+      const { cookie } = sessions.establish(proposal_id, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
+      const page = await fetch(`${as.asUrl}/templates/proposals/${proposal_id}`, { headers: { cookie } });
+      expect(page.status).toBe(200);
+      expect(await page.text()).toContain(
+        `Budget ${OWNER}/${BUDGET_ID} exposure: consumption to date 125.00 USD committed; outstanding reservations 0.00 USD reserved and 0.00 USD held pending reconciliation, as read at this rendering.`,
+      );
+    } finally {
+      await closeStack(stack);
+    }
+  });
 });
