@@ -49,9 +49,9 @@ beforeAll(async () => {
 const wallS = () => Math.floor(Date.now() / 1000);
 
 /** A base ID-JAG, or a continuation one with its own already-resolved `sub`. */
-async function mintGrant(opts: { continuation?: boolean; iat?: number } = {}): Promise<string> {
+async function mintGrant(opts: { continuation?: boolean; iat?: number; noExp?: boolean } = {}): Promise<string> {
   const iat = opts.iat ?? wallS();
-  return new SignJWT({
+  const jwt = new SignJWT({
     mission: {
       issuer: AS_ISS,
       id: "mission-1",
@@ -70,9 +70,8 @@ async function mintGrant(opts: { continuation?: boolean; iat?: number } = {}): P
     .setIssuer(AS_ISS)
     .setAudience(RAS_ISS)
     .setIssuedAt(iat)
-    .setExpirationTime(wallS() + 300)
-    .setJti(`jag_${Math.random().toString(36).slice(2)}`)
-    .sign(asKeys.privateKey);
+    .setJti(`jag_${Math.random().toString(36).slice(2)}`);
+  return (opts.noExp ? jwt : jwt.setExpirationTime(wallS() + 300)).sign(asKeys.privateKey);
 }
 
 async function rasConfig(config: Partial<RasConfig> = {}): Promise<RasConfig> {
@@ -160,6 +159,14 @@ describe("RAS durable redemption records across a restart (@spec cross-domain#va
     const after = await rasOn(file);
     await expect(after.redeem(grant, clientJkt)).resolves.toMatchObject({ access_token: expect.any(String) });
     await expect(after.redeem(grant, clientJkt)).rejects.toMatchObject(REPLAY);
+  });
+
+  it("refuses a grant without exp, which has no acceptance period to keep its claim through", async () => {
+    const server = await rasOn(createdStore());
+    await expect(server.redeem(await mintGrant({ noExp: true }), clientJkt)).rejects.toMatchObject({
+      code: "invalid_grant",
+      message: "grant has no exp",
+    });
   });
 
   it("releases one token for concurrent redemptions of one grant", async () => {
