@@ -2353,7 +2353,11 @@ replacement's versions beside the old Mission's status.<a href="#section-4.4-2.5
 under the AS's active Mission Status signing key, the key it currently
 signs Mission Status responses under
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section "Response"),
-published in its <code>jwks_uri</code>. Its JWS header carries
+published in its <code>jwks_uri</code>. The Status profile's signing-key
+retention (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Signing-Key Retention for Audit") keeps that key resolvable for at
+least the Mission's audit horizon, so an archived receipt stays
+verifiable for audit. Its JWS header carries
 <code>typ</code> of <code>mission-discharge-receipt+jwt</code> and a <code>kid</code> identifying the
 signing key, and the HTTP <code>Content-Type</code> is
 <code>application/mission-discharge-receipt+jwt</code> (<a href="#iana-receipt" class="auto internal xref">Section 7.2</a>). A
@@ -2867,6 +2871,11 @@ signing key, and the consumer's signature check is strengthened: a
 consumer verifies a receipt only under a key its trusted
 configuration authorizes for that AS's Mission Status responses,
 never merely because the key appears in <code>jwks_uri</code> (#831, D857).<a href="#section-9-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-9-2.7">
+          <p id="section-9-2.7.1">The receipt's signing key is retained under the Status profile's
+Signing-Key Retention for Audit, since it is the Mission Status
+signing key; no requirement changed (#831, D864).<a href="#section-9-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

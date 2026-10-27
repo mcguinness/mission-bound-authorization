@@ -804,11 +804,11 @@ Table of Contents
               authorization/draft-mcguinness-oauth-mission-status.html>.
 
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
-              Aimable, N., "Attenuating Authorization Tokens for Agentic
-              Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
-              October 2026, <https://datatracker.ietf.org/doc/html/
-              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
+              Niyikiza, N. A., "Attenuating Authorization Tokens for
+              Agentic Delegation Chains", Work in Progress, Internet-
+              Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01,
+              15 June 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-01>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,

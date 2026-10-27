@@ -1405,7 +1405,8 @@ are distinct.<a href="#section-3-3" class="pilcrow">¶</a></p>
 <p id="section-4-1">A Mission-bound attenuation root is a Mission-bound token
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) whose carried authority is an
 <code>attenuating_agent_token</code> authorization detail
-(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>).
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.3" class="relref">Section 3.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>,
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>).
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of <a href="#root-mapping" class="auto internal xref">Section 4.1</a>. The root carries the <code>mission</code>
 claim (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) and the holder's
@@ -1420,10 +1421,19 @@ issuer.<a href="#section-4-1" class="pilcrow">¶</a></p>
 and it signs the root with its own keys. It <span class="bcp14">MUST</span> carry <code>aud</code> per the
 issuance profile's token rules (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>),
 identifying the resource server(s) authorized to consume its authority.<a href="#section-4-2" class="pilcrow">¶</a></p>
-<p id="section-4-3">A Mission-bound attenuation root is one shape of Mission-bound token. A
+<p id="section-4-3">The root is an attenuation-substrate token, not a JWT access token: its
+JWS header carries the substrate's <code>typ</code> value <code>aat+jwt</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.5" class="relref">Section 3.5</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>)
+in place of the issuance profile's <code>at+jwt</code>, its <code>cnf</code> carries the
+holder's public key as <code>jwk</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.2" class="relref">Section 3.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+and the token endpoint returns it with the substrate's <code>token_type</code>
+value <code>aat</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.3" class="relref">Section 6.1.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-4-3" class="pilcrow">¶</a></p>
+<p id="section-4-4">A Mission-bound attenuation root is one shape of Mission-bound token. A
 deployment <span class="bcp14">MAY</span> also issue ordinary <code>mission_resource_access</code> tokens for
 the same Mission; the two are derived from the same Authority Set and
-gated on the same Mission state.<a href="#section-4-3" class="pilcrow">¶</a></p>
+gated on the same Mission state.<a href="#section-4-4" class="pilcrow">¶</a></p>
 <div id="root-mapping">
 <section id="section-4.1">
         <h3 id="name-deriving-the-root-from-the-">
@@ -1514,39 +1524,35 @@ Mission's Authority Set (<a href="#root-mapping" class="auto internal xref">Sect
 </dd>
       <dd class="break"></dd>
 </dl>
-<p id="section-5-3">A client requests a Mission-bound attenuation root at the token
-endpoint, on any grant the issuance profile uses to issue a
-Mission-bound token (for example, the Mission's <code>refresh_token</code> grant).
-The request combines a selector, a confirmation key, and an optional
-narrowing detail, each with a distinct role:<a href="#section-5-3" class="pilcrow">¶</a></p>
-<span class="break"></span><dl class="dlParallel" id="section-5-4">
-        <dt id="section-5-4.1">
-<code>mission_attenuation_root</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-5-4.2">
-          <p id="section-5-4.2.1"><span class="bcp14">OPTIONAL</span> boolean. When <code>true</code> on a Mission-bound token request it
-selects root issuance: the Mission Issuer issues the token as a
-Mission-bound attenuation root (<a href="#root" class="auto internal xref">Section 4</a>) rather than an ordinary
-<code>mission_resource_access</code> token. A request that omits it or sets it
-<code>false</code> is an ordinary Mission-bound token request. The attenuation
-substrate defines no OAuth Token Exchange <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>
-requested-token-type for asking for a root, so this boolean, not a
-token-type identifier, is what asks for one.<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
-</dd>
-      <dd class="break"></dd>
-</dl>
-<p id="section-5-5">The client <span class="bcp14">MUST</span> carry the holder's confirmation key, which binds the
-root to the holder as both profiles require
-(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>, <a href="#root" class="auto internal xref">Section 4</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
-<p id="section-5-6">The client <span class="bcp14">MAY</span> carry an <code>attenuating_agent_token</code> authorization detail
-<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> to request a root narrower than the full mapped Authority
-Set: its tools and argument constraints are the requested subset.<a href="#section-5-6" class="pilcrow">¶</a></p>
-<p id="section-5-7">When the detail is present, the Mission Issuer <span class="bcp14">MUST</span> validate it against
-the root mapping (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>). It <span class="bcp14">MUST</span> reject, with
-<code>invalid_request</code>, any tool or argument constraint not within the
-mapped Authority Set. When the detail is absent, the Mission Issuer
-derives the full mapped root from the Mission's delegable Authority Set
-entries (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>). A client-requested root is therefore always
-at most the mapped Authority Set, never broader.<a href="#section-5-7" class="pilcrow">¶</a></p>
+<p id="section-5-3">Such an issuer also lists <code>attenuating_agent_token</code> in
+<code>authorization_details_types_supported</code>, the substrate's root issuer
+discovery
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.1" class="relref">Section 6.1.1</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-4">A client requests a Mission-bound attenuation root at the token
+endpoint with the substrate's root request
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.2" class="relref">Section 6.1.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+on any grant the issuance profile uses to issue a Mission-bound token
+(for example, the Mission's <code>refresh_token</code> grant). The request
+carries an <code>attenuating_agent_token</code> authorization detail <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
+whose tools and argument constraints are the requested root
+authority; that detail on a Mission-bound token request selects root
+issuance (<a href="#root" class="auto internal xref">Section 4</a>) rather than an ordinary <code>mission_resource_access</code>
+token.<a href="#section-5-4" class="pilcrow">¶</a></p>
+<p id="section-5-5">The client <span class="bcp14">MUST</span> carry the holder's public key in the substrate's
+<code>req_cnf</code> parameter
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.2" class="relref">Section 6.1.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+The Mission Issuer verifies that the client possesses the
+corresponding private key and binds that key as the root's <code>cnf.jwk</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.3" class="relref">Section 6.1.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>,
+<a href="#root" class="auto internal xref">Section 4</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">The Mission Issuer <span class="bcp14">MUST</span> validate the detail against the root mapping
+(<a href="#root-mapping" class="auto internal xref">Section 4.1</a>). It <span class="bcp14">MUST</span> refuse the request with
+<code>invalid_authorization_details</code> when any tool or argument constraint
+is not within the mapped Authority Set, rather than issue a root for
+the rest, as the issuance profile refuses a requested subset beyond
+the Mission's authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A
+client-requested root is therefore always at most the mapped Authority
+Set, never broader.<a href="#section-5-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="attenuation">
@@ -1555,7 +1561,9 @@ at most the mapped Authority Set, never broader.<a href="#section-5-7" class="pi
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-offline-attenuation" class="section-name selfRef">Offline Attenuation</a>
       </h2>
 <p id="section-6-1">The holder of a Mission-bound attenuation token mints a narrower child
-offline, by the attenuation substrate's derivation. The holder:<a href="#section-6-1" class="pilcrow">¶</a></p>
+offline, by the attenuation substrate's derivation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+The holder:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-6-2.1">
           <p id="section-6-2.1.1">selects a narrower tool and constraint set;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
@@ -1573,9 +1581,9 @@ offline, by the attenuation substrate's derivation. The holder:<a href="#section
 <p id="section-6-3">No Mission Issuer contact occurs.<a href="#section-6-3" class="pilcrow">¶</a></p>
 <p id="section-6-4"><code>par_hash</code> commits to the exact parent token bytes, per the attenuation
 substrate's cryptographic linkage rule
-(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>): its value is
-the base64url encoding, without padding, of the SHA-256 digest of the
-parent token's JWS Signing Input.<a href="#section-6-4" class="pilcrow">¶</a></p>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.6" class="relref">Section 4.6</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>):
+its value is the base64url encoding, without padding, of the SHA-256
+digest of the parent token's JWS Signing Input.<a href="#section-6-4" class="pilcrow">¶</a></p>
 <p id="section-6-5">The child's <code>aud</code> <span class="bcp14">MUST</span> equal its parent's <code>aud</code> or be a subset of it.
 For this comparison the <code>aud</code> is treated as a set of audience values: a
 string <code>aud</code> is the one-element set of that string, and an array <code>aud</code>
@@ -1583,15 +1591,20 @@ is the set of its members. Values are compared as case-sensitive,
 byte-exact strings, with no URI normalization; a single-string <code>aud</code>
 and a one-element array carrying the same value are therefore
 equivalent.<a href="#section-6-5" class="pilcrow">¶</a></p>
-<p id="section-6-6">The child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>. Because the
-Mission Issuer caps the root's <code>exp</code> at the Mission's <code>expires_at</code>
+<p id="section-6-6">The child's <code>exp</code> <span class="bcp14">MUST NOT</span> exceed its parent's <code>exp</code>, the substrate's
+TTL monotonicity
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.4" class="relref">Section 4.4</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+Because the Mission Issuer caps the root's <code>exp</code> at the Mission's
+<code>expires_at</code>
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), the per-hop <code>exp</code> rule bounds
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.<a href="#section-6-6" class="pilcrow">¶</a></p>
 <p id="section-6-7">The <code>mission</code> claim rides the chain unchanged: every token in the chain
 carries the same <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
-capability monotonicity, which is the subset relation a consumer checks;
+capability monotonicity
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.5" class="relref">Section 4.5</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
 without holding the Mission's full Authority Set.<a href="#section-6-7" class="pilcrow">¶</a></p>
@@ -1610,11 +1623,17 @@ from the narrowed leaf, exactly as for any narrowed Mission-bound token
 <a href="#section-7" class="section-number selfRef">7. </a><a href="#name-verifying-the-mission-bindi" class="section-name selfRef">Verifying the Mission Binding</a>
       </h2>
 <p id="section-7-1">A consumer verifies the chain linkage, capability monotonicity, depth,
-and proof-of-possession under the attenuation substrate
-(<span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>). This profile
+and proof-of-possession under the attenuation substrate's chain
+verification algorithm
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+This profile
 adds checks on the <code>mission</code> claim, which the substrate does not define
-because it has no concept of the Mission binding. In addition to the
-substrate's chain verification, a consumer <span class="bcp14">MUST</span>:<a href="#section-7-1" class="pilcrow">¶</a></p>
+because it has no concept of the Mission binding. The substrate gives a
+claim it does not define no authority in a derived token unless a
+profile defines how it carries across derivation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.3" class="relref">Section 3.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>);
+this profile defines that for <code>mission</code>: it is carried unchanged. In
+addition to the substrate's chain verification, a consumer <span class="bcp14">MUST</span>:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
           <p id="section-7-2.1.1">reject the chain unless every token in it carries a <code>mission</code> claim
@@ -1626,8 +1645,10 @@ not treated as a narrower grant; and<a href="#section-7-2.1.1" class="pilcrow">�
 </li>
         <li class="normal" id="section-7-2.2">
           <p id="section-7-2.2.1">reject the chain unless the root's <code>iss</code> equals its <code>mission.issuer</code>,
-and verify the root's signature under the Mission Issuer's published
-keys (those of that <code>iss</code>). A root whose <code>iss</code> is not its
+and verify the root's signature under the Mission Issuer's keys, the
+consumer's trust anchor for that <code>iss</code>
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>,
+step 3). A root whose <code>iss</code> is not its
 <code>mission.issuer</code>, or whose signature does not verify under the Mission
 Issuer's keys, <span class="bcp14">MUST</span> cause the whole chain to be refused: only the
 Mission Issuer mints a Mission-bound root; and<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
@@ -1652,10 +1673,12 @@ Mission binding, an audience within its parent's, and an expiry within
 its parent's is refused, not evaluated against a guessed Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
 <p id="section-7-4">Verification cost scales with the chain: a consumer performs one
 signature verification per link, the proof-of-possession check, and
-the Mission-state check (<a href="#kill-switch" class="auto internal xref">Section 8</a>) on every presentation. A
-consumer <span class="bcp14">SHOULD</span> bound the chain length it accepts, independently of
-the <code>del_max_depth</code> the chain carries, so an adversarially deep chain
-is refused rather than verified.<a href="#section-7-4" class="pilcrow">¶</a></p>
+the Mission-state check (<a href="#kill-switch" class="auto internal xref">Section 8</a>) on every presentation. The
+substrate's implementation depth limit bounds the chain length a
+consumer accepts independently of the <code>del_max_depth</code> the chain
+carries
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.3" class="relref">Section 4.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+so an adversarially deep chain is refused rather than verified.<a href="#section-7-4" class="pilcrow">¶</a></p>
 <div id="edge-validation">
 <section id="section-7.1">
         <h3 id="name-edge-validation">
@@ -1705,7 +1728,9 @@ actions whose consequences warrant it.<a href="#section-7.1-4" class="pilcrow">�
       <h2 id="name-the-kill-switch-requires-ru">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-the-kill-switch-requires-ru" class="section-name selfRef">The Kill Switch Requires Runtime Enforcement</a>
       </h2>
-<p id="section-8-1">The attenuation substrate defines no revocation: a child, once minted,
+<p id="section-8-1">The attenuation substrate defines no revocation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-9.8" class="relref">Section 9.8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>):
+a child, once minted,
 is valid by its signature chain until its <code>exp</code>, and no issuer can reach
 it. The Mission kill switch is therefore not automatic for offline
 children; it is delivered only by the runtime enforcement layer.<a href="#section-8-1" class="pilcrow">¶</a></p>
@@ -1868,7 +1893,9 @@ Set extends the single-domain walkthrough's, its write entry also
 carrying a <code>delegation</code> member with <code>max_depth</code> 2, so both mapped
 entries are delegable to depth 2 under the root-shaping rules of
 <a href="#root-mapping" class="auto internal xref">Section 4.1</a> and its <code>authority_hash</code> differs from that example's).
-Decoded root token:<a href="#section-12-1" class="pilcrow">¶</a></p>
+The Mission Issuer signs the root with protected header
+<code>{"alg":"ES256","kid":"as-2026-10","typ":"aat+jwt"}</code>. Decoded root
+claims:<a href="#section-12-1" class="pilcrow">¶</a></p>
 <div class="lang-json sourcecode" id="section-12-2">
 <pre>
 {
@@ -1878,8 +1905,10 @@ Decoded root token:<a href="#section-12-1" class="pilcrow">¶</a></p>
   "aud": "https://erp.example.com",
   "iat": 1793609400,
   "exp": 1793609700,
-  "jti": "aat_root_7M2R4kP9sT1x",
-  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "jti": "01a19b73-7ec0-7404-b47d-da1f4f13688c",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "13PnaI27qUjjjxZ7rW0Ls-iTo5F_c_hMNN3K4aLGv2g" } },
   "del_depth": 0,
   "del_max_depth": 2,
   "mission": {
@@ -1912,21 +1941,24 @@ names that resource server. The ERP's operation contract identifies
 <p id="section-12-4">The orchestrator spawns a read-only extraction sub-agent and, with no
 authorization server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
-root's <code>cnf</code> binds, sets <code>iss</code> to that key's thumbprint, increments
-<code>del_depth</code>, and commits the parent by <code>par_hash</code> (the <code>iss</code> value
-is one line, wrapped here for display):<a href="#section-12-4" class="pilcrow">¶</a></p>
+root's <code>cnf.jwk</code> carries (protected header
+<code>{"alg":"Ed25519","typ":"aat+jwt"}</code>), sets <code>iss</code> to the JWK Thumbprint
+(<span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span>) URI of that key, increments <code>del_depth</code>, and commits the
+parent by <code>par_hash</code> (the <code>iss</code> value is one line, wrapped here for
+display):<a href="#section-12-4" class="pilcrow">¶</a></p>
 <div class="alignLeft art-text artwork" id="section-12-5">
 <pre>
 {
   "iss":
-    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
-     DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
-  "sub": "user_3p2q8mN1a0kV7tR",
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:gmukbzuLQoEbUSbOF
+     xbiOyvNwWCaCXdeii24v-xRahg",
   "aud": "https://erp.example.com",
   "iat": 1793609430,
   "exp": 1793609640,
-  "jti": "aat_child_2Yt7Qv9Lq",
-  "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s" },
+  "jti": "01a19b73-f3f0-76a5-bdf3-fe39a8c43247",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "l3TlQp7m4AFPndPII7gkG2jxttodVKaGrm58SEi2AF4" } },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
   "del_depth": 1,
   "del_max_depth": 2,
@@ -1949,18 +1981,22 @@ is one line, wrapped here for display):<a href="#section-12-4" class="pilcrow">�
 <p id="section-12-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's,
 its <code>exp</code> (1793609640) ends before the root's (1793609700), within the
 per-hop bound, the write tool is gone, and the read constraint is
-unchanged (a permitted narrowing). The child's <code>cnf.jkt</code> is the JWK
-thumbprint <span>[<a href="#RFC7638" class="cite xref">RFC7638</a>]</span> of the delegate extractor's own key, which its
-per-invocation proof-of-possession must match. The child's <code>par_hash</code>
+unchanged (a permitted narrowing). The child's <code>cnf.jwk</code> is the
+extractor's own public key, not the orchestrator's, as the substrate
+requires for a child handed across a process boundary
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+The child's <code>par_hash</code>
 derives as <a href="#attenuation" class="auto internal xref">Section 6</a> states, the base64url SHA-256 digest, without
 padding, of the root token's JWS Signing Input; the value shown is
 illustrative, since the example gives the root's decoded claims rather
 than its serialized bytes. To read an invoice
-the extractor presents the chain <code>[root, child]</code> and a per-invocation
-proof-of-possession to the gateway. The gateway verifies the chain (the
-child's signature under the root's <code>cnf</code> key, <code>par_hash</code>, the depth,
-capability monotonicity, and the <code>aud</code> and <code>exp</code> bounds), verifies the
-proof-of-possession under the child's <code>cnf</code> key, and, because this is
+the extractor sends the gateway a presentation, the chain
+<code>[root, child]</code> and a PoP JWT for that invocation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-7.4" class="relref">Section 7.4</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+The gateway verifies the chain (the child's signature under the root's
+<code>cnf.jwk</code>, <code>par_hash</code>, the depth, capability monotonicity, and the
+<code>aud</code> and <code>exp</code> bounds), verifies the PoP JWT under the child's
+<code>cnf.jwk</code>, and, because this is
 Mission-bound, checks on this presentation that
 <code>msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns</code> is <code>active</code> within the
 deployment's declared freshness bound (<a href="#kill-switch" class="auto internal xref">Section 8</a>). A write attempt
@@ -2001,14 +2037,16 @@ within its parent's; and<a href="#section-13-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.4">
           <p id="section-13-3.4.1"><span class="bcp14">MUST</span> increment the depth member the attenuation substrate defines
-(<code>del_depth</code>, <span>[<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-13-3.4.1" class="pilcrow">¶</a></p>
+(<code>del_depth</code>,
+<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.3" class="relref">Section 4.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-13-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-13-4">A consumer conforming to this profile:<a href="#section-13-4" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-5.1">
           <p id="section-13-5.1.1"><span class="bcp14">MUST</span> verify the attenuation chain and proof-of-possession per the
-attenuation substrate;<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
+attenuation substrate
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>);<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.2">
           <p id="section-13-5.2.1"><span class="bcp14">MUST</span> verify that the <code>mission</code> claim is unchanged across the chain
@@ -2147,23 +2185,15 @@ record of offline derivations and protect it accordingly.<a href="#section-15-3"
 <p id="section-16-1">A Mission-bound attenuation root carries the <code>mission</code> claim, which the
 issuance profile registers as an open object, and the
 <code>attenuating_agent_token</code> authorization detail, which the attenuation
-substrate registers; this profile combines them by reference and defines
-no new claim or registry. It registers one metadata member and one
-request parameter.<a href="#section-16-1" class="pilcrow">¶</a></p>
+substrate defines (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> establishes no registry of types); this
+profile combines them by reference and defines no new claim or
+registry. It registers one metadata member.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>: Change Controller IETF; Reference
 this document, <a href="#request-discovery" class="auto internal xref">Section 5</a>.<a href="#section-16-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-16-3.1">
           <p id="section-16-3.1.1"><code>mission_attenuation_supported</code><a href="#section-16-3.1.1" class="pilcrow">¶</a></p>
-</li>
-      </ul>
-<p id="section-16-4">This document registers one parameter in the "OAuth Parameters" registry:
-Parameter Usage Location token request; Change Controller IETF; Reference
-this document, <a href="#request-discovery" class="auto internal xref">Section 5</a>.<a href="#section-16-4" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-16-5.1">
-          <p id="section-16-5.1.1"><code>mission_attenuation_root</code><a href="#section-16-5.1.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2193,7 +2223,7 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 5
 <dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>
-<span class="refAuthor">Aimable, N.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-02</span>, <time datetime="2026-10-26" class="refDate">26 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02</a>&gt;</span>. </dd>
+<span class="refAuthor">Niyikiza, N. A.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-02</span>, <time datetime="2026-10-26" class="refDate">26 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -2269,24 +2299,62 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 5
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Mission-Binding Profile states the root, chain, authority bound,
-state check, and consumer checks under which every token in a chain
-carries the <code>mission</code> claim, as the issuance profile's Claim
-Reservation requires. No requirement changed (#1531).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Worked Example: the tokens carry <code>typ</code> <code>aat+jwt</code> and <code>cnf.jwk</code>, the
+child binds the extractor's own key, and the extractor presents a
+PoP JWT.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Deriving the Root from the Authority Set: every operation a mapped
+          <p id="appendix-A-2.2.1">Verifying the Mission Binding: the chain-length bound is the
+substrate's <code>MAX_DELEGATION_DEPTH</code>, a requirement there, in place of
+this profile's own recommendation.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Requesting a Root and Discovery: the substrate's root request, which
+always carries an <code>attenuating_agent_token</code> detail, selects root
+issuance; the <code>mission_attenuation_root</code> parameter and the full
+mapped root for a request without a detail are withdrawn.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Requesting a Root and Discovery: the holder key travels in the
+substrate's <code>req_cnf</code>, and the Mission Issuer verifies possession
+before binding it as <code>cnf.jwk</code>; a Mission Issuer that advertises this
+profile also lists <code>attenuating_agent_token</code> in
+<code>authorization_details_types_supported</code>.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Requesting a Root and Discovery: a requested tool or argument
+constraint beyond the mapped Authority Set refuses the request with
+<code>invalid_authorization_details</code> (was <code>invalid_request</code>), as in the
+issuance profile and the substrate.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Mission-Bound Attenuation Roots: the root carries the substrate's
+<code>typ</code> (<code>aat+jwt</code>, not <code>at+jwt</code>) and a <code>cnf.jwk</code>, and is returned
+with <code>token_type</code> <code>aat</code>.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Profiles revision -02 of Attenuating Agent Tokens and cites it by
+section.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Mission-Binding Profile states the root, chain, authority bound,
+state check, and consumer checks under which every token in a chain
+carries the <code>mission</code> claim, as the issuance profile's Claim
+Reservation requires. No requirement changed (#1531).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Deriving the Root from the Authority Set: every operation a mapped
 tool can perform at each root audience has an operation target
 within the entry's <code>resource</code>; equal <code>resource</code> and <code>aud</code> values do
 not establish this alone, and an entry finer than the reachable
-targets is confined by argument constraints or not mapped (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+targets is confined by argument constraints or not mapped (#1276).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Deriving the Root from the Authority Set: the preserved target
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Deriving the Root from the Authority Set: the preserved target
 restriction includes the entry's <code>resource_match</code> and holds for every
 tool and every audience; an issuer that cannot establish it for a
 tool does not map the entry to that tool, and the reverse mapping
-traces each tool to the entry's target restriction (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+traces each tool to the entry's target restriction (#1276).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

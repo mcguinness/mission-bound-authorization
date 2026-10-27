@@ -369,6 +369,9 @@ Table of Contents
       id, version, and digest, or one of them does not have the form
       Section 3 gives it;
 
+   *  a date-time value in a Common Constraint defined by this
+      specification uses 60 for the seconds field (Section 6.1);
+
    *  its time_window Common Constraint has a not_before later than its
       not_after, a window that admits no instant; or
 
@@ -851,7 +854,9 @@ Table of Contents
 
 6.1.  Initial Common Constraints
 
-   This document defines the following Common Constraints.
+   This document defines the following Common Constraints.  RFC 3339
+   date-time values in the Common Constraints defined by this
+   specification MUST NOT use 60 for the seconds field.
 
    max_amount:  A per-action ceiling on a monetary amount.
 
@@ -2058,6 +2063,11 @@ Appendix A.  Document History
       value is malformed and refused at submission.
 
    *  An http or https resource carrying a userinfo subcomponent is
+      refused at submission.
+
+   *  Date-time values in the Common Constraints this specification
+      defines do not use 60 for the seconds field, though RFC 3339
+      permits it for an actual leap second; an entry carrying one is
       refused at submission.
 
    -00
