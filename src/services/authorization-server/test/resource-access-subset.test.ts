@@ -87,6 +87,41 @@ const readCases = () =>
     .filter((f) => f.endsWith(".json"))
     .flatMap((f) => read<{ cases: Case[] }>(join(CASES_DIR, f)).cases);
 
+/**
+ * An applicability file (`mission-resource-contract-applicability/1`): its one
+ * exact-resource configuration, the frozen contract file it names (whose
+ * reference it must carry) and the payments deployment's declaration of that
+ * version.
+ */
+function applicabilityOf(file: string) {
+  const applicability = read<{
+    format: string;
+    contracts: { resource: string; resource_match: string; current: { file: string; reference: ResourceContractRef } }[];
+  }>(join(SUBSET_DIR, file));
+  expect(applicability.format, file).toBe("mission-resource-contract-applicability/1");
+  expect(applicability.contracts, file).toHaveLength(1);
+  const [current] = applicability.contracts;
+  if (!current) throw new Error(`${file} names no contract`);
+  expect(current.resource_match, file).toBe("exact");
+  const frozen = read<ContractFile>(join(SUBSET_DIR, current.current.file));
+  expect(current.current.reference, file).toEqual(frozen.reference);
+  return {
+    configured: [{ resource: current.resource, reference: current.current.reference }],
+    frozen,
+    declared: RESOURCE_CONTRACTS.versionOf(current.current.reference),
+  };
+}
+
+/** The ids of the entry-validation cases carrying exactly `configured` inline. */
+const carryingCases = (configured: unknown): string[] =>
+  readCases()
+    .filter(
+      (c) =>
+        c.check === "entry-validation" &&
+        JSON.stringify((c.input as { contracts?: unknown }).contracts) === JSON.stringify(configured),
+    )
+    .map((c) => c.id);
+
 /** The key names in the draft's "Initial Mission Common Constraints registry" table. */
 function initialRegistryKeys(): string[] {
   const text = readFileSync(DRAFT, "utf8");
@@ -144,32 +179,42 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
-  // #249 (D712, D865): the contract's resource applicability, in a file of its
-  // own beside the frozen contract and subset files. The file is frozen at the
-  // version current when it was frozen, 2026-10-24; #1693's v15 made
-  // 2026-10-26 current, so the file's reference is checked as a version the
-  // payments deployment still declares and performs, not as the current one.
-  it("names, in a separate frozen applicability file, the one resource a declared payments contract version is current for, and the contract cases carry exactly that configuration", () => {
-    const applicability = read<{
-      format: string;
-      contracts: { resource: string; resource_match: string; current: { file: string; reference: ResourceContractRef } }[];
-    }>(join(SUBSET_DIR, "payments-contract-applicability-2026-10-26.json"));
-    expect(applicability.format).toBe("mission-resource-contract-applicability/1");
-    expect(applicability.contracts).toHaveLength(1);
-    const [current] = applicability.contracts;
-    expect(current?.resource_match).toBe("exact");
-    const frozen = read<ContractFile>(join(SUBSET_DIR, current?.current.file ?? ""));
-    expect(current?.current.reference).toEqual(frozen.reference);
-    const declared = RESOURCE_CONTRACTS.versionOf(current?.current.reference);
+  // #249 (D712, D865), #1693 (D889): the contract's resource applicability,
+  // in files of their own beside the frozen contract and subset files. The
+  // current file names the version the payments deployment declares current;
+  // the historical one, frozen at 2026-10-24 before v15, names a version the
+  // deployment still declares and performs. Each file's configuration is the
+  // one its own cases carry inline, and every case carrying a configuration
+  // carries one of the two.
+  it("names, in the current applicability file, the one resource the current contract applies to, and its contract cases carry exactly that configuration (#1693)", () => {
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-v15.json");
+    expect(frozen.reference).toEqual(contract.reference);
+    expect(declared?.version.state).toBe("current");
+    expect(declared?.version.document).toEqual(frozen.document);
+    expect(carryingCases(configured)).toEqual(["ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+  });
+
+  it("keeps, in the historical applicability file frozen before v15, a declared payments contract version, and its contract cases carry exactly that configuration", () => {
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-2026-10-26.json");
+    expect(frozen.reference.version).toBe("2026-10-24");
     expect(declared).toBeDefined();
     expect(["current", "superseded"]).toContain(declared?.version.state);
     expect(declared?.version.document).toEqual(frozen.document);
-    const configured = [{ resource: current?.resource, reference: current?.current.reference }];
+    expect(carryingCases(configured)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
+  });
+
+  it("every case carrying a contract configuration carries one of the applicability files' configurations", () => {
+    const known = ["payments-contract-applicability-v15.json", "payments-contract-applicability-2026-10-26.json"].map(
+      (f) => applicabilityOf(f).configured,
+    );
     const carrying = readCases().filter(
       (c) => c.check === "entry-validation" && (c.input as { contracts?: unknown }).contracts !== undefined,
     );
-    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
-    for (const c of carrying) expect((c.input as { contracts: unknown }).contracts, c.id).toEqual(configured);
+    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03", "ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+    for (const c of carrying) {
+      const carried = JSON.stringify((c.input as { contracts: unknown }).contracts);
+      expect(known.some((k) => JSON.stringify(k) === carried), c.id).toBe(true);
+    }
   });
 
   it("keeps the superseded versions 2026-10-20 and 2026-10-24 declared exactly as they were frozen, each with a declared retention (#252, #1693)", () => {

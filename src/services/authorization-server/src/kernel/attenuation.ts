@@ -415,8 +415,9 @@ export async function mintChildOffline(
     del_max_depth: Number(parent.del_max_depth),
     par_hash: parHash(parentToken),
     authorization_details: [{ type: AAT_DETAIL_TYPE, tools: narrowedTools }],
-    ...(typeof parent.sub === "string" ? { sub: parent.sub } : {}),
-    ...(typeof parent.client_id === "string" ? { client_id: parent.client_id } : {}),
+    // @spec attenuation#mission-binding-check (#1758): no `sub` or
+    // `client_id`. A holder-set identity claim carries no authority in a
+    // derived token (AAT -02 Section 3.3); the consumer reads both from the root.
   })
     .setProtectedHeader({ alg: "ES256", typ: AAT_TYP, jwk: pubJwk as JWK })
     .setIssuer(iss)
