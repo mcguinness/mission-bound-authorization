@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-27T00:43:54Z
-Source repository commit: e6c400b5948b3d90caed141f12e566849a2c6eec
+Generated: 2026-10-27T04:50:36Z
+Source repository commit: 6104286d65294035c3edd2f8e90bb0794621ecfd
 Member count: 7
 
 Reading order:
@@ -8270,6 +8270,10 @@ Table of Contents
 
    Mission Client:  The client conformance role, defined in Section 19.
 
+   Mission-governed client:  A client that the deployment registers as
+      Mission-governed ("a client registered as Mission-governed");
+      Section 4.3 states the rule that registration triggers.
+
    Mission-aware Resource Server:  The resource server conformance role,
       defined in Section 19.
 
@@ -8492,7 +8496,8 @@ Table of Contents
       per [RFC8707]-style indicators or a protected resource per
       [RFC9728]).  It bounds which resources a derived Authority Set
       entry may name (Section 5) and serves as a configured-mapping
-      lookup key.  It is not RFC 8707 resource carriage: a client
+      lookup key (Section 5.1); like purpose, the key alone grants no
+      authority.  It is not RFC 8707 resource carriage: a client
       separately requests the audience of a given token with the
       standard resource parameter (Section 8.4).
 
@@ -8968,12 +8973,13 @@ Table of Contents
       only target (Section 8.7), yields the candidate entries, which are
       then narrowed to policy.
 
-      The mapping is a lookup, not synthesis.  Because no
-      authorization_details object was submitted, the AS refuses an
-      Intent that matches no configured mapping, or whose mapped
-      candidates policy narrows to nothing, with access_denied
-      (Section 10).  Its error_description can say whether no mapping
-      matched or policy narrowed the candidates to nothing.
+      The mapping is a lookup, not synthesis, and no key grants
+      authority by itself.  Because no authorization_details object was
+      submitted, the AS refuses an Intent that matches no configured
+      mapping, or whose mapped candidates policy narrows to nothing,
+      with access_denied (Section 10).  Its error_description can say
+      whether no mapping matched or policy narrowed the candidates to
+      nothing.
 
       Either mode is conforming.  A deployment publishes its mapping
       space as deployment documentation.  Eligibility can be scoped per
@@ -9187,8 +9193,10 @@ Table of Contents
       transformation capabilities the AS declares for the type (below);
       and
 
-   *  evaluating the entry against a concrete request is the runtime
-      layer's responsibility (Section 20.3.1), not the AS's.
+   *  evaluating the entry against a concrete request is the
+      responsibility of the resource server, under the entry's type
+      (Section 9.1), or of a composing runtime layer (Section 20.3.1),
+      not the AS's.
 
 5.5.1.  Declared Transformation Capabilities
 
@@ -9484,9 +9492,11 @@ Table of Contents
        strictly later than the creation instant: acceptance of the
        submission does not freeze time, and where the requested ceiling
        passed while the approval was pending, completion creates no
-       Mission.  A deferred or relocated approval flow (Section 16)
-       inherits this check at its own creation commit, with the
-       completion error each flow defines.
+       Mission.  Where a direct approval fails this check, the AS MUST
+       refuse the request with access_denied (Section 10), issuing no
+       authorization code or profile-defined grant.  A deferred or
+       relocated approval flow (Section 16) inherits this check at its
+       own creation commit, with the completion error each flow defines.
 
    The authority_hash is the *authority commitment*: it commits, by
    cryptographic digest, exactly the authority the Approver approved.
@@ -9533,8 +9543,15 @@ Table of Contents
       character presentation in them.
 
    *  The rendering MUST visually distinguish the AS-derived Authority
-      Set from client-supplied text, so crafted client text cannot pass
-      as derived authority.
+      Set from client-supplied text and attribute that text to the
+      client, identified from client identity information the AS trusts
+      (Section 6.2.1), so crafted client text cannot pass as derived
+      authority or as a statement of the AS.
+
+   The rendering presents goal and task_bounds as recorded, without
+   truncation: the Intent is recorded verbatim and committed by
+   intent_hash (Section 15.1), so a truncated rendering would show the
+   Approver less than the record holds.
 
    Rendering a bound is not the same as enforcing it: a deployment MUST
    NOT present a rendered bound as enforced when no party enforces it.
@@ -10113,34 +10130,43 @@ Table of Contents
 
 8.1.4.  Mission Identifier and Expiry in Responses
 
-   A client learns its mission_id from the mission claim's id on each
-   issued token (Section 8.8) or from the token response.
-
    This document defines mission_id as a token-endpoint response
    parameter: a string carrying the Mission Identifier, returned
-   alongside the issued token.  An AS SHOULD return it, because a client
-   need not parse the access token and cannot read the mission claim of
-   a token that is encrypted or opaque to it.  It is an informational
-   reference only: presenting it authorizes nothing (Section 8.1.1), and
-   a client MUST NOT derive authority from it.
+   alongside the issued token.  It is an informational reference only:
+   presenting it authorizes nothing (Section 8.1.1), and a client MUST
+   NOT derive authority from it.
 
    Alongside it, this document defines mission_expires_at: the exact RFC
    3339 string recorded as the Mission Record's effective expires_at
    (Section 14), the common member of every Mission-creating success
-   response, whatever surface completes the creation.  The success
-   response that first delivers a newly created Mission's identifier or
-   credential MUST carry it, and a Mission-bound token response SHOULD
-   carry it beside mission_id: expires_in describes the access token's
-   lifetime, not the Mission's, and the effective expiry can be shorter
-   than the requested intent.expires_at.
+   response, whatever surface completes the creation. expires_in
+   describes the access token's lifetime, not the Mission's, and the
+   effective expiry can be shorter than the requested intent.expires_at.
+
+   A client learns both values from these members, not from the access
+   token, which it treats as opaque (Section 6 of [RFC9068]).  The AS
+   returns them as follows:
+
+   *  The success response that first delivers a newly created Mission's
+      identifier or credential MUST carry both.  On the authorization-
+      code path, the authorization response carrying only the code is
+      not that response; the token response redeeming the code is.
+
+   *  A delegated exchange response (Section 12.2) MUST carry both,
+      because the delegate did not receive the response that created the
+      Mission.
+
+   *  Any other Mission-bound token response, including a refresh,
+      designation (Section 12.1), or self-exchange (Section 12.4)
+      response, SHOULD carry both.
 
    A creation replay deduplicated under the applicable operation
    identifier (approval_event_id for direct approval (Section 14), or
    the identifier a Mission-creating profile defines) returns the
-   committed effective value unchanged.  On OAuth token responses the
-   member is additionally registered as a token-endpoint response
-   parameter (Section 23.1).  It is informational in the same way:
-   presenting it authorizes nothing.
+   committed effective value unchanged.  On OAuth token responses
+   mission_expires_at is additionally registered as a token-endpoint
+   response parameter (Section 23.1).  It is informational in the same
+   way: presenting it authorizes nothing.
 
 8.2.  Issuance Gating
 
@@ -10173,6 +10199,12 @@ Table of Contents
    any other grant, refresh included, with the invalid_grant error code.
    The AS MUST refuse a derivation request it answers after it has
    acknowledged a revocation of the Mission, with the same error code.
+   The AS answers a request when it makes its final decision to release
+   the result, not when network delivery of the response completes: a
+   result prepared before the acknowledgment and released after it is
+   refused.  A Token Exchange takes invalid_request because a presented
+   token whose Mission is not active is unacceptable for the exchange, a
+   case Section 2.2.2 of [RFC8693] assigns to that code.
 
    Where a profile of a Token Exchange that the AS implements assigns
    its own error code to either refusal, such as a continuation
@@ -10187,9 +10219,33 @@ Table of Contents
    defines supersession), the Mission's termination reason
    (Section 7.1).
 
-   The mission_error member is diagnostic only: it grants nothing, an
-   unrecognized value is ignored, and it is returned only to the
-   authenticated client presenting the Mission's grant.
+   These values are termination reasons.  A companion profile that
+   defines another Mission state (Section 7), which this section also
+   refuses, or a further refusal at issuance defines any mission_error
+   value for it, as Mission Status does for a suspended Mission
+   ([I-D.draft-mcguinness-oauth-mission-status], Section "Mission
+   Lifecycle Endpoint") and Derivation Limits does for an exhausted
+   limit ([I-D.draft-mcguinness-oauth-mission-derivation-limits],
+   Section "Enforcement at Issuance").  A Mission in a state from which
+   it can return to active is never reported with a termination reason.
+
+   The mission_error member is diagnostic only and optional, whichever
+   document defines its value: it grants nothing, an unrecognized value
+   is ignored and is not authoritative about the Mission's state, and it
+   is returned only to the authenticated client presenting the Mission's
+   grant.
+
+   The mission_error values this section names each report a terminated
+   Mission (Section 7.1): no retry under the same grant cures the
+   refusal.  Further work needs a new approval or, for superseded, the
+   successor Mission ([I-D.draft-mcguinness-oauth-mission-expansion]).
+   A new approval is a fresh approval event, not an automatic
+   consequence of the refusal; a credential held outside the Mission is
+   no fallback for its task (Section 20.1.2); and the refusal gives no
+   assurance that the refresh token remains usable.  This reading is
+   keyed on the value, not on the error code, because the same refusal
+   covers a Mission in a non-terminal state that a companion profile
+   registers (Section 23.7), whose meaning that profile defines.
 
    Derived tokens SHOULD be short-lived so that a transition to
    terminated takes effect promptly without per-request revocation
@@ -10312,8 +10368,12 @@ Table of Contents
    omit values from it: the response states exactly the (possibly
    narrowed) set assigned to the issued token, and it is the
    authoritative statement of what was granted, which the client
-   compares with its proposal (Section 4.3).  The mission_id response
-   parameter carries the Mission reference beside it (Section 8.1.4).
+   compares with its proposal (Section 4.3).  A client MUST NOT assume
+   authority absent from the granted set.  An entry the echo narrows
+   grants the narrower authority it states, and a client need not reject
+   a grant narrower than its proposal.  The mission_id and
+   mission_expires_at response parameters carry the Mission reference
+   and expiry beside it (Section 8.1.4).
 
    The following is an example of a refresh request that narrows the
    canonical ERP Mission (the worked example of Section 14) to a read-
@@ -10551,6 +10611,29 @@ Table of Contents
    type's entries (for mission_resource_access,
    [I-D.draft-mcguinness-oauth-mission-resource-access]).
 
+   For example, a payments API at https://pay.example.com consumes only
+   scope.  Its trusted mapping states that payments.small stands for the
+   payments.create action there, and that the API enforces a fixed
+   500.00 USD ceiling on every operation payments.small permits.
+   Consider this entry for the API:
+
+   { "type": "mission_resource_access",
+     "resource": "https://pay.example.com",
+     "actions": ["payments.create"],
+     "constraints": {
+       "max_amount": { "amount": "500.00", "currency": "USD" } } }
+
+   The entry projects to payments.small, since the mapping shows that
+   the target independently enforces its constraint.  The same entry
+   with a max_amount of 200.00 USD does not project, since
+   payments.small does not convey the narrower value.  With no other
+   carried entry supplying a safe projection, issuance to the API is
+   refused: under step 5 with invalid_target, or, where the request
+   names payments.small, with invalid_scope under the rule for an
+   explicitly requested value above (Section 10).  The Mission Resource
+   Access Profile gives the same pair
+   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
+
    The runtime profile's enforcement-scope declarations
    ([I-D.draft-mcguinness-mission-runtime]) can reference the same
    mapping for the paths it covers; this rule does not depend on that
@@ -10713,13 +10796,12 @@ Table of Contents
        type it does not implement, or whose type-defined enforcement it
        cannot complete (an unrecognized member, an unenforceable
        constraint, or an unrecognized matching mode).  It MUST refuse
-       the request (for example, a 403 with the insufficient_scope error
-       code [RFC6750], or the deployment's usual insufficient-authority
-       error) unless another applicable entry that it can fully enforce
-       authorizes the whole request on its own, and MUST NOT combine
-       parts of several entries to authorize one request.  A failure of
-       the token's own validation (above) rejects the token whatever its
-       entries carry.
+       the request, with insufficient_scope ([RFC6750]) or the RAR-
+       remediation challenge as Section 9.4 states, unless another
+       applicable entry that it can fully enforce authorizes the whole
+       request on its own, and MUST NOT combine parts of several entries
+       to authorize one request.  A failure of the token's own
+       validation (above) rejects the token whatever its entries carry.
 
    3.  MUST NOT, when a token also carries scope, grant on the basis of
        a scope value any access broader than the corresponding
@@ -10992,6 +11074,15 @@ Table of Contents
    request error at PAR, and returning it there does not change which
    row applies.
 
+   Where a token request fails more than one check, this document
+   defines no general precedence among the resulting errors; as under
+   [RFC6749], which defines none, the AS returns any applicable one.
+   The orders this document does state still apply: a submission's
+   processing order (Section 4.5), and the Mission-governed refusal,
+   which applies only to an otherwise processable request (Section 4.3).
+   The choice relaxes neither client authentication nor any rule that
+   limits who receives a detail, such as mission_error (Section 8.2).
+
    The tables are grouped by surface.  The first table holds each
    failure whose rule is not confined to the surface of one of the other
    three tables (PAR and the authorization endpoint, Token Exchange, or
@@ -11067,11 +11158,14 @@ Table of Contents
    | Token endpoint: the Mission is  | invalid_request on a Token      |
    | terminated (revoked, expired,   | Exchange (Section 2.2.2 of      |
    | superseded, or another          | [RFC8693]), invalid_grant       |
-   | termination reason)             | (Section 5.2 of [RFC6749]) on   |
-   |                                 | any other grant, or the code a  |
-   |                                 | Token Exchange profile assigns  |
-   |                                 | (Section 8.2).  Detail:         |
-   |                                 | mission_error (Section 23)      |
+   | termination reason), or in      | (Section 5.2 of [RFC6749]) on   |
+   | another state that is not       | any other grant, or the code a  |
+   | active, such as one a           | Token Exchange profile assigns  |
+   | companion profile defines       | (Section 8.2).  Detail:         |
+   |                                 | mission_error (Section 23), or  |
+   |                                 | a value the companion profile   |
+   |                                 | defines for its state           |
+   |                                 | (Section 8.2)                   |
    +---------------------------------+---------------------------------+
    | Token endpoint (Section 5.4,    | invalid_authorization_details   |
    | Section 8.5): the requested     | (Section 6 of [RFC9396]).       |
@@ -11090,63 +11184,61 @@ Table of Contents
 
                Table 5: Failures not confined to one surface
 
-   +===================================+===============================+
-   | Surface / failing input           | Base OAuth error and optional |
-   |                                   | detail                        |
-   +===================================+===============================+
-   | PAR: malformed Submission         | invalid_request (Section 5.2  |
-   | envelope or Intent (schema,       | of [RFC6749]).  Detail: safe  |
-   | unknown member, invalid           | error_description             |
-   | value), including a               |                               |
-   | structurally invalid evidence     |                               |
-   | entry (Section 4.2,               |                               |
-   | Section 4.4)                      |                               |
-   +-----------------------------------+-------------------------------+
-   | PAR or authorization:             | invalid_authorization_details |
-   | malformed or unsupported          | (Section 5 of [RFC9396]).     |
-   | actual RAR object (an entry       | Detail: RAR-defined detail    |
-   | of a submitted                    |                               |
-   | authorization_details             |                               |
-   | proposal) (Section 4.3)           |                               |
-   +-----------------------------------+-------------------------------+
-   | PAR: a proposed entry, valid      | invalid_request (Section 5.2  |
-   | for its type, whose resource      | of [RFC6749]).  Detail: safe  |
-   | is not among the Intent's         | error_description             |
-   | target_resources                  |                               |
-   | (Section 4.3)                     |                               |
-   +-----------------------------------+-------------------------------+
-   | PAR or authorization request      | invalid_request               |
-   | from a client registered as       | (Section 4.1.2.1 of           |
-   | Mission-governed:                 | [RFC6749], Section 5.2 of     |
-   | authorization_details without     | [RFC6749]).  Detail: safe     |
-   | mission_intent (Section 4.3)      | error_description             |
-   +-----------------------------------+-------------------------------+
-   | Token request, any grant          | invalid_target (Section 2 of  |
-   | type: an audience the token       | [RFC8707]).  Detail: safe     |
-   | would carry, named or             | error_description             |
-   | inferred, is a Mission-           |                               |
-   | governed resource, and the        |                               |
-   | request has no qualifying         |                               |
-   | Mission binding (Section 4.3)     |                               |
-   +-----------------------------------+-------------------------------+
-   | Authorization request: scope      | invalid_scope                 |
-   | includes openid and the           | (Section 4.1.2.1 of           |
-   | Approver is not the Subject       | [RFC6749]).  Detail: safe     |
-   | (Section 6.8)                     | error_description             |
-   +-----------------------------------+-------------------------------+
-   | Authorization decision            | access_denied                 |
-   | (Section 6.2, Section 6.8,        | (Section 4.1.2.1 of           |
-   | Section 5.1): the Approver        | [RFC6749]).  Detail: for a    |
-   | declines, approval                | configured-mapping refusal, a |
-   | authentication fails the          | safe error_description can    |
-   | floor or a requested              | say whether no mapping        |
-   | acr_values or max_age, or a       | matched or policy narrowed    |
-   | well-formed request               | the candidates to nothing;    |
-   | (including configured-mapping     | otherwise none unless a       |
-   | mode) is refused by AS policy     | defined extension applies     |
-   +-----------------------------------+-------------------------------+
+   +=================================+================================+
+   | Surface / failing input         | Base OAuth error and optional  |
+   |                                 | detail                         |
+   +=================================+================================+
+   | PAR: malformed Submission       | invalid_request (Section 5.2   |
+   | envelope or Intent (schema,     | of [RFC6749]).  Detail: safe   |
+   | unknown member, invalid value), | error_description              |
+   | including a structurally        |                                |
+   | invalid evidence entry          |                                |
+   | (Section 4.2, Section 4.4)      |                                |
+   +---------------------------------+--------------------------------+
+   | PAR or authorization: malformed | invalid_authorization_details  |
+   | or unsupported actual RAR       | (Section 5 of [RFC9396]).      |
+   | object (an entry of a submitted | Detail: RAR-defined detail     |
+   | authorization_details proposal) |                                |
+   | (Section 4.3)                   |                                |
+   +---------------------------------+--------------------------------+
+   | PAR: a proposed entry, valid    | invalid_request (Section 5.2   |
+   | for its type, whose resource is | of [RFC6749]).  Detail: safe   |
+   | not among the Intent's          | error_description              |
+   | target_resources (Section 4.3)  |                                |
+   +---------------------------------+--------------------------------+
+   | PAR or authorization request    | invalid_request                |
+   | from a client registered as     | (Section 4.1.2.1 of [RFC6749], |
+   | Mission-governed:               | Section 5.2 of [RFC6749]).     |
+   | authorization_details without   | Detail: safe error_description |
+   | mission_intent (Section 4.3)    |                                |
+   +---------------------------------+--------------------------------+
+   | Token request, any grant type:  | invalid_target (Section 2 of   |
+   | an audience the token would     | [RFC8707]).  Detail: safe      |
+   | carry, named or inferred, is a  | error_description              |
+   | Mission-governed resource, and  |                                |
+   | the request has no qualifying   |                                |
+   | Mission binding (Section 4.3)   |                                |
+   +---------------------------------+--------------------------------+
+   | Authorization request: scope    | invalid_scope (Section 4.1.2.1 |
+   | includes openid and the         | of [RFC6749]).  Detail: safe   |
+   | Approver is not the Subject     | error_description              |
+   | (Section 6.8)                   |                                |
+   +---------------------------------+--------------------------------+
+   | Authorization decision          | access_denied (Section 4.1.2.1 |
+   | (Section 6.2, Section 6.8,      | of [RFC6749]).  Detail: for a  |
+   | Section 5.1, Section 6.2.2):    | configured-mapping refusal, a  |
+   | the Approver declines, approval | safe error_description can say |
+   | authentication fails the floor  | whether no mapping matched or  |
+   | or a requested acr_values or    | policy narrowed the candidates |
+   | max_age, a well-formed request  | to nothing; for an expiry at   |
+   | (including configured-mapping   | the commit, a safe             |
+   | mode) is refused by AS policy,  | error_description can say that |
+   | or the commit finds the         | the requested expiry has       |
+   | effective expiry not later than | passed; otherwise none unless  |
+   | the creation instant            | a defined extension applies    |
+   +---------------------------------+--------------------------------+
 
-              Table 6: PAR and authorization endpoint failures
+             Table 6: PAR and authorization endpoint failures
 
     +=================================+===============================+
     | Surface / failing input         | Base OAuth error and optional |
@@ -11223,42 +11315,57 @@ Table of Contents
 
                       Table 7: Token Exchange failures
 
-    +===========================+====================================+
-    | Surface / failing input   | Base OAuth error and optional      |
-    |                           | detail                             |
-    +===========================+====================================+
-    | Protected resource: a     | invalid_token (Section 3.1 of      |
-    | token lacking the mission | [RFC6750]).  Detail: none          |
-    | claim, where the resource |                                    |
-    | requires it (Section 9)   |                                    |
-    +---------------------------+------------------------------------+
-    | Protected resource: weak  | insufficient_user_authentication   |
-    | or stale authentication   | (Section 3 of [RFC9470]).  Detail: |
-    | of the token's Subject,   | acr_values or max_age              |
-    | where the deployment      |                                    |
-    | conveys it (Section 9)    |                                    |
-    +---------------------------+------------------------------------+
-    | Protected resource: DPoP  | DPoP invalid_token challenge       |
-    | proof missing, invalid,   | (Section 7.1 of [RFC9449]).        |
-    | or mismatched (Section 9) | Detail: none                       |
-    +---------------------------+------------------------------------+
-    | Protected resource: DPoP  | DPoP use_dpop_nonce challenge      |
-    | nonce required, missing,  | (Section 9 of [RFC9449]).  Detail: |
-    | or stale (Section 9.4)    | fresh nonce                        |
-    +---------------------------+------------------------------------+
-    | Protected resource:       | Bearer invalid_token challenge     |
-    | certificate-bound token's | (Section 3.1 of [RFC6750], per     |
-    | presented certificate     | Section 3 of [RFC8705]).  Detail:  |
-    | mismatch (Section 9)      | none                               |
-    +---------------------------+------------------------------------+
-    | Protected resource:       | insufficient_scope (Section 3.1 of |
-    | insufficient carried      | [RFC6750]) or the RAR-remediation  |
-    | authority, or an          | challenge (Section 9.6).  Detail:  |
-    | unenforceable constraint  | mission_denial (Section 9),        |
-    | (Section 9.4)             | minimized                          |
-    +---------------------------+------------------------------------+
+     +============================+==================================+
+     | Surface / failing input    | Base OAuth error and optional    |
+     |                            | detail                           |
+     +============================+==================================+
+     | Protected resource: a      | invalid_token (Section 3.1 of    |
+     | token lacking the mission  | [RFC6750]).  Detail: none        |
+     | claim, where the resource  |                                  |
+     | requires it (Section 9)    |                                  |
+     +----------------------------+----------------------------------+
+     | Protected resource: weak   | insufficient_user_authentication |
+     | or stale authentication of | (Section 3 of [RFC9470]).        |
+     | the token's Subject, where | Detail: acr_values or max_age    |
+     | the deployment conveys it  |                                  |
+     | (Section 9)                |                                  |
+     +----------------------------+----------------------------------+
+     | Protected resource: DPoP   | DPoP invalid_token challenge     |
+     | proof missing, invalid, or | (Section 7.1 of [RFC9449]).      |
+     | mismatched (Section 9)     | Detail: none                     |
+     +----------------------------+----------------------------------+
+     | Protected resource: DPoP   | DPoP use_dpop_nonce challenge    |
+     | nonce required, missing,   | (Section 9 of [RFC9449]).        |
+     | or stale (Section 9.4)     | Detail: fresh nonce              |
+     +----------------------------+----------------------------------+
+     | Protected resource:        | Bearer invalid_token challenge   |
+     | certificate-bound token's  | (Section 3.1 of [RFC6750], per   |
+     | presented certificate      | Section 3 of [RFC8705]).         |
+     | mismatch (Section 9)       | Detail: none                     |
+     +----------------------------+----------------------------------+
+     | Protected resource: an     | invalid_token (Section 3.1 of    |
+     | opaque Mission-bound token | [RFC6750]), in the DPoP scheme   |
+     | that its introspection     | for a DPoP-bound token           |
+     | response or issuer-local   | (Section 7.1 of [RFC9449]).      |
+     | resolution reports         | Detail: none                     |
+     | inactive (Section 11.4)    |                                  |
+     +----------------------------+----------------------------------+
+     | Protected resource:        | No error code reporting the      |
+     | introspection or issuer-   | token invalid: HTTP 503          |
+     | local resolution of an     | (Section 15.6.4 of [RFC9110]),   |
+     | opaque Mission-bound token | with Retry-After where a retry   |
+     | cannot be completed        | time is meaningful.  Detail:     |
+     | (Section 11.4)             | none                             |
+     +----------------------------+----------------------------------+
+     | Protected resource:        | insufficient_scope (Section 3.1  |
+     | insufficient carried       | of [RFC6750]) or the RAR-        |
+     | authority, or an           | remediation challenge            |
+     | unenforceable constraint   | (Section 9.6).  Detail:          |
+     | (Section 9.4)              | mission_denial (Section 9),      |
+     |                            | minimized                        |
+     +----------------------------+----------------------------------+
 
-                  Table 8: Protected resource challenges
+                   Table 8: Protected resource challenges
 
    In these tables, which evidence types are required follows
    [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
@@ -11448,10 +11555,21 @@ Table of Contents
          same rules as the token-carried form (Section 9), the fail-
          closed duties included.
 
+   *  A resource server whose introspection response for an opaque
+      Mission-bound token is active: false, or whose issuer-local
+      resolution resolves it as inactive, MUST refuse the request with
+      the invalid_token error code (Section 3.1 of [RFC6750]), in the
+      DPoP scheme for a DPoP-bound token (Section 7.1 of [RFC9449]).
+
    *  A resource server that cannot obtain a valid introspection
       response or issuer-local resolution for an opaque Mission-bound
       token MUST refuse the request rather than serve it from any cached
-      or out-of-band belief about the token's authority.
+      or out-of-band belief about the token's authority.  The failure
+      establishes nothing about the token: the resource server MUST
+      respond with HTTP status code 503 (Service Unavailable)
+      (Section 15.6.4 of [RFC9110]), adding a Retry-After header field
+      where a retry time is meaningful, and MUST NOT report the token as
+      invalid, such as with the invalid_token error code.
 
    The per-use freshness rule of Section 11 covers the whole response in
    this mode: each response is one observation of the token's claims and
@@ -12109,6 +12227,11 @@ Table of Contents
    immutable after creation, except state and the termination member
    written once when the Mission terminates (Section 7.1).
 
+   The record is a logical object: this document constrains its members
+   and their values and requires no storage form.  Where a surface or
+   profile exchanges or signs the record, the record's JSON form, with
+   the members this section defines, governs.
+
    Record member names omit the mission prefix because the record is the
    Mission.  Prefixed names, such as the mission_intent request
    parameter and the mission_id response parameter, belong to surfaces
@@ -12744,7 +12867,31 @@ Table of Contents
    *  *Authority types.* The Authority Set is open to any AS-supported
       authorization_details type (Section 5.5); the Mission apparatus
       (commitment, gating, delegation) is type-agnostic, subject to the
-      delegation and projection limits in Section 5.5.
+      delegation and projection limits in Section 5.5.  A type's
+      specification supplies what the apparatus relies on for its
+      entries:
+
+      -  the definition a proposed entry is validated against, alongside
+         any schema advertised for the type or established out of band
+         (Section 4.5);
+
+      -  the enforcement semantics a resource server applies to an entry
+         (Section 9.1);
+
+      -  the subset relation, which the AS applies only where it
+         declares narrowing for the type; otherwise an entry is carried
+         as approved (Section 5.4, Section 5.5.1);
+
+      -  the delegation policy, which the AS applies only where it
+         declares delegation; an entry with no type-defined policy is
+         non-delegable (Section 12.5);
+
+      -  when a scope-projection mapping is safe for the type's entries,
+         which the AS relies on only where it declares projection
+         (Section 8.7); and
+
+      -  any normalization a comparison of its members uses; without
+         one, URI-valued members compare byte for byte (Section 15.2).
 
    *  *Intent Submission Evidence types.* The evidence array of the
       Submission envelope is open to evidence types defined by companion
@@ -13018,7 +13165,11 @@ Table of Contents
 
    In either form, it enforces each applicable entry its tokens carry
    under that entry's type, which for mission_resource_access is work a
-   plain [RFC9068] resource server does not do.
+   plain [RFC9068] resource server does not do.  Conformance in this
+   role implies support for no particular type: an entry of a type the
+   resource server does not implement provides no authority there
+   (Section 9.1), so interoperable enforcement needs a type that both
+   the AS and the resource server implement.
 
    A *Mission Client* implements the client surfaces:
 
@@ -13028,10 +13179,11 @@ Table of Contents
       mission_intent (Section 4.3);
 
    *  reading its granted authority from the token-response
-      authorization_details echo (Section 8.4); and
+      authorization_details echo, and assuming none absent from it
+      (Section 8.4); and
 
    *  obtaining mission_id from the mission_id token-response parameter
-      or the mission claim's id (Section 8.1.4), treating it as a
+      (Section 8.1.4), never from the access token, treating it as a
       reference, not a credential.
 
 19.2.  Optional Capabilities
@@ -13811,6 +13963,9 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 8.8
 
+   Appendix B.2 distinguishes this claim from similarly named claims and
+   concepts of adjacent work.
+
 23.4.  OAuth Token Introspection Response Registration
 
    This document requests registration of the following in the "OAuth
@@ -14190,6 +14345,11 @@ Table of Contents
               (JAR)", RFC 9101, DOI 10.17487/RFC9101, August 2021,
               <https://www.rfc-editor.org/rfc/rfc9101>.
 
+   [RFC9110]  Fielding, R., Ed., Nottingham, M., Ed., and J. Reschke,
+              Ed., "HTTP Semantics", STD 97, RFC 9110,
+              DOI 10.17487/RFC9110, June 2022,
+              <https://www.rfc-editor.org/rfc/rfc9110>.
+
    [RFC9126]  Lodderstedt, T., Campbell, B., Sakimura, N., Tonge, D.,
               and F. Skokan, "OAuth 2.0 Pushed Authorization Requests",
               RFC 9126, DOI 10.17487/RFC9126, September 2021,
@@ -14243,6 +14403,12 @@ Table of Contents
               draft-cecchetti-oauth-rar-cedar-02, 21 February 2024,
               <https://datatracker.ietf.org/doc/html/draft-cecchetti-
               oauth-rar-cedar-02>.
+
+   [I-D.draft-hardt-oauth-aauth-protocol]
+              Hardt, D., "AAuth Protocol", Work in Progress, Internet-
+              Draft, draft-hardt-oauth-aauth-protocol-11, 25 September
+              2026, <https://datatracker.ietf.org/doc/html/draft-hardt-
+              oauth-aauth-protocol-11>.
 
    [I-D.draft-ietf-oauth-spiffe-client-auth]
               Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
@@ -14451,9 +14617,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              niyikiza-oauth-attenuating-agent-tokens-01>.
+              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
+              October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -14929,6 +15095,14 @@ B.2.  Relationship to Adjacent Work
    per that document uses these mechanisms to obtain Mission-bound
    tokens.
 
+   The mission claim (Section 8.8) references a Mission, the
+   authorization object this document defines.  It is distinct from
+   AAuth's mission_s256 claim ([I-D.draft-hardt-oauth-aauth-protocol]),
+   the SHA-256 digest that identifies an AAuth mission, and from the
+   agent's mission that [I-D.draft-ietf-wimse-aims] names, the purpose
+   this document translates into authorization.  The two claim names do
+   not collide in the JSON Web Token Claims registry (Section 23.3).
+
    Decision-layer access-request and approval workflows, such as the
    OpenID AuthZEN Access Request and Approval Profile [AuthZEN.ARAP],
    manage approval tasks but do not tie an approval to token issuance.
@@ -15143,8 +15317,8 @@ B.6.  Client Identification in Delegated Tokens
    derived token, would lead a generic [RFC9068] resource server or
    logging pipeline to misattribute a delegate's action to the approved
    agent, with no error to surface the mismatch.  It would be safe only
-   where every resource server already processes the act chain, as a
-   Mission-aware Resource Server does (Section 9).
+   where every resource server already processes the act chain, and
+   Mission awareness alone does not establish that (Section 9.2).
 
    The routing rule of Section 9 does not depend on this choice.  The
    mission claim's presence signals that a token may carry an act chain
@@ -15987,6 +16161,55 @@ Appendix G.  Document History
       revoked; temporary disablement, an outage, or another principal's
       departure does not trigger the rule, and termination does not
       recall issued tokens (Revocation; #830).
+
+   *  A direct approval whose commit finds the effective expiry passed
+      is refused with access_denied, with no Mission or authorization
+      code (Committing the Mission).  A token request that fails several
+      checks gets any applicable error, subject to the orders this
+      document states.  A state a companion defines takes that
+      companion's mission_error value, never a termination reason
+      (Issuance Gating).  A resource server answers an opaque Mission-
+      bound token resolved as inactive with invalid_token, and a
+      resolution it cannot complete with HTTP 503 and no token error
+      (Introspected Token Consumption).  Enforcement Requirements
+      refuses an entry it cannot enforce only with the codes of the
+      error table, and Mission awareness alone does not imply act
+      processing (Error and Challenge Mapping, Client Identification in
+      Delegated Tokens; #1721, D845).
+
+   *  mission_id and mission_expires_at are required on the response
+      that first delivers a newly created Mission's identifier or
+      credential (on the authorization-code path, the token response,
+      not the code-only authorization response) and on a delegated
+      exchange response, and recommended on every other Mission-bound
+      token response; a client learns them from the response, not from
+      the access token.  A client assumes no authority absent from the
+      granted authorization_details and need not reject a narrower grant
+      (Mission Identifier and Expiry in Responses, Audience and Token
+      Response, Conformance Roles; #1719, D845).
+
+   *  Editorial, no requirement change: the AS answers a request at its
+      final decision to release the result, so a result prepared before
+      an acknowledged revocation and released after it is refused
+      (Issuance Gating); the Mission Record is a logical object with no
+      required storage form; the Authority types extension point lists
+      what a type's specification supplies; resource-server conformance
+      implies no particular type (Conformance Roles, Authorization
+      Details Types); each mission_error value is explained to the
+      client (Issuance Gating); and Scope Projection gains an example
+      (#1722).
+
+   *  Editorial, no requirement change: Adjacent Work distinguishes the
+      mission claim from AAuth's mission_s256 claim and the WIMSE AIMS
+      agent mission; target_resources, like purpose, grants no authority
+      as a configured-mapping key; Terminology defines "Mission-governed
+      client"; and Issuance Gating gives the reason a Token Exchange
+      refusal uses invalid_request (#1532).
+
+   *  The consent rendering attributes client-supplied text to the
+      client, identified from client identity information the AS trusts,
+      and presents goal and task_bounds as recorded, without truncation
+      (Rendering Safeguards; #1532, D859).
 
    -01
 
@@ -23538,9 +23761,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              niyikiza-oauth-attenuating-agent-tokens-01>.
+              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
+              October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [I-D.draft-rosomakho-oauth-txn-challenge]
               Rosomakho, Y., Campbell, B., McGuinness, K., and P.
