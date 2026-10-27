@@ -22694,12 +22694,19 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "a retransmit concurrent with its original commits no second transition, and every answer reports the one committed operation's outcome",
-    "local": "the nonce claim commits inside the transition's transaction, and a retransmit finding a committed claim is finalized from it, never re-executed"
+    "local": "the nonce claim commits inside the transition's transaction; a retransmit that finds the claim still committed (the original still signing) finalizes it from the retained observation, never re-executing the operation, and every exchange delivers the response retained first, so the original, a concurrent retransmit and a later replay carry the same bytes"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847). The reference's single-writer store serializes the claim with the transition; no concurrent witness yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-concurrent-retransmit.test.ts",
+     "name": "a retransmit concurrent with its original commits once and answers with the one response (@spec status#idempotency, #1724 C1) > a resume retransmitted while the original is still being signed commits one transition, and the original, the retransmit and a later replay answer the same 200 response byte for byte",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C1 (D847). The witness holds the original `resume` at its signature, after its commit, and retransmits in that window. Proved by two defects: dropping the deduplication lookup (the retransmit re-executes and answers `conflict`), and delivering each exchange's own signature instead of the retained one (the original and the retransmit answer with different envelopes, which the reference did before this change)."
   },
   {
    "id": "status.lifecycle.client-expired-replay-confirmation",
