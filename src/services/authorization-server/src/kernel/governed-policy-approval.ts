@@ -64,7 +64,7 @@ import {
   type CapabilitySourceResolver,
   resolveFreshCapabilitySources,
 } from "./capability-binding.js";
-import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
+import { deriveAuthoritySetWithProvenance, isSubsetEntry, isSubsetSet } from "./derive.js";
 import { recheckDirectApprovalRecord } from "./direct-approval-record.js";
 import { recheckDrawdownApprovalRecord } from "./drawdown-approval-record.js";
 import { inheritChildActorOrigins } from "./child-actor-eligibility.js";
@@ -72,6 +72,7 @@ import { inheritOrigins, type RetainedOrigin } from "./eligibility-provenance.js
 import { IntentError } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { assembleResourceContracts } from "./resource-contract.js";
 import type {
   ApprovalBasisGovernedPolicy,
   AuthorityEntry,
@@ -1085,6 +1086,21 @@ interface PreparedActivation {
  * intersection), with the source ceiling refusing rather than narrowing
  * (step 5).
  */
+/** The entry without its `resource_contract`. */
+const unpinned = ({ resource_contract: _ref, ...entry }: AuthorityEntry): AuthorityEntry => entry as AuthorityEntry;
+
+/**
+ * @spec resource-access#resource-contract (#249, D875): whether every
+ * bounded entry falls within a root ceiling entry. A root entry carrying a
+ * reference requires the same one, fixed by the root's consent; a root entry
+ * carrying none bounds authority irrespective of reference, as a policy
+ * ceiling does, since the adjudication is a new approval that assembled the
+ * reference from configuration.
+ */
+function withinRootCeiling(bounded: readonly AuthorityEntry[], ceiling: readonly AuthorityEntry[]): boolean {
+  return bounded.every((b) => ceiling.some((c) => isSubsetEntry(c.resource_contract === undefined ? unpinned(b) : b, c)));
+}
+
 function prepareGovernedActivation(
   kernel: MissionKernel,
   config: GovernedPolicyApprovalConfig,
@@ -1149,7 +1165,17 @@ function prepareGovernedActivation(
     }
     throw e;
   }
-  if (!isSubsetSet(bounded, derived) || !isSubsetSet(bounded, root.authority_ceiling)) {
+  // @spec resource-access#resource-contract (#249, D875): governed
+  // adjudication is a new approval, so the bounded set's references are
+  // assembled from configuration BEFORE anything evaluates it: the governing
+  // policy and any model judge the referenced entries, and `boundedHash`, the
+  // committed Authority Set and every re-check carry the same reference. A
+  // carried reference configuration does not name as current refuses: a new
+  // approval meets the current-reference rule.
+  bounded = assembleResourceContracts(bounded, kernel.resourceContracts());
+  // The policy-derived half compares without references (a policy ceiling
+  // need not carry one); the root ceiling half per withinRootCeiling.
+  if (!isSubsetSet(bounded.map(unpinned), derived.map(unpinned)) || !withinRootCeiling(bounded, root.authority_ceiling)) {
     throw new Error("governed activation violated the root-ceiling intersection invariant");
   }
   kernel.assertAuthorityWithinSource(resolvedSource, bounded);
