@@ -186,9 +186,16 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
   };
   const jwks = { keys: [{ ...signingKey.publicJwk, kid, use: "sig" }] };
 
-  /** The deterministic approver's agent allowlist, which is also the agent-person binding. */
-  const requireAgent = (agent: string): AgentEntry => {
-    const entry = config.agents.get(agent);
+  /**
+   * A sub-agent never calls the PS directly (AAuth -11 Sections 10.2.2 and
+   * 10.2.3), whatever the allowlist names; otherwise the deterministic
+   * approver's agent allowlist, which is also the agent-person binding.
+   */
+  const requireAgent = (agentToken: VerifiedToken): AgentEntry => {
+    if (agentToken.payload.parent_agent !== undefined) {
+      throw new PsError(403, "denied", "a sub-agent does not call the person server directly");
+    }
+    const entry = config.agents.get(agentToken.payload.sub as string);
     if (!entry) {
       throw new PsError(
         403,
@@ -350,7 +357,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
   ) => {
     const agentToken = verified.token as VerifiedToken;
     const agent = agentToken.payload.sub as string;
-    const entry = requireAgent(agent);
+    const entry = requireAgent(agentToken);
     const nowMs = now();
     const nowS = Math.floor(nowMs / 1000);
     if (typeof params.description !== "string" || params.description.trim() === "") {
@@ -461,8 +468,9 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
    * @spec aauth#section-8.7
    */
   const retrieve = (res: ServerResponse, verified: VerifiedRequest, segment: string) => {
-    const agent = (verified.token as VerifiedToken).payload.sub as string;
-    requireAgent(agent);
+    const agentToken = verified.token as VerifiedToken;
+    const agent = agentToken.payload.sub as string;
+    requireAgent(agentToken);
     if (!isMissionS256(segment)) throw invalidRequest("the mission_s256 path segment is malformed");
     const record = gateMission(
       agent,
@@ -485,7 +493,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
   ) => {
     const agentToken = verified.token as VerifiedToken;
     const agent = agentToken.payload.sub as string;
-    const entry = requireAgent(agent);
+    const entry = requireAgent(agentToken);
     refuseUnsupported(params);
     const resource = params.resource;
     if (!isServerIdentifier(resource)) {
@@ -541,7 +549,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
   ) => {
     const agentToken = verified.token as VerifiedToken;
     const agent = agentToken.payload.sub as string;
-    const entry = requireAgent(agent);
+    const entry = requireAgent(agentToken);
     refuseUnsupported(params);
     if (typeof params.resource_token !== "string" || params.resource_token === "") {
       throw invalidRequest("resource_token is required");

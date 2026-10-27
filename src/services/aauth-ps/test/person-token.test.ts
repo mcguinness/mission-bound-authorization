@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { rfc3339 } from "../src/index.js";
 import {
   type Agent,
+  ASSISTANT,
   approve,
   claims,
   HELPER,
@@ -24,6 +25,7 @@ import {
   requestPersonToken,
   STRANGER,
   shape,
+  signed,
   type World,
   world,
 } from "./helpers.js";
@@ -185,6 +187,29 @@ describe("person token endpoint: request validation", () => {
       refused(r, 400, "invalid_request");
       expect(r.body.detail).toBe("call chaining and sub-agent requests are not supported here");
     }
+  });
+
+  it("refuses a sub-agent calling directly, even one the allowlist names: denied", async () => {
+    await w.close();
+    const subAgent = "aauth:assistant+search1@ap.test";
+    w = await world({
+      config: (doc) => {
+        (doc.agents as Record<string, unknown>[]).push({
+          agent: subAgent,
+          person: "bob",
+          mission_governed: false,
+        });
+      },
+    });
+    const sub = await makeAgent(w.ap, w.clock, subAgent, { parent_agent: ASSISTANT });
+    const r = await requestPersonToken(w, sub, { resource: RS });
+    refused(r, 403, "denied");
+    expect(r.body.detail).toBe("a sub-agent does not call the person server directly");
+    const missions = await signed(w.clock, "POST", `${w.origin}/mission`, sub, {
+      description: "Search",
+    });
+    expect(missions.status).toBe(403);
+    expect(missions.body.error).toBe("denied");
   });
 
   it("refuses an agent the allowlist does not name: user_unreachable, no Signature-Error", async () => {
