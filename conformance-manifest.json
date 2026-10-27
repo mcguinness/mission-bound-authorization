@@ -79,8 +79,8 @@
     "content_sha256": "29ab6b61f162fec24ca027aa42b9c99c1b776cb273692180b99ba44badc430b0"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "32e1ebcbe589e865b854cc4e5e673d0c3a9a48da",
-    "content_sha256": "171abe8a5a1d594ae501de1e97b9acd7cc21cd9602161d6051bce8f2d73bd86b"
+    "revision": "2cf12f09d5164f56aa741871f738dbfde58d3ec2",
+    "content_sha256": "a5810e3481b60eefebd2d482ceb84982200829e6dea9fac10c12dba2cea1abd7"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
@@ -62646,7 +62646,7 @@
    "id": "attenuation.request.detail-selects-root",
    "spec": "draft-mcguinness-oauth-mission-attenuation.md",
    "anchor": "request-discovery",
-   "text": "The request carries an `attenuating_agent_token` authorization detail {{RFC9396}} whose tools and argument constraints are the requested root authority; that detail on a Mission-bound token request selects root issuance ({{root}}) rather than an ordinary `mission_resource_access` token.",
+   "text": "The request carries an `attenuating_agent_token` authorization detail {{RFC9396}} whose `tools` and `mission_constraints` are the requested root authority; that detail on a Mission-bound token request selects root issuance ({{root}}) rather than an ordinary `mission_resource_access` token.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -62667,7 +62667,7 @@
    "id": "attenuation.request.refuse-beyond-mapped-authority",
    "spec": "draft-mcguinness-oauth-mission-attenuation.md",
    "anchor": "request-discovery",
-   "text": "The Mission Issuer MUST validate the detail against the root mapping ({{root-mapping}}). It MUST refuse the request with `invalid_authorization_details` when any tool or argument constraint is not within the mapped Authority Set, rather than issue a root for the rest",
+   "text": "The Mission Issuer MUST validate the detail against the root mapping ({{root-mapping}}). It MUST refuse the request with `invalid_authorization_details` when any tool, argument constraint, or `mission_constraints` value is not within the mapped Authority Set, rather than issue a root for the rest",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -62677,7 +62677,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a root request whose attenuating_agent_token detail names a tool or argument constraint outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
+    "normative": "a root request whose attenuating_agent_token detail names a tool, argument constraint or mission_constraints value outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -62769,6 +62769,204 @@
     }
    ],
    "notes": "#1758 (D876, D882). TokenFacts.sub was leafPayload.sub ?? rootPayload.sub, so a holder chose the decision, idempotency and recorded subject. Mutations: a leaf-first sub, a leaf-first client_id and dropping the root profile's sub requirement each fail a witness; restoring the child mint's sub and client_id copy fails the mint test in the same block."
+  },
+  {
+   "id": "attenuation.mission-constraints.required-member",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-constraints",
+   "text": "REQUIRED in the `attenuating_agent_token` entry of every token in a Mission-bound attenuation chain.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission-bound chain any token of which lacks mission_constraints, or carries one without exactly one member per tool, is refused"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.mission-constraints.per-hop-narrowing",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-constraints",
+   "text": "Removing a restriction never yields unrestricted authority: a missing `mission_constraints`, a missing or extra member, a missing `constraints`, `constraints` that are not a subset of the parent's under step 3, or a changed `resource_contract` refuses the whole chain.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child whose mission_constraints drops a member, drops constraints, carries constraints that are not a subset of its parent's under the Resource Access subset rule's step 3, or changes resource_contract refuses the whole chain"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.mission-constraints.unknown-key-refused",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-constraints",
+   "text": "A key the consumer does not understand or cannot enforce also refuses the chain; it is never ignored.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mission_constraints key the consumer does not understand or cannot enforce refuses the chain"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.consumer.enforce-mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-binding-check",
+   "text": "The consumer MUST also enforce the leaf's `mission_constraints` value for the invoked tool against the facts of the operation it executes, and refuse the invocation where they do not hold.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an invocation that the substrate permits but whose operation's facts do not satisfy the leaf's mission_constraints for the invoked tool is refused; the facts come from the resource server's records where the operation acts on one, never from an argument's claim about such a record"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.root-mapping.mission-constraints-unchanged",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "the entry's `constraints`, and its `resource_contract` when it carries one, become the tool's `mission_constraints` value unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a minted root carries, for each tool, the mapped entry's constraints and resource_contract unchanged as that tool's mission_constraints value"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.root-mapping.one-entry-per-tool",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "A tool takes its restrictions from exactly one entry: where more than one entry maps to a tool identifier, the issuer carries one entry's restrictions for that tool or mints separate roots, and never merges them.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where several entries map to one tool identifier, a minted root carries one entry's restrictions for that tool, or the issuer mints separate roots; restrictions are never merged"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.root-mapping.facts-established",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "The issuer MUST NOT map an entry to a tool unless the resource server establishes, for every operation the tool identifier names, each fact the entry's `constraints` restrict",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry whose constraints restrict a fact the resource server does not establish for an operation the tool identifier names is not mapped to that tool"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.root-mapping.arguments-explicit",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root-mapping",
+   "text": "a tool's argument constraints name every argument that the resource server's definitions of the operations the tool identifier names declare, each admitted explicitly, and carry no `\"*\"` entry",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a minted root's argument constraints name each argument the operations' definitions declare, with no \"*\" entry; an argument only some of the operations take is optional"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+  },
+  {
+   "id": "attenuation.holder.narrow-mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "conformance",
+   "text": "MUST only narrow authority and never broaden it, including `mission_constraints`",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child an Attenuating Holder mints carries mission_constraints no broader than its parent's"
+   },
+   "level": "unit",
+   "coverage": "blocked",
+   "tests": [],
+   "blocked_by": "#1756",
+   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
   },
   {
    "id": "resource-access.subset.same-matcher",
