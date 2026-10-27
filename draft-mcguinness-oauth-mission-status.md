@@ -859,20 +859,16 @@ shape, not the problem details of {{RFC9457}}.
 This section is OPTIONAL and is a thin delta over the OAuth 2.0 Token
 Introspection {{RFC7662}} projection of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission State via
-Token Introspection"). That section already
-defines a `mission` member on the introspection response carrying
-`id` and `issuer`, and (from the Mission's issuer) the lifecycle
-`state`, with `authority_hash` disclosed only to a caller holding
-that member's disclosure privilege, together with the
-caller-authorization, minimization, and issuer-only-reports-state
-rules. This document does not restate those rules.
+Token Introspection"). That section defines the `mission` member
+(`id`, `issuer`, the lifecycle `state` reported only by the Mission's
+issuer, and `authority_hash` disclosed only to a caller holding its
+disclosure privilege) and its caller-authorization and minimization
+rules.
 
-This extension adds the following to that projection:
+This section adds to that projection:
 
-- An introspection response that carries a Mission projection is
-  protected by TLS, as for token introspection generally
-  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
-  Token Introspection"). Where the projection's integrity and provenance
+- TLS protects the projection, as it does any introspection response.
+  Where the projection's integrity and provenance
   need to be verifiable independently of the transport (for example
   when the response transits intermediaries or is retained for audit),
   the AS SHOULD return it as a {{RFC9701}}-signed response, advertised
@@ -882,12 +878,11 @@ This extension adds the following to that projection:
   additionally carry `fresh_until`, an RFC 3339 {{RFC3339}} date-time
   giving the point until which the consumer MAY rely on the reported
   `state` without re-checking. The caching rule of
-  {{mission-status-caching}} applies with the response-level terms
-  the response carries, and a term it does not carry drops out: an
-  {{RFC9701}} response's top-level `iat` dates it, and a top-level
-  `exp`, which {{RFC9701}} discourages but permits, bounds reliance
-  where present; an unsigned response carries neither. The `iat` and
-  `exp` members of the {{RFC7662}} introspection response describe
+  {{mission-status-caching}} applies with only the response-level
+  terms the response carries: an {{RFC9701}} response's top-level
+  `iat` dates it, and a top-level `exp` (discouraged but permitted by
+  {{RFC9701}}) bounds reliance where present; an unsigned response
+  carries neither. The {{RFC7662}} `iat` and `exp` members describe
   the token, not the observation of Mission state, and are not these
   terms. The AS sets `fresh_until` no later than the time of the
   response plus any advertised `mission_max_stale_seconds`. When
@@ -895,16 +890,15 @@ This extension adds the following to that projection:
   issuance profile's per-use rule governs: the consumer MUST NOT reuse
   the reported `state` for a later decision.
 
-This projection and the dedicated Mission Status Response
-({{mission-status-response}}) carry Mission facts in a `mission` object
-of the same shape: the open `mission` claim object of
+This projection and the Mission Status Response
+({{mission-status-response}}) share one `mission` object shape: the
+open `mission` claim object of
 {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission Claim")
-with status members (`state`, `termination`, `fresh_until`, any
-companion-defined extension member, and, on the dedicated response,
-`expires_at` and `version`) added. This
-projection populates the subset a token-holding consumer needs; the
-dedicated response populates more. Either way a consumer reads the
-same fact from the same place.
+plus status members (`state`, `termination`, `fresh_until`, any
+companion-defined extension member, and, on the Mission Status
+Response, `expires_at` and `version`). The projection populates the
+subset a token-holding consumer needs, and a consumer reads each fact
+from the same place in either.
 
 Example {{RFC9701}}-signed introspection response (decoded payload),
 for a token whose Mission is `active`:
@@ -929,17 +923,14 @@ for a token whose Mission is `active`:
 ~~~
 
 Per {{RFC9701}}, the signed response is a JWT of `typ`
-`token-introspection+jwt` whose {{RFC7662}} members, including the
-`mission` projection, ride in the `token_introspection` claim, beside
-the top-level `iss`, `aud`, and `iat` the JWT always carries.
+`token-introspection+jwt` carrying the {{RFC7662}} members, `mission`
+included, in its `token_introspection` claim, beside the top-level
+`iss`, `aud`, and `iat` it always carries.
 
-A consumer holding only a `mission_id`, or one that needs signed
-evidence independent of a specific token (an auditor or an
-authorization server in another trust domain), uses the dedicated
-Mission Status operation
-({{mission-status}}); the introspection projection is purely a
-same-call convenience for token-holding consumers and is never the
-sole Mission Status path.
+A consumer holding only a `mission_id`, or needing signed evidence
+independent of a specific token, uses the Mission Status operation
+({{mission-status}}); the projection is a same-call convenience for
+token-holding consumers and is never the sole Mission Status path.
 
 # Mission Lifecycle Endpoint {#mission-lifecycle-endpoint}
 
@@ -948,8 +939,8 @@ authenticated, deployment-defined means to revoke a Mission and defers
 a standardized management API and the richer `suspend`, `resume`, and
 `complete` operations ({{I-D.draft-mcguinness-oauth-mission}},
 Sections "Revocation" and "Mission Lifecycle"). This section
-standardizes that management surface; who may perform each operation
-is governed by {{lifecycle-authorization}}.
+standardizes that management surface; {{lifecycle-authorization}}
+governs who may perform each operation.
 
 The AS publishes its Mission Lifecycle endpoint URL in authorization
 server metadata ({{as-metadata}}) as `mission_lifecycle_endpoint`,
@@ -960,12 +951,11 @@ recommendations of {{RFC9325}}.
 This endpoint's operations extend the issuance profile's lifecycle
 state space ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
 Lifecycle"), each value arriving with the operation that introduces
-it ({{conformance}}): `suspend` adds one state, `suspended` (a paused
-Mission that derives no tokens until resumed), and `complete` adds
-one termination reason, `completed` (the Mission completed
-successfully).
-Issuance gating treats any state other than `active` as
-non-deriving, exactly as the issuance profile gates on `active`.
+it ({{conformance}}): `suspend` adds the state `suspended` (a paused
+Mission), and `complete` adds the termination reason `completed` (the
+Mission completed successfully). Issuance gating treats any state
+other than `active` as non-deriving, exactly as the issuance profile
+gates on `active`.
 
 A transition to `suspended`, or to `terminated` with reason
 `completed`, gates new derivation only.
@@ -983,27 +973,24 @@ the AS SHOULD check whether the Mission, or another Mission whose
 state a companion profile makes gate its derivation, is suspended.
 When this check detects suspension, the AS SHOULD
 refuse the request without consuming the refresh token or invalidating
-its otherwise-valid grant solely because of that suspension. This
-check does not replace issuance-time state validation. A concurrent
-suspension can still cause issuance to be refused after the
-preliminary check, and preserving refresh capability across that
-interval requires coordination with the issuance commit. The check
-leaves refresh-token rotation and reuse detection intact, and a
-`resume` does not revive a credential that expired or was revoked
-independently.
+its otherwise-valid grant solely because of that suspension. The
+check does not replace issuance-time state validation: a concurrent
+suspension can still refuse issuance after the check, and preserving
+refresh capability across that interval requires coordination with
+the issuance commit. It leaves refresh-token rotation and reuse
+detection intact, and a `resume` does not revive a credential that
+expired or was revoked independently.
 
-An error code alone does not tell a client whether a `resume` can
-lift a refusal. When the issuance profile's gating refuses a
-derivation because the Mission is `suspended`, or `terminated` with
-reason `completed`, the AS SHOULD include, alongside `error`, the
-`mission_error` token-error-response member
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
-with the value `suspended` or `completed`, respectively. The issuance
-profile's rules for that member apply: it is diagnostic only, it grants nothing, an
+When the issuance profile's gating refuses a derivation because the
+Mission is `suspended`, or `terminated` with reason `completed`, the
+AS SHOULD include, alongside `error`, the `mission_error`
+token-error-response member ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Issuance Gating") with the value `suspended` or `completed`,
+respectively. `suspended` reports a refusal that a `resume` can lift;
+`completed` reports a terminal one. The issuance profile's rules for
+that member apply: it is diagnostic only, it grants nothing, an
 unrecognized value is ignored, and it is returned only to the
 authenticated client presenting the Mission's grant.
-`suspended` reports a refusal that a `resume` can lift; `completed`
-reports a terminal one.
 
 ## Operations {#lifecycle-operations}
 
@@ -1091,8 +1078,8 @@ schedule passes, the AS MUST apply `on_expiry` (transition to
 `revoke`) and emit the corresponding transition, without a further
 request, unless expiry governs (below). While the Mission
 is `suspended` under a deadline, both `suspend_until` and `on_expiry`
-surface in the signed Mission Status Response ({{mission-status-response}})
-so a consumer sees the pending outcome.
+surface in the signed Mission Status Response
+({{mission-status-response}}) so a consumer sees the pending outcome.
 
 The AS authorizes a schedule when it commits it
 ({{lifecycle-authorization}}) and does not re-authorize it at the
@@ -1123,10 +1110,10 @@ request still replays its original response after the deadline passes
 {{lifecycle-states}} shows the Mission lifecycle states and the
 transitions this document defines. An approval event creates a Mission
 in `active` ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
-Lifecycle"), and only `active` permits derivation. A deadline is a
-schedule's `suspend_until` ({{lifecycle-operations}}). A companion
-profile can define further transitions to `terminated`, each
-recording a termination reason of its own.
+Lifecycle"). A deadline is a schedule's `suspend_until`
+({{lifecycle-operations}}). A companion profile can define further
+transitions to `terminated`, each recording a termination reason of
+its own.
 
 ~~~
       approval
@@ -1153,7 +1140,7 @@ An operation is legal only from the source states below. The
 reason. {{idempotency}} decides an operation not legal from the
 current state as idempotent success or a conflict. This table
 governs Mission-level state; an extension operation that changes no
-Mission state is not a row of it.
+Mission state has no row in it.
 
 | Operation | Legal from | Resulting state | Termination reason |
 |---|---|---|---|
@@ -1163,10 +1150,9 @@ Mission state is not a row of it.
 | `complete` | `active`, `suspended` | `terminated` | `completed` |
 {: title="Lifecycle operations and legal transitions"}
 
-`complete` is legal from `suspended` as well as `active`: completion is
-a monotonic narrowing to `terminated` and needs no derivation
-window, so a suspended Mission need not first be resumed to be
-completed.
+A suspended Mission need not first be resumed to be completed:
+completion is a monotonic narrowing to `terminated` and needs no
+derivation window.
 
 A Mission
 that reaches its `expires_at` from `active` or `suspended` is
@@ -1178,11 +1164,10 @@ expiry governs: the Mission is `terminated` with reason `expired` at
 
 ## Authentication
 
-The lifecycle endpoint uses the same authentication as the Mission
-Status endpoint ({{mission-status-authentication}}): client
-authentication with an advertised method that uses no shared secret, or
-a sender-constrained access token (DPoP- or mTLS-bound). Its discovery mirrors that endpoint: the accepted
-methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
+The Lifecycle endpoint uses the same authentication as the Mission
+Status endpoint ({{mission-status-authentication}}). Its discovery
+mirrors that endpoint: the accepted methods in
+`mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
 ({{as-metadata}}). Its authentication failures follow
@@ -1194,13 +1179,12 @@ endpoint is: the AS publishes, in its Protected Resource Metadata for
 this resource {{RFC9728}}, the `resource` identifier the token's
 audience MUST name and the scopes it requires (`scopes_supported`):
 `mission_lifecycle` for `revoke`, `suspend`, `resume`, and `complete`
-({{mission-lifecycle-endpoint}}), and any scope an adopted extension
+({{lifecycle-authorization}}), and any scope an adopted extension
 operation defines. A private-key JWT
 `client_assertion` names the AS's issuer identifier in `aud`, and a
 presented access token MUST be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
-endpoint. A caller that authenticates directly as a client carries
-the deployment-defined equivalent grant, never a scope.
+endpoint.
 
 ## Authorization {#lifecycle-authorization}
 
@@ -1208,9 +1192,9 @@ This section governs `revoke`, `suspend`, `resume`, and `complete`. An
 extension operation has the authority model its companion defines,
 which a `mission_lifecycle` grant under this section MUST NOT imply.
 
-The AS authorizes lifecycle operations against deployment policy. This
-document sets the minimum authorization semantics and leaves finer
-policy deployment-defined. Every authenticated caller, whatever its
+The AS authorizes lifecycle operations against deployment policy: this
+section sets the minimum authorization semantics, and finer policy is
+deployment-defined. Every authenticated caller, whatever its
 authentication mechanism ({{mission-status-authentication}}), MUST be
 governed by an explicit lifecycle authorization: a `mission_lifecycle`
 scope or a deployment-defined equivalent grant that names who may
@@ -1234,15 +1218,14 @@ authorization, follow from the authentication case:
    the parties per the issuance profile's access-token model
    ({{I-D.draft-mcguinness-oauth-mission}}): for a delegated access
    token its `sub` denotes the resource owner (the represented party),
-   matching the {{RFC9068}} access-token `sub` model; the calling party
-   is identified by `client_id` ({{RFC8693}} Section 4.3); and, where a
-   delegation chain is present, the immediate actor is identified by the
-   `act` claim ({{RFC8693}}, {{I-D.draft-mcguinness-oauth-mission}}). A
-   DPoP {{RFC9449}} or mTLS
-   {{RFC8705}} sender constraint binds the presenter to a key; it does
-   not change what `sub` denotes. The acting party is the calling party
-   so identified, and the presented token MUST carry the lifecycle
-   authorization the AS checks against it.
+   as in {{RFC9068}}; `client_id` identifies the calling party
+   ({{Section 4.3 of RFC8693}}); and, where a delegation chain is
+   present, the `act` claim identifies the immediate actor. A DPoP
+   {{RFC9449}} or mTLS {{RFC8705}} sender constraint binds the
+   presenter to a key; it does not change what `sub` denotes. The
+   acting party is the calling party so identified, and the presented
+   token MUST carry the lifecycle authorization the AS checks against
+   it.
 2. When the caller authenticates directly as a client
    ({{mission-status-authentication}}), the authenticated client is the
    acting party. The AS MUST check the
@@ -1252,15 +1235,14 @@ In every case the AS MUST record the acting party, and the response
 envelope's `sub` carries it ({{mission-status-response}}), distinct
 from any access token's `sub`. A deployment-defined audit member of
 the Mission Status Response MAY carry it as well. For a delegated
-access token, the represented party its `sub` denotes is part of the
-delegation context the AS evaluates, which a policy authorizing the
-Mission's Subject or Approver matches.
+access token, the represented party is part of the delegation context
+the AS evaluates, which a policy authorizing the Mission's Subject or
+Approver matches.
 
-Which parties may perform which operation on which Missions is
-deployment-defined. Typical
-deployments authorize `revoke` to the Mission's Subject or Approver and
-to administrators; `suspend` and `resume` to administrators; and
-`complete` to the Mission's client or an administrator.
+Typical deployments authorize `revoke` to the Mission's Subject or
+Approver and to administrators; `suspend` and `resume` to
+administrators; and `complete` to the Mission's client or an
+administrator.
 
 Because `resume` returns a suspended Mission to `active` and so undoes
 the containment a `suspend` established, a deployment SHOULD require a
