@@ -442,6 +442,10 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import {
+  HISTORICAL_JWKS_PATH,
+  HISTORICAL_KEY_SET_MEDIA_TYPE,
+} from "../kernel/historical-key-set.js";
 import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
@@ -875,6 +879,13 @@ export interface AdapterOptions {
    * Absent with keys generated at boot.
    */
   jwksRevision?: number;
+  /**
+   * @spec status#historical-key-set (#831 B3): the historical key set, signed
+   * at boot under the active Mission Status signing key, present while it
+   * lists a key. Served at `HISTORICAL_JWKS_PATH` and advertised as
+   * `mission_historical_jwks_uri`; absent, neither is.
+   */
+  historicalKeySet?: string;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -2901,6 +2912,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
       ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
       if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
+  });
+  // @spec status#historical-key-set (#831 B3): the historical key set, while
+  // it lists a key. Its `typ` is `jwk-set+jwt`, served as that media type;
+  // it declares the same explicit freshness as `/jwks`, and the ring
+  // revision as its `ETag`, since it changes only with the ring.
+  provider.use(async (ctx, next) => {
+    if (ctx.path !== HISTORICAL_JWKS_PATH || opts.historicalKeySet === undefined) return next();
+    if (ctx.method !== "GET" && ctx.method !== "HEAD") {
+      ctx.status = 405;
+      ctx.set("allow", "GET, HEAD");
+      return;
+    }
+    ctx.status = 200;
+    ctx.set("content-type", HISTORICAL_KEY_SET_MEDIA_TYPE);
+    ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+    if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
+    ctx.body = opts.historicalKeySet;
   });
 
   // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
@@ -6577,6 +6605,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // either even where the Status route itself is disabled.
       if (enabled("status") || lifecycleServed) {
         meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
+      }
+      // @spec status#as-metadata, status#historical-key-set (#831 B3):
+      // REQUIRED while the historical key set lists a key.
+      if (opts.historicalKeySet !== undefined) {
+        meta.mission_historical_jwks_uri = `${opts.issuer}${HISTORICAL_JWKS_PATH}`;
       }
       // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
       // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
