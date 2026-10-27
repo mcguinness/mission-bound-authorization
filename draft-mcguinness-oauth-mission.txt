@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -1116,15 +1116,16 @@ Table of Contents
    it with the invalid_authorization_details error code.
 
    Policy narrowing is distinct.  During Authority Set derivation the AS
-   MAY narrow or omit a syntactically valid entry that policy cannot
-   accept (Section 5).  The granted authorization_details in the token
-   response reflects every narrowing and omission (Section 8.4).
+   MAY omit a syntactically valid entry that policy cannot accept, or
+   narrow it where the AS has declared narrowing for its type
+   (Section 5, Section 5.5.1).  The granted authorization_details in the
+   token response reflects every narrowing and omission (Section 8.4).
 
    When a proposal is present, the AS MUST derive each Authority Set
    entry as a subset (Section 5.4) of some proposed entry of the _same
-   type_: narrowed under that type's own subset rule where it defines
-   one, or carried through unchanged where it defines none
-   (Section 5.5).
+   type_: narrowed under that type's own subset rule where the AS has
+   declared narrowing for the type, or carried through unchanged
+   otherwise (Section 5.5.1).
 
    goal and task_bounds then serve as rendering and bounding context
    over the proposed authority.  Each proposed entry that carries a
@@ -1197,11 +1198,12 @@ Table of Contents
    sender.
 
    The following is an example of an authority proposal submitted
-   alongside the example Intent of Section 4.  Authority Set derivation
-   narrows invoices.* to invoices.read, keeps the proposed Q3 issuance
-   window and write ceiling, which the Intent's task bounds support, and
-   carries the proposed delegation policy through unchanged (the example
-   Authority Set of Section 5):
+   alongside the example Intent of Section 4.  Authority Set derivation,
+   under a declared narrowing capability, narrows invoices.* to
+   invoices.read, keeps the proposed Q3 issuance window and write
+   ceiling, which the Intent's task bounds support, and carries the
+   proposed delegation policy through unchanged (the example Authority
+   Set of Section 5):
 
    [
      { "type": "mission_resource_access",
@@ -1386,6 +1388,10 @@ Table of Contents
       experimental Mission Template profile
       ([I-D.draft-mcguinness-oauth-mission-template]), not this mode.
 
+   In either mode, narrowing a candidate entry needs a declared
+   narrowing capability for its type; without one, the entry is retained
+   unchanged or omitted (Section 5.5.1).
+
    Authority Set derivation can run provisionally during submission
    processing, where the inputs it needs are available (Section 4.5).
    The candidate Authority Set is complete before the approval rendering
@@ -1550,7 +1556,11 @@ Table of Contents
 
    Where the comparison relation cannot decide (an unrecognized member,
    an incomparable value), the posture is conservative refusal, as each
-   consuming rule of this document states.
+   consuming rule of this document states.  At the token endpoint, where
+   the comparison cannot establish that a requested
+   authorization_details entry is a subset, the AS MUST refuse the
+   request with the invalid_authorization_details error code, as for an
+   entry that exceeds the grant (Section 10).
 
    An entry equal to its reference entry, byte-identical under the
    canonical form of Section 15.2, is a subset of it for every type.
@@ -1600,6 +1610,14 @@ Table of Contents
    type for which it has not declared the corresponding capability; on
    an undeclared capability the entry is carried as approved.
 
+   The narrowing capability also governs Authority Set derivation, and
+   approval does not waive the subset proof.  Without narrowing for its
+   type, the AS retains a valid candidate entry, whether proposed
+   (Section 4.3) or yielded by a configured mapping (Section 5.1),
+   unchanged, or omits it where this document permits omission; it never
+   modifies the entry under a claimed subset relation.  A malformed
+   entry is refused as Section 4.3 states.
+
    The AS relates each entry to the audiences that consume it through a
    trusted entry-to-audience mapping, such as authenticated
    configuration or protected resource metadata ([RFC9728]).  An entry's
@@ -1640,6 +1658,13 @@ Table of Contents
    so equality never restores an entry, or any part of one, that the
    presented token omits.
 
+   A designation's aud names its redeemer (Section 12.1) and reassigns
+   no entry's original approved audience: for a designation, the
+   audience rules test the resource audiences associated with the
+   entries it carries, never the designated client (Section 8.4).  Its
+   redemption issues an entry only as the rules above permit, including
+   their narrowing condition.
+
    The AS declares the capabilities through these carriers, in order of
    preference:
 
@@ -1654,11 +1679,16 @@ Table of Contents
        (Section 17).
 
    Deployment documentation is always a sufficient carrier; a machine-
-   readable carrier is additive.  A mission_transformation_capabilities
-   value is a JSON object with three OPTIONAL boolean members,
-   narrowing, delegation, and projection; an absent member leaves that
-   capability undeclared by this carrier, falling through to the next
-   carrier in the order above.
+   readable carrier is optional, and the first declaring carrier
+   governs.  A mission_transformation_capabilities value is a JSON
+   object with three OPTIONAL boolean members, narrowing, delegation,
+   and projection; an absent member leaves that capability undeclared by
+   this carrier, falling through to the next carrier in the order above.
+   For each capability, the first carrier in that order that declares
+   the member governs, whether it declares true or false; a later
+   carrier does not override it.  A declared capability permits a
+   transformation without requiring it, and waives no check this
+   document requires and no local policy under which the AS refuses one.
 
 5.5.2.  Policy-Language Types
 
@@ -2360,8 +2390,8 @@ Table of Contents
 
    *  the refresh token on refresh;
 
-   *  the Mission-bound subject_token on Token Exchange (the actor_token
-      identifies the delegate, Section 12.2); or
+   *  the Mission-bound subject_token on Token Exchange (a delegate is
+      identified by its client authentication, Section 12.2); or
 
    *  a profile-defined grant, through the authenticated mission
       reference it carries, such as the Template profile's handoff grant
@@ -2564,7 +2594,13 @@ Table of Contents
 
    Derived tokens SHOULD be short-lived so that a transition to
    terminated takes effect promptly without per-request revocation
-   checks.
+   checks.  A resource server that does not check Mission state per
+   request can accept a derived token until its exp, so the token's
+   lifetime is the termination latency there (Section 20.3.1).  Short-
+   lived means within the termination latency the deployment accepts.
+   This document sets no numerical bound; a deployment profile can.  The
+   cap at the Mission's expires_at (Section 8.6) does not by itself make
+   a token short-lived.
 
 8.3.  Token Claims
 
@@ -2614,10 +2650,13 @@ Table of Contents
    for credentials that cross a trust domain
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]).
 
-   An AS MUST publish its token verification keys (for example, at its
-   [RFC8414] jwks_uri, as Section 4 of [RFC9068] recommends); rotation
-   retires a key from signing, never from resolvability while tokens
-   signed under it remain valid.
+   An AS that issues Mission-bound JWT access tokens for resource
+   servers to consume MUST publish its token verification keys (for
+   example, at its [RFC8414] jwks_uri, as Section 4 of [RFC9068]
+   recommends); rotation retires a key from signing, never from
+   resolvability while tokens signed under it remain valid.  A token the
+   AS issues only for presentation back to itself, such as a designation
+   (Section 12.1), creates no publication duty by itself.
 
    Every emitted authorization_details entry is a subset of a Mission
    Authority Set entry (Section 5.4).
@@ -2656,6 +2695,17 @@ Table of Contents
    audience is approved for none of the entries the token would carry,
    and one whose authorization_details (Section 6 of [RFC9396]) names an
    entry not approved for its audience.
+
+   For a designation (Section 12.1), these rules test the resource
+   audiences associated with the entries it carries, never the
+   designated client its aud names (Section 8.3).  A designation carries
+   only a permitted subset of the presented token's entries
+   (Section 5.4, Section 12.5), each keeping its original approved
+   audience (Section 5.5.1).  An entry without an original approved
+   audience is not carried, and a designation that would carry no entry
+   is refused with invalid_target.  The delegated token issued at its
+   redemption is subject to every rule of this section unchanged
+   (Section 12.2).
 
    The AS returns the granted authorization_details in every token
    response, including refresh and Token Exchange responses (Section 7
@@ -3431,6 +3481,13 @@ Table of Contents
    | or, on refresh, the presented   |                                 |
    | refresh grant                   |                                 |
    +---------------------------------+---------------------------------+
+   | Token endpoint (Section 5.4):   | invalid_authorization_details   |
+   | the comparison cannot           | (Section 6 of [RFC9396]).       |
+   | establish that a requested RAR  | Detail: safe error_description  |
+   | entry is a subset (an           |                                 |
+   | unrecognized member, an         |                                 |
+   | incomparable value)             |                                 |
+   +---------------------------------+---------------------------------+
 
                Table 5: Failures not confined to one surface
 
@@ -3492,64 +3549,78 @@ Table of Contents
 
               Table 6: PAR and authorization endpoint failures
 
-     +===============================+===============================+
-     | Surface / failing input       | Base OAuth error and optional |
-     |                               | detail                        |
-     +===============================+===============================+
-     | Token exchange: a             | invalid_request               |
-     | subject_token or actor_token  | (Section 2.2.2 of [RFC8693]), |
-     | that is invalid, whose sender | unless a Token Exchange       |
-     | constraint is not proven, or  | profile assigns the failure   |
-     | that is unacceptable for the  | its own code.  Detail: safe   |
-     | exchange                      | error_description             |
-     +-------------------------------+-------------------------------+
-     | Token exchange: a required    | invalid_dpop_proof (Section 5 |
-     | DPoP proof that is missing,   | of [RFC9449]): the failure is |
-     | or a DPoP proof that fails    | not an unproven sender        |
-     | its own validation            | constraint, so the row above  |
-     |                               | does not apply.  Detail: safe |
-     |                               | error_description             |
-     +-------------------------------+-------------------------------+
-     | Token exchange: a DPoP proof  | use_dpop_nonce with a DPoP-   |
-     | lacking the current DPoP      | Nonce header (Section 8 of    |
-     | nonce, where the              | [RFC9449]), not               |
-     | authorization server requires | invalid_dpop_proof.  Detail:  |
-     | one                           | safe error_description        |
-     +-------------------------------+-------------------------------+
-     | Token exchange with no actor  | invalid_request               |
-     | (Section 12.4): the           | (Section 2.2.2 of [RFC8693]). |
-     | authenticated client is not   | Detail: safe                  |
-     | the Mission's approved agent  | error_description             |
-     +-------------------------------+-------------------------------+
-     | Delegated token exchange      | invalid_request               |
-     | (Section 12.2): the           | (Section 2.2.2 of [RFC8693]). |
-     | subject_token is not a        | Detail: safe                  |
-     | designation this AS issued    | error_description             |
-     | naming the requesting client  |                               |
-     +-------------------------------+-------------------------------+
-     | Designation (Section 12.1):   | invalid_target (Section 2.2.2 |
-     | the AS cannot establish that  | of [RFC8693]).  Detail: safe  |
-     | no resource server accepts    | error_description             |
-     | the named client's identifier |                               |
-     | as an audience for its access |                               |
-     | tokens, including an alias it |                               |
-     | never issues                  |                               |
-     +-------------------------------+-------------------------------+
-     | Delegated token exchange      | invalid_target (Section 2.2.2 |
-     | (Section 12.5): narrowing     | of [RFC8693]).  Detail: safe  |
-     | leaves no entries for the     | error_description             |
-     | delegate                      |                               |
-     +-------------------------------+-------------------------------+
-     | Token exchange using          | invalid_client_attestation.   |
-     | Section 12.3: required Client | Detail: no instance-identity  |
-     | Attestation fails validation  | disclosure                    |
-     +-------------------------------+-------------------------------+
-     | Token exchange using          | invalid_request               |
-     | Section 12.3: required        | (Section 2.2.2 of [RFC8693]). |
-     | instance-to-delegate or       | Detail: no instance-identity  |
-     | output-key association cannot | disclosure                    |
-     | be established                |                               |
-     +-------------------------------+-------------------------------+
+    +=================================+===============================+
+    | Surface / failing input         | Base OAuth error and optional |
+    |                                 | detail                        |
+    +=================================+===============================+
+    | Token exchange: a subject_token | invalid_request               |
+    | or actor_token that is invalid, | (Section 2.2.2 of [RFC8693]), |
+    | whose sender constraint is not  | unless a Token Exchange       |
+    | proven, or that is unacceptable | profile assigns the failure   |
+    | for the exchange                | its own code.  Detail: safe   |
+    |                                 | error_description             |
+    +---------------------------------+-------------------------------+
+    | Token exchange: a required DPoP | invalid_dpop_proof (Section 5 |
+    | proof that is missing, or a     | of [RFC9449]): the failure is |
+    | DPoP proof that fails its own   | not an unproven sender        |
+    | validation                      | constraint, so the row above  |
+    |                                 | does not apply.  Detail: safe |
+    |                                 | error_description             |
+    +---------------------------------+-------------------------------+
+    | Token exchange: a DPoP proof    | use_dpop_nonce with a DPoP-   |
+    | lacking the current DPoP nonce, | Nonce header (Section 8 of    |
+    | where the authorization server  | [RFC9449]), not               |
+    | requires one                    | invalid_dpop_proof.  Detail:  |
+    |                                 | safe error_description        |
+    +---------------------------------+-------------------------------+
+    | Token exchange with no actor    | invalid_request               |
+    | (Section 12.4): the             | (Section 2.2.2 of [RFC8693]). |
+    | authenticated client is not the | Detail: safe                  |
+    | Mission's approved agent        | error_description             |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_client (Section 5.2   |
+    | (Section 12.2): the AS does not | of [RFC6749]).  Detail: safe  |
+    | authenticate the requesting     | error_description             |
+    | client by a method it relies on |                               |
+    | to identify the client, which   |                               |
+    | no public client meets          |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_request               |
+    | (Section 12.2): the AS has      | (Section 2.2.2 of [RFC8693]). |
+    | authenticated the requesting    | Detail: safe                  |
+    | client, and the request carries | error_description             |
+    | an actor_token                  |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_request               |
+    | (Section 12.2): the             | (Section 2.2.2 of [RFC8693]). |
+    | subject_token is not a          | Detail: safe                  |
+    | designation this AS issued      | error_description             |
+    | naming the authenticated        |                               |
+    | requesting client               |                               |
+    +---------------------------------+-------------------------------+
+    | Designation (Section 12.1): the | invalid_target (Section 2.2.2 |
+    | AS cannot establish that no     | of [RFC8693]).  Detail: safe  |
+    | resource server accepts the     | error_description             |
+    | named client's identifier as an |                               |
+    | audience for its access tokens, |                               |
+    | including an alias it never     |                               |
+    | issues                          |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_target (Section 2.2.2 |
+    | (Section 12.5): narrowing       | of [RFC8693]).  Detail: safe  |
+    | leaves no entries for the       | error_description             |
+    | delegate                        |                               |
+    +---------------------------------+-------------------------------+
+    | Token exchange using            | invalid_client_attestation.   |
+    | Section 12.3: required Client   | Detail: no instance-identity  |
+    | Attestation fails validation    | disclosure                    |
+    +---------------------------------+-------------------------------+
+    | Token exchange using            | invalid_request               |
+    | Section 12.3: required          | (Section 2.2.2 of [RFC8693]). |
+    | instance-to-delegate or output- | Detail: no instance-identity  |
+    | key association cannot be       | disclosure                    |
+    | established                     |                               |
+    +---------------------------------+-------------------------------+
 
                       Table 7: Token Exchange failures
 
@@ -3946,9 +4017,10 @@ Table of Contents
       claim (Section 4.4 of [RFC8693]) whose sub is that identifier;
 
    *  carries no cnf and no act claim: like an authorization code, it is
-      bound to the client that redeems it, which proves its own key in
-      the delegated exchange (Section 12.2), and the delegated token's
-      act renders the AS's accounting (Section 12.5); and
+      bound to the client that redeems it, which authenticates and
+      proves its own key in the delegated exchange (Section 12.2), and
+      the delegated token's act renders the AS's accounting
+      (Section 12.5); and
 
    *  MUST expire shortly after it is issued, and no later than the
       presented token or the Mission's expires_at.
@@ -3985,8 +4057,25 @@ Table of Contents
       type:access_token.  The AS MUST refuse any other subject_token
       with invalid_request (Section 2.2.2 of [RFC8693]); an access token
       issued for resource access is never sufficient.  The delegate is
-      identified by an actor_token or by its own client authentication,
-      and the AS asserts the actor itself (Section 12.5).
+      identified by its own client authentication, and the AS asserts
+      the actor itself (Section 12.5).
+
+   *  *The delegate authenticates.* The AS MUST authenticate the
+      requesting client, whether or not the request carries an
+      actor_token, by a method it relies on to identify the client
+      (Section 2.3 of [RFC6749]), and MUST refuse a client it does not
+      so authenticate with invalid_client (Section 5.2 of [RFC6749]),
+      issuing no token.  Once it has so authenticated the client, the AS
+      MUST refuse a request that carries an actor_token with
+      invalid_request (Section 2.2.2 of [RFC8693]), issuing no token.  A
+      claimed client_id, possession of the designation, or proof of an
+      independently chosen key, such as a DPoP key, does not
+      authenticate a client.  This document does not support a public
+      client as a delegate: Section 2.3 of [RFC6749] lets an AS
+      establish a client authentication method with a public client but
+      not rely on it to identify the client.  Only an extension that
+      defines an explicit binding of a designation to its delegate
+      admits one; deployment policy alone does not.
 
    *  *Subject is stable.* sub remains the Mission's Subject.  The
       delegate is an actor, not the Subject.
@@ -4138,8 +4227,10 @@ Table of Contents
    Because it names no actor, such an exchange does not delegate: it re-
    scopes the agent's own authority downward.  A designation
    (Section 12.1) names a delegate, so it is not a self-exchange, and
-   these rules do not apply to it.  A no-actor exchange is subject to
-   the following:
+   these rules do not apply to it.  An exchange whose subject_token is a
+   designation is a delegated exchange (Section 12.2), not a no-actor
+   exchange, even when it carries no actor_token.  A no-actor exchange
+   is subject to the following:
 
    1.  The AS MUST refuse a no-actor exchange with the invalid_request
        error code (Section 2.2.2 of [RFC8693]) unless the authenticated
@@ -5700,10 +5791,13 @@ Table of Contents
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) where Section 8 and Section 12.2 require it.  A
    designation (Section 12.1) carries no confirmation key: like an
-   authorization code, it is bound to the client that redeems it, and it
-   authorizes no resource access.  A stolen token is bounded by the
-   Authority Set and the Mission lifetime regardless, but sender-
-   constraint prevents replay by a different party.
+   authorization code issued to a client that authenticates, it is bound
+   to the client that redeems it, which authenticates to do so
+   (Section 12.2), and it authorizes no resource access.  A stolen
+   designation is therefore useless without that client's credentials.
+   A stolen token is bounded by the Authority Set and the Mission
+   lifetime regardless, but sender-constraint prevents replay by a
+   different party.
 
 20.4.2.  Delegation and Chain Compromise
 
@@ -5743,11 +5837,12 @@ Table of Contents
       agent (Section 12.4).
 
    Designation (Section 12.1) closes the remaining gap: a delegated
-   exchange accepts only a designation naming the requesting client,
-   which only the token's holder obtains, by proving possession of the
-   token's key, so a token obtained from an audience is refused there.
-   Sender-constraining the primary token (Section 8.3) likewise keeps a
-   stolen token from being designated or self-exchanged.
+   exchange accepts only a designation naming the authenticated
+   requesting client, which only the token's holder obtains, by proving
+   possession of the token's key, so a token obtained from an audience
+   is refused there.  Sender-constraining the primary token
+   (Section 8.3) likewise keeps a stolen token from being designated or
+   self-exchanged.
 
 20.4.3.  Client Attribution and Delegation Lineage
 
@@ -6908,8 +7003,9 @@ A.2.  Stage 1: Mission Creation
    Host: as.example.com
 
    The AS (as.example.com) validates both, derives this Authority Set
-   (each entry a same-type subset of a proposed entry, Section 4.3), and
-   renders it for alice's consent:
+   under a declared narrowing capability (each entry a same-type subset
+   of a proposed entry, Section 4.3, Section 5.5.1), and renders it for
+   alice's consent:
 
    [
      { "type": "mission_resource_access",
@@ -7629,8 +7725,9 @@ D.2.  Derivation Policy Properties
       defined, are refused (Section 4.3, Section 5.4, Section 10).
       Authority Set derivation does not repair them by omitting the
       entry or dropping the constraint.  An entry the engine compares
-      but policy cannot accept differs: it is narrowed or omitted, and
-      the granted echo reflects that (Section 4.3).
+      but policy cannot accept differs: it is narrowed, under a declared
+      narrowing capability (Section 5.5.1), or omitted, and the granted
+      echo reflects that (Section 4.3).
 
    *  *Issuer-established members are not client-supplied.* The issuer
       establishes policy_version (Section 5), and authority_source and
@@ -7679,12 +7776,12 @@ D.3.  Derivation Rule Example
          "max_amount": { "amount": "900.00", "currency": "USD" } } }
    ]
 
-   The resulting Authority Set contains the proposed invoices.read entry
-   unchanged, and the proposed journal-entries.write entry with
-   max_amount narrowed to 500.00 USD.  The ceiling's unrequested
-   journal-entries.read does not appear.  Each proposed entry intersects
-   the same-resource ceiling entries; an empty action intersection
-   contributes no authority.
+   Under a declared narrowing capability (Section 5.5.1), the resulting
+   Authority Set contains the proposed invoices.read entry unchanged,
+   and the proposed journal-entries.write entry with max_amount narrowed
+   to 500.00 USD.  The ceiling's unrequested journal-entries.read does
+   not appear.  Each proposed entry intersects the same-resource ceiling
+   entries; an empty action intersection contributes no authority.
 
    Negative fixtures accompany this positive result; none is a special
    case that relaxes the type's relation:
@@ -8064,9 +8161,8 @@ Appendix F.  OAuth Binding Mapping Assessment
       Scope and defining sections: The Token Exchange join at delegated
       issuance: the AS, as joining authority, joins the Mission and
       Subject carried by the Mission-bound subject_token with the
-      delegate identity independently established by the actor_token or
-      the delegate's own client authentication, binding both to the
-      newly issued credential
+      delegate identity independently established by the delegate's own
+      client authentication, binding both to the newly issued credential
 
       Limitations: The base grant binding at issuance co-establishes its
       facts and is not a join; cross-authority joins are the Mission
@@ -8203,6 +8299,40 @@ Appendix G.  Document History
       none of the entries the token would carry, the request is refused
       with invalid_target (Declared Transformation Capabilities,
       Audience and Token Response; #1503, D620, D733).
+
+   *  A designation's aud names its redeemer and reassigns no entry's
+      original approved audience: the audience rules test the audiences
+      associated with the entries it carries, a permitted subset of the
+      presented token's that excludes an entry without an original
+      approved audience, and the delegated token issued at its
+      redemption is subject to every audience rule (Audience and Token
+      Response, Declared Transformation Capabilities; #1717, D845,
+      D859).
+
+   *  At a delegated exchange the AS authenticates the requesting client
+      by a method it relies on to identify the client and refuses any
+      other, including every public client, with invalid_client and no
+      token; a claimed client_id, the designation, or an independently
+      chosen key does not authenticate it.  That client authentication
+      alone identifies the delegate: the AS refuses an actor_token from
+      an authenticated client with invalid_request.  An exchange
+      presenting a designation is a delegated exchange, never a no-actor
+      one (Delegated Exchange, Designation, Self-Exchange Down-Scoping,
+      Establishing and Resolving a Binding, Error and Challenge Mapping,
+      Token Theft, OAuth Binding Mapping Assessment; #1718, D845, D859).
+
+   *  The key-publication requirement applies to an AS that issues
+      Mission-bound JWT access tokens for resource servers to consume,
+      not to one issuing only designations; the first capability carrier
+      that declares a member governs, true or false, and a declaration
+      waives no check; the declared narrowing capability also governs
+      Authority Set derivation, where without it a candidate entry is
+      retained unchanged or omitted; an undecidable token-endpoint
+      subset comparison is refused with invalid_authorization_details;
+      and short-lived is related to the termination latency a deployment
+      accepts, with numerical bounds left to deployment profiles (Token
+      Claims, Declared Transformation Capabilities, Authority Proposal,
+      Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).
 
    *  The AS refuses, with invalid_target, a delegated Mission-bound
       token for an audience it has not established as a Mission-aware
