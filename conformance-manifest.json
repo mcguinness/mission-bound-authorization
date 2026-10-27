@@ -39914,7 +39914,7 @@
     "normative": "a Mission Intent's max_budget currency takes max_amount's form: the authorization server admits exactly three upper-case ASCII letters and refuses any other value"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
@@ -39923,7 +39923,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. The capability stays disabled and unclaimed. D877 ledger pass: surface follows max-budget-amount-decimal (PAR refuses max_budget; it is admitted only on dispatch intake under standing-payment-dispatch). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the /token dispatch intake a max_budget currency of 'usd' or 'USDX' is refused invalid_request, creating nothing, and USD is admitted throughout the batch. Mutation: not checking the currency form (16) fails it. Partial: the AS track left the row partial on its surface alone, which the re-surfacing above meets; it stays partial until the owner's review of the reconciliation (D907 keeps the AS track's partial rows partial)."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. The capability stays disabled and unclaimed. D877 ledger pass: surface follows max-budget-amount-decimal (PAR refuses max_budget; it is admitted only on dispatch intake under standing-payment-dispatch). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the /token dispatch intake a max_budget currency of 'usd' or 'USDX' is refused invalid_request, creating nothing, and USD is admitted throughout the batch. Mutation: not checking the currency form (16) fails it. Tested (D929): the /token witness is at the row's token-endpoint surface."
   },
   {
    "id": "metering.bounds.max-budget-currency-exact",
@@ -40825,7 +40825,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. The case does not arise (observation.local, D877). Todo: no test dispatches, with the capability on, a template that does not designate the standing payment with an Intent carrying max_budget. That refusal (invalid_request, nothing created), killed by a mutant removing the check in dispatchFromTemplate, would witness it. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the /token batch refuses max_budget on the dispatch of a template that is not a standing payment (mutant 18 fails it); citing it here waits on the owner's review of the reconciliation."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. The case does not arise (observation.local, D877). Todo (D929): the rendering obligation has no witness, because its case does not arise in the reference. The non-applicability explanation in observation.local rests on a /token refusal: 'standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses invalid_request at /token max_budget on the dispatch of an ordinary template, creating nothing (@spec metering#capacity-across-missions, #813)' (impl/813-as-slice4 at 03a9a4a6; removing the check in dispatchFromTemplate, mutant 18, fails it). That test proves an unsupported configuration is refused, not what a consent page displays, so it is evidence for observation.local and is not cited as this row's witness."
   },
   {
    "id": "metering.capacity-across-missions.standing-consent-child-refused",
