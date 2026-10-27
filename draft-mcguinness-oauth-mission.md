@@ -2036,8 +2036,10 @@ show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-The enforcement table ({{rs-responsibilities}}) summarizes which party
-enforces each bound and what holds when that enforcer is absent.
+Which party enforces each bound, and what holds when that party is
+absent, follows from Enforcement Requirements ({{rs-requirements}})
+and, for a resource server that enforces only `scope`, from Scope
+Projection ({{scope-projection}}).
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
@@ -3422,21 +3424,6 @@ A value the client does not recognize is treated as
 attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment permits to learn the distinction
 ({{denial-disclosure}}).
-
-## Enforcement Responsibilities {#rs-responsibilities}
-
-Every bound this document defines is enforced by a party this document
-names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent. Where a
-row names a type specification, it is the one for
-`mission_resource_access`
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}):
-
-| Bound | Enforced by | When that enforcer is absent |
-|---|---|---|
-| `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
-{: title="Enforcement of an entry's resource, actions, and constraints"}
 
 ## Remediation Grains {#remediation-grains}
 
