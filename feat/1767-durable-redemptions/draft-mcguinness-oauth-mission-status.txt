@@ -360,14 +360,14 @@ Table of Contents
    other than mTLS client authentication, such as client_assertion for
    private_key_jwt, uses that method, and any client certificate is not
    treated as client authentication; otherwise a request presenting only
-   a client certificate uses mTLS client authentication.  This order
-   keeps "exactly one path" satisfiable when mTLS terminates at the
-   edge.  The parameters of a path or method the order does not select,
-   such as a client_assertion beside an access token, are not evaluated
-   as client authentication.  A request whose selected method the
-   endpoint does not advertise, including a shared-secret method such as
-   HTTP Basic, is answered as one that presented no credential
-   (Section 3.3).
+   a client certificate uses the mTLS client authentication method
+   registered for the client ([RFC8705]).  This order keeps "exactly one
+   path" satisfiable when mTLS terminates at the edge.  The parameters
+   of a path or method the order does not select, such as a
+   client_assertion beside an access token, are not evaluated as client
+   authentication.  A request whose selected method the endpoint does
+   not advertise, including a shared-secret method such as HTTP Basic,
+   is answered as one that presented no credential (Section 3.3).
 
    An authenticated caller MUST additionally carry an explicit read
    authorization: a mission_status scope on the presented access token,
@@ -443,13 +443,16 @@ Table of Contents
       defines for that failure, with any error code, status, and
       challenge it requires, such as a method that answers a missing
       server-provided challenge or a stale credential with its own
-      error.  Where the method defines none, the request receives HTTP
-      400 with the invalid_client error code, as Section 5.2 of
-      [RFC6749] answers a failed client authentication carried outside
-      the Authorization header, with no WWW-Authenticate challenge.  A
-      failed client authentication is not reported as an access-token
-      failure.  A client certificate rejected during the TLS handshake
-      fails at the TLS layer, before any HTTP response.
+      error.  That response keeps this document's error body
+      (Section 3.10): its error code is the body's error, with
+      error_description and any nonce echo, and a challenge header the
+      method requires is added to it.  Where the method defines none,
+      the request receives HTTP 400 with the invalid_client error code,
+      as Section 5.2 of [RFC6749] answers a failed client authentication
+      carried outside the Authorization header, with no WWW-Authenticate
+      challenge.  A failed client authentication is not reported as an
+      access-token failure.  A client certificate rejected during the
+      TLS handshake fails at the TLS layer, before any HTTP response.
 
    *  A request that presented no credential receives, where the
       endpoint accepts an access-token scheme, HTTP 401 unauthorized
@@ -1768,15 +1771,15 @@ Table of Contents
       CONDITIONAL.  A JSON array of strings naming the client
       authentication methods the Mission Status endpoint (Section 3)
       accepts, values of the OAuth Token Endpoint Authentication Methods
-      registry [RFC7591], as
-      introspection_endpoint_auth_methods_supported names them for the
-      introspection endpoint [RFC8414].  It MUST NOT list a method that
-      authenticates with a shared client secret, or none (Section 3.2).
-      The sender-constrained access-token path is not a client
-      authentication method: this endpoint's Protected Resource Metadata
-      [RFC9728] describes it.  This member describes this endpoint, not
-      the token endpoint.  REQUIRED when the Mission Status endpoint
-      accepts client authentication.
+      registry [RFC7591] alone, not the OAuth Access Token Types values
+      that introspection_endpoint_auth_methods_supported also admits
+      [RFC8414].  It MUST NOT list a method that authenticates with a
+      shared client secret, or none (Section 3.2).  The sender-
+      constrained access-token path is not a client authentication
+      method: this endpoint's Protected Resource Metadata [RFC9728]
+      describes it.  This member describes this endpoint, not the token
+      endpoint.  REQUIRED when the Mission Status endpoint accepts
+      client authentication.
 
    mission_status_endpoint_auth_signing_alg_values_supported:
       CONDITIONAL.  A JSON array of strings, the JWS [RFC7515] algorithm
