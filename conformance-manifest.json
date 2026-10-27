@@ -49548,7 +49548,7 @@
    "id": "issuance-grant.minting-errors.client-auth-failure",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "minting-errors",
-   "text": "| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed",
+   "text": "| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49558,12 +49558,12 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a grant request whose mutual-TLS or private-key-JWT client authentication fails, or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
+    "normative": "a grant request whose client authentication fails under a method that defines no error response of its own (for example mutual TLS or private-key JWT), or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists. #1763 review: re-quoted; a method's own error response governs where it defines one."
   },
   {
    "id": "issuance-grant.minting-errors.access-token-challenge",
@@ -77929,7 +77929,7 @@
    "id": "mas.errors.invalid-client",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "submission-errors",
-   "text": "A failed mTLS or private-key-JWT client authentication receives 400 `invalid_client`, not a token challenge",
+   "text": "A failed client authentication receives the response Mission Status assigns to it, the method's own error response or by default 400 `invalid_client`, not a token challenge",
    "role": "Controller",
    "strength": "stated",
    "applicability": {
@@ -77939,7 +77939,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client",
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets the method's own error response where the method defines one, and otherwise 400 invalid_client, never a token challenge",
     "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the join-assertion endpoint URL, to the issuer beside another audience or to another issuer, and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
    },
    "level": "endpoint",
@@ -77952,7 +77952,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint."
+   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint. #1763 review: re-quoted; the reference's join-assertion endpoint accepts private_key_jwt, which defines no error response of its own, so the 400 invalid_client witnesses still hold for the default; no reference method defines its own error response."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
