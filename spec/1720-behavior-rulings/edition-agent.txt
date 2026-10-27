@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-26T23:14:26Z
-Source repository commit: 9ab5f47cf706766321a3b5a56ff558960e78f72f
+Generated: 2026-10-27T00:09:09Z
+Source repository commit: 7600b64f48ec3388333aa432489a595b26b15b30
 Member count: 9
 
 Reading order:
@@ -30,8 +30,8 @@ Reading order:
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           26 October 2026
-Expires: 29 April 2027
+Intended status: Informational                           27 October 2026
+Expires: 30 April 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -84,7 +84,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -6002,8 +6002,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                      Mission Substrate Requirements
@@ -6061,7 +6061,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -7602,8 +7602,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -7662,7 +7662,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -9988,8 +9988,8 @@ Table of Contents
 
    *  the refresh token on refresh;
 
-   *  the Mission-bound subject_token on Token Exchange (the actor_token
-      identifies the delegate, Section 12.2); or
+   *  the Mission-bound subject_token on Token Exchange (a delegate is
+      identified by its client authentication, Section 12.2); or
 
    *  a profile-defined grant, through the authenticated mission
       reference it carries, such as the Template profile's handoff grant
@@ -11147,64 +11147,78 @@ Table of Contents
 
               Table 6: PAR and authorization endpoint failures
 
-     +===============================+===============================+
-     | Surface / failing input       | Base OAuth error and optional |
-     |                               | detail                        |
-     +===============================+===============================+
-     | Token exchange: a             | invalid_request               |
-     | subject_token or actor_token  | (Section 2.2.2 of [RFC8693]), |
-     | that is invalid, whose sender | unless a Token Exchange       |
-     | constraint is not proven, or  | profile assigns the failure   |
-     | that is unacceptable for the  | its own code.  Detail: safe   |
-     | exchange                      | error_description             |
-     +-------------------------------+-------------------------------+
-     | Token exchange: a required    | invalid_dpop_proof (Section 5 |
-     | DPoP proof that is missing,   | of [RFC9449]): the failure is |
-     | or a DPoP proof that fails    | not an unproven sender        |
-     | its own validation            | constraint, so the row above  |
-     |                               | does not apply.  Detail: safe |
-     |                               | error_description             |
-     +-------------------------------+-------------------------------+
-     | Token exchange: a DPoP proof  | use_dpop_nonce with a DPoP-   |
-     | lacking the current DPoP      | Nonce header (Section 8 of    |
-     | nonce, where the              | [RFC9449]), not               |
-     | authorization server requires | invalid_dpop_proof.  Detail:  |
-     | one                           | safe error_description        |
-     +-------------------------------+-------------------------------+
-     | Token exchange with no actor  | invalid_request               |
-     | (Section 12.4): the           | (Section 2.2.2 of [RFC8693]). |
-     | authenticated client is not   | Detail: safe                  |
-     | the Mission's approved agent  | error_description             |
-     +-------------------------------+-------------------------------+
-     | Delegated token exchange      | invalid_request               |
-     | (Section 12.2): the           | (Section 2.2.2 of [RFC8693]). |
-     | subject_token is not a        | Detail: safe                  |
-     | designation this AS issued    | error_description             |
-     | naming the requesting client  |                               |
-     +-------------------------------+-------------------------------+
-     | Designation (Section 12.1):   | invalid_target (Section 2.2.2 |
-     | the AS cannot establish that  | of [RFC8693]).  Detail: safe  |
-     | no resource server accepts    | error_description             |
-     | the named client's identifier |                               |
-     | as an audience for its access |                               |
-     | tokens, including an alias it |                               |
-     | never issues                  |                               |
-     +-------------------------------+-------------------------------+
-     | Delegated token exchange      | invalid_target (Section 2.2.2 |
-     | (Section 12.5): narrowing     | of [RFC8693]).  Detail: safe  |
-     | leaves no entries for the     | error_description             |
-     | delegate                      |                               |
-     +-------------------------------+-------------------------------+
-     | Token exchange using          | invalid_client_attestation.   |
-     | Section 12.3: required Client | Detail: no instance-identity  |
-     | Attestation fails validation  | disclosure                    |
-     +-------------------------------+-------------------------------+
-     | Token exchange using          | invalid_request               |
-     | Section 12.3: required        | (Section 2.2.2 of [RFC8693]). |
-     | instance-to-delegate or       | Detail: no instance-identity  |
-     | output-key association cannot | disclosure                    |
-     | be established                |                               |
-     +-------------------------------+-------------------------------+
+    +=================================+===============================+
+    | Surface / failing input         | Base OAuth error and optional |
+    |                                 | detail                        |
+    +=================================+===============================+
+    | Token exchange: a subject_token | invalid_request               |
+    | or actor_token that is invalid, | (Section 2.2.2 of [RFC8693]), |
+    | whose sender constraint is not  | unless a Token Exchange       |
+    | proven, or that is unacceptable | profile assigns the failure   |
+    | for the exchange                | its own code.  Detail: safe   |
+    |                                 | error_description             |
+    +---------------------------------+-------------------------------+
+    | Token exchange: a required DPoP | invalid_dpop_proof (Section 5 |
+    | proof that is missing, or a     | of [RFC9449]): the failure is |
+    | DPoP proof that fails its own   | not an unproven sender        |
+    | validation                      | constraint, so the row above  |
+    |                                 | does not apply.  Detail: safe |
+    |                                 | error_description             |
+    +---------------------------------+-------------------------------+
+    | Token exchange: a DPoP proof    | use_dpop_nonce with a DPoP-   |
+    | lacking the current DPoP nonce, | Nonce header (Section 8 of    |
+    | where the authorization server  | [RFC9449]), not               |
+    | requires one                    | invalid_dpop_proof.  Detail:  |
+    |                                 | safe error_description        |
+    +---------------------------------+-------------------------------+
+    | Token exchange with no actor    | invalid_request               |
+    | (Section 12.4): the             | (Section 2.2.2 of [RFC8693]). |
+    | authenticated client is not the | Detail: safe                  |
+    | Mission's approved agent        | error_description             |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_client (Section 5.2   |
+    | (Section 12.2): the AS does not | of [RFC6749]).  Detail: safe  |
+    | authenticate the requesting     | error_description             |
+    | client by a method it relies on |                               |
+    | to identify the client, which   |                               |
+    | no public client meets          |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_request               |
+    | (Section 12.2): the AS has      | (Section 2.2.2 of [RFC8693]). |
+    | authenticated the requesting    | Detail: safe                  |
+    | client, and the request carries | error_description             |
+    | an actor_token                  |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_request               |
+    | (Section 12.2): the             | (Section 2.2.2 of [RFC8693]). |
+    | subject_token is not a          | Detail: safe                  |
+    | designation this AS issued      | error_description             |
+    | naming the authenticated        |                               |
+    | requesting client               |                               |
+    +---------------------------------+-------------------------------+
+    | Designation (Section 12.1): the | invalid_target (Section 2.2.2 |
+    | AS cannot establish that no     | of [RFC8693]).  Detail: safe  |
+    | resource server accepts the     | error_description             |
+    | named client's identifier as an |                               |
+    | audience for its access tokens, |                               |
+    | including an alias it never     |                               |
+    | issues                          |                               |
+    +---------------------------------+-------------------------------+
+    | Delegated token exchange        | invalid_target (Section 2.2.2 |
+    | (Section 12.5): narrowing       | of [RFC8693]).  Detail: safe  |
+    | leaves no entries for the       | error_description             |
+    | delegate                        |                               |
+    +---------------------------------+-------------------------------+
+    | Token exchange using            | invalid_client_attestation.   |
+    | Section 12.3: required Client   | Detail: no instance-identity  |
+    | Attestation fails validation    | disclosure                    |
+    +---------------------------------+-------------------------------+
+    | Token exchange using            | invalid_request               |
+    | Section 12.3: required          | (Section 2.2.2 of [RFC8693]). |
+    | instance-to-delegate or output- | Detail: no instance-identity  |
+    | key association cannot be       | disclosure                    |
+    | established                     |                               |
+    +---------------------------------+-------------------------------+
 
                       Table 7: Token Exchange failures
 
@@ -11601,9 +11615,10 @@ Table of Contents
       claim (Section 4.4 of [RFC8693]) whose sub is that identifier;
 
    *  carries no cnf and no act claim: like an authorization code, it is
-      bound to the client that redeems it, which proves its own key in
-      the delegated exchange (Section 12.2), and the delegated token's
-      act renders the AS's accounting (Section 12.5); and
+      bound to the client that redeems it, which authenticates and
+      proves its own key in the delegated exchange (Section 12.2), and
+      the delegated token's act renders the AS's accounting
+      (Section 12.5); and
 
    *  MUST expire shortly after it is issued, and no later than the
       presented token or the Mission's expires_at.
@@ -11640,8 +11655,25 @@ Table of Contents
       type:access_token.  The AS MUST refuse any other subject_token
       with invalid_request (Section 2.2.2 of [RFC8693]); an access token
       issued for resource access is never sufficient.  The delegate is
-      identified by an actor_token or by its own client authentication,
-      and the AS asserts the actor itself (Section 12.5).
+      identified by its own client authentication, and the AS asserts
+      the actor itself (Section 12.5).
+
+   *  *The delegate authenticates.* The AS MUST authenticate the
+      requesting client, whether or not the request carries an
+      actor_token, by a method it relies on to identify the client
+      (Section 2.3 of [RFC6749]), and MUST refuse a client it does not
+      so authenticate with invalid_client (Section 5.2 of [RFC6749]),
+      issuing no token.  Once it has so authenticated the client, the AS
+      MUST refuse a request that carries an actor_token with
+      invalid_request (Section 2.2.2 of [RFC8693]), issuing no token.  A
+      claimed client_id, possession of the designation, or proof of an
+      independently chosen key, such as a DPoP key, does not
+      authenticate a client.  This document does not support a public
+      client as a delegate: Section 2.3 of [RFC6749] lets an AS
+      establish a client authentication method with a public client but
+      not rely on it to identify the client.  Only an extension that
+      defines an explicit binding of a designation to its delegate
+      admits one; deployment policy alone does not.
 
    *  *Subject is stable.* sub remains the Mission's Subject.  The
       delegate is an actor, not the Subject.
@@ -11793,8 +11825,10 @@ Table of Contents
    Because it names no actor, such an exchange does not delegate: it re-
    scopes the agent's own authority downward.  A designation
    (Section 12.1) names a delegate, so it is not a self-exchange, and
-   these rules do not apply to it.  A no-actor exchange is subject to
-   the following:
+   these rules do not apply to it.  An exchange whose subject_token is a
+   designation is a delegated exchange (Section 12.2), not a no-actor
+   exchange, even when it carries no actor_token.  A no-actor exchange
+   is subject to the following:
 
    1.  The AS MUST refuse a no-actor exchange with the invalid_request
        error code (Section 2.2.2 of [RFC8693]) unless the authenticated
@@ -13355,10 +13389,13 @@ Table of Contents
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) where Section 8 and Section 12.2 require it.  A
    designation (Section 12.1) carries no confirmation key: like an
-   authorization code, it is bound to the client that redeems it, and it
-   authorizes no resource access.  A stolen token is bounded by the
-   Authority Set and the Mission lifetime regardless, but sender-
-   constraint prevents replay by a different party.
+   authorization code issued to a client that authenticates, it is bound
+   to the client that redeems it, which authenticates to do so
+   (Section 12.2), and it authorizes no resource access.  A stolen
+   designation is therefore useless without that client's credentials.
+   A stolen token is bounded by the Authority Set and the Mission
+   lifetime regardless, but sender-constraint prevents replay by a
+   different party.
 
 20.4.2.  Delegation and Chain Compromise
 
@@ -13398,11 +13435,12 @@ Table of Contents
       agent (Section 12.4).
 
    Designation (Section 12.1) closes the remaining gap: a delegated
-   exchange accepts only a designation naming the requesting client,
-   which only the token's holder obtains, by proving possession of the
-   token's key, so a token obtained from an audience is refused there.
-   Sender-constraining the primary token (Section 8.3) likewise keeps a
-   stolen token from being designated or self-exchanged.
+   exchange accepts only a designation naming the authenticated
+   requesting client, which only the token's holder obtains, by proving
+   possession of the token's key, so a token obtained from an audience
+   is refused there.  Sender-constraining the primary token
+   (Section 8.3) likewise keeps a stolen token from being designated or
+   self-exchanged.
 
 20.4.3.  Client Attribution and Delegation Lineage
 
@@ -15721,9 +15759,8 @@ Appendix F.  OAuth Binding Mapping Assessment
       Scope and defining sections: The Token Exchange join at delegated
       issuance: the AS, as joining authority, joins the Mission and
       Subject carried by the Mission-bound subject_token with the
-      delegate identity independently established by the actor_token or
-      the delegate's own client authentication, binding both to the
-      newly issued credential
+      delegate identity independently established by the delegate's own
+      client authentication, binding both to the newly issued credential
 
       Limitations: The base grant binding at issuance co-establishes its
       facts and is not a join; cross-authority joins are the Mission
@@ -15869,6 +15906,18 @@ Appendix G.  Document History
       redemption is subject to every audience rule (Audience and Token
       Response, Declared Transformation Capabilities; #1717, D845,
       D859).
+
+   *  At a delegated exchange the AS authenticates the requesting client
+      by a method it relies on to identify the client and refuses any
+      other, including every public client, with invalid_client and no
+      token; a claimed client_id, the designation, or an independently
+      chosen key does not authenticate it.  That client authentication
+      alone identifies the delegate: the AS refuses an actor_token from
+      an authenticated client with invalid_request.  An exchange
+      presenting a designation is a delegated exchange, never a no-actor
+      one (Delegated Exchange, Designation, Self-Exchange Down-Scoping,
+      Establishing and Resolving a Binding, Error and Challenge Mapping,
+      Token Theft, OAuth Binding Mapping Assessment; #1718, D845, D859).
 
    *  The key-publication requirement applies to an AS that issues
       Mission-bound JWT access tokens for resource servers to consume,
@@ -16087,8 +16136,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -16140,7 +16189,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -18639,8 +18688,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                    Mission-Bound Runtime Enforcement
@@ -18699,7 +18748,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -23934,8 +23983,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                         Mission Runtime Evidence
@@ -23985,7 +24034,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -27026,8 +27075,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
            Mission-Bound Runtime Enforcement: AuthZEN Profile
@@ -27076,7 +27125,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -30833,8 +30882,8 @@ Author's Address
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                      Mission-Aware Agent Harnesses
@@ -30886,7 +30935,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -32977,8 +33026,8 @@ Author's Address
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         26 October 2026
-Expires: 29 April 2027
+Intended status: Standards Track                         27 October 2026
+Expires: 30 April 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -33033,7 +33082,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
