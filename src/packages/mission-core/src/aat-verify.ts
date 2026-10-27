@@ -83,12 +83,22 @@ export interface AatTrustAnchor {
   kid?: string;
 }
 
-/** @spec AAT -02 Section 7.3 and step 7i: accepted PoP `jti` state, shared by an enforcement point's replicas. */
+/**
+ * @spec AAT -02 Section 7.3 and step 7i: accepted PoP `jti` state, shared by
+ * an enforcement point's replicas. The check and the record are one atomic
+ * call, so two replicas cannot both accept one proof between a check and a
+ * record. It matches `admit(jti)` of the DPoP replay cache (dpop-replay.ts).
+ */
 export interface AatReplayState {
   /** Track `jti` for this invocation (a tool with side effects, or a sensitive read). */
   trackJti: boolean;
-  seen(jti: string, iat: number): boolean;
-  record(jti: string, iat: number): void;
+  /**
+   * Atomically: false when `jti` was already accepted and is still within the
+   * window of its `iat`; otherwise record it, retained until `iat` leaves the
+   * window, and return true. Called only after every other check passes, so a
+   * refused proof is never recorded.
+   */
+  admit(jti: string, iat: number): boolean;
 }
 
 /** The enforcement point's audience and presentation policy (steps 6c, 7d, 7h, 7i). */
@@ -541,10 +551,9 @@ export function verifyAatPresentation(
     if (typeof pop.nonce !== "string" || !policy.acceptNonce(pop.nonce))
       return deny("7h", "PoP nonce is absent or not accepted");
   }
-  // Step 7i: check and record, after every other check.
-  if (policy.replay?.trackJti) {
-    if (policy.replay.seen(pop.jti, popIat)) return deny("7i", "PoP jti was already accepted");
-    policy.replay.record(pop.jti, popIat);
+  // Step 7i: one atomic check-and-record, after every other check.
+  if (policy.replay?.trackJti && !policy.replay.admit(pop.jti, popIat)) {
+    return deny("7i", "PoP jti was already accepted");
   }
   return {
     ...chainPermit(r.tokens, r.anchorIssuer),

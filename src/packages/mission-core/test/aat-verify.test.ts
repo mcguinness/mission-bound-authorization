@@ -200,3 +200,53 @@ describe("verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 st
     ).toMatchObject({ verdict: "DENY", step: "6c" });
   });
 });
+
+describe("step 7i: one atomic admit, after every other check (@spec AAT -02 Section 7.3 and Section 8 step 7i, #1756)", () => {
+  const root = jws(anchor, ROOT_HEADER, rootClaims());
+  const child = jws(holder, CHILD_HEADER, childOf(root));
+  const presentTracked = (
+    pop: string,
+    argsJson: string,
+    calls: [string, number][],
+    answer: boolean,
+  ) =>
+    verifyAatPresentation({
+      chain: [root, child],
+      pop,
+      tool: "read_file",
+      argsJson,
+      trustAnchors: anchors,
+      now: NOW,
+      policy: {
+        audiences: [EP],
+        replay: {
+          trackJti: true,
+          admit: (jti, iat) => {
+            calls.push([jti, iat]);
+            return answer;
+          },
+        },
+      },
+    });
+
+  it("offers a verified proof to admit once, with its jti and iat, and denies when admit refuses it", () => {
+    const pop = popFor(child);
+    const popJti = JSON.parse(Buffer.from(pop.split(".")[1] as string, "base64url").toString()).jti;
+    const calls: [string, number][] = [];
+    expect(presentTracked(pop, '{"path":"/a"}', calls, true)).toMatchObject({ verdict: "PERMIT" });
+    expect(calls).toEqual([[popJti, NOW]]);
+    expect(presentTracked(pop, '{"path":"/a"}', [], false)).toMatchObject({
+      verdict: "DENY",
+      step: "7i",
+    });
+  });
+
+  it("never offers a refused proof to admit", () => {
+    const calls: [string, number][] = [];
+    // The leaf allows only "/a", so the invocation is refused before step 7i.
+    expect(presentTracked(popFor(child), '{"path":"/b"}', calls, true)).toMatchObject({
+      verdict: "DENY",
+    });
+    expect(calls).toEqual([]);
+  });
+});

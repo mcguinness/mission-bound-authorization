@@ -70,10 +70,14 @@ function run(v: Vector): {
     ...(v.policy.nonce !== undefined ? { acceptNonce: (n: string) => n === v.policy.nonce } : {}),
     ...(v.policy.track_pop_jti
       ? {
+          // replay_state.before seeds the accepted set; admit refuses a jti in it, or records one.
           replay: {
             trackJti: true,
-            seen: (jti: string) => accepted.has(jti),
-            record: (jti: string) => void accepted.add(jti),
+            admit: (jti: string) => {
+              if (accepted.has(jti)) return false;
+              accepted.add(jti);
+              return true;
+            },
           },
         }
       : {}),
