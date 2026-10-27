@@ -38,6 +38,7 @@ import {
 } from "./evaluate.js";
 import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
+  BudgetMetering,
   ClaimRequester,
   ClaimResolution,
   ConsumptionStatusFn,
@@ -229,6 +230,8 @@ export interface DecisionPoint {
 interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
+  /** @spec metering#metering (#816, decision f): bound by {@link createDecisionPoint} only. */
+  budgets?: BudgetMetering | undefined;
   workItemAttributedClasses?: ReadonlySet<string> | undefined;
   resourcePolicy: ResourcePolicy | undefined;
   authorityDependency?: AuthorityDependencyEnforcement | undefined;
@@ -249,6 +252,12 @@ interface PointBindings {
  * rather than merely overwritten. None of them can be supplied, replaced, or
  * suppressed from the enforcement side. A decision point bound to no Resource
  * policy forwards none, and `evaluate` refuses to decide.
+ *
+ * #816 (decision d), owed by slice 3b: `opts.view` is forwarded as the caller
+ * built it, so the view's budget binding (`MissionView.budget`) is still the
+ * caller's here. Before anything populates it, the binding must be attached
+ * on the PDP side (a PDP-owned view load), and a `budget` the caller supplies
+ * ignored: a caller that drops it would otherwise make every spend unmetered.
  */
 function bindDecide(
   bindings: PointBindings,
@@ -270,6 +279,8 @@ function bindDecide(
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.budgets;
+    if (bindings.budgets) forwarded.budgets = bindings.budgets;
     delete forwarded.workItemAttributedClasses;
     if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
     delete forwarded.resourcePolicy;
@@ -334,6 +345,11 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   const bindings: PointBindings = {
     emitter,
     claims: config.claims,
+    // @spec metering#metering, metering#topology (#816, decision f): the
+    // co-resident PDP meters budgets in its own claim domain, where that
+    // domain's statement claims `budget_metering`. The ephemeral decision
+    // point and the remote server never bind one.
+    budgets: config.claims?.budgetMetering(),
     workItemAttributedClasses: config.workItemAttributedClasses,
     resourcePolicy: config.resourcePolicy,
     authorityDependency: config.authorityDependency,
