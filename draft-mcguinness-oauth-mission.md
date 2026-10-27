@@ -48,6 +48,7 @@ normative:
   RFC8707:
   RFC9068:
   RFC9101:
+  RFC9110:
   RFC9126:
   RFC9207:
   RFC9396:
@@ -1919,9 +1920,12 @@ The same procedure continues from step 5:
    strictly later than the creation instant: acceptance of the
    submission does not freeze time, and where the requested ceiling
    passed while the approval was pending, completion creates no
-   Mission. A deferred or relocated approval flow ({{extensibility}})
-   inherits this check at its own creation commit, with the
-   completion error each flow defines.
+   Mission. Where a direct approval fails this check, the AS MUST
+   refuse the request with `access_denied` ({{error-mapping}}),
+   issuing no authorization code or profile-defined grant. A deferred
+   or relocated approval flow ({{extensibility}}) inherits this check
+   at its own creation commit, with the completion error each flow
+   defines.
 {: start="6"}
 
 The `authority_hash` is the **authority commitment**: it commits, by
@@ -2610,9 +2614,22 @@ of the values `revoked`, `expired`, or `superseded` (where a companion
 defines supersession), the Mission's termination reason
 ({{termination}}).
 
-The `mission_error` member is diagnostic only: it grants nothing, an
-unrecognized value is ignored, and it is returned only to the
-authenticated client presenting the Mission's grant.
+These values are termination reasons. A companion profile that
+defines another Mission state ({{lifecycle}}), which this section
+also refuses, or a further refusal at issuance defines any
+`mission_error` value for it, as Mission Status does for a suspended
+Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Mission Lifecycle Endpoint") and Derivation Limits does for an
+exhausted limit
+({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+"Enforcement at Issuance"). A Mission in a state from which it can
+return to `active` is never reported with a termination reason.
+
+The `mission_error` member is diagnostic only and optional, whichever
+document defines its value: it grants nothing, an unrecognized value
+is ignored and is not authoritative about the Mission's state, and it
+is returned only to the authenticated client presenting the Mission's
+grant.
 
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
@@ -3137,13 +3154,12 @@ A resource server:
    type it does not implement, or whose type-defined enforcement it
    cannot complete (an unrecognized member, an unenforceable
    constraint, or an unrecognized matching mode). It MUST refuse the
-   request (for example, a `403` with the `insufficient_scope` error
-   code {{RFC6750}}, or the deployment's usual insufficient-authority
-   error) unless another applicable entry that it can fully enforce
-   authorizes the whole request on its own, and MUST NOT combine parts
-   of several entries to authorize one request. A failure of the
-   token's own validation (above) rejects the token whatever its
-   entries carry.
+   request, with `insufficient_scope` ({{RFC6750}}) or the
+   RAR-remediation challenge as {{rs-denials}} states, unless another
+   applicable entry that it can fully enforce authorizes the whole
+   request on its own, and MUST NOT combine parts of several entries
+   to authorize one request. A failure of the token's own validation
+   (above) rejects the token whatever its entries carry.
 3. MUST NOT, when a token also carries `scope`, grant on the basis of
    a scope value any access broader than the corresponding
    `authorization_details` entry permits, including access that
@@ -3393,6 +3409,16 @@ token endpoint. {{Section 2.3 of RFC9126}} permits an
 authorization-request error at PAR, and returning it there does not
 change which row applies.
 
+Where a token request fails more than one check, this document
+defines no general precedence among the resulting errors; as under
+{{RFC6749}}, which defines none, the AS returns any applicable one.
+The orders this document does state still apply: a submission's
+processing order ({{submission-processing}}), and the Mission-governed
+refusal, which applies only to an otherwise processable request
+({{authority-proposal}}). The choice relaxes neither client
+authentication nor any rule that limits who receives a detail, such
+as `mission_error` ({{issuance-gating}}).
+
 The tables are grouped by surface. The first table holds each
 failure whose rule is not confined to the surface of one of the other
 three tables (PAR and the authorization endpoint, Token Exchange, or a
@@ -3409,7 +3435,7 @@ exchange rows of the third table.
 | Authorization or token request: the target's scope-projection mapping is unknown, ambiguous, or stale, whether or not the request names a `scope` value, or the target is `scope`-only and no safe projection exists for the applicable entries when the request names no `scope` value ({{scope-projection}}); or the AS has not established a delegated Mission-bound token's audience as a Mission-aware Resource Server that also processes the `act` chain ({{rs-mission-unaware}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization or token request: an explicitly requested `scope` value the issuance cannot grant under a scope-projection mapping the AS trusts ({{scope-projection}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
-| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
+| Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason), or in another state that is not `active`, such as one a companion profile defines | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}), or a value the companion profile defines for its state ({{issuance-gating}}) |
 | Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 | Token endpoint ({{subset}}): the comparison cannot establish that a requested RAR entry is a subset (an unrecognized member, an incomparable value) | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
@@ -3422,7 +3448,7 @@ exchange rows of the third table.
 | PAR or authorization request from a client registered as Mission-governed: `authorization_details` without `mission_intent` ({{authority-proposal}}) | `invalid_request` ({{Section 4.1.2.1 of RFC6749}}, {{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token request, any grant type: an audience the token would carry, named or inferred, is a Mission-governed resource, and the request has no qualifying Mission binding ({{authority-proposal}}) | `invalid_target` ({{Section 2 of RFC8707}}). Detail: safe `error_description` |
 | Authorization request: `scope` includes `openid` and the Approver is not the Subject ({{approval-authentication}}) | `invalid_scope` ({{Section 4.1.2.1 of RFC6749}}). Detail: safe `error_description` |
-| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, or a well-formed request (including configured-mapping mode) is refused by AS policy | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: for a configured-mapping refusal, a safe `error_description` can say whether no mapping matched or policy narrowed the candidates to nothing; otherwise none unless a defined extension applies |
+| Authorization decision ({{direct-approval-steps}}, {{approval-authentication}}, {{derivation-modes}}, {{approval-commit}}): the Approver declines, approval authentication fails the floor or a requested `acr_values` or `max_age`, a well-formed request (including configured-mapping mode) is refused by AS policy, or the commit finds the effective expiry not later than the creation instant | `access_denied` ({{Section 4.1.2.1 of RFC6749}}). Detail: for a configured-mapping refusal, a safe `error_description` can say whether no mapping matched or policy narrowed the candidates to nothing; for an expiry at the commit, a safe `error_description` can say that the requested expiry has passed; otherwise none unless a defined extension applies |
 {: title="PAR and authorization endpoint failures"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -3447,6 +3473,8 @@ exchange rows of the third table.
 | Protected resource: DPoP proof missing, invalid, or mismatched ({{rs-enforcement}}) | `DPoP` `invalid_token` challenge ({{Section 7.1 of RFC9449}}). Detail: none |
 | Protected resource: DPoP nonce required, missing, or stale ({{rs-denials}}) | `DPoP` `use_dpop_nonce` challenge ({{Section 9 of RFC9449}}). Detail: fresh nonce |
 | Protected resource: certificate-bound token's presented certificate mismatch ({{rs-enforcement}}) | Bearer `invalid_token` challenge ({{Section 3.1 of RFC6750}}, per {{Section 3 of RFC8705}}). Detail: none |
+| Protected resource: an opaque Mission-bound token that its introspection response or issuer-local resolution reports inactive ({{introspected-consumption}}) | `invalid_token` ({{Section 3.1 of RFC6750}}), in the `DPoP` scheme for a DPoP-bound token ({{Section 7.1 of RFC9449}}). Detail: none |
+| Protected resource: introspection or issuer-local resolution of an opaque Mission-bound token cannot be completed ({{introspected-consumption}}) | No error code reporting the token invalid: HTTP 503 ({{Section 15.6.4 of RFC9110}}), with `Retry-After` where a retry time is meaningful. Detail: none |
 | Protected resource: insufficient carried authority, or an unenforceable constraint ({{rs-denials}}) | `insufficient_scope` ({{Section 3.1 of RFC6750}}) or the RAR-remediation challenge ({{remediation-grains}}). Detail: `mission_denial` ({{rs-enforcement}}), minimized |
 {: title="Protected resource challenges"}
 
@@ -3630,10 +3658,20 @@ profiled.
   - MUST enforce the response's `authorization_details` under the
     same rules as the token-carried form ({{rs-enforcement}}), the
     fail-closed duties included.
+- A resource server whose introspection response for an opaque
+  Mission-bound token is `active: false`, or whose issuer-local
+  resolution resolves it as inactive, MUST refuse the request with
+  the `invalid_token` error code ({{Section 3.1 of RFC6750}}), in the
+  `DPoP` scheme for a DPoP-bound token ({{Section 7.1 of RFC9449}}).
 - A resource server that cannot obtain a valid introspection response
   or issuer-local resolution for an opaque Mission-bound token MUST
   refuse the request rather than serve it from any cached or
-  out-of-band belief about the token's authority.
+  out-of-band belief about the token's authority. The failure
+  establishes nothing about the token: the resource server MUST
+  respond with HTTP status code 503 (Service Unavailable)
+  ({{Section 15.6.4 of RFC9110}}), adding a `Retry-After` header field
+  where a retry time is meaningful, and MUST NOT report the token as
+  invalid, such as with the `invalid_token` error code.
 
 The per-use freshness rule of {{introspection}} covers the whole
 response in this mode: each response is one observation of the
@@ -6795,8 +6833,9 @@ The alternative, fixing `client_id` to the approved agent on every
 derived token, would lead a generic {{RFC9068}} resource server or
 logging pipeline to misattribute a delegate's action to the approved
 agent, with no error to surface the mismatch. It would be safe only
-where every resource server already processes the `act` chain, as a
-Mission-aware Resource Server does ({{rs-enforcement}}).
+where every resource server already processes the `act` chain, and
+Mission awareness alone does not establish that
+({{rs-mission-unaware}}).
 
 The routing rule of {{rs-enforcement}} does not depend on this
 choice. The `mission` claim's presence signals that a token may carry
@@ -7613,6 +7652,19 @@ Cross-Domain:
   temporary disablement, an outage, or another principal's departure
   does not trigger the rule, and termination does not recall issued
   tokens (Revocation; #830).
+- A direct approval whose commit finds the effective expiry passed is
+  refused with `access_denied`, with no Mission or authorization code
+  (Committing the Mission). A token request that fails several checks
+  gets any applicable error, subject to the orders this document
+  states. A state a companion defines takes that companion's
+  `mission_error` value, never a termination reason (Issuance Gating).
+  A resource server answers an opaque Mission-bound token resolved as
+  inactive with `invalid_token`, and a resolution it cannot complete
+  with HTTP 503 and no token error (Introspected Token Consumption).
+  Enforcement Requirements refuses an entry it cannot enforce only with
+  the codes of the error table, and Mission awareness alone does not
+  imply `act` processing (Error and Challenge Mapping, Client
+  Identification in Delegated Tokens; #1721, D845).
 
 -01
 

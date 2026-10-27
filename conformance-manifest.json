@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "b31b7020313c9cf2fab2981589228a7ec8b0c398",
-    "content_sha256": "e4f0eacf9b5ef52432ed12a41f18975bf3e9baa58b90e97884556ea516b8fe80"
+    "revision": "b81f60f0e78b1777d8eb2a4cc5ad265e571fb912",
+    "content_sha256": "e8b6b3f1e8766757e5eab12f39315a30348356953eac5963d815e36cadb3ed6f"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
@@ -9063,7 +9063,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an effective expires_at that changed between rendering and decision, by an input or by the passage of time, is detected and no Mission is created from the old decision; a Mission created records the effective expires_at its rendering showed",
-    "local": "The rendering commits the effective expires_at it shows (the page displays it). The decision commits exactly that instant while the current inputs admit it (later than now, no later than the expiry they establish now), so a lifetime measured from a later decision never moves it. A rendered expiry that has passed, or that a shorter lifetime bound narrows, asks for a fresh decision; where no expiry later than now remains, the commit's mapped refusal (invalid_request) applies instead."
+    "local": "The rendering commits the effective expires_at it shows (the page displays it). The decision commits exactly that instant while the current inputs admit it (later than now, no later than the expiry they establish now), so a lifetime measured from a later decision never moves it. A rendered expiry that has passed, or that a shorter lifetime bound narrows, asks for a fresh decision; where no expiry later than now remains, the commit's refusal (access_denied, #1721) applies instead."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -10240,6 +10240,42 @@
     }
    ],
    "notes": "#1740 (D863): the AROP deferral initiation carries no mission_error, since it presents mission_id, requested authority, client authentication and DPoP but no Mission grant; its inactive-Mission refusal is witnessed on core.issuance-gating.inactive-refused-by-grant."
+  },
+  {
+   "id": "core.issuance-gating.reversible-state-not-termination",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "A Mission in a state from which it can return to `active` is never reported with a termination reason.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a derivation refused because the Mission is in a state from which it can return to active carries no termination reason as its mission_error; a value the defining companion gives that state can appear",
+    "local": "Mission Status's suspended is the only such state the reference AS implements; lifecycleMissionError reports Status's suspended for it, never revoked, expired, superseded or completed."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > suspend gates refresh with invalid_grant; resume restores issuance",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/refresh-precheck.test.ts",
+     "name": "refresh pre-check: a refused refresh consumes nothing (@spec mission#issuance-gating, #914) > rotating approval grant: a refresh refused while suspended saves no refresh token, the same token refreshes after resume, and its replay is still reuse",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error."
   },
   {
    "id": "core.revocation.revoke-by-mission-id",
@@ -11553,7 +11589,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request invalid_request and creates nothing",
+     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request access_denied, with no Mission, grant or code (@spec mission#approval-commit, #1721)",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -11564,7 +11600,51 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics. Direct-approval arm (#1610): a requested ceiling that passed before the decision completes the authorization request invalid_request (a device session is denied), and one that passes during the commit is refused by the commit's own check; neither creates a Mission or grant."
+   "notes": "insertRecord, the single Mission-record creation funnel, checks created_at < expires_at inside the creation transaction, so every creating surface inherits it. Endpoint arm: a deferred expansion whose approved horizon has passed by completion creates no successor and fails with the profile's denial semantics. Direct-approval arm (#1610, #1721): a requested ceiling that passed before the decision, and one that passes during the commit and is refused by the commit's own check, both complete the authorization request access_denied (a device session is denied); neither creates a Mission, grant or code (core.approval-commit.direct-expiry-access-denied)."
+  },
+  {
+   "id": "core.approval-commit.direct-expiry-access-denied",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-commit",
+   "text": "Where a direct approval fails this check, the AS MUST refuse the request with `access_denied` ({{error-mapping}}), issuing no authorization code or profile-defined grant",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a direct approval whose effective expiry is not later than its creation instant at the commit, including one whose requested ceiling passed while the approval was pending, completes with access_denied and creates no Mission, no authorization code and no redeemable profile-defined grant",
+    "local": "The reference AS finds the condition at either of two points of one decision: its re-validation of the pushed request (the requested ceiling has passed) or the commit's own atomic check in insertRecord (the ceiling passes while the grant saves). Both throw ExpiryPassedError, which keeps invalid_request on every other surface, and the decision maps it to access_denied on the authorization response. The error_description names the passed expiry and no Mission. Under the device authorization profile, a back-channel carriage, the same refusal ends the session denied, so the poll answers access_denied and the device_code never redeems."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request access_denied, with no Mission, grant or code (@spec mission#approval-commit, #1721)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "a device decision on a request that no longer validates (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed denies the session, never a 500",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1721 item 1 (D845). Proved by mutation: making the decision's refusal mapping return the error's own code (invalid_request) fails both browser tests on the error parameter; removing the commit guard (created_at < expires_at) fails the race test, which then completes with a code; throwing an untyped invalid_request from the decision's re-validation fails the late-decision test alone; making the device decision record invalid_request for a refusal fails the device test. The device test passes whatever the browser mapping returns, so it witnesses only the back-channel arm. The approval render of an expired request still answers 400 invalid_request to the Approver's user agent: a render completes nothing."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -13926,6 +14006,30 @@
    "notes": "#1258 item 2. #1362: witnessed at the SaaS resource: a clean entry that covers the whole request authorizes beside one carrying an unrecognized member, an entry SaaS cannot enforce lends its action to no clean entry, and a write whose action is in one entry and whose vendor is in another is refused (#1298). Proved by mutation: refusing the whole token for one unenforceable entry, and pooling actions across entries, each fail these tests. The reference policy decision point's Mission bound weighs every applicable entry whole since #1375, so it neither refuses an independently sufficient alternative nor combines entries (witnessed under resource-access.rs-enforcement.type-scoped-matching)."
   },
   {
+   "id": "core.rs-enforcement.unenforceable-refusal-code",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rs-enforcement",
+   "text": "It MUST refuse the request, with `insufficient_scope` ({{RFC6750}}) or the RAR-remediation challenge as {{rs-denials}} states",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request that only an entry the resource server cannot fully enforce would authorize is refused with a 403 insufficient_scope challenge or the RAR-remediation challenge, never another error"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1721 item 5 (D845) aligns item 2 with the error table, which already named these codes; the refusal itself is witnessed by core.rs-enforcement.unenforceable-entry-no-authority and core.rs-enforcement.whole-request-single-entry. No reference resource server answers it with an HTTP challenge: mcp-saas, which enforces the entries, refuses at the MCP tool layer with its out_of_authority result, and plain-rs authorizes from scope alone."
+  },
+  {
    "id": "core.rs-enforcement.mission-issuer-trusted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rs-enforcement",
@@ -16072,6 +16176,51 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Scoped to core.introspected-consumption (#904 option b): the clause binds only a deployment issuing opaque Mission-bound tokens, an optional mode no published baseline selects. The reference AS issues JWT access tokens only and leaves the capability unclaimed."
+  },
+  {
+   "id": "core.introspection.opaque-rs-inactive-invalid-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "MUST refuse the request with the `invalid_token` error code ({{Section 3.1 of RFC6750}}), in the `DPoP` scheme for a DPoP-bound token ({{Section 7.1 of RFC9449}})",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server consuming an opaque Mission-bound token answers an introspection response with active false, or an issuer-local resolution of the token as inactive, with the invalid_token error code in the scheme the token was presented under (DPoP for a DPoP-bound token), and performs no operation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1721 item 4(a) (D845). Scoped to core.introspected-consumption like its neighbours: no reference resource server accepts an opaque Mission-bound token, and the reference AS issues JWT access tokens only. Evidence of the shape, not cited because neither server consumes an opaque Mission-bound token: plain-rs, a Mission-unaware JWT resource server whose introspection mode also introspects each token, answers active false with 401 invalid_token (plain-rs introspection mode > honors only `active`: an inactive token is refused even when its JWT is valid, and an introspected scope grants nothing); mcp-payments' estate route resolves ordinary opaque tokens by introspection, refuses any response carrying `mission`, and answers an inactive one 401 with an invalid_token body."
+  },
+  {
+   "id": "core.introspection.opaque-rs-unavailable-503",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "introspected-consumption",
+   "text": "the resource server MUST respond with HTTP status code 503 (Service Unavailable) ({{Section 15.6.4 of RFC9110}}), adding a `Retry-After` header field where a retry time is meaningful, and MUST NOT report the token as invalid, such as with the `invalid_token` error code",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.introspected-consumption"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server that cannot complete introspection or issuer-local resolution of an opaque Mission-bound token (the issuer unreachable, a timeout, or no valid response) answers HTTP 503 with no invalid_token or other error reporting the token invalid, and performs no operation",
+    "local": "whether a retry time is meaningful, and so whether Retry-After is sent, is the resource server's judgment and is not asserted"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1721 item 4(b) (D845). Scoped to core.introspected-consumption like its neighbours: no reference resource server accepts an opaque Mission-bound token, and the reference AS issues JWT access tokens only. Evidence of the shape, not cited because neither server consumes an opaque Mission-bound token: plain-rs's introspection failure contract (#873) answers an unreachable, slow, non-200 or malformed introspection response 503 temporarily_unavailable before any operation (plain-rs introspection failure contract (#873) > an unreachable introspection endpoint (connection refused) refuses 503 temporarily_unavailable before the operation); mcp-payments' estate route answers 503 temporarily_unavailable over its HTTP transport when its estate gives no answer."
   },
   {
    "id": "core.introspection.opaque-rs-resolve-before-service",
