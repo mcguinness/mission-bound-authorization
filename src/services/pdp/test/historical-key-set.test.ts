@@ -72,7 +72,7 @@ describe("a historical key set's signer, from the consumer's configuration (@spe
 });
 
 describe("a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3)", () => {
-  it("never verifies a current response under a key the set lists, though a cached jwks_uri still carries it; an archived response under it verifies for audit", async () => {
+  it("never verifies a current response under a key the set lists, though a cached jwks_uri still carries it", async () => {
     const status = await key("as-status-2");
     const compromised = await key("as-status");
     // The AS has withdrawn as-status, but this consumer's cached jwks_uri, still fresh, carries it.
@@ -90,9 +90,14 @@ describe("a listed key and a current reliance decision (@spec status#signing-key
     // ...while a consumer holding no set would accept it from its cached jwks_uri: the set is what refuses it.
     const withoutSet = refreshingStatusKeys(JWKS, ["as-status", "as-status-2"], { algs: ["ES256"], fetch });
     await jwtVerify(await compromised.sign(), withoutSet.keys);
+  });
 
-    // Once the jwks_uri no longer carries it, the current keys never fall back to the set...
-    state.published = [status.jwk];
+  it("never falls back to the set for a current reliance decision once the jwks_uri no longer carries a listed key; only audit verification reads it", async () => {
+    const status = await key("as-status-2");
+    const compromised = await key("as-status");
+    const state = { published: [status.jwk], historical: await status.signSet([revoked(compromised.jwk)]) };
+    const { fetch } = issuer(state);
+    // The current keys never fall back to the set...
     const refreshed = refreshingStatusKeys(JWKS, ["as-status", "as-status-2"], {
       algs: ["ES256"],
       fetch,
