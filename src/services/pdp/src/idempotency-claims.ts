@@ -601,17 +601,19 @@ const MIGRATIONS = [
   ) STRICT;`,
   // @spec metering#settlement-contract "Conflicting redelivery" (#816, D877):
   // each settlement record that conflicts with the applied one, retained as
-  // evidence once per (evaluation, attempt, outcome). Never purged.
+  // evidence once per distinct record: per evaluation and per the members
+  // settlement reads (attempt, outcome and error). Never purged.
   `CREATE TABLE settlement_conflicts (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,
     evaluation_id TEXT NOT NULL,
     execution_id TEXT NOT NULL,
     outcome TEXT NOT NULL,
+    error TEXT NOT NULL,
     applied_execution_id TEXT NOT NULL,
     applied_outcome TEXT NOT NULL,
     record_json TEXT NOT NULL,
     received_at_ms INTEGER NOT NULL,
-    UNIQUE (evaluation_id, execution_id, outcome)
+    UNIQUE (evaluation_id, execution_id, outcome, error)
   ) STRICT;`,
 ];
 
@@ -1384,9 +1386,17 @@ export class IdempotencyClaimDomain {
       );
       if (!row) return { accepted: false, reason: "unknown_evaluation" };
       if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
-      const redeemer = await this.askRedeemer(evaluationId, row.pep_epoch, redeemingExecution);
-      if (redeemer === undefined) return { accepted: false, reason: "redeeming_attempt_unknown" };
-      if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
+      // @spec metering#settlement-contract "Conflicting redelivery" (#816,
+      // D877 review F1): once a settlement is applied, a non-completed record
+      // settles nothing whichever attempt wrote it, so it goes to the
+      // conflict check (retained and alarmed, or acknowledged as the applied
+      // record's redelivery) without the redemption owner's answer, which
+      // may be lost.
+      if (row.execution_id === null) {
+        const redeemer = await this.askRedeemer(evaluationId, row.pep_epoch, redeemingExecution);
+        if (redeemer === undefined) return { accepted: false, reason: "redeeming_attempt_unknown" };
+        if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
+      }
     }
     const outcomeRef = typeof content.evidence_id === "string" ? content.evidence_id : executionId;
     const settled = this.tx(() =>
@@ -1424,9 +1434,8 @@ export class IdempotencyClaimDomain {
   ): { accepted: true; duplicate: boolean } | { accepted: false; reason: string } {
     const rows = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
     if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
-    if (rows.some((r) => r.pep_id !== requester.pep_id || r.pep_epoch !== requester.pep_epoch)) {
-      return { accepted: false, reason: "not_the_permit_holder" };
-    }
+    const refused = this.correctionRefusal(rows, requester);
+    if (refused) return { accepted: false, reason: refused };
     const result = this.commitReleased(rows, evaluationId, cause, nowMs);
     // A redelivered correction is acknowledged; a reservation the claim's own
     // settlement committed is not re-acknowledged here, so a conflicting
@@ -1435,6 +1444,20 @@ export class IdempotencyClaimDomain {
       return { accepted: false, reason: "already_committed" };
     }
     return result;
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, owner review of #1713, D877
+   * review F5): the guards every budget commit from a PEP's record shares,
+   * the correction path's and a conflicting `completed` record's alike. Only
+   * the PEP and redemption-store epoch the reserving permit was issued to may
+   * commit its reservations, and nothing commits a reservation released
+   * because no permit ever left the PDP.
+   */
+  private correctionRefusal(rows: readonly ReservationRow[], requester: ClaimRequester): string | undefined {
+    if (rows.some((r) => r.pep_id !== requester.pep_id || r.pep_epoch !== requester.pep_epoch)) return "not_the_permit_holder";
+    if (rows.some((r) => r.state === "released" && NO_PERMIT_RELEASES.has(r.cause))) return "no_permit_issued";
+    return undefined;
   }
 
   /**
@@ -1512,10 +1535,14 @@ export class IdempotencyClaimDomain {
       // and the conflict alarmed; it is never acknowledged as a duplicate. A
       // conflicting `completed` proves the money moved, so the claim's
       // reservations commit (a released one included, with the overspend
-      // alert), through the same transition as a correction.
+      // alert), through the same transition and under the same guards as a
+      // correction; a refused commit is logged with its reason.
       this.retainConflict(row, executionId, outcome, record, nowMs);
       if (next === "completed") {
-        this.transitionReservations(evaluationId, ["reserved", "held", "released"], "committed", `conflict_completed:${outcomeRef}`, nowMs);
+        const reservations = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
+        const refused = this.correctionRefusal(reservations, requester);
+        if (refused) this.log(row, row.state, row.state, `conflict_commit_refused:${refused}`, nowMs);
+        else this.transitionReservations(evaluationId, ["reserved", "held", "released"], "committed", `conflict_completed:${outcomeRef}`, nowMs);
       }
       return { accepted: false, reason: CONFLICTING_SETTLEMENT };
     }
@@ -1535,20 +1562,31 @@ export class IdempotencyClaimDomain {
 
   /**
    * @spec metering#settlement-contract "Conflicting redelivery" (#816,
-   * D877): retain a conflicting settlement record, once per (evaluation,
-   * attempt, outcome), and queue {@link ClaimDomainOptions.onSettlementConflict}
-   * for after the enclosing transaction commits. A redelivery of a record
-   * already retained alarms nothing new.
+   * D877): retain a conflicting settlement record, once per distinct record
+   * (evaluation, attempt, outcome and error), and queue
+   * {@link ClaimDomainOptions.onSettlementConflict} for after the enclosing
+   * transaction commits. A redelivery of a record already retained alarms
+   * nothing new; two records of one attempt that differ in their error are
+   * each retained and alarmed.
    */
   private retainConflict(row: ClaimRow, executionId: string, outcome: string, record: unknown, nowMs: number): void {
+    const error = object(record) ? record.error : undefined;
     const inserted = this.db
       .prepare(
-        `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, applied_execution_id, applied_outcome,
-           record_json, received_at_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, error, applied_execution_id,
+           applied_outcome, record_json, received_at_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(row.evaluation_id, executionId, outcome, row.execution_id ?? "", row.outcome ?? "", JSON.stringify(record ?? null), nowMs)
-      .changes;
+      .run(
+        row.evaluation_id,
+        executionId,
+        outcome,
+        error === undefined ? "" : typeof error === "string" ? error : JSON.stringify(error),
+        row.execution_id ?? "",
+        row.outcome ?? "",
+        JSON.stringify(record ?? null),
+        nowMs,
+      ).changes;
     if (inserted !== 1) return;
     this.log(row, row.state, row.state, `conflict_retained:${outcome}`, nowMs);
     const hook = this.options.onSettlementConflict;
@@ -1707,9 +1745,20 @@ export class IdempotencyClaimDomain {
   }
 
   private sweepNow(nowMs: number): void {
+    // #816 (D877 review F6): a terminal row whose decision is tombstoned
+    // changes only when it is purged, so one that cannot be purged yet (its
+    // horizon is ahead, it has none, or it carries reservations and is never
+    // purged) is not loaded. Exactly the rows `advance` leaves unchanged are
+    // skipped; metered claims still stay in the table, and in the scan,
+    // indefinitely.
     const rows = this.db
-      .prepare("SELECT * FROM claims WHERE state != 'claimed' OR pdp_boot != ?")
-      .all(this.boot) as ClaimRow[];
+      .prepare(
+        `SELECT * FROM claims c WHERE (state != 'claimed' OR pdp_boot != ?)
+         AND NOT (state IN ('completed', 'failed', 'indeterminate') AND decision_json IS NULL
+           AND (retain_until_ms IS NULL OR retain_until_ms > ?
+             OR EXISTS (SELECT 1 FROM budget_reservations r WHERE r.evaluation_id = c.evaluation_id)))`,
+      )
+      .all(this.boot, nowMs) as ClaimRow[];
     for (const row of rows) this.advance(row, nowMs);
     // @spec metering#settlement-states (#816): this boot's claims that never
     // persisted a decision and that no evaluation still holds issued no

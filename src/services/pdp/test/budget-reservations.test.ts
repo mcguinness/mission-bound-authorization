@@ -1689,6 +1689,136 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
       expect(claimRowOf(file, a)).toMatchObject({ state: "completed", execution_id: executionId, outcome: "completed" });
     });
+
+    it("once a settlement is applied, a non-completed record goes to the conflict check whatever the redemption owner can answer: the applied attempt's suppressed record with no answer and a second attempt's failed record are each retained and alarmed, and neither moves a counter (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const completed = await executionRecord(a, "completed", executionId);
+      expect((await claims.settle(REQUESTER, completed)).accepted).toBe(true);
+      // The PEP lost its redemption record (a restart, a timeout, another epoch): no answer names the redeeming attempt.
+      const suppressed = await executionRecord(a, "suppressed", executionId);
+      expect(await claims.settle(REQUESTER, suppressed, () => undefined)).toEqual({ accepted: false, reason: "already_settled" });
+      // A second attempt's failed record, which the redemption owner says did not redeem.
+      const failed = await executionRecord(a, "failed");
+      expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.outcome, r.applied_execution_id])).toEqual([
+        [executionId, "suppressed", executionId],
+        [failed.execution_id, "failed", executionId],
+      ]);
+      expect(conflicts.map((r) => [r.execution_id, r.outcome])).toEqual([
+        [executionId, "suppressed"],
+        [failed.execution_id, "failed"],
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("a completed record from another attempt commits a reservation an applied failed record holds, and is retained and alarmed (@spec metering#settlement-contract, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const failed = await executionRecord(a, "failed");
+      expect(await claims.settle(REQUESTER, failed, () => String(failed.execution_id))).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => [r.state, r.cause])).toEqual([
+        ["committed", `conflict_completed:${String(completed.execution_id)}`],
+        ["committed", `conflict_completed:${String(completed.execution_id)}`],
+      ]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.applied_outcome])).toEqual([[completed.execution_id, "failed"]]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("an applied failed record holds the reservation, and the same attempt's later suppressed record is a conflict that leaves it held, retained and alarmed, while the failed record redelivered without a redemption answer is the duplicate (@spec metering#settlement-contract, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const failed = await executionRecord(a, "failed", executionId);
+      expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(await claims.settle(REQUESTER, failed, () => undefined)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      const suppressed = await executionRecord(a, "suppressed", executionId);
+      expect(await claims.settle(REQUESTER, suppressed, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.outcome, r.applied_outcome])).toEqual([[executionId, "suppressed", "failed"]]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("a conflicting completed record from another redemption-store epoch of the permit's PEP is retained and alarmed but commits nothing, as the correction path refuses it, and the same record from the permit's own epoch commits (@spec metering#settlement-states, metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const failed = await executionRecord(a, "failed");
+      expect((await claims.settle(REQUESTER, failed, () => String(failed.execution_id))).accepted).toBe(true);
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle({ ...REQUESTER, pep_epoch: "epoch-816-b" }, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a)).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+      // Control: from the epoch the permit was issued to, the record commits (already retained, so not alarmed again).
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("a conflicting completed record never commits a reservation released because no permit left the PDP, a state written into the file here since no path produces it on a settled claim (@spec metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      let claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const suppressed = await executionRecord(a, "suppressed");
+      expect((await claims.settle(REQUESTER, suppressed, () => String(suppressed.execution_id))).accepted).toBe(true);
+      claims.close();
+      const db = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
+      db.prepare("UPDATE budget_reservations SET cause = 'not_persisted' WHERE evaluation_id = ?").run(a);
+      db.close();
+      claims = open();
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a)).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("two conflicting records of one attempt that differ only in their error are each retained and alarmed once, and a redelivery of either retains nothing new (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed", executionId))).accepted).toBe(true);
+      const killSwitch = await executionRecord(a, "suppressed", executionId, { error: "kill_switch" });
+      const drift = await executionRecord(a, "suppressed", executionId, { error: "target_drift" });
+      for (const record of [killSwitch, drift, killSwitch, drift]) {
+        expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a).map((r) => (r.record as { error?: string }).error)).toEqual(["kill_switch", "target_drift"]);
+      expect(conflicts).toHaveLength(2);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
   });
 
   describe("a metered claim is retained while its Mission can present it (@spec metering#retry)", () => {
@@ -2049,6 +2179,21 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       expectDenied(await evaluate(request(c, { missionId: "msn_b", amount: "100.00" }), options(claims, c, view("msn_b", lowerCase))), "constraint_unsupported");
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    });
+
+    it("a well-formed binding whose currency, or whose instance max_budget currency, is not the budget's declared currency is denied constraint_unsupported and reserves nothing (@spec metering#bounds, metering#metering, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      // Each binding passes the currency-code shape check, so only the comparison with the declared currency refuses it.
+      const bindingInEuros = binding("msn_b", { currency: "EUR" });
+      expectDenied(await evaluate(request(c, { missionId: "msn_b", amount: "100.00" }), options(claims, c, view("msn_b", bindingInEuros))), "constraint_unsupported");
+      const instanceInEuros = binding("msn_c", { instance: { max_budget: { amount: "1000.00", currency: "EUR" }, root_mission_id: "msn_c" } });
+      expectDenied(await evaluate(request(c, { missionId: "msn_c", amount: "100.00" }), options(claims, c, view("msn_c", instanceInEuros))), "constraint_unsupported");
+      // Control: the same binding in the declared currency is charged.
+      expectPermit(await evaluate(request(c, { missionId: "msn_d", amount: "100.00" }), options(claims, c, view("msn_d", binding("msn_d")))));
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
     });
   });
 });
