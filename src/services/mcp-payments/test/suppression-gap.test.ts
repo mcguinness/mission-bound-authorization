@@ -303,14 +303,27 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
     }
   });
 
-  it("write reverification: an unkeyed hold and a keyed schedule whose invoice moved after the permit keep their reverification refusals with gap emission_failed and one alert each; nothing is held or scheduled; written, neither carries a gap", async () => {
+  it("write reverification: an unkeyed hold and a keyed schedule refused at admission, at parameter reverification after the invoice moved, or at release keep their refusals with gap emission_failed and one alert each; nothing is held or scheduled; written, none carries a gap", async () => {
     const h = harness();
     try {
       const drift = () => h.payments.bumpInvoiceAmount("inv-1", "150.00");
       const restore = () => h.payments.bumpInvoiceAmount("inv-1", "125.00");
+      const expireDuringReads = () => h.advance(PAST_PERMIT_MS);
+      const expiredAtDecision = async <T>(act: () => Promise<T>): Promise<T> => {
+        h.afterDecide(() => h.advance(PAST_PERMIT_MS));
+        try {
+          return await act();
+        } finally {
+          h.afterDecide(undefined);
+        }
+      };
       const cases: Array<[string, () => Promise<unknown>, string]> = [
-        ["unkeyed hold", () => hold(h, drift), "target_drift"],
-        ["keyed schedule", () => schedule(h, key(), TOKEN, drift), "parameter_mismatch"],
+        ["unkeyed hold, admission", () => expiredAtDecision(() => hold(h)), "permit_expired"],
+        ["unkeyed hold, parameters", () => hold(h, drift), "target_drift"],
+        ["unkeyed hold, release", () => hold(h, expireDuringReads), "permit_expired"],
+        ["keyed schedule, admission", () => expiredAtDecision(() => schedule(h, key())), "permit_expired"],
+        ["keyed schedule, parameters", () => schedule(h, key(), TOKEN, drift), "parameter_mismatch"],
+        ["keyed schedule, release", () => schedule(h, key(), TOKEN, expireDuringReads), "permit_expired"],
       ];
       let alerts = 0;
       for (const [label, act, reason] of cases) {
@@ -405,7 +418,7 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
     }
   });
 
-  it("retained release: a conflict and a reserved record keep their refusals with gap emission_failed and one alert each; a completed record is not disclosed without the retrieval's own record, and a later retrieval under its own permit discloses it; nothing executes again", async () => {
+  it("retained release: a retrieval refused at its permit's use, at release, as a conflict or over a reserved record keeps its refusal with gap emission_failed and one alert each; a completed record is not disclosed without the retrieval's own record, and a later retrieval under its own permit discloses it; nothing executes again", async () => {
     const h = harness();
     try {
       // A completed record under k: its retrieval is withheld while the
@@ -419,6 +432,35 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
       expect(await schedule(h, k)).toEqual({ ok: true, deduped: true, result: first.result });
       expect(h.alerts.alerts).toHaveLength(1);
 
+      // A retrieval whose permit expired before it was used.
+      h.afterDecide(() => h.advance(PAST_PERMIT_MS));
+      const expired = await withFailedSuppression(h, () => schedule(h, k));
+      expect(expired).toEqual({ ok: false, refusal_reason: "permit_expired", gap: "emission_failed" });
+      expectOneAlert(h, 2);
+      expect(await schedule(h, k)).toEqual({ ok: false, refusal_reason: "permit_expired" });
+      h.afterDecide(undefined);
+      expect(h.alerts.alerts).toHaveLength(2);
+
+      // A retrieval whose permit expires while its disposition is written:
+      // the release-time comparison refuses it and discloses nothing.
+      const original = h.evidence.recordExecution.bind(h.evidence);
+      const slowWrite = (fail: boolean) =>
+        vi.spyOn(h.evidence, "recordExecution").mockImplementation(async (emitterId, role, input) => {
+          h.advance(PAST_PERMIT_MS);
+          if (fail) throw new Error("evidence store unavailable");
+          return original(emitterId, role, input);
+        });
+      const failingSlow = slowWrite(true);
+      const atRelease = await schedule(h, k);
+      failingSlow.mockRestore();
+      expect(atRelease).toEqual({ ok: false, refusal_reason: "permit_expired", gap: "emission_failed" });
+      expectOneAlert(h, 3);
+      const writtenSlow = slowWrite(false);
+      expect(await schedule(h, k)).toEqual({ ok: false, refusal_reason: "permit_expired" });
+      writtenSlow.mockRestore();
+      expect(h.alerts.alerts).toHaveLength(3);
+      expect(h.executions().at(-1)).toMatchObject({ outcome: "suppressed", error: "operation_already_claimed" });
+
       // The same key over a changed invoice: a different operation identity.
       h.payments.bumpInvoiceAmount("inv-1", "130.00");
       const conflict = await withFailedSuppression(h, () => schedule(h, k));
@@ -428,7 +470,7 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
         next_action: "none",
         gap: "emission_failed",
       });
-      expectOneAlert(h, 2);
+      expectOneAlert(h, 4);
       expect(await schedule(h, k)).toEqual({ ok: false, refusal_reason: "operation_identity_conflict", next_action: "none" });
       h.payments.bumpInvoiceAmount("inv-1", "125.00");
 
@@ -439,9 +481,9 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
       const again = () => h.server.callWriteTool("schedule_payment", { invoice_id: "inv-2", idempotency_key: r }, TOKEN);
       const reserved = await withFailedSuppression(h, again);
       expect(reserved).toEqual({ ok: false, refusal_reason: "duplicate_suppressed", next_action: "retry", gap: "emission_failed" });
-      expectOneAlert(h, 3);
+      expectOneAlert(h, 5);
       expect(await again()).toEqual({ ok: false, refusal_reason: "duplicate_suppressed", next_action: "retry" });
-      expect(h.alerts.alerts).toHaveLength(3);
+      expect(h.alerts.alerts).toHaveLength(5);
 
       // Nothing executed again: one schedule per invoice, one reservation per key.
       expect(h.store.schedules().map((s) => s.invoice_id).sort()).toEqual(["inv-1", "inv-2"]);
