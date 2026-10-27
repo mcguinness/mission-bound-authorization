@@ -253,9 +253,31 @@ describe("step-up on a presented auth token (V5; @spec aauth#section-6.5)", () =
     });
     nothingRan();
   });
+
+  it("asks only for scope values it defines (@spec aauth#section-11.10)", async () => {
+    w = await world();
+    const at = await w.ps.authToken(w.agent, { scope: "documents.read profile" });
+    const res = await w.agent.send(DOCS, { method: "POST", body: { title: "plan" }, token: at });
+    const rt = await verifiedResourceToken(w, requirementOf(res)?.resourceToken as string);
+    expect(rt.payload.scope).toBe("documents.read documents.write");
+    nothingRan();
+  });
 });
 
 describe("request binding (@spec aauth#section-11.3.4)", () => {
+  it("refuses a body over its size limit before reading further", async () => {
+    w = await world();
+    const res = await w.net.request({
+      method: "POST",
+      url: DOCS,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "x".repeat(64 * 1024) }),
+    });
+    expect(res.status).toBe(413);
+    expect(w.resource.issuedResourceTokens).toEqual([]);
+    nothingRan();
+  });
+
   it("requires Content-Digest and Content-Type on a request with a body", async () => {
     w = await world();
     const at = await w.ps.authToken(w.agent);
@@ -354,6 +376,22 @@ describe("request binding (@spec aauth#section-11.3.4)", () => {
 describe("authorization endpoint (@spec aauth#section-6.6)", () => {
   const AUTHORIZE = `${RESOURCE}/authorize`;
 
+  it("refuses parameters not sent as application/json with invalid_request", async () => {
+    w = await world();
+    const pt = await w.ps.personToken(w.agent);
+    const message = signedMessage(w, {
+      method: "POST",
+      path: "/authorize",
+      token: pt,
+      body: JSON.stringify({ scope: "documents.read" }),
+      contentType: "text/plain",
+    });
+    const res = await sendMessage(w, message);
+    expect(res.status).toBe(400);
+    expect(res.json()).toMatchObject({ error: "invalid_request" });
+    expect(w.resource.issuedResourceTokens).toEqual([]);
+  });
+
   it("answers a person token and a defined scope with a resource token", async () => {
     w = await world();
     const pt = await w.ps.personToken(w.agent, { mission_s256: M });
@@ -449,6 +487,15 @@ describe("configuration", () => {
       { operations: [{ method: "POST", path: "/authorize", scope: "a.read" }] },
     ],
     ["a symmetric key algorithm", { signing_key: { kid: "k", alg: "HS256" } }],
+    [
+      "an operation named twice",
+      {
+        operations: [
+          { method: "GET", path: "/a", scope: "a.read" },
+          { method: "GET", path: "/a", scope: "a.read" },
+        ],
+      },
+    ],
   ])("refuses %s", (_what, change) => {
     expect(() => parseResourceConfig({ ...valid(), ...change })).toThrow(/aauth-resource config/);
   });

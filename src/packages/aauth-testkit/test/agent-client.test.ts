@@ -291,6 +291,33 @@ describe("PS metadata and mission approval (@spec aauth#section-11.2, aauth#sect
     expect(w.agent.sent).toEqual([]);
   });
 
+  it("refuses PS metadata without its token endpoints", async () => {
+    w = await world();
+    delete w.ps.metadata.auth_token_endpoint;
+    const err = await refusal(w.agent.requestPersonToken(RESOURCE));
+    expect(err.detail).toBe("PS metadata lacks a token endpoint");
+    expect(w.agent.sent).toEqual([]);
+  });
+
+  it("refuses resource metadata that names another issuer, or no authorization endpoint (@spec aauth#section-6.6)", async () => {
+    w = await world();
+    w.resource.metadata.issuer = "https://other.test";
+    const mismatch = await refusal(w.agent.authorize(RESOURCE, "documents.read"));
+    expect(mismatch.detail).toBe("resource metadata failed the issuer check");
+    w.resource.metadata.issuer = RESOURCE;
+    const missing = await refusal(w.agent.authorize(RESOURCE, "documents.read"));
+    expect(missing.detail).toBe("resource has no authorization_endpoint");
+    expect(w.agent.sent).toEqual([]);
+  });
+
+  it("refuses an approval without s256 or mission", async () => {
+    w = await world();
+    w.ps.routes["POST /mission"] = () => ({ status: 200, body: { s256: M } });
+    const err = await refusal(w.agent.proposeMission({ description: "# Q" }));
+    expect(err.code).toBe("mission_invalid");
+    expect(w.agent.mission).toBeUndefined();
+  });
+
   it("verifies s256 over the exact decoded bytes, and keeps those bytes", async () => {
     w = await world();
     // Unusual whitespace and member order: a reserialization would change the bytes.

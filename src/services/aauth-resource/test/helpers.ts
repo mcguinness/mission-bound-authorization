@@ -238,13 +238,16 @@ export function signedMessage(
     path: string;
     token?: string;
     body?: string;
+    contentType?: string;
     components?: readonly string[];
   },
 ): HttpRequestMessage & { headers: Record<string, string> } {
   const method = options.method ?? "GET";
   const url = `${RESOURCE}${options.path}`;
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers["content-type"] = "application/json";
+  if (options.body !== undefined) {
+    headers["content-type"] = options.contentType ?? "application/json";
+  }
   const added = signRequest(
     { method, url, headers, body: options.body },
     {
