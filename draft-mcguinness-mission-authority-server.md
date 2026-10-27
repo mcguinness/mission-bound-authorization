@@ -798,9 +798,10 @@ for its endpoints ({{I-D.draft-mcguinness-oauth-mission-status}},
 Section "Authentication Failures"). A 401 `unauthorized` response
 carries the `WWW-Authenticate` challenges that Mission Status defines
 for its endpoints, naming the Protected Resource Metadata of the
-endpoint called. A failed mTLS or private-key-JWT client
-authentication receives 400 `invalid_client`, not a token challenge,
-and an authenticated caller to whom a submission or Mission is not
+endpoint called. A failed client authentication receives the
+response Mission Status assigns to it, the method's own error response
+or by default 400 `invalid_client`, not a token challenge, and an
+authenticated caller to whom a submission or Mission is not
 visible still receives `not_found`.
 
 | `error` | HTTP | Returned by | Description |
@@ -809,7 +810,7 @@ visible still receives `not_found`.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unsupported_media_type` | 415 | submission | The request media type is neither of the two the endpoint dispatches on ({{mission-submission}}). |
-| `invalid_client` | 400 | submission, join assertion | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
+| `invalid_client` | 400 | submission, join assertion | Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
 | `unauthorized` | 401 | submission, join assertion | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges Mission Status defines. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
 | `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrollee holding the PDP role, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
