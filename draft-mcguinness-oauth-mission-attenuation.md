@@ -32,6 +32,14 @@ normative:
   RFC8693:
   RFC9396:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+    title: "Attenuating Authorization Tokens for Agentic Delegation Chains"
+    author:
+      -
+        ins: N. A. Niyikiza
+        name: Niki Aimable Niyikiza
+    date: 2026-10-26
+    seriesinfo:
+      Internet-Draft: draft-niyikiza-oauth-attenuating-agent-tokens-02
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html
@@ -252,7 +260,8 @@ are distinct.
 A Mission-bound attenuation root is a Mission-bound token
 ({{I-D.draft-mcguinness-oauth-mission}}) whose carried authority is an
 `attenuating_agent_token` authorization detail
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{RFC9396}}).
+({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+{{RFC9396}}).
 The Mission Issuer derives that authority from the Mission's Authority
 Set by the mapping of {{root-mapping}}. The root carries the `mission`
 claim ({{I-D.draft-mcguinness-oauth-mission}}) and the holder's
@@ -372,7 +381,9 @@ at most the mapped Authority Set, never broader.
 # Offline Attenuation {#attenuation}
 
 The holder of a Mission-bound attenuation token mints a narrower child
-offline, by the attenuation substrate's derivation. The holder:
+offline, by the attenuation substrate's derivation
+({{Section 6.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The holder:
 
 - selects a narrower tool and constraint set;
 - increments `del_depth`;
@@ -383,9 +394,9 @@ No Mission Issuer contact occurs.
 
 `par_hash` commits to the exact parent token bytes, per the attenuation
 substrate's cryptographic linkage rule
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}): its value is
-the base64url encoding, without padding, of the SHA-256 digest of the
-parent token's JWS Signing Input.
+({{Section 4.6 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+its value is the base64url encoding, without padding, of the SHA-256
+digest of the parent token's JWS Signing Input.
 
 The child's `aud` MUST equal its parent's `aud` or be a subset of it.
 For this comparison the `aud` is treated as a set of audience values: a
@@ -395,8 +406,11 @@ byte-exact strings, with no URI normalization; a single-string `aud`
 and a one-element array carrying the same value are therefore
 equivalent.
 
-The child's `exp` MUST NOT exceed its parent's `exp`. Because the
-Mission Issuer caps the root's `exp` at the Mission's `expires_at`
+The child's `exp` MUST NOT exceed its parent's `exp`, the substrate's
+TTL monotonicity
+({{Section 4.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+Because the Mission Issuer caps the root's `exp` at the Mission's
+`expires_at`
 ({{I-D.draft-mcguinness-oauth-mission}}), the per-hop `exp` rule bounds
 the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.
@@ -404,7 +418,9 @@ none outlives the Mission.
 The `mission` claim rides the chain unchanged: every token in the chain
 carries the same `id`, `issuer`, and `authority_hash` as the root. The
 child's narrowing is governed entirely by the attenuation substrate's
-capability monotonicity, which is the subset relation a consumer checks;
+capability monotonicity
+({{Section 4.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+which is the subset relation a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
 without holding the Mission's full Authority Set.
@@ -420,8 +436,10 @@ from the narrowed leaf, exactly as for any narrowed Mission-bound token
 # Verifying the Mission Binding {#mission-binding-check}
 
 A consumer verifies the chain linkage, capability monotonicity, depth,
-and proof-of-possession under the attenuation substrate
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}). This profile
+and proof-of-possession under the attenuation substrate's chain
+verification algorithm
+({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+This profile
 adds checks on the `mission` claim, which the substrate does not define
 because it has no concept of the Mission binding. In addition to the
 substrate's chain verification, a consumer MUST:
@@ -491,7 +509,9 @@ actions whose consequences warrant it.
 
 # The Kill Switch Requires Runtime Enforcement {#kill-switch}
 
-The attenuation substrate defines no revocation: a child, once minted,
+The attenuation substrate defines no revocation
+({{Section 9.8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+a child, once minted,
 is valid by its signature chain until its `exp`, and no issuer can reach
 it. The Mission kill switch is therefore not automatic for offline
 children; it is delivered only by the runtime enforcement layer.
@@ -756,12 +776,14 @@ An Attenuating Holder conforming to this profile:
 - MUST keep each child's `aud` within its parent's and its `exp`
   within its parent's; and
 - MUST increment the depth member the attenuation substrate defines
-  (`del_depth`, {{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+  (`del_depth`,
+  {{Section 4.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 
 A consumer conforming to this profile:
 
 - MUST verify the attenuation chain and proof-of-possession per the
-  attenuation substrate;
+  attenuation substrate
+  ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
 - MUST verify that the `mission` claim is unchanged across the chain
   and that each child's `aud` and `exp` are within its parent's
   ({{mission-binding-check}}); and
@@ -891,6 +913,9 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Profiles revision -02 of Attenuating Agent Tokens and cites it by
+  section.
 
 - Mission-Binding Profile states the root, chain, authority bound,
   state check, and consumer checks under which every token in a chain
