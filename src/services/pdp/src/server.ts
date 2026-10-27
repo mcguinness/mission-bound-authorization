@@ -424,6 +424,12 @@ export async function createPdpHttpServer(config: PdpRemoteServerConfig): Promis
     const opts = { ...(await config.getOptions(evalRequest)) } as EvaluateOptions;
     delete opts.evidence;
     delete opts.claims;
+    // @spec metering#topology (#816, decision f): this server takes no budget
+    // store, and marks every decision it serves as remote, so a budget-bound
+    // Mission is denied `constraint_unsupported` whichever decision function
+    // serves it.
+    delete opts.budgets;
+    opts.decisionChannel = "remote";
     delete (opts as Partial<EvaluateOptions>).resourcePolicy;
     delete opts.requester;
     delete opts.consumptionStatus;

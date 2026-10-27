@@ -17,6 +17,7 @@ import type { DelegateCandidate } from "./delegate-matcher.js";
 import { type OriginProjection, projectThroughEffective } from "./derive.js";
 import { combineOrigins, type DelegationCandidate, retainedOrigins } from "./eligibility-provenance.js";
 import type { MissionKernel } from "./kernel.js";
+import { assertNotStandingPaymentLineage } from "./standing-payment.js";
 import type { AuthorityEntry, MissionRecord } from "./types.js";
 
 export const ID_JAG_TYP = "oauth-id-jag+jwt";
@@ -287,6 +288,11 @@ export async function issueCrossDomainGrant(
   // durable reservation, released on acceptance below, with ONE in-flight owner
   // per operation identity: signing is asynchronous, so two callers presenting
   // one identity would otherwise mint two grants against one counted derivation.
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
+  // Mission in a standing-payment lineage is not continued across a domain
+  // until that budget accounting extends there. Refused before any count.
+  const mission = kernel.get(input.missionId);
+  if (mission) assertNotStandingPaymentLineage(kernel, mission, "a cross-domain grant");
   const jti = `jag_${randomBytes(12).toString("base64url")}`;
   const operationId = input.operationId ?? jti;
   return kernel.exclusiveDerivation(input.missionId, operationId, () =>

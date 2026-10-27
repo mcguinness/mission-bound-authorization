@@ -31,6 +31,7 @@ import {
   type ResourceContractDeclaration,
   ResourceContractDeclarations,
 } from "@mission/core";
+import { type BudgetMeteringDeclaration, budgetMeteringFindings } from "./budget-metering.js";
 import type { EnforcementBoundaries } from "./enforcement-boundary.js";
 
 /**
@@ -92,7 +93,14 @@ export type EnforcementExtensionName =
   | "evidence"
   | "high_assurance_agent"
   | "outcome_reconciliation"
-  | "evaluation_context_binding";
+  | "evaluation_context_binding"
+  /**
+   * @spec metering#topology, metering#aggregate-bounds (#816): the PDP's
+   * exact `max_budget` metering ({@link BudgetMeteringDeclaration}). Claimed,
+   * the co-resident PDP meters the declared actions; without the claim it
+   * meters nothing, and a budget-bound Mission is refused.
+   */
+  | "budget_metering";
 
 /**
  * @spec runtime#execution-reverification — one `transaction_assurance`
@@ -332,6 +340,15 @@ export interface EnforcementExtensionDeclarations {
    * representation, not a Runtime wire member.
    */
   authority_dependencies?: ReadonlyArray<AuthorityDependencyDeclaration>;
+  /**
+   * @spec metering#topology, metering#retry, metering#aggregate-bounds
+   * (#816): the budgets this PDP meters exactly, in the claim domain's own
+   * transaction, each with its owner, the disclosure copy of its approved
+   * limit, and every committed Dispatch Policy (`id`, `version`, `digest`)
+   * that commits it ({@link budgetMeteringFindings}). A reference-statement representation,
+   * not a Runtime wire member.
+   */
+  budget_metering?: BudgetMeteringDeclaration;
 }
 
 /**
@@ -666,6 +683,9 @@ export function validateEnforcementScopeStatement(
   }
 
   findings.push(...reversibleWriteFindings(stmt, scopeOk && object(scope) ? scope : undefined));
+  // @spec metering#topology (#816): like `outcome_reconciliation`, the
+  // budget-metering declaration is shape-checked wherever it appears.
+  findings.push(...budgetMeteringFindings(stmt));
 
   return findings;
 }

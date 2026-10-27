@@ -58,6 +58,7 @@ import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { assertSuccessorMaxBudget } from "./standing-payment.js";
 import {
   type ApprovalBasis,
   type AuthorityEntry,
@@ -1519,6 +1520,10 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   if (!predecessor.authority_ceiling || !predecessor.ceiling_hash || !predecessor.ceiling_consented_at) {
     throw new Error("a ceiling drawdown requires a predecessor that carries a consented ceiling");
   }
+  // @spec metering#bounds (#813, ruling 2): a drawdown successor of a
+  // standing-payment lineage keeps the instance's max_budget, as an
+  // expansion successor does.
+  assertSuccessorMaxBudget(kernel, predecessor, input.intent);
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
   // The successor's Authority Set is derived exactly as an ordinary
   // expansion's, carrying the predecessor's recorded capability bindings.

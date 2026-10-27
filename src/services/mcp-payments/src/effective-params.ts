@@ -164,8 +164,20 @@ export function listMembers(
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
-export function parameterDigest(params: EffectiveParams | ListEffectiveParams): string {
+/**
+ * @spec authzen#parameter-digest `parameters` (#813): the normalized parameter
+ * object, exactly what {@link parameterDigest} is computed over: the effective
+ * parameters without the local invocation guard. A decision request that
+ * carries it lets the PDP recompute the digest and read a raw value.
+ */
+export function normalizedParameters<T extends EffectiveParams | ListEffectiveParams>(
+  params: T,
+): Omit<T, "capability_snapshot"> {
   const { capability_snapshot: _localInvocationGuard, ...parameters } = params;
-  const canonical = canonicalize(parameters as unknown as JsonValue);
+  return parameters;
+}
+
+export function parameterDigest(params: EffectiveParams | ListEffectiveParams): string {
+  const canonical = canonicalize(normalizedParameters(params) as unknown as JsonValue);
   return `sha-256:${createHash("sha256").update(canonical, "utf8").digest("base64url")}`;
 }

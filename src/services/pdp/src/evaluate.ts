@@ -69,6 +69,7 @@ import type {
   AuthorityBound,
   DecisionEvidenceEmitter,
   DecisionEvidenceObject,
+  DecisionMeteringEntry,
   RuntimeActionClass,
   RuntimeConditions,
   RuntimePrincipalMapping,
@@ -78,6 +79,8 @@ import type {
 import { runtimeCapabilitySourceOf, evaluationRequestDigest, isEvaluationIdentifier } from "./decision-evidence.js";
 import type { Fga } from "./fga.js";
 import {
+  type BudgetChargeRequest,
+  type BudgetMetering,
   type ClaimInput,
   type ClaimRequester,
   type ClaimTicket,
@@ -100,6 +103,7 @@ import {
   vendorConstraintSatisfied,
   viewHoldsCommittedSet,
 } from "./policy-view.js";
+import { COVERED_PHASES, committedDestinationHolds, isMissionBudgetBinding } from "./budget-metering.js";
 import { type DurationLeaseDomain, durationLeaseStep, renewalClaimIdentity } from "./duration-lease.js";
 import { permitDeadline } from "./permit-deadline.js";
 import {
@@ -132,6 +136,17 @@ export type { EntitlementObservation, EntitlementResolver, OriginPrincipal, Prin
  * `context.mission_state_observation` is not by itself a fail-closed signal there.
  */
 const HIGH_CONSEQUENCE_ACTION_CLASSES = new Set(["irreversible_action", "external_commitment", "privileged_administration"]);
+
+/**
+ * @spec metering#metering (#816, decision h): the only classes in which an
+ * amount-bearing action spends nothing under a budget-bound Mission: reads
+ * and the non-consequential postures. Fail closed: an amount-bearing action
+ * the statement does not meter, in any other class (`external_commitment`,
+ * `privileged_administration`, `consequential_write`, `irreversible_action`,
+ * a class this PDP does not recognize) or with no class at all, is refused
+ * `constraint_unsupported`.
+ */
+const BUDGET_EXEMPT_CLASSES = new Set(["consequential_read", "non_consequential", "audit_only"]);
 
 /**
  * @spec runtime#state-freshness: the default allowed future skew for
@@ -286,6 +301,16 @@ export interface EvaluationRequest {
        * reads it; an absent identity satisfies no such bound.
        */
       tool?: string;
+      /**
+       * @spec authzen#parameter-digest `parameters`, authzen#pdp-consistency-checks
+       * check 8 (#813): CONDITIONAL, the operation-profile-normalized parameter
+       * object, the same bytes `context.parameter_digest` is computed over.
+       * Read where the PDP needs a raw parameter value: a budget-bound
+       * Mission's metered action, whose payee is compared with the committed
+       * destination (step 8c) after the PDP recomputes the digest over it.
+       * Typed `unknown` deliberately: only `committedDestinationHolds` reads it.
+       */
+      parameters?: unknown;
     };
   };
   context: {
@@ -537,7 +562,24 @@ export type DenialReason =
    * action under another, even when both references resolve: the PDP MUST
    * deny that re-evaluation with ARAP's `out_of_scope`".
    */
-  | "out_of_scope";
+  | "out_of_scope"
+  /**
+   * @spec authzen#runtime-denial-classification `quota_exceeded`,
+   * metering#authzen-binding, metering#aggregate-bounds (#816): metering the
+   * request's amount would exceed a counter, the instance's `max_budget` or
+   * the standing approval's shared budget. An evaluated denial whose
+   * Decision Evidence `metering` entry names the counter.
+   */
+  | "quota_exceeded"
+  /**
+   * @spec authzen#failure-condition-coverage "Unrecognized or unmetered
+   * constraint", metering#metering (#816, decision b): the Mission carries a
+   * budget binding this PDP cannot meter (no budget store, a budget its
+   * statement does not declare as bound, another currency, or a limit or
+   * Dispatch Policy reference that differs from the declaration), so it refuses rather
+   * than pass the bound through unmetered.
+   */
+  | "constraint_unsupported";
 
 export interface Decision {
   decision: boolean;
@@ -835,6 +877,24 @@ export interface EvaluateOptions {
    */
   claims?: IdempotencyClaimDomain;
   /**
+   * @spec metering#metering, metering#topology (#816, decisions b and f):
+   * this PDP's budget store, the `budget_metering` handle of the claim
+   * domain above (`claims.budgetMetering()`), bound only by the co-resident
+   * decision point (`createDecisionPoint`). A Mission whose view carries a
+   * budget binding is metered through it; absent, or bound to another
+   * domain than `claims`, every decision on such a Mission that would
+   * otherwise permit is denied `constraint_unsupported`.
+   */
+  budgets?: BudgetMetering;
+  /**
+   * @spec metering#topology (#816, decision f): set to `remote` by the
+   * remote PDP server on every decision it serves. Budget metering is scoped
+   * to the co-resident PDP, so a remote decision on a budget-bound Mission is
+   * denied `constraint_unsupported`, whatever decision function serves it.
+   * A caller that sets it can only refuse its own metered decisions.
+   */
+  decisionChannel?: "remote";
+  /**
    * @spec runtime#permit-binding (#918, #1028 review P2): where the
    * deployment's Enforcement Scope Statement declares that a request's
    * operation, a reversible consequential write, elects the "short validity
@@ -939,6 +999,9 @@ export type DecisionOptions = Omit<
   EvaluateOptions,
   | "evidence"
   | "claims"
+  // @spec metering#metering (#816): so is the budget store, for the reason
+  // the claim domain is.
+  | "budgets"
   // @spec authzen#context-work-item (#815): so are the classes the statement
   // claims work-item attribution for, for the reason the phased actions are.
   | "workItemAttributedClasses"
@@ -965,6 +1028,12 @@ interface ClaimContext {
    * `completed` when it is persisted; no Execution Evidence is expected.
    */
   settled?: typeof LEASE_EXTENSION_OUTCOME;
+  /**
+   * @spec metering#metering-evidence (#816): the counters this evaluation
+   * metered, set by the claim step on a reservation or a `quota_exceeded`
+   * refusal, read only by the Decision Evidence emitter.
+   */
+  metering?: DecisionMeteringEntry[];
 }
 
 /**
@@ -1169,7 +1238,17 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
       if (claim.retransmitted) return decision;
       try {
         if (opts.evidence) {
-          decision.context.decision_evidence = await emitDecisionEvidence(req, opts, opts.evidence, decision, contributions, requestDigest, join, bound);
+          decision.context.decision_evidence = await emitDecisionEvidence(
+            req,
+            opts,
+            opts.evidence,
+            decision,
+            contributions,
+            requestDigest,
+            join,
+            bound,
+            claim.metering,
+          );
         }
         // The single writer persists the whole decision before it returns,
         // so a crash after this point yields at most this same permit again.
@@ -1207,6 +1286,7 @@ async function emitDecisionEvidence(
   requestDigest: string,
   join: Readonly<JoinTrace>,
   bound: Readonly<BoundTrace>,
+  metering?: readonly DecisionMeteringEntry[],
 ): Promise<DecisionEvidenceObject> {
   const { view } = opts;
   // @spec cross-domain#origin-principal-mapping, runtime-evidence#principal_mapping,
@@ -1306,6 +1386,9 @@ async function emitDecisionEvidence(
     ...(decision.context.denial_reason !== undefined
       ? { denial_reason: decision.context.denial_reason as string }
       : {}),
+    // @spec metering#metering-evidence (#816): "a Decision Evidence record
+    // emitted for a metered evaluation, permit or refusal, MUST carry it".
+    ...(metering !== undefined ? { metering } : {}),
     ...(decision.context.entry_digest !== undefined
       ? { entry_digest: decision.context.entry_digest as string }
       : {}),
@@ -2631,6 +2714,86 @@ async function evaluateInner(
     return deny("parameter_violation");
   }
 
+  // 8c. Budget metering (@spec metering#metering, metering#topology,
+  // metering#aggregate-bounds, #816, D830). A Mission whose view carries a
+  // budget binding is metered only by the co-resident PDP that holds the
+  // claim domain the reservation shares a transaction with (decision f): at
+  // any other PDP (no budget store, a store over another domain, a remote
+  // channel) every decision that would otherwise permit is denied
+  // `constraint_unsupported`, since this PDP cannot tell which of its actions
+  // consume the budget. Where it can meter, an action the statement meters
+  // is charged the request's amount, the same `context.amount` the
+  // `max_amount` step reads, against both counters inside the claim (step
+  // 9). The declared action's preflight and prepare phases
+  // ({@link COVERED_PHASES}) are covered by that charge and charge nothing;
+  // any other action or phase carrying an amount (the declared action's
+  // `compensate` included), unless its class is exempt
+  // ({@link BUDGET_EXEMPT_CLASSES}: reads and the non-consequential
+  // postures), is a spend this PDP does not meter, refused
+  // `constraint_unsupported` rather than passed through unmetered (decision
+  // h). An unclassified action is not exempt. A view without a binding is
+  // unmetered and reaches none of this.
+  //
+  // A binding this PDP cannot read, the decision point's `UNDERIVABLE_BUDGET`
+  // marker included (#813: the kernel records the Mission as a standing
+  // payment but its binding cannot be derived), denies every decision that
+  // would otherwise permit `constraint_unsupported`, as a budget it cannot
+  // meter does: never evaluated as unmetered.
+  //
+  // @spec mission-template#standing-payment-exception (#813, D830 ruling 4):
+  // every crossing of the declared metered action, its covered phases
+  // included, is also held to the committed destinations: the payee the PEP
+  // established (inside the digest-verified `action.properties.parameters`)
+  // must be the destination the approved policy commits for the request's
+  // vendor, else `parameter_violation`, before anything is reserved.
+  let budgetCharge: BudgetChargeRequest | undefined;
+  if (view.budget !== undefined) {
+    const budgets = opts.decisionChannel === "remote" ? undefined : opts.budgets;
+    if (budgets === undefined || opts.claims === undefined || budgets.domain !== opts.claims) {
+      return deny("constraint_unsupported");
+    }
+    const binding = view.budget;
+    if (!isMissionBudgetBinding(binding)) return deny("constraint_unsupported");
+    const phase = isActionPhase(req.context.action_phase) ? req.context.action_phase : undefined;
+    const metered = budgets.meters(req.action.name, phase);
+    const covered =
+      !metered && budgets.declaresAction(req.action.name) && phase !== undefined && COVERED_PHASES.has(phase);
+    if (
+      (metered || covered) &&
+      !committedDestinationHolds({
+        parameters: req.action.properties?.parameters,
+        parameterDigest: req.context.parameter_digest,
+        vendorId: req.resource.properties?.vendor_id,
+        amount: req.context.amount,
+        destinations: binding.destinations,
+      })
+    ) {
+      return deny("parameter_violation");
+    }
+    if (metered) {
+      contributions.add("max_budget");
+      // The reservation runs inside the claim: a metered action outside the
+      // classes the domain claims has nowhere to reserve.
+      if (!highConsequence || !opts.claims.declares(actionClass)) return deny("constraint_unsupported");
+      const amount = req.context.amount;
+      if (!amount || typeof amount.amount !== "string" || !isValidAmount(amount.amount) || typeof amount.currency !== "string") {
+        return deny("parameter_violation");
+      }
+      budgetCharge = {
+        binding,
+        issuer: view.issuer,
+        missionId: view.id,
+        amount: { amount: amount.amount, currency: amount.currency },
+      };
+    } else if (
+      req.context.amount !== undefined &&
+      (actionClass === undefined || !BUDGET_EXEMPT_CLASSES.has(actionClass)) &&
+      !covered
+    ) {
+      return deny("constraint_unsupported");
+    }
+  }
+
   // 9. Idempotency claim (@spec runtime#idempotency, authzen#parameter-digest,
   // #917): "Before issuing a permit for a keyed action in the
   // irreversible-action, external-commitment, or privileged-administration
@@ -2671,6 +2834,7 @@ async function evaluateInner(
       // The decision's own clock, read by the domain inside each transaction
       // it decides in, never a reading taken before an await.
       clock: () => now().getTime(),
+      ...(budgetCharge !== undefined ? { budget: budgetCharge } : {}),
     };
     // An unreachable domain throws here: no decision, so the PEP records
     // `pdp_unreachable` and nothing executes (runtime: "MUST fail closed
@@ -2681,6 +2845,17 @@ async function evaluateInner(
       context: base({ denial_reason: reason, reason, ...next }),
     });
     if (outcome.kind === "conflict") return idempotencyDenial("idempotency_conflict", { next_action: "none" });
+    // @spec metering#authzen-binding, metering#metering-evidence (#816): an
+    // exhausted counter is an evaluated denial, recorded with the counters it
+    // metered; nothing was claimed or reserved. A binding the domain's own
+    // declaration does not meter as bound is `constraint_unsupported`, and an
+    // amount its unit cannot count exactly is a parameter the PDP cannot use.
+    if (outcome.kind === "quota_exceeded") {
+      claim.metering = outcome.metering;
+      return deny("quota_exceeded");
+    }
+    if (outcome.kind === "budget_unsupported") return deny("constraint_unsupported");
+    if (outcome.kind === "budget_amount_invalid") return deny("parameter_violation");
     if (outcome.kind === "suppressed") {
       return idempotencyDenial(
         "duplicate_suppressed",
@@ -2696,6 +2871,7 @@ async function evaluateInner(
       return idempotencyDenial("duplicate_suppressed", { next_action: "retry", retry_after: 1 });
     }
     claim.ticket = outcome.ticket;
+    if (outcome.metering !== undefined) claim.metering = outcome.metering;
   }
 
   if (lease.kind === "leased") {

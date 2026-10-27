@@ -1598,6 +1598,23 @@ export const GOVERNED_RESOURCES: GovernedResourcePolicy = parseGovernedResources
 export const DISPATCH_PROHIBITED_ACTIONS: string[] = POLICY.dispatch_prohibited_actions;
 
 /**
+ * @spec runtime#action-approval, mission-template#prohibited-classes (#813):
+ * the deployment's action-approval predicate, one declaration both the
+ * runtime decision policy and a standing-payment consent disclosure read:
+ * the actions whose every execution requires an action-bound approval, and
+ * who gives that approval.
+ */
+export interface ActionApprovalPolicy {
+  readonly actions: readonly string[];
+  readonly approver: string;
+}
+
+export const ACTION_APPROVAL_POLICY: ActionApprovalPolicy = Object.freeze({
+  actions: Object.freeze(["payments:remittance.send"]),
+  approver: "an Approver on the Access Request Service's approval surface",
+});
+
+/**
  * Derivation policy ceiling (@spec mission#authorization-derivation): the
  * AS derives each Authority Set entry as a subset of a proposed entry,
  * bounded by this ceiling. Nothing a client proposes can widen past it. The
