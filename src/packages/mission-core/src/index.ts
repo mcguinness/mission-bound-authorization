@@ -10,6 +10,7 @@ export {
   normalizeConstraintMap as aatNormalizeConstraintMap,
 } from "./aat-constraints.js";
 export {
+  AatJcsError,
   type AatJson,
   AatJsonError,
   AatNumber,

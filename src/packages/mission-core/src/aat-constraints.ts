@@ -13,6 +13,7 @@
  */
 
 import {
+  AatJcsError,
   type AatJson,
   AatNumber,
   type AatObject,
@@ -22,19 +23,21 @@ import {
 } from "./aat-json.js";
 
 /** The members each core type defines (Table 2), beside `constraint_type` and a top-level `optional`. */
-const TYPE_MEMBERS: Readonly<Record<string, readonly string[]>> = {
-  exact: ["value"],
-  range: ["min", "max", "min_inclusive", "max_inclusive"],
-  one_of: ["values"],
-  not_one_of: ["excluded"],
-  contains: ["required"],
-  subset: ["allowed"],
-  wildcard: [],
-  all: ["constraints"],
-  any: ["constraints"],
-};
+// A Map, not an object literal: a `constraint_type` such as "constructor",
+// "__proto__" or "toString" must not resolve through Object.prototype (#1775 review).
+const TYPE_MEMBERS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["exact", ["value"]],
+  ["range", ["min", "max", "min_inclusive", "max_inclusive"]],
+  ["one_of", ["values"]],
+  ["not_one_of", ["excluded"]],
+  ["contains", ["required"]],
+  ["subset", ["allowed"]],
+  ["wildcard", []],
+  ["all", ["constraints"]],
+  ["any", ["constraints"]],
+]);
 
-export const AAT_SUPPORTED_CONSTRAINT_TYPES: readonly string[] = Object.keys(TYPE_MEMBERS);
+export const AAT_SUPPORTED_CONSTRAINT_TYPES: readonly string[] = [...TYPE_MEMBERS.keys()];
 
 const has = (o: AatObject, k: string): boolean => Object.hasOwn(o, k);
 const typeOf = (c: AatObject): string => c.constraint_type as string;
@@ -51,7 +54,7 @@ export function constraintProblem(c: AatJson, level: number, maxDepth: number): 
   if (!isAatObject(c)) return "constraint is not an object";
   const type = c.constraint_type;
   if (typeof type !== "string") return "constraint_type is not a string";
-  const members = TYPE_MEMBERS[type];
+  const members = TYPE_MEMBERS.get(type);
   if (!members) return `unsupported constraint_type ${JSON.stringify(type)}`;
   for (const k of Object.keys(c)) {
     if (k === "constraint_type") continue;
@@ -311,9 +314,15 @@ export function constraintMapAttenuationProblem(
   }
   for (const [k, c] of Object.entries(child)) {
     const p = k !== "*" && has(parent, k) ? parent[k] : parent["*"];
-    if (!isAatObject(p) || !isAatObject(c) || !constraintSubsumes(p, c)) {
-      return `4p4: the constraint on ${JSON.stringify(k)} does not attenuate its parent's`;
+    let subsumed: boolean;
+    try {
+      subsumed = isAatObject(p) && isAatObject(c) && constraintSubsumes(p, c);
+    } catch (e) {
+      if (!(e instanceof AatJcsError)) throw e;
+      return `4p4: the constraint on ${JSON.stringify(k)} carries a string JCS cannot canonicalize`;
     }
+    if (!subsumed)
+      return `4p4: the constraint on ${JSON.stringify(k)} does not attenuate its parent's`;
   }
   return undefined;
 }
@@ -329,8 +338,14 @@ export function constraintMapCheckProblem(map: AatObject, args: AatObject): stri
   for (const [name, value] of Object.entries(args)) {
     const c = name !== "*" && has(m, name) ? m[name] : has(m, "*") ? m["*"] : undefined;
     if (!isAatObject(c)) return `argument ${JSON.stringify(name)} is not admitted (closed world)`;
-    if (!constraintChecks(c, value))
-      return `argument ${JSON.stringify(name)} violates its constraint`;
+    let satisfied: boolean;
+    try {
+      satisfied = constraintChecks(c, value);
+    } catch (e) {
+      if (!(e instanceof AatJcsError)) throw e;
+      return `argument ${JSON.stringify(name)} carries a string JCS cannot canonicalize`;
+    }
+    if (!satisfied) return `argument ${JSON.stringify(name)} violates its constraint`;
   }
   for (const [name, c] of Object.entries(m)) {
     if (name !== "*" && !isOptional(c) && !has(args, name))

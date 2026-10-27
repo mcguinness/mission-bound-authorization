@@ -22,6 +22,7 @@ import {
   constraintMapProblem,
 } from "./aat-constraints.js";
 import {
+  AatJcsError,
   type AatJson,
   type AatNumber,
   type AatObject,
@@ -538,9 +539,14 @@ export function verifyAatPresentation(
   // Step 7e.
   if (pop.aat_tool !== input.tool) return deny("7e", "PoP aat_tool is not the invoked tool");
   // Step 7f: hta, as written, equals the invocation's arguments under JCS.
-  if (!allNumbersAdmissible(pop.hta) || jcs(pop.hta) !== jcs(args)) {
-    return deny("7f", "PoP hta does not match the invocation arguments");
+  let htaMatches: boolean;
+  try {
+    htaMatches = allNumbersAdmissible(pop.hta) && jcs(pop.hta) === jcs(args);
+  } catch (e) {
+    if (!(e instanceof AatJcsError)) throw e;
+    return deny("7f", "PoP hta or the invocation arguments carry a string JCS cannot canonicalize");
   }
+  if (!htaMatches) return deny("7f", "PoP hta does not match the invocation arguments");
   // Step 7g: the bilateral clock window.
   const popIat = num(pop.iat);
   if (!(popIat >= input.now - p.popWindow && popIat <= input.now + p.popWindow)) {

@@ -317,16 +317,48 @@ export function allNumbersAdmissible(v: AatJson): boolean {
   return true;
 }
 
-/** @spec RFC 8785: the JCS serialization of `v`; numbers are serialized from their double. */
+/**
+ * @spec RFC 8785 Section 3.2.2.2: a string or property name that is not
+ * well-formed UTF-16 (a lone surrogate) has no JCS serialization. Callers turn
+ * it into a refusal (#1775 review).
+ */
+export class AatJcsError extends Error {}
+
+/** Every surrogate in `s` belongs to a high-low pair. */
+function isWellFormedUtf16(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = s.charCodeAt(i + 1);
+      if (!(d >= 0xdc00 && d <= 0xdfff)) return false;
+      i++;
+    } else if (c >= 0xdc00 && c <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function jcsString(s: string): string {
+  if (!isWellFormedUtf16(s))
+    throw new AatJcsError("a string or property name carries a lone surrogate");
+  return JSON.stringify(s);
+}
+
+/**
+ * @spec RFC 8785: the JCS serialization of `v`; numbers are serialized from
+ * their double. Throws {@link AatJcsError} for a string or property name with a
+ * lone surrogate.
+ */
 export function jcs(v: AatJson): string {
   if (v === null) return "null";
   if (v === true) return "true";
   if (v === false) return "false";
-  if (typeof v === "string") return JSON.stringify(v);
+  if (typeof v === "string") return jcsString(v);
   if (v instanceof AatNumber) return jcsNumber(v.value);
   if (Array.isArray(v)) return `[${v.map(jcs).join(",")}]`;
   const keys = Object.keys(v).sort();
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${jcs(v[k] as AatJson)}`).join(",")}}`;
+  return `{${keys.map((k) => `${jcsString(k)}:${jcs(v[k] as AatJson)}`).join(",")}}`;
 }
 
 /** `v` with its numbers as doubles, for callers outside the verifier. */

@@ -250,3 +250,103 @@ describe("step 7i: one atomic admit, after every other check (@spec AAT -02 Sect
     expect(calls).toEqual([]);
   });
 });
+
+describe("hardening from the owner's review of #1775 (@spec AAT -02 Section 3.4, RFC 8785 Section 3.2.2.2, #1756)", () => {
+  const rootWith = (tools: Record<string, unknown>) =>
+    jws(
+      anchor,
+      ROOT_HEADER,
+      rootClaims({ authorization_details: [{ type: "attenuating_agent_token", tools }] }),
+    );
+  const chainOnly = (chain: string[]) =>
+    verifyAatChain({ chain, trustAnchors: anchors, now: NOW, policy });
+  /** A PoP by the root's holder for `read_file` over `hta`, presented with `argsJson`. */
+  const presentRoot = (root: string, hta: Record<string, unknown>, argsJson: string) =>
+    verifyAatPresentation({
+      chain: [root],
+      pop: jws(
+        holder,
+        { alg: "Ed25519", typ: "aat-pop+jwt" },
+        {
+          jti: `pop-${Math.random()}`,
+          iat: NOW,
+          aat_id: "root-1",
+          aat_hash: hash(root),
+          aat_tool: "read_file",
+          aat_aud: EP,
+          hta,
+        },
+      ),
+      tool: "read_file",
+      argsJson,
+      trustAnchors: anchors,
+      now: NOW,
+      policy,
+    });
+
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])(
+    "refuses a %s constraint_type, with or without members, rather than resolving it through Object.prototype",
+    (type) => {
+      expect(
+        chainOnly([rootWith({ read_file: { path: { constraint_type: type } } })]),
+      ).toMatchObject({
+        verdict: "DENY",
+        step: "3n",
+      });
+      expect(
+        chainOnly([rootWith({ read_file: { path: { constraint_type: type, value: "/a" } } })]),
+      ).toMatchObject({ verdict: "DENY", step: "3n" });
+      // A holder adds it under a wildcard parent, which would subsume any supported type.
+      const root = rootWith({ read_file: { path: { constraint_type: "wildcard" } } });
+      const child = jws(
+        holder,
+        CHILD_HEADER,
+        childOf(root, {
+          authorization_details: [
+            {
+              type: "attenuating_agent_token",
+              tools: { read_file: { path: { constraint_type: type } } },
+            },
+          ],
+        }),
+      );
+      expect(chainOnly([root, child])).toMatchObject({ verdict: "DENY", step: "4o" });
+    },
+  );
+
+  it("refuses a lone surrogate in an argument value or property name even when hta carries the same one", () => {
+    const wildcardPath = rootWith({ read_file: { path: { constraint_type: "wildcard" } } });
+    expect(presentRoot(wildcardPath, { path: "\ud800" }, '{"path":"\\ud800"}')).toMatchObject({
+      verdict: "DENY",
+      step: "7f",
+    });
+    const anyArgument = rootWith({ read_file: { "*": { constraint_type: "wildcard" } } });
+    expect(presentRoot(anyArgument, { "\udc00": "x" }, '{"\\udc00":"x"}')).toMatchObject({
+      verdict: "DENY",
+      step: "7f",
+    });
+    // An exact constraint compares by JCS too, so the argument check refuses first.
+    const exactPath = rootWith({
+      read_file: { path: { constraint_type: "exact", value: "\ud800" } },
+    });
+    expect(presentRoot(exactPath, { path: "\ud800" }, '{"path":"\\ud800"}')).toMatchObject({
+      verdict: "DENY",
+      step: "6b",
+    });
+    // A well-formed surrogate pair is ordinary text and still permits.
+    expect(presentRoot(wildcardPath, { path: "😀" }, '{"path":"\\ud83d\\ude00"}')).toMatchObject({
+      verdict: "PERMIT",
+    });
+  });
+
+  it("refuses a lone surrogate in an exact constraint at the subsumption check", () => {
+    const exact = { read_file: { path: { constraint_type: "exact", value: "\ud800" } } };
+    const root = rootWith(exact);
+    const child = jws(
+      holder,
+      CHILD_HEADER,
+      childOf(root, { authorization_details: [{ type: "attenuating_agent_token", tools: exact }] }),
+    );
+    expect(chainOnly([root, child])).toMatchObject({ verdict: "DENY", step: "4p4" });
+  });
+});
