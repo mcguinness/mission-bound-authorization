@@ -2600,6 +2600,8 @@ export class Pep {
     /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
     let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
+    /** A compensate crossing's named invoice, whose committed wire the link below establishes (#252). */
+    let compensatedInvoiceId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
     if (mapping.targetsVendor) {
@@ -2628,7 +2630,22 @@ export class Pep {
         },
       };
     }
-    if (mapping.needsInvoice) {
+    if (mapping.needsInvoice && mapping.compensates) {
+      // @spec runtime#compound-actions (#252, #1693, D879): a compensate
+      // crossing names the invoice whose committed wire it offsets, and that
+      // invoice must exist; the link below requires the wire it establishes
+      // to be that invoice's. Its vendor is the vendor the committed wire
+      // paid, which only the link names, and its effect parameters are that
+      // wire's. Nothing here reads the vendor the invoice names now (its
+      // record, its routing, or parameters built from it), so an invoice
+      // reassigned to a vendor that has no record still reverses the wire it
+      // paid. The snapshot taken once the link is established reads the
+      // invoice and the paid vendor.
+      const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+      if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
+      compensatedInvoiceId = invoice.id;
+      resourceObj = { type: "invoice", id: invoice.id };
+    } else if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
       if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
@@ -2821,8 +2838,8 @@ export class Pep {
         return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
       }
       const established =
-        mapping.compensates && effective
-          ? await this.compensatedEffect(missionAnchor, effective.invoice_id, mapping.compensates)
+        mapping.compensates && compensatedInvoiceId !== undefined
+          ? await this.compensatedEffect(missionAnchor, compensatedInvoiceId, mapping.compensates)
           : undefined;
       if (!established) {
         return await this.refuse(boundary, token, "compensation_link_unavailable", mapping.action, view, undefined, {
@@ -2844,7 +2861,7 @@ export class Pep {
       // invoice names, taken now, after the last await of link
       // establishment, is what both the decision's live properties and the
       // context capture below are built from, with no await between them.
-      // A record gone by now is the same pre-decision refusal as above.
+      // An invoice gone by now is refused `unknown_invoice`, as above.
       //
       // @spec resource-access#initial-common-constraints, runtime#compound-actions
       // (#1693, D873): the vendor record read is the vendor the committed wire

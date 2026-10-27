@@ -1243,6 +1243,63 @@ describe("the compensate crossing checks the current tenant of the vendor the co
   });
 });
 
+/** Move `inv-1` to a new vendor `globex`, then delete that vendor's record: the invoice's current vendor no longer resolves (#1693, D879). */
+function orphanInvoice(payments: PaymentsStore): void {
+  addVendor(payments, "globex", "tenant-b");
+  reassignInvoice(payments, "globex");
+  payments.db.prepare("DELETE FROM vendors WHERE id = 'globex'").run();
+  expect(payments.getVendor(payments.getInvoice("inv-1")?.vendor_id ?? "")).toBeUndefined();
+}
+
+describe("the compensate crossing does not depend on the invoice's current vendor (@spec runtime#compound-actions, runtime#evaluation-context-binding, resource-access#initial-common-constraints, #1693, D879)", () => {
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`an invoice moved to another vendor whose record is then deleted still reverses the wire it paid under a bound on the paid vendor's tenant, offsetting that wire (${mode})`, async () => {
+      const h = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      expect(wire?.vendor_id).toBe("acme");
+      orphanInvoice(h.payments);
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      // The decision evaluated the paid vendor and its tenant.
+      expect(h.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      const decision = compensating(h);
+      expect(decision?.decision).toBe("permit");
+      // The reversal offsets the paid vendor's wire.
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([
+        expect.objectContaining({ reversed_op_key: wire?.op_key, amount: "125.00", currency: "USD" }),
+      ]);
+      const completed = executions(h).filter((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+      expect(completed).toHaveLength(1);
+      expect(completed[0]?.effective_parameter_digest).toBe(decision?.parameter_digest);
+      if (declarations === CLAIMED) {
+        expect(completed[0]?.effective_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+      }
+    });
+  }
+
+  it("an ordinary invoice-scoped operation still refuses unknown_vendor when the invoice's current vendor has no record, before any decision request", async () => {
+    for (const [tool, call] of [
+      ["get_invoice", (h: Harness) => h.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN)],
+      ["execute_wire_transfer", (h: Harness) => cross(h, COMMIT)],
+    ] as const) {
+      const h = harness();
+      orphanInvoice(h.payments);
+      const refused = await call(h);
+      expect(refused, tool).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+      expect(h.requests, tool).toHaveLength(0);
+      expect(refusals(h).at(-1), tool).toMatchObject({
+        denial_reason: "target_unresolvable",
+        action: { name: TOOL_ACTIONS[tool]?.action },
+      });
+      expect(h.connectors.committedEffects(), tool).toHaveLength(0);
+    }
+  });
+});
+
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
   for (const c of COVERED) {
     it(`a binding made before a restart is refused before any effect on ${c.tool} (${c.path} path): target_drift, no effective context digest`, async () => {
