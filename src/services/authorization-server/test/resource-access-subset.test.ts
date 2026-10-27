@@ -179,38 +179,56 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
-  // #249 (D712, D865), #1693 (D889): the contract's resource applicability,
-  // in files of their own beside the frozen contract and subset files. The
-  // current file names the version the payments deployment declares current;
-  // the historical one, frozen at 2026-10-24 before v15, names a version the
+  // #249 (D712, D865), #1693 (D889), #813 (D877): the contract's resource
+  // applicability, in files of their own beside the frozen contract and
+  // subset files. The current file (v16) names the version the payments
+  // deployment declares current; the historical ones, frozen at 2026-10-26
+  // before v16 and at 2026-10-24 before v15, each name a version the
   // deployment still declares and performs. Each file's configuration is the
   // one its own cases carry inline, and every case carrying a configuration
-  // carries one of the two.
+  // carries one of the three.
   it("names, in the current applicability file, the one resource the current contract applies to, and its contract cases carry exactly that configuration (#1693)", () => {
-    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-v15.json");
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-v16.json");
     expect(frozen.reference).toEqual(contract.reference);
     expect(declared?.version.state).toBe("current");
     expect(declared?.version.document).toEqual(frozen.document);
-    expect(carryingCases(configured)).toEqual(["ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+    expect(carryingCases(configured)).toEqual(["ev-rc-09", "ev-rc-10", "ev-rc-11"]);
   });
 
-  it("keeps, in the historical applicability file frozen before v15, a declared payments contract version, and its contract cases carry exactly that configuration", () => {
-    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-2026-10-26.json");
-    expect(frozen.reference.version).toBe("2026-10-24");
-    expect(declared).toBeDefined();
-    expect(["current", "superseded"]).toContain(declared?.version.state);
-    expect(declared?.version.document).toEqual(frozen.document);
-    expect(carryingCases(configured)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
+  it("keeps, in each historical applicability file (frozen before v16, and before v15), a declared payments contract version, and its contract cases carry exactly that configuration (#1693, #813)", () => {
+    for (const [file, version, cases] of [
+      ["payments-contract-applicability-v15.json", "2026-10-26", ["ev-rc-05", "ev-rc-06", "ev-rc-07"]],
+      ["payments-contract-applicability-2026-10-26.json", "2026-10-24", ["ev-rc-01", "ev-rc-02", "ev-rc-03"]],
+    ] as const) {
+      const { configured, frozen, declared } = applicabilityOf(file);
+      expect(frozen.reference.version, file).toBe(version);
+      expect(declared, file).toBeDefined();
+      expect(declared?.version.state, file).toBe("superseded");
+      expect(declared?.version.document, file).toEqual(frozen.document);
+      expect(carryingCases(configured), file).toEqual(cases);
+    }
   });
 
   it("every case carrying a contract configuration carries one of the applicability files' configurations", () => {
-    const known = ["payments-contract-applicability-v15.json", "payments-contract-applicability-2026-10-26.json"].map(
-      (f) => applicabilityOf(f).configured,
-    );
+    const known = [
+      "payments-contract-applicability-v16.json",
+      "payments-contract-applicability-v15.json",
+      "payments-contract-applicability-2026-10-26.json",
+    ].map((f) => applicabilityOf(f).configured);
     const carrying = readCases().filter(
       (c) => c.check === "entry-validation" && (c.input as { contracts?: unknown }).contracts !== undefined,
     );
-    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03", "ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+    expect(carrying.map((c) => c.id)).toEqual([
+      "ev-rc-01",
+      "ev-rc-02",
+      "ev-rc-03",
+      "ev-rc-05",
+      "ev-rc-06",
+      "ev-rc-07",
+      "ev-rc-09",
+      "ev-rc-10",
+      "ev-rc-11",
+    ]);
     for (const c of carrying) {
       const carried = JSON.stringify((c.input as { contracts: unknown }).contracts);
       expect(known.some((k) => JSON.stringify(k) === carried), c.id).toBe(true);
