@@ -1507,7 +1507,8 @@ The AS MUST process a lifecycle request in this order, refusing it at
 the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
-   parsing the request body only as far as authentication needs. A
+   parsing the request body only as far as authentication and the
+   `nonce` echo of {{mission-status-errors}} need. A
    body that cannot be parsed is refused `invalid_request`, whatever
    credential the request presents; a client authentication parameter
    included more than once fails authentication, and no occurrence of
