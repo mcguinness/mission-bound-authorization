@@ -35,10 +35,20 @@ import {
   ListToolsRequestSchema,
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ACCEPT_TXN_CHALLENGE_HEADER, acceptsTxnChallenge } from "@mission/core";
+import {
+  ACCEPT_TXN_CHALLENGE_HEADER,
+  type AatJson,
+  AatJsonError,
+  AatNumber,
+  aatIsObject,
+  aatToPlainJson,
+  acceptsTxnChallenge,
+  parseAatJson,
+} from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
 import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
 import { IntrospectionUnavailableError } from "./introspection.js";
+import { originalArgumentsFrom, snapshotArguments } from "./invocation-arguments.js";
 import type { MediatedToolResult } from "./mcp-transport.js";
 import {
   MCP_REFERENCE_META_KEY,
@@ -212,6 +222,14 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
     const authSignals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     if (!token) return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the call's
+    // original arguments, from the body the middleware read once and parsed
+    // losslessly, the same parse this request was dispatched from. A call
+    // with none is refused rather than handled from the parsed object alone.
+    const invocations = extra.authInfo?.extra?.invocations as ReadonlyMap<string, string> | undefined;
+    const key = invocationKey(extra.requestId);
+    const argumentsJson = key === undefined ? undefined : invocations?.get(key);
+    if (argumentsJson === undefined) return toCallToolResult({ ok: false, refusal_reason: "invalid_request" });
     // @spec authority-server#mcp-reference (#1694): the propagated reference
     // also rides params._meta on each tools/call, and a server that silently
     // ignores that key is not a conforming Mission PEP. It is read with the
@@ -225,7 +243,11 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
       fieldReference,
       parseMcpReferenceMeta(request.params._meta?.[MCP_REFERENCE_META_KEY]),
     );
-    const signals: RequestSignals = { ...rest, ...(missionReference ? { missionReference } : {}) };
+    const signals: RequestSignals = {
+      ...rest,
+      ...(missionReference ? { missionReference } : {}),
+      invocation: { argumentsJson },
+    };
     const verdict = await route(paymentsServer, request.params.name, args, token, signals);
     return toCallToolResult(verdict);
   });
@@ -254,6 +276,120 @@ function replayStateUnavailable(res: ServerResponse, retryAfterS: number): void 
 }
 
 /**
+ * @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the largest request
+ * body the channel reads, the SDK's own bound on one SSE message. The
+ * streamable transport set none of its own.
+ */
+const MAX_REQUEST_BODY_BYTES = 4 * 1024 * 1024;
+
+/** A request body refused before authentication, answered in the SDK transport's own JSON-RPC error shape. */
+interface BodyRefusal {
+  status: number;
+  code: number;
+  message: string;
+}
+
+/**
+ * A POST body read once and validated: `parsedBody` is the lossless parse's
+ * plain form and is exactly what the SDK dispatches; `invocations` holds each
+ * `tools/call` request's original arguments, serialized from that same parse
+ * with their number spellings, keyed by {@link invocationKey}.
+ */
+interface ValidatedBody {
+  parsedBody: unknown;
+  invocations: ReadonlyMap<string, string>;
+}
+
+/** The key of a JSON-RPC request id among a body's invocations: a string or number id, by type and value. */
+function invocationKey(id: unknown): string | undefined {
+  if (typeof id === "string") return `s:${id}`;
+  if (typeof id === "number") return `n:${id}`;
+  return undefined;
+}
+
+/** The request body, or `"too_large"` once it passes `limit` (the rest is drained and discarded). */
+function readBody(req: IncomingMessage, limit: number): Promise<Buffer | "too_large"> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    let over = false;
+    req.on("data", (chunk: Buffer) => {
+      if (over) return;
+      size += chunk.length;
+      if (size > limit) {
+        over = true;
+        chunks.length = 0;
+        resolve("too_large");
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (!over) resolve(Buffer.concat(chunks));
+    });
+    req.on("error", reject);
+  });
+}
+
+const PARSE_ERROR: BodyRefusal = { status: 400, code: -32700, message: "Parse error: Invalid JSON" };
+
+/**
+ * @spec AAT -02 Section 3.4 and Section 8 steps 6b and 7f (#1756, D902):
+ * validate a body as UTF-8 JSON with no duplicate member names, keeping each
+ * number's source spelling, and collect each `tools/call`'s original
+ * arguments. A batch that reuses a `tools/call` id is refused, so no call's
+ * arguments can stand in for another's.
+ */
+function validateBody(raw: Buffer): ValidatedBody | BodyRefusal {
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true }).decode(raw);
+  } catch {
+    return PARSE_ERROR;
+  }
+  let tree: AatJson;
+  try {
+    tree = parseAatJson(text);
+  } catch (e) {
+    if (e instanceof AatJsonError) return PARSE_ERROR;
+    throw e;
+  }
+  const invocations = new Map<string, string>();
+  for (const message of Array.isArray(tree) ? tree : [tree]) {
+    if (!aatIsObject(message) || message.method !== "tools/call") continue;
+    const key = invocationKey(message.id instanceof AatNumber ? message.id.value : message.id);
+    // A tools/call with no usable id is not a request the SDK dispatches.
+    if (key === undefined) continue;
+    if (invocations.has(key)) return { status: 400, code: -32600, message: "Invalid Request: a tools/call id repeats" };
+    const params = message.params;
+    invocations.set(key, originalArgumentsFrom(aatIsObject(params) ? params.arguments : undefined));
+  }
+  return { parsedBody: aatToPlainJson(tree), invocations };
+}
+
+/**
+ * Read and validate a request's body before anything else sees it. A request
+ * with no JSON body to read (not a POST, or not `application/json`, which
+ * the SDK answers 415 without reading) passes through with none. Returns the
+ * validated body, or `undefined` once it has answered the request.
+ */
+async function readValidatedBody(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<Partial<ValidatedBody> | undefined> {
+  if (req.method !== "POST" || !(req.headers["content-type"] ?? "").includes("application/json")) return {};
+  const raw = await readBody(req, MAX_REQUEST_BODY_BYTES);
+  const body: ValidatedBody | BodyRefusal =
+    raw === "too_large" ? { status: 413, code: -32600, message: "Invalid Request: body too large" } : validateBody(raw);
+  if ("status" in body) {
+    res.writeHead(body.status, { "content-type": "application/json", ...(raw === "too_large" ? { connection: "close" } : {}) });
+    res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: body.code, message: body.message }, id: null }));
+    return undefined;
+  }
+  return body;
+}
+
+/**
  * The DPoP-auth middleware, run for EVERY HTTP request before dispatch to MCP,
  * including every request on an established session. Missing/malformed
  * credential or failed proof-of-possession -> 401, and the request is NEVER
@@ -265,6 +401,7 @@ async function authenticate(
   res: ServerResponse,
   paymentsServer: McpPaymentsServer,
   masGoverned: boolean,
+  invocations?: ReadonlyMap<string, string>,
 ): Promise<TokenFacts | undefined> {
   const authz = req.headers.authorization;
   const proof = req.headers.dpop;
@@ -343,6 +480,9 @@ async function authenticate(
       // route hands the PEP the credential it authenticated, for its Join
       // Assertion request.
       signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}), ...(masGoverned ? { accessToken } : {}) },
+      // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): each tools/call's
+      // original arguments, from the body this request is dispatched from.
+      ...(invocations ? { invocations } : {}),
     },
   };
   return facts;
@@ -404,12 +544,20 @@ export async function createHttpMcpChannel(
    * the session an `initialize` opens on them. The SDK answers anything else
    * there 400, and that pair is discarded.
    */
-  const dispatch = async (req: AuthedRequest, res: ServerResponse, holder: SessionHolder): Promise<void> => {
+  const dispatch = async (
+    req: AuthedRequest,
+    res: ServerResponse,
+    holder: SessionHolder,
+    parsedBody: unknown,
+  ): Promise<void> => {
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the SDK dispatches
+    // `parsedBody`, the validated parse of the body read before authentication,
+    // never a second parse of its own.
     const sessionId = req.headers["mcp-session-id"];
     if (sessionId !== undefined) {
       const session = typeof sessionId === "string" ? sessions.get(sessionId) : undefined;
       if (!session || !sameHolder(session.holder, holder)) return sessionNotFound(res);
-      return session.transport.handleRequest(req, res);
+      return session.transport.handleRequest(req, res, parsedBody);
     }
     const server = createHttpMcpServer(paymentsServer);
     const transport = new StreamableHTTPServerTransport({
@@ -428,7 +576,7 @@ export async function createHttpMcpChannel(
     // does not satisfy their own `Transport` interface's optional members under this
     // repo's exactOptionalPropertyTypes; cast at the connect boundary only.
     await server.connect(transport as unknown as Transport);
-    await transport.handleRequest(req, res);
+    await transport.handleRequest(req, res, parsedBody);
     if (transport.sessionId === undefined) await server.close().catch(() => {});
   };
 
@@ -438,8 +586,15 @@ export async function createHttpMcpChannel(
     // the credential gate: they publish public keys and metadata.
     if (serveResourceMetadata(paymentsServer, req, res, joinResource)) return;
     const authed = req as AuthedRequest;
-    authenticate(authed, res, paymentsServer, masGoverned)
-      .then((facts) => (facts ? dispatch(authed, res, holderOf(facts)) : undefined))
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the body is read
+    // and validated once, before authentication, and that one validated parse
+    // is what is dispatched.
+    readValidatedBody(req, res)
+      .then(async (body) => {
+        if (body === undefined) return;
+        const facts = await authenticate(authed, res, paymentsServer, masGoverned, body.invocations);
+        if (facts) await dispatch(authed, res, holderOf(facts), body.parsedBody);
+      })
       .catch(() => {
         if (!res.headersSent) {
           res.writeHead(500, { "content-type": "application/json" });
@@ -527,9 +682,13 @@ export async function createHttpMediatedClient(
       return res.tools.map((t) => t.name);
     },
     async callTool(name, args, missionReference) {
+      // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the object API's
+      // serialization boundary, as on the in-memory client: the arguments are
+      // serialized once, and the call carries exactly that snapshot.
+      const snapshot = snapshotArguments(args);
       const res = await mcp.callTool({
         name,
-        arguments: args,
+        arguments: snapshot.args,
         ...(missionReference !== undefined ? { _meta: { [MCP_REFERENCE_META_KEY]: missionReference } } : {}),
       });
       return (res.structuredContent ?? { ok: false, refusal_reason: "no_result" }) as unknown as MediatedToolResult;
