@@ -28,7 +28,11 @@ edges.
 
 The AS's four role keys come from a key ring or are generated at each boot
 (#831): a key ring, created once by `pnpm keys init`, keeps them under the
-same `kid` across restarts. Every other key below is generated at each boot.
+same `kid` across restarts. The PEP's and the PDP's evidence keys come from
+evidence key files or are generated at each boot (#831): `pnpm evidence-keys
+init` creates the files once, and the stack signs under the same keys at
+every boot when it is given them. Every other key below is generated at each
+boot.
 
 A ring keeps each role's generations. Generation 1 is under the `kid` below,
 generation `n` under `<kid>-<n>`, and a role signs under its one `active`
@@ -76,33 +80,43 @@ One operator edits a ring at a time; nothing locks it.
 | `as-status` | AS kernel | Status responses, the Status List token, discharge receipts, and the records signed through the kernel's status signer (carryover evidence, governed-policy consents, approval-governance records) | key ring or per boot |
 | `as-txn` | AS | transaction tokens | key ring or per boot |
 | `as-continuation` | AS | the continuation ID-JAG | key ring or per boot |
-| `as-crossdomain` | demo stack, not on the AS JWKS | the cross-domain ID-JAG (`demo/src/stack.ts:581`) | per boot |
-| `rs-txn` | MCP payments PEP | Transaction Authorization Challenges, published at `txn_challenge_jwks_uri` (`stack.ts:432`) | per boot |
-| `ras-token` | RAS | SaaS-domain local tokens (`stack.ts:583`) | per boot |
-| `pdp-decision-evidence` | PDP | Decision Evidence (`stack.ts:731`) | per boot |
-| `ephemeral-pep`, `ephemeral-executor`, `ephemeral-receipt_issuer` | MCP payments PEP | Execution Evidence and Refusal Records (`services/mcp-payments/src/ephemeral-signer.ts:124`) | per boot |
-| `pdp-evidence` | PDP, as producer | Transparency Signed Statements (`stack.ts:1080`) | per boot |
-| `transparency` | Transparency Service | receipts (`stack.ts:1078`) | per boot |
-| `ars` | Access Request Service | ARAP approval JWS (`stack.ts:379`) | per boot |
+| `as-crossdomain` | demo stack, not on the AS JWKS | the cross-domain ID-JAG (`demo/src/stack.ts`, `xdKeys`) | per boot: with the RAS's single-use table in memory, this protects a coordinated restart of the whole stack, not an independent RAS restart (#1767) |
+| `rs-txn` | MCP payments PEP | Transaction Authorization Challenges, published at `txn_challenge_jwks_uri` (`stack.ts`, `rsTxnKeys`) | per boot: its challenges and the resource's pending store live in memory, so a restart fails closed |
+| `ras-token` | RAS | SaaS-domain local tokens (`stack.ts`, `rasKeys`) | per boot: nothing it signs is persisted |
+| `pdp-decision-evidence` | PDP | Decision Evidence and PDP Refusal Records (`stack.ts`, `decisionEvidenceKeys`) | evidence key file (`MISSION_PDP_EVIDENCE_KEYS`) or per boot |
+| `ephemeral-pep`, `ephemeral-executor`, `ephemeral-receipt_issuer` | MCP payments PEP | Execution Evidence and Refusal Records (`demo/src/evidence-key-files.ts`; per boot, `services/mcp-payments/src/ephemeral-signer.ts`) | evidence key file (`MISSION_PEP_EVIDENCE_KEYS`) or per boot; the identifiers are retained, though "ephemeral" no longer describes every deployment |
+| `pdp-evidence` | PDP, as producer | Transparency Signed Statements (`stack.ts`, `pdpProducerKeys`) | per boot: nothing it signs is persisted |
+| `transparency` | Transparency Service | receipts (`stack.ts`) | per boot: its log is in memory |
+| `ars` | Access Request Service | ARAP approval JWS (`stack.ts`) | per boot: pending tasks end with their owner (D39) |
 | `*-auth` client keys | each client (the demo AS generates them) | `private_key_jwt` client assertions | per boot |
 | per-instance | each agent instance | DPoP proofs and the instance assertion `cnf` | per instance |
 
 The AS publishes every live generation of `as-token`, `as-status`,
-`as-txn` and `as-continuation` at `/jwks`. The payments resource takes its
-copy once, at assembly (`stack.ts:555`), and accepts per role only the
-`kid`s it pins (`services/mcp-payments/src/key-roles.ts`); the PDP accepts
-Status responses only under the `kid`s it declares. With a key ring, an AS
-restart changes nothing the resource holds, but a rotation does: the
-resource and the PDP keep the key set they took and the `kid`s they pin, so
-after one they refuse what the AS signs under the new generation. Refreshing
-verifiers bound to each role's current generations are #831's part C.
+`as-txn` and `as-continuation` at `/jwks`. The payments resource, the RAS
+and the separated MAS pilot's PDP hold that set through `IssuerKeys`
+(#831 C): per role, only the `kid`s their configuration trusts, refreshed
+within the freshness `/jwks` declares, and refused when a stale set cannot
+be revalidated. A rotation reaches them once their trusted `kid`s name the
+new generation and they reload (`SIGUSR2`); publication alone grants no
+trust.
 
-A per-boot key under a fixed `kid` breaks anything that outlives the
-process. A file-backed evidence store refuses its second boot, because the
-PEP republishes its `ephemeral-*` kids with new material
-(`services/mcp-payments/src/evidence-retention.ts:460`). Records those keys
-signed stop verifying after a restart. Both are #831's to close, role by
-role.
+A per-boot key under a fixed `kid` strands whatever it signed that
+outlives the process. The evidence keys are the only keys outside the AS's
+four whose signatures sit in a durable store. `pnpm evidence-keys init`
+creates one file per holder (the PEP's three keys, the PDP's one; #741), and
+with `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS` the stack
+signs under the same keys at every boot and publishes their key sets to a
+durable file beside the retention file: each boot republishes the same keys,
+a no-op, and a regenerated file is refused at publication
+(`EvidenceRetentionStore.publishKey`) rather than stranding the records the
+old key signed. Without them, the evidence keys stay per boot, their key
+sets in memory, and a restart leaves the records an earlier boot signed
+unverifiable. The other per-boot keys sign nothing that is persisted, or,
+like `as-crossdomain`, stay per boot under D366. That protects only a
+coordinated restart of the whole stack: the RAS's single-use table lives in
+memory, so an independent RAS restart lets a base or continuation ID-JAG it
+already redeemed redeem again while its signing key still verifies. #1767
+gives the RAS durable redemption records (D887).
 
 Post-D26 note: there is no AS->PDP materialization artifact to
 authenticate; `policy_view_id` is a content commitment, not a credential.
