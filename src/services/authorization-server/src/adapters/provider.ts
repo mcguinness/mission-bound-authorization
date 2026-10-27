@@ -603,6 +603,7 @@ import {
 import {
   assertStandingPaymentCoverage,
   assertStandingPaymentExactProfile,
+  deploymentCrossDomain,
   type ProhibitedPredicateMapping,
   publishedProhibitedPredicateMapping,
   type TemplateConsentProvenance,
@@ -6694,12 +6695,14 @@ async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC,
  * cross-domain (no map: none is known local).
  */
 export function prohibitedPredicateMappingOf(opts: AdapterOptions): ProhibitedPredicateMapping {
-  const resourceToAs = opts.resourceToAs;
-  return publishedProhibitedPredicateMapping(
-    opts.approvalFloor,
-    opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
-    (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
-  );
+  return {
+    ...publishedProhibitedPredicateMapping(
+      opts.approvalFloor,
+      opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
+    ),
+    // The same decision the Progressive drawdown reads (continuation-grant.ts).
+    isCrossDomain: deploymentCrossDomain(opts.approvalFloor, opts.issuer, opts.resourceToAs),
+  };
 }
 
 async function handleMissionDispatchGrant(

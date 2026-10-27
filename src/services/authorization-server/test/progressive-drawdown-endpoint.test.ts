@@ -79,6 +79,10 @@ const REFUSE_ISSUER = `http://localhost:${REFUSE_PORT}`;
 // Records an Approval Governance Record for every policy drawdown (#1470 slice 2).
 const RECORDING_PORT = 14854;
 const RECORDING_ISSUER = `http://localhost:${RECORDING_PORT}`;
+// Publishes the payments resource as cross-domain in its approval floor's
+// classification, while its resource-to-AS map keeps it local (#1710).
+const CLASSIFIED_PORT = 14856;
+const CLASSIFIED_ISSUER = `http://localhost:${CLASSIFIED_PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_EXP = "2027-01-01T00:00:00Z";
@@ -92,11 +96,13 @@ let as: BuiltAs;
 let asOff: BuiltAs;
 let asRefuse: BuiltAs;
 let asRecording: BuiltAs;
+let asClassified: BuiltAs;
 let servers: Server[] = [];
 let ap: Client;
 let apOff: Client;
 let apRefuse: Client;
 let apRecording: Client;
+let apClassified: Client;
 let second: Client;
 let verifierSeq = 0;
 const commits: LifecycleCommit[] = [];
@@ -106,6 +112,7 @@ const approvalSessions = new Map([
   [OFF_ISSUER, new ApprovalSessionStore()],
   [REFUSE_ISSUER, new ApprovalSessionStore()],
   [RECORDING_ISSUER, new ApprovalSessionStore()],
+  [CLASSIFIED_ISSUER, new ApprovalSessionStore()],
 ]);
 
 /** The deployment's drawdown policies: a JSON snapshot stating the per-drawdown bound and the review cadence. */
@@ -464,16 +471,28 @@ beforeAll(async () => {
     progressive: PROGRESSIVE,
     ceilingDrawdownRecording: { recency: { ceilings: { default: 30 * 86400 }, clock_skew_s: 60 } },
   });
+  asClassified = await buildAuthorizationServer({
+    issuer: CLASSIFIED_ISSUER,
+    approvalSessions: approvalSessions.get(CLASSIFIED_ISSUER) as ApprovalSessionStore,
+    activationPolicies: POLICIES,
+    progressive: PROGRESSIVE,
+    approvalFloor: {
+      ...APPROVAL_FLOOR,
+      classification: APPROVAL_FLOOR.classification.map((c) => (c.resource === RESOURCE ? { ...c, cross_domain: true } : c)),
+    },
+  });
   servers = [
     as.provider.listen(PORT),
     asOff.provider.listen(OFF_PORT),
     asRefuse.provider.listen(REFUSE_PORT),
     asRecording.provider.listen(RECORDING_PORT),
+    asClassified.provider.listen(CLASSIFIED_PORT),
   ];
   ap = await shippedClient("ap-agent", "ap-agent-auth", as.agentClientJwk);
   apOff = await shippedClient("ap-agent", "ap-agent-auth", asOff.agentClientJwk);
   apRefuse = await shippedClient("ap-agent", "ap-agent-auth", asRefuse.agentClientJwk);
   apRecording = await shippedClient("ap-agent", "ap-agent-auth", asRecording.agentClientJwk);
+  apClassified = await shippedClient("ap-agent", "ap-agent-auth", asClassified.agentClientJwk);
 });
 
 describe("recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2)", () => {
@@ -1301,6 +1320,26 @@ describe("fresh-approval fallback (@spec progressive#in-ceiling-expansion, progr
     expect(body.mission_denial_reason).toBeUndefined();
     expect(as.kernel.allMissions().length).toBe(before);
     expect(as.kernel.get(pred.missionId)?.state).toBe("active");
+  });
+
+  it("a drawdown widening at a resource the published classification states is cross-domain falls back, though the resource-to-AS map places it at this authorization server; where the classification does not, the same request is adjudicated by policy (@spec mission-template#prohibited-classes, #1710)", async () => {
+    // The shipped classification: the payments resource is local, and the
+    // widening is adjudicated by policy.
+    const local = await issueMission(READ, ceilingOf());
+    await drawdown(local.accessToken, crypto.randomUUID(), READ_LIST);
+
+    // The same deployment, except its classification states the payments
+    // resource is cross-domain: the drawdown falls back to a fresh approval.
+    const pred = await issueMission(READ, ceilingOf(), { client: apClassified, issuer: CLASSIFIED_ISSUER });
+    const before = asClassified.kernel.allMissions().length;
+    const res = await tokenRequest(expansionParams(pred.accessToken, crypto.randomUUID(), READ_LIST), apClassified, CLASSIFIED_ISSUER);
+    const body = (await res.json()) as { error?: string; deferral_code?: string; mission_denial_reason?: string };
+    expect(res.status, JSON.stringify(body)).toBe(400);
+    expect(body.error).toBe("authorization_pending");
+    expect(typeof body.deferral_code).toBe("string");
+    expect(body.mission_denial_reason).toBeUndefined();
+    expect(asClassified.kernel.allMissions().length).toBe(before);
+    expect(asClassified.kernel.get(pred.missionId)?.state).toBe("active");
   });
 
   it("a Mission that commits no drawdown policy is never adjudicated by policy", async () => {

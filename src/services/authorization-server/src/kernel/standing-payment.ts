@@ -391,6 +391,26 @@ export function publishedProhibitedPredicateMapping(
   };
 }
 
+/**
+ * @spec mission-template#prohibited-classes, progressive#in-ceiling-expansion
+ * (#1710, D877): the deployment's one cross-domain decision, which the
+ * Dispatch prohibited-class mapping and the Progressive drawdown both read: a
+ * resource is cross-domain where the published classification states it is,
+ * or where the AS's resource-to-AS map places it at another AS (no map: none
+ * is known local).
+ */
+export function deploymentCrossDomain(
+  floor: ApprovalFloorPolicy,
+  issuer: string,
+  resourceToAs: ((resource: string) => string) | undefined,
+): (resource: string, entry?: AuthorityEntry) => boolean {
+  return publishedProhibitedPredicateMapping(
+    floor,
+    [],
+    (resource) => !resourceToAs || resourceToAs(resource) !== issuer,
+  ).isCrossDomain;
+}
+
 /** The prohibited predicates `action` at `entry` satisfies, or undefined when the mapping does not classify it. */
 export function prohibitedPredicatesOf(
   mapping: ProhibitedPredicateMapping,
