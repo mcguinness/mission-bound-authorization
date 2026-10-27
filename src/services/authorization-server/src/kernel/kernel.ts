@@ -213,6 +213,7 @@ import {
 import { StandingPaymentStore } from "./standing-payment.js";
 import { TemplateApprovalRecordStore } from "./template-approval-record.js";
 import {
+  ExpiryPassedError,
   IntentError,
   type IntentIntakeOptions,
   type IntentSubmissionPresenter,
@@ -2212,9 +2213,10 @@ export class MissionKernel {
           `mission ${record.id} would commit expires_at ${record.expires_at} later than the requested ceiling ${record.intent.expires_at}`,
         );
       }
+      // Typed (#1721, D845) so a direct approval decision completes this
+      // refusal `access_denied`; every other creator keeps its own mapping.
       if (!(createdMs < expiresMs)) {
-        throw new IntentError(
-          "invalid_request",
+        throw new ExpiryPassedError(
           `effective expires_at ${record.expires_at} is not later than the creation instant ${record.created_at}`,
         );
       }

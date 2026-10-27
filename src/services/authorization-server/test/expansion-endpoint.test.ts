@@ -1645,6 +1645,7 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     });
     const firstBody = (await first.json()) as {
       mission_id?: string;
+      mission_expires_at?: string;
       access_token?: string;
       related_to?: string;
       carryover_manifest_hash?: string;
@@ -1652,6 +1653,11 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     };
     expect(first.status, JSON.stringify(firstBody)).toBe(200);
     expect(firstBody.mission_id).toBe(replacementId);
+    // @spec mission#mission-response-parameters (#1719, D845): the retrieval
+    // delivers the replacement's credential to its child actor, with both members.
+    const replacementExpiry = as.kernel.get(replacementId)?.expires_at;
+    expect(typeof replacementExpiry).toBe("string");
+    expect(firstBody.mission_expires_at).toBe(replacementExpiry);
     expect(firstBody.related_to).toBe(pred.childId);
     expect(firstBody.carryover_evidence).toBeDefined();
     // The returned grant names the replacement's own actor as its redeemer.
