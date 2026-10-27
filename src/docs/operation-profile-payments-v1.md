@@ -330,7 +330,7 @@ and the PDP refuses a matched entry that carries one.
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
 | `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive; for `list_invoices`, each invoice returned | `resource.properties.issued_at`; for `list_invoices`, each member's `issued_at` in `resource.properties.members` | `lookup_vendor` (a vendor record has no issuance instant), an invoice with no `issued_at`, and a `list_invoices` read with such a member or with no member: refused |
-| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned; for `reverse_wire_transfer`, the current record of the vendor the committed wire paid (Evaluation-Context Binding, below) | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
 | `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named; for `list_invoices`, each invoice returned | `resource.properties.data_classification`; for `list_invoices`, each member's `data_classification` in `resource.properties.members` | `lookup_vendor` (a vendor record has no label), an invoice with no label, and a `list_invoices` read with such a member or with no member: refused |
@@ -466,13 +466,21 @@ names as the targets. None of them is read from the invoice as it reads
 now, so an invoice amount that changes after its wire committed leaves
 them unchanged. The descriptor also declares the live resource facts the
 compensating decision evaluates through the Common Constraints: the
-invoice's issuance instant and classification, and the tenant of the
-vendor the invoice names, each read from the payments store as the
-decision request carries it (the value, or null when the record names
-none). Each resolver names the crossings it serves, so the compensate
-crossing reads no effect fact from the store. A changed or missing ledger
-record, or a moved live fact, is `target_drift`. The request carries
-`compensates_evaluation_id` beside the context members.
+invoice's issuance instant and classification, and the current tenant of
+the vendor the wire paid (`payments-store:paid-vendor.tenant`, #1693), each
+read from the payments store as the decision request carries it (the
+value, or null when the record names none). The wire fixes which vendor
+the reversal concerns, and that vendor's record supplies its tenant now:
+the tenant is not frozen at payment time, and an invoice reassigned to
+another vendor after its wire committed neither blocks nor widens the
+reversal. A paid vendor the store no longer holds is refused
+`unknown_vendor` before the decision request. Each resolver names the
+crossings it serves, so the compensate crossing reads no effect fact from
+the store, and `payments-store:vendor.tenant` (the tenant of the vendor an
+invoice names) serves store crossings only. A changed or missing ledger
+record, a moved live fact, or a paid vendor record gone after the decision
+is `target_drift`. The request carries `compensates_evaluation_id` beside
+the context members.
 
 Every crossing of a covered operation captures its context from the
 payments store, or the compensate crossing from the ledger record, before
