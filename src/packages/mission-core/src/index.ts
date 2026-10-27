@@ -1,3 +1,4 @@
+export { aLabelViolation } from "./a-label.js";
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";
 export {
   ACTIVATION_POLICY_TYP,

@@ -1003,7 +1003,11 @@ A Discharge Receipt is a JWS Compact Serialization {{RFC7515}} signed
 under the AS's active Mission Status signing key, the key it currently
 signs Mission Status responses under
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"),
-published in its `jwks_uri`. Its JWS header carries
+published in its `jwks_uri`. The Status profile's signing-key
+retention ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Signing-Key Retention for Audit") keeps that key resolvable for at
+least the Mission's audit horizon, so an archived receipt stays
+verifiable for audit. Its JWS header carries
 `typ` of `mission-discharge-receipt+jwt` and a `kid` identifying the
 signing key, and the HTTP `Content-Type` is
 `application/mission-discharge-receipt+jwt` ({{iana-receipt}}). A
@@ -1355,6 +1359,9 @@ entry carrying a `terminal_when` constraint it does not understand
   consumer verifies a receipt only under a key its trusted
   configuration authorizes for that AS's Mission Status responses,
   never merely because the key appears in `jwks_uri` (#831, D857).
+- The receipt's signing key is retained under the Status profile's
+  Signing-Key Retention for Audit, since it is the Mission Status
+  signing key; no requirement changed (#831, D864).
 
 # Acknowledgments
 {:numbered="false"}
