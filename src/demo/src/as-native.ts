@@ -8,7 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { kernelStoreFromEnv, loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
-import { evidenceKeysFromEnv } from "./evidence-key-files.js";
+import { evidenceKeySourceFromEnv, validateEvidenceKeyFiles } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
 
@@ -19,8 +19,10 @@ import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.
  * `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID` when both are set, else bootstrap
  * a development store; `resourcePolicyStoreFromEnv`) and the PDP mode
  * (`MISSION_PDP_MODE`), the signing keys (`MISSION_KEY_RING` or
- * `MISSION_EPHEMERAL_KEYS`) and the kernel's file (`MISSION_KERNEL_STORE`,
- * which requires the key ring), and nothing else, so never the test-only
+ * `MISSION_EPHEMERAL_KEYS`), the kernel's file (`MISSION_KERNEL_STORE`,
+ * which requires the key ring) and the evidence keys
+ * (`MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or
+ * `MISSION_EPHEMERAL_EVIDENCE_KEYS`), and nothing else, so never the test-only
  * ordinary-token minting fixture. A value that is set but unusable refuses
  * startup with an error naming it, before anything connects or listens.
  */
@@ -48,8 +50,10 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   const signingKeys = signingKeysFromEnv(env);
   // @spec #250: a kernel kept across restarts, only with a key ring.
   const kernelStore = kernelStoreFromEnv(env);
-  // @spec #831 (scope inventory): durable evidence keys, or keys generated per boot.
-  const evidenceKeys = evidenceKeysFromEnv(env);
+  // @spec #831 (D901): the deployment says where its evidence keys come from,
+  // the key files or keys generated at each boot.
+  const evidenceKeySource = evidenceKeySourceFromEnv(env);
+  const evidenceKeys = "pep" in evidenceKeySource ? evidenceKeySource : undefined;
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
@@ -103,6 +107,9 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       asContinuation,
     });
   }
+  // @spec #831 (D901): both evidence key files load, each as its holder's,
+  // before anything connects; composeStack loads them again.
+  if (options.evidenceKeys) validateEvidenceKeyFiles(options.evidenceKeys);
   // @spec #250: the kernel file's directory exists before anything connects.
   if (options.kernelStore) mkdirSync(dirname(options.kernelStore.file), { recursive: true });
   const stack = await composeStack(options);
@@ -143,6 +150,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
           ? `${options.kernelStore.file} (kept across restarts; recovery witness ${options.kernelStore.witness})`
           : "in memory (lost at restart)"
       }`,
+      `  evidence keys      ${options.evidenceKeys ? `key files (kept across restarts): PEP ${options.evidenceKeys.pep}, PDP ${options.evidenceKeys.pdp}` : "ephemeral (new at every restart)"}`,
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,

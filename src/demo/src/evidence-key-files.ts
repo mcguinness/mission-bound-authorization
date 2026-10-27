@@ -185,6 +185,43 @@ export function evidenceKeysFromEnv(env: NodeJS.ProcessEnv): { pep: string; pdp:
   return { pep, pdp };
 }
 
+/** Where a deployment's evidence keys come from: the two key files, or keys generated at each boot. */
+export type EvidenceKeySource = { pep: string; pdp: string } | { ephemeral: true };
+
+/**
+ * @spec #831 (D901): a deployment launcher's evidence keys, chosen as its
+ * signing keys are (`signingKeysFromEnv`, D499): both
+ * `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS` select the key
+ * files ({@link evidenceKeysFromEnv}), and `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`
+ * keys generated at each boot, whose records stop verifying after a restart.
+ * Neither, or both, refuses: a deployment says which it runs.
+ */
+export function evidenceKeySourceFromEnv(env: NodeJS.ProcessEnv): EvidenceKeySource {
+  const files = evidenceKeysFromEnv(env);
+  const ephemeral = env.MISSION_EPHEMERAL_EVIDENCE_KEYS === "1";
+  if (files && ephemeral) {
+    throw new EvidenceKeyFileError(
+      "set MISSION_PEP_EVIDENCE_KEYS and MISSION_PDP_EVIDENCE_KEYS, or MISSION_EPHEMERAL_EVIDENCE_KEYS=1, not both",
+    );
+  }
+  if (files) return files;
+  if (ephemeral) return { ephemeral: true };
+  throw new EvidenceKeyFileError(
+    "choose the evidence keys: MISSION_PEP_EVIDENCE_KEYS=<path> and MISSION_PDP_EVIDENCE_KEYS=<path> (create them once with `pnpm evidence-keys init`), or MISSION_EPHEMERAL_EVIDENCE_KEYS=1 for keys that change at every restart",
+  );
+}
+
+/**
+ * @spec #831 (D901): both key files load, each as its own holder's, before a
+ * launcher connects to anything: a missing file, one open to others, another
+ * holder's file (one file named for both included), or one that lacks a
+ * role's key refuses by name.
+ */
+export function validateEvidenceKeyFiles(files: { pep: string; pdp: string }): void {
+  loadEvidenceKeyFile(files.pep, "pep");
+  loadEvidenceKeyFile(files.pdp, "pdp");
+}
+
 /**
  * The PEP's loaded keys as the signing and verification bundle the stack
  * wires, the shape `createEphemeralEvidenceKeys` gives per-boot keys: each

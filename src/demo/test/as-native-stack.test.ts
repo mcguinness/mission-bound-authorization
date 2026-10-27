@@ -24,7 +24,7 @@
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, symlinkSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
@@ -55,6 +55,7 @@ import {
 import { DOMAIN_MODEL, Fga } from "@mission/pdp";
 import { issueMissionToken, resolveMissionApproval, type UpstreamApprovalConsole } from "../src/approval-console.js";
 import { asNativeLaunchOptions, launchAsNative } from "../src/as-native.js";
+import { initEvidenceKeyFile } from "../src/evidence-key-files.js";
 import { ISSUANCE_ONLY_CAPABILITIES } from "../src/issuance-only.js";
 import { requestLifecycle } from "../src/lifecycle-client.js";
 import { resourcePolicyAdmin } from "../src/resource-policy-admin.js";
@@ -1420,13 +1421,17 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     env: Record<string, string> = {},
     files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() },
   ) => ({
-    ...asNativeLaunchOptions({ ...(env.MISSION_KEY_RING ? {} : { MISSION_EPHEMERAL_KEYS: "1" }), ...env }),
+    ...asNativeLaunchOptions({
+      ...(env.MISSION_KEY_RING ? {} : { MISSION_EPHEMERAL_KEYS: "1" }),
+      ...(env.MISSION_PEP_EVIDENCE_KEYS ? {} : { MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" }),
+      ...env,
+    }),
     asPort: LAUNCH_AS_PORT,
     ...files,
   });
 
   it("composes exactly the target from its own configuration: the D332 capability set, no dev ordinary issuance, no MAS join route and no test fixture", async () => {
-    expect(asNativeLaunchOptions({ MISSION_EPHEMERAL_KEYS: "1" })).toEqual({
+    expect(asNativeLaunchOptions({ MISSION_EPHEMERAL_KEYS: "1", MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" })).toEqual({
       openfgaUrl: TOPOLOGY.openfga.url,
       presharedKey: TOPOLOGY.openfga.presharedKey,
       resourcePolicyStore: { bootstrap: "development" },
@@ -1434,7 +1439,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       target: "as-native",
     });
     // @spec #831: a configured key ring is the AS's signing-key source.
-    expect(asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json" }).signingKeys).toEqual({
+    expect(asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" }).signingKeys).toEqual({
       ring: "/var/keys/ring.json",
     });
     const ca = fileURLToPath(import.meta.url);
@@ -1445,6 +1450,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
         OPENFGA_CA_CERT: ca,
         MISSION_PDP_MODE: "remote",
         MISSION_EPHEMERAL_KEYS: "1",
+        MISSION_EPHEMERAL_EVIDENCE_KEYS: "1",
       }),
     ).toEqual({
       openfgaUrl: "https://fga.test:8080",
@@ -1457,7 +1463,10 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     });
     // @spec runtime#input-resource-policy (#828): a configured store and model
     // are attached, never bootstrapped.
-    expect(asNativeLaunchOptions({ OPENFGA_STORE_ID: "store-1", OPENFGA_MODEL_ID: "model-1", MISSION_EPHEMERAL_KEYS: "1" }).resourcePolicyStore).toEqual({
+    expect(
+      asNativeLaunchOptions({ OPENFGA_STORE_ID: "store-1", OPENFGA_MODEL_ID: "model-1", MISSION_EPHEMERAL_KEYS: "1", MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" })
+        .resourcePolicyStore,
+    ).toEqual({
       attach: { storeId: "store-1", modelId: "model-1" },
     });
     const launched = await launchAsNative(launchOptions());
@@ -1599,6 +1608,53 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     copyFileSync(witnessed, kernelFile);
     const again = await launchAsNative(launchOptions(env, files));
     await again.close();
+  });
+
+  it("requires an explicit evidence-key choice, the key files or keys generated at each boot, and loads both files as their holders' before anything connects (#831, D901)", async () => {
+    const keys = { MISSION_EPHEMERAL_KEYS: "1" };
+    const files = { MISSION_PEP_EVIDENCE_KEYS: "/keys/pep.json", MISSION_PDP_EVIDENCE_KEYS: "/keys/pdp.json" };
+    const cases: [Record<string, string>, RegExp][] = [
+      [keys, /^choose the evidence keys: MISSION_PEP_EVIDENCE_KEYS=<path> and MISSION_PDP_EVIDENCE_KEYS=<path>/],
+      [{ ...keys, MISSION_EPHEMERAL_EVIDENCE_KEYS: "0" }, /^choose the evidence keys/],
+      [{ ...keys, ...files, MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" }, /^set MISSION_PEP_EVIDENCE_KEYS and MISSION_PDP_EVIDENCE_KEYS, or MISSION_EPHEMERAL_EVIDENCE_KEYS=1, not both$/],
+      [{ ...keys, MISSION_PEP_EVIDENCE_KEYS: "/keys/pep.json" }, /^set both MISSION_PEP_EVIDENCE_KEYS and MISSION_PDP_EVIDENCE_KEYS, or neither$/],
+      [{ ...keys, MISSION_PEP_EVIDENCE_KEYS: "keys/pep.json", MISSION_PDP_EVIDENCE_KEYS: "/keys/pdp.json" }, /^MISSION_PEP_EVIDENCE_KEYS must be an absolute path/],
+    ];
+    for (const [env, message] of cases) expect(() => asNativeLaunchOptions(env), JSON.stringify(env)).toThrow(message);
+    expect(asNativeLaunchOptions({ ...keys, MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" }).evidenceKeys).toBeUndefined();
+    expect(asNativeLaunchOptions({ ...keys, ...files }).evidenceKeys).toEqual({ pep: "/keys/pep.json", pdp: "/keys/pdp.json" });
+
+    // Both paths load, each as its holder's, before anything connects.
+    const dir = mkdtempSync(join(tmpdir(), "as-native-evidence-"));
+    const pep = join(dir, "pep-evidence-keys.json");
+    const pdp = join(dir, "pdp-evidence-keys.json");
+    initEvidenceKeyFile(pep, "pep");
+    initEvidenceKeyFile(pdp, "pdp");
+    const alias = join(dir, "pep-alias.json");
+    symlinkSync(pep, alias);
+    fgaBootstrap.mockClear();
+    const refused: [Record<string, string>, RegExp][] = [
+      [{ MISSION_PEP_EVIDENCE_KEYS: pep, MISSION_PDP_EVIDENCE_KEYS: join(dir, "missing.json") }, /no evidence key file at .*missing\.json/],
+      [{ MISSION_PEP_EVIDENCE_KEYS: pdp, MISSION_PDP_EVIDENCE_KEYS: pep }, /holds the pdp keys, not the pep keys/],
+      // One file named for both, under another path: still the PEP's.
+      [{ MISSION_PEP_EVIDENCE_KEYS: pep, MISSION_PDP_EVIDENCE_KEYS: alias }, /holds the pep keys, not the pdp keys/],
+    ];
+    for (const [env, message] of refused) {
+      await expect(launchAsNative(launchOptions(env)), JSON.stringify(env)).rejects.toThrow(message);
+    }
+    expect(fgaBootstrap).not.toHaveBeenCalled();
+    const launched = await launchAsNative(launchOptions({ MISSION_PEP_EVIDENCE_KEYS: pep, MISSION_PDP_EVIDENCE_KEYS: pdp }));
+    try {
+      expect(launched.summary).toContain(`  evidence keys      key files (kept across restarts): PEP ${pep}, PDP ${pdp}`);
+    } finally {
+      await launched.close();
+    }
+    const perBoot = await launchAsNative(launchOptions());
+    try {
+      expect(perBoot.summary).toContain("  evidence keys      ephemeral (new at every restart)");
+    } finally {
+      await perBoot.close();
+    }
   });
 
   it("refuses an unusable configuration by name, before anything connects", () => {
@@ -1817,15 +1873,21 @@ function runLauncher(env: Record<string, string>) {
     "MISSION_PDP_MODE",
     "MISSION_KEY_RING",
     "MISSION_EPHEMERAL_KEYS",
+    "MISSION_PEP_EVIDENCE_KEYS",
+    "MISSION_PDP_EVIDENCE_KEYS",
+    "MISSION_EPHEMERAL_EVIDENCE_KEYS",
     "NODE_OPTIONS",
   ]) {
     delete inherited[name];
   }
   // @spec #831: ephemeral signing keys unless the case names its own source.
   const keys = env.MISSION_KEY_RING === undefined && env.MISSION_EPHEMERAL_KEYS === undefined ? { MISSION_EPHEMERAL_KEYS: "1" } : {};
+  // @spec #831 (D901): per-boot evidence keys unless the case names its own.
+  const evidenceKeys =
+    env.MISSION_PEP_EVIDENCE_KEYS === undefined && env.MISSION_EPHEMERAL_EVIDENCE_KEYS === undefined ? { MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" } : {};
   const child: ChildProcess = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], {
     cwd: mkdtempSync(join(tmpdir(), "as-native-launch-")),
-    env: { ...inherited, ...keys, ...env },
+    env: { ...inherited, ...keys, ...evidenceKeys, ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   let stdout = "";
@@ -2078,7 +2140,13 @@ dLive("the as-native target with the test-only ordinary-token minting fixture ag
  */
 const POLICY_AS_PORT = 14112;
 dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a live OpenFGA (@spec runtime#input-resource-policy, #828)", () => {
-  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, MISSION_EPHEMERAL_KEYS: "1", ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+  const BASE_ENV = {
+    OPENFGA_HTTP_URL: API_URL,
+    OPENFGA_PRESHARED_KEY: KEY,
+    MISSION_EPHEMERAL_KEYS: "1",
+    MISSION_EPHEMERAL_EVIDENCE_KEYS: "1",
+    ...(CA ? { OPENFGA_CA_CERT: CA } : {}),
+  };
 
   /** The launcher's composition from `env`, on this block's AS port and its own store files. */
   const launch = (env: Record<string, string>) =>
@@ -2213,7 +2281,13 @@ dLive("the as-native target's Resource policy over HTTP MCP with DPoP against a 
  */
 const RESTART_AS_PORT = 14113;
 dLive("the as-native target restarted on the same store files against a live OpenFGA (@spec runtime#idempotency, #253)", () => {
-  const BASE_ENV = { OPENFGA_HTTP_URL: API_URL, OPENFGA_PRESHARED_KEY: KEY, MISSION_EPHEMERAL_KEYS: "1", ...(CA ? { OPENFGA_CA_CERT: CA } : {}) };
+  const BASE_ENV = {
+    OPENFGA_HTTP_URL: API_URL,
+    OPENFGA_PRESHARED_KEY: KEY,
+    MISSION_EPHEMERAL_KEYS: "1",
+    MISSION_EPHEMERAL_EVIDENCE_KEYS: "1",
+    ...(CA ? { OPENFGA_CA_CERT: CA } : {}),
+  };
 
   /** One boot of the launcher on this block's AS port and the given store files. */
   const launch = (files: { claimsFile: string; writeReservationsFile: string }) =>

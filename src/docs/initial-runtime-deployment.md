@@ -423,7 +423,8 @@ the connector effect, then evidence, then claim settlement.
 | Payments store, DPoP replay cache, actor records | in memory, seeded per boot | none | lost or reseeded |
 | Mission kernel (Mission records, lifecycle events, the continuation and delegation-family tables) and the provider's grants, codes and refresh tokens | in memory by default; `MISSION_KERNEL_STORE` keeps the kernel in a file, WAL with `synchronous=FULL` on every open (normal locking; exclusive under a recovery witness; #1684), with a key ring (§12). The provider uses oidc-provider's memory adapter (`provider-integration-port.md` §1) | the floor's | without the kernel file, lost: no Mission, grant or refresh token survives (`control-plane-deployment.md`, Restart inventory); with it, the Missions survive and the provider's grants, codes and refresh tokens do not (§12) |
 | AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring file named by `MISSION_KEY_RING`, or generated per boot under `MISSION_EPHEMERAL_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with a ring; regenerated otherwise. Rotation and resource-side JWKS refresh: #831 |
-| Other keys (the PEP's `rs-txn` and evidence signers, the PDP's `pdp-decision-evidence`, client keys) | generated per boot under fixed kids (`channel-key-matrix.md`) | none | regenerated (#831) |
+| Evidence keys (the PEP's `ephemeral-pep`, `ephemeral-executor` and `ephemeral-receipt_issuer`, the PDP's `pdp-decision-evidence`) | two evidence key files named by `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or generated per boot under `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with the files, so records an earlier boot signed still verify; regenerated otherwise, and they stop verifying (#831) |
+| Other keys (the PEP's `rs-txn`, client keys) | generated per boot under fixed kids (`channel-key-matrix.md`) | none | regenerated (#831) |
 
 Witnesses for the durable stores:
 `PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > a persisted permit is unknown after restart: suppressed, never returned, never fresh`
@@ -768,7 +769,7 @@ and
 `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses startup when the AS cannot be built, its kernel file a directory, and keeps no listener it opened, the upstream Approver login provider's included (#1320)`.
 
 Its configuration is the OpenFGA connection, the Resource-policy store, the
-PDP mode, the signing-key source and the kernel's file from the environment,
+PDP mode, the signing-key and evidence-key sources and the kernel's file from the environment,
 and nothing else (`asNativeLaunchOptions`, `demo/src/as-native.ts`).
 
 The deployment chooses where the AS's signing keys come from (#831).
@@ -782,7 +783,16 @@ to others or created for another issuer refuses startup before anything
 connects:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > signs with a configured key ring and says so; a ring for another issuer refuses before anything connects (#831)`.
 The ring holds one generation per role; rotation and resource-side JWKS
-refresh are #831's next slice. `MISSION_KERNEL_STORE=<absolute path>` keeps
+refresh are #831's next slice. The deployment also chooses its evidence keys
+(#831, D901): `MISSION_PEP_EVIDENCE_KEYS=<absolute path>` and
+`MISSION_PDP_EVIDENCE_KEYS=<absolute path>` name the PEP's and the PDP's
+evidence key files, created once by `pnpm evidence-keys init`, so a record an
+earlier boot signed still verifies; `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`
+generates them at each boot instead. Neither, both, one file without the other
+or a relative path refuses startup, and both files load, each as its own
+holder's, before anything connects:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > requires an explicit evidence-key choice, the key files or keys generated at each boot, and loads both files as their holders' before anything connects (#831, D901)`.
+`MISSION_KERNEL_STORE=<absolute path>` keeps
 the Mission kernel in that file across restarts, and requires
 `MISSION_KEY_RING`; absent, the kernel is in memory. The launcher creates the
 file's directory, prints which it runs, and releases the file on close:
