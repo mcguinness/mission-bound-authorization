@@ -47,9 +47,9 @@ export interface DeferralContext {
    * (#813, #816, D877): for a successor in a standing-payment lineage, the
    * counters it continues (the dispatched instance's and the shared budget's)
    * with their consumption and outstanding reservations as read at this
-   * rendering; `null` for any other Mission.
+   * rendering; absent for any other Mission, whose commitment is unchanged.
    */
-  budget_exposure: DeferralBudgetExposure | null;
+  budget_exposure?: DeferralBudgetExposure;
 }
 
 /** The budget exposure a standing-payment successor's approval renders and commits. */
@@ -121,7 +121,7 @@ export function deferralContext(
         })
       : null,
     carryover: review.carryover ? contentDigest(review.carryover) : null,
-    budget_exposure: budgetExposure,
+    ...(budgetExposure ? { budget_exposure: budgetExposure } : {}),
   };
   return { context, commitment: contentDigest(context) };
 }
@@ -258,7 +258,8 @@ function budgetExposureSection(context: DeferralContext): string {
   return `<section class="budget-exposure"><h2>Standing-payment budget this successor continues</h2>
 <p>${escapeHtml(`This successor keeps the budget identity ${exposure.budget.owner}/${exposure.budget.id} and continues the counter of the dispatched instance ${exposure.instance}; its payments draw on both.`)}</p>
 <ul>${line(`Instance ${exposure.instance}`, instance)}${line(`Budget ${exposure.budget.owner}/${exposure.budget.id}`, shared)}</ul>
-</section>`;
+</section>
+`;
 }
 
 /** The approval page for a pending deferral, rendered to an eligible, authenticated Approver. */
@@ -286,8 +287,7 @@ ${view.bindings ? `${view.bindings}\n` : ""}<h2>Expiry (when the approved author
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}
 ${carryoverSection(review.carryover)}
-${budgetExposureSection(context)}
-${ceilingSection(disclosure)}
+${budgetExposureSection(context)}${ceilingSection(disclosure)}
 ${view.changed ? `<p class="deferral-changed"><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n` : ""}<form method="post" action="${deferralPagePath(review.deferralCode)}/decide">
 ${view.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(view.revision)}">\n` : ""}${view.csrf ? `<input type="hidden" name="csrf_token" value="${escapeHtml(view.csrf)}">\n` : ""}${reconsent}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;

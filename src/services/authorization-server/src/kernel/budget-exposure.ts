@@ -16,6 +16,7 @@
  * (D830 ruling 7), and an exposure the Approver was never shown is not
  * accounted for.
  */
+import { isValidAmount } from "@mission/core";
 import type { StandingPaymentAdmission } from "./standing-payment.js";
 
 /** One counter, keyed as the PDP keys it. */
@@ -39,7 +40,8 @@ export interface BudgetCounterTotals {
 /**
  * The deployment's read port. `read` returns a counter's totals, or
  * `undefined` for a counter never charged (read as zero), and throws when
- * the counter store cannot be read.
+ * the counter store cannot be read. The reading is synchronous: a reading
+ * answered later (a Promise) is no reading.
  */
 export interface BudgetExposurePort {
   read(key: BudgetCounterKey): BudgetCounterTotals | undefined;
@@ -60,17 +62,73 @@ export interface CounterExposure {
 }
 
 /**
- * Read one counter through `port`, as zero in `currency` when it was never
- * charged. Any failure, an absent port included, is a
- * {@link BudgetExposureUnavailableError}.
+ * The counters' unit: the currency and the minor-unit exponent the
+ * Enforcement Scope Statement's `budget_metering` declares, which the PDP
+ * counts in and renders every total at.
+ */
+export interface CounterUnit {
+  currency: string;
+  exponent: number;
+}
+
+/** The widest exponent a PDP counter takes, as the PDP bounds it. */
+const MAX_EXPONENT = 9;
+
+const isRecord = (v: unknown): v is Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * The counter unit `statement` declares for `budget_metering`, or `undefined`
+ * when it declares none or one that is not a currency and a whole exponent
+ * from 0 to 9.
+ */
+export function meteringUnitOf(statement: unknown): CounterUnit | undefined {
+  const declared =
+    isRecord(statement) && isRecord(statement.extensions) ? statement.extensions.budget_metering : undefined;
+  const unit = isRecord(declared) ? declared.unit : undefined;
+  if (
+    !isRecord(unit) ||
+    typeof unit.currency !== "string" ||
+    !/^[A-Z]{3}$/.test(unit.currency) ||
+    typeof unit.exponent !== "number" ||
+    !Number.isSafeInteger(unit.exponent) ||
+    unit.exponent < 0 ||
+    unit.exponent > MAX_EXPONENT
+  ) {
+    return undefined;
+  }
+  return { currency: unit.currency, exponent: unit.exponent };
+}
+
+/** Zero in `unit`, written as the PDP writes a total: `exponent` fractional digits. */
+export const zeroIn = (unit: CounterUnit): CounterAmount => ({
+  amount: unit.exponent === 0 ? "0" : `0.${"0".repeat(unit.exponent)}`,
+  currency: unit.currency,
+});
+
+/** Whether `amount` is a decimal string with exactly `exponent` fractional digits. */
+const atExponent = (amount: string, exponent: number): boolean =>
+  isValidAmount(amount) && (amount.split(".")[1]?.length ?? 0) === exponent;
+
+/**
+ * Read one counter through `port`, as zero in `unit` when it was never
+ * charged. A reading is accepted only when it is made now and each of its
+ * three totals is a decimal amount in `unit`'s currency at its exponent. Any
+ * failure, an absent port or unit, a thrown or deferred reading, or a total
+ * of another shape, is a {@link BudgetExposureUnavailableError}.
  */
 export function readCounterExposure(
   port: BudgetExposurePort | undefined,
   key: BudgetCounterKey,
-  currency: string,
+  unit: CounterUnit | undefined,
 ): CounterExposure {
   if (!port) throw new BudgetExposureUnavailableError("no budget exposure port is configured");
-  let totals: BudgetCounterTotals | undefined;
+  if (!unit) {
+    throw new BudgetExposureUnavailableError(
+      "the Enforcement Scope Statement declares no budget_metering unit to read the counters in",
+    );
+  }
+  let totals: unknown;
   try {
     totals = port.read(key);
   } catch (e) {
@@ -78,13 +136,39 @@ export function readCounterExposure(
       `the ${key.counter_scope} budget counter could not be read: ${(e as Error).message}`,
     );
   }
-  // The workflow meters USD at exponent 2 (D814, decision c).
-  const zero = { amount: "0.00", currency };
+  if (totals !== null && (typeof totals === "object" || typeof totals === "function")) {
+    const then = (totals as { then?: unknown }).then;
+    if (typeof then === "function") {
+      // A rejection the refusal already accounts for is not left unhandled.
+      Promise.resolve(totals).catch(() => undefined);
+      throw new BudgetExposureUnavailableError(
+        `the ${key.counter_scope} budget counter's reading was deferred, not made now`,
+      );
+    }
+  }
+  if (totals === undefined) {
+    const zero = zeroIn(unit);
+    return { counter_scope: key.counter_scope, committed: { ...zero }, reserved: { ...zero }, held: { ...zero } };
+  }
+  const total = (member: "committed" | "reserved" | "held"): CounterAmount => {
+    const value = isRecord(totals) ? totals[member] : undefined;
+    if (
+      !isRecord(value) ||
+      typeof value.amount !== "string" ||
+      !atExponent(value.amount, unit.exponent) ||
+      value.currency !== unit.currency
+    ) {
+      throw new BudgetExposureUnavailableError(
+        `the ${key.counter_scope} budget counter's ${member} total is not a decimal amount in ${unit.currency} at exponent ${unit.exponent}`,
+      );
+    }
+    return { amount: value.amount, currency: value.currency };
+  };
   return {
     counter_scope: key.counter_scope,
-    committed: totals ? { ...totals.committed } : zero,
-    reserved: totals ? { ...totals.reserved } : zero,
-    held: totals ? { ...totals.held } : zero,
+    committed: total("committed"),
+    reserved: total("reserved"),
+    held: total("held"),
   };
 }
 
