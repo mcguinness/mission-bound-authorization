@@ -58,7 +58,9 @@ function daysFromCivil(year: number, month: number, day: number): bigint {
  * grammar or with an out-of-range field (RFC 3339 section 5.7). A second of 60
  * is admitted only where it falls at 23:59:60 UTC, the one place RFC 3339
  * section 5.7 places a leap second; this consumer has no leap-second table, so
- * it does not check that the date carried one.
+ * it does not check that the date carried one. A Common Constraint value never
+ * uses 60 for the seconds field, so constraints.ts refuses a parsed leap
+ * second there (resource-access#initial-common-constraints).
  */
 export function parseInstant(value: unknown): Instant | undefined {
   if (typeof value !== "string") return undefined;

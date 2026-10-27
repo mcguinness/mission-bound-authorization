@@ -51,8 +51,8 @@
     "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "cfad6a684188e0ae6a3585a00dd22597de09bae0",
-    "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
+    "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
+    "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
@@ -75,8 +75,8 @@
     "content_sha256": "69a15b7d2282b92ee0f1d0a424770d9ca985ee5466550f4d2defa7878922f999"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
-    "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
+    "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
+    "content_sha256": "29ab6b61f162fec24ca027aa42b9c99c1b776cb273692180b99ba44badc430b0"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
@@ -19452,7 +19452,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST verify, before relying on a Discharge Receipt, for example before it stops retrying:",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
@@ -19526,7 +19526,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST validate `typ` exactly and MUST NOT accept a Discharge Receipt as a Mission Status Response, or a Mission Status Response as a Discharge Receipt",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
@@ -59370,6 +59370,44 @@
    "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases: the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts) runs cc-satisfaction-alternative, -no-alternative and -fragments, all agreeing; cc-satisfaction-absent-* require rs.enforcement and stay skipped. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
+   "id": "resource-access.common-constraints.date-time-no-leap-second",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "RFC 3339 date-time values in the Common Constraints defined by this specification MUST NOT use `60` for the seconds field",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no entry the authorization server derives carries a resource_issued_after, resource_issued_before or time_window endpoint value whose seconds field is 60: the entry guard every derivation and configured ceiling passes refuses one in each member (an actual leap second, its offset form, or a :60 at no leap second), and a configured ceiling carrying one fails to load",
+    "local": "the reference's RFC 3339 parser refuses every :60 for every caller; for date-times outside these Common Constraints that is its own stricter-than-RFC-3339 choice, not this rule"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/common-constraints.test.ts",
+     "name": "Common Constraint date-time values never use 60 seconds (@spec resource-access#initial-common-constraints, #1376, D858) > refuses an actual leap second, its offset equivalent and an invalid :60 in each member",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/constraint-value-config.test.ts",
+     "name": "a configured ceiling carrying a forbidden Common Constraint value fails to load (#1376, D858) > refuses a date-time value that uses 60 for the seconds field: an actual leap second, its offset equivalent, an invalid :60",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D858. RFC 3339 Section 5.7 permits an actual leap second, so this is a normative restriction, not a clarification; it covers the Common Constraints Resource Access defines and does not extend to companion-defined ones (D865). A client generating a proposal is bound too; the authorization server's refusal of one is resource-access.entry-validation.date-time-leap-second-refused. The reference enforced it before the rule through its shared parser. Proved by mutation: a parser admitting :60 fails both witnesses. An actual leap second on the last day of a year is still refused under that mutation by the calendar roll-over check, so the offset form and the :60 at no leap second carry the proof. Positive controls: ordinary timestamps beside the leap second are admitted in each member and load in a ceiling. Cases ev-tw-04 to ev-tw-06 and ev-iss-01 to ev-iss-03 run (entry-validation)."
+  },
+  {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -62709,6 +62747,78 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference is assembled before authority_hash is computed, so the record's anchor is the anchor over the set carrying it and differs from the set without it. Proved by not recording the reference."
   },
   {
+   "id": "resource-access.resource-contract.derivation-preserves",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "Every derivation, narrowing, and delegation preserves it exactly",
+   "observation": {
+    "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
+    "local": "witnessed for child delegation only; token derivation, refresh, token exchange, template dispatch, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry carrying a reference carries the same reference without restating it, under authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a superseded reference within its declared retention survives the derivation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a conflicting proposed reference is refused by the strict-subset proof, never replaced",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed."
+  },
+  {
+   "id": "resource-access.resource-contract.no-reference-without-approval",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
+   "observation": {
+    "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
+    "local": "witnessed for child delegation only; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry without a reference carries none",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). Partial until refresh and token exchange are witnessed."
+  },
+  {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
@@ -64747,6 +64857,37 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). The published schema and validateMissionResourceAccessSchema admit exactly id (an absolute URI), version (non-empty) and digest (sha-256: base64url); PAR refuses an extra member invalid_authorization_details. Proved by removing the shape check."
   },
   {
+   "id": "resource-access.entry-validation.date-time-leap-second-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "a date-time value in a Common Constraint defined by this specification uses `60` for the seconds field",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_issued_after, resource_issued_before, time_window not_before or time_window not_after uses 60 for the seconds field (an actual leap second, its offset form, or a :60 at no leap second) is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a Common Constraint date-time value that uses 60 for the seconds field, in each member",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376, D858; scoped to this specification's Common Constraints (D865). Positive control: ordinary timestamps beside the leap second are accepted at PAR in each member. Proved by mutation: a parser admitting :60 fails the witness. Cases ev-tw-04 to ev-tw-06 and ev-iss-01 to ev-iss-03 run (entry-validation); ev-tw-07 and ev-iss-04 are valid controls."
+  },
+  {
    "id": "resource-access.entry-validation.time-window-ordering",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
@@ -64795,8 +64936,8 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed entry whose recipient_domain carries a non-ASCII label, an empty label or a trailing dot is refused invalid_authorization_details, creating no Mission",
-    "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall; it does not decode an xn-- label to confirm it is a valid A-label"
+    "normative": "a proposed entry whose recipient_domain carries a non-ASCII label, an empty label, a trailing dot, or an xn-- label that is not an A-label is refused invalid_authorization_details, creating no Mission",
+    "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall and, for an xn-- label read in lower case, the structural checks: it decodes under Punycode (RFC 3492) and encodes back to itself (RFC 5891 Section 5.3), and the decoded form holds a non-ASCII character, is in NFC and lower case as decoded, does not begin with a combining mark (Section 4.2.3.2), and meets the hyphen restrictions (Section 4.2.3.1). It does not check the RFC 5892 code-point classes (RFC 5891 Section 4.2.2), the contextual rules (CONTEXTJ and CONTEXTO, Section 4.2.3.3) or the Bidi rule (Section 4.2.3.4, RFC 5893), so a label only those refuse, such as xn--n3h (U+2603, DISALLOWED), is admitted"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64806,9 +64947,15 @@
      "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a recipient_domain that is not an ASCII DNS name or that ends in a dot",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a recipient_domain whose xn-- label is not a structurally valid A-label",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#1376 states the rule the reference already enforced through the shared recipient_domain value syntax. Exercised: a non-ASCII label, an empty label and a trailing dot are refused at PAR, and an A-label is accepted (resource-access.entry-validation.recipient-domain-case). Not exercised: the reference does not decode an xn-- label, so a label that only looks like an A-label is accepted, hence partial. Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com. Cases ev-rd-01 and ev-rd-02 run (entry-validation)."
+   "notes": "#1376 states the rule. D858 accepts structural A-label checks as partial implementation coverage, and D865 keeps the row partial: structural checks and agreement between two consumers do not establish full IDNA2008 validity. Exercised at PAR: a non-ASCII label, an empty label, a trailing dot, and an xn-- label that does not decode or decodes to a form not in lower case, not in NFC, beginning with a combining mark, beginning with a hyphen, or with hyphens in its third and fourth positions; an A-label is accepted in any ASCII letter case (resource-access.entry-validation.recipient-domain-case). Not checked, hence partial: the RFC 5892 code-point classes, the contextual rules and the Bidi rule (observation.local). Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com; removing the NFC, lower-case, leading-combining-mark, leading-or-trailing-hyphen or third-and-fourth-hyphen check admits its case at PAR; and a recipient_domain syntax without the A-label checks admits them all. The round-trip check, which RFC 5891 Section 5.3 requires explicitly, has no witness found in 500,000 random inputs: none decoded but failed to encode back to itself. It is kept. The decoder never throws (unit witnesses for a truncated integer, an overflow, a code point past U+10FFFF and a surrogate). Cases ev-rd-01, ev-rd-02 and ev-rd-04 to ev-rd-10 run (entry-validation); ev-rd-03 and ev-rd-11 are valid controls. The second consumer checks the same structural subset."
   },
   {
    "id": "resource-access.entry-validation.recipient-domain-case",
@@ -64839,7 +64986,7 @@
      "surface": "par"
     }
    ],
-   "notes": "#1376. Comparison is case-insensitive (resource-access.value-space.recipient-domain-labels); this row covers validity only. Proved by mutation: a lowercase-only label pattern refuses Mail.Example.COM (expected 400 to be 201). Case ev-rd-03 runs (entry-validation)."
+   "notes": "#1376. Comparison is case-insensitive (resource-access.value-space.recipient-domain-labels); this row covers validity only. Proved by mutation: a lowercase-only label pattern refuses Mail.Example.COM (expected 400 to be 201); and decoding an xn-- label in its given case instead of reading it in lower case (D858) refuses Mail.XN--Mnchen-3YA.example. Cases ev-rd-03 and ev-rd-11 run (entry-validation)."
   },
   {
    "id": "resource-access.entry-validation.max-depth-zero-no-delegation",

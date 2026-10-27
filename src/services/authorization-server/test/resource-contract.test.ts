@@ -29,6 +29,8 @@ import {
   type AuthorityEntry,
   type BuiltAs,
   buildAuthorizationServer,
+  ChildDelegationError,
+  createChildMission,
   createTemplate,
   deriveAuthoritySet,
   IntentError,
@@ -40,6 +42,8 @@ import {
   validateMissionIntent,
   validateMissionResourceAccessSchema,
 } from "../src/index.js";
+import { inheritResourceContract } from "../src/kernel/child-delegation.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -381,5 +385,125 @@ describe("PAR intake validates a proposed reference against the shipped configur
       expect(body.request_uri).toBeUndefined();
       expect(as.kernel.allMissions().length).toBe(before);
     }
+  });
+});
+
+// @spec resource-access#resource-contract (#1751, D875): "Every derivation,
+// narrowing, and delegation preserves it exactly". A child entry carries the
+// reference of the parent entry that authorizes the whole child entry, without
+// restating it; a superseded reference survives while supported.
+describe("a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875)", () => {
+  const CHILD = "subagent-contract";
+  const CURRENT_V1 = declarations([declared("v1", "current")]);
+  /** v1 retired, v2 current: a v1 reference is no longer supported. */
+  const RETIRED = declarations([declared("v1", "retired"), declared("v2", "current")]);
+  let key: CryptoKey;
+  beforeAll(async () => {
+    key = (await generateKeyPair("ES256")).privateKey;
+  });
+  /** A kernel whose configuration a test may change between the parent's approval and the child's creation. */
+  const kernelFor = (resourceContracts: ResourceContractDeclarations) => {
+    const opts: ConstructorParameters<typeof MissionKernel>[0] = {
+      issuer: "https://as.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      resourceContracts,
+      now: () => NOW,
+      actorProfiles: aiAgents(CHILD),
+    };
+    return { opts, kernel: new MissionKernel(opts) };
+  };
+  let seq = 0;
+  const approveParent = (kernel: MissionKernel, r?: ResourceContractRef) =>
+    kernel.approve({
+      intent: validateMissionIntent(JSON.stringify(TASK_INTENT)),
+      proposedAuthority: proposal(r),
+      subject: { iss: "https://as.test", sub: "alice" },
+      approver: { iss: "https://as.test", sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `rc-child-apev-${seq++}`,
+    });
+  const createChild = (kernel: MissionKernel, parentId: string, r?: ResourceContractRef) =>
+    createChildMission(kernel, {
+      parentId,
+      intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read one Acme invoice" })),
+      proposedAuthority: proposal(r),
+      childActor: { sub: CHILD, sub_profile: "ai_agent" },
+    });
+
+  it("a child of a parent entry carrying a reference carries the same reference without restating it, under authority_hash", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    const parent = approveParent(kernel, V2);
+    expect(parent.authority_set[0]?.resource_contract).toEqual(V2);
+    const { child } = createChild(kernel, parent.id);
+    expect(child.authority_set[0]?.resource_contract).toEqual(V2);
+    expect(child.authority_hash).toBe(authorityHash(child.issuer, child.authority_set as never));
+  });
+
+  it("a superseded reference within its declared retention survives the derivation", () => {
+    const { opts, kernel } = kernelFor(CURRENT_V1);
+    const parent = approveParent(kernel, V1);
+    // The deployment supersedes v1 after the parent's approval.
+    opts.resourceContracts = SUPERSEDED;
+    const { child } = createChild(kernel, parent.id);
+    expect(child.authority_set[0]?.resource_contract).toEqual(V1);
+  });
+
+  it("a reference no longer supported refuses the child at creation, invalid_authorization_details", () => {
+    const { opts, kernel } = kernelFor(CURRENT_V1);
+    const parent = approveParent(kernel, V1);
+    opts.resourceContracts = RETIRED;
+    const refused = (() => {
+      try {
+        createChild(kernel, parent.id);
+      } catch (e) {
+        return e;
+      }
+      return undefined;
+    })();
+    expect(refused).toBeInstanceOf(IntentError);
+    expect((refused as IntentError).code).toBe("invalid_authorization_details");
+  });
+
+  it("a conflicting proposed reference is refused by the strict-subset proof, never replaced", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    const parent = approveParent(kernel, V2);
+    expect(() => createChild(kernel, parent.id, V1)).toThrow(ChildDelegationError);
+  });
+
+  it("a child of a parent entry without a reference carries none", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    const parent = approveParent(kernel);
+    const { child } = createChild(kernel, parent.id);
+    expect(child.authority_set[0]?.resource_contract).toBeUndefined();
+  });
+
+  describe("inheritResourceContract selects only a parent entry that authorizes the whole child entry", () => {
+    const LIST = "payments:invoice.list";
+    const entry = (actions: string[], r?: ResourceContractRef): AuthorityEntry => ({
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions,
+      constraints: { vendors: ["acme"] },
+      ...(r ? { resource_contract: r } : {}),
+    });
+
+    it("takes the reference of the one parent entry covering the child entry, never another resource entry's", () => {
+      const parents = [entry([READ], V1), entry([LIST], V2)];
+      expect(inheritResourceContract([entry([READ])], parents)[0]?.resource_contract).toEqual(V1);
+      expect(inheritResourceContract([entry([LIST])], parents)[0]?.resource_contract).toEqual(V2);
+    });
+
+    it("combines nothing: a child entry only two parent entries together cover gains no reference", () => {
+      expect(inheritResourceContract([entry([READ, LIST])], [entry([READ], V2), entry([LIST], V2)])[0]?.resource_contract).toBeUndefined();
+    });
+
+    it("chooses nothing when the covering parent entries disagree, and leaves a proposed reference as proposed", () => {
+      expect(inheritResourceContract([entry([READ])], [entry([READ], V1), entry([READ, LIST], V2)])[0]?.resource_contract).toBeUndefined();
+      expect(inheritResourceContract([entry([READ])], [entry([READ]), entry([READ], V2)])[0]?.resource_contract).toBeUndefined();
+      expect(inheritResourceContract([entry([READ], V1)], [entry([READ], V2)])[0]?.resource_contract).toEqual(V1);
+    });
   });
 });

@@ -17,6 +17,7 @@
  * satisfies a bound.
  */
 
+import { aLabelViolation } from "./a-label.js";
 import type { JsonValue } from "./canonicalize.js";
 import {
   compareInstants,
@@ -213,6 +214,16 @@ function isDnsName(v: unknown): v is string {
 }
 
 /**
+ * @spec resource-access#entry-validation (#1376, D858): a `recipient_domain`
+ * value is a DNS name whose every `xn--` label is a structurally valid
+ * A-label ({@link aLabelViolation}). An observed recipient address is parsed
+ * with {@link isDnsName} alone.
+ */
+function isRecipientDomain(v: unknown): v is string {
+  return isDnsName(v) && v.split(".").every((l) => aLabelViolation(l) === undefined);
+}
+
+/**
  * Whether `name` equals `domain` or is a subdomain of it, compared
  * case-insensitively on whole labels: `mail.example.com` is within
  * `example.com`, and `notexample.com` is not.
@@ -239,7 +250,7 @@ function addressDomain(address: unknown): string | undefined {
  * or falls outside the domain, is refused.
  */
 const RECIPIENT_DOMAIN: Semantics = {
-  valid: isDnsName,
+  valid: isRecipientDomain,
   noBroader: (c, r) => withinDomain(c as string, r as string),
   // The narrower value when one is within the other; otherwise none.
   intersect: (a, b) =>
