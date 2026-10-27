@@ -533,6 +533,47 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
+  it("surfaces a conflicting settlement on the composed stack's alarm path: a second completed record for a settled wire raises one settlement_conflict operator alert, and the applied settlement and the committed amount are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+    const stack = await compose(15029, newFiles());
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const alerts = () =>
+      stderr.mock.calls
+        .map(([chunk]) => String(chunk))
+        .filter((line) => line.startsWith('{"type":"operator_alert"'))
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      const paid = await wire(stack, instance, "inv-1");
+      expect(paid.ok, JSON.stringify(paid)).toBe(true);
+      const applied = stack.evidence
+        .forMission(instance)
+        .find((e) => e.kind === "execution" && e.content.outcome === "completed");
+      if (applied?.kind !== "execution") throw new Error("no completed Execution Evidence for the wire");
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
+      // A second attempt's completed record for the same permit, signed under the executor's key.
+      const conflicting = await stack.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+        permitId: applied.permit_id,
+        opKey: applied.op_key,
+        evaluation_id: applied.content.evaluation_id,
+        mission_id: instance,
+        audience: applied.content.audience,
+        outcome: "completed",
+      });
+      expect(await stack.decisionChannel.claims.settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(alerts()).toEqual([
+        expect.objectContaining({ kind: "settlement_conflict", evaluation_id: applied.content.evaluation_id, mission_id: instance, cause: "completed_then_completed" }),
+      ]);
+      expect(stack.pdpClaims.settlementConflicts(applied.content.evaluation_id)).toEqual([
+        expect.objectContaining({ execution_id: conflicting.content.execution_id, outcome: "completed", applied_execution_id: applied.content.execution_id }),
+      ]);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
+    } finally {
+      stderr.mockRestore();
+      await closeStack(stack);
+    }
+  });
+
   it("continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)", async () => {
     const stack = await compose(15026, newFiles());
     try {
