@@ -20047,7 +20047,7 @@
    "id": "status.lifecycle.private-key-jwt-params",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "private-key-jwt",
    "role": "AS",
    "strength": "stated",
@@ -20075,13 +20075,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200)."
+   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200). Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.client-id-mtls",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "mtls-client-id",
    "role": "AS",
    "strength": "stated",
@@ -20093,12 +20093,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Lifecycle request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+    "normative": "a Lifecycle request authenticating by mTLS client authentication (`tls_client_auth`) carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -20810,7 +20810,7 @@
    "id": "status.auth.mechanism-supported",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST support at least one of the following mechanisms.",
+   "text": "The AS MUST support at least one of the following paths.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -20825,8 +20825,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Status and Lifecycle endpoints each authenticate a request by mTLS, a sender-constrained access token or private-key JWT",
-    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept private-key JWT (#1407); the Status operation's development GET route keeps the service-token stand-in and is not advertised"
+    "normative": "the Status and Lifecycle endpoints each authenticate a request on at least one of the two paths: client authentication with a method of the OAuth Token Endpoint Authentication Methods registry that the AS advertises for that endpoint and that uses no shared client secret (for example `tls_client_auth` or `private_key_jwt`), or a sender-constrained access token",
+    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept client authentication by `private_key_jwt` (#1407), the one method they advertise; neither accepts the access-token path; the Status operation's development GET route keeps the service-token stand-in and is not advertised"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -20850,13 +20850,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.auth.unauthenticated-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST refuse a request not authenticated by one of the three mechanisms, with the outcome {{mission-status-auth-failures}} assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400).",
+   "text": "The AS MUST refuse a request not authenticated on one of the two paths, with the outcome {{mission-status-auth-failures}} assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400).",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -20871,8 +20871,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request carrying no credential, or only a client secret (Basic or POST), or a mechanism the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
-    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts no access-token scheme, so a request with no credential, a client secret, Basic or an access token is 400 invalid_client; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
+    "normative": "a request carrying no credential, one whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`, included), or a path the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
+    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts `private_key_jwt` and no access-token scheme, so a request with no credential, `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `none` (a bare `client_id`), or an access token is 400 invalid_client, the shared-secret methods and `none` exactly as no credential; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -20888,9 +20888,95 @@
      "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. A shared-secret method or none answered other than as no credential (client_secret_post, Basic, client_secret_jwt and none each made retryable) failed the new witnesses."
+  },
+  {
+   "id": "status.auth.client-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A method that authenticates with a shared client secret, such as `client_secret_basic`, `client_secret_post`, or `client_secret_jwt`, MUST NOT be used, and `none` is not client authentication.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client of the Status or Lifecycle endpoint never authenticates with a shared client secret (`client_secret_basic`, `client_secret_post`, `client_secret_jwt`) and never relies on `none`",
+    "local": "the PDP's Mission Status resolver (services/pdp/src/mission-status-resolver.ts), the reference's Status client, presents private_key_jwt alone: an ES256 client assertion with no Authorization header, no client_secret and no bare client_id; the witness captures the request it sends. The AS side, a shared-secret request answered as one with no credential, is status.auth.unadvertised-method-as-no-credential"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver authenticates without a shared client secret (@spec status#mission-status-authentication) > presents private_key_jwt alone: an asymmetrically signed client assertion, with no Authorization header, no client_secret and no bare client_id",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: the resolver sending a Basic Authorization header failed the witness."
+  },
+  {
+   "id": "status.auth.unadvertised-method-as-no-credential",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A request whose selected method the endpoint does not advertise, including a shared-secret method such as HTTP Basic, is answered as one that presented no credential",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`) receives exactly the outcome a request with no credential receives",
+    "local": "at both endpoints, which accept no access-token scheme, the outcome is 400 invalid_client with no challenge and the request's nonce echoed, for no credential and for each of client_secret_basic, client_secret_post, client_secret_jwt (an HS256 assertion) and none (a bare client_id)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth); the AS side of status.auth.client-no-shared-secret. Mutation-proved: answering client_secret_post, Basic, client_secret_jwt or none as retryable instead of as no credential each failed a witness."
   },
   {
    "id": "status.auth.advertised-assertion-algs",
@@ -21343,7 +21429,7 @@
    "id": "status.metadata.lifecycle-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when the Mission Lifecycle endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21357,8 +21443,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving the Lifecycle endpoint, in either Lifecycle conformance class, advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
-    "local": "[\"private_key_jwt\"]"
+    "normative": "a deployment whose Lifecycle endpoint, in either Lifecycle conformance class, accepts client authentication advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the client authentication methods it accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"]; the reference Lifecycle endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever the endpoint is served and the member is advertised there"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21376,7 +21462,40 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Lifecycle discovery witness."
+  },
+  {
+   "id": "status.metadata.lifecycle-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_lifecycle_endpoint_auth_methods_supported` takes the Status member's value space and constraints: it lists only registry values that use no shared client secret, never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method",
+    "local": "[\"private_key_jwt\"] (LIFECYCLE_ENDPOINT_AUTH_METHODS), a constant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Twin of status.metadata.status-auth-methods-no-shared-secret for the Lifecycle member, whose MUST NOT arrives through \"the value space and constraints of\" the Status member. Mutation-proved: listing client_secret_basic, and listing none, each failed the witness."
   },
   {
    "id": "status.metadata.lifecycle-assertion-algs",
@@ -21427,7 +21546,7 @@
    "id": "status.metadata.status-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Status endpoint.",
+   "text": "REQUIRED when the Mission Status endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21438,8 +21557,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an AS serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods that endpoint accepts",
-    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407)"
+    "normative": "an AS whose Mission Status endpoint accepts client authentication advertises `mission_status_endpoint_auth_methods_supported` naming exactly the client authentication methods that endpoint accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407); the reference Mission Status endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever it is served"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21451,7 +21570,37 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability."
+   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Status discovery witness."
+  },
+  {
+   "id": "status.metadata.status-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "It MUST NOT list a method that authenticates with a shared client secret, or `none`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_status_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret: never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method (the access-token path is described by Protected Resource Metadata)",
+    "local": "[\"private_key_jwt\"] (STATUS_ENDPOINT_AUTH_METHODS in services/authorization-server/src/adapters/lifecycle-endpoint.ts), a constant: no deployment configuration can add a method, so no load-time guard is needed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: listing client_secret_basic, and listing access_token, each failed the witness."
   },
   {
    "id": "status.metadata.status-assertion-algs",
@@ -21697,7 +21846,7 @@
    "id": "status.auth.invalid-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-auth-failures",
-   "text": "A request whose mTLS or private-key-JWT client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "text": "A request whose client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -21712,7 +21861,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
+    "normative": "a failed client authentication, whatever the advertised method (for example `tls_client_auth` or `private_key_jwt`), gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
     "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Mission Status endpoint authenticates the same way and refuses the same way (#1407)"
    },
    "level": "endpoint",
@@ -21743,7 +21892,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint."
+   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -22076,7 +22225,7 @@
    "id": "status.lifecycle.direct-client-grant",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "When the caller authenticates directly as a client (mTLS client authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
+   "text": "When the caller authenticates directly as a client ({{mission-status-authentication}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -22087,7 +22236,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a client authenticated by private-key JWT is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
+    "normative": "a client that authenticates directly as a client, with an advertised client authentication method (`private_key_jwt` in the reference), is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
     "local": "the grant is the deployment's lifecycleClientGrants entry for the client_id, or a dedicated client registered through lifecycleClients with its public key and grants; the shipped launchers bind mission_lifecycle to one lifecycle console and to no other client; an unknown grant name fails the boot"
    },
    "level": "endpoint",
@@ -22112,7 +22261,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.acting-party-reflected",
@@ -76315,6 +76464,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
+  },
+  {
+   "id": "mas.metadata.submission-auth-methods-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "REQUIRED when the mission submission endpoint accepts client authentication.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS whose mission submission endpoint accepts client authentication publishes `mission_submission_endpoint_auth_methods_supported` naming the client authentication methods that endpoint accepts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+  },
+  {
+   "id": "mas.metadata.submission-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_submission_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret, never `none`, and no `access_token` pseudo-method; a sender-constrained access token accepted there is described by the endpoint's Protected Resource Metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
   },
   {
    "id": "mas.join-assertion.mint-requires-active",
