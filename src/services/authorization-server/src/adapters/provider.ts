@@ -460,6 +460,7 @@ import {
   ceilingAdjudicationLine,
   ceilingConsentOf,
   consentedCeilingEntries,
+  assembledCeilingOffer,
   consentsOffer,
   type ProgressiveDrawdownOptions,
 } from "../kernel/progressive.js";
@@ -4463,10 +4464,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // deployment's approval surface offers, rendered for the Approver; the
       // decision consents only exactly this offer. A device approval offers
       // none (#1256).
-      const ceilingOffer =
+      // @spec resource-access#resource-contract (#249, D875): its references
+      // assembled from configuration before it renders.
+      const ceilingOffer = assembledCeilingOffer(
         !deviceJti && opts.progressive?.ceilingOffer
           ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-          : undefined;
+          : undefined,
+        kernel.resourceContracts(),
+      );
       // The decision is bound to this rendering, never to an offer computed afresh.
       retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
       // @spec mission#approval-context-changes (#1446, D583): the context this

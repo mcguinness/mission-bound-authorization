@@ -100,6 +100,7 @@ import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
 import { deploymentCrossDomain, StandingPaymentLineageError, standingPaymentRootOf } from "../kernel/standing-payment.js";
 import {
+  drawdownRequested,
   adjudicateDrawdown,
   createCeilingDrawdownInCallerTx,
   DrawdownRefusal,
@@ -2891,7 +2892,9 @@ export async function handleExpansionExchange(
     }
     const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
-      requested,
+      // @spec resource-access#resource-contract (#249, D875): a drawdown carries
+      // the consented ceiling's reference, never one assembled afresh.
+      requested: drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling),
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
       ...(submissionEvidence?.length ? { submissionEvidence } : {}),
