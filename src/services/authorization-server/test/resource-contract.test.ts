@@ -33,6 +33,8 @@ import {
   DispatchError,
   dispatchFromTemplate,
   createChildMission,
+  createExpansion,
+  ExpansionDeferralStore,
   createTemplate,
   deriveAuthoritySet,
   IntentError,
@@ -628,5 +630,96 @@ describe("a child Mission preserves its parent entry's reference (@spec resource
       expect(inheritResourceContract([entry([READ])], [entry([READ]), entry([READ], V2)])[0]?.resource_contract).toBeUndefined();
       expect(inheritResourceContract([entry([READ], V1)], [entry([READ], V2)])[0]?.resource_contract).toEqual(V1);
     });
+  });
+});
+
+// @spec resource-access#resource-contract (#249, D875): an Expansion is a new
+// approval, so the successor's references are assembled from configuration
+// in the one construction its page, its decision, its completion check and
+// createExpansion share; the predecessor is never re-pinned.
+describe("expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875)", () => {
+  /** v2 superseded and v3 current, required for the read. */
+  const LATER = declarations(
+    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [READ],
+  );
+  let ekey: CryptoKey;
+  beforeAll(async () => {
+    ekey = (await generateKeyPair("ES256")).privateKey;
+  });
+  const kernelFor = (resourceContracts: ResourceContractDeclarations) => {
+    const opts: ConstructorParameters<typeof MissionKernel>[0] = {
+      issuer: "https://as.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: ekey,
+      statusKid: "as-status",
+      resourceContracts,
+      now: () => NOW,
+    };
+    return { opts, kernel: new MissionKernel(opts) };
+  };
+  let seq = 0;
+  const approveIn = (kernel: MissionKernel) =>
+    kernel.approve({
+      intent: validateMissionIntent(JSON.stringify(TASK_INTENT)),
+      proposedAuthority: proposal(),
+      subject: { iss: "https://as.test", sub: "alice" },
+      approver: { iss: "https://as.test", sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `rc-exp-apev-${seq++}`,
+    });
+  const expand = (kernel: MissionKernel, predecessorId: string, r?: ResourceContractRef) =>
+    createExpansion(kernel, {
+      predecessorId,
+      intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read Acme's Q3 and Q4 invoices" })),
+      proposedAuthority: proposal(r),
+      approver: { iss: "https://as.test", sub: "bob" },
+      approvalEventId: `rc-exp-succ-${seq++}`,
+    } as never);
+
+  it("the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned", () => {
+    const { opts, kernel } = kernelFor(SUPERSEDED);
+    const predecessor = approveIn(kernel);
+    expect(predecessor.authority_set[0]?.resource_contract).toBeUndefined();
+    opts.resourceContracts = REQUIRED;
+    const { successor } = expand(kernel, predecessor.id);
+    expect(successor.authority_set[0]?.resource_contract).toEqual(V2);
+    expect(kernel.get(predecessor.id)?.authority_set[0]?.resource_contract).toBeUndefined();
+  });
+
+  it("refuses an Expansion proposing a version configuration does not name as current", () => {
+    const { kernel } = kernelFor(REQUIRED);
+    const predecessor = approveIn(kernel);
+    expect(() => expand(kernel, predecessor.id, V1)).toThrow(IntentError);
+  });
+
+  it("the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins", () => {
+    const { opts, kernel } = kernelFor(REQUIRED);
+    const store = new ExpansionDeferralStore(kernel, () => NOW);
+    const open = (predecessorId: string) =>
+      store.open({
+        predecessorId,
+        intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read Acme's Q3 and Q4 invoices" })),
+        proposedAuthority: proposal(),
+        clientId: "ap-agent",
+        jkt: "jkt-rc",
+        creationRequestId: `crid-rc-${seq++}`,
+      });
+    const decide = (code: string) =>
+      store.approve(code, { approver: { iss: "https://as.test", sub: "bob" }, approvalEventId: `rc-exp-dec-${seq++}`, approvedUntil: "2027-01-01T00:00:00Z" });
+    // Completed under the configuration it was approved under.
+    const first = open(approveIn(kernel).id);
+    expect(store.pendingReview(first.deferral_code)?.successor[0]?.resource_contract).toEqual(V2);
+    decide(first.deferral_code);
+    const done = store.redeem(first.deferral_code);
+    expect("successor" in done && kernel.get(done.successor.id)?.authority_set[0]?.resource_contract).toEqual(V2);
+    // Approved under v2, completed after configuration made v3 current: refused.
+    const second = open(approveIn(kernel).id);
+    decide(second.deferral_code);
+    opts.resourceContracts = LATER;
+    const before = kernel.allMissions().length;
+    expect(store.redeem(second.deferral_code)).toEqual({ error: "access_denied" });
+    expect(kernel.allMissions().length).toBe(before);
   });
 });
