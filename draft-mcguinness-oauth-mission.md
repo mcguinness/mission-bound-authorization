@@ -7799,6 +7799,11 @@ Cross-Domain:
   the Enforcement Responsibilities table is removed, with Rendering
   Safeguards pointing to Enforcement Requirements and Scope Projection
   (#1793, D919).
+- Editorial, no requirement change: Token Claims, Delegated Exchange,
+  Intent Submission Evidence, Revocation, Authority Hash and Mission
+  Identity, and Authority Materialized Before Containment point to the
+  home of a rule they restated, keeping each operation's own condition
+  (#1793, D919).
 
 -01
 
