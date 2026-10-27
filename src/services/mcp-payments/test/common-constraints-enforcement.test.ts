@@ -800,7 +800,8 @@ describe("the payments resource fails closed on a constraint it does not enforce
     const h = harness({ mission: { x_region: "eu" } });
     const res = await read(h, "inv-q3");
     expect(res.ok).toBe(false);
-    expect(res.denial_reason).toBe("parameter_violation");
+    // @spec authzen#failure-condition-coverage (#1772, D907).
+    expect(res.denial_reason).toBe("constraint_unsupported");
     expect(res.result).toBeUndefined();
   });
 });
