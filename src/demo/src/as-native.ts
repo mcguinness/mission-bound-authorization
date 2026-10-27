@@ -8,7 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { kernelStoreFromEnv, loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
-import { evidenceKeySourceFromEnv, validateEvidenceKeyFiles } from "./evidence-key-files.js";
+import { evidenceKeySourceFromEnv } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
 
@@ -107,9 +107,6 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       asContinuation,
     });
   }
-  // @spec #831 (D901): both evidence key files load, each as its holder's,
-  // before anything connects; composeStack loads them again.
-  if (options.evidenceKeys) validateEvidenceKeyFiles(options.evidenceKeys);
   // @spec #250: the kernel file's directory exists before anything connects.
   if (options.kernelStore) mkdirSync(dirname(options.kernelStore.file), { recursive: true });
   const stack = await composeStack(options);

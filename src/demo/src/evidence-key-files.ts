@@ -212,17 +212,6 @@ export function evidenceKeySourceFromEnv(env: NodeJS.ProcessEnv): EvidenceKeySou
 }
 
 /**
- * @spec #831 (D901): both key files load, each as its own holder's, before a
- * launcher connects to anything: a missing file, one open to others, another
- * holder's file (one file named for both included), or one that lacks a
- * role's key refuses by name.
- */
-export function validateEvidenceKeyFiles(files: { pep: string; pdp: string }): void {
-  loadEvidenceKeyFile(files.pep, "pep");
-  loadEvidenceKeyFile(files.pdp, "pdp");
-}
-
-/**
  * The PEP's loaded keys as the signing and verification bundle the stack
  * wires, the shape `createEphemeralEvidenceKeys` gives per-boot keys: each
  * enforcement-point key bound to its emitter and audience, the receipt
