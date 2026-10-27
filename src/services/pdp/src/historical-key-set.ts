@@ -12,10 +12,14 @@
  *   ({@link excludingCompromised}), and refuses a key the held set lists even
  *   while a cached `jwks_uri` still carries it. A listed key verifies only an
  *   archived response, for audit ({@link auditKeys}).
- * - **When the set cannot be fetched or verified, the consumer holds none**,
- *   and current reliance continues on the `jwks_uri` rule alone: the AS's
- *   withdrawal, bounded by that set's declared freshness, stays the primary
- *   enforcement. Refusing all Status reliance instead is the alternative.
+ * - **When the set cannot be fetched or verified, the consumer keeps the last
+ *   set it verified.** Unlike the `jwks_uri`, an allow-list whose stale copy
+ *   would admit a withdrawn key, the set only refuses, and a compromised key
+ *   is never taken back, so a stale set can only refuse too much. A
+ *   consumer that has never verified one continues on the `jwks_uri` rule
+ *   alone: the AS's withdrawal, bounded by that set's declared freshness,
+ *   stays the primary enforcement. Refusing all Status reliance instead is
+ *   the alternative.
  */
 
 import { freshUntil, type IssuerKeysFetch } from "@mission/core";
@@ -72,8 +76,9 @@ export async function verifyHistoricalKeySet(
 
 /**
  * A refreshing hold on the set at `uri`: refetched within the freshness its
- * response declares, as the consumer's `jwks_uri` is. A set that cannot be
- * fetched or verified leaves nothing held.
+ * response declares, as the consumer's `jwks_uri` is. A fetch that fails, or
+ * a set that does not verify, keeps the last set verified; with none ever
+ * verified, nothing is held.
  */
 export class HistoricalKeySetHolder {
   #held: { keys: HistoricalKey[]; freshUntil: number } | undefined;
@@ -101,10 +106,9 @@ export class HistoricalKeySetHolder {
     };
   }
 
-  /** The listed keys, fresh; `undefined` when no verified set can be held. */
+  /** The listed keys: fresh, or the last verified set while a refetch fails; `undefined` when none was ever verified. */
   async keys(): Promise<readonly HistoricalKey[] | undefined> {
     if (this.#held && this.#opts.now() < this.#held.freshUntil) return this.#held.keys;
-    this.#held = undefined;
     const requestTime = this.#opts.now();
     try {
       const controller = new AbortController();
@@ -116,12 +120,15 @@ export class HistoricalKeySetHolder {
         clearTimeout(timer);
       }
       const responseTime = this.#opts.now();
-      if (res.status !== 200) return undefined;
+      if (res.status !== 200) return this.#held?.keys;
       const keys = await verifyHistoricalKeySet(await res.text(), this.#opts);
       this.#held = { keys, freshUntil: freshUntil(res.headers, requestTime, responseTime) };
       return keys;
     } catch {
-      return undefined;
+      // A compromised key is never taken back, so the last verified set,
+      // stale or not, can only refuse too much, never admit a listed key:
+      // keep it, and try again at the next use.
+      return this.#held?.keys;
     }
   }
 }

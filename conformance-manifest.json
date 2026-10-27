@@ -22817,7 +22817,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it; with no set held, the jwks_uri rule alone decides."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps the last set it verified while a refetch fails; with none ever verified, the jwks_uri rule alone decides."
    },
    "level": "unit",
    "coverage": "partial",

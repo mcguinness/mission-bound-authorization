@@ -111,7 +111,7 @@ describe("a listed key and a current reliance decision (@spec status#signing-key
     await jwtVerify(archived, auditKeys(refreshed.keys, listed ?? []));
   });
 
-  it("continues on the jwks_uri rule alone when the set cannot be fetched or verified: the held set is nothing, and the current keys decide", async () => {
+  it("continues on the jwks_uri rule alone when no set has ever been fetched and verified: nothing is held, and the current keys decide", async () => {
     const status = await key("as-status-2");
     const compromised = await key("as-status");
     const other = await key("as-token");
@@ -128,5 +128,34 @@ describe("a listed key and a current reliance decision (@spec status#signing-key
       // No verified set held: the key the cached jwks_uri carries still verifies, as without a set.
       await jwtVerify(await compromised.sign(), held.keys);
     }
+  });
+
+  it("keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much", async () => {
+    const status = await key("as-status-2");
+    const compromised = await key("as-status");
+    const other = await key("as-token");
+    let t = 0;
+    const state: { published: Record<string, unknown>[]; historical: string | Error | undefined } = {
+      published: [status.jwk, compromised.jwk],
+      historical: await status.signSet([revoked(compromised.jwk)]),
+    };
+    const { fetch } = issuer(state);
+    const held = refreshingStatusKeys(JWKS, ["as-status", "as-status-2"], {
+      algs: ["ES256"],
+      fetch,
+      now: () => t,
+      historical: { uri: HISTORICAL, issuer: ISSUER },
+    });
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    // The set's lifetime passes and it cannot be refetched: the last verified set still refuses.
+    state.historical = new Error("unreachable");
+    t += 300_000;
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    expect((await held.historical?.keys())?.map((k) => k.kid)).toEqual(["as-status"]);
+    // A set that does not verify keeps it too.
+    state.historical = await other.signSet([]);
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    // The current Status key verifies throughout.
+    await jwtVerify(await status.sign(), held.keys);
   });
 });
