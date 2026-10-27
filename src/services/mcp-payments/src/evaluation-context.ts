@@ -14,7 +14,8 @@
  * (#252) reads its effect facts from the committed wire's own ledger record,
  * the effect the reversal offsets, never from the invoice as it reads now,
  * and reads from the store only the live resource facts its decision also
- * evaluates (the invoice's issuance and classification, its vendor's tenant).
+ * evaluates: the issuance and classification of the invoice the wire paid,
+ * and the current tenant of the vendor the wire paid (#1693, D873).
  *
  * Salt posture: per-epoch secret material, with an explicit
  * restart-loses-bindings posture. Each version is fresh random material
@@ -99,7 +100,12 @@ export class EvaluationContextSalts {
   }
 }
 
-/** The store records a crossing's invoice names: the invoice, and the vendor it names now. */
+/**
+ * The store records a crossing's live facts are read from: the invoice, and
+ * the vendor whose current record supplies the vendor facts. On a store
+ * crossing that vendor is the one the invoice names now; on a compensate
+ * crossing it is the vendor the committed wire paid (#1693, D873).
+ */
 export interface StoreRecords {
   invoice: Invoice;
   vendor: Vendor;
@@ -110,8 +116,8 @@ export interface StoreRecords {
  * The records a fact or target is resolved from. An ordinary crossing reads
  * the invoice and vendor in this resource's store. A compensate crossing
  * (#252) reads the committed wire's ledger record and the operation key it
- * committed under, and beside them the store records of the invoice that
- * wire paid, for the live facts its decision also evaluates.
+ * committed under, and beside them the store records of the invoice and the
+ * vendor that wire paid, for the live facts its decision also evaluates.
  */
 type ResolutionSources =
   | ({ kind: "store" } & StoreRecords)
@@ -135,7 +141,7 @@ interface FactResolver {
 
 const STORE_ONLY: readonly SourceKind[] = Object.freeze(["store"]);
 const WIRE_ONLY: readonly SourceKind[] = Object.freeze(["committed_wire"]);
-/** A live resource fact a compensating decision evaluates as well (#252). */
+/** A live invoice fact a compensating decision evaluates as well (#252). */
 const STORE_AND_COMPENSATE: readonly SourceKind[] = Object.freeze(["store", "committed_wire"]);
 
 /** A string fact the record may omit: its value, or `null` when it carries none. */
@@ -196,7 +202,8 @@ export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver>> = O
   // read (`resource_issued_after` and `_before`, `data_classification`,
   // `tenant`), exactly as the decision request carries them: the value, or
   // `null` when the record names none. On a compensate crossing they are the
-  // only store facts, read for the invoice the committed wire paid.
+  // only store facts: the issuance and classification of the invoice the
+  // committed wire paid, and the tenant of the vendor it paid, below.
   "payments-store:invoice.issued_at": {
     sources: STORE_AND_COMPENSATE,
     granularity: "effective_values",
@@ -209,8 +216,20 @@ export const PAYMENTS_FACT_RESOLVERS: Readonly<Record<string, FactResolver>> = O
     normalization: "string-or-null",
     resolve: ({ invoice }) => stringOrNull(invoice.classification),
   },
+  // The tenant of the vendor the invoice names now: a store crossing's.
   "payments-store:vendor.tenant": {
-    sources: STORE_AND_COMPENSATE,
+    sources: STORE_ONLY,
+    granularity: "effective_values",
+    normalization: "string-or-null",
+    resolve: ({ vendor }) => stringOrNull(vendor.tenant),
+  },
+  // @spec resource-access#initial-common-constraints, runtime#compound-actions
+  // (#1693, D873): a compensate crossing's tenant is the current tenant of
+  // the vendor the committed wire paid. The wire fixes which vendor the
+  // reversal concerns, and that vendor's record in the store supplies its
+  // tenant now, never the vendor the invoice names now.
+  "payments-store:paid-vendor.tenant": {
+    sources: WIRE_ONLY,
     granularity: "effective_values",
     normalization: "string-or-null",
     resolve: ({ vendor }) => stringOrNull(vendor.tenant),
@@ -290,8 +309,8 @@ export interface HeldEvaluationContext {
 /**
  * Where a context's facts are read. The invoice the request names, in the
  * payments store; or, with `compensates`, the committed wire's ledger record
- * through `committedEffects`, beside the store records of the invoice it
- * paid.
+ * through `committedEffects`, beside the store records of the invoice and
+ * the vendor it paid.
  *
  * `records` (and, for a compensate crossing, `wire`) are records the caller
  * already resolved: a capture commits exactly them, so the decision request
@@ -318,15 +337,29 @@ export function readStoreRecords(payments: PaymentsStore, invoiceId: string): St
   return invoice && vendor ? { invoice, vendor, payments } : undefined;
 }
 
+/**
+ * @spec runtime#compound-actions (#252, #1693, D873): one synchronous read of
+ * the store records a committed wire names: the invoice it paid, and the
+ * current record of the vendor it paid, never the vendor the invoice names
+ * now. `undefined` when either does not resolve.
+ */
+function readPaidRecords(payments: PaymentsStore, wire: CommittedWire): StoreRecords | undefined {
+  const invoice = payments.getInvoice(wire.invoiceId);
+  const vendor = invoice ? payments.getVendor(wire.vendorId) : undefined;
+  return invoice && vendor ? { invoice, vendor, payments } : undefined;
+}
+
 function resolutionSources(subject: ContextSubject): ResolutionSources | undefined {
   if (subject.compensates) {
     const wire =
       subject.wire ?? subject.committedEffects?.committedWire(subject.compensates.opKey, subject.compensates.evaluationId);
     if (!wire) return undefined;
-    // The live facts are the invoice the committed wire paid, and the vendor
-    // that invoice names now, as the compensating decision reads them.
-    const records = subject.records ?? readStoreRecords(subject.payments, wire.invoiceId);
-    if (!records || records.invoice.id !== wire.invoiceId) return undefined;
+    // The live facts are the invoice the committed wire paid and the vendor
+    // it paid, as the compensating decision reads them (#1693, D873). Records
+    // handed in must be those two: a different invoice or vendor does not
+    // resolve.
+    const records = subject.records ?? readPaidRecords(subject.payments, wire);
+    if (!records || records.invoice.id !== wire.invoiceId || records.vendor.id !== wire.vendorId) return undefined;
     return { kind: "committed_wire", wire, reverses: subject.compensates.opKey, ...records };
   }
   const records = subject.records ?? readStoreRecords(subject.payments, subject.invoiceId);
