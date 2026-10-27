@@ -28,6 +28,27 @@ against a proposal's description, the first match deciding, else
 - **Updating.** Edit, review, and restart the PS. A change applies to the
   next request; approved missions keep the blob they were approved with.
 
+## `aauth-resource.json`
+
+The AAuth Resource of the three-party route (#836 slice 2,
+`services/aauth-resource`, read by that package's own
+`loadResourceConfig`): its server identifier, the `kid` and `alg` of its
+resource-token signing key (the key is generated at boot), the
+resource-token lifetime (at most 300 seconds, aauth -11 Section 6.7.1),
+the signature window, the scope values it defines, and each protected
+operation with the one scope an auth token must grant for it. The scope
+check is the Resource's own policy on the PS-issued auth token (Section
+13.7); the Resource never evaluates a mission.
+
+- **Owner.** The Resource's operator.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, an issuer that is not a server identifier, a lifetime
+  over 300 seconds, an unsupported algorithm, an operation at a reserved
+  path, an operation scope the file does not define, and a duplicate
+  operation.
+- **Updating.** Edit, review, and restart the Resource. Resource tokens
+  already issued keep their scope.
+
 ## `approval-floor.json`
 
 The published approval-authentication floor (`@spec
