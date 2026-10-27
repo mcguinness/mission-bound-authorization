@@ -280,7 +280,7 @@ the stack's issuer ([fga-hygiene.md](fga-hygiene.md)). Its owner is the
 deployment's OpenFGA administrator, who changes it with `pnpm resource-policy`
 (`FgaDomainAdmin`, attached to the configured store, never creating one):
 `pnpm resource-policy administers the stored entitlements (@spec runtime#input-resource-policy, #828) > attaches to the configured store and model and never bootstraps one; without both ids it refuses before connecting`.
-The Operation Profile (`payments-runtime-profile-v14`) declares its owner,
+The Operation Profile (`payments-runtime-profile-v15`) declares its owner,
 principals (subject and client), relations, tenant, freshness (current as of the decision, separate from
 Mission-state freshness) and failure behavior; the Enforcement Scope
 Statement's baseline has no Resource-policy member, and the runtime profile
