@@ -113,17 +113,18 @@ export interface VerifiedMissionStatus {
   relianceBoundMs: number;
   /**
    * Present, and `true`, only when the caller asked for expiry to be reported
-   * ({@link MissionStatusVerifyOptions}) and `exp` had passed: every other
-   * check passed as of the response's own `exp`.
+   * ({@link MissionStatusVerifyOptions}) and the verification time is on or
+   * after `exp`, whatever the tolerance: every other check passed.
    */
   expired?: true;
 }
 
 /**
  * How {@link verifyMissionStatusResponse} treats a response whose `exp` has
- * passed (consumer check 9). `refuse`, the default, fails it. `report` runs
- * every other check as of the response's own `exp` and marks the result
- * `expired`, for a Lifecycle client that MAY accept a replay of its own
+ * passed (consumer check 9). `refuse`, the default, fails it once past the
+ * tolerance. `report` runs every other check, and marks the result `expired`
+ * whenever the verification time is on or after `exp`, inside the tolerance
+ * or beyond it, for a Lifecycle client that MAY accept a replay of its own
  * retained request as confirmation of that request's outcome
  * (@spec status#idempotency), never as the Mission's current state.
  */
@@ -161,9 +162,9 @@ export interface MissionStatusVerifyOptions {
  * `clockToleranceSeconds` is check 9's receipt-time allowance on `exp`: it
  * decides whether the response is accepted, never how long it is relied on.
  * The returned reliance bound carries no allowance. With `options.expired`
- * `report`, a response whose `exp` has passed is verified by every other
- * check as of that `exp` and returned marked `expired`; the default refuses
- * it.
+ * `report`, a response verified on or after its `exp` is verified by every
+ * other check and returned marked `expired`, the tolerance playing no part in
+ * that classification; the default refuses it once past the tolerance.
  */
 export async function verifyMissionStatusResponse(
   jws: string,
@@ -186,18 +187,25 @@ export async function verifyMissionStatusResponse(
       requiredClaims: ["exp", "iat"],
     });
   try {
-    let expired = false;
     let payload: JWTPayload;
     try {
       ({ payload } = await verifyAt(now));
     } catch (e) {
       // Only an expiry is reported, and only on request: the signature and
-      // every claim check then run again as of the response's own `exp`, so
-      // an expired response that fails any other check is still refused.
+      // every claim check then run again at the last second of the
+      // response's lifetime, `exp` minus one, which JWT validation admits at
+      // any tolerance, zero included (a JWT is expired "on or after" its
+      // `exp`, RFC 7519 Section 4.1.4). An expired response that fails any
+      // other check is still refused.
       if (options.expired !== "report" || !(e instanceof errors.JWTExpired) || typeof e.payload.exp !== "number") throw e;
-      ({ payload } = await verifyAt(new Date(e.payload.exp * 1000)));
-      expired = true;
+      ({ payload } = await verifyAt(new Date((e.payload.exp - 1) * 1000)));
     }
+    // @spec status#idempotency (#1757 review): whether the response is
+    // expired is decided by its verified `exp` and the verification time
+    // alone, never by the tolerance, which only decides whether a response
+    // is accepted. One received on or after its `exp`, inside the skew
+    // allowance or beyond it, is reported expired.
+    const expired = options.expired === "report" && now.getTime() >= (payload.exp as number) * 1000;
     const mission = payload.mission;
     if (mission === null || typeof mission !== "object" || Array.isArray(mission)) return undefined;
     const m = mission as Record<string, unknown>;

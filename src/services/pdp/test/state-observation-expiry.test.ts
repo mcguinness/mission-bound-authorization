@@ -72,9 +72,46 @@ describe("the shared Mission Status verifier, reporting expiry on request (@spec
     expect("expired" in (current as object)).toBe(false);
   });
 
-  it("still refuses an expired response that fails any other check: another audience, another issuer, another Mission, a fresh_until after exp, or a key it does not hold", async () => {
+  it("classifies expiry by exp and the verification time alone: current one second before exp, expired at exp and after it, inside the tolerance and beyond it, at the profile's tolerance and at zero (#1757 review)", async () => {
+    const jws = await sign(claims(IAT));
+    const exp = IAT + 60;
+    const at = (s: number) => new Date(s * 1000);
     const report = { expired: "report" } as const;
-    const refused = async (jws: string) => expect(await verifyMissionStatusResponse(jws, EXPECTED, keys, LATER, TOLERANCE_S, report)).toBeUndefined();
+    for (const tolerance of [TOLERANCE_S, 0]) {
+      const before = await verifyMissionStatusResponse(jws, EXPECTED, keys, at(exp - 1), tolerance, report);
+      expect(before, `tolerance ${tolerance}, exp - 1`).toBeDefined();
+      expect("expired" in (before as object), `tolerance ${tolerance}, exp - 1`).toBe(false);
+      for (const offset of [0, 1, TOLERANCE_S - 1, TOLERANCE_S, TOLERANCE_S + 1, 120]) {
+        const reported = await verifyMissionStatusResponse(jws, EXPECTED, keys, at(exp + offset), tolerance, report);
+        expect(reported?.expired, `tolerance ${tolerance}, exp + ${offset}`).toBe(true);
+        expect(reported?.mission, `tolerance ${tolerance}, exp + ${offset}`).toMatchObject({ id: MISSION, state: "suspended" });
+      }
+    }
+    // The default mode is unchanged: accepted and unmarked inside the
+    // tolerance, refused beyond it.
+    const inside = await verifyMissionStatusResponse(jws, EXPECTED, keys, at(exp + 1), TOLERANCE_S);
+    expect(inside).toBeDefined();
+    expect("expired" in (inside as object)).toBe(false);
+    expect(await verifyMissionStatusResponse(jws, EXPECTED, keys, at(exp + TOLERANCE_S + 1), TOLERANCE_S)).toBeUndefined();
+  });
+
+  it("still refuses an expired response that fails any other check: another audience, another issuer, another Mission, a fresh_until after exp, or a key it does not hold, at its exp, just after it and long after, at the profile's tolerance and at zero", async () => {
+    const report = { expired: "report" } as const;
+    const instants = [new Date((IAT + 60) * 1000), new Date((IAT + 61) * 1000), LATER];
+    const refused = async (jws: string) => {
+      for (const tolerance of [TOLERANCE_S, 0]) {
+        for (const when of instants) {
+          expect(await verifyMissionStatusResponse(jws, EXPECTED, keys, when, tolerance, report), `tolerance ${tolerance}, ${when.toISOString()}`).toBeUndefined();
+        }
+      }
+    };
+    // The unedited response verifies at every one of those instants, so each refusal below is its one edit's.
+    for (const tolerance of [TOLERANCE_S, 0]) {
+      for (const when of instants) {
+        const reported = await verifyMissionStatusResponse(await sign(claims(IAT)), EXPECTED, keys, when, tolerance, report);
+        expect(reported?.expired, `tolerance ${tolerance}, ${when.toISOString()}`).toBe(true);
+      }
+    }
     await refused(await sign(claims(IAT, (p) => { p.aud = "another-console"; })));
     await refused(await sign(claims(IAT, (p) => { p.iss = "https://impostor.example"; })));
     await refused(await sign(claims(IAT, (p) => { (p.mission as Record<string, unknown>).id = "msn_another"; })));

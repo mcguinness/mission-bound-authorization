@@ -241,6 +241,24 @@ describe("the reference Lifecycle client's verification of an expired replay (@s
     ).toEqual({ kind: "refused", reason: "signature or claims" });
   });
 
+  it("takes a replay at or past its exp as confirmation only, inside the 30 second skew allowance and beyond it, and one second before its exp as an observation (#1757 review)", async () => {
+    const { m, request, jws } = await suspended();
+    const exp = decodeJwt(jws).exp as number;
+    const at = (s: number) => () => new Date(s * 1000);
+    expect(await verifyLifecycleResponse(jws, verifying(request, { now: at(exp - 1) }))).toMatchObject({
+      kind: "observation",
+      mission: { id: m.id, state: "suspended" },
+    });
+    for (const offset of [0, 1, 29, 30, 31, 120]) {
+      expect(await verifyLifecycleResponse(jws, verifying(request, { now: at(exp + offset) })), `exp + ${offset}`).toEqual({
+        kind: "confirmation",
+        missionId: m.id,
+        nonce: request.nonce,
+        outcome: { state: "suspended", version: m.version + 1 },
+      });
+    }
+  });
+
   // Last: it compromises the AS's Status key.
   it("refuses the AS's replay of its retained request once the Status key that signed it is compromised, before and after its exp", async () => {
     const { m, request, jws } = await suspended();
