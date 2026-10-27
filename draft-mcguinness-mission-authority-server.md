@@ -464,9 +464,11 @@ MAS's mission submission endpoint, published as
 `mission_submission_endpoint` ({{discovery}}). The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
-client using the authentication mechanisms of the Mission Status
-endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
-authentication, a DPoP- or mTLS-bound access token, or private-key JWT.
+client on one of the two paths of the Mission Status endpoint
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Authentication"): client authentication with a method the MAS
+advertises that uses no shared client secret, or a DPoP- or
+mTLS-bound access token.
 An access token's audience names this endpoint, and a client
 assertion's `aud` is the MAS's issuer identifier as its sole value,
 the client-authentication audience Mission Status requires. The MAS
@@ -477,14 +479,15 @@ advertises the accepted methods in the
 Client registration with a MAS is deployment-defined. The MAS records
 the client identifier it authenticates as the Mission's `client_id`.
 
-A request whose body is `application/json` carries the client
-authentication parameters of the mechanism it uses as top-level JSON
-string members, with the values Mission Status defines for them as
-form parameters ({{I-D.draft-mcguinness-oauth-mission-status}},
-Section "Authentication"): `client_id` with mTLS client
-authentication, and `client_assertion_type` and `client_assertion`
-with private-key-JWT client authentication
-({{Section 2.2 of RFC7523}}). These are request-level members, not
+A request whose body is `application/json` carries, as top-level
+JSON string members, the client authentication parameters that its
+method defines as form parameters, with the values Mission Status
+gives them ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Authentication"): `client_id` with mTLS client authentication, and
+`client_assertion_type` and `client_assertion` with private-key-JWT
+client authentication ({{Section 2.2 of RFC7523}}). A method that
+carries its credentials in HTTP header fields keeps them there. These
+JSON members are request-level members, not
 members of the Mission Intent Submission envelope or the Intent. The
 MAS MUST remove them, and authenticate the request with them, before
 it validates the rest of the body, so a partial or unverifiable pair
@@ -3507,6 +3510,15 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- The mission submission endpoint, and the join-assertion and
+  issuance-grant endpoints that inherit its rules, authenticate on
+  Mission Status's two paths: client authentication with an advertised
+  method from the OAuth Token Endpoint Authentication Methods registry
+  that uses no shared client secret, or a sender-constrained access
+  token, which Protected Resource Metadata describes rather than an
+  `access_token` method value. A JSON body carries as members only the
+  parameters a method defines as form parameters; header-carried
+  credentials stay in their header fields.
 - A client join counts as `delegate_depth` 0 in the assertion
   comparison: a reported 0 agrees and any other value is denied, and
   the `join` claim still carries no `depth` for a client (#1592, D681).
