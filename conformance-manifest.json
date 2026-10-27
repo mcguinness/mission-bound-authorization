@@ -56777,6 +56777,90 @@
    "tests": []
   },
   {
+   "id": "cross-domain.resource-as.rejects-replayed-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST reject a replayed cross-domain grant: it MUST track the grant's `jti` for the grant's validity window and refuse a second presentation with `invalid_grant` ({{RFC7523}} Section 3), so a grant cannot be replayed even by the party it is bound to.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS refuses with invalid_grant a second presentation of a cross-domain grant it has redeemed, base or continuation, for as long as the grant could otherwise be accepted: across a restart of the Resource AS, with the issuer's clock ahead of its own, and under concurrent presentation, where exactly one presentation releases a token; the claim is scoped to the grant's issuer and jti",
+    "local": "the reference keeps its claims in a durable store when one is configured, refuses to start on a missing store or one its init command did not create, and keeps each claim until the grant's exp plus a 300 s margin for clock adjustment"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > a replayed ID-JAG is rejected at the RAS (one-time jti)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses, after a restart on the same store, a base ID-JAG redeemed before it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses, after a restart on the same store, a continuation ID-JAG redeemed before it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses the replay after a restart when the issuer's clock runs ahead of the RAS's: the grant's iat is after the RAS started, both times",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > redeems once, after a restart, a grant issued before it and never redeemed",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > releases one token for concurrent redemptions of one grant",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption store: missing or lost history refuses (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses to boot on a missing store, names the command that creates it, and never creates one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption store: missing or lost history refuses (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses to boot on a store file init did not create: an empty file is lost history, not an empty one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > scopes a claim to its issuer: one jti from two issuers is two claims, and each is claimed once",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > keeps a claim through its grant's exp and the margin past it, and prunes it only after",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. Partial: the durable store is opt-in (`RasConfig.redemptions`), and the composed stack and its launchers do not yet give it to the RAS, so the composed RAS tracks `jti` only for its process's lifetime (the launcher follow-up on #1767); and until the owner reviews the witnesses (D842)."
+  },
+  {
    "id": "cross-domain.resource-as.authenticates-redeeming-client",
    "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
    "anchor": "validation-at-resource-as",
