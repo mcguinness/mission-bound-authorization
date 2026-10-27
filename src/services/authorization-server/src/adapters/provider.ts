@@ -4427,6 +4427,59 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         !deviceJti && opts.progressive?.ceilingOffer
           ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
           : undefined;
+      // Step 1, continued (#1802; @spec mission#approval-authentication, #826,
+      // D425, #1255): the Approver's achieved authentication, from the trusted
+      // surface, meets the client's requested `acr_values` and `max_age` and
+      // the published approval-authentication floor over the derived set and
+      // the ceiling this page offers, the inputs the decision checks. A login
+      // that falls short is asked to sign in again with nothing from the
+      // request shown, and a headless service's registration never meets a
+      // browser-only floor. Authority the classification does not name is
+      // refused for every Approver, as a derivation refusal is. The decision
+      // checks both again, so a login that ages out after the rendering still
+      // refuses there.
+      const nowSeconds = Math.floor(kernel.nowDate().getTime() / 1000);
+      let offered: AuthorityEntry[] = [];
+      try {
+        offered = ceilingOffer ? consentedCeilingEntries(ceilingOffer) : [];
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
+      const floor = evaluateApprovalFloor(
+        opts.approvalFloor,
+        [...authority, ...offered],
+        { acr: rendering.acr, auth_time: rendering.auth_time },
+        { interactive: rendering.interactive, nowSeconds },
+      );
+      if (floor.outcome === "refused" && floor.unclassified) {
+        ctx.status = 400;
+        ctx.body = { error: "access_denied", error_description: floor.reason };
+        return;
+      }
+      const prompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
+      const strengthMet = approverAuthenticationSatisfies(
+        {
+          ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
+          ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
+          ...(params.max_age === undefined && prompts.includes("login") ? { forceFreshLogin: true } : {}),
+        },
+        { acr: rendering.acr, authTime: rendering.auth_time },
+        nowSeconds,
+      );
+      if (!strengthMet || floor.outcome === "refused") {
+        notice(
+          401,
+          "insufficient_user_authentication",
+          "Sign in again, with the authentication this request requires, to review it.",
+          loginHref(rendering.selected),
+        );
+        return;
+      }
       // Step 2 (#1802): the decision's own predicates for who may approve:
       // the Subject is known, and the Approver is that Subject or holds
       // approve-for authority over it under local policy; write-bearing
