@@ -1,5 +1,12 @@
 import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
-import { DEMO_DISPATCH_POLICIES, demoReconciliationTemplate, DERIVATION_POLICY } from "@mission/demo-data";
+import {
+  APPROVAL_FLOOR,
+  DEMO_DISPATCH_POLICIES,
+  demoReconciliationTemplate,
+  DERIVATION_POLICY,
+  DISPATCH_PROHIBITED_ACTIONS,
+  PROGRESSIVE_PROFILE,
+} from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -12,9 +19,11 @@ import {
   type DispatchInput,
   type DispatchPolicies,
   dispatchFromTemplate,
+  dispatchProhibitedCoverageGaps,
   IntentError,
   MissionKernel,
   type MissionRecord,
+  publishedProhibitedPredicateMapping,
   selectDispatchAgent,
   TemplateError,
   TemplateStore,
@@ -699,11 +708,14 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
       dispatchEventId: "demo-dsp-1",
       dispatchPolicies: DEMO_DISPATCH_POLICIES,
       dispatcher: "ap-agent",
-      intent: intentOf(["payments:invoice.read", "payments:vendor.read"]),
+      // Template mode: no proposal, so the instance is the whole ceiling at
+      // the payments resource.
+      intent: intentOf([]),
       // The demo instance acts for the template's consenting human, its one
       // listed Subject, exactly as the /token dispatch grant establishes it.
       subject: { iss: ISS, sub: "bob" },
       policyVersion: POLICY_VERSION,
+      dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
     });
     expect(mission.state).toBe("active");
     expect(mission.client_id).toBe("subagent-invoice-extractor");
@@ -713,6 +725,103 @@ describe("seeded demo reconciliation template (@spec mission-template)", () => {
     expect(actions).toContain("payments:invoice.read");
     expect(actions).not.toContain("payments:payment.execute");
     expect(actions).not.toContain("payments:payment.schedule");
+    // @spec mission-template#prohibited-classes (#1710, D877): admitted
+    // under the shipped dispatch-prohibited set, it grants none of it.
+    expect([...actions].sort()).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+  });
+
+  it("the seeded template's ceiling carries no dispatch-prohibited action, so a Dispatch to every resource it names is admitted under the shipped set (@spec mission-template#prohibited-classes, #1710)", () => {
+    const seed = demoReconciliationTemplate(ISS);
+    const REPORTS = "http://localhost:4410/api";
+    expect(seed.ceiling.map((e) => [e.resource, e.actions])).toEqual([
+      [RESOURCE, ["payments:invoice.list", "payments:invoice.read"]],
+      [REPORTS, ["reports:report.read"]],
+    ]);
+    expect(seed.ceiling.flatMap((e) => e.actions).filter((a) => DISPATCH_PROHIBITED_ACTIONS.includes(a))).toEqual([]);
+    const t = createTemplate(store, seed as never, {
+      ...kernel.authoritySourceOptions(),
+      dispatchPolicies: DEMO_DISPATCH_POLICIES,
+    });
+    const { mission } = dispatchFromTemplate(kernel, store, {
+      templateId: t.id,
+      dispatchEventId: "demo-dsp-every-resource",
+      dispatchPolicies: DEMO_DISPATCH_POLICIES,
+      dispatcher: "ap-agent",
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "reconcile Acme invoices against the quarterly reports",
+          target_resources: [RESOURCE, REPORTS],
+          expires_at: "2027-01-01T00:00:00Z",
+        }),
+      ),
+      subject: { iss: ISS, sub: "bob" },
+      policyVersion: POLICY_VERSION,
+      dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
+    });
+    expect(mission.authority_set.map((e) => [e.resource, [...e.actions].sort()])).toEqual([
+      [RESOURCE, ["payments:invoice.list", "payments:invoice.read"]],
+      [REPORTS, ["reports:report.read"]],
+    ]);
+  });
+});
+
+describe("a Dispatch never grants a privileged-administration action (@spec mission-template#prohibited-classes, #1710)", () => {
+  // No shipped action is privileged administration, so this witness adds a
+  // classification that makes one, holds the configured set to it through the
+  // coverage check, and dispatches it at the kernel. The /token witnesses for
+  // the other four predicates use shipped actions
+  // (template-dispatch-endpoint.test.ts).
+  it("refuses dispatch_prohibited_class, committing nothing, a Dispatch granting an action the published mapping classifies as privileged administration, once the configured set covers that mapping (#1710)", () => {
+    const HR = "http://localhost:4499/mcp";
+    const admin: AuthorityEntry = { type: "mission_resource_access", resource: HR, actions: ["hr:role.grant"] };
+    const policy = { ...DERIVATION_POLICY, ceiling: [...DERIVATION_POLICY.ceiling, admin] };
+    kernel = new MissionKernel({
+      issuer: ISS,
+      policy: policy as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(
+        policy.ceiling as never,
+        ["worker", "intruder", "subagent-invoice-extractor", "orchestrator"],
+        ["human-approver", "bob"],
+      ),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+    const floor = {
+      ...APPROVAL_FLOOR,
+      classification: [
+        ...APPROVAL_FLOOR.classification,
+        {
+          type: "mission_resource_access",
+          resource: HR,
+          cross_domain: false,
+          actions: { "hr:role.grant": "privileged_administration" as const },
+        },
+      ],
+    };
+    const mapping = publishedProhibitedPredicateMapping(floor, PROGRESSIVE_PROFILE.external_communication_actions);
+    const gaps = dispatchProhibitedCoverageGaps(DISPATCH_PROHIBITED_ACTIONS, floor.classification, mapping);
+    expect(gaps).toEqual([{ action: "hr:role.grant", resource: HR, predicates: ["privileged_administration"] }]);
+    const configured = [...DISPATCH_PROHIBITED_ACTIONS, ...gaps.map((g) => g.action)];
+    expect(dispatchProhibitedCoverageGaps(configured, floor.classification, mapping)).toEqual([]);
+
+    const t = mkTemplate({ ceiling: [admin] });
+    const adminIntent = kernel.validateIntent(
+      JSON.stringify({ goal: "grant the reconciler role", target_resources: [HR], expires_at: "2027-01-01T00:00:00Z" }),
+    );
+    const before = kernel.allMissions().length;
+    try {
+      dispatch(t.id, { intent: adminIntent, dispatchProhibitedActions: configured });
+      expect.unreachable();
+    } catch (e) {
+      expect((e as DispatchError).reason).toBe("dispatch_prohibited_class");
+    }
+    expect(kernel.allMissions().length).toBe(before);
+    expect(store.dispatchesSince(t.id, "1970-01-01T00:00:00.000Z")).toBe(0);
+    // Under a set that leaves the action out (one the coverage check
+    // refuses), the same Dispatch is admitted: the refusal is the configured
+    // set's, which the check holds to the mapping.
+    expect(dispatch(t.id, { intent: adminIntent }).mission.state).toBe("active");
   });
 });
 

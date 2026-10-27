@@ -37,8 +37,10 @@ import {
   isRfc3339Instant,
   isValidAmount,
 } from "@mission/core";
+import type { ApprovalFloorPolicy } from "@mission/demo-data";
 import { type Database, withTransaction } from "@mission/store";
 import type { RegisteredActivationPolicy } from "./activation-policy.js";
+import { actionClassesAt, crossDomainAt } from "./approval-floor.js";
 import type { ActivationPolicySnapshotStore } from "./activation-policy-snapshots.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
@@ -362,8 +364,31 @@ export interface ProhibitedPredicateMapping {
   classesOf(entry: AuthorityEntry, action: string): readonly string[] | undefined;
   /** Actions satisfying the runtime profile's external-communication predicate. */
   externalCommunicationActions: ReadonlySet<string>;
-  /** Whether authority at `resource` is cross-domain. */
-  isCrossDomain(resource: string): boolean;
+  /** Whether authority at `resource` (the resource of `entry`, when given) is cross-domain. */
+  isCrossDomain(resource: string, entry?: AuthorityEntry): boolean;
+}
+
+/**
+ * @spec mission-template#prohibited-classes (#813, #1710, D877): the
+ * deployment's published prohibited-predicate mapping, read from what it
+ * publishes: the approval-authentication floor's classification (each
+ * action's runtime classes, and whether its resource is cross-domain) and the
+ * external-communication actions. `alsoCrossDomain`, when given, marks
+ * further resources cross-domain (the AS passes its resource-to-AS map); it
+ * only adds the predicate, never removes one the classification states.
+ */
+export function publishedProhibitedPredicateMapping(
+  floor: ApprovalFloorPolicy,
+  externalCommunicationActions: Iterable<string>,
+  alsoCrossDomain?: (resource: string) => boolean,
+): ProhibitedPredicateMapping {
+  return {
+    classesOf: (entry, action) => actionClassesAt(floor, entry, action),
+    externalCommunicationActions: new Set(externalCommunicationActions),
+    isCrossDomain: (resource, entry) =>
+      crossDomainAt(floor, entry ?? { type: "mission_resource_access", resource, actions: [] }) ||
+      (alsoCrossDomain?.(resource) ?? false),
+  };
 }
 
 /** The prohibited predicates `action` at `entry` satisfies, or undefined when the mapping does not classify it. */
@@ -377,7 +402,7 @@ export function prohibitedPredicatesOf(
   const out = new Set<ProhibitedPredicate>();
   for (const cls of classes) if (PROHIBITED_CLASSES.has(cls)) out.add(cls as ProhibitedPredicate);
   if (mapping.externalCommunicationActions.has(action)) out.add("external_communication");
-  if (mapping.isCrossDomain(entry.resource)) out.add("cross_domain");
+  if (mapping.isCrossDomain(entry.resource, entry)) out.add("cross_domain");
   return [...out];
 }
 
