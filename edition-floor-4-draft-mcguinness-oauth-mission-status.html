@@ -1634,7 +1634,8 @@ constraint; otherwise a request presenting the parameters of a method
 other than mTLS client authentication, such as <code>client_assertion</code> for
 <code>private_key_jwt</code>, uses that method, and any client certificate is not
 treated as client authentication; otherwise a request presenting only
-a client certificate uses mTLS client authentication. This order keeps
+a client certificate uses the mTLS client authentication method
+registered for the client (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>). This order keeps
 "exactly one path" satisfiable when mTLS terminates at the edge.
 The parameters of a path or method the order does not select, such as
 a <code>client_assertion</code> beside an access token, are not evaluated as
@@ -1725,7 +1726,11 @@ codes.<a href="#section-3.3-2.1.1" class="pilcrow">¶</a></p>
 receives the error response that the method's specification defines
 for that failure, with any error code, status, and challenge it
 requires, such as a method that answers a missing server-provided
-challenge or a stale credential with its own error. Where the method
+challenge or a stale credential with its own error. That response
+keeps this document's error body (<a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>): its
+error code is the body's <code>error</code>, with <code>error_description</code> and any
+<code>nonce</code> echo, and a challenge header the method requires is added to
+it. Where the method
 defines none, the request receives HTTP 400 with the <code>invalid_client</code>
 error code, as <span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> answers a failed client
 authentication carried outside the <code>Authorization</code> header, with no
@@ -3352,8 +3357,9 @@ when the AS supports it.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
           <p id="section-8-2.4.1">CONDITIONAL. A JSON array of strings naming the client authentication
 methods the Mission Status endpoint (<a href="#mission-status" class="auto internal xref">Section 3</a>) accepts,
 values of the OAuth Token Endpoint Authentication Methods registry
-<span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span>, as <code>introspection_endpoint_auth_methods_supported</code> names
-them for the introspection endpoint <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> list a
+<span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> alone, not the OAuth Access Token Types values that
+<code>introspection_endpoint_auth_methods_supported</code> also admits
+<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> list a
 method that authenticates with a shared client secret, or <code>none</code>
 (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>). The sender-constrained
 access-token path is not a client authentication method: this
