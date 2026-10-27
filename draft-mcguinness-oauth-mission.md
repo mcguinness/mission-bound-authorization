@@ -2522,11 +2522,12 @@ The grant binding relates to other mechanisms as follows:
   projection and child creation, which return a JWT authorization
   grant, and expansion, which creates a successor. Redeeming the
   Template profile's handoff grant
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) or an identity
-  continuation assertion
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}) issues a
-  derived token and creates or extends no grant binding; each profile
-  states which of its exchanges establish a grant lineage. A Resource
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) issues a derived
+  token and creates or extends no grant binding. In the continuation
+  profile's Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), redeeming a
+  root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
+  at a Resource AS produces a local derived access token. A Resource
   AS holds a destination-side grant binding only where it separately
   establishes a redeemable grant lineage mapped to the Mission, such
   as a refresh-token family.
