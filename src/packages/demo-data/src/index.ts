@@ -2068,8 +2068,8 @@ export interface DemoTemplateInput {
 export const DEMO_TEMPLATE_REVIEW_CADENCE_S = 30 * 24 * 60 * 60;
 
 /**
- * @spec mission-template — the demo READ-ONLY reconciliation template: read
- * invoices and reports, NO execute. Its ceiling is built from DERIVATION_POLICY
+ * @spec mission-template. The demo READ-ONLY reconciliation template reads
+ * invoices and reports, and executes nothing. Its ceiling is built from DERIVATION_POLICY
  * by keeping only the read/list actions and the ceiling constraints verbatim
  * while DROPPING delegation, so every template entry is entry-wise within the
  * policy ceiling (a dispatched instance cannot widen past either).
