@@ -23,6 +23,8 @@ import {
   DuplicateMemberError,
   intentHash,
   isAbsoluteUri,
+  isCurrencyCode,
+  isValidAmount,
   type JsonValue,
   MISSION_INTENT_EVIDENCE_TYP,
   parseStrictJson,
@@ -578,6 +580,15 @@ export function validateMissionIntent(raw: string, opts: IntentIntakeOptions = {
  */
 export interface IntentIntakeOptions {
   now?: Date;
+  /**
+   * @spec metering#bounds (#813, ruling 2): admit the `max_budget` member, an
+   * object of exactly `amount` (a decimal amount) and `currency` (three
+   * upper-case ASCII letters). Set only by a dispatch intake under the
+   * `standing-payment-dispatch` capability and by the expansion of a
+   * standing-payment instance; every other carrier refuses the member as
+   * unknown.
+   */
+  admitMaxBudget?: boolean;
 }
 
 /** The semantic-Intent rules over a parsed object (shared by the envelope
@@ -588,8 +599,22 @@ function validateMissionIntentObject(
 ): MissionIntent {
   // Closed top level (@spec mission#submission-via-par).
   for (const key of Object.keys(obj)) {
-    if (!TOP_LEVEL.has(key)) {
+    if (!TOP_LEVEL.has(key) && !(key === "max_budget" && opts.admitMaxBudget === true)) {
       throw new IntentError("invalid_request", `unknown top-level member: ${key}`);
+    }
+  }
+  if (obj.max_budget !== undefined) {
+    const cap = obj.max_budget;
+    if (
+      cap === null ||
+      typeof cap !== "object" ||
+      Array.isArray(cap) ||
+      Object.keys(cap).length !== 2 ||
+      typeof cap.amount !== "string" ||
+      !isValidAmount(cap.amount) ||
+      !isCurrencyCode(cap.currency)
+    ) {
+      throw new IntentError("invalid_request", "max_budget must be {amount, currency} with a decimal amount and a currency code");
     }
   }
 

@@ -28,6 +28,7 @@ import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import { projectThroughEffectiveWithOrigin, SourceUnavailableError } from "../kernel/derive.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AccountedActor, RecordedIssuance } from "../kernel/token-issuance-store.js";
+import { standingPaymentRootOf } from "../kernel/standing-payment.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { audienceCollision, resourceAudiences, separationDeclared } from "./audience-separation.js";
 import {
@@ -289,6 +290,13 @@ export async function handleDesignationExchange(
   const subject = await verifySubjectPossession(opts, ctx, { subjectError: "invalid_request" });
   if (!subject) return;
   const { record, jkt, claims } = subject;
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
+  // standing-payment lineage is not delegated until its budget accounting
+  // extends to a delegate.
+  if (standingPaymentRootOf(opts.kernel, record)) {
+    txError(ctx, 400, "invalid_target", "a standing-payment lineage is not delegated (#813)");
+    return;
+  }
 
   // 3. The holder: the token's client, and its accounted current actor.
   if (claims.client_id !== client.clientId) {
