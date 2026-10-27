@@ -27,6 +27,7 @@
     "mas-pilot:separated": "node scripts/mas-pilot.mjs separated",
     "resource-policy": "node scripts/resource-policy.mjs",
     "keys": "node scripts/keys.mjs",
+    "evidence-keys": "node scripts/evidence-keys.mjs",
     "kernel-recovery": "node scripts/kernel-recovery.mjs",
     "measure:evidence": "node scripts/measure-evidence.mjs"
   },

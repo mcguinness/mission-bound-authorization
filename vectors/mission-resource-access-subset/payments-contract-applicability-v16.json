@@ -1,0 +1,30 @@
+{
+  "format": "mission-resource-contract-applicability/1",
+  "id": "payments-contract-applicability/v16",
+  "description": "The resource each payments contract version is current for under payments-runtime-profile-v16, as an authorization server's trusted configuration names it (Resource Contracts: the configuration states which contract version is current for an entry's resource). Version 2026-10-27 is current for the payments resource only; it is current for no other resource. It supersedes payments-contract-applicability-v15.json, which names 2026-10-26 and stays frozen as a historical configuration, as does payments-contract-applicability-2026-10-26.json, which names 2026-10-24. It states currency only: whether a resource requires a reference, and the versions' Runtime states and retention, are outside this file.",
+  "spec": "draft-mcguinness-oauth-mission-resource-access",
+  "refs": [
+    "#249",
+    "D712",
+    "D865",
+    "#1693",
+    "D889",
+    "#813",
+    "#816",
+    "D877"
+  ],
+  "contracts": [
+    {
+      "resource": "https://payments.example/mcp",
+      "resource_match": "exact",
+      "current": {
+        "file": "payments-contract-2026-10-27.json",
+        "reference": {
+          "id": "https://payments.example/contracts/payments",
+          "version": "2026-10-27",
+          "digest": "sha-256:wLsBMvOEFtvnozYZjgIgZyFAh5QuP6eF8y5Dmk_ze8Y"
+        }
+      }
+    }
+  ]
+}

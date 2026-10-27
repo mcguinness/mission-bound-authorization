@@ -181,9 +181,10 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * compensate crossing `reverse_wire_transfer`. v15 (#1693, D873, D879)
  * changes only that crossing: its tenant is the current tenant of the vendor
  * the committed wire paid, and it does not depend on the vendor the invoice
- * names now.
+ * names now. v16 (#813, #816, D877) states the budget metering of
+ * `payments:payment.execute` and changes no crossing.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v15";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v16";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -558,6 +559,10 @@ const WITHOUT_REVERSAL: Readonly<Record<string, ActionMapping>> = Object.freeze(
  *   pinned to `2026-10-24` is never performed under v15's semantics, and is
  *   refused `resource_contract_unresolvable` before any decision request,
  *   while every other v14 crossing performs exactly as it did.
+ * - `payments-runtime-profile-v15` (contract version `2026-10-26`) names
+ *   every crossing the live profile does, each performed exactly as it is,
+ *   the reversal under the paid vendor's current tenant: v16 only states the
+ *   budget metering.
  *
  * Every crossing a retained profile names performs exactly as it did, and a
  * crossing it does not name is not performed under it.
@@ -565,6 +570,7 @@ const WITHOUT_REVERSAL: Readonly<Record<string, ActionMapping>> = Object.freeze(
 export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
   "payments-runtime-profile-v13": WITHOUT_REVERSAL,
   "payments-runtime-profile-v14": WITHOUT_REVERSAL,
+  "payments-runtime-profile-v15": Object.freeze({ ...TOOL_ACTIONS }),
 });
 
 /**

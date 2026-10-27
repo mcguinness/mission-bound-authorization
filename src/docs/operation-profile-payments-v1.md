@@ -1,12 +1,24 @@
-# payments-runtime-profile-v15
+# payments-runtime-profile-v16
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v15`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v16`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v16** (#813, #816, D877): states how `payments:payment.execute` is
+  metered against a standing-payment budget (Budget metering, below): the
+  payment class defines no actual measure, so the reserved amount commits,
+  and a `failed` wire stays charged pending reconciliation (D830 ruling 10).
+  It also records the `action.properties.parameters` member that an
+  invoice-scoped decision request carries under a budget-bound Mission
+  (Effective parameters, below), which had no entry. The payments resource
+  contract gains version `2026-10-27`, which names this profile;
+  `2026-10-26` (v15) is superseded and performed under the retained v15
+  profile within its retention. No crossing changes, so every operation
+  keeps its decision bytes.
 
 - **v15** (#1693, D873, D879): changes only `reverse_wire_transfer`. Its
   `tenant` fact is the current tenant of the vendor the committed wire
@@ -217,12 +229,13 @@ Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
 Statement's `extensions.resource_contracts`: one contract, `id`
 `https://payments.example/contracts/payments`, served for the canonical
 resource URI under `resource_match: prefix` (so a finer target beneath the
-service, such as an argument-derived invoice target, is covered), with three
+service, such as an argument-derived invoice target, is covered), with four
 versions, each frozen in `vectors/mission-resource-access-subset/`:
 
 | Version | State | Operation Profile | Retained until |
 |---|---|---|---|
-| `2026-10-26` | `current` | `payments-runtime-profile-v15` | |
+| `2026-10-27` | `current` | `payments-runtime-profile-v16` | |
+| `2026-10-26` | `superseded` | `payments-runtime-profile-v15` | `2027-10-27T00:00:00Z` |
 | `2026-10-24` | `superseded` | `payments-runtime-profile-v14` | `2027-10-26T00:00:00Z` |
 | `2026-10-20` | `superseded` | `payments-runtime-profile-v13` | `2027-10-24T00:00:00Z` |
 
@@ -238,8 +251,10 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   Refusal Record and no effect, unless another applicable entry covers it;
   it never gets v15's semantics silently. Every other crossing pinned to
   `2026-10-24` performs exactly as under v14, since v15 changes no other
-  crossing. An unpinned entry, and one pinned to `2026-10-26`, reverses
-  under v15.
+  crossing. An unpinned entry, and one pinned to `2026-10-26` or
+  `2026-10-27`, reverses under v15's semantics. v16 changes no crossing, so
+  the retained v15 profile names every crossing, each performed exactly as
+  under v16, within the `2026-10-26` retention.
 
 - **Contract material.** The version's document assembles, for each tool:
   its action identifier and phase, its minimum action class, its
@@ -248,9 +263,10 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   takes an idempotency key, and its catalog capability (`tool_id` and the
   extracted-definition `source_digest`). It names, per constraint key, the
   fact the resource reads, and the Operation Profile version it assembles
-  (`operation_profile`: `payments-runtime-profile-v15` for `2026-10-26`).
-  `2026-10-26` differs from `2026-10-24` only in its version, its profile
-  and the `tenant` fact it names for `reverse_wire_transfer`.
+  (`operation_profile`: `payments-runtime-profile-v16` for `2026-10-27`).
+  `2026-10-27` differs from `2026-10-26` only in its version and its
+  profile; `2026-10-26` differs from `2026-10-24` only in its version, its
+  profile and the `tenant` fact it names for `reverse_wire_transfer`.
   It overrides none of
   those definitions. Resource policy, Mission state, entitlements,
   revocation and resolved resource facts are not contract material.
@@ -291,8 +307,8 @@ versions, each frozen in `vectors/mission-resource-access-subset/`:
   entry carrying a reference covers the operation only under exactly it.
 - **Retained versions.** A superseded version is performed under the
   Operation Profile its document names (`PepDeps.retainedOperationProfiles`,
-  by default `RETAINED_OPERATION_PROFILES`, whose v13 is v14 without
-  `reverse_wire_transfer`):
+  by default `RETAINED_OPERATION_PROFILES`, whose v15 is every crossing of
+  v16, and whose v14 and v13 are v16 without `reverse_wire_transfer`):
   the operation target and the effective parameters, so `parameter_digest`,
   follow that profile, never the current one.
 - **Decision.** The PDP resolves the reference under its own declaration and
@@ -715,6 +731,26 @@ Residuals:
 - An invoice amended after settlement (a larger amount) is refused as
   already settled; paying the difference is a new business event that
   needs its own identity and is left to operator handling.
+
+## Budget metering (#813, #816)
+
+Under a Mission bound to a standing-payment budget (the
+`standing-payment-dispatch` capability and the `budget_metering`
+declaration, both disabled and unclaimed), the PDP meters
+`payments:payment.execute` at its `commit` crossing, `execute_wire_transfer`:
+
+- **No actual measure.** The payment class defines no actual measure. What
+  a wire consumes is the amount the decision charged, the invoice's
+  `{amount, currency}`. Execution Evidence conveys no `consumed`, and a
+  `completed` settlement commits the reserved amount.
+- **A failed wire stays charged.** A `failed` settlement leaves the
+  reservation held pending reconciliation (D830 ruling 10). A timeout, a
+  restart or an elapsed lease never releases it. Release is only on
+  affirmative non-execution: the redeeming attempt's own `suppressed`
+  settlement, or an operator's `not_executed` once the permit and its
+  lease have elapsed. A permit the PEP suppresses before redeeming it
+  stays charged the same way. This PEP's transaction-tier redemption store
+  cannot durably cancel a permit, so it sends nothing for one.
 
 ## Compensation (#252)
 

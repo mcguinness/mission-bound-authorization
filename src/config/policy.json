@@ -59,7 +59,10 @@
   "dispatch_prohibited_actions": [
     "payments:payment.execute",
     "payments:payment.reverse",
-    "payments:remittance.send"
+    "payments:remittance.send",
+    "payments:vendor.read",
+    "ledger:vendor.read",
+    "ledger:journal.write"
   ],
   "max_mission_lifetime_s": null,
   "child_mission_carryover": true,
