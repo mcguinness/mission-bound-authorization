@@ -29707,7 +29707,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten, and the supported-subset fixture test checks that both superseded versions stay declared as frozen."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -29748,7 +29748,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879): the shipped statement declares three versions: 2026-10-26 current (payments-runtime-profile-v15), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z)."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -29933,9 +29933,33 @@
      "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > performs the superseded 2026-10-24 version under the retained v14 profile: each crossing as the live profile does, and not the compensate crossing, whose v15 semantics it never gets (#1693, D879)",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-26 performs the reversal under the paid vendor's current tenant",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): the shipped contract is 2026-10-26 (payments-runtime-profile-v15, current), with 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under v15; an entry pinned to 2026-10-26 performs the reversal under v15. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -45235,9 +45259,15 @@
      "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > where the resource requires a reference, an entry without one provides no authority, unless another fully enforceable entry covers the operation",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -62974,9 +63004,15 @@
      "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
