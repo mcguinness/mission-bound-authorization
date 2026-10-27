@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-27T17:21:56Z
-Source repository commit: 37d70bdbb4a6276bef5fa7c8b66e16a8e72c1ceb
+Generated: 2026-10-27T21:05:30Z
+Source repository commit: 4d3c2820f3fb6d53ecd79991acffa73b8000e222
 Member count: 9
 
 Reading order:
@@ -8081,6 +8081,176 @@ Table of Contents
 
             Table 1: Applicability of this document's surfaces
 
+   The following table lists the choices this document leaves to a
+   deployment, who makes each, and, for each party that needs to learn
+   it, the existing signal, if any, from which that party learns it.  A
+   signal serves only the party entitled to read it: a client treats an
+   access token as opaque (Section 6 of [RFC9068]), so a token's header
+   and claims are resource-server signals.  Where no signal exists, the
+   table says so, and the party relies on the deployment's documentation
+   or configuration.  The cited sections govern.
+
+   +===============+===========+======================================+
+   |Choice point   |Decided by |Who learns it, and how                |
+   +===============+===========+======================================+
+   |Access-token   |AS         |Resource server: a JWT's typ header   |
+   |format: JWT or |           |parameter value at+jwt (Section 8.3,  |
+   |opaque         |           |Section 4 of [RFC9068]); no in-band   |
+   |reference token|           |signal marks an opaque token, which it|
+   |(Section 8)    |           |resolves as its deployment arranges   |
+   |               |           |(Section 11.4).  Client: none; it     |
+   |               |           |treats every access token as opaque   |
+   +---------------+-----------+--------------------------------------+
+   |Introspection, |AS         |Resource server: the                  |
+   |and issuer-    |           |introspection_endpoint AS metadata    |
+   |local          |           |([RFC8414]); for issuer-local         |
+   |resolution of  |           |resolution, none, since the AS        |
+   |an opaque token|           |authorizes each reader inside its     |
+   |(Section 11,   |           |trusted implementation boundary       |
+   |Section 11.4)  |           |                                      |
+   +---------------+-----------+--------------------------------------+
+   |Sender         |AS, on the |Resource server: the token's cnf      |
+   |constraint:    |client's   |claim, or the cnf member of an active |
+   |bearer, DPoP,  |proof, if  |introspection response (Section 9,    |
+   |or mTLS        |any        |Section 11.4).  Client: for DPoP, the |
+   |(Section 8.3)  |           |binding applied to the issued token,  |
+   |               |           |from token_type DPoP in the token     |
+   |               |           |response (Section 5 of [RFC9449]); for|
+   |               |           |mTLS, the AS's mTLS metadata          |
+   |               |           |(Section 3.3 of [RFC8705]) states only|
+   |               |           |that the AS supports certificate-bound|
+   |               |           |tokens, and no token-response member  |
+   |               |           |says a given token is bound.  A       |
+   |               |           |resource's DPoP requirement or mTLS   |
+   |               |           |support comes from its protected      |
+   |               |           |resource metadata ([RFC9728]), which  |
+   |               |           |also states support, not the binding  |
+   |               |           |of a given token.  Settled for        |
+   |               |           |delegation: a designation is requested|
+   |               |           |with a sender-constrained token, and a|
+   |               |           |delegated token is bound to the       |
+   |               |           |delegate's own key (Section 12.1,     |
+   |               |           |Section 12.2)                         |
+   +---------------+-----------+--------------------------------------+
+   |Authorization- |Client,    |AS: the request's code_challenge      |
+   |code binding:  |among the  |([RFC7636]), or its dpop_jkt parameter|
+   |PKCE S256 or a |methods the|or DPoP proof (Section 10 of          |
+   |DPoP-bound code|AS accepts |[RFC9449]).  Client: the              |
+   |(Section 6.1)  |           |code_challenge_methods_supported      |
+   |               |           |([RFC8414]) and                       |
+   |               |           |dpop_signing_alg_values_supported     |
+   |               |           |(Section 5.1 of [RFC9449]) AS metadata|
+   +---------------+-----------+--------------------------------------+
+   |Refresh-token  |AS         |Client: under rotation, a new refresh |
+   |binding: client|           |token in each refresh response        |
+   |authentication,|           |(Section 6 of [RFC6749]); for a DPoP  |
+   |sender         |           |binding, none beyond its own proof    |
+   |constraint, or |           |when it obtained the refresh token    |
+   |rotation       |           |(Section 5 of [RFC9449])              |
+   |(Section 8.5)  |           |                                      |
+   +---------------+-----------+--------------------------------------+
+   |Mission support|AS         |Client: the                           |
+   |(Section 17)   |           |mission_bound_authorization_supported |
+   |               |           |AS metadata; otherwise, out of band   |
+   +---------------+-----------+--------------------------------------+
+   |Supported types|AS; each   |Client: the AS's                      |
+   |and their      |resource   |authorization_details_types_supported |
+   |schemas        |server, for|metadata ([RFC9396]) and, where       |
+   |(Section 5.5)  |the types  |advertised, its types metadata        |
+   |               |it accepts |endpoint (Section 17); a resource     |
+   |               |           |server's                              |
+   |               |           |authorization_details_types_supported |
+   |               |           |metadata (Section 18)                 |
+   +---------------+-----------+--------------------------------------+
+   |Derivation     |Client, by |Client: no metadata signal; the       |
+   |mode: authority|proposing  |deployment publishes its mapping space|
+   |proposal or    |or not;    |as deployment documentation           |
+   |configured     |deployment,|                                      |
+   |mapping        |by         |                                      |
+   |(Section 5.1)  |configuring|                                      |
+   |               |mappings   |                                      |
+   +---------------+-----------+--------------------------------------+
+   |Transformation |AS         |Client, in order of preference: a     |
+   |capabilities   |operator,  |mission_transformation_capabilities   |
+   |per type:      |per type   |member in the type's entry at the     |
+   |narrowing,     |           |types metadata endpoint, an           |
+   |delegation,    |           |equivalently shaped member of         |
+   |projection     |           |supported-type documentation, or      |
+   |(Section 5.5.1)|           |deployment documentation.  Resource   |
+   |               |           |server: none needed; it enforces      |
+   |               |           |entries as carried (Section 12.5).    |
+   |               |           |Settled: the first carrier that       |
+   |               |           |declares a member governs, and a      |
+   |               |           |declared narrowing also governs       |
+   |               |           |Authority Set derivation              |
+   +---------------+-----------+--------------------------------------+
+   |Each entry's   |Deployment |AS: a trusted entry-to-audience       |
+   |audience       |           |mapping, such as authenticated        |
+   |(Section 5.5.1)|           |configuration or protected resource   |
+   |               |           |metadata ([RFC9728]).  Client: none;  |
+   |               |           |it requests an audience with resource |
+   |               |           |and reads the granted entries from the|
+   |               |           |token response (Section 8.4)          |
+   +---------------+-----------+--------------------------------------+
+   |Scope          |Deployment,|AS: the target's protected resource   |
+   |projection for |per target |metadata ([RFC9728]) or authenticated |
+   |a target       |           |out-of-band configuration             |
+   |(Section 8.7)  |           |                                      |
+   +---------------+-----------+--------------------------------------+
+   |Mission-       |Deployment,|AS and client: the                    |
+   |governed       |or the     |mission_bound_authorization_required  |
+   |resources      |resource   |protected resource metadata           |
+   |(Section 4.3)  |through its|(Section 18), which the AS            |
+   |               |metadata   |authenticates; a deployment's own     |
+   |               |           |classification has no signal, and     |
+   |               |           |false or omission does not clear it.  |
+   |               |           |Resource server: its own configuration|
+   |               |           |(Section 9.1)                         |
+   +---------------+-----------+--------------------------------------+
+   |Delegation     |AS         |Delegating party and delegate:        |
+   |support        |           |grant_types_supported listing the     |
+   |(Section 12)   |           |Token Exchange grant type             |
+   |               |           |(Section 17); otherwise, out of band  |
+   |               |           |or by attempt.  Settled: a delegate is|
+   |               |           |identified by its client              |
+   |               |           |authentication, an actor_token is     |
+   |               |           |refused, and a public client is not a |
+   |               |           |delegate (Section 12.2)               |
+   +---------------+-----------+--------------------------------------+
+   |Audiences that |Deployment |AS: no protocol signal; neither       |
+   |process the act|           |parsing act nor                       |
+   |chain          |           |mission_bound_authorization_required  |
+   |(Section 9.2)  |           |establishes it, and the AS establishes|
+   |               |           |it by deployment means, for example   |
+   |               |           |its configuration                     |
+   +---------------+-----------+--------------------------------------+
+   |Designated-    |Deployment |AS: no protocol signal; the AS        |
+   |client         |           |establishes by deployment means, for  |
+   |separation     |           |example its configuration, that no    |
+   |(Section 12.1) |           |resource server accepts the client's  |
+   |               |           |identifier as an audience             |
+   +---------------+-----------+--------------------------------------+
+   |Designation    |AS         |Delegate: no protocol signal; the AS's|
+   |redemption     |           |policy governs, and deployment        |
+   |count          |           |documentation may describe it.  An    |
+   |(Section 12.1) |           |attempt reveals only its own outcome, |
+   |               |           |not the permitted count               |
+   +---------------+-----------+--------------------------------------+
+   |Subject-       |Deployment |Resource server: the acr, amr, and    |
+   |authentication |           |auth_time claims (Section 8.6), or    |
+   |conveyance     |           |introspection (Section 6 of           |
+   |(Section 9.4)  |           |[RFC9470]); where no Subject          |
+   |               |           |authentication applies, they are      |
+   |               |           |absent                                |
+   +---------------+-----------+--------------------------------------+
+   |Revocation     |Deployment |A party authorized to revoke: none in |
+   |means          |           |this document; a deployment-defined   |
+   |(Section 7.2)  |           |surface, or Mission Status's revoke   |
+   |               |           |operation                             |
+   +---------------+-----------+--------------------------------------+
+
+        Table 2: Deployment choices and how each party learns them
+
 1.2.  Applicability
 
    This document targets OAuth deployments where authority serves a
@@ -8355,6 +8525,34 @@ Table of Contents
       document; a token that only references or carries Mission data
       without the gates is not Mission-bound (Section 19).
 
+   Applicable entry:  An authorization_details entry that applies, under
+      the entry's type, to a request to a resource server: where the
+      type defines a resource, the request's operation target matches it
+      under that type (Section 8.4).  Section 9.1 governs an entry whose
+      type the resource server does not implement, or whose type-defined
+      enforcement it cannot complete.
+
+   Delegate:  A sub-agent, service, or tool, itself an OAuth client
+      authenticated as a distinct actor, that obtains a delegated token
+      by Token Exchange (Section 12).
+
+   Delegating party:  The holder of a Mission-bound access token that
+      obtains a designation for a delegate: the Mission's approved
+      agent, or a delegate delegating further (Section 12.1).
+
+   Designation:  The delegating party's authorization, obtained by Token
+      Exchange, for one delegate to obtain delegated tokens
+      (Section 12.1).
+
+   Delegated exchange (delegated token):  The Token Exchange in which a
+      delegate redeems a designation naming it for a delegated token,
+      whose act claim names that delegate as the current actor
+      (Section 12.2).
+
+   Self-exchange (no-actor exchange):  A Token Exchange with no actor in
+      which an agent presents its own Mission-bound access token to
+      obtain a narrowed one; it delegates nothing (Section 12.4).
+
 3.2.  Principal Model
 
    This document maps principals onto native OAuth constructs:
@@ -8473,7 +8671,7 @@ Table of Contents
      |                  |          | past value                      |
      +------------------+----------+---------------------------------+
 
-                Table 2: Mission Intent members at a glance
+                Table 3: Mission Intent members at a glance
 
    The Mission Intent members are:
 
@@ -9796,7 +9994,7 @@ Table of Contents
           | active | expires_at reached | terminated | expired |
           +--------+--------------------+------------+---------+
 
-                  Table 3: Mission lifecycle transitions
+                  Table 4: Mission lifecycle transitions
 
    The Mission Lifecycle States registry (Section 23.7) holds these
    states, and the Mission Termination Reasons registry (Section 23.8)
@@ -11002,7 +11200,7 @@ Table of Contents
    |             |                         | (Section 8.7)            |
    +-------------+-------------------------+--------------------------+
 
-        Table 4: Enforcement of an entry's resource, actions, and
+        Table 5: Enforcement of an entry's resource, actions, and
                                constraints
 
 9.6.  Remediation Grains
@@ -11184,7 +11382,7 @@ Table of Contents
    | incomparable value)             |                                 |
    +---------------------------------+---------------------------------+
 
-               Table 5: Failures not confined to one surface
+               Table 6: Failures not confined to one surface
 
    +=================================+================================+
    | Surface / failing input         | Base OAuth error and optional  |
@@ -11240,7 +11438,7 @@ Table of Contents
    | the creation instant            | a defined extension applies    |
    +---------------------------------+--------------------------------+
 
-             Table 6: PAR and authorization endpoint failures
+             Table 7: PAR and authorization endpoint failures
 
     +=================================+===============================+
     | Surface / failing input         | Base OAuth error and optional |
@@ -11315,7 +11513,7 @@ Table of Contents
     | established                     |                               |
     +---------------------------------+-------------------------------+
 
-                      Table 7: Token Exchange failures
+                      Table 8: Token Exchange failures
 
      +============================+==================================+
      | Surface / failing input    | Base OAuth error and optional    |
@@ -11367,7 +11565,7 @@ Table of Contents
      |                            | minimized                        |
      +----------------------------+----------------------------------+
 
-                   Table 8: Protected resource challenges
+                   Table 9: Protected resource challenges
 
    In these tables, which evidence types are required follows
    [I-D.draft-mcguinness-oauth-mission-submission-evidence], and
@@ -11379,10 +11577,9 @@ Table of Contents
    A resource server consults the issuer about a Mission-bound token in
    one of three cases, with different obligations:
 
-   *  *JWT state observation.* A Mission-state-aware resource server
-      holding a JWT Mission-bound token introspects it to observe the
-      Mission's current state per request instead of waiting for the
-      token to expire.
+   *  *JWT state observation.* A resource server that observes Mission
+      state per request introspects the JWT Mission-bound token it
+      holds, instead of waiting for the token to expire.
 
    *  *Opaque-token consumption.* For an opaque Mission-bound token,
       introspection is the claims carriage: an active response carries
@@ -14073,7 +14270,7 @@ Table of Contents
    |            |          | reason.        |            | 7.1        |
    +------------+----------+----------------+------------+------------+
 
-       Table 9: Mission Lifecycle States registry: initial contents
+      Table 10: Mission Lifecycle States registry: initial contents
 
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.  A Designated
@@ -14133,7 +14330,7 @@ Table of Contents
    |         | equals it.           |         |            |           |
    +---------+----------------------+---------+------------+-----------+
 
-      Table 10: Mission Termination Reasons registry: initial contents
+      Table 11: Mission Termination Reasons registry: initial contents
 
    Each further document that defines a termination reason requests that
    reason's registration in its own IANA considerations.
@@ -14210,7 +14407,7 @@ Table of Contents
     |                |      |                    |          |Section 4|
     +----------------+------+--------------------+----------+---------+
 
-               Table 11: Core-defined Mission Intent members
+               Table 12: Core-defined Mission Intent members
 
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
@@ -15047,7 +15244,7 @@ A.7.  Timeline
     |               | token alone stops honoring it      |           |
     +---------------+------------------------------------+-----------+
 
-                  Table 12: End-to-end example timeline
+                  Table 13: End-to-end example timeline
 
 Appendix B.  Design Context and Boundaries
 
@@ -15608,7 +15805,7 @@ D.5.  Ownership and Operational Signals
    |                     | issuer policy |                            |
    +---------------------+---------------+----------------------------+
 
-               Table 13: Ownership and operational signals
+               Table 14: Ownership and operational signals
 
    Templates amortize authoring across Missions and do not bypass the
    ceilings.  The unmapped-resource rate, template-hit rate, and rule-
@@ -16212,6 +16409,15 @@ Appendix G.  Document History
       client, identified from client identity information the AS trusts,
       and presents goal and task_bounds as recorded, without truncation
       (Rendering Safeguards; #1532, D859).
+
+   *  Editorial, no requirement change: Terminology defines "applicable
+      entry" by the matching rule Audience and Token Response states,
+      and adds the delegation terms; Mission State via Token
+      Introspection describes a resource server that observes Mission
+      state in plain terms; and the Implementation Map gains a table of
+      deployment choices, naming for each who decides, which party
+      learns it, and the existing signal, if any, it learns from (#1723,
+      #1504, D845).
 
    -01
 
