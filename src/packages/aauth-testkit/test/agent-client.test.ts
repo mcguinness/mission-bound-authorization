@@ -328,6 +328,7 @@ describe("PS metadata and mission approval (@spec aauth#section-11.2, aauth#sect
     const approval = await w.agent.proposeMission({ description: "# Q" });
     expect(approval.blob.equals(blob)).toBe(true);
     expect(w.agent.mission?.s256).toBe(approval.s256);
+    expect(w.agent.mission?.blob?.equals(blob)).toBe(true);
     expect(w.agent.personToken(RESOURCE)).toBe("pt-from-approval");
   });
 
