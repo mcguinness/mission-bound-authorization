@@ -2184,13 +2184,14 @@ resolved from the MAS metadata document instead:
   ({{mission-submission}}).
 
 `mission_submission_endpoint_auth_methods_supported`:
-: REQUIRED. A JSON array of strings naming the authentication methods
-  the mission submission endpoint accepts, from the value space of
-  `mission_status_endpoint_auth_methods_supported`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
-  names a sender-constrained access token whose audience, required
-  scope, and sender constraint the MAS publishes in this endpoint's
-  Protected Resource Metadata {{RFC9728}}.
+: REQUIRED when the mission submission endpoint accepts client
+  authentication. A JSON array of strings naming the client
+  authentication methods that endpoint accepts, with the value space
+  and constraints of `mission_status_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). Where the endpoint
+  accepts a sender-constrained access token, the MAS publishes the
+  token's audience, required scope, and sender constraint in this
+  endpoint's Protected Resource Metadata {{RFC9728}}.
 
 `mission_submission_endpoint_auth_signing_alg_values_supported`:
 : REQUIRED when `mission_submission_endpoint_auth_methods_supported`
@@ -2204,7 +2205,7 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
+: Presence and semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_endpoint_auth_signing_alg_values_supported`:
@@ -2224,7 +2225,7 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_lifecycle_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
+: Presence and semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
@@ -2265,20 +2266,20 @@ The following is an example of a MAS metadata document:
   "mission_submission_endpoint":
     "https://mas.example.com/mas/mission/submit",
   "mission_submission_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_submission_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_endpoint":
     "https://mas.example.com/mas/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_status_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://mas.example.com/mas/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_join_assertion_endpoint":
