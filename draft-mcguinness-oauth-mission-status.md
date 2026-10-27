@@ -38,6 +38,7 @@ normative:
   RFC7517:
   RFC7519:
   RFC7523:
+  RFC7591:
   RFC7662:
   RFC8259:
   RFC8414:
@@ -292,7 +293,7 @@ The request is an HTTPS POST with an
   this specific request.
 
 The request also carries the client authentication parameters of the
-mechanism it uses ({{mission-status-authentication}}): `client_id`,
+method it uses ({{mission-status-authentication}}): `client_id`,
 REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}}),
 and `client_assertion_type` and `client_assertion`, REQUIRED with
 private-key-JWT client authentication {{RFC7523}}. A sender-constrained
@@ -314,23 +315,21 @@ certificate subject. The response's `aud` is the requested `audience`
 ## Authentication {#mission-status-authentication}
 
 The request MUST be authenticated. The AS MUST support at least one
-of the following mechanisms. The client MUST use exactly one of them
-per request:
+of the following paths. The client MUST use exactly one of them per
+request:
 
-1. **mTLS client authentication** {{RFC8705}}. The AS validates the
-   client's X.509 certificate against its configured trust anchors and
-   the client's registered `tls_client_auth` metadata.
-2. **Sender-constrained access token**. The client presents a
-   `mission_status`-scoped access token (see the authorization
-   requirement below) in the `Authorization` header, sender-constrained
-   either by DPoP {{RFC9449}} (the `DPoP` scheme with a `DPoP` proof
-   header, the token's `cnf.jkt` matching the proof key thumbprint) or
-   by mTLS {{RFC8705}} (a certificate-bound token, the `Bearer` scheme,
-   whose `cnf.x5t#S256` matches the presented client certificate). The
-   token MUST be audience-restricted to this endpoint's
-   protected-resource identifier (below).
-3. **Private-key-JWT client authentication** {{RFC7523}}. The client
-   presents `client_assertion_type` with the exact value
+1. **Client authentication**, with a method from the OAuth Token
+   Endpoint Authentication Methods registry {{RFC7591}} that the AS
+   advertises for this endpoint ({{as-metadata}}). A method that
+   authenticates with a shared client secret, such as
+   `client_secret_basic`, `client_secret_post`, or `client_secret_jwt`,
+   MUST NOT be used, and `none` is not client authentication. Each
+   method is processed as its specification defines. With
+   `tls_client_auth` {{RFC8705}}, the AS validates the client's X.509
+   certificate against its configured trust anchors and the client's
+   registered `tls_client_auth` metadata. With `private_key_jwt`
+   {{RFC7523}}, the
+   client presents `client_assertion_type` with the exact value
    `urn:ietf:params:oauth:client-assertion-type:jwt-bearer` and a signed
    JWT as `client_assertion`. The assertion's `aud` MUST be the AS's
    issuer identifier {{RFC8414}} as its sole value, the client
@@ -340,25 +339,35 @@ per request:
    The AS accepts only the JWS
    {{RFC7515}} algorithms it advertises for that endpoint
    ({{as-metadata}}); `none` MUST NOT be used.
+2. **Sender-constrained access token**. The client presents a
+   `mission_status`-scoped access token (see the authorization
+   requirement below) in the `Authorization` header, sender-constrained
+   either by DPoP {{RFC9449}} (the `DPoP` scheme with a `DPoP` proof
+   header, the token's `cnf.jkt` matching the proof key thumbprint) or
+   by mTLS {{RFC8705}} (a certificate-bound token, the `Bearer` scheme,
+   whose `cnf.x5t#S256` matches the presented client certificate). The
+   token MUST be audience-restricted to this endpoint's
+   protected-resource identifier (below).
 
-Plain Basic or POST client authentication MUST NOT be used for this
-endpoint. The AS MUST refuse a request not authenticated by one of the
-three mechanisms, with the outcome {{mission-status-auth-failures}}
-assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400). The
-mechanism is
+The AS MUST refuse a request not authenticated on one of the two
+paths, with the outcome {{mission-status-auth-failures}}
+assigns. The
+path and method are
 determined by wire evidence in order: a request presenting an access
-token in `Authorization` is mechanism 2, and any client certificate is
-then evaluated only as that token's mTLS sender constraint; otherwise a
-request presenting `client_assertion` is mechanism 3, and any client
-certificate is not treated as client authentication; otherwise a request
-presenting only a client certificate is mechanism 1. This order keeps
-"exactly one mechanism" satisfiable when mTLS terminates at the edge.
-The parameters of a mechanism the order does not select, such as a
-`client_assertion` beside an access token, are not evaluated as
+token in `Authorization` takes the access-token path, and any client
+certificate is then evaluated only as that token's mTLS sender
+constraint; otherwise a request presenting the parameters of a method
+other than mTLS client authentication, such as `client_assertion` for
+`private_key_jwt`, uses that method, and any client certificate is not
+treated as client authentication; otherwise a request presenting only
+a client certificate uses mTLS client authentication. This order keeps
+"exactly one path" satisfiable when mTLS terminates at the edge.
+The parameters of a path or method the order does not select, such as
+a `client_assertion` beside an access token, are not evaluated as
 client authentication. A
-request whose selected mechanism the endpoint does not advertise, or
-whose only credential is of a kind no mechanism uses (HTTP Basic, a
-client secret), is answered as one that presented no credential
+request whose selected method the endpoint does not advertise,
+including a shared-secret method such as HTTP Basic, is answered as
+one that presented no credential
 ({{mission-status-auth-failures}}).
 
 An authenticated caller MUST additionally carry an explicit read
@@ -368,7 +377,7 @@ client. The `mission_status` scope authorizes the Mission Status read
 operation and mirrors the `mission_lifecycle` scope of the Mission
 Lifecycle endpoint ({{mission-lifecycle-endpoint}}). The token-less
 path is preserved: a consumer that holds only a `mission_id` and
-authenticates directly as a client (mechanism 1 or 3) carries the
+authenticates directly as a client carries the
 deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
@@ -390,13 +399,13 @@ the authorization for the `mission_id` and audience that
 {{mission-status-anti-oracle}} requires, and a Mission it does not
 cover receives the not-found response.
 
-A presented access token (mechanism 2) MUST be audience-restricted to
+A presented access token MUST be audience-restricted to
 this endpoint's protected-resource identifier: the `resource` value the
 AS publishes for this endpoint in its Protected Resource Metadata
 {{RFC9728}}. For these surfaces that identifier is the endpoint's own URL
 (the `mission_status_endpoint` or `mission_lifecycle_endpoint`), not
-the issuer identifier that a private-key-JWT assertion's `aud` names
-(mechanism 3). The AS MUST reject a token whose audience does
+the issuer identifier that a private-key-JWT assertion's `aud` names.
+The AS MUST reject a token whose audience does
 not name that identifier. This token audience is distinct from the request body's
 `audience` parameter ({{mission-status-request}}): the token audience
 authorizes the call at this endpoint, whereas the request `audience`
@@ -404,10 +413,11 @@ carries no authentication weight and only selects the
 Resource-Server-specific authority projection the response returns
 ({{mission-status-response}}).
 
-Which mechanisms and authorization this endpoint accepts are
+Which paths and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
-metadata. The AS advertises the methods this endpoint accepts in
-`mission_status_endpoint_auth_methods_supported` ({{as-metadata}}).
+metadata. The AS advertises the client authentication methods this
+endpoint accepts in `mission_status_endpoint_auth_methods_supported`
+({{as-metadata}}).
 
 For
 the sender-constrained access-token path, this endpoint is an OAuth
@@ -416,9 +426,9 @@ for this resource {{RFC9728}}, the `resource` identifier the token's
 audience MUST name, the `mission_status` scope it requires
 (`scopes_supported`), and the presentation and sender constraints it
 accepts (`bearer_methods_supported`, `dpop_bound_access_tokens_required`,
-`tls_client_certificate_bound_access_tokens`). For the retained
-direct-client-authentication path (mTLS {{RFC8705}} or private-key JWT
-{{RFC7523}}), the accepted methods and, for `private_key_jwt`, the
+`tls_client_certificate_bound_access_tokens`). For the
+client-authentication path, the accepted methods and, for
+`private_key_jwt`, the
 accepted client-assertion signing algorithms are advertised for this
 endpoint ({{as-metadata}}), not read from the token endpoint's
 `token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
@@ -435,13 +445,18 @@ credential it presented:
   {{Section 3 of RFC6750}}, or `DPoP` under
   {{Section 7.1 of RFC9449}}, including its `algs` parameter and error
   codes.
-- A request whose mTLS or private-key-JWT client authentication fails
-  at the HTTP layer receives HTTP 400 with the `invalid_client` error
-  code, as {{Section 5.2 of RFC6749}} answers a failed client
-  authentication carried outside the `Authorization` header. It carries
-  no `WWW-Authenticate` challenge and is not reported as an
-  access-token failure. A client certificate rejected during the TLS
-  handshake fails at the TLS layer, before any HTTP response.
+- A request whose client authentication fails at the HTTP layer
+  receives the error response that the method's specification defines
+  for that failure, with any error code, status, and challenge it
+  requires, such as a method that answers a missing server-provided
+  challenge or a stale credential with its own error. Where the method
+  defines none, the request receives HTTP 400 with the `invalid_client`
+  error code, as {{Section 5.2 of RFC6749}} answers a failed client
+  authentication carried outside the `Authorization` header, with no
+  `WWW-Authenticate` challenge. A failed client authentication is not
+  reported as an access-token failure. A client certificate rejected
+  during the TLS handshake fails at the TLS layer, before any HTTP
+  response.
 - A request that presented no credential receives, where the endpoint
   accepts an access-token scheme, HTTP 401 `unauthorized` with one
   challenge for each access-token scheme the endpoint accepts and no
@@ -450,7 +465,8 @@ credential it presented:
 
 Every challenge carries the `resource_metadata` parameter naming the
 endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
-A 401 response carries the challenge or challenges and a JSON body
+A 401 response this section assigns to an access-token failure or a
+missing credential carries the challenge or challenges and a JSON body
 ({{mission-status-errors}}): a challenge's `error` attribute, when
 present, follows its scheme as above and is distinct from the body's
 `error`, which is `unauthorized`.
@@ -832,7 +848,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `error` | HTTP | Description |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` whose operation members differ from the original's, present or absent alike ({{idempotency}}). |
-| `invalid_client` | 400 | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
+| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
@@ -840,6 +856,10 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
 {: title="Error codes"}
+
+A client authentication method's own error codes and statuses
+({{mission-status-auth-failures}}) can also appear, in addition to
+those in the table.
 
 Note the distinction between the access failures: `unauthorized`
 (401) and `invalid_client` (400) mean the request carried no valid
@@ -1079,7 +1099,7 @@ form-urlencoded body:
   it only to retransmit that request.
 
 The request also carries the client authentication parameters of the
-mechanism it uses, as at the Mission Status endpoint
+method it uses, as at the Mission Status endpoint
 ({{mission-status-request}}).
 
 A companion-registered extension operation carries additional
@@ -1203,10 +1223,10 @@ expiry governs: the Mission is `terminated` with reason `expired` at
 
 ## Authentication
 
-The lifecycle endpoint uses the same authentication mechanisms as the
-Mission Status endpoint ({{mission-status-authentication}}): mTLS client
-authentication, a sender-constrained access token (DPoP- or mTLS-bound),
-or private-key JWT. Its discovery mirrors that endpoint: the accepted
+The lifecycle endpoint uses the same authentication as the Mission
+Status endpoint ({{mission-status-authentication}}): client
+authentication with an advertised method that uses no shared secret, or
+a sender-constrained access token (DPoP- or mTLS-bound). Its discovery mirrors that endpoint: the accepted
 methods in `mission_lifecycle_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion algorithms in
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`
@@ -1224,8 +1244,8 @@ operation defines. A private-key JWT
 `client_assertion` names the AS's issuer identifier in `aud`, and a
 presented access token MUST be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
-endpoint. Direct mTLS or private-key-JWT callers carry the
-deployment-defined equivalent grant, never a scope.
+endpoint. A caller that authenticates directly as a client carries
+the deployment-defined equivalent grant, never a scope.
 
 ## Authorization {#lifecycle-authorization}
 
@@ -1268,9 +1288,9 @@ authorization, follow from the authentication case:
    not change what `sub` denotes. The acting party is the calling party
    so identified, and the presented token MUST carry the lifecycle
    authorization the AS checks against it.
-2. When the caller authenticates directly as a client (mTLS client
-   authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the
-   authenticated client is the acting party. The AS MUST check the
+2. When the caller authenticates directly as a client
+   ({{mission-status-authentication}}), the authenticated client is the
+   acting party. The AS MUST check the
    deployment-defined lifecycle grant bound to that client.
 
 In every case the AS MUST record the acting party, and the response
@@ -1739,18 +1759,17 @@ through standard {{RFC8414}} discovery.
   when the AS supports it.
 
 `mission_status_endpoint_auth_methods_supported`:
-: CONDITIONAL. A JSON array of strings naming the authentication methods
-  the Mission Status endpoint ({{mission-status}}) accepts. Its value
-  space is a closed set defined by this document, not the OAuth Token
-  Endpoint Authentication Methods registry: `tls_client_auth`
-  (mutual-TLS client authentication {{RFC8705}}), `private_key_jwt`
-  (private-key JWT client authentication {{RFC7523}}), and `access_token`
-  (a `mission_status`-scoped, sender-constrained access token, whose
-  presentation and DPoP or mTLS binding are described by this endpoint's
-  Protected Resource Metadata {{RFC9728}}). The first two values are
-  spelled identically to registered token-endpoint authentication
-  methods by intent; this member describes this endpoint, not the token
-  endpoint. REQUIRED when the AS serves the Mission Status endpoint.
+: CONDITIONAL. A JSON array of strings naming the client authentication
+  methods the Mission Status endpoint ({{mission-status}}) accepts,
+  values of the OAuth Token Endpoint Authentication Methods registry
+  {{RFC7591}}, as `introspection_endpoint_auth_methods_supported` names
+  them for the introspection endpoint {{RFC8414}}. It MUST NOT list a
+  method that authenticates with a shared client secret, or `none`
+  ({{mission-status-authentication}}). The sender-constrained
+  access-token path is not a client authentication method: this
+  endpoint's Protected Resource Metadata {{RFC9728}} describes it. This
+  member describes this endpoint, not the token endpoint. REQUIRED when
+  the Mission Status endpoint accepts client authentication.
 
 `mission_status_endpoint_auth_signing_alg_values_supported`:
 : CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
@@ -1781,12 +1800,11 @@ through standard {{RFC8414}} discovery.
   when the AS supports it.
 
 `mission_lifecycle_endpoint_auth_methods_supported`:
-: CONDITIONAL. A JSON array of strings naming the authentication methods
-  the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
-  accepts, from the same closed value space as
-  `mission_status_endpoint_auth_methods_supported` (with `access_token`
-  naming a `mission_lifecycle`-scoped access token). REQUIRED when the
-  AS serves the Mission Lifecycle endpoint.
+: CONDITIONAL. A JSON array of strings naming the client authentication
+  methods the Mission Lifecycle endpoint ({{mission-lifecycle-endpoint}})
+  accepts, with the value space and constraints of
+  `mission_status_endpoint_auth_methods_supported`. REQUIRED when the
+  Mission Lifecycle endpoint accepts client authentication.
 
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
 : CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
@@ -1844,14 +1862,14 @@ Cache-Control: max-age=3600
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["tls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt"],
   "mission_status_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["tls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt"],
   "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_max_stale_seconds": 60
@@ -1916,10 +1934,8 @@ An implementation claiming an extension MUST meet its requirements:
   anti-oracle property
   ({{mission-status-anti-oracle}}), and the error shape of
   {{mission-status-errors}}; and advertise `mission_status_endpoint`,
-  `mission_status_endpoint_auth_methods_supported`,
-  `mission_status_signing_alg_values_supported`, and, when it lists
-  `private_key_jwt`,
-  `mission_status_endpoint_auth_signing_alg_values_supported`.
+  `mission_status_signing_alg_values_supported`, and the endpoint's
+  authentication metadata ({{as-metadata}}).
 - **Introspection projection**: carry the Mission projection on the
   introspection response ({{introspection-projection}}), signing it
   with {{RFC9701}} as that section provides.
@@ -1928,10 +1944,8 @@ An implementation claiming an extension MUST meet its requirements:
   gate the `suspended` state and the
   `completed` termination it introduces exactly as the issuance profile
   gates on non-`active` state, and advertise `mission_lifecycle_endpoint`,
-  `mission_lifecycle_endpoint_auth_methods_supported`,
-  `mission_status_signing_alg_values_supported`, and, when it lists
-  `private_key_jwt`,
-  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`.
+  `mission_status_signing_alg_values_supported`, and the endpoint's
+  authentication metadata ({{as-metadata}}).
 - **Mission Lifecycle, revoke only**: serve the Mission Lifecycle endpoint
   ({{mission-lifecycle-endpoint}}) with the `revoke` operation, under
   its authentication, its explicit lifecycle authorization
@@ -1944,10 +1958,8 @@ An implementation claiming an extension MUST meet its requirements:
   operation the implementation has not adopted
   ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,
-  `mission_lifecycle_endpoint_auth_methods_supported`,
-  `mission_status_signing_alg_values_supported`, and, when it lists
-  `private_key_jwt`,
-  `mission_lifecycle_endpoint_auth_signing_alg_values_supported`. The
+  `mission_status_signing_alg_values_supported`, and the endpoint's
+  authentication metadata ({{as-metadata}}). The
   class requires no other operation and not the Mission Status
   operation; an implementation that also serves another base operation
   or the Mission Status operation meets that operation's requirements,
@@ -2103,9 +2115,10 @@ profile's privacy considerations.
 This document requests IANA actions for OAuth AS metadata members,
 OAuth extensions error codes, a media type, and one entry in each of
 two issuance-profile registries. It defines no new registry of its
-own: the endpoint
-authentication-method value space is a closed set defined inline
-({{as-metadata}}), and Mission Lifecycle `operation` values have no
+own: endpoint
+authentication methods are values of the existing OAuth Token Endpoint
+Authentication Methods registry {{RFC7591}} ({{as-metadata}}), and
+Mission Lifecycle `operation` values have no
 IANA registry; a companion profile registers an extension operation
 by defining it in its own specification
 ({{mission-lifecycle-endpoint}}). The `mission_error` values
