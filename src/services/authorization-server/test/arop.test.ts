@@ -12,6 +12,7 @@ import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
   type AuthorityEntry,
   createExpansion,
+  DeferralError,
   DeferralStore,
   MISSION_TXN_TOKEN_TYP,
   MissionKernel,
@@ -202,6 +203,41 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
       /not within the active Mission/,
     );
   });
+
+  it.each([
+    ["revoked", 11],
+    ["expired", 12],
+    ["suspended", 13],
+  ] as const)(
+    "opening a deferral on a Mission that is %s throws mission_not_active, the Mission's own expiry applied (@spec mission#issuance-gating, #1740, D862)",
+    (state, n) => {
+      const mission = approveMission(n, ["acme"]);
+      if (state === "expired") {
+        kernel.db
+          .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+          .run(new Date(Date.now() - 1000).toISOString(), mission.id);
+      } else {
+        kernel.transition(mission.id, state === "revoked" ? "revoke" : "suspend");
+      }
+      const deferrals = new DeferralStore(kernel);
+      const requested: AuthorityEntry[] = [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read"],
+          constraints: { vendors: ["acme"] },
+        },
+      ];
+      let thrown: unknown;
+      try {
+        deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT });
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeInstanceOf(DeferralError);
+      expect((thrown as DeferralError).code).toBe("mission_not_active");
+    },
+  );
 
   it("Mission Expansion (the separate widening flow) refuses when the predecessor is not active", () => {
     const predecessor = approveMission(3, ["acme"]);

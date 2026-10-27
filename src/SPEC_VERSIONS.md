@@ -151,7 +151,11 @@ this matrix and the `@spec` tags to the affected code and tests.
   is refused `invalid_authorization_details` when the subset comparison cannot
   establish its requested authority as within the active Mission, whether it
   exceeds it or the comparison cannot decide, as the originating grant's own
-  validation would refuse it (§5.3.1; #1720, D859). The deferral records
+  validation would refuse it (§5.3.1; #1720, D859). It is refused
+  `invalid_grant` when the Mission is not active, suspension included, with
+  no `mission_error`: that diagnostic goes only to a client presenting the
+  Mission's grant, and the initiation presents none (#1740, D862, D863).
+  The deferral records
   that client and its DPoP key. Before redeem, a poll by another client, or of
   a deferral whose recorded client is not the Mission's own, is answered as
   an unknown code (`invalid_grant`, §5.5.1, §5.6), whatever key it uses; only

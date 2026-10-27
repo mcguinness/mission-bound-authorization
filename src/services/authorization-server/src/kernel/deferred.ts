@@ -123,8 +123,9 @@ export interface DeferredToken {
  * establish that the requested authority is a subset of the active Mission,
  * whether the request exceeds it or the comparison cannot decide; the handler
  * answers invalid_authorization_details (@spec mission#subset, #1720 item 3,
- * D859). `mission_not_active`: the Mission is not active; the handler keeps
- * invalid_request for it.
+ * D859). `mission_not_active`: the Mission is not active; the handler answers
+ * the Mission's own client invalid_grant, with no mission_error (@spec
+ * mission#issuance-gating, #1740, D863).
  */
 export class DeferralError extends Error {
   constructor(

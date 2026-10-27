@@ -51,8 +51,8 @@
     "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "b4f67b35b7798a15ebb876f488100282291e98c9",
-    "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
+    "revision": "cfad6a684188e0ae6a3585a00dd22597de09bae0",
+    "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
@@ -10238,7 +10238,8 @@
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#1740 (D863): the AROP deferral initiation carries no mission_error, since it presents mission_id, requested authority, client authentication and DPoP but no Mission grant; its inactive-Mission refusal is witnessed on core.issuance-gating.inactive-refused-by-grant."
   },
   {
    "id": "core.revocation.revoke-by-mission-id",
@@ -10489,7 +10490,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a derivation from a Mission that is not `active` issues nothing: a Token Exchange is refused `invalid_request` and a refresh `invalid_grant`, on the explicit state checks and on the save-time gate and lifetime clamp alike",
-    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family; the deferred grant on the AROP poll, pending or approved, and the Mission approval poll, each with the Mission's own mission_error and the deferral left pollable after a resume. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
+    "local": "Token Exchange witnessed on async delegation (explicit check and lifetime clamp), expansion and child creation; refresh on the async-delegation family; the deferred grant on the AROP poll, pending or approved, and the Mission approval poll, each with the Mission's own mission_error and the deferral left pollable after a resume; and the AROP deferral initiation by the Mission's own client on a revoked, expired or suspended Mission, with no mission_error, since the initiation presents no Mission grant (D863), opening no deferral, issuing no token and counting no derivation, with the same initiation opening one after a resume (#1740, D862). Another client, or any client naming an unknown Mission, gets the indistinguishable invalid_request before the state check, and an unauthenticated client invalid_client first, each with no mission_error, no deferral, no token and no derivation counted; those witnesses in the same describe are regression witnesses of the reference's disclosure choice and are not cited. The authorization-code and JWT-bearer paths keep invalid_grant through the same refusal mapping, pinned by its unit test."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -10571,9 +10572,21 @@
      "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > refuses a resolving poll for a Mission suspended after the approval decision with invalid_grant and mission_error suspended, delivering nothing; after resume the poll delivers (@spec mission#issuance-gating, #250)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferral initiation on a Mission that is not active (@spec mission#issuance-gating, mission#error-mapping, #1740, D862, D863) > the Mission's own client initiating on its Mission that is %s is refused invalid_grant with no mission_error, opening no deferral, issuing no token and counting no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dtr-endpoint.test.ts",
+     "name": "the AROP deferral initiation on a Mission that is not active (@spec mission#issuance-gating, mission#error-mapping, #1740, D862, D863) > an initiation refused under a suspended Mission succeeds after resume: the same request opens a deferral",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1154 (D369). Deferred polls aligned to invalid_grant (#250)."
+   "notes": "#1154 (D369). Deferred polls aligned to invalid_grant (#250). #1740 (D862, D863): the AROP deferral initiation answered its own client invalid_request for a Mission that is not active; it answers invalid_grant, with no mission_error. Mutation-proved: answering it invalid_request again (the handleDeferredGrant catch in adapters/provider.ts) fails every cited initiation witness and the D859 separation witness; adding the Mission's mission_error to that refusal (the pre-D863 lifecycleMissionError argument, from the expiry-applied record) fails the same witnesses on the absent member; reducing the pre-open ownership check to an existence check fails the other-client witnesses (not cited) and the #1348 ownership witness."
   },
   {
    "id": "core.issuance-gating.after-acknowledged-revocation",
@@ -19030,6 +19043,71 @@
     }
    ],
    "notes": "Both test-side verifiers validate typ exactly before anything else: a receipt fed to the Status verifier and a Status response fed to the receipt verifier are each refused at the typ check, while each verifies as itself. Partial: consumer-side rule, exercised only by the test verifier (no production consumer in src/)."
+  },
+  {
+   "id": "status.discharge.receipt-signed-under-status-key",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS signs a Discharge Receipt under its active Mission Status signing key: the receipt's `kid` is that key's, and it verifies under that key",
+    "local": "The kernel's signDischargeReceipt signs under the same key and kid as its Mission Status responses (statusKey, statusKid in src/services/authorization-server/src/kernel/kernel.ts)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#831 (D857): the Discharge Receipt uses the Mission Status signing role. The endpoint witness asserts the real receipt's kid is the configured Mission Status kid and verifies it under a consumer configuration naming that kid. Proven by a kid swap: the kernel holds no other private key, so the defect labels the receipt with another role's kid rather than signing under that role's key; the test fails at its kid assertion."
+  },
+  {
+   "id": "status.discharge.receipt-consumer-authorized-signer",
+   "spec": "draft-mcguinness-oauth-mission-discharge.md",
+   "anchor": "discharge-receipt",
+   "text": "the JWS signature against a current `jwks_uri` entry for the AS that the consumer's trusted configuration authorizes for that AS's Mission Status responses; a key's presence in the `jwks_uri` does not authorize it",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.discharge"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Discharge Receipt signed under a key the AS publishes in its `jwks_uri` but the consumer's trusted configuration does not authorize for that AS's Mission Status responses, and relies on nothing it carries"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover) > refuses a correctly signed receipt under another role's published key, and accepts it once the configuration authorizes that key (#831, D857)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/discharge-carryover.test.ts",
+     "name": "the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3) > answers a caller without Status read rights with a signed receipt bound to its aud and nonce, and replays it",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#831 (D857). Verified with the TEST-SIDE consumer (test/discharge-consumer.helper.ts, verifyDischargeReceipt), as for the other receipt consumer rows. The unit witness signs a correct receipt under another role's key published beside the Status key (a local key under kid as-token): refused at check 3, and the same bytes accepted once the configuration names that kid. The endpoint witness refuses the real AS's receipt under a configuration naming only the AS's published access-token kid. Proven by dropping the helper's authorization check: both fail at their refusals. A Mission Status Response presented as a receipt stays refused at typ (status.discharge.receipt-typ-exclusive). Partial: no production consumer of receipts exists in src/, so the rule is exercised only by the test verifier."
   },
   {
    "id": "child-delegation.carryover.entry-pairing",
@@ -71670,7 +71748,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone. #1720 item 3 (D859): the AROP deferral initiation answered an excess invalid_request; it answers invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes. Mutation-proved: answering the initiation's subset failure invalid_request fails the AROP witness; removing the initiation's subset check fails it, the request then pending."
+   "notes": "#1303, #1503. Proved by mutation: projecting a request with neither the subset check nor the issued-whole check fails the excess, relaxation and narrower-family witnesses (removing the subset check alone is masked by the issued-whole check, which also refuses those requests); deciding it only after consumption fails the before-rotation witnesses; the raw grant rar as the ceiling fails the contained witness; the Mission's effective set as the ceiling, ignoring the presented grant, fails only the narrower-family witness; returning the ceiling from the code-exchange hook fails the code witnesses. The async-delegation exchange's Mission check is witnessed by a request its presented handle still carries after containment; disabling that check fails the witness. #1513: the async-delegation exchange also refuses a request its projection cannot issue whole, such as an entry naming a capability_sources binding the Mission does not record (beyond the grant under the Subset Rule), which it had opened as a narrower family; the check compares each requested entry with its own projection, so a sibling entry for the same action cannot cover a dropped one; disabling it fails the two #1513 witnesses alone, and comparing the whole set instead fails only the overlap witness, and the whole-issue refusal carries its own description, so the containment witness still catches the Mission check alone. #1720 item 3 (D859): the AROP deferral initiation answered an excess invalid_request; it answers invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes. Mutation-proved: answering the initiation's subset failure invalid_request fails the AROP witness; removing the initiation's subset check fails it, the request then pending. #1740 (D862) then answers the Mission's own client invalid_grant for a Mission that is not active; the ownership and authentication refusals keep their codes."
   },
   {
    "id": "core.error-mapping.token-rar-undecidable",
@@ -72864,7 +72942,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1720 item 3 (D845, D859). The refresh witnesses existed (#1399, #1377). Mutation-proved: refusing the intake's schema violation with invalid_request instead of invalid_authorization_details (the validate hook in adapters/provider.ts) fails both refresh witnesses on the error code; disabling the unsupported-member branch of refusedMemberViolation fails the member witness, whose request is then refused by the subset comparison's own guard with the subset message, still invalid_authorization_details. The AROP deferral initiation answered both of its cases invalid_request, its error for any excess; D859 maps the subset failure to invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes, and DTR's originating-grant validation (draft-ietf-oauth-deferred-token-response-00 Section 5.3.1) needs no exception. Mutation-proved for the AROP deferral initiation: answering its subset failure invalid_request (the handleDeferredGrant catch in adapters/provider.ts, the pre-D859 mapping) fails both AROP witnesses; removing the initiation's subset check (DeferralStore.open, kernel/deferred.ts) fails both, the request then pending. A separation witness in the same describe (an initiation on the client's own Mission that is not active keeps invalid_request) fails when every deferral refusal is answered invalid_authorization_details, or when the kernel codes the not-active refusal as a subset failure; it witnesses no clause of this row and is not cited."
+   "notes": "#1720 item 3 (D845, D859). The refresh witnesses existed (#1399, #1377). Mutation-proved: refusing the intake's schema violation with invalid_request instead of invalid_authorization_details (the validate hook in adapters/provider.ts) fails both refresh witnesses on the error code; disabling the unsupported-member branch of refusedMemberViolation fails the member witness, whose request is then refused by the subset comparison's own guard with the subset message, still invalid_authorization_details. The AROP deferral initiation answered both of its cases invalid_request, its error for any excess; D859 maps the subset failure to invalid_authorization_details, apart from the not-active, ownership and authentication refusals, which keep their codes, and DTR's originating-grant validation (draft-ietf-oauth-deferred-token-response-00 Section 5.3.1) needs no exception. Mutation-proved for the AROP deferral initiation: answering its subset failure invalid_request (the handleDeferredGrant catch in adapters/provider.ts, the pre-D859 mapping) fails both AROP witnesses; removing the initiation's subset check (DeferralStore.open, kernel/deferred.ts) fails both, the request then pending. A separation witness in the same describe (an initiation on the client's own Mission that is not active, refused invalid_grant since #1740) fails when every deferral refusal is answered invalid_authorization_details, or when the kernel codes the not-active refusal as a subset failure; it witnesses no clause of this row and is not cited. #1740 (D862) then answers the Mission's own client invalid_grant for a Mission that is not active; the ownership and authentication refusals keep their codes."
   },
   {
    "id": "core.self-exchange.result-subset",
