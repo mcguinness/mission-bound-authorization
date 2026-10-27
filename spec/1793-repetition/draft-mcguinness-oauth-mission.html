@@ -4550,11 +4550,12 @@ Exchanges are covered by the two items below instead: cross-domain
 projection and child creation, which return a JWT authorization
 grant, and expansion, which creates a successor. Redeeming the
 Template profile's handoff grant
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>) or an identity
-continuation assertion
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>) issues a
-derived token and creates or extends no grant binding; each profile
-states which of its exchanges establish a grant lineage. A Resource
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>) issues a derived
+token and creates or extends no grant binding. In the continuation
+profile's Identity Continuation Transport
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-continuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-continuation</a>]</span>), redeeming a
+root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
+at a Resource AS produces a local derived access token. A Resource
 AS holds a destination-side grant binding only where it separately
 establishes a redeemable grant lineage mapped to the Mission, such
 as a refresh-token family.<a href="#section-8.1.2-2.1.1" class="pilcrow">¶</a></p>
