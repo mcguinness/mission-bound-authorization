@@ -53016,7 +53016,7 @@
     "normative": "a Dispatch whose surviving instance authority includes an action the deployment classifies in a prohibited class, other than an operation the Standing Payment Exception admits, is refused dispatch_prohibited_class even when the action is within both the derivation-policy ceiling and the Template Ceiling"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
@@ -53028,6 +53028,42 @@
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatch_prohibited_class: within both ceilings, but a dispatch-prohibited action",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a Dispatch never grants a privileged-administration action (@spec mission-template#prohibited-classes, #1710) > refuses dispatch_prohibited_class, committing nothing, a Dispatch granting an action the published mapping classifies as privileged administration, once the configured set covers that mapping (#1710)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -53079,7 +53115,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): under a designating template with the capability on, remittance (external commitment) and the payment where it is also cross-domain authority are refused dispatch_prohibited_class at /token, and the kernel refuses the payment where the mapping also classifies it privileged administration, external commitment or external communication. Mutations: the /token remittance test fails only when the predicate admission and the AGR high-risk gate are both disabled (two independent layers); the /token cross-domain test fails when the predicate admission refuses nothing, when every predicate of the payment is waived, or when the cross-domain predicate is unmapped; round-1 mutants kill the kernel tests. Still partial: the shipped configured set leaves out payments:vendor.read (external communication in config/progressive.json) and the ledger actions at the cross-domain resource, so per the builder's finding the ordinary dispatch path admits authority its own mapping prohibits (#1710); and no predicate refusal asserts that nothing is committed (deferring the admission refusal past the commit leaves the external-communication and cross-domain kernel tests passing)."
+   "notes": "#813, D830; #1710, D877 item 4. One refusal witness per prohibited predicate, each committing nothing (impl/1710-prohibited-coverage at 3f72c8e1a). At /token a template whose ceiling is the whole derivation-policy ceiling (policy wide-reconciliation) dispatches a proposal of one action within both ceilings: payments:payment.execute (irreversible), payments:remittance.send (external commitment), payments:vendor.read (external communication), ledger:vendor.read or ledger:journal.write (cross-domain). Each case asserts that the published mapping gives the action exactly that predicate and that the shipped set lists it, then expects 400 dispatch_prohibited_class with no token and no mission_id, no new Mission, no dispatch event, and the same dispatch_event_id reusable for an admitted payments:invoice.read Dispatch. No shipped action is privileged administration, so that witness is at the kernel: a classification makes hr:role.grant privileged administration, the coverage check's gap adds it to the configured set, and the Dispatch is refused with no Mission and no dispatch event, while the shipped set, which leaves it out, admits it. The AAM e2e step 2 (live OpenFGA only) still witnesses remittance. Mutations (2026-10-26): a guard that refuses nothing fails the kernel gate test, the older /token test and every per-predicate witness; a guard that refuses only after the instance and dispatch event commit fails the five /token witnesses and the kernel privileged-administration witness; a guard that admits one listed action while the set still lists it fails that action's witness alone, for each of the six. The older /token test dispatches the whole wide ceiling, so it no longer isolates the irreversible class: admitting payment.execute leaves it passing while remittance and the vendor read still refuse. Slice 3a (impl/813-standing-payment-admission at a7063aab): under a designating template with the capability on, remittance and the payment where it is also cross-domain authority are refused dispatch_prohibited_class at /token, and the kernel refuses the payment where the mapping also classifies it privileged administration, external commitment or external communication. Mutations: the /token remittance test fails only when the predicate admission and the AGR high-risk gate are both disabled (two independent layers); the /token cross-domain test fails when the predicate admission refuses nothing, when every predicate of the payment is waived, or when the cross-domain predicate is unmapped; round-1 mutants kill the kernel tests."
   },
   {
    "id": "template.prohibited-classes.dispatch-policy-never-dispatches",
@@ -53099,12 +53135,48 @@
     "normative": "under every committed Dispatch Policy, including one whose ceiling and rules would otherwise admit the instance, a Dispatch bearing a prohibited class the Standing Payment Exception does not admit is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatch_prohibited_class: within both ceilings, but a dispatch-prohibited action",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a Dispatch never grants a privileged-administration action (@spec mission-template#prohibited-classes, #1710) > refuses dispatch_prohibited_class, committing nothing, a Dispatch granting an action the published mapping classifies as privileged administration, once the configured set covers that mapping (#1710)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -53156,7 +53228,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed through the issuer's refusal. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): the policy snapshot varies. A Dispatch Policy designating the standing payment does not lift the prohibition with the capability off (kernel), and with it on it still leaves remittance and every other prohibited predicate of the payment refused dispatch_prohibited_class (kernel and /token). Mutations: removing the capability-off configured refusal fails the kernel capability-off test; the /token and kernel predicate tests are killed as recorded on template.prohibited-classes.dispatch-never-instantiates. Still partial: the shipped configured set leaves out the external-communication and cross-domain actions of the published mapping, so a Dispatch bearing them is admitted under any policy (#1710)."
+   "notes": "#813, D830; #1710, D877 item 4. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed through the issuer's refusal under a policy that would otherwise admit the instance. #1710 (impl/1710-prohibited-coverage at 3f72c8e1a): at /token a template under the wide-reconciliation Dispatch Policy (ceiling equal to the derivation-policy ceiling) is refused dispatch_prohibited_class, committing nothing, for one action per predicate the shipped set lists (payments:payment.execute, payments:remittance.send, payments:vendor.read, ledger:vendor.read, ledger:journal.write), and the same template, policy and dispatch_event_id then admit a payments:invoice.read Dispatch. Privileged administration has no shipped action: at the kernel a Dispatch granting hr:role.grant, classified privileged administration, is refused under the configured set the coverage check yields and admitted under the shipped set, which leaves it out. Slice 3a (impl/813-standing-payment-admission at a7063aab): a Dispatch Policy designating the standing payment does not lift the prohibition with the capability off (kernel), and with it on still leaves remittance and every other prohibited predicate of the payment refused dispatch_prohibited_class (kernel and /token). Mutations: shared with template.prohibited-classes.dispatch-never-instantiates (a guard that refuses nothing, refuses only after the commit, or admits one listed action fails the matching witnesses); removing the capability-off configured refusal fails the kernel capability-off test."
   },
   {
    "id": "template.prohibited-classes.configured-set-covers-mapping",
@@ -53176,11 +53248,17 @@
     "normative": "every action the published classification maps to the irreversible, external-commitment or privileged-administration class, to the external-communication predicate, or to cross-domain authority appears in the configured dispatch-prohibited action set"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
-     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the published mapping states, for every action the reference serves, which prohibited predicates it satisfies, and every classification states whether its resource is cross-domain (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published mapping classifies as irreversible, external-commitment, privileged-administration, external-communication or cross-domain (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -53204,12 +53282,48 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under irreversible_action, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under external_commitment, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under external_communication, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under cross_domain, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under privileged_administration, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
      "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > refuses a configured set that leaves out an action the published classification classifies as irreversible, naming it (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > reads cross-domain from the classification's statement, and the AS's resource-to-AS map only adds to it (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. approval-floor.json's classification and enforcement-scope.json's execution capabilities and resource contract classify payments:payment.reverse as irreversible_action; the MUST is on the mapping, not on reachability. Slice 3a (impl/813-standing-payment-admission at a7063aab): config/policy.json adds payments:payment.reverse to dispatch_prohibited_actions, and dispatchProhibitedCoverageGaps / assertDispatchProhibitedCoverage check all five predicates. A unit check holds the shipped set to the three class predicates. Mutations: dropping payment.reverse from policy.json fails the first, second, fourth and fifth coverage tests; a gap check that skips every action fails the third, fourth and fifth. Partial: the external-communication and cross-domain clauses are not asserted for the shipped set, and per the builder's finding they fail today (payments:vendor.read, ledger:vendor.read, ledger:journal.write); #1710 owns them. The check runs as a unit test, not a startup refusal."
+   "notes": "#813, D830; #1710, D877 item 4. The published mapping is configuration alone: config/approval-floor.json's classification (each action's class, and each classification's cross_domain statement: true for the ledger at http://localhost:4406/mcp, false for payments and reports) and config/progressive.json's external-communication actions (payments:vendor.read). approval-floor.json and enforcement-scope.json classify payments:payment.reverse as irreversible_action; the MUST is on the mapping, not on reachability. config/policy.json's dispatch_prohibited_actions lists payments:payment.execute, payments:payment.reverse, payments:remittance.send, payments:vendor.read, ledger:vendor.read and ledger:journal.write. #1710 (impl/1710-prohibited-coverage at 3f72c8e1a): a table test states the predicates the mapping gives each of the twelve served actions and that every classification states cross_domain; the shipped set is checked under all five predicates; one gap test per predicate shows the check names exactly that action under that predicate alone and throws (privileged administration has no shipped action, so its case adds a classification that makes hr:role.grant one); the AS's resource-to-AS map only adds cross-domain resources and never clears one the classification states. Mutations (2026-10-26): leaving payment.execute, remittance.send, vendor.read, ledger:vendor.read or ledger:journal.write out of policy.json fails the shipped-set test and the gap tests (payment.reverse: slice 3a, impl/813-standing-payment-admission at a7063aab); the ledger's cross_domain set false or removed, the mapping ignoring the statement or dropping the external-communication actions, or the predicate reader never adding cross_domain each fail the table test and the gap tests; a gap check that drops external communication fails the external-communication gap tests, and one that skips every classified action fails all five; a resource-to-AS map that no longer adds, or that overrides the classification, fails the cross-domain statement test. The check runs as a unit test, not a startup refusal: an AS whose resource-to-AS map places payments at another AS (the standing-payment /token cross-domain test) would see every payments read action as a gap."
   },
   {
    "id": "template.prohibited-classes.checked-after-intersection",
@@ -53229,9 +53343,52 @@
     "normative": "the prohibited-class check reads the post-intersection set: a prohibited action the derivation-policy or Template Ceiling already removed never yields dispatch_prohibited_class, and one that survives the intersection does"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Optional row (adjudication step 6). Todo: no test proposes a prohibited action that the ceiling clips and shows the Dispatch is not refused dispatch_prohibited_class."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "seeded demo reconciliation template (@spec mission-template) > createTemplate accepts the demo descriptor and it dispatches a read-only instance",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "seeded demo reconciliation template (@spec mission-template) > the seeded template's ceiling carries no dispatch-prohibited action, so a Dispatch to every resource it names is admitted under the shipped set (@spec mission-template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830; #1710, D877 item 4. Optional row (adjudication step 6). The kernel applies the guard to the final set, after the double intersection. Witnessed (impl/1710-prohibited-coverage at 3f72c8e1a): in template mode the derivation-policy derivation at the payments resource carries payments:payment.execute, payments:remittance.send and payments:vendor.read, the seeded Template Ceiling removes them, and the kernel admits the Dispatch under the shipped set with payments:invoice.list and payments:invoice.read (and reports:report.read where the Intent targets the reports API); at /token, a prohibited action that survives both ceilings is refused dispatch_prohibited_class, one per predicate. Partial: no recorded mutant makes the guard read the pre-intersection set, and the removed-then-admitted half is witnessed only at the kernel and only in template mode, not as a proposal the ceiling clips."
   },
   {
    "id": "template.standing-payment.other-classes-stay-prohibited",
@@ -53294,9 +53451,57 @@
      "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a designating template whose ceiling also carries payments:vendor.read, under the shipped set and published mapping (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses the vendor read by its external-communication predicate, committing nothing, even under a configured set that leaves it out (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class at dispatch, committing nothing, a designating template whose stored ceiling has gained ledger:vendor.read at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class at dispatch, committing nothing, a designating template whose stored ceiling has gained ledger:journal.write at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > the standing-payment admission refuses ledger:vendor.read in an instance's authority by the configured set, and under a set that leaves it out by the cross-domain predicate (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > the standing-payment admission refuses ledger:journal.write in an instance's authority by the configured set, and under a set that leaves it out by the cross-domain predicate (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses at consent a designating template whose ceiling also carries ledger:vendor.read at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses at consent a designating template whose ceiling also carries ledger:journal.write at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): witnessed per excluded class under a designating template. External commitment: remittance refused dispatch_prohibited_class at /token and in the kernel, and the payment refused where the mapping also classifies it external commitment. Cross-domain: the payment refused at /token on an AS whose resourceToAs places the payments resource at another AS, and in the kernel. Privileged administration and external communication: the payment refused in the kernel where a mapping so classifies it (no shipped action is privileged administration). Mutations: /token remittance fails only with the predicate admission and the AGR high-risk gate both disabled; /token cross-domain fails with the predicate admission refusing nothing, every predicate waived, or the cross-domain predicate unmapped; kernel remittance fails with the configured-set refusal removed; the four kernel predicate tests fail with every predicate of the payment waived."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): witnessed per excluded class under a designating template. External commitment: remittance refused dispatch_prohibited_class at /token and in the kernel, and the payment refused where the mapping also classifies it external commitment. Cross-domain: the payment refused at /token on an AS whose resourceToAs places the payments resource at another AS, and in the kernel. Privileged administration and external communication: the payment refused in the kernel where a mapping so classifies it (no shipped action is privileged administration). Mutations: /token remittance fails only with the predicate admission and the AGR high-risk gate both disabled; /token cross-domain fails with the predicate admission refusing nothing, every predicate waived, or the cross-domain predicate unmapped; kernel remittance fails with the configured-set refusal removed; the four kernel predicate tests fail with every predicate of the payment waived. #1710 (D877 item 4, impl/1710-prohibited-coverage at 3f72c8e1a), under the shipped set and published mapping: a designating template whose ceiling also carries payments:vendor.read is refused dispatch_prohibited_class at dispatch by the configured set, committing nothing, and under a set that leaves it out by its external-communication predicate; a ledger action (cross-domain) in a designating ceiling is refused at consent (a standing-payment ceiling names exactly one resource), refused dispatch_prohibited_class at dispatch, committing nothing, when a stored ceiling gains it, and refused by the admission by the configured set and, under a set that leaves it out, by cross_domain, while the payment alone stays admitted. Mutations (2026-10-26): the admission dropping its configured-set clause fails the vendor-read and ledger admission tests; waiving every predicate of a non-designated action fails the external-communication vendor-read test and the ledger admission tests; a standing-payment ceiling allowed another resource fails the ledger consent and dispatch-time tests; leaving vendor.read or a ledger action out of policy.json fails the matching test."
   },
   {
    "id": "template.standing-payment.no-other-predicate-waived",
@@ -53534,7 +53739,7 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
-     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published mapping classifies as irreversible, external-commitment, privileged-administration, external-communication or cross-domain (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -53545,7 +53750,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set. With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Slice 3b (impl/813-budget-binding-3b at 62325958): the Exact-profile condition is refused at startup (observation.local, owner ruling); dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: a budget-member defect is refused at template consent, not at Dispatch."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set (since #1710 under all five predicates; leaving payment.execute out of policy.json fails it). With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Slice 3b (impl/813-budget-binding-3b at 62325958): the Exact-profile condition is refused at startup (observation.local, owner ruling); dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: a budget-member defect is refused at template consent, not at Dispatch."
   },
   {
    "id": "template.standing-payment.per-payment-max-amount",

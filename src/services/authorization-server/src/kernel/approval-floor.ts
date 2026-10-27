@@ -70,6 +70,16 @@ export function actionClassesAt(
   return [...new Set(classes as string[])];
 }
 
+/**
+ * @spec mission-template#prohibited-classes (#1710, D877): whether the
+ * published classification states authority at one entry's resource is
+ * cross-domain, through the same matcher: any applicable classification
+ * stating `cross_domain: true` makes it so. False when none applies.
+ */
+export function crossDomainAt(policy: ApprovalFloorPolicy, entry: AuthorityEntry): boolean {
+  return (classificationsFor(policy, entry) ?? []).some((c) => c.cross_domain === true);
+}
+
 /** The achieved authentication context the approval surface supplied. */
 export interface AchievedApproverContext {
   acr?: unknown;
