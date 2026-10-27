@@ -16,6 +16,7 @@ import {
   type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
+  carriesHttpUserinfo,
   computeAnchor,
   containmentSelectorViolation,
   DuplicateMemberError,
@@ -1260,6 +1261,13 @@ function wellFormedResource(file: string, e: Record<string, unknown>, ctx: strin
     throw new ConfigError(
       file,
       `${ctx} has resource ${JSON.stringify(resource)}, which is not an RFC 3986 absolute URI`,
+    );
+  }
+  // @spec resource-access#entry-validation (#1376): nor an http(s) URI carrying userinfo.
+  if (carriesHttpUserinfo(resource)) {
+    throw new ConfigError(
+      file,
+      `${ctx} has resource ${JSON.stringify(resource)}, which carries a userinfo subcomponent`,
     );
   }
   return resource;

@@ -11,20 +11,20 @@
     "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
-    "content_sha256": "0b573747ea2e4759c7ba509b832e0cb95e1b77b2b2f0e0fa7b18168efce498c5"
+    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
+    "content_sha256": "9f21e8b33e4be8c1e8912676a0a771b6224b9b9a2d67be938c11b5e94087e7a8"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
     "content_sha256": "6cfc344cb0e4ce656ccd21f996ad9d5aefb40bf762e01afd42c01992891a1d06"
    },
    "draft-mcguinness-mission-runtime-evidence.md": {
-    "revision": "54bfc7d5077f7ab59f8ac7070b7dd09000854ebf",
-    "content_sha256": "2589fb9ff1db587d07713a2638dbb74699dd5494bc9678facd31afd467455210"
+    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
+    "content_sha256": "6d637c5754f09965a3ef291909a7c48609de6b3fac2e82c66db364c9ade2a025"
    },
    "draft-mcguinness-mission-runtime.md": {
-    "revision": "80378d7762a658e6c2f89b066d93a48a5e8906c0",
-    "content_sha256": "6dd7bb6708133bcef6ee979c66d057151b35a1ebf2b62f5290714fa4243256cd"
+    "revision": "4af5bf54f153576708077ade84f8f8648aa445b5",
+    "content_sha256": "49b65b4cc89ccb1aaf406b04873d381d9ea89916618296deb0987d5e54a5d8b3"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
     "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
@@ -55,8 +55,8 @@
     "content_sha256": "7045896b9dcf4574459f31fb8725faaf5d4520290b49d751ee028d2c958e8cd2"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "041fb449df08a925f6a39e4296897dd860bc0378",
-    "content_sha256": "74627111c3bd16ffbdb2cd371116ed1ebb54b234b89f6f35910ce3da05d5e04e"
+    "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
+    "content_sha256": "b5440314c1763d7dacbc85a656de939a27d08031ed4c9ff8ea35e9e0d6c9edef"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "dc2eabb1398ab0229f72b60f4bb7899b96039d0a",
-    "content_sha256": "510aa2b7589242e78495474cfbc6d6c8edb3d1aa21bcd1359cc98b2f07927e66"
+    "revision": "f2d3e1cf76891b1600849f6c3d43743557633c89",
+    "content_sha256": "129b505e0b0ea4655bfde1e590257581a2a32481ad16fc70845695a0da94f282"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "2abbc7a2068b9de959c646d8a8ebdfc31701daf6",
-    "content_sha256": "a5d4486c5b3f708b16b0a86aabd670a429d37de62aa2436b87c2aadaf10e8ef9"
+    "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
+    "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
@@ -95,8 +95,8 @@
     "content_sha256": "b54570c5a1a8170b7fba90bb8e4d9b163e3603e736726d81bbbc8334f1007637"
    },
    "draft-mcguinness-mission-evidence-envelope.md": {
-    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
-    "content_sha256": "2a8e428cc12a8086df3e3fc95b51229f787f523718231ff5dc90cb128c097f8f"
+    "revision": "3a75ab4b90a356972114d858aa7e52b71c4931ef",
+    "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
     "revision": "4a904d2f0a0df0d87f8986fab437600736674163",
@@ -2636,6 +2636,41 @@
     }
    ],
    "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
+  },
+  {
+   "id": "status.response.consumer-authorized-signer",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-response",
+   "text": "the JWS signature against a current `jwks_uri` entry for the `issuer` AS that the consumer's trusted configuration authorizes for that AS's Mission Status responses; a key's presence in the `jwks_uri` does not authorize it",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a Mission Status Response signed under a key the issuer publishes in its `jwks_uri` but the consumer's trusted configuration does not authorize for that issuer's Mission Status responses (another role's key, say), and relies on nothing it carries",
+    "local": "The reference's Mission Status consumer is the PDP. It verifies only under its declared Status kids: declaredStatusKeys over a fixed key set, and refreshingStatusKeys over the issuer's `jwks_uri` through IssuerKeys (#831 C2), both in src/services/pdp/src/mission-status-resolver.ts."
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response signed by a key the issuer publishes for another purpose",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
+     "name": "the declared Status keys over a jwks_uri (@spec #831 C2) > verifies under a declared kid only, and follows the set the issuer publishes",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 (D842): the step 3 role restriction, ruled a C follow-up with a verifier row. Proven by disabling each path: declaredStatusKeys keeping every published key fails \"refuses a response signed by a key the issuer publishes for another purpose\" (the response is accepted); refreshingStatusKeys trusting whatever kid the header names fails the refreshing test at its undeclared-key assertion (the token-key signature verifies). Role verifier: the duty is every consumer's, whatever kind."
   },
   {
    "id": "status.response.consumer-issuer-binding",
@@ -14472,6 +14507,28 @@
    "notes": "#869 (D449) implements the delegated exchange, but no `authorization_details` type that declares delegation without narrowing is configured, so this row has no witness."
   },
   {
+   "id": "core.other-types.designation-equal-entry-issued",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "A designation's `aud` names its redeemer ({{designation}}) and reassigns no entry's original approved audience",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for a type that declares `delegation` without `narrowing`, a designation carrying an entry equal ({{subset}}) to an entry of the presented token, that entry keeping its original approved audience, is issued: the designated client its `aud` names is not tested as the entry's audience"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1717 (D845) witness (a), moved to #1377 by D859 (option (ii), which relaxes D845's all-three-witnesses requirement): this row stays todo until #1377's `delegation` audit supplies the declaration and the equal-only carriage it needs. The reference cannot express its precondition. (1) No declaration: it declares no transformation capability for its only supported type, `mission_resource_access` (no `mission_transformation_capabilities` member in AUTHORIZATION_DETAILS_TYPES_METADATA, none in its documentation: src/docs/resource-access-transformation-capabilities.md section 1), and has no per-type configuration that could declare `delegation` without `narrowing`; the `delegation` provider capability switches the exchanges on, it declares nothing for a type. (2) No behavior keyed on one: the designation and delegated exchanges narrow entries through the effective set whatever is declared, where this case needs them to carry only entries equal to the presented token's (row core.other-types.delegation-only-unchanged, todo; #1377 owns the `delegation` audit). The outcome without the precondition, an equal entry with its association kept carried by an issued designation, is asserted by row core.tokens.designation-permitted-subset-kept-audience."
+  },
+  {
    "id": "core.other-types.no-narrowing-original-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "other-types",
@@ -14853,6 +14910,167 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: accepting any accounted token as a designation fails both witnesses. #250: by the owner's review of #1488, the restart witness's refused redemption is not cited here. It presents a designation this AS issued to the client it names, so it shows the deployment's per-boot restart policy, not this row's refusal of another token kind or recipient; the restart inventory in src/docs/control-plane-deployment.md records it. #831 A: a transaction token this AS signed under another role's key is refused invalid_request with no token issued, at the credential-class check (the access-token key alone and typ at+jwt); disabling both the key-role and token-type checks makes it pass that check."
+  },
+  {
+   "id": "core.delegation.delegate-client-authenticated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "The AS MUST authenticate the requesting client, whether or not the request carries an `actor_token`, by a method it relies on to identify the client ({{Section 2.3 of RFC6749}}), and MUST refuse a client it does not so authenticate with `invalid_client` ({{Section 5.2 of RFC6749}}), issuing no token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS does not authenticate by a method it relies on to identify the client is refused invalid_client, with no token issued and no derivation counted: a confidential client's client_id presented without its client authentication, with a DPoP key of the presenter's choosing, and a public client registered for no client authentication; the designated client that authenticates and proves its own key is issued the delegated token; a request that also carries an actor_token is refused the same way, an actor_token never taking the place of client authentication",
+    "local": "The reference AS refuses with HTTP 401, the status of the token endpoint's own client-authentication refusals. A confidential client's missing or failed authentication is refused by the token endpoint's client authentication (oidc-provider), before the exchange handler runs; a client registered with token_endpoint_auth_method none, which that step admits on its client_id alone, is refused by the delegated-exchange handler's first check. An authenticated client's actor_token is refused afterwards, by the handler (core.delegation.actor-token-refused); the reference's delegates authenticate by private_key_jwt, and no other method is exercised."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Each refusal is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's check of the registered method fails the public-client witness (a delegated token is issued to the public client on its client_id and its own DPoP key, which is what the reference did before #1718) and the actor_token witness (the request then reaches the reference's actor_token refusal, invalid_request, not invalid_client), and no other test. The confidential case is enforced by the token endpoint's client authentication, so no handler mutation reaches it: a temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails only the stolen-designation witness. Making the handler's check refuse every client fails the positive witness and the stolen-designation witness's control. The refusal of an authenticated delegate's actor_token is core.delegation.actor-token-refused's clause (D845, D859), not this row's. The order witness's unauthenticated request (the sub-agent's client_id and an actor_token) is the confidential client's case of this row's actor_token clause; the oidc-provider mutation above also fails it."
+  },
+  {
+   "id": "core.delegation.delegate-authentication-insufficient",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "A claimed `client_id`, possession of the designation, or proof of an independently chosen key, such as a DPoP key, does not authenticate a client",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange that names the designated client's client_id, presents a valid designation naming that client, and proves a DPoP key of the presenter's choosing, but carries no client authentication the AS relies on to identify the client, is refused invalid_client, with no token issued and no derivation counted, whether the named client is confidential or public"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). The stolen-designation witness presents all three for a confidential client; the public-client witness presents all three for a client registered for no client authentication. Proven by the mutations core.delegation.delegate-client-authenticated records: accepting a claimed client_id at the token endpoint fails the first, and removing the handler's registered-method check fails the second."
+  },
+  {
+   "id": "core.delegation.public-client-not-delegate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "This document does not support a public client as a delegate",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a public client, registered for no client authentication and otherwise designable and eligible, that redeems a designation naming itself and proves its own DPoP key is refused invalid_client at the delegated exchange, with no token issued and no derivation counted",
+    "local": "The reference still issues a designation naming a public client; the binding places the refusal at the delegated exchange. The refusal is unconditional: the reference has no configuration that admits a public delegate."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by disabling the code it covers: removing the delegated-exchange handler's check of the registered method fails the witness, a delegated token being issued to the public client."
+  },
+  {
+   "id": "core.delegation.actor-token-refused",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "Once it has so authenticated the client, the AS MUST refuse a request that carries an `actor_token` with `invalid_request` ({{Section 2.2.2 of RFC8693}}), issuing no token",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS has authenticated that carries an actor_token is refused invalid_request, with no token issued and no derivation counted; the refusal follows client authentication, so the same request from a client the AS does not authenticate, a confidential client presenting only its client_id or a public client, is refused invalid_client instead",
+    "local": "The reference also refuses an actor_token_type presented without an actor_token. The confidential client's leg of the order is enforced by the token endpoint's client authentication (oidc-provider), which runs before the exchange handler; the public client's leg by the handler's registered-method check, which precedes its actor_token refusal."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845, D859). Each witness is proven by its own mutation, with the delegation-exchange suite run per mutant. Removing the handler's actor_token refusal fails the first two witnesses (the authenticated sub-agent's request then passes the refusal), and no other test. Moving that refusal ahead of the handler's registered-method check fails the public-client witness (invalid_request, not invalid_client), and no other test. A temporary mutation of oidc-provider 9.10.0 lib/shared/client_auth.js that accepts a claimed client_id for a private_key_jwt client (the registered-method match skipped, and the assertion verified only when present) fails the order witness (its unauthenticated request reaches the actor_token refusal, invalid_request) and the stolen-designation witness, and no other test."
   },
   {
    "id": "core.delegation.redemption-evaluated-afresh",
@@ -15480,6 +15698,35 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: applying the no-actor rule to a designation fails the depth-2 witness."
+  },
+  {
+   "id": "core.self-exchange.designation-redemption-is-delegated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "An exchange whose `subject_token` is a designation is a delegated exchange ({{delegated-exchange}}), not a no-actor exchange, even when it carries no `actor_token`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegate that is not the Mission's approved agent redeems a designation naming it, with no actor_token, and is issued a delegated token whose act names it, not refused under the no-actor rule"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by disabling the code it covers: applying the no-actor rule to the redemption (refusing invalid_request unless the authenticated client is the Mission Record's client_id) fails the witness. A designation presented to the reference's no-actor exchanges (the delegation handle, the async-delegation transport) is refused because it carries no key its holder could prove; that refusal is cited under the designation's possession rows, not here."
   },
   {
    "id": "core.introspection.designation-inactive",
@@ -17156,7 +17403,7 @@
    "id": "status.lifecycle.final-check-not-suspension",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-processing",
-   "text": "The final issuance check of {{I-D.draft-mcguinness-oauth-mission}} (Section \"Issuance Gating\"), which applies to an acknowledged revocation, is not extended to suspension: a suspension refuses later derivations at their gate, and a derivation already past its gate when the suspension commits can complete.",
+   "text": "The issuance profile's refusal of a derivation answered after an acknowledged revocation ({{I-D.draft-mcguinness-oauth-mission}}, Section \"Issuance Gating\") is not extended to suspension: a suspension refuses later derivations at their gate, and a derivation already past its gate when the suspension commits can complete.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -17191,7 +17438,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 9 (D649, -01). Existing #250 witnesses of the release fence (releaseFenceRefusal refuses only an ended Mission); no new mutation was run for this row."
+   "notes": "#1535 finding 9 (D649, -01). Existing #250 witnesses of the release fence (releaseFenceRefusal refuses only an ended Mission); no new mutation was run for this row. Requoted (#1724 C9, D847): \"final issuance check\" named as the issuance profile's refusal; no requirement change."
   },
   {
    "id": "status.lifecycle.unparseable-body-refused",
@@ -18886,6 +19133,32 @@
    "notes": "#1182 (D378, D383). #1191 (D416) closed the three reference gaps the class row recorded: the request shape, the signed response and the signing-algorithm discovery. status.lifecycle-revoke remains unclaimed until the owner claims it."
   },
   {
+   "id": "status.conformance.suspend-with-resume",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "conformance",
+   "text": "one that serves `suspend` serves `resume`, without widening who may perform either ({{lifecycle-authorization}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an implementation that serves suspend also serves resume, and the authorization for each stays as Authorization assigns it",
+    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 C8 (D847), normative. Structural in the reference; no witness refuses a configuration serving suspend alone."
+  },
+  {
    "id": "status.lifecycle.endpoint-advertised",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
@@ -18931,7 +19204,7 @@
    "id": "status.lifecycle.rfc7009-not-by-itself",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "An {{RFC7009}} revocation does not by itself revoke a Mission; the lifecycle endpoint is the authoritative Mission state change.",
+   "text": "An {{RFC7009}} revocation does not by itself revoke a Mission: Mission state changes only by a lifecycle transition ({{legal-transitions}}), such as a request to this endpoint, a deadline, expiry, or the coupling below.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -18957,7 +19230,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run."
+   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint."
   },
   {
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
@@ -19674,7 +19947,7 @@
    "id": "status.response.sub-requesting-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-response",
-   "text": "`sub` equals the requesting client's identifier",
+   "text": "On a response to the Mission Status operation or a base lifecycle operation, the AS MUST set `sub` to the authenticated client's identifier: the presented access token's `client_id`, or the client that authenticated directly.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -19714,7 +19987,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1407: the producer side of consumer check 6 and of Mission Status Response Replay's caller binding. Proved by defects that sign the Mission's client as sub again, on the endpoint and on the development route."
+   "notes": "#1407: the producer side of consumer check 6 and of Mission Status Response Replay's caller binding. Proved by defects that sign the Mission's client as sub again, on the endpoint and on the development route. Requoted (#1724 C2, D847) to the AS-side MUST the Response section now states; consumer check 6 is unchanged."
   },
   {
    "id": "status.response.consumer-sub-check",
@@ -19950,6 +20223,36 @@
     }
    ],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+  },
+  {
+   "id": "status.read.coverage-by-policy",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "Read authorization identifies the Missions the caller may inspect under deployment policy: all Missions at the issuer, those of a tenant, or a narrower set.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission inside the reader's read authorization is answered, and one outside it receives the not-found response an unknown Mission receives, identical in status and body",
+    "local": "readCovers (adapters/provider.ts) applies the reader's client policy `missions` to both Status routes; a policy with no `missions` covers every Mission at this AS"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "level": "endpoint",
+     "surface": "verification",
+     "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > reads a Mission only within the read authorization's coverage, and answers one outside it with the not-found response an unknown Mission gets (@spec status#mission-status-authentication, status#mission-status-anti-oracle, #1724 D1, D847)"
+    }
+   ],
+   "notes": "#1724 D1 (D847), normative. Mutation: ignoring the coverage answers the uncovered Mission 200 and fails the test."
   },
   {
    "id": "status.response.effective-set-entries",
@@ -21113,10 +21416,10 @@
    "id": "status.lifecycle.acting-party-reflected",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "In every case the AS MUST record the acting party and SHOULD reflect it in the signed response's audit surface: the response envelope's `sub`, distinct from any access token's `sub`, or a deployment-defined audit member of the Mission Status Response.",
+   "text": "In every case the AS MUST record the acting party, and the response envelope's `sub` carries it ({{mission-status-response}}), distinct from any access token's `sub`.",
    "facet": "reflect",
    "role": "AS",
-   "strength": "SHOULD",
+   "strength": "MUST",
    "applicability": {
     "kind": "capability",
     "capability": "status.lifecycle"
@@ -21144,13 +21447,13 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Requoted (#1724 C2, D847): the envelope `sub` carries the acting party as a MUST (Response); the former SHOULD to reflect it in `sub` or an audit member is subsumed, and an additional deployment-defined audit member is a MAY."
   },
   {
    "id": "status.lifecycle.schedule-applied-at-deadline",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition, without a further request.",
+   "text": "When the `suspend_until` of a current schedule passes, the AS MUST apply `on_expiry` (transition to `active` for `resume`, or to `terminated` with reason `revoked` for `revoke`) and emit the corresponding transition, without a further request, unless expiry governs (below).",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21180,7 +21483,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1002 (D416). Proved by arming no timer on a committed schedule, by disabling the due-schedule application, and by terminating a revoke schedule with another reason (the deadline test fails each time)."
+   "notes": "#1002 (D416). Proved by arming no timer on a committed schedule, by disabling the due-schedule application, and by terminating a revoke schedule with another reason (the deadline test fails each time). Requoted (#1724 C13, D847): names the D649 finding 11 expiry exception; no requirement change."
   },
   {
    "id": "status.lifecycle.schedule-reported",
@@ -21671,10 +21974,61 @@
    "notes": "#1191 witnesses the refusal on an active Mission and the parse; #1002 adds a suspended Mission with a recorded schedule. Proved by reading an incomplete pair as no schedule (all three tests fail)."
   },
   {
+   "id": "status.lifecycle.concurrent-retransmit-one-commit",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "A retransmit that arrives while the original is still being processed never commits the operation a second time",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a retransmit concurrent with its original commits no second transition, and every answer reports the one committed operation's outcome",
+    "local": "the nonce claim commits inside the transition's transaction, and a retransmit finding a committed claim is finalized from it, never re-executed"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 C1 (D847). The reference's single-writer store serializes the claim with the transition; no concurrent witness yet."
+  },
+  {
+   "id": "status.lifecycle.client-expired-replay-confirmation",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "idempotency",
+   "text": "the client MAY accept it as confirmation of its original operation's outcome when it correlates the response to that retained request (its `mission_id` and `nonce`) and every other check passes.",
+   "role": "client",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 C1 (D847), normative client rule; no reference Lifecycle client is witnessed."
+  },
+  {
    "id": "status.signing-keys.compromise-published",
    "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
-   "text": "the AS publishes it as revoked, or marks it with a compromise time, rather than only rotating it out.",
+   "anchor": "signing-key-retention",
+   "text": "publishes it as revoked in its historical key set",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -21689,17 +22043,17 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published in its `jwks_uri` as revoked, or marked with a compromise time, rather than only rotated out or removed, so the archived responses it signed stay verifiable and classifiable"
+    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published as revoked in the AS's historical key set, so the archived responses it signed stay verifiable and classifiable"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice. D405: specified, not implemented."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
    "spec": "draft-mcguinness-oauth-mission-status.md",
-   "anchor": "security-considerations",
+   "anchor": "signing-key-retention",
    "text": "A consumer MUST NOT accept, for a current reliance decision, a response signed under a key the AS has published as compromised.",
    "role": "verifier",
    "strength": "MUST NOT",
@@ -21710,12 +22064,247 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as revoked or marked with a compromise time, although the key stays resolvable in the `jwks_uri` and the signature still verifies for audit"
+    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: kernel/signing-key-ring.ts holds one generation per role, and rotation, retirement and compromise are deferred to #831's next slice, and the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check compromise. D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty."
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section."
+  },
+  {
+   "id": "status.signing-keys.retention-audit-horizon",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "The AS MUST keep the public JWK for every `kid` it has signed such a response under resolvable for at least the Mission's audit horizon",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every key the AS signed a Mission Status or Lifecycle response under stays resolvable for the Mission's audit horizon: a retired key in its jwks_uri, a compromised key in its historical key set"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842)."
+  },
+  {
+   "id": "status.signing-keys.compromised-withdrawn",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "the AS stops signing with it and removes it from its `jwks_uri`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a key known or suspected compromised signs no further response and is absent from the AS's jwks_uri"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842)."
+  },
+  {
+   "id": "status.signing-keys.no-historical-fallback",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A consumer MUST NOT use a key from the historical key set to verify a response for a current reliance decision.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer never verifies a response for a current reliance decision under a key it found only in the historical key set, whatever the key's state"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.signing-keys.bounded-jwks-cache",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A consumer MUST NOT rely on a cached copy of the AS's `jwks_uri` beyond the freshness lifetime its response explicitly declares",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.signing-keys.no-heuristic-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "A response without valid explicit freshness information is stale when received",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a jwks_uri response without valid explicit freshness information is stale when received and is revalidated before reuse; the consumer never assigns it a heuristic lifetime"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.signing-keys.failed-revalidation-refuses",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "signing-key-retention",
+   "text": "When the cached set is stale and revalidation fails, the consumer MUST NOT accept a Status or Lifecycle response for a current reliance decision until a fetch or revalidation succeeds.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status or Lifecycle response until a fetch or revalidation of the jwks_uri succeeds"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+  },
+  {
+   "id": "status.historical-key-set.signed",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS signs the set under its active Mission Status signing key",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement, never another published key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization."
+  },
+  {
+   "id": "status.historical-key-set.consumer-validates-signer",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer MUST NOT accept a historical key set whose signature does not verify under the key its trusted configuration authorizes.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer refuses a historical key set signed under any key other than the Mission Status signing key its trusted configuration authorizes, including another role's key, a retired key, a key the set lists, and a replacement its configuration does not yet authorize"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3."
+  },
+  {
+   "id": "status.historical-key-set.revoked-member",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "Each listed JWK carries the `revoked` member",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each JWK in the historical key set carries revoked with reason compromised, revoked_at as the revocation time, and compromised_at as the established compromise time when one is established"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3."
+  },
+  {
+   "id": "status.metadata.historical-jwks-uri",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "REQUIRED while that set\n  lists a key.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "while the historical key set lists a key, the AS advertises its https URL as mission_historical_jwks_uri in its authorization server metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
@@ -22760,7 +23349,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "governed work with no establishable Mission reference is refused before evaluation, on both arms. On the MAS Join path the propagated reference is the ONLY source: an absent or stripped field refuses unknown_mission and a malformed one refuses mission_reference_conflict, so governed work never runs ungoverned. On the credential-carried path an absent field correctly leaves the credential-established reference in force, and a malformed field still refuses"
+    "normative": "governed work with no usable Mission reference is refused before evaluation, never run ungoverned: where the propagated reference is the only source (the MAS Join path), an absent, stripped or malformed reference refuses; where the credential carries the Mission, an absent field leaves the credential-carried reference in force and a malformed one still refuses",
+    "local": "the reference PEP refuses each of these with mission_reference_conflict, the reason Verification and Conflict assigns to a malformed or missing reference where governance requires one, before any decision (#972 item 13, D289); unknown_mission is kept for a well-formed reference whose Mission does not resolve"
    },
    "level": "unit",
    "coverage": "tested",
@@ -22802,7 +23392,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses unknown_mission and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
+   "notes": "Both arms are now exercised (#557 stage C2). The missing/stripped arm needed the MAS Join consumption path, where nothing but the propagated field can name a Mission: with the field absent the request refuses mission_reference_conflict (unknown_mission before #972 item 13, D289) and never reaches evaluation, at unit level and over a real MAS-governed HTTP channel. Malformed carriage was already end-to-end (#557 part 1) and now refuses mission_reference_conflict, distinct from an unknown Mission. Level stays unit: the endpoint entries auto-skip without OpenFGA."
   },
   {
    "id": "mas.reference.reject-extra-data",
@@ -22840,6 +23430,12 @@
      "name": "MCP _meta Mission reference propagation > a malformed _meta reference (extra member) is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a _meta reference carrying an extra member, or not an object, is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
    "notes": "Wire behavior landed with #557 (gateway PEP: header and _meta carriage, credential-governs conflict rule)."
@@ -22858,7 +23454,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing"
+    "normative": "credential-carried claim, PEP-recorded binding, and propagated reference naming different Missions denies with mission_reference_conflict; no source is silently preferred except the credential-carried claim governing; two carriages of the propagated reference on one request (the Mission-Reference field and the MCP `_meta` key) naming different Missions likewise deny, with neither preferred"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -22886,9 +23482,21 @@
      "name": "MCP _meta Mission reference propagation > a loaded view naming a different Mission issuer than the credential is refused with mission_reference_conflict",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference naming another Mission than the credential is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming different Missions are refused with mission_reference_conflict in either order, recorded as a Refusal Record, never a silent pick-one",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test."
+   "notes": "Both arms exercised: propagated-vs-credential conflicts on both tuple members (endpoint), and the PEP's own binding source (the loaded Mission view's issuer) vs the credential (cross-component). Landed with #557 part 1. #1503: a credential whose `mission.issuer` differs from its `iss` is now refused at validation (core.rs-enforcement.mission-issuer-equals-iss), so the binding-source arm is witnessed by a credential naming its own issuer and a loaded view under another; removing the PEP's view-issuer check fails that test. #1694: over MCP on HTTP, a `_meta` reference naming another Mission than the credential, and a Mission-Reference field and `_meta` key naming different Missions (in either order, on a MAS-governed route where either one alone would join), are refused before any decision; these entries use a stub FGA and never skip."
   },
   {
    "id": "mas.reference.mcp-duplicate-keys",
@@ -22910,6 +23518,83 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Extra-member and non-string arms are enforced post-parse and tested (see reject-extra-data). The duplicate-member and repeated-key arms are UNENFORCED at this boundary: the MCP SDK owns the JSON parse and collapses duplicates before the server sees the object; implementing them requires access to the raw parse boundary (recorded honestly rather than claimed)."
+  },
+  {
+   "id": "mas.reference.mcp-key-honored",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mcp-reference",
+   "text": "A server that silently ignores this key is not a conforming Mission PEP",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the `_meta` propagation key on each tools/call reaches the enforcement path on every MCP transport the PEP serves, MCP over HTTP included, and is never dropped: a well-formed value is the request's selection assertion (on a MAS-governed route it selects the Mission, and it carries its work item to the PEP), and a malformed value, or one naming another Mission than the credential, is refused",
+    "local": "on MCP over HTTP the `_meta` key and a Mission-Reference field on the same request are one reference only when they agree on id, issuer and work item (both absent, or both present and equal); a malformed carriage, or two that disagree, is refused mission_reference_conflict before any decision, and a well-formed carriage never rescues a malformed one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference alone selects the Mission on a MAS-governed route: an ordinary credential's joined read permits under that Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference carries its work item to the PEP where the statement names the attacher",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the _meta Mission reference reaches the PEP (@spec authority-server#mcp-reference, #1694) > a _meta reference naming another Mission than the credential is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a _meta reference carrying an extra member, or not an object, is refused with mission_reference_conflict before any decision",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a malformed _meta reference is not rescued by a well-formed Mission-Reference field: the governed read is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming different Missions are refused with mission_reference_conflict in either order, recorded as a Refusal Record, never a silent pick-one",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: the Mission-Reference field and the _meta key are one reference (@spec authority-server#reference-verification, #1694) > a field and a _meta key naming the same Mission but disagreeing on the work item, or on its presence, are refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a conflicting _meta reference is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-channel.test.ts",
+     "name": "MCP _meta Mission reference propagation > a malformed _meta reference (extra member) is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1694: the HTTP MCP transport read only the Mission-Reference field and dropped a `_meta` reference without refusal; it now reads the key with the in-memory transport's closed parser and reconciles it with the field. Each HTTP entry fails with the `_meta` read disabled in mcp-http-transport.ts, and each mcp-channel.test.ts entry fails with the same read disabled in mcp-transport.ts (run against live OpenFGA). The HTTP entries use a stub FGA and never skip; the mcp-channel.test.ts entries auto-skip without OpenFGA. The duplicate-member and repeated-key arms stay with mas.reference.mcp-duplicate-keys."
   },
   {
    "id": "mas.reference.mcp-unsupported-refusal",
@@ -29049,7 +29734,7 @@
     },
     {
      "file": "src/services/pdp/test/runtime-freshness-floor.test.ts",
-     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential, undeclared and default classes",
+     "name": "consequential freshness floor (@spec runtime#state-freshness) > refuses an injected no-freshness posture for consequential and undeclared classes, and a request with no class before evaluation",
      "level": "unit",
      "surface": "decision-request"
     },
@@ -31384,7 +32069,7 @@
    "id": "runtime.record-integrity.sequence-and-retention-floor",
    "spec": "draft-mcguinness-mission-runtime.md",
    "anchor": "record-integrity",
-   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's audit horizon",
+   "text": "The retention window declared in the Enforcement Scope Statement MUST be no shorter than the Mission's retention period as its Mission Substrate Binding declares it",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -31396,11 +32081,12 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's audit horizon"
+    "normative": "records for one Mission carry a per-emitter sequence indicator, and the declared retention window is never shorter than the Mission's retention period as its substrate binding declares it (the audit horizon, covering the Mission Record and its evidence, in the OAuth binding), nor than a longer period an adopted companion requires; the floor applies to every required record, not only the governance record"
    },
    "level": "unit",
    "coverage": "todo",
-   "tests": []
+   "tests": [],
+   "notes": "Re-quoted for #854 (D814): the floor moved from the OAuth audit horizon to the substrate binding's declared retention period, with the audit horizon as its OAuth realization."
   },
   {
    "id": "runtime.record-integrity.sequence-not-reused-pdp",
@@ -33557,6 +34243,52 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "authzen.pdp-consistency-checks.action-class-missing-refused",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "pdp-consistency-checks",
+   "text": "the PDP MUST refuse it before evaluation, MUST NOT evaluate it under a default class or record a class in Decision Evidence, and MUST record the refusal as a Refusal Record with `denial_reason` `action_class_missing`",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a mediated request reaching the PDP with no action class established is refused before evaluation, in process and over the remote decision channel, with no decision, no evaluation_id, no Decision Evidence and no class consulted or recorded; the refusal is a PDP-signed Refusal Record `action_class_missing`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > the remote PDP refuses an unclassified mediated request before evaluation as action_class_missing, with a signed Refusal Record and no decision work",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > a mediated request with no action_class is refused before evaluation as action_class_missing: no decision, no Decision Evidence, never consequential_read (@spec runtime#classification, authzen#pdp-consistency-checks, #956)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > refuses to sign a record that names no action class, never defaulting one",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q1. Every Enforcement Scope Statement the loader accepts declares action classes, so the reference refuses any missing class. Mutation: removing the pre-evaluation check fails both action-class witnesses and the GAP 2 witness; restoring the emitter's consequential_read default fails the emitter witness. The posture's old default is unreachable behind the check, so it is not separately mutated."
   },
   {
    "id": "authzen.pdp-request.consistency-state-active-and-pdp-precedence",
@@ -36256,7 +36988,7 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the PDP's evaluation_request_digest is the canonical-object digest of the request body as submitted, extension members included, computed before any receiver-side default (the PDP's default action class does not enter it); a remote decision channel's envelope and MAC header fields do not enter it"
+    "normative": "the PDP's evaluation_request_digest is the canonical-object digest of the request body as submitted, extension members included, computed before any receiver-side default; a remote decision channel's envelope and MAC header fields do not enter it"
    },
    "level": "unit",
    "coverage": "tested",
@@ -36269,7 +37001,7 @@
     },
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body as submitted: order-independent, extension members and explicit null included",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -36279,7 +37011,8 @@
      "level": "cross-component",
      "surface": "evidence-emission"
     }
-   ]
+   ],
+   "notes": "#956 (D814) removed the PDP's default action class, the one receiver-side default the reference applied; with none left, the before-any-default clause holds without a reference default to exclude, and the witness covers the body as submitted."
   },
   {
    "id": "authzen.evaluation-request-digest-input.jcs-sha256-encoding",
@@ -36304,7 +37037,7 @@
    "tests": [
     {
      "file": "src/services/pdp/test/decision-evidence.test.ts",
-     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body: order-independent, extension members and explicit null included, receiver defaults excluded",
+     "name": "evaluate() emits the Decision Evidence it decided (@spec runtime-evidence#decision-evidence-object, #741) > covers the whole submitted body as submitted: order-independent, extension members and explicit null included",
      "level": "unit",
      "surface": "evidence-emission"
     },
@@ -42922,6 +43655,40 @@
     }
    ],
    "notes": "#1629 (D744 ruling 3). The PDP signs a pdp-role Refusal Record phase_invalid over the request as submitted, naming no Mission and no evaluation, for an out-of-set phase and for a missing phase its declaration requires; the remote PDP retains one verifiable record per refusal (endpoint). phase_invalid joins the evidence store's PDP closed set, and a PEP-side store refuses to sign it. Mutations: recording the refusal as operation_target_invalid fails the signed-record and remote witnesses; removing phase_invalid from the PDP set fails the closed-set witness; adding it to the PEP set fails it too."
+  },
+  {
+   "id": "evidence.refusal.pdp-action-class-missing",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "pre-decision-refusal",
+   "text": "for a mediated request with no action class established, where the runtime Enforcement Scope Statement declares action classes, `action_class_missing`, recorded with no class",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PDP's Refusal Record for an unclassified mediated request carries denial_reason action_class_missing and no action_class or class_source, and verifies under the PDP's evidence key; a PEP-side store never signs that reason"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/refusal-denial-reason.test.ts",
+     "name": "the evidence store refuses a denial_reason outside the emitting role's closed set before signing (@spec runtime-evidence#pre-decision-refusal, #1148, D379) > action_class_missing is the PDP's alone, and a PEP-side store never signs it (#956)",
+     "level": "unit",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#956, D814. The PDP recorder takes the reason by type; the evidence store's closed sets hold it at runtime. Mutation: removing action_class_missing from the store's PDP set, or admitting it to the PEP set, fails the closed-set witness."
   },
   {
    "id": "evidence.refusal.pep-compensation-link-unavailable",
@@ -61876,6 +62643,37 @@
    "notes": "#1376 states the D480 host rule (RFC 9110 Sections 4.2.1 and 4.2.2) for an entry's resource; the reference enforced it through #1310. Proved by mutation: an isAbsoluteUri that skips the http(s) host check fails the witness for https:///mcp and https:localhost/mcp. Cases ev-res-02 and ev-res-03 run (entry-validation)."
   },
   {
+   "id": "resource-access.entry-validation.http-userinfo-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "its `resource` is an `http` or `https` URI carrying a userinfo subcomponent",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose http or https resource carries a userinfo subcomponent, an empty one or under an upper-case scheme included, is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses an http or https resource carrying a userinfo subcomponent, empty or not",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376 states RFC 9110 Section 4.2.4's rule for an entry's resource. The reference refuses it at every entry boundary through carriesHttpUserinfo: proposal intake, isAuthorityEntry, the ceiling loaders, template creation and direct derivation; an Intent's target_resources is not held to it. Proved by mutation: an intake that skips the check fails the witness. Cases ev-res-05 to ev-res-08 run (entry-validation); ev-res-09, an @ in the path, is valid."
+  },
+  {
    "id": "resource-access.entry-validation.resource-match-unrecognized-refused",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
@@ -71122,6 +71920,76 @@
    "notes": "#1178. Proved by mutation: the token endpoint's proof refusal and the missing-proof refusal answering invalid_request were each caught."
   },
   {
+   "id": "core.error-mapping.delegated-exchange-unauthenticated-client",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the AS does not authenticate the requesting client by a method it relies on to identify the client, which no public client meets | `invalid_client` ({{Section 5.2 of RFC6749}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange whose requesting client the AS does not authenticate by a method it relies on to identify the client, a confidential client presenting only its client_id or a public client, is refused with the error code invalid_client, with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845). Proven by the mutations core.delegation.delegate-client-authenticated records: accepting a claimed client_id at the token endpoint fails the first witness, and removing the handler's registered-method check fails the second."
+  },
+  {
+   "id": "core.error-mapping.delegated-exchange-actor-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "error-mapping",
+   "text": "the AS has authenticated the requesting client, and the request carries an `actor_token` | `invalid_request` ({{Section 2.2.2 of RFC8693}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a delegated exchange from a client the AS has authenticated that carries an actor_token is refused with the error code invalid_request, with no token issued; a client the AS does not authenticate is refused invalid_client instead"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845) > an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1718 (D845, D859). Proven by the mutations core.delegation.actor-token-refused records: removing the handler's actor_token refusal fails both witnesses, and accepting a claimed client_id at the token endpoint fails the second."
+  },
+  {
    "id": "core.error-mapping.token-rar-exceeds-granted",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "error-mapping",
@@ -71510,6 +72378,138 @@
     }
    ],
    "notes": "#1503 finding 7, D733 (owner rulings on #1604). Proved by disabling the explicit-request refusal, by never detecting a requested authorization_details, and by removing the AROP admission check."
+  },
+  {
+   "id": "core.tokens.designation-entry-audiences-tested",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "For a designation ({{designation}}), these rules test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation is issued although its `aud`, the designated client, is the original approved audience of none of the entries it carries; the designated client is never tested as an entry's audience",
+    "local": "the designation exchange computes no audience projection for the designated client, and the save-time audience check (unapprovedCarriage) is skipped for a token marked as a delegation handle (markDelegationHandle), as a designation is"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (b). Mutation-proved: applying the audience projection to the designated client at the designation, and running the save-time audience check on a designation's `aud`, each refused the witness's designation invalid_target."
+  },
+  {
+   "id": "core.tokens.designation-permitted-subset-kept-audience",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "A designation carries only a permitted subset of the presented token's entries ({{subset}}, {{delegation-constraints}}), each keeping its original approved audience ({{transformation-capabilities}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation, and its token response, carry only the presented token's entries whose delegation policy permits the designated client, each equal to its presented entry; each keeps the original approved audience the Mission retained for it, so the designation's redemption for that audience is issued carrying the entry",
+    "local": "the reference computes associations from the Mission record at each issuance, never from a designation, so a designation cannot reassign one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (b). Mutation-proved: carrying the presented authority whole at the designation failed the subset assertion; testing the carried entries against the designation's `aud` as their association at redemption refused the redemption invalid_target."
+  },
+  {
+   "id": "core.tokens.designation-unassociated-entry-not-carried",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "An entry without an original approved audience is not carried",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a designation leaves out a presented entry that has no original approved audience and carries the presented token's other permitted entries, in the designation and its token response alike; where no permitted entry has one, the designation is refused invalid_target and none is issued",
+    "local": "the designation exchange keeps only the entries whose retained association (derivedAudiences) names an audience, before settlement, and refuses an empty result there, so the refusal records no accounting and counts no derivation; an issued designation's accounting carries the same set; an entry the record retains an empty association for, and every entry of a record that stores no association, each have none"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation whose presented token carries one entry with an original approved audience and one without carries only the first, in the designation, its response and its accounting (#1717, D859)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a designation whose every carried entry lacks an original approved audience is refused invalid_target, issuing nothing and counting no derivation (#1717, D859)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D859): the issuance fix for the owner's probe, in which a designation was issued, and a derivation counted, for a Mission whose recorded association had been removed. Redemption's audience limit stays (row core.tokens.designation-redemption-audience-rules). The invalid_target refusal of an empty designation applies this section's refusal of a request approved for none of the entries the token would carry, read for a designation as the paragraph directs (its entries' associated audiences), and agrees with delegation-constraints' Empty result. Mutation-proved: removing the exclusion carried the unassociated entry (the first witness) and issued the second witness's designation 200; removing the empty refusal alone issued that designation 200 with empty authorization_details."
+  },
+  {
+   "id": "core.tokens.designation-redemption-audience-rules",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-response",
+   "text": "The delegated token issued at its redemption is subject to every rule of this section unchanged",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the delegated token issued at a designation's redemption carries only the designation's entries whose original approved audience includes its audience; a redemption for an audience that is the original approved audience of none of them is refused invalid_target and issues no token, while the same designation is redeemed for an audience its entries are approved for",
+    "local": "the delegated exchange limits its entries with audienceCarriedEntries before the derivation count and refuses there, so a refusal counts nothing; the save-time audience check (unapprovedCarriage) is the backstop and refuses with a different description"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845) > a redemption for a resource audience the carried entry is not approved for is refused invalid_target, issuing nothing and counting nothing, while the same designation redeems for its approved audience",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (c). Mutation-proved: removing the delegated exchange's audience limit alone failed the witness on its description (the save-time backstop still refused invalid_target); removing it together with the backstop issued the refused redemption. The carriage-only witness is #1604's (D733)."
   },
   {
    "id": "core.other-types.derived-mission-audience",
@@ -72257,6 +73257,178 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Specification-only instance-context composition. Optional capability; not claimed by the reference deployment. Positive and negative implementation coverage remains to be added."
+  },
+  {
+   "id": "runtime.classification.unclassified-mediated-request-refused",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "classification",
+   "text": "A request that does reach the PDP within a mediated scope with no action class established, where the Enforcement Scope Statement declares action classes, is a request fault",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "such a request is refused before evaluation, never evaluated under a class it was not assigned, and no class is recorded for it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-fail-closed.test.ts",
+     "name": "evaluateInner fail-closed gaps (#608) > GAP 2: freshness absence fails closed for high-consequence classes (@spec runtime#state-freshness) > a mediated request with no action_class is refused before evaluation as action_class_missing: no decision, no Decision Evidence, never consequential_read (@spec runtime#classification, authzen#pdp-consistency-checks, #956)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-action-class.test.ts",
+     "name": "an unclassified mediated request is a request fault (@spec runtime#classification, authzen#pdp-consistency-checks, runtime-evidence#pre-decision-refusal, #956) > records the refusal as a PDP-signed Refusal Record action_class_missing over the request as submitted, naming no class, no Mission and no evaluation",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q1. Fully constrained reads outside the mediated gate never reach the PDP and are unaffected; the declared argument-dependent classifier rule (runtime.classification.unclassifiable-defaults-to-widest) is separate and unchanged."
+  },
+  {
+   "id": "runtime.mission-binding.establishment-mode-values",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "Each enforcement scope declares the modes it serves as `mission_establishment_mode` in its Enforcement Scope Statement",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Enforcement Scope Statement's mission_establishment_mode is credential_carried, externally_established, or a non-empty duplicate-free list of them; an empty list, a repeated mode or any other value is refused at load"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > credential_carried is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > externally_established is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list naming both modes is accepted",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > an empty list is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list repeating a mode is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a free-string value outside the two modes (token-claim) is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/enforcement-scope.test.ts",
+     "name": "mission_establishment_mode values (@spec runtime#mission-binding, #956) > a list carrying a value outside the two modes is refused",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#956, D814 Q2. Mutation: accepting any non-empty string fails the four refusal cases."
+  },
+  {
+   "id": "runtime.mission-binding.declare-only-served-modes",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "A scope declares only the modes it actually serves.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the reference stack declares both modes only where the MAS baseline Join governs the payments resource; the AS-native target, which excludes the MAS, publishes credential_carried alone"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/establishment-modes.test.ts",
+     "name": "the stack declares the Mission-establishment modes it serves (@spec runtime#mission-binding, #956) > declares both modes where the MAS Join governs the payments resource, and credential_carried alone where it does not",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/establishment-modes.test.ts",
+     "name": "the stack declares the Mission-establishment modes it serves (@spec runtime#mission-binding, #956) > the published statement declares both modes, for the full reference stack that serves the MAS baseline Join",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native target over HTTP MCP with DPoP, OpenFGA client stubbed (D315) > publishes credential_carried as its only Mission-establishment mode: the AS-native target serves no externally established mode (@spec runtime#mission-binding, #956)",
+     "level": "cross-component",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#956, D814 Q2. Mutation: declaring both modes unconditionally fails the AS-native publication witness and the served-modes witness."
+  },
+  {
+   "id": "runtime.mission-binding.both-modes-no-fallback",
+   "spec": "draft-mcguinness-mission-runtime.md",
+   "anchor": "mission-binding",
+   "text": "Declaring both creates no fallback: the binding profile's precedence decides which reference establishes the Mission",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "where a scope serves both modes, a credential-carried reference governs, and a propagated reference naming a different Mission or issuer is refused rather than establishing the Mission; an invalid credential is not rescued by an externally established reference"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different Mission is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-channel.test.ts",
+     "name": "Mission-Reference propagation (gateway PEP) > a propagated reference naming a different issuer is refused with mission_reference_conflict",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#956, D814 Q2. Partial: the conflicting-selector half is witnessed (also cited by mas.reference.conflict-deny); no witness yet shows an invalid credential refused despite a valid propagated reference."
   },
   {
    "id": "mas.instance-join.no-coarse-fallback",
@@ -73943,9 +75115,15 @@
      "name": "MAS-governed HTTP MCP channel (baseline Join) > refuses mission_reference_conflict with the Mission-Reference field ABSENT: the route requires a reference and the credential establishes no Mission of its own",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/mcp-http-meta-reference.test.ts",
+     "name": "HTTP MCP channel: a malformed _meta Mission reference is refused (@spec authority-server#mcp-reference, authority-server#reference-tuple, #1694) > a malformed _meta reference is not rescued by a well-formed Mission-Reference field: the governed read is refused with mission_reference_conflict",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny."
+   "notes": "The reference PEP refuses both a malformed and a missing reference on the MAS-governed route with mission_reference_conflict (src/services/mcp-payments/src/pep.ts; the missing case mutation-checked against the former unknown_mission). The row level stays unit: the endpoint entries auto-skip without OpenFGA. Attribution conflicts are mas.reference.conflict-deny. #1694: a malformed MCP `_meta` reference on a MAS-governed HTTP route is refused even beside a well-formed Mission-Reference field (stub FGA, never skips)."
   },
   {
    "id": "mas.submission.status-body-members",
@@ -85437,7 +86615,7 @@
    "id": "authzen.failure-condition-coverage.work-item-invalid-unusable-input",
    "spec": "draft-mcguinness-mission-authzen.md",
    "anchor": "failure-condition-coverage",
-   "text": "`evaluation_context_invalid`, and `work_item_invalid` are PDP refusals before evaluation",
+   "text": "`evaluation_context_invalid`, `work_item_invalid`, and `action_class_missing` are PDP refusals before evaluation",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -85494,6 +86672,141 @@
      "surface": "evidence-emission"
     }
    ]
+  },
+  {
+   "id": "status.lifecycle.expected-version-canonical",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-operations",
+   "text": "A string, the canonical decimal form of a positive state version ({{mission-status-response}}): ASCII digits with no leading zero, and no sign, whitespace, fraction or exponent.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an expected_version of 0, a sign, a leading zero, whitespace, a fraction, an exponent or a non-ASCII digit is refused invalid_request; a canonical numeral beyond every state version answers stale_version, never rounded to a matching version; the current version is applied",
+    "local": "lifecycle-endpoint.ts parses /^[1-9][0-9]*$/ and carries a numeral beyond a safe integer as a value no version takes"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > accepts only the canonical decimal form of a positive expected_version, refusing any other form invalid_request and answering a canonical numeral beyond every state version stale_version, never rounded (@spec status#lifecycle-operations, #1724 C6, D847)"
+    }
+   ],
+   "notes": "#1724 C6 (D847), normative. Mutations: refusing a huge canonical numeral as malformed, and accepting non-canonical forms, each fail the test."
+  },
+  {
+   "id": "status.lifecycle.reason-bound",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-operations",
+   "text": "A string of at most 1024 Unicode code points, a longer one being malformed.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a reason of 1024 code points is accepted and one of 1025 refused invalid_request, in ASCII and outside the Basic Multilingual Plane"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint",
+     "name": "Mission Lifecycle endpoint authorization and request members (@spec status#lifecycle-authorization, status#mission-lifecycle-endpoint, #1191) > bounds reason at 1024 Unicode code points: 1024 accepted and 1025 refused invalid_request, ASCII and outside the Basic Multilingual Plane (@spec status#lifecycle-operations, #1724 C11, D847)"
+    }
+   ],
+   "notes": "#1724 C11 (D847). Mutation: counting UTF-16 units refuses 1024 supplementary-plane characters and fails the test."
+  },
+  {
+   "id": "status.lifecycle.client-fresh-nonce",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-operations",
+   "text": "a client MUST use a fresh `nonce` for each new operation it requests on a Mission, unique among its `nonce` values for that Mission within the deduplication window, and repeat it only to retransmit that request.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 D9 (D847), a client duty; no reference Lifecycle client is witnessed."
+  },
+  {
+   "id": "status.introspection.fresh-until-cap",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "introspection-projection",
+   "text": "The AS sets `fresh_until` no later than the time of the response plus any advertised `mission_max_stale_seconds`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.introspection-projection"
+   },
+   "profiles": [],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 C4 (D847). The reference emits no introspection fresh_until."
+  },
+  {
+   "id": "status.consumer.expected-issuer-trust",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status",
+   "text": "A consumer resolves it from the expected issuer, which comes from its own issuer trust or configuration, never from the response under verification",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a consumer takes the expected issuer from its own trust or configuration, validates the issuer's metadata (its issuer equal to the identifier used to retrieve it), and verifies with that issuer's jwks_uri keys",
+    "local": "the PDP's Mission Status resolver is configured with its issuer (services/pdp/src/mission-status-resolver.ts)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1724 D5 (D847)."
   }
  ]
 }

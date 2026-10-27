@@ -1,6 +1,6 @@
 /** @spec runtime#state-freshness — configuration and runtime share the floor. */
 import { describe, it, expect } from "vitest";
-import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
+import { DecisionRequestRefused, evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptions, type MissionView, relationForAction } from "../src/index.js";
 import { loadRuntimePosture, postureStalenessBound, RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
@@ -19,7 +19,7 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
     }
   });
 
-  it("refuses an injected no-freshness posture for consequential, undeclared and default classes", async () => {
+  it("refuses an injected no-freshness posture for consequential and undeclared classes, and a request with no class before evaluation", async () => {
     const view: MissionView = {
       id: "review-mission", issuer: "https://as.test", state: "active", version: 1,
       authority_hash: "sha-256:test", subject: { iss: "https://as.test", sub: "alice" }, client_id: "agent",
@@ -35,7 +35,7 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
       fga: { checkWithContext: async () => true } as never,
       stalenessBound: () => ({ kind: "none" }), relationForAction, resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
     };
-    for (const actionClass of [undefined, "consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration", "unknown"]) {
+    for (const actionClass of ["consequential_read", "consequential_write", "irreversible_action", "external_commitment", "privileged_administration", "unknown"]) {
       request.context.action_class = actionClass;
       for (const observation of [undefined, { state: "active", mode: "fresh", freshness_at: "2026-07-22T12:00:00Z" }]) {
         request.context.mission_state_observation = observation;
@@ -44,6 +44,25 @@ describe("consequential freshness floor (@spec runtime#state-freshness)", () => 
         expect(result.context.denial_reason).toBe("out_of_authority");
       }
     }
+    // @spec runtime#classification (#956, D814): there is no default class.
+    // A request with none is refused before evaluation, so the injected
+    // posture is never consulted for it and no decision is produced.
+    request.context.action_class = undefined;
+    const consulted: Array<string | undefined> = [];
+    const watched: EvaluateOptions = {
+      ...options,
+      stalenessBound: (c) => {
+        consulted.push(c);
+        return { kind: "none" };
+      },
+    };
+    for (const observation of [undefined, { state: "active", mode: "fresh", freshness_at: "2026-07-22T12:00:00Z" }]) {
+      request.context.mission_state_observation = observation;
+      const refused = await evaluate(request, watched).catch((e: unknown) => e);
+      expect(refused).toBeInstanceOf(DecisionRequestRefused);
+      expect((refused as DecisionRequestRefused).denial_reason).toBe("action_class_missing");
+    }
+    expect(consulted).toEqual([]);
   });
 
   it("keeps the explicit audit-only exemption and the configured non-consequential window", () => {

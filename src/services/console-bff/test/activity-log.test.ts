@@ -459,6 +459,7 @@ describe("ConsoleBff.activityLog read surface (operator role + join)", () => {
         subject: { id: "alice" },
         resource: { type: "invoice", id: "inv-1" },
         action: { name: "payments:invoice.read" },
+        action_class: "consequential_read",
         audience: AUDIENCE,
         evaluation_id: "dec_activity",
         // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted request.
