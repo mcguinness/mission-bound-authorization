@@ -104,7 +104,7 @@ import {
   openWriteReservationStore,
   type WriteReservationStore,
 } from "@mission/mcp-payments";
-import { openRasRedemptionStore, ResourceAuthorizationServer } from "@mission/ras";
+import { ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
@@ -466,9 +466,10 @@ export async function composeStack(opts: {
    * @spec #1767 (D901): the RAS's durable redemption store, kept across
    * restarts. Absent: its single-use claims are in memory. `pnpm as-native`
    * sets it from `MISSION_RAS_REDEMPTIONS` (`rasRedemptionsFromEnv`), which a
-   * key ring requires. The file is created once by `pnpm ras-redemptions
-   * init`, never here: a missing or uninitialized store refuses before
-   * anything listens. Whoever composed the stack closes it
+   * key ring requires, and refuses a missing or uninitialized store before
+   * anything connects. The file is created once by `pnpm ras-redemptions
+   * init`, never here: a store the RAS cannot open refuses composition,
+   * releasing what it opened. Whoever composed the stack closes it
    * (`DemoStack.authServer.ras.close()`).
    */
   rasRedemptions?: { file: string };
@@ -616,9 +617,6 @@ export async function composeStack(opts: {
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
-    // @spec #1767 (D901): a missing, uninitialized or held redemption store
-    // refuses here, before anything listens; the RAS below opens it again.
-    if (opts.rasRedemptions) openRasRedemptionStore(opts.rasRedemptions.file).close();
     // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
     // public half so POST /transaction validates challenges from this RS, and
     // opens the AROP task on the SAME ars this stack adjudicates against.
@@ -872,9 +870,9 @@ export async function composeStack(opts: {
     if (!Array.isArray(saasConstraints) || !saasConstraints.every((k) => typeof k === "string")) {
       throw new Error("SaaS protected resource metadata is missing mission_constraints_supported");
     }
-    // A RAS that cannot open its store after the AS listens (the file
-    // removed or taken since the check above) releases the listener and what
-    // construction opened, as a failed listen does.
+    // A RAS that cannot open its redemption store (missing, uninitialized or
+    // held) releases the AS listener and what construction opened, as a
+    // failed listen does.
     let ras: ResourceAuthorizationServer;
     try {
       ras = new ResourceAuthorizationServer({
