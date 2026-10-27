@@ -20898,7 +20898,7 @@
    "id": "status.auth.unauthenticated-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST refuse a request not authenticated on one of the two paths, with the outcome {{mission-status-auth-failures}} assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400).",
+   "text": "The AS MUST refuse a request not authenticated on one of the two paths, with the outcome {{mission-status-auth-failures}} assigns.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -20944,7 +20944,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. A shared-secret method or none answered other than as no credential (client_secret_post, Basic, client_secret_jwt and none each made retryable) failed the new witnesses."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. A shared-secret method or none answered other than as no credential (client_secret_post, Basic, client_secret_jwt and none each made retryable) failed the new witnesses. #1763 review: the refusal clause no longer fixes the two error codes; the outcome is the auth-failures section's, which preserves a method's own error response and defaults to 400 invalid_client."
   },
   {
    "id": "status.auth.client-no-shared-secret",
@@ -21888,7 +21888,7 @@
    "id": "status.auth.invalid-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-auth-failures",
-   "text": "A request whose client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "text": "Where the method defines none, the request receives HTTP 400 with the `invalid_client` error code",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -21903,7 +21903,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed client authentication, whatever the advertised method (for example `tls_client_auth` or `private_key_jwt`), gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
+    "normative": "a failed client authentication whose method defines no error response of its own (for example `tls_client_auth` or `private_key_jwt`) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
     "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Mission Status endpoint authenticates the same way and refuses the same way (#1407)"
    },
    "level": "endpoint",
@@ -21934,7 +21934,33 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
+   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. #1763 review: 400 invalid_client is the default where the method defines no error response; private_key_jwt defines none, so the existing witnesses still hold."
+  },
+  {
+   "id": "status.auth.method-defined-failure-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose client authentication fails at the HTTP layer receives the error response that the method's specification defines for that failure, with any error code, status, and challenge it requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -77622,6 +77648,27 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added for #1581 (D702 scope, D707: the fields stay out of the envelope, the Intent and their commitments, while the authenticated client identity is still recorded). Todo: the reference serves no MAS submission endpoint."
+  },
+  {
+   "id": "mas.submission.header-credentials-stay",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the submission endpoint, and its credentials are not carried as members of the JSON body"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): the JSON-body carriage covers only parameters a method defines as form parameters. Todo: the reference serves no MAS submission endpoint."
   },
   {
    "id": "mas.submission.json-client-id-mtls",
