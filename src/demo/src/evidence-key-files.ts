@@ -46,7 +46,13 @@ export const EVIDENCE_KEY_FILE_FORMAT = "mission-evidence-keys/1";
 export type EvidenceKeyHolder = "pep" | "pdp";
 export type EvidenceKeyRole = "pep" | "executor" | "receipt_issuer" | "pdp";
 
-/** Each holder's roles, under the `kid`s this deployment's statement and topology declare. */
+/**
+ * Each holder's roles, under the `kid`s this deployment's statement and
+ * topology declare. The `ephemeral-*` identifiers are retained for the PEP's
+ * keys, durable or not (D887): renaming them would change the boundary
+ * declaration and every record that names them, so the word no longer
+ * describes every deployment.
+ */
 export const EVIDENCE_KEY_ROLES: Record<EvidenceKeyHolder, readonly { role: EvidenceKeyRole; kid: string }[]> = {
   pep: [
     { role: "pep", kid: "ephemeral-pep" },
