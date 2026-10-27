@@ -129,13 +129,12 @@ It gates derivation on Mission state, carries the `mission` claim on
 every derived token, and offers only OPTIONAL token introspection
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission State via
 Token Introspection") as a way for a resource server to observe
-Mission state. It names this document for the canonical Mission Status
-surface (keyed by `mission_id`) and its signed status evidence, and
-defers a standardized management endpoint for lifecycle transitions to
-this document.
+Mission state. It defers to this document the canonical Mission Status
+surface, keyed by `mission_id`, with its signed status evidence, and a
+standardized management endpoint for lifecycle transitions.
 
-This document specifies those surfaces as optional extensions
-that build on the issuance profile. The capabilities are:
+This document specifies the following extensions to the issuance
+profile:
 
 - A dedicated **Mission Status operation**
   ({{mission-status}}), which an authenticated, authorized consumer
@@ -153,34 +152,23 @@ that build on the issuance profile. The capabilities are:
   ({{revocation-enforcement-classes}}): the `mission_max_stale_seconds`
   ceiling on reliance on an observation of Mission state, and how to
   size token lifetimes to the propagation mechanisms in use.
-- **authorization server metadata** members
+- **Authorization server metadata** members
   ({{as-metadata}}) advertising the endpoints above.
 
-Each capability is independently optional. An implementation states
-which it supports through the metadata of {{as-metadata}} and the
-conformance language of {{conformance}}. An implementation that
-supports none of them is unaffected and remains a conforming issuance
-profile.
+Each extension is independently optional ({{conformance}}).
 
-This document does not restate the issuance profile. The Mission Intent,
-authority derivation, the `mission` claim, the integrity anchors,
-Mission-bound token issuance, the subset rule, and lifecycle gating are
-all defined in {{I-D.draft-mcguinness-oauth-mission}}; the
-`mission_resource_access` authorization details type is defined in its
-Mission Resource Access Profile
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}); both are
-referenced, not re-specified, here.
+This document does not restate the issuance profile: the Mission
+Intent, authority derivation, the `mission` claim, the integrity
+anchors, Mission-bound token issuance, the subset rule, and lifecycle
+gating are defined in {{I-D.draft-mcguinness-oauth-mission}}.
 
 The OpenID Shared Signals Framework {{OIDC-SSF}} and its Continuous
 Access Evaluation Profile {{OIDC-CAEP}} push events to a receiver,
 and a companion profile can carry Mission transitions that way
 ({{revocation-enforcement-classes}}). An event reports that state
-changed; a Mission Status Response reports the state and how long a
-consumer may rely on it, so a push speeds learning of transitions
-without replacing the Status operation ({{status-operational}}).
-OAuth token revocation {{RFC7009}} acts on a token, not a Mission;
-the Lifecycle endpoint standardizes the means to revoke a Mission
-that the issuance profile requires.
+changed, not how long a consumer may rely on the state, so a push
+speeds learning of transitions without replacing the Status operation
+({{status-operational}}).
 
 # Conventions and Terminology {#conventions-and-definitions}
 
@@ -188,12 +176,13 @@ that the issuance profile requires.
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer (the Mission `issuer`: in the OAuth binding the
+Mission Issuer, Authority Set, the `mission` claim, and `mission_id`,
+and the `mission_resource_access` authorization details type defined
+in its Mission Resource Access Profile
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The Mission
+Issuer is the Mission `issuer`: in the OAuth binding, the
 authorization server; another binding's Mission Issuer that serves
-these surfaces does so with the same semantics), Authority Set, the
-`mission` claim, and `mission_id`; and the `mission_resource_access`
-authorization details type defined in its Mission Resource Access
-Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). It
+these surfaces does so with the same semantics. This document
 additionally uses:
 
 Mission Status Response:
@@ -231,9 +220,8 @@ JWS Compact Serialization {{RFC7515}} applies.
 
 This section is OPTIONAL. The issuance profile's stateless baseline
 needs no dedicated status surface
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"); a
-deployment that does not stand up this operation, and a
-consumer that does not use it, are unaffected.
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"), and a
+consumer that does not use this operation is unaffected.
 
 The dedicated Mission Status operation is the canonical status surface
 the issuance profile defers. Unlike token introspection
@@ -273,31 +261,25 @@ The request is an HTTPS POST with an
 `audience`:
 : CONDITIONAL. A string. The audience for which the consumer requests
   authority, one the Mission Issuer's configuration authorizes that
-  consumer to request (below). An authorized consumer
-  that is not a resource
-  server (for example an auditor or an authorization server in
-  another trust domain) that
-  needs only Mission state,
-  not audience-scoped authority, MAY omit `audience`; the response is
-  then state-only and carries no `authorization_details`
+  consumer to request (below). An authorized consumer that is not a
+  resource server (for example an auditor or an authorization server
+  in another trust domain) and needs only Mission state, not
+  audience-scoped authority, MAY omit `audience`; the response is then
+  state-only and carries no `authorization_details`
   ({{mission-status-response}}). A resource server resolving authority
   for a specific audience MUST send it.
 
 `nonce`:
 : REQUIRED. A string of 1 to 255 Unicode code points. A
-  client-generated nonce binding the
-  response to this request. It MUST be unique per request within the
-  response lifetime. A consumer MUST reject a response whose `nonce`
-  does not equal the one it sent. This is a standard client challenge:
-  echoing it in the signed response anti-replay-binds that response to
-  this specific request.
+  client-generated nonce binding the response to this request. It
+  MUST be unique per request within the response lifetime. A consumer
+  MUST reject a response whose `nonce` does not equal the one it sent.
 
 The request also carries the client authentication parameters of the
 method it uses ({{mission-status-authentication}}): `client_id`,
 REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}}),
 and `client_assertion_type` and `client_assertion`, REQUIRED with
-private-key-JWT client authentication {{RFC7523}}. A sender-constrained
-access token travels in the `Authorization` header instead.
+private-key-JWT client authentication {{RFC7523}}.
 
 The Mission Issuer's configuration states which audiences each
 authenticated caller may request: a resource server is typically
@@ -350,37 +332,36 @@ request:
    protected-resource identifier (below).
 
 The AS MUST refuse a request not authenticated on one of the two
-paths, with the outcome {{mission-status-auth-failures}}
-assigns. The
-path and method are
-determined by wire evidence in order: a request presenting an access
-token in `Authorization` takes the access-token path, and any client
-certificate is then evaluated only as that token's mTLS sender
-constraint; otherwise a request presenting the parameters of a method
-other than mTLS client authentication, such as `client_assertion` for
-`private_key_jwt`, uses that method, and any client certificate is not
-treated as client authentication; otherwise a request presenting only
-a client certificate uses the mTLS client authentication method
-registered for the client ({{RFC8705}}). This order keeps
-"exactly one path" satisfiable when mTLS terminates at the edge.
-The parameters of a path or method the order does not select, such as
-a `client_assertion` beside an access token, are not evaluated as
-client authentication. A
-request whose selected method the endpoint does not advertise,
-including a shared-secret method such as HTTP Basic, is answered as
-one that presented no credential
+paths, with the outcome {{mission-status-auth-failures}} assigns.
+Wire evidence selects the path and method, in this order:
+
+- A request presenting an access token in `Authorization` takes the
+  access-token path, and any client certificate is evaluated only as
+  that token's mTLS sender constraint.
+- Otherwise, a request presenting the parameters of a method other
+  than mTLS client authentication, such as `client_assertion` for
+  `private_key_jwt`, uses that method, and any client certificate is
+  not treated as client authentication.
+- Otherwise, a request presenting only a client certificate uses the
+  mTLS client authentication method registered for the client
+  ({{RFC8705}}).
+
+This order keeps "exactly one path" satisfiable when mTLS terminates
+at the edge. The parameters of a path or method the order does not
+select, such as a `client_assertion` beside an access token, are not
+evaluated as client authentication. A request whose selected method
+the endpoint does not advertise, including a shared-secret method such
+as HTTP Basic, is answered as one that presented no credential
 ({{mission-status-auth-failures}}).
 
 An authenticated caller MUST additionally carry an explicit read
 authorization: a `mission_status` scope on the presented access token,
 or a deployment-defined equivalent grant bound to the authenticated
 client. The `mission_status` scope authorizes the Mission Status read
-operation and mirrors the `mission_lifecycle` scope of the Mission
-Lifecycle endpoint ({{mission-lifecycle-endpoint}}). The token-less
-path is preserved: a consumer that holds only a `mission_id` and
-authenticates directly as a client carries the
-deployment-defined equivalent grant, not a scope, and so resolves
-Mission state without holding an access token the AS issued. A caller
+operation and mirrors the `mission_lifecycle` scope
+({{lifecycle-authorization}}). A consumer that holds only a
+`mission_id` and authenticates directly as a client carries the
+deployment-defined equivalent grant, not a scope. A caller
 carrying no such authorization is refused with the not-found response
 of {{mission-status-errors}} ({{mission-status-anti-oracle}}). This
 includes an authenticated caller presenting an otherwise-valid access
@@ -400,40 +381,33 @@ the authorization for the `mission_id` and audience that
 {{mission-status-anti-oracle}} requires, and a Mission it does not
 cover receives the not-found response.
 
-A presented access token MUST be audience-restricted to
-this endpoint's protected-resource identifier: the `resource` value the
-AS publishes for this endpoint in its Protected Resource Metadata
-{{RFC9728}}. For these surfaces that identifier is the endpoint's own URL
-(the `mission_status_endpoint` or `mission_lifecycle_endpoint`), not
-the issuer identifier that a private-key-JWT assertion's `aud` names.
-The AS MUST reject a token whose audience does
-not name that identifier. This token audience is distinct from the request body's
+A presented access token MUST be audience-restricted to this
+endpoint's protected-resource identifier: the `resource` value the AS
+publishes for this endpoint in its Protected Resource Metadata
+{{RFC9728}}. For these surfaces that identifier is the endpoint's own
+URL (the `mission_status_endpoint` or `mission_lifecycle_endpoint`),
+not the issuer identifier that a private-key-JWT assertion's `aud`
+names. The AS MUST reject a token whose audience does not name that
+identifier. This token audience is distinct from the request's
 `audience` parameter ({{mission-status-request}}): the token audience
 authorizes the call at this endpoint, whereas the request `audience`
 carries no authentication weight and only selects the
-Resource-Server-specific authority projection the response returns
+resource-server-specific authority projection the response returns
 ({{mission-status-response}}).
 
-Which paths and authorization this endpoint accepts are
-discoverable per endpoint, not inferred from the token endpoint's
-metadata. The AS advertises the client authentication methods this
-endpoint accepts in `mission_status_endpoint_auth_methods_supported`
-({{as-metadata}}).
-
-For
-the sender-constrained access-token path, this endpoint is an OAuth
-protected resource: the AS publishes, in its Protected Resource Metadata
-for this resource {{RFC9728}}, the `resource` identifier the token's
-audience MUST name, the `mission_status` scope it requires
+For the sender-constrained access-token path, this endpoint is an
+OAuth protected resource: the AS publishes, in its Protected Resource
+Metadata for this resource {{RFC9728}}, the `resource` identifier the
+token's audience MUST name, the `mission_status` scope it requires
 (`scopes_supported`), and the presentation and sender constraints it
-accepts (`bearer_methods_supported`, `dpop_bound_access_tokens_required`,
+accepts (`bearer_methods_supported`,
+`dpop_bound_access_tokens_required`,
 `tls_client_certificate_bound_access_tokens`). For the
-client-authentication path, the accepted methods and, for
-`private_key_jwt`, the
-accepted client-assertion signing algorithms are advertised for this
-endpoint ({{as-metadata}}), not read from the token endpoint's
-`token_endpoint_auth_methods_supported` {{RFC8414}}. Both paths are
-therefore discoverable.
+client-authentication path, the AS advertises the accepted methods in
+`mission_status_endpoint_auth_methods_supported` and, for
+`private_key_jwt`, the accepted client-assertion signing algorithms
+in `mission_status_endpoint_auth_signing_alg_values_supported`, not
+in the token endpoint's metadata ({{as-metadata}}).
 
 ## Authentication Failures {#mission-status-auth-failures}
 
@@ -449,14 +423,12 @@ credential it presented:
 - A request whose client authentication fails at the HTTP layer
   receives the error response that the method's specification defines
   for that failure, with any error code, status, and challenge it
-  requires, such as a method that answers a missing server-provided
-  challenge or a stale credential with its own error. That response
-  keeps this document's error body ({{mission-status-errors}}): its
-  error code is the body's `error`, with `error_description` and any
-  `nonce` echo, and a challenge header the method requires is added to
-  it. Where the method
-  defines none, the request receives HTTP 400 with the `invalid_client`
-  error code, as {{Section 5.2 of RFC6749}} answers a failed client
+  requires, such as a method's own error for a missing server-provided
+  challenge or a stale credential. That response's body is the error
+  body of {{mission-status-errors}}, with the method's error code as
+  its `error`. Where the method defines none, the request receives HTTP
+  400 with the `invalid_client` error code, as
+  {{Section 5.2 of RFC6749}} answers a failed client
   authentication carried outside the `Authorization` header, with no
   `WWW-Authenticate` challenge. A failed client authentication is not
   reported as an access-token failure. A client certificate rejected
