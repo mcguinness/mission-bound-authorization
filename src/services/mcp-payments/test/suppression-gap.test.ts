@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import type { Decision, Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it, vi } from "vitest";
@@ -31,6 +32,7 @@ import {
   McpPaymentsServer,
   openWriteReservationStore,
   PaymentsStore,
+  PaymentsToolCatalog,
   Pep,
   REVERSIBLE_WRITE_REFUSAL_ERRORS,
   type TokenFacts,
@@ -48,6 +50,8 @@ const PAST_PERMIT_MS = 3_600_000;
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 const key = (): string => `idem_${randomUUID()}`;
 const tempFile = (): string => join(mkdtempSync(join(tmpdir(), "suppression-gap-")), "write-reservations.sqlite");
+/** The trusted payments catalog every permit's capability snapshot is taken from. */
+const CATALOG = TRUSTED_TOOL_CATALOGS.find((c) => c.service_id === "payments")?.text as string;
 
 const TOKEN: TokenFacts = {
   sub: "alice",
@@ -91,6 +95,7 @@ function harness(o: { store?: "closed" } = {}) {
   let nowMs = BASE_MS;
   const now = () => new Date(nowMs);
   let view: MissionView = VIEW;
+  let catalog = CATALOG;
   let replayed: Decision | undefined;
   let mutate: ((d: Decision) => Decision) | undefined;
   let afterDecide: (() => void) | undefined;
@@ -123,6 +128,7 @@ function harness(o: { store?: "closed" } = {}) {
     },
     payments,
     evidence,
+    capabilityCatalog: new PaymentsToolCatalog(() => catalog),
     fga: alwaysAllowFga,
     modelId: "model-1715",
     loadView,
@@ -157,6 +163,10 @@ function harness(o: { store?: "closed" } = {}) {
     },
     setView: (next: MissionView) => {
       view = next;
+    },
+    /** The catalog this PEP resolves capability snapshots from, from now on. */
+    setCatalog: (next: string) => {
+      catalog = next;
     },
     advance: (ms: number) => {
       nowMs += ms;
@@ -231,11 +241,18 @@ const withConditions = (extra: Record<string, unknown>) => (d: Decision): Decisi
 });
 
 describe("a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715)", () => {
-  it("read reverification: a refusal at admission, at the bound list's parameters, or at release still refuses with its own reason, carries gap emission_failed and one alert each, and discloses nothing; written, the same refusals carry neither", async () => {
+  it("read reverification: a refusal at admission, at the capability snapshot, at the bound list's parameters, or at release still refuses with its own reason, carries gap emission_failed and one alert each, and discloses nothing; written, the same refusals carry neither", async () => {
     const h = harness();
     try {
       const expireAtDecision = () => h.afterDecide(() => h.advance(PAST_PERMIT_MS));
       const expireDuringReads = () => h.advance(PAST_PERMIT_MS);
+      const moveCatalog = async <T>(act: (moved: () => void) => Promise<T>): Promise<T> => {
+        try {
+          return await act(() => h.setCatalog(`${CATALOG}\n`));
+        } finally {
+          h.setCatalog(CATALOG);
+        }
+      };
       const widenScope = () =>
         h.setView({
           ...VIEW,
@@ -257,6 +274,7 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
           },
           "permit_expired",
         ],
+        ["capability snapshot", () => moveCatalog((moved) => read(h, moved)), "capability_source_unresolvable"],
         [
           "bound list parameters",
           async () => {
@@ -303,11 +321,15 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
     }
   });
 
-  it("write reverification: an unkeyed hold and a keyed schedule refused at admission, at parameter reverification after the invoice moved, or at release keep their refusals with gap emission_failed and one alert each; nothing is held or scheduled; written, none carries a gap", async () => {
+  it("write reverification: an unkeyed hold and a keyed schedule refused at admission, at the capability snapshot, at parameter reverification after the invoice moved, or at release keep their refusals with gap emission_failed and one alert each; nothing is held or scheduled; written, none carries a gap", async () => {
     const h = harness();
     try {
       const drift = () => h.payments.bumpInvoiceAmount("inv-1", "150.00");
-      const restore = () => h.payments.bumpInvoiceAmount("inv-1", "125.00");
+      const restore = () => {
+        h.payments.bumpInvoiceAmount("inv-1", "125.00");
+        h.setCatalog(CATALOG);
+      };
+      const moveCatalog = () => h.setCatalog(`${CATALOG}\n`);
       const expireDuringReads = () => h.advance(PAST_PERMIT_MS);
       const expiredAtDecision = async <T>(act: () => Promise<T>): Promise<T> => {
         h.afterDecide(() => h.advance(PAST_PERMIT_MS));
@@ -319,9 +341,11 @@ describe("a read or reversible-write refusal whose suppressed record cannot be w
       };
       const cases: Array<[string, () => Promise<unknown>, string]> = [
         ["unkeyed hold, admission", () => expiredAtDecision(() => hold(h)), "permit_expired"],
+        ["unkeyed hold, capability", () => hold(h, moveCatalog), "capability_source_unresolvable"],
         ["unkeyed hold, parameters", () => hold(h, drift), "target_drift"],
         ["unkeyed hold, release", () => hold(h, expireDuringReads), "permit_expired"],
         ["keyed schedule, admission", () => expiredAtDecision(() => schedule(h, key())), "permit_expired"],
+        ["keyed schedule, capability", () => schedule(h, key(), TOKEN, moveCatalog), "capability_source_unresolvable"],
         ["keyed schedule, parameters", () => schedule(h, key(), TOKEN, drift), "parameter_mismatch"],
         ["keyed schedule, release", () => schedule(h, key(), TOKEN, expireDuringReads), "permit_expired"],
       ];
