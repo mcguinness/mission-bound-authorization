@@ -2225,23 +2225,19 @@ Mission. Two richer patterns are out of scope:
 Where a deployment needs either, the Approval Governance Record
 ({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
 and Consent Evidence can carry a partial presentation of that record
-through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 The `adjudication.governance_record` member ({{mission-record}})
 marks an approval such a record backs, and {{role-mapping}} shows how
 each scenario assigns the three `approval_basis` roles.
 
-The Approval Governance Record is signed by the Mission Issuer and
-names the Mission's approval event and its Intent and Authority Set
-commitments. The issuer retains it, and this document defines no
-surface that discloses it. An artifact that refers to it does so by
-its record digest, as Consent Evidence's `approval_governance_digest`
-and audit transparency registration do
-({{I-D.draft-mcguinness-mission-audit}}). The record binds a
-governance evaluation to the Mission's approval event. It does not,
-by itself, establish a separate business decision for each subsequent
-action.
+The issuer retains the Approval Governance Record, and this document
+defines no surface that discloses it. An artifact that refers to it
+does so by its record digest
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Conventions and Definitions"). The record binds a governance
+evaluation to the Mission's approval event. It does not, by itself,
+establish a separate business decision for each subsequent action.
 
 Authenticating approval evidence does not, by itself, establish that
 conditions governing later reliance remain satisfied. Whether
