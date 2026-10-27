@@ -386,6 +386,24 @@ describe("PAR intake validates a proposed reference against the shipped configur
       expect(as.kernel.allMissions().length).toBe(before);
     }
   });
+
+  // #249 (D712, D865): "a contract its configuration names as current for the
+  // entry's `resource`": the shipped current reference, proposed on a resource
+  // the configuration names no contract current for, is refused.
+  it("refuses the configured current reference on a resource the configuration does not name it current for", async () => {
+    const OTHER = "https://ledger.example/mcp";
+    const before = as.kernel.allMissions().length;
+    const res = await pushPar({
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, target_resources: [RESOURCE, OTHER] } }),
+      authorization_details: JSON.stringify([{ ...proposal()[0], resource: OTHER, resource_contract: SHIPPED }]),
+    });
+    const body = (await res.json()) as { error: string; error_description?: string; request_uri?: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_authorization_details");
+    expect(body.error_description).toMatch(/current for the entry's resource/);
+    expect(body.request_uri).toBeUndefined();
+    expect(as.kernel.allMissions().length).toBe(before);
+  });
 });
 
 // @spec resource-access#resource-contract (#1751, D875): "Every derivation,
