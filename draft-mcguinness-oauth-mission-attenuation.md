@@ -278,6 +278,16 @@ and it signs the root with its own keys. It MUST carry `aud` per the
 issuance profile's token rules ({{I-D.draft-mcguinness-oauth-mission}}),
 identifying the resource server(s) authorized to consume its authority.
 
+The root is an attenuation-substrate token, not a JWT access token: its
+JWS header carries the substrate's `typ` value `aat+jwt`
+({{Section 3.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}})
+in place of the issuance profile's `at+jwt`, its `cnf` carries the
+holder's public key as `jwk`
+({{Section 3.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+and the token endpoint returns it with the substrate's `token_type`
+value `aat`
+({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+
 A Mission-bound attenuation root is one shape of Mission-bound token. A
 deployment MAY also issue ordinary `mission_resource_access` tokens for
 the same Mission; the two are derived from the same Authority Set and
@@ -914,6 +924,10 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission-Bound Attenuation Roots: the root carries the substrate's
+  `typ` (`aat+jwt`, not `at+jwt`) and a `cnf.jwk`, and is returned
+  with `token_type` `aat`.
 
 - Profiles revision -02 of Attenuating Agent Tokens and cites it by
   section.
