@@ -7872,6 +7872,13 @@ Cross-Domain:
   identified from client identity information the AS trusts, and
   presents `goal` and `task_bounds` as recorded, without truncation
   (Rendering Safeguards; #1532, D859).
+- Editorial, no requirement change: Terminology defines "applicable
+  entry" by the matching rule Audience and Token Response states, and
+  adds the delegation terms; Mission State via Token Introspection
+  describes a resource server that observes Mission state in plain
+  terms; and the Implementation Map gains a table of deployment
+  choices, naming for each who decides, which party learns it, and the
+  existing signal, if any, it learns from (#1723, #1504, D845).
 
 -01
 
