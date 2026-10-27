@@ -22563,6 +22563,41 @@
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Requoted (#1724 C2, D847): the envelope `sub` carries the acting party as a MUST (Response); the former SHOULD to reflect it in `sub` or an audit member is subsumed, and an additional deployment-defined audit member is a MAY."
   },
   {
+   "id": "status.lifecycle.base-operation-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-operations",
+   "text": "The AS answers a successful base operation with the signed, state-only Mission Status Response ({{mission-status-response}}), whose `aud` is the authenticated client's `client_id` and whose `nonce` is the request's.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successful `revoke`, `suspend`, `resume` or `complete` is answered with a signed Mission Status Response that carries no `authorization_details`, whose `aud` is the authenticated client's `client_id` and whose `nonce` equals the request's"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers revoke with the signed state-only Mission Status Response: requester aud and sub, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > answers revoke with the signed state-only Mission Status Response: aud the client's client_id, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "D921 item 1: the Lifecycle success response is stated in Operations. partial: the cited witnesses answer `revoke`; the `suspend`, `resume` and `complete` responses are not separately witnessed."
+  },
+  {
    "id": "status.lifecycle.schedule-applied-at-deadline",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
