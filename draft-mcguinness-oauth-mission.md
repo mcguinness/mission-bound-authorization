@@ -8057,6 +8057,13 @@ Cross-Domain:
   terms; and the Implementation Map gains a table of deployment
   choices, naming for each who decides, which party learns it, and the
   existing signal, if any, it learns from (#1723, #1504, D845).
+- Editorial, no requirement change: Mission-Bound Access Tokens opens
+  with Issuance Checks, one list of the checks issuance applies, each
+  with its home sections and its applicability and exceptions on code
+  redemption, refresh, designation, delegated exchange, and
+  self-exchange, and each of those paths points to the list; the
+  Implementation Map gains an operation index naming the sections each
+  operation needs (#1723, D845).
 
 -01
 
