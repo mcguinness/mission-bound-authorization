@@ -1891,7 +1891,8 @@ method) or, equivalently, issue a DPoP-bound authorization code
 ({{RFC9449}}). Redemption is then verified as
 {{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
 This prevents authorization-code injection from yielding the Mission
-grant.
+grant. Issuance at the code's redemption applies the checks of
+{{issuance-checks}} as that list states for code redemption.
 
 The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
@@ -2446,11 +2447,78 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
-The first four subsections follow one issuance: resolving the Mission
-from the presented grant ({{grant-binding}}), the checks every issuance
-passes
+{{issuance-checks}} lists the checks an issuance applies on each path.
+The next four subsections follow one issuance: resolving the Mission
+from the presented grant ({{grant-binding}}), gating the issuance
 ({{issuance-gating}}), and the token ({{token-claims}}) and its
 response ({{token-response}}).
+
+## Issuance Checks {#issuance-checks}
+
+This document defines five issuance paths: code redemption, the token
+response that redeems a newly created Mission's authorization code
+({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
+designation ({{designation}}); a delegated exchange
+({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
+Each is a derivation ({{issuance-gating}}); companion profiles define
+further derivations. Each item below names a check, the sections that
+state it, and the paths it applies to, with any difference by path. A
+path's own section states its further rules, and {{error-mapping}}
+gives the error codes.
+
+1. Mission resolution ({{grant-binding-resolution}}): every path, from
+   the presented grant: the code, the refresh token, or the
+   `subject_token`, which on a delegated exchange is the designation.
+2. Client and sender binding: every path, as its own section states
+   for the code ({{approval-code-protection}}), the refresh token
+   ({{refresh-tokens}}), the token a designation request presents
+   ({{designation}}), the delegate ({{delegated-exchange}}), and the
+   self-exchanging agent ({{self-exchange}}).
+3. Mission state ({{issuance-gating}}, {{lifecycle}}): every path; a
+   delegated exchange evaluates each redemption afresh
+   ({{delegated-exchange}}).
+4. Mission-governed resources ({{authority-proposal}}): every path; a
+   refresh, a self-exchange, or a designation request needs no
+   `mission_intent`.
+5. Subset ({{subset}}): every path, against the Mission Authority Set,
+   and also against the presented refresh grant on a refresh
+   ({{refresh-tokens}}), the presented token on a designation or a
+   self-exchange, and the designation on a delegated exchange; on
+   those two delegation exchanges, only as {{delegation-constraints}}
+   permits.
+6. Declared transformation capabilities
+   ({{transformation-capabilities}}): every path that narrows an entry,
+   issues it to another audience, delegates it, as a delegated
+   exchange does, or projects it to `scope`.
+7. Audience ({{token-response}}): every path, by each entry's original
+   approved audience ({{transformation-capabilities}}); for a
+   designation, the resource audiences of its entries, not the client
+   its `aud` names, with designated-client separation
+   ({{designation}}); for a delegated token, also an audience that
+   processes the `act` chain ({{delegated-exchange}}).
+8. Scope projection ({{scope-projection}}): every path that emits
+   `scope`, whose request names a `scope` value, or whose target
+   consumes only `scope`; on a refresh, with that section's protection
+   of the refresh token.
+9. Token claims ({{token-claims}}, {{mission-claim}},
+   {{mission-claim-reservation}}): every path; the three exchanges keep
+   the presented token's `mission` claim. A designation's `aud` names
+   the designated client, it carries `may_act` and no `cnf` or `act`
+   ({{designation}}), and it creates no key-publication duty by
+   itself; a delegated token adds the `act` chain and the delegate's
+   own key ({{delegated-exchange}}); a self-exchange adds no `act`
+   chain.
+10. Lifetime and authentication claims
+    ({{token-authentication-lifetime}}): every path, kept short as
+    {{issuance-gating}} recommends; a designation also has its own
+    expiry ({{designation}}), which does not bound a delegated token
+    issued from it.
+11. Response members ({{token-response}},
+    {{mission-response-parameters}}): every path echoes the granted
+    `authorization_details`; {{mission-response-parameters}} requires
+    `mission_id` and `mission_expires_at` on code redemption and
+    delegated-exchange responses and recommends them on refresh,
+    designation, and self-exchange responses.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -2937,6 +3005,9 @@ intact:
 ~~~
 
 ## Refresh Tokens {#refresh-tokens}
+
+Issuance on a refresh applies the checks of {{issuance-checks}} as
+that list states for a refresh.
 
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
@@ -3972,6 +4043,9 @@ the Mission's approved agent for a token that carries no `act` claim,
 and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
+Issuing a designation applies the checks of {{issuance-checks}} as
+that list states for a designation.
+
 A designation the AS issues:
 
 - carries a subset ({{subset}}) of the presented token's authority,
@@ -4008,8 +4082,9 @@ introspection ({{composite-active}}).
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
-obtained for it ({{designation}}). The AS issues the delegated token
-subject to all of the following:
+obtained for it ({{designation}}). Issuance applies the checks of
+{{issuance-checks}} as that list states for a delegated exchange. The
+AS issues the delegated token subject to all of the following:
 
 - **The exchange is explicit.** The `subject_token` is a designation
   this AS issued naming the authenticated requesting client
@@ -4183,8 +4258,9 @@ the agent's own authority downward. A designation ({{designation}})
 names a delegate, so it is not a self-exchange, and these rules do not
 apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
-even when it carries no `actor_token`. A no-actor exchange is subject
-to the following:
+even when it carries no `actor_token`. Issuance applies the checks of
+{{issuance-checks}} as that list states for a self-exchange. A
+no-actor exchange is subject to the following:
 
 1. The AS MUST refuse a no-actor exchange with the `invalid_request`
    error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
