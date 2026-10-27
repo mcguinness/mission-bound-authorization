@@ -199,7 +199,7 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
       { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute"], constraints: { vendors: ["globex"] } },
     ];
     expect(() => deferrals.open({ missionId: mission.id, requested: widen, clientId: "ap-agent", jkt: AGENT_JKT })).toThrow(
-      /exceeds the active Mission/,
+      /not within the active Mission/,
     );
   });
 
