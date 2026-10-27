@@ -93,13 +93,14 @@ import {
   normalizedParameters,
   parameterDigest,
 } from "./effective-params.js";
-import type {
-  DecisionEvidence,
-  EvidenceStore,
-  ExecutionEvidence,
-  ExecutionEvidenceObject,
-  PepRefusalDenialReason,
-  RuntimeHopReference,
+import {
+  type DecisionEvidence,
+  type EvidenceStore,
+  type ExecutionEvidence,
+  type ExecutionEvidenceObject,
+  ExecutionRedispositionError,
+  type PepRefusalDenialReason,
+  type RuntimeHopReference,
 } from "./evidence.js";
 import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
 import {
@@ -1404,6 +1405,15 @@ export interface EnforceResult {
    */
   attempt?: ExecutionAttempt;
   /**
+   * @spec runtime-evidence#execution-evidence-object (#786, #1715): present on
+   * a refusal this PEP made inside enforcement after the permit (an
+   * unrecognized condition, a dependency not established, an obligation not
+   * fulfilled). The permit's attempt and the outcome of its suppressed
+   * disposition, so the caller surfaces a record that could not be written
+   * rather than dropping it.
+   */
+  suppressed?: { attempt: ExecutionAttempt; disposition: SuppressOutcome };
+  /**
    * @spec runtime#idempotency (#918): present on a permit for a keyed
    * reversible write. The (idempotency scope, `idempotency_key`) pair this
    * PEP reserves, and the operation identity it is reserved under, projected
@@ -1701,9 +1711,14 @@ export interface AttemptEvaluationContext {
  * whose context-bound permit's effective context digest could not be (#773).
  * A suppression never reports either: it emits without the effective digest,
  * "comparison unavailable" (#786).
+ *
+ * `prior: true` (#1715) marks a suppression of an attempt whose one
+ * disposition is already retained under its execution identity (an attempt
+ * replayed into the effect step): this refusal records nothing further, and
+ * no record is missing.
  */
 export type SuppressOutcome =
-  | { recorded: true }
+  | { recorded: true; prior?: true }
   | {
       recorded: false;
       gap: "effective_parameter_digest_unobservable" | "effective_evaluation_context_digest_unobservable" | "emission_failed";
@@ -3589,8 +3604,8 @@ export class Pep {
       // Post-permit: a permit was obtained and is unusable, so this is a
       // suppressed disposition of that permit, never a Refusal Record
       // (@spec runtime-evidence#pre-decision-refusal boundary rule).
-      await this.suppressExecution(attempt, "condition_unrecognized");
-      return { permitted: false, refusal_reason: "unrecognized_condition" };
+      const disposition = await this.suppressExecution(attempt, "condition_unrecognized");
+      return { permitted: false, refusal_reason: "unrecognized_condition", suppressed: { attempt, disposition } };
     }
 
     // @spec runtime#input-authority-dependency (#830, D798): the composed
@@ -3605,8 +3620,8 @@ export class Pep {
         action: mapping.action,
       });
       if (!checked.ok) {
-        await this.suppressExecution(attempt, "resource_policy");
-        return { permitted: false, decision, denial_reason: "resource_policy" };
+        const disposition = await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy", suppressed: { attempt, disposition } };
       }
       // The ceiling travels with the permit into execution admission and is
       // enforced at release (the `authority_dependency` use check).
@@ -3642,10 +3657,10 @@ export class Pep {
         // ("one object per attached obligation, in the order the decision
         // returned them"): every attached obligation has its entry, a malformed
         // one included, with no `id` or `type` invented for it (#786).
-        await this.suppressExecution(attempt, "obligation_unfulfilled", {
+        const disposition = await this.suppressExecution(attempt, "obligation_unfulfilled", {
           ...(processed.outcomes ? { obligationOutcomes: processed.outcomes } : {}),
         });
-        return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+        return { permitted: false, refusal_reason: "unfulfillable_obligation", suppressed: { attempt, disposition } };
       }
       // Fulfilled: every obligation identified itself and was performed.
       attempt.obligationOutcomes = processed.outcomes;
@@ -4009,6 +4024,7 @@ export class Pep {
       // "recorded as the executing PEP attributed it".
       ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
     };
+    let disposedEarlier = false;
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
@@ -4024,11 +4040,18 @@ export class Pep {
         // reservation stays charged until the permit and its lease elapse.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
-      } catch {
+      } catch (e) {
         /* one retry, on the SAME execution identity: a retained record is
            returned rather than duplicated, so this cannot double-emit. */
+        disposedEarlier = e instanceof ExecutionRedispositionError && e.held === "retained";
       }
     }
+    // @spec runtime-evidence#execution-evidence-object (#786, #1715): one
+    // execution identity, one disposition. A refusal of an attempt whose
+    // disposition is already retained records nothing further, and nothing is
+    // missing. A completed disposition refused that way stays a gap: its
+    // effect stands and its identity's record says otherwise.
+    if (disposedEarlier && disposition.outcome === "suppressed") return { recorded: true, prior: true };
     return { recorded: false, gap: "emission_failed" };
   }
 
