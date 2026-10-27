@@ -1826,37 +1826,11 @@ the Intent like any other, but does not interpret the carried policy
 beyond its type's declared capabilities; the resource server or policy
 decision point (PDP) evaluates it at request time.
 
-The following is an example of an Authority Set with a Cedar policy
-entry for a finance audience that consumes Cedar, alongside a
-`mission_resource_access` entry for a calendar audience that does
-not. The Cedar `policySet` is abbreviated:
-
-~~~ json
-[
-  {
-    "type": "account_information",
-    "rarFormat": "cedar",
-    "policySet": "permit(principal, action, resource) when {...};"
-  },
-  {
-    "type": "mission_resource_access",
-    "resource": "https://calendar.example.com",
-    "actions": ["events.read"],
-    "constraints": { "window_days": 30 }
-  }
-]
-~~~
-
-Both entries are committed by the one `authority_hash` and bound to the
-Mission. The Cedar entry is evaluated by the finance audience's PDP; the
-`mission_resource_access` entry is enforced as in
-{{mission-bound-tokens}}.
-
 Because the Cedar profile defines no subset or delegation rule over
-policy sets, the AS carries the Cedar entry as approved, so it does not
+policy sets, the AS carries a Cedar entry as approved, so it does not
 appear in a delegated token or cross-domain grant. Delegation controls
-on other entries, such as the `mission_resource_access` entry, apply to
-those entries only.
+on other entries in the same Authority Set, such as a
+`mission_resource_access` entry, apply to those entries only.
 
 Invoking a Model Context Protocol tool or a function call is modeled
 as a `mission_resource_access` entry with no separate type; the
