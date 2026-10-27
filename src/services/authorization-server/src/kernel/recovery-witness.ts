@@ -44,6 +44,7 @@ import { existsSync, readFileSync } from "node:fs";
 import {
   type CommitGuard,
   type Database,
+  holdFileLock,
   openStore,
   setCommitGuard,
   withTransaction,
@@ -171,17 +172,11 @@ export function writeRecoveryWitness(file: string, record: RecoveryWitnessRecord
  * any other kernel or reconciliation holds it, whichever store it opened.
  */
 function lockWitness(witnessFile: string): Database {
-  let lock: Database;
   try {
-    lock = openStore("", { file: `${witnessFile}.lock`, exclusive: true });
-    lock.exec("CREATE TABLE IF NOT EXISTS witness_lock (k INTEGER PRIMARY KEY CHECK (k = 1), held_at TEXT NOT NULL)");
-    lock.prepare("INSERT INTO witness_lock (k, held_at) VALUES (1, ?) ON CONFLICT(k) DO UPDATE SET held_at = excluded.held_at").run(
-      new Date().toISOString(),
-    );
+    return holdFileLock(`${witnessFile}.lock`);
   } catch (e) {
     throw new RecoveryUncertainError("witness_locked", `another writer holds the witness ${witnessFile}: ${(e as Error).message}`);
   }
-  return lock;
 }
 
 /**

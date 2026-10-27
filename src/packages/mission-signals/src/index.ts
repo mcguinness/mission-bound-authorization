@@ -44,7 +44,9 @@ import {
 } from "@mission/core";
 import { MISSION_STATUS_SKEW_SECONDS, verifyMissionStatusResponse } from "@mission/pdp";
 import {
+  canonicalPath,
   type Database,
+  holdFileLock,
   openStore,
   type StoreOptions,
   withTransaction,
@@ -291,8 +293,10 @@ export type ResynchronizeResult =
        * - `nonce`: it does not echo a nonce this receiver issued for the Mission.
        * - `generation`: its nonce was issued before a later restore.
        * - `behind`: it reports a version below the one the store holds.
+       * - `expired`: its reliance bound (its `fresh_until`, its `exp`, or an
+       *   active Mission's `expires_at`) has passed.
        */
-      reason: "not_recovering" | "unverified" | "nonce" | "generation" | "behind";
+      reason: "not_recovering" | "unverified" | "expired" | "nonce" | "generation" | "behind";
     };
 
 /**
@@ -387,6 +391,7 @@ CREATE TABLE IF NOT EXISTS signal_receiver_sequence (
   audience TEXT NOT NULL,
   store_id TEXT NOT NULL,
   sequence INTEGER NOT NULL,
+  witness TEXT NOT NULL,
   PRIMARY KEY (issuer, audience)
 ) STRICT;
 CREATE TABLE IF NOT EXISTS signal_receiver_recovery (
@@ -526,6 +531,8 @@ export class MissionSignalReceiver {
   private readonly statusKeys: ReturnType<typeof createLocalJWKSet>;
   /** @spec control-plane#rollback (#1749): the witness as this receiver last wrote it. */
   private witness: ReceiverWitness | undefined;
+  /** The witness's lock file, held while this receiver is open: one witnessed writer (D910). */
+  private witnessLock: Database | undefined;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
 
@@ -555,13 +562,22 @@ export class MissionSignalReceiver {
       }
     }
     this.db = openStore(RECEIVER_SCHEMA, opts.store);
-    if (witnessFile !== undefined) {
-      try {
+    try {
+      if (witnessFile !== undefined) {
         this.admit(witnessFile);
-      } catch (e) {
-        this.db.close();
-        throw e;
+      } else if (this.sequenceRow() !== undefined) {
+        // @spec control-plane#rollback (D910): a write through an unwitnessed
+        // handle would advance the store without its witness, so a later
+        // restore that loses it would go undetected.
+        throw new SignalReceiverRecoveryError(
+          "this receiver's store has a recovery witness, so it opens only with that witness",
+        );
       }
+    } catch (e) {
+      this.witnessLock?.close();
+      this.witnessLock = undefined;
+      this.db.close();
+      throw e;
     }
   }
 
@@ -579,8 +595,22 @@ export class MissionSignalReceiver {
    *   replaced by an empty or older store): a restore. A new recovery
    *   generation is committed in the store, and every Mission is held until
    *   it is resynchronized.
+   *
+   * One witnessed writer (D910): the witness's lock is held while the
+   * receiver is open, so a second handle on the same witness is refused, and
+   * the store records the witness's path, so a handle on a copy of the
+   * witness at another path is refused too. A witness moved to another path
+   * is refused in the same way; the way back is to move it back.
    */
   private admit(file: string): void {
+    try {
+      this.witnessLock = holdFileLock(`${file}.lock`);
+    } catch (e) {
+      throw new SignalReceiverRecoveryError(
+        `another receiver holds the witness ${file}: ${(e as Error).message}`,
+      );
+    }
+    const path = canonicalPath(file);
     const witness = readReceiverWitness(file);
     const stored = this.sequenceRow();
     if (witness === undefined) {
@@ -599,9 +629,9 @@ export class MissionSignalReceiver {
       writeDurableFile(file, JSON.stringify(record));
       this.db
         .prepare(
-          "INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence) VALUES (?, ?, ?, 0)",
+          "INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence, witness) VALUES (?, ?, ?, 0, ?)",
         )
-        .run(this.opts.issuer, this.audience, record.store_id);
+        .run(this.opts.issuer, this.audience, record.store_id, path);
       this.witness = record;
       return;
     }
@@ -610,6 +640,11 @@ export class MissionSignalReceiver {
     }
     if (stored !== undefined && stored.store_id !== witness.store_id) {
       throw new SignalReceiverRecoveryError(`the witness ${file} belongs to another store`);
+    }
+    if (stored !== undefined && stored.witness !== path) {
+      throw new SignalReceiverRecoveryError(
+        `the store is witnessed by ${stored.witness}, not ${path}`,
+      );
     }
     if (stored !== undefined && stored.sequence > witness.sequence) {
       throw new SignalReceiverRecoveryError(
@@ -624,10 +659,11 @@ export class MissionSignalReceiver {
     withTransaction(this.db, () => {
       this.db
         .prepare(
-          `INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence) VALUES (?, ?, ?, ?)
-           ON CONFLICT (issuer, audience) DO UPDATE SET store_id = excluded.store_id, sequence = excluded.sequence`,
+          `INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence, witness) VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (issuer, audience) DO UPDATE SET
+             store_id = excluded.store_id, sequence = excluded.sequence, witness = excluded.witness`,
         )
-        .run(this.opts.issuer, this.audience, witness.store_id, witness.sequence);
+        .run(this.opts.issuer, this.audience, witness.store_id, witness.sequence, path);
       this.db
         .prepare(
           `INSERT INTO signal_receiver_recovery (issuer, audience, generation, detected_at) VALUES (?, ?, ?, ?)
@@ -640,12 +676,14 @@ export class MissionSignalReceiver {
     this.witness = next;
   }
 
-  private sequenceRow(): { store_id: string; sequence: number } | undefined {
+  private sequenceRow(): { store_id: string; sequence: number; witness: string } | undefined {
     return this.db
       .prepare(
-        "SELECT store_id, sequence FROM signal_receiver_sequence WHERE issuer = ? AND audience = ?",
+        "SELECT store_id, sequence, witness FROM signal_receiver_sequence WHERE issuer = ? AND audience = ?",
       )
-      .get(this.opts.issuer, this.audience) as { store_id: string; sequence: number } | undefined;
+      .get(this.opts.issuer, this.audience) as
+      | { store_id: string; sequence: number; witness: string }
+      | undefined;
   }
 
   /**
@@ -654,14 +692,41 @@ export class MissionSignalReceiver {
    * it. A crash can leave the witness ahead of the store, which holds every
    * Mission on the next open, never a committed write the witness does not
    * cover. A witness write that fails throws, and nothing commits.
+   *
+   * The witness is read back first and must be the record this receiver last
+   * wrote; one changed underneath it refuses every write. The sequence is
+   * allocated in the store, inside this transaction, and the witness never
+   * moves below it or below its own last value (D910).
    */
   private witnessWrite(): void {
     const file = this.opts.witness?.file;
     if (file === undefined || this.witness === undefined) return;
-    const record = { ...this.witness, sequence: this.witness.sequence + 1 };
-    this.db
-      .prepare("UPDATE signal_receiver_sequence SET sequence = ? WHERE issuer = ? AND audience = ?")
-      .run(record.sequence, this.opts.issuer, this.audience);
+    const last = this.witness;
+    const onDisk = readReceiverWitness(file);
+    if (
+      onDisk === undefined ||
+      onDisk.store_id !== last.store_id ||
+      onDisk.sequence !== last.sequence ||
+      onDisk.generation !== last.generation
+    ) {
+      throw new SignalReceiverRecoveryError(`the witness ${file} changed underneath this receiver`);
+    }
+    const allocated = (
+      this.db
+        .prepare(
+          "UPDATE signal_receiver_sequence SET sequence = sequence + 1 WHERE issuer = ? AND audience = ? RETURNING sequence",
+        )
+        .get(this.opts.issuer, this.audience) as { sequence: number }
+    ).sequence;
+    const sequence = Math.max(allocated, last.sequence + 1);
+    if (sequence !== allocated) {
+      this.db
+        .prepare(
+          "UPDATE signal_receiver_sequence SET sequence = ? WHERE issuer = ? AND audience = ?",
+        )
+        .run(sequence, this.opts.issuer, this.audience);
+    }
+    const record = { ...last, sequence };
     this.persistWitness(file, record);
     this.witness = record;
   }
@@ -701,9 +766,11 @@ export class MissionSignalReceiver {
     return generation > 0 && this.releasedGeneration(missionId) < generation;
   }
 
-  /** Close the receiver's store. The receiver owns it. */
+  /** Close the receiver's store, and release its witness's lock. The receiver owns both. */
   close(): void {
     this.db.close();
+    this.witnessLock?.close();
+    this.witnessLock = undefined;
   }
 
   private row(missionId: string): ReceiverMissionRow | undefined {
@@ -768,6 +835,7 @@ export class MissionSignalReceiver {
     try {
       return withTransaction(this.db, () => this.applyInTx(jti, parsed, setJwt));
     } catch (e) {
+      if (e instanceof SignalReceiverRecoveryError) throw e;
       throw new SignalReceiverStorageError(
         `the receiver could not record the SET: ${e instanceof Error ? e.message : String(e)}`,
       );
@@ -1080,6 +1148,9 @@ export class MissionSignalReceiver {
     if (verified === undefined || verified.payload.sub !== status.clientId) {
       return { status: "refused", reason: "unverified" };
     }
+    // @spec status#mission-status-caching (D910): the observation releases
+    // nothing once its reliance bound has passed, though its `exp` is ahead.
+    if (now.getTime() >= verified.relianceBoundMs) return { status: "refused", reason: "expired" };
     const nonce = verified.payload.nonce;
     const m = verified.mission;
     const version = m.version;
@@ -1168,6 +1239,7 @@ export class MissionSignalReceiver {
         };
       });
     } catch (e) {
+      if (e instanceof SignalReceiverRecoveryError) throw e;
       throw new SignalReceiverStorageError(
         `the receiver could not record the resynchronization: ${e instanceof Error ? e.message : String(e)}`,
       );

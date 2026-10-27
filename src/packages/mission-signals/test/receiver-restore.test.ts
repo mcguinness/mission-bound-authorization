@@ -117,7 +117,7 @@ function statusResponse(
   version: number,
   state: string,
   nonce: string,
-  opts: { key?: CryptoKey; sub?: string; iatOffset?: number } = {},
+  opts: { key?: CryptoKey; sub?: string; iatOffset?: number; freshFor?: number } = {},
 ): Promise<string> {
   const iat = Math.floor(Date.now() / 1000) + (opts.iatOffset ?? 0);
   return new SignJWT({
@@ -129,7 +129,7 @@ function statusResponse(
       state,
       version,
       expires_at: EXPIRES_AT,
-      fresh_until: new Date((iat + 60) * 1000).toISOString(),
+      fresh_until: new Date((iat + (opts.freshFor ?? 60)) * 1000).toISOString(),
       ...(state === "terminated"
         ? { termination: { reason: "revoked", terminated_at: "2026-10-01T00:00:00Z", version } }
         : {}),
@@ -546,6 +546,96 @@ describe("Signals receiver restore admission (@spec control-plane#rollback, #174
       expect(reopened.recovering("msn_a")).toBe(false);
     } finally {
       reopened.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#rollback (D910): the owner's review of #1784. Each test
+ * is the review's probe, now refused.
+ */
+describe("Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910)", () => {
+  it("refuses an unwitnessed open of a store this receiver witnesses, so no write escapes the witness, while another audience's receiver still shares the file", async () => {
+    const paths = layout();
+    const witnessed = open(paths);
+    await witnessed.verifyAndApply(await set("msn_a", 1, "active"));
+    witnessed.close();
+    // The probe: a termination written through an unwitnessed handle, then a
+    // restore that loses it, would match the witness. The handle never opens.
+    const plain = { jwks, issuer: ISS, audience: AUD, store: { file: paths.store } };
+    expect(() => new MissionSignalReceiver(plain)).toThrow(SignalReceiverRecoveryError);
+    const other = new MissionSignalReceiver({ ...plain, audience: "https://other.consumer.test" });
+    try {
+      expect(other.recovering("msn_a")).toBe(false);
+    } finally {
+      other.close();
+    }
+    const reopened = open(paths);
+    try {
+      expect(reopened.recovering("msn_a")).toBe(false);
+      expect(reopened.viewState("msn_a")).toMatchObject({ state: "active", version: 1 });
+    } finally {
+      reopened.close();
+    }
+  });
+
+  it("admits one witnessed writer: a second handle on the same witness is refused, and so is a handle on a copy of the witness at another path", async () => {
+    const paths = layout();
+    const first = open(paths);
+    try {
+      await first.verifyAndApply(await set("msn_a", 1, "active"));
+      expect(() => open(paths)).toThrow(SignalReceiverRecoveryError);
+      const copy = join(paths.backups, "copied.witness");
+      copyFileSync(paths.witness, copy);
+      expect(() => open({ store: paths.store, witness: copy })).toThrow(
+        SignalReceiverRecoveryError,
+      );
+    } finally {
+      first.close();
+    }
+    // Released with the first handle: the next writer opens.
+    const next = open(paths);
+    next.close();
+  });
+
+  it("releases nothing for a response past its freshness bound, though its exp is still ahead", async () => {
+    const paths = layout();
+    const first = open(paths);
+    await first.verifyAndApply(await set("msn_a", 1, "active"));
+    first.close();
+    rmSync(paths.store);
+    const restored = open(paths);
+    try {
+      const nonce = restored.recoveryNonce("msn_a") as string;
+      // Signed, nonce-matched, exp a minute ahead, fresh_until ten seconds past.
+      const stale = await statusResponse("msn_a", 1, "active", nonce, { freshFor: -10 });
+      expect(await restored.resynchronize("msn_a", stale)).toEqual({
+        status: "refused",
+        reason: "expired",
+      });
+      expect(restored.recovering("msn_a")).toBe(true);
+      expect(await resync(restored, "msn_a", 1, "active")).toMatchObject({
+        status: "resynchronized",
+        version: 1,
+      });
+    } finally {
+      restored.close();
+    }
+  });
+
+  it("stops writing when the witness changes underneath a running receiver", async () => {
+    const paths = layout();
+    const receiver = open(paths);
+    try {
+      await receiver.verifyAndApply(await set("msn_a", 1, "active"));
+      const current = JSON.parse(readFileSync(paths.witness, "utf8")) as ReceiverWitness;
+      writeFileSync(paths.witness, JSON.stringify({ ...current, sequence: current.sequence + 5 }));
+      await expect(receiver.verifyAndApply(await set("msn_a", 2, "suspended"))).rejects.toThrow(
+        SignalReceiverRecoveryError,
+      );
+      expect(receiver.viewState("msn_a")).toMatchObject({ state: "active", version: 1 });
+    } finally {
+      receiver.close();
     }
   });
 });

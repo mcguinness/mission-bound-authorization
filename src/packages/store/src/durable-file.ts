@@ -17,7 +17,7 @@ import {
 import { basename, dirname, join, resolve, sep } from "node:path";
 
 /** `p`, absolute, through any symbolic links of its nearest existing ancestor. */
-function canonicalPath(p: string): string {
+export function canonicalPath(p: string): string {
   let existing = resolve(p);
   const rest: string[] = [];
   while (!existsSync(existing)) {
