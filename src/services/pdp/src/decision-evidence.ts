@@ -25,7 +25,9 @@ import {
   canonicalDigest,
   isActionPhase,
   isEvaluationContextBindingRef,
+  isCurrencyCode,
   isEvaluationContextDigest,
+  isValidAmount,
   type JsonValue,
 } from "@mission/core";
 import {
@@ -197,6 +199,80 @@ export function runtimeCapabilitySourceOf(presented: unknown): RuntimeCapability
   };
 }
 
+/**
+ * @spec metering#metering-evidence (#816): a quantity in the `max_budget`
+ * bound's native unit shape, `{amount, currency}`. The only bound this PDP
+ * meters; the other bound classes' shapes are not implemented.
+ */
+export interface MeteringQuantity {
+  amount: string;
+  currency: string;
+}
+
+/** @spec metering#metering-evidence `counter_scope`: the counter's key class. */
+export const METERING_COUNTER_SCOPES = ["mission", "subject", "client", "lineage", "standing_consent"] as const;
+export type MeteringCounterScope = (typeof METERING_COUNTER_SCOPES)[number];
+
+/**
+ * @spec metering#metering-evidence (#816): one entry of the coordinated
+ * `metering` member, one per counter the evaluation metered. In Decision
+ * Evidence `requested` and `remaining` are REQUIRED; a permit under the
+ * reserving posture also carries `reserved` and `settlement_state`, and a
+ * refusal carries neither: its `remaining` is the unchanged quantity the
+ * request exceeded.
+ */
+export interface DecisionMeteringEntry {
+  bound: string;
+  counter_scope: MeteringCounterScope;
+  counter_id: string;
+  requested: MeteringQuantity;
+  reserved?: MeteringQuantity;
+  remaining: MeteringQuantity;
+  settlement_state?: "reserved" | "committed";
+}
+
+function meteringQuantityOf(value: unknown): MeteringQuantity {
+  const q = objectOf(value);
+  if (!q || typeof q.amount !== "string" || !isValidAmount(q.amount) || !isCurrencyCode(q.currency)) {
+    throw new Error("Decision Evidence metering quantity must be {amount, currency}");
+  }
+  return { amount: q.amount, currency: q.currency };
+}
+
+/**
+ * @spec metering#metering-evidence: the entries a record carries, rebuilt
+ * member by member (never a cast), with the decision-dependent members
+ * checked: `reserved` and `settlement_state` on a permit only, and both
+ * there. The PDP builds them, so a malformed entry is a defect that refuses
+ * the emission rather than a partial record signed.
+ */
+function meteringEntriesOf(value: unknown, decision: "permit" | "deny"): DecisionMeteringEntry[] {
+  if (!Array.isArray(value) || value.length === 0) throw new Error("Decision Evidence metering must be a non-empty array");
+  return value.map((raw) => {
+    const e = objectOf(raw);
+    if (!e) throw new Error("Decision Evidence metering entry must be an object");
+    if (!(METERING_COUNTER_SCOPES as readonly unknown[]).includes(e.counter_scope)) {
+      throw new Error("Decision Evidence metering entry names an unknown counter_scope");
+    }
+    const permit = decision === "permit";
+    if (permit !== (e.reserved !== undefined) || permit !== (e.settlement_state !== undefined)) {
+      throw new Error("Decision Evidence metering reserved and settlement_state belong to a permit, and a permit carries both");
+    }
+    if (e.settlement_state !== undefined && e.settlement_state !== "reserved" && e.settlement_state !== "committed") {
+      throw new Error("Decision Evidence metering settlement_state must be reserved or committed");
+    }
+    return {
+      bound: requiredString(e.bound),
+      counter_scope: e.counter_scope as MeteringCounterScope,
+      counter_id: requiredString(e.counter_id),
+      requested: meteringQuantityOf(e.requested),
+      ...(e.reserved !== undefined ? { reserved: meteringQuantityOf(e.reserved) } : {}),
+      remaining: meteringQuantityOf(e.remaining),
+      ...(e.settlement_state !== undefined ? { settlement_state: e.settlement_state as "reserved" | "committed" } : {}),
+    };
+  });
+}
+
 /** @spec runtime-evidence#decision-evidence-object (lines 331-573): the closed wire object. */
 export interface DecisionEvidenceObject {
   evidence_id: string;
@@ -265,6 +341,12 @@ export interface DecisionEvidenceObject {
    */
   authority_bound?: AuthorityBound;
   contributing_constraints?: string[];
+  /**
+   * @spec metering#metering-evidence (#816): the coordinated `metering`
+   * member, carried on every record of a metered evaluation, permit or
+   * refusal, one entry per counter the evaluation charged.
+   */
+  metering?: DecisionMeteringEntry[];
   entry_digest?: string;
   sequence: number;
   emitter: { id: string; role: "pdp" };
@@ -383,6 +465,8 @@ export interface DecisionEvidenceEmissionInput {
   denial_reason?: string;
   authority_bound?: AuthorityBound;
   contributing_constraints?: readonly string[];
+  /** @spec metering#metering-evidence (#816): the counters this evaluation metered, from the claim step. */
+  metering?: readonly DecisionMeteringEntry[];
   entry_digest?: string;
 }
 
@@ -604,6 +688,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(input.contributing_constraints?.length ? {
           contributing_constraints: [...new Set(input.contributing_constraints.map(requiredString))],
         } : {}),
+        ...(input.metering !== undefined ? { metering: meteringEntriesOf(input.metering, input.decision) } : {}),
         ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
         sequence: nextSequence(mission),
         emitter: { id: config.emitterId, role: "pdp" as const },

@@ -17,9 +17,11 @@
 import type { Server } from "node:http";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import {
+  createLocalJWKSet,
   createRemoteJWKSet,
   decodeJwt,
   decodeProtectedHeader,
+  exportJWK,
   generateKeyPair,
   type JWTVerifyGetKey,
   SignJWT,
@@ -770,7 +772,8 @@ describe("the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3)"
     const bytes = await res.text();
     const header = decodeProtectedHeader(bytes);
     expect(header).toMatchObject({ typ: "mission-discharge-receipt+jwt", alg: "ES256" });
-    expect(typeof header.kid).toBe("string");
+    // Signed under the AS's Mission Status signing key (#831, D857).
+    expect(header.kid).toBe(TOPOLOGY.keys.asStatus.kid);
     const payload = decodeJwt(bytes) as Record<string, unknown>;
     expect(Object.keys(payload).sort()).toEqual(["aud", "discharge_receipt", "exp", "iat", "iss", "nonce"]);
     expect(payload.iss).toBe(ISSUER);
@@ -794,18 +797,24 @@ describe("the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3)"
     // and the signing algorithms the AS advertises in discovery.
     const algs = await advertisedAlgs(ISSUER);
     expect(algs).toContain(header.alg);
+    // The consumer's trusted configuration authorizes the AS's Status key.
+    const consumer = {
+      keys,
+      algs,
+      issuer: ISSUER,
+      audience: SOURCE,
+      nonce: req.nonce,
+      missionId: child.id,
+      sent: { condition_selector: selector, event_id: req.event_id },
+      now: Math.floor(Date.now() / 1000),
+      statusKids: [TOPOLOGY.keys.asStatus.kid],
+    };
+    await expect(verifyDischargeReceipt(bytes, consumer)).resolves.toMatchObject({ aud: SOURCE });
+    // A configuration naming only another role's key the AS publishes (its
+    // access-token key) refuses the same receipt at the signature check.
     await expect(
-      verifyDischargeReceipt(bytes, {
-        keys,
-        algs,
-        issuer: ISSUER,
-        audience: SOURCE,
-        nonce: req.nonce,
-        missionId: child.id,
-        sent: { condition_selector: selector, event_id: req.event_id },
-        now: Math.floor(Date.now() / 1000),
-      }),
-    ).resolves.toMatchObject({ aud: SOURCE });
+      verifyDischargeReceipt(bytes, { ...consumer, statusKids: [TOPOLOGY.keys.asToken.kid] }),
+    ).rejects.toMatchObject({ check: "signature" });
 
     // A byte-identical retransmission replays the stored receipt bytes.
     const again = await lifecycle(child.id, req, SOURCE_TOKEN);
@@ -840,12 +849,21 @@ describe("the Discharge Receipt (@spec discharge#discharge-receipt, #898 fix 3)"
 describe("discharge response consumers (@spec discharge#discharge-receipt, #discharge-carryover)", () => {
   const NOW = 1_800_000_000;
   let signingKey: CryptoKey;
+  /** Another role's key the AS also publishes (its access-token key, say). */
+  let otherRoleKey: CryptoKey;
   let localKeys: JWTVerifyGetKey;
 
   beforeAll(async () => {
     const pair = await generateKeyPair("ES256");
+    const other = await generateKeyPair("ES256");
     signingKey = pair.privateKey as CryptoKey;
-    localKeys = async () => pair.publicKey;
+    otherRoleKey = other.privateKey as CryptoKey;
+    localKeys = createLocalJWKSet({
+      keys: [
+        { ...(await exportJWK(pair.publicKey)), kid: "as-status", alg: "ES256" },
+        { ...(await exportJWK(other.publicKey)), kid: "as-token", alg: "ES256" },
+      ],
+    });
   });
 
   const SENT: SentTarget = { condition_selector: "dcs_selectorUnderTest00000", event_id: "close-x" };
@@ -865,10 +883,11 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
     missionId: "msn_old",
     sent: SENT,
     now: NOW,
+    statusKids: ["as-status"],
   };
 
-  const sign = (payload: Record<string, unknown>, typ: string, key: CryptoKey = signingKey) =>
-    new SignJWT(payload).setProtectedHeader({ alg: "ES256", kid: "as-status", typ }).sign(key);
+  const sign = (payload: Record<string, unknown>, typ: string, key: CryptoKey = signingKey, kid = "as-status") =>
+    new SignJWT(payload).setProtectedHeader({ alg: "ES256", kid, typ }).sign(key);
 
   it("relies on a Discharge Receipt only after all eight checks, each of which refuses on its own", async () => {
     const opts = { ...receiptOpts, keys: localKeys };
@@ -937,6 +956,18 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
     ).resolves.toBeDefined();
   });
 
+  it("refuses a correctly signed receipt under another role's published key, and accepts it once the configuration authorizes that key (#831, D857)", async () => {
+    const opts = { ...receiptOpts, keys: localKeys };
+    // Under the authorized Status key: accepted.
+    await expect(verifyDischargeReceipt(await sign(GOOD_RECEIPT, RECEIPT_TYP), opts)).resolves.toBeDefined();
+    // Under the access-token key the AS also publishes: the signature verifies,
+    // but the configuration does not authorize that key for Mission Status.
+    const underOtherRole = await sign(GOOD_RECEIPT, RECEIPT_TYP, otherRoleKey, "as-token");
+    await expect(verifyDischargeReceipt(underOtherRole, opts)).rejects.toMatchObject({ check: "signature" });
+    // The same bytes, once the configuration names that key: the refusal was the configuration's.
+    await expect(verifyDischargeReceipt(underOtherRole, { ...opts, statusKids: ["as-status", "as-token"] })).resolves.toBeDefined();
+  });
+
   it("verifies a forwarded Status response by forwarded_from in place of the mission.id check", async () => {
     const pred = approvePredecessor();
     const child = addChild(pred.id);
@@ -952,6 +983,7 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
       nonce: req.nonce,
       missionId: child.id,
       now: Math.floor(Date.now() / 1000),
+      statusKids: [TOPOLOGY.keys.asStatus.kid],
     };
     // A consumer implementing Discharge After Carryover accepts it, reading
     // `mission` as the replacement.
@@ -975,7 +1007,16 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
         .setIssuer("https://as.test")
         .setAudience("svc:console")
         .sign(signingKey);
-    const local = { keys: localKeys, algs: ["ES256"], issuer: "https://as.test", audience: "svc:console", nonce: "n", now: NOW, forwarded: true };
+    const local = {
+      keys: localKeys,
+      algs: ["ES256"],
+      issuer: "https://as.test",
+      audience: "svc:console",
+      nonce: "n",
+      now: NOW,
+      forwarded: true,
+      statusKids: ["as-status"],
+    };
     await expect(verifyStatusResponse(await forged({}), { ...local, missionId: "msn_old" })).resolves.toBeDefined();
     await expect(verifyStatusResponse(await forged({}), { ...local, missionId: "msn_someone_else" })).rejects.toMatchObject({
       check: "mission",
@@ -1002,7 +1043,15 @@ describe("discharge response consumers (@spec discharge#discharge-receipt, #disc
       .setIssuer("https://as.test")
       .setAudience("svc:close-source")
       .sign(signingKey);
-    const common = { keys: localKeys, algs: ["ES256"], issuer: "https://as.test", audience: "svc:close-source", nonce: "nonce-x", now: NOW };
+    const common = {
+      keys: localKeys,
+      algs: ["ES256"],
+      issuer: "https://as.test",
+      audience: "svc:close-source",
+      nonce: "nonce-x",
+      now: NOW,
+      statusKids: ["as-status"],
+    };
     // Each verifies as itself...
     await expect(verifyDischargeReceipt(receipt, { ...common, missionId: "msn_old", sent: SENT })).resolves.toBeDefined();
     await expect(verifyStatusResponse(status, { ...common, missionId: "msn_old" })).resolves.toBeDefined();

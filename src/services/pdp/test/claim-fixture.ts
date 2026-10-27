@@ -8,11 +8,25 @@
 
 import { randomUUID } from "node:crypto";
 import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
-import { type ClaimDomainOptions, type IdempotencyClaimDomain, openEphemeralClaimDomain } from "../src/idempotency-claims.js";
+import {
+  CLAIM_SCHEMA_VERSION,
+  type ClaimDomainOptions,
+  type IdempotencyClaimDomain,
+  openEphemeralClaimDomain,
+} from "../src/idempotency-claims.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 
 /** The shipped statement's claim owner. */
 export const CLAIM_OWNER = RUNTIME_POSTURE.pdps[0] as string;
+
+/**
+ * No-op migrations naming the claim file's current schema version, for a
+ * test that reads the file through a raw single-writer opener after the
+ * domain released it.
+ */
+export function claimSchemaPlaceholders(): string[] {
+  return Array.from({ length: CLAIM_SCHEMA_VERSION }, (_, i) => `-- claims schema v${i + 1}`);
+}
 
 /**
  * The shipped statement plus a fixture `privileged_administration` class:

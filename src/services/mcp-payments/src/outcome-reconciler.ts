@@ -37,7 +37,15 @@
  * steps b to d only read and alert.
  */
 
-import { type ClaimChannel, type EnforcementScopeStatement, type IndeterminateClaim, retentionWindowSeconds } from "@mission/pdp";
+import {
+  type BudgetOverspend,
+  type ClaimChannel,
+  type EnforcementScopeStatement,
+  type HeldReservation,
+  type IndeterminateClaim,
+  type ReleasedReservation,
+  retentionWindowSeconds,
+} from "@mission/pdp";
 import { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 import type { Connectors } from "./connectors.js";
 import type { EvidenceStore } from "./evidence.js";
@@ -56,6 +64,22 @@ export type OperatorAlertKind =
   | "orphaned_evidence"
   /** A `reserved` write reservation has no recorded outcome. */
   | "reservation_unresolved"
+  /**
+   * @spec metering#settlement-states (#816, D830 ruling 7): a budget
+   * reservation became `held`; it stays charged until an operator reconciles
+   * it.
+   */
+  | "budget_reservation_held"
+  /**
+   * @spec metering#settlement-states (#813, #816): a held reservation was
+   * later released; the resolution of its `budget_reservation_held` alert.
+   */
+  | "budget_reservation_released"
+  /**
+   * @spec metering#settlement-states (#816): a late `completed` settlement
+   * committed a released reservation and pushed a counter past its limit.
+   */
+  | "budget_overspend"
   /** A transaction-tier disposition record could not be written after one retry (#821). */
   | "evidence_emission_failed";
 
@@ -97,6 +121,52 @@ export function indeterminateClaimAlert(claim: IndeterminateClaim): OperatorAler
     ...(claim.mission_id !== undefined ? { mission_id: claim.mission_id } : {}),
     cause: "window_closed",
     at: claim.closed_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#816, D830 ruling 7): the declared alert
+ * for a budget reservation the PDP holds (a `failed` settlement, an elapsed
+ * lease, a restart that left the permit's outcome unknown). Identifiers and
+ * the hold's cause only.
+ */
+export function heldReservationAlert(reservation: HeldReservation): OperatorAlert {
+  return {
+    kind: "budget_reservation_held",
+    evaluation_id: reservation.evaluation_id,
+    mission_id: reservation.mission_id,
+    cause: reservation.cause,
+    at: reservation.held_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#813, #816): the resolution notice for a
+ * held reservation since released (the permit holder's suppression, or an
+ * operator's `not_executed`). Identifiers and the release's cause only.
+ */
+export function releasedReservationNotice(released: ReleasedReservation): OperatorAlert {
+  return {
+    kind: "budget_reservation_released",
+    evaluation_id: released.evaluation_id,
+    mission_id: released.mission_id,
+    cause: released.cause,
+    at: released.released_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-states (#816): the declared alert for a counter a
+ * late `completed` settlement pushed past its limit. Identifiers and the
+ * counter's scope only.
+ */
+export function budgetOverspendAlert(overspend: BudgetOverspend): OperatorAlert {
+  return {
+    kind: "budget_overspend",
+    evaluation_id: overspend.evaluation_id,
+    mission_id: overspend.mission_id,
+    cause: `${overspend.counter_scope}_limit_exceeded`,
+    at: overspend.detected_at,
   };
 }
 

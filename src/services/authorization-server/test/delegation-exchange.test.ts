@@ -579,6 +579,30 @@ describe("delegation by designation: the agent designates, the sub-agent redeems
   });
 });
 
+describe("both exchange responses carry the Mission's identifier and expiry (@spec mission#mission-response-parameters, #1719, D845)", () => {
+  it("the delegated exchange response carries mission_id and mission_expires_at, each the committed record value: the delegate never received the creating response", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const expiresAt = on.as.kernel.get(missionId)?.expires_at;
+    expect(typeof expiresAt).toBe("string");
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const delegated = await redeem(on, designation.body.access_token as string);
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(delegated.body.mission_id).toBe(missionId);
+    expect(delegated.body.mission_expires_at).toBe(expiresAt);
+  });
+
+  it("the designation response carries mission_id and mission_expires_at, each the committed record value (the SHOULD taken up)", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const expiresAt = on.as.kernel.get(missionId)?.expires_at;
+    expect(typeof expiresAt).toBe("string");
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(designation.body.mission_id).toBe(missionId);
+    expect(designation.body.mission_expires_at).toBe(expiresAt);
+  });
+});
+
 describe("who presents which proof (@spec mission#designation, mission#delegation)", () => {
   it("a designation proven under a key other than the presented token's is refused", async () => {
     const { missionId, accessToken } = await baseMission(on);

@@ -206,6 +206,14 @@ export class PaymentsStore {
     this.db.prepare("UPDATE vendors SET tenant = ?, version = version + 1 WHERE id = ?").run(tenant, id);
   }
 
+  /**
+   * Change the payee account an invoice pays (test hook for a changed bank
+   * account, #813: a changed authoritative fact, so it bumps the version).
+   */
+  setInvoicePayeeAccount(id: string, payeeAccount: string): void {
+    this.db.prepare("UPDATE invoices SET payee_account = ?, version = version + 1 WHERE id = ?").run(payeeAccount, id);
+  }
+
   /** Mutate an invoice (test hook for TOCTOU: bumps version). */
   bumpInvoiceAmount(id: string, amount: string): void {
     this.db
