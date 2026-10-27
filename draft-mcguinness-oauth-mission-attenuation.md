@@ -482,10 +482,12 @@ its parent's is refused, not evaluated against a guessed Mission.
 
 Verification cost scales with the chain: a consumer performs one
 signature verification per link, the proof-of-possession check, and
-the Mission-state check ({{kill-switch}}) on every presentation. A
-consumer SHOULD bound the chain length it accepts, independently of
-the `del_max_depth` the chain carries, so an adversarially deep chain
-is refused rather than verified.
+the Mission-state check ({{kill-switch}}) on every presentation. The
+substrate's implementation depth limit bounds the chain length a
+consumer accepts independently of the `del_max_depth` the chain
+carries
+({{Section 4.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+so an adversarially deep chain is refused rather than verified.
 
 ## Edge Validation {#edge-validation}
 
@@ -918,6 +920,10 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Verifying the Mission Binding: the chain-length bound is the
+  substrate's `MAX_DELEGATION_DEPTH`, a requirement there, in place of
+  this profile's own recommendation.
 
 - Requesting a Root and Discovery: the substrate's root request, which
   always carries an `attenuating_agent_token` detail, selects root
