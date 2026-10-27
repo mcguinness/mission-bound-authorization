@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
-import { activationPolicyDigest, approvalPolicyDigest, authorityHash } from "@mission/core";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import {
+  activationPolicyDigest,
+  approvalPolicyDigest,
+  authorityHash,
+  ResourceContractDeclarations,
+  type ResourceContractRef,
+} from "@mission/core";
+import { DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -144,6 +150,7 @@ const makeKernel = (
     catalog?: AuthoritySourceCatalog;
     capabilityResolver?: CapabilitySourceResolver;
     entryAudiences?: () => readonly string[];
+    resourceContracts?: ResourceContractDeclarations;
   } = {},
 ) =>
   new MissionKernel({
@@ -156,6 +163,7 @@ const makeKernel = (
     ...(opts.activationPolicies ? { activationPolicies: opts.activationPolicies } : {}),
     ...(opts.capabilityResolver ? { capabilityResolver: opts.capabilityResolver } : {}),
     ...(opts.entryAudiences ? { entryAudiences: opts.entryAudiences } : {}),
+    ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
     now,
   });
 
@@ -1346,5 +1354,71 @@ describe("a governed activation keeps the association its consent retained (@spe
     clockMs = T0 + 60_000;
     const { mission } = activate(kernel, c.consent_id);
     expect(mission.approved_audiences).toEqual(mission.authority_set.map(() => []));
+  });
+});
+
+// @spec resource-access#resource-contract (#249, D875): governed adjudication
+// is a new approval, so the bounded set's references are assembled from
+// configuration before anything evaluates it, and the activation commits the
+// same reference. A root ceiling carrying a reference requires the same one;
+// one carrying none bounds the entry irrespective of reference.
+describe("governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875)", () => {
+  const [DECLARED] = RESOURCE_CONTRACTS.declarations;
+  const refOf = (state: string): ResourceContractRef => {
+    const v = DECLARED?.versions.find((x) => x.state === state);
+    return { id: DECLARED?.id as string, version: v?.version as string, digest: v?.digest as string };
+  };
+  const CURRENT = refOf("current");
+  const SUPERSEDED = refOf("superseded");
+  /** The shipped declaration, requiring a reference for the read. */
+  const REQUIRED = new ResourceContractDeclarations(
+    RESOURCE_CONTRACTS.declarations.map((d) => ({
+      resource: d.resource,
+      resource_match: d.resource_match,
+      id: d.id,
+      requires_reference: ["payments:invoice.read"],
+      versions: d.versions.map((v) => ({
+        version: v.version,
+        state: v.state,
+        digest: v.digest,
+        ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+        ...(v.document !== undefined ? { document: v.document } : {}),
+      })),
+    })),
+  );
+  const recheck = (kernel: MissionKernel, missionId: string) =>
+    recheckApprovalGovernanceRecord(kernel, missionId, { resolveKey: resolveKey(kernel) });
+
+  it("records the configured current reference in the bounded set before evaluation, and the activation commits exactly the evaluated set", () => {
+    const kernel = makeKernel({ resourceContracts: REQUIRED });
+    const c = consent(kernel);
+    const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId: "ape-rc-1", intent: intent(), clientId: "svc-agent" });
+    expect(view.authority.map((e) => e.resource_contract)).toEqual([CURRENT]);
+    const { mission } = activate(kernel, c.consent_id, { approvalEventId: "ape-rc-1" });
+    expect(mission.authority_set).toEqual(view.authority);
+    expect(mission.authority_hash).toBe(view.authority_hash);
+    expect(recheck(kernel, mission.id)).toEqual({ rechecked: true });
+  });
+
+  it("adds no reference where configuration requires none (positive control)", () => {
+    const kernel = makeKernel();
+    expect(activate(kernel, consent(kernel).consent_id).mission.authority_set.map((e) => e.resource_contract)).toEqual([undefined]);
+  });
+
+  it("a root ceiling carrying a reference carries it into the activation, and refuses a proposal naming another", () => {
+    const pinned = rootDoc({ authority_ceiling: [{ ...readEntry(), resource_contract: CURRENT }] });
+    const kernel = makeKernel({ doc: pinned, resourceContracts: REQUIRED });
+    expect(activate(kernel, consent(kernel).consent_id).mission.authority_set.map((e) => e.resource_contract)).toEqual([CURRENT]);
+    const other = makeKernel({ doc: pinned, resourceContracts: REQUIRED });
+    expect(
+      outcome(() => activate(other, consent(other).consent_id, { proposedAuthority: [{ ...readEntry(), resource_contract: SUPERSEDED }] })),
+    ).toBe("out_of_root_ceiling");
+    nothingCommitted(other);
+  });
+
+  it("a root ceiling pinned to a version no longer current does not activate: a new approval meets the current-reference rule", () => {
+    const kernel = makeKernel({ doc: rootDoc({ authority_ceiling: [{ ...readEntry(), resource_contract: SUPERSEDED }] }), resourceContracts: REQUIRED });
+    expect(outcome(() => activate(kernel, consent(kernel).consent_id))).toBe("intent:invalid_authorization_details");
+    nothingCommitted(kernel);
   });
 });
