@@ -8,6 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { kernelStoreFromEnv, loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
+import { openRasRedemptionStore, rasRedemptionsFromEnv } from "@mission/ras";
 import { evidenceKeysFromEnv } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
@@ -19,8 +20,9 @@ import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.
  * `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID` when both are set, else bootstrap
  * a development store; `resourcePolicyStoreFromEnv`) and the PDP mode
  * (`MISSION_PDP_MODE`), the signing keys (`MISSION_KEY_RING` or
- * `MISSION_EPHEMERAL_KEYS`) and the kernel's file (`MISSION_KERNEL_STORE`,
- * which requires the key ring), and nothing else, so never the test-only
+ * `MISSION_EPHEMERAL_KEYS`), the kernel's file (`MISSION_KERNEL_STORE`,
+ * which requires the key ring) and the RAS's redemption store
+ * (`MISSION_RAS_REDEMPTIONS`, which the key ring requires), and nothing else, so never the test-only
  * ordinary-token minting fixture. A value that is set but unusable refuses
  * startup with an error naming it, before anything connects or listens.
  */
@@ -50,6 +52,9 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   const kernelStore = kernelStoreFromEnv(env);
   // @spec #831 (scope inventory): durable evidence keys, or keys generated per boot.
   const evidenceKeys = evidenceKeysFromEnv(env);
+  // @spec #1767 (D901): the RAS's single-use claims kept across restarts,
+  // required with a key ring.
+  const rasRedemptions = rasRedemptionsFromEnv(env);
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
@@ -59,6 +64,7 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
     signingKeys,
     ...(kernelStore ? { kernelStore } : {}),
     ...(evidenceKeys ? { evidenceKeys } : {}),
+    ...(rasRedemptions ? { rasRedemptions } : {}),
     target: "as-native",
   };
 }
@@ -103,6 +109,9 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       asContinuation,
     });
   }
+  // @spec #1767 (D901): a missing or uninitialized redemption store refuses
+  // before anything connects; the launcher never creates one.
+  if (options.rasRedemptions) openRasRedemptionStore(options.rasRedemptions.file).close();
   // @spec #250: the kernel file's directory exists before anything connects.
   if (options.kernelStore) mkdirSync(dirname(options.kernelStore.file), { recursive: true });
   const stack = await composeStack(options);
@@ -119,6 +128,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       stack.writeReservations.close();
       stack.evidenceRetention.close();
       stack.evidenceKeySets.close();
+      if (options.rasRedemptions) authServer?.ras.close();
       // Last: everything above may still read the kernel while it stops.
       if (options.kernelStore) stack.kernel.close();
     })());
@@ -143,6 +153,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
           ? `${options.kernelStore.file} (kept across restarts; recovery witness ${options.kernelStore.witness})`
           : "in memory (lost at restart)"
       }`,
+      `  RAS redemptions    ${options.rasRedemptions ? `${options.rasRedemptions.file} (kept across restarts)` : "in memory (lost at restart)"}`,
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,
       `  MAS join route     ${stack.masGovernedChannel ? "mounted" : "not mounted"}`,

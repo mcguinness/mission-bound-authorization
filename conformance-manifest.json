@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "a601b1ce5e807d9e737a19efada94687db37dee2",
-    "content_sha256": "d1f6b6d582bfa1448d9829e46b3a392c83a1316e67c774035f15742de76b027c"
+    "revision": "5257c35b038c4d3dbea79a1abeffe9bb1b61366c",
+    "content_sha256": "a270d0a4a4ce798051b32fc4bedfa6fee5c7e300864e92bb0b5083ed4634cc8d"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "bdb8ff582b7a90ce3fa9853d79c7a04df12edc3e",
-    "content_sha256": "ab1debebb33bfd0391a3ab60bbd5621e5365ac6bb31dba213c7e62a31b2f6dff"
+    "revision": "65aca267b53baaaf312334515596ead8bd4cd808",
+    "content_sha256": "a1efcd28a1983362f4a5d735728d54a887d1facab8944c52465906eb8fc277c0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -13289,7 +13289,7 @@
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "Such a join is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
+   "text": "is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
@@ -22745,6 +22745,47 @@
     }
    ],
    "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Requoted (#1724 C2, D847): the envelope `sub` carries the acting party as a MUST (Response); the former SHOULD to reflect it in `sub` or an audit member is subsumed, and an additional deployment-defined audit member is a MAY."
+  },
+  {
+   "id": "status.lifecycle.base-operation-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "lifecycle-operations",
+   "text": "The AS answers a successful base operation with the signed, state-only Mission Status Response ({{mission-status-response}}), whose `aud` is the authenticated client's `client_id` and whose `nonce` is the request's.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.lifecycle"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successful `revoke`, `suspend`, `resume` or `complete` is answered with a signed Mission Status Response that carries no `authorization_details`, whose `aud` is the authenticated client's `client_id` and whose `nonce` equals the request's"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers revoke with the signed state-only Mission Status Response: requester aud and sub, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-revoke-only.test.ts",
+     "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > answers revoke with the signed state-only Mission Status Response: aud the client's client_id, the request's nonce, and every required member",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers suspend, resume and complete with the same signed shape, and an idempotent success with the current state",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "D921 item 1: the Lifecycle success response is stated in Operations. partial: the `revoke` witnesses check the signed response, `aud` and `sub` as the client, the request's `nonce`, and no `authorization_details`; the `suspend`, `resume` and `complete` witness checks the signed media type, `aud`, `sub` and `nonce`, but not the absence of `authorization_details` for those operations."
   },
   {
    "id": "status.lifecycle.schedule-applied-at-deadline",
@@ -57878,7 +57919,7 @@
     "local": "the reference keeps its claims in a durable store when one is configured, refuses to start on a missing store or one its init command did not create, and keeps each claim until the grant's exp plus a 300 s margin for clock adjustment"
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-saas/test/cross-domain.test.ts",
@@ -57939,9 +57980,21 @@
      "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > keeps a claim through its grant's exp and the margin past it, and prunes it only after",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > keeps the RAS's single-use claims in the file MISSION_RAS_REDEMPTIONS names, with a key ring: an ID-JAG redeemed before a restart is refused after it (#1767)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > requires MISSION_RAS_REDEMPTIONS with a key ring, and refuses a missing or uninitialized store before anything listens, creating none (#1767)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. Partial: the durable store is opt-in (`RasConfig.redemptions`), and the composed stack and its launchers do not yet give it to the RAS, so the composed RAS tracks `jti` only for its process's lifetime (the launcher follow-up on #1767); and until the owner reviews the witnesses (D842)."
+   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. D901: the owner reviewed these witnesses with #1776, and the composed stack carries the store: `pnpm as-native` requires `MISSION_RAS_REDEMPTIONS` whenever `MISSION_KEY_RING` is set and refuses a missing or uninitialized store before anything connects, creating none. Its composed witness redeems an ID-JAG under the ring's durable `as-continuation` key, restarts the target on the same files, and is refused the replay, while one never redeemed redeems once. Mutation-proved: the stack not giving the RAS its store fails the composed witness at the replay; a key ring not requiring the store, or the launcher not checking it early, fails the gate; shutdown not closing the store fails the second boot. A restored older copy of the store is not detected, a documented limitation (D901)."
   },
   {
    "id": "cross-domain.resource-as.authenticates-redeeming-client",
@@ -64297,9 +64350,21 @@
      "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling pinned to a version no longer current does not activate: a new approval meets the current-reference rule",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > refuses an Expansion proposing a version configuration does not name as current",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -64356,9 +64421,21 @@
      "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > records the configured current reference in the bounded set before evaluation, and the activation commits exactly the evaluated set",
      "level": "unit",
      "surface": "governance-decision"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -64413,7 +64490,7 @@
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
+    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover and drawdown (an Expansion is a new approval, so it assembles; #249 B.3) are not yet witnessed here (the #249 cutover, D875)"
    },
    "tests": [
     {
@@ -64479,12 +64556,18 @@
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation only; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+    "local": "witnessed for child delegation, and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
    },
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry without a reference carries none",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned",
      "level": "unit",
      "surface": "derivation"
     }

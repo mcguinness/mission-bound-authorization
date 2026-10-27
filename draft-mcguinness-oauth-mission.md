@@ -519,6 +519,108 @@ supports, such as `mission_resource_access`
 Mission-aware Resource Server enforces each applicable entry its tokens
 carry under that entry's type ({{rs-requirements}}).
 
+The following index names every section an implementer of each
+operation needs, by phase, including delegation, which the starting
+path excludes; the cited sections govern. Each issuing operation
+names the issuance checks ({{issuance-checks}}) and the sections they
+cite for it.
+
+Mission creation (client, AS):
+: From discovery to the first token response:
+
+  - submission: {{mission-intent}}, {{intent-members}},
+    {{submission-via-par}}, {{authority-proposal}},
+    {{intent-submission-evidence}}, {{submission-processing}},
+    {{commitment-mechanisms}}, {{discovery}};
+  - authority: {{authorization-derivation}}, {{derivation-modes}},
+    {{consented-authority-set}}, {{subset}}, {{other-types}},
+    {{transformation-capabilities}};
+  - approval: {{approval-event}}, {{approval-code-protection}},
+    {{direct-approval-steps}}, {{approval-preparation}},
+    {{approval-commit}}, {{subject-establishment}},
+    {{rendering-safeguards}}, {{approval-context-changes}},
+    {{authority-sources}}, {{approval-authentication}},
+    {{grant-binding-resolution}};
+  - Mission Record: {{mission-record}}, {{lifecycle}},
+    {{record-identity-members}}, {{record-content-members}},
+    {{record-principal-members}}, {{record-provenance-members}},
+    {{mission-id}}, {{integrity-anchors}}, {{canonicalization}};
+  - code redemption: {{issuance-checks}}, with
+    {{mission-response-parameters}}, {{issuance-gating}},
+    {{token-claims}}, {{token-response}}, {{refresh-tokens}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}}, and, for an
+    opaque token, {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}, {{conformance-roles}},
+    {{claiming-conformance}}.
+
+Refresh (client, AS):
+: A refresh under a Mission-bound refresh token, narrowing or not:
+
+  - request and grant: {{refresh-tokens}}, {{authority-proposal}},
+    {{grant-binding-resolution}}, {{grant-binding-state}};
+  - issuance: {{issuance-checks}}, with {{subset}},
+    {{transformation-capabilities}}, {{lifecycle}}, {{termination}},
+    {{revocation}}, {{mission-response-parameters}},
+    {{issuance-gating}}, {{token-claims}}, {{token-response}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}},
+    {{remediation-grains}}, and, for an opaque token,
+    {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}, {{conformance-roles}}.
+
+Designation and delegated exchange (delegating party, delegate, AS):
+: Obtaining a designation and redeeming it:
+
+  - support and selection: {{delegation}}, {{self-exchange}},
+    {{discovery}}, {{optional-capabilities}};
+  - designation: {{designation}}, {{authority-proposal}},
+    {{grant-binding-resolution}}, {{grant-binding-related}},
+    {{composite-active}};
+  - delegated exchange: {{delegated-exchange}},
+    {{grant-binding-state}}, {{rs-mission-unaware}},
+    {{delegated-instance-context}}, {{delegation-constraints}},
+    {{worked-example-delegated-token}}, {{client-id-rebinding}};
+  - issuance, for both: {{issuance-checks}}, with {{subset}},
+    {{transformation-capabilities}}, {{lifecycle}},
+    {{mission-response-parameters}}, {{issuance-gating}},
+    {{token-claims}}, {{token-response}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}}, and, for an
+    opaque token, {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}.
+
+Resource-server enforcement of a JWT (RS):
+: Validating and enforcing a JWT Mission-bound token:
+
+  - validation: {{rs-enforcement}}, {{token-claims}},
+    {{mission-claim}}, {{mission-claim-reservation}},
+    {{protected-resource-metadata}};
+  - enforcement: {{rs-requirements}}, {{token-response}},
+    {{rs-carried-authority}}, {{delegated-instance-context}},
+    {{delegation-constraints}};
+  - denial: {{rs-denials}}, {{remediation-grains}}, {{error-mapping}},
+    {{denial-disclosure}}; and
+  - where it introspects to observe Mission state: {{introspection}},
+    {{lifecycle}}, {{termination}}, {{composite-active}},
+    {{integrity-anchors}}.
+
+Resource-server enforcement by introspection (RS):
+: Resolving an opaque Mission-bound token through introspection or
+  issuer-local resolution:
+
+  - resolution: {{introspected-consumption}}, {{lifecycle}},
+    {{termination}}, {{introspection}},
+    {{caller-authorization-and-minimization}}, {{composite-active}},
+    {{only-issuer-reports-state}}, {{examples}}, {{integrity-anchors}},
+    {{discovery}};
+  - enforcement, under the rules for a JWT: {{rs-enforcement}},
+    {{rs-requirements}}, {{token-response}}, {{mission-claim}},
+    {{rs-carried-authority}}, {{delegated-instance-context}},
+    {{delegation-constraints}}, {{protected-resource-metadata}}; and
+  - denial: {{rs-denials}}, {{remediation-grains}}, {{error-mapping}},
+    {{denial-disclosure}}.
+
 The following table summarizes which surfaces apply, to whom, and
 when; the cited sections govern. Ordinary JWT consumption does not
 require retrieving the Mission Record or recomputing the complete
@@ -1826,37 +1928,11 @@ the Intent like any other, but does not interpret the carried policy
 beyond its type's declared capabilities; the resource server or policy
 decision point (PDP) evaluates it at request time.
 
-The following is an example of an Authority Set with a Cedar policy
-entry for a finance audience that consumes Cedar, alongside a
-`mission_resource_access` entry for a calendar audience that does
-not. The Cedar `policySet` is abbreviated:
-
-~~~ json
-[
-  {
-    "type": "account_information",
-    "rarFormat": "cedar",
-    "policySet": "permit(principal, action, resource) when {...};"
-  },
-  {
-    "type": "mission_resource_access",
-    "resource": "https://calendar.example.com",
-    "actions": ["events.read"],
-    "constraints": { "window_days": 30 }
-  }
-]
-~~~
-
-Both entries are committed by the one `authority_hash` and bound to the
-Mission. The Cedar entry is evaluated by the finance audience's PDP; the
-`mission_resource_access` entry is enforced as in
-{{mission-bound-tokens}}.
-
 Because the Cedar profile defines no subset or delegation rule over
-policy sets, the AS carries the Cedar entry as approved, so it does not
+policy sets, the AS carries a Cedar entry as approved, so it does not
 appear in a delegated token or cross-domain grant. Delegation controls
-on other entries, such as the `mission_resource_access` entry, apply to
-those entries only.
+on other entries in the same Authority Set, such as a
+`mission_resource_access` entry, apply to those entries only.
 
 Invoking a Model Context Protocol tool or a function call is modeled
 as a `mission_resource_access` entry with no separate type; the
@@ -1891,7 +1967,8 @@ method) or, equivalently, issue a DPoP-bound authorization code
 ({{RFC9449}}). Redemption is then verified as
 {{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
 This prevents authorization-code injection from yielding the Mission
-grant.
+grant. Issuance at the code's redemption applies the checks of
+{{issuance-checks}} as that list states for code redemption.
 
 The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
@@ -2062,8 +2139,10 @@ show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-The enforcement table ({{rs-responsibilities}}) summarizes which party
-enforces each bound and what holds when that enforcer is absent.
+Which party enforces each bound, and what holds when that party is
+absent, follows from Enforcement Requirements ({{rs-requirements}})
+and, for a resource server that enforces only `scope`, from Scope
+Projection ({{scope-projection}}).
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
@@ -2103,22 +2182,17 @@ resources. The consent object remains the complete derived Authority
 Set. The following non-normative practices can help make it
 reviewable:
 
-- **Group** entries by resource and action, so the Approver reviews
-  kinds of authority rather than a list of entries, while keeping
-  material differences in constraints visible: a group of identical
-  actions still shows an entry whose resource range or consumption
-  bound is much broader than the rest.
-- **Summarize with drill-down**: a summary covering every resource,
-  action, and bound, with each complete entry one interaction away. A
-  summary is a view of the set, never a substitute for it.
-- **Surface high-risk entries**: make the irreversible,
-  external-commitment, privileged-administration, and
-  consumption-bounded authority of {{approval-authentication}}
-  prominent in the initial view, distinguishing materially different
-  risks and bounds.
-- **Split rather than approve**: when the set is too large or varied
-  for one decision, narrower Missions can keep each approval
-  meaningful ({{applicability}}).
+- **Group** entries by resource and action, keeping visible an entry
+  whose constraints, such as its resource range or consumption bound,
+  differ materially from the rest of its group.
+- **Summarize with drill-down**: cover every resource, action, and
+  bound, with each complete entry one interaction away; a summary is a
+  view of the set, never a substitute for it.
+- **Surface high-risk entries**: make the high-risk authority of
+  {{approval-authentication}} prominent in the initial view,
+  distinguishing materially different risks and bounds.
+- **Split rather than approve** when the set is too large or varied
+  for one decision ({{applicability}}).
 
 Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
@@ -2251,23 +2325,19 @@ Mission. Two richer patterns are out of scope:
 Where a deployment needs either, the Approval Governance Record
 ({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
 and Consent Evidence can carry a partial presentation of that record
-through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 The `adjudication.governance_record` member ({{mission-record}})
 marks an approval such a record backs, and {{role-mapping}} shows how
 each scenario assigns the three `approval_basis` roles.
 
-The Approval Governance Record is signed by the Mission Issuer and
-names the Mission's approval event and its Intent and Authority Set
-commitments. The issuer retains it, and this document defines no
-surface that discloses it. An artifact that refers to it does so by
-its record digest, as Consent Evidence's `approval_governance_digest`
-and audit transparency registration do
-({{I-D.draft-mcguinness-mission-audit}}). The record binds a
-governance evaluation to the Mission's approval event. It does not,
-by itself, establish a separate business decision for each subsequent
-action.
+The issuer retains the Approval Governance Record, and this document
+defines no surface that discloses it. An artifact that refers to it
+does so by its record digest
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Conventions and Definitions"). The record binds a governance
+evaluation to the Mission's approval event. It does not, by itself,
+establish a separate business decision for each subsequent action.
 
 Authenticating approval evidence does not, by itself, establish that
 conditions governing later reliance remain satisfied. Whether
@@ -2446,11 +2516,78 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
-The first four subsections follow one issuance: resolving the Mission
-from the presented grant ({{grant-binding}}), the checks every issuance
-passes
+{{issuance-checks}} lists the checks an issuance applies on each path.
+The next four subsections follow one issuance: resolving the Mission
+from the presented grant ({{grant-binding}}), gating the issuance
 ({{issuance-gating}}), and the token ({{token-claims}}) and its
 response ({{token-response}}).
+
+## Issuance Checks {#issuance-checks}
+
+This document defines five issuance paths: code redemption, the token
+response that redeems a newly created Mission's authorization code
+({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
+designation ({{designation}}); a delegated exchange
+({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
+Each is a derivation ({{issuance-gating}}); companion profiles define
+further derivations. Each item below names a check, the sections that
+state it, and the paths it applies to, with any difference by path. A
+path's own section states its further rules, and {{error-mapping}}
+gives the error codes.
+
+1. Mission resolution ({{grant-binding-resolution}}): every path, from
+   the presented grant: the code, the refresh token, or the
+   `subject_token`, which on a delegated exchange is the designation.
+2. Client and sender binding: every path, as its own section states
+   for the code ({{approval-code-protection}}), the refresh token
+   ({{refresh-tokens}}), the token a designation request presents
+   ({{designation}}), the delegate ({{delegated-exchange}}), and the
+   self-exchanging agent ({{self-exchange}}).
+3. Mission state ({{issuance-gating}}, {{lifecycle}}): every path; a
+   delegated exchange evaluates each redemption afresh
+   ({{delegated-exchange}}).
+4. Mission-governed resources ({{authority-proposal}}): every path; a
+   refresh, a self-exchange, or a designation request needs no
+   `mission_intent`.
+5. Subset ({{subset}}): every path, against the Mission Authority Set,
+   and also against the presented refresh grant on a refresh
+   ({{refresh-tokens}}), the presented token on a designation or a
+   self-exchange, and the designation on a delegated exchange; on
+   those two delegation exchanges, only as {{delegation-constraints}}
+   permits.
+6. Declared transformation capabilities
+   ({{transformation-capabilities}}): every path that narrows an entry,
+   issues it to another audience, delegates it, as a delegated
+   exchange does, or projects it to `scope`.
+7. Audience ({{token-response}}): every path, by each entry's original
+   approved audience ({{transformation-capabilities}}); for a
+   designation, the resource audiences of its entries, not the client
+   its `aud` names, with designated-client separation
+   ({{designation}}); for a delegated token, also an audience that
+   processes the `act` chain ({{delegated-exchange}}).
+8. Scope projection ({{scope-projection}}): every path that emits
+   `scope`, whose request names a `scope` value, or whose target
+   consumes only `scope`; on a refresh, with that section's protection
+   of the refresh token.
+9. Token claims ({{token-claims}}, {{mission-claim}},
+   {{mission-claim-reservation}}): every path; the three exchanges keep
+   the presented token's `mission` claim. A designation's `aud` names
+   the designated client, it carries `may_act` and no `cnf` or `act`
+   ({{designation}}), and it creates no key-publication duty by
+   itself; a delegated token adds the `act` chain and the delegate's
+   own key ({{delegated-exchange}}); a self-exchange adds no `act`
+   chain.
+10. Lifetime and authentication claims
+    ({{token-authentication-lifetime}}): every path, kept short as
+    {{issuance-gating}} recommends; a designation also has its own
+    expiry ({{designation}}), which does not bound a delegated token
+    issued from it.
+11. Response members ({{token-response}},
+    {{mission-response-parameters}}): every path echoes the granted
+    `authorization_details`; {{mission-response-parameters}} requires
+    `mission_id` and `mission_expires_at` on code redemption and
+    delegated-exchange responses and recommends them on refresh,
+    designation, and self-exchange responses.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -2560,21 +2697,17 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor. The Template
-  profile's Dispatch Handoff
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
-  grant that establishes no grant lineage; its redemption issues a
-  derived token for the dispatched Mission, creating or extending no
-  grant binding, and the later delegation-family exchange creates
-  that Mission's first grant binding. In the continuation profile's
-  Identity Continuation Transport
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
-  onward exchanges return ID-JAGs that identify the Mission, and the
-  identity provider's hop record is continuation state, not a grant
-  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
-  derived access token. A Resource AS holds a destination-side grant
-  binding only where it separately establishes a redeemable grant
-  lineage mapped to the Mission, such as a refresh-token family.
+  grant, and expansion, which creates a successor. Redeeming the
+  Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) issues a derived
+  token and creates or extends no grant binding. In the continuation
+  profile's Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), redeeming a
+  root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
+  at a Resource AS produces a local derived access token. A Resource
+  AS holds a destination-side grant binding only where it separately
+  establishes a redeemable grant lineage mapped to the Mission, such
+  as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -2591,13 +2724,10 @@ The grant binding relates to other mechanisms as follows:
   binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
 
-A grant binding is also distinct from a decision-time runtime join, such
-as the Mission Join of
+A decision-time runtime join, such as the Mission Join of
 {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request.
-
-Such a join is not a Mission grant binding: it does not make the joined
+request, is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
 and evidence, never on a Mission grant binding.
 
@@ -2937,6 +3067,9 @@ intact:
 ~~~
 
 ## Refresh Tokens {#refresh-tokens}
+
+Issuance on a refresh applies the checks of {{issuance-checks}} as
+that list states for a refresh.
 
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
@@ -3466,46 +3599,19 @@ attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment permits to learn the distinction
 ({{denial-disclosure}}).
 
-## Enforcement Responsibilities {#rs-responsibilities}
-
-Every bound this document defines is enforced by a party this document
-names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent. Where a
-row names a type specification, it is the one for
-`mission_resource_access`
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}):
-
-| Bound | Enforced by | When that enforcer is absent |
-|---|---|---|
-| `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
-{: title="Enforcement of an entry's resource, actions, and constraints"}
-
 ## Remediation Grains {#remediation-grains}
 
 A denial can carry independent remediation grains: separate
 remediation mechanisms, each naming a next step without granting
-anything. The three remediation grains are:
-
-`mission_denial`:
-: - Carriage: `WWW-Authenticate` attribute
-  - Defined by: This document ({{rs-denials}})
-
-`insufficient_authorization` with `authorization_remediation`:
-: - Carriage: `WWW-Authenticate` error code and parameter
-  - Defined by: {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
-
-Requestable denial:
-: - Carriage: AuthZEN denial response: `context.access_request` with
-    `next_action: request`
-  - Defined by: {{AuthZEN.ARAP}}, profiled by
-    {{I-D.draft-mcguinness-mission-authzen}}
-
-A resource server can also respond with the
-`insufficient_authorization` error code and the
+anything. There are three: the `mission_denial` attribute of the
+`WWW-Authenticate` challenge ({{rs-denials}}); the
+`insufficient_authorization` error code with the
 `authorization_remediation` parameter
-({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names
-what `mission_denial: insufficient_authority` only points at. Each
+({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names what
+`mission_denial: insufficient_authority` only points at; and the
+requestable denial of {{AuthZEN.ARAP}}, profiled by
+{{I-D.draft-mcguinness-mission-authzen}}, which routes the same denial
+into a governed access request rather than a fresh derivation. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
@@ -3526,10 +3632,6 @@ an expansion where that companion is deployed
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
-
-A third grain, the requestable denial of {{AuthZEN.ARAP}}, profiled by
-{{I-D.draft-mcguinness-mission-authzen}}, routes the same denial into a
-governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
@@ -3972,6 +4074,9 @@ the Mission's approved agent for a token that carries no `act` claim,
 and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
+Issuing a designation applies the checks of {{issuance-checks}} as
+that list states for a designation.
+
 A designation the AS issues:
 
 - carries a subset ({{subset}}) of the presented token's authority,
@@ -4008,8 +4113,9 @@ introspection ({{composite-active}}).
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
-obtained for it ({{designation}}). The AS issues the delegated token
-subject to all of the following:
+obtained for it ({{designation}}). Issuance applies the checks of
+{{issuance-checks}} as that list states for a delegated exchange. The
+AS issues the delegated token subject to all of the following:
 
 - **The exchange is explicit.** The `subject_token` is a designation
   this AS issued naming the authenticated requesting client
@@ -4183,8 +4289,9 @@ the agent's own authority downward. A designation ({{designation}})
 names a delegate, so it is not a self-exchange, and these rules do not
 apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
-even when it carries no `actor_token`. A no-actor exchange is subject
-to the following:
+even when it carries no `actor_token`. Issuance applies the checks of
+{{issuance-checks}} as that list states for a self-exchange. A
+no-actor exchange is subject to the following:
 
 1. The AS MUST refuse a no-actor exchange with the `invalid_request`
    error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
@@ -7879,6 +7986,23 @@ Cross-Domain:
   terms; and the Implementation Map gains a table of deployment
   choices, naming for each who decides, which party learns it, and the
   existing signal, if any, it learns from (#1723, #1504, D845).
+- Editorial, no requirement change: Mission-Bound Access Tokens opens
+  with Issuance Checks, one list of the checks issuance applies, each
+  with its home sections and its applicability and exceptions on code
+  redemption, refresh, designation, delegated exchange, and
+  self-exchange, and each of those paths points to the list; the
+  Implementation Map gains an operation index naming the sections each
+  operation needs (#1723, D845).
+- Editorial, no requirement change: Policy-Language Types drops its
+  Cedar example; Remediation Grains names its three grains in one
+  paragraph; Grant Bindings and Related Mechanisms leaves the Template
+  and Identity Continuation exchange mechanics to their profiles and
+  merges the Mission Join paragraphs; Single Accountable Approver
+  points to the Approval Governance Record for its mechanics, keeping
+  both limitations; Approval Comprehension condenses its practices; and
+  the Enforcement Responsibilities table is removed, with Rendering
+  Safeguards pointing to Enforcement Requirements and Scope Projection
+  (#1793, D919).
 
 -01
 
