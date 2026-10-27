@@ -14,7 +14,10 @@
  * (`Authorization: DPoP <token>` + `DPoP: <proof>`), exactly as a real MCP-over-
  * HTTP resource server would receive it. `initialize`, `tools/list`, and
  * `tools/call` are ALL gated (the middleware is method- and path-agnostic), so
- * there is no un-gated HTTP path to the PEP.
+ * there is no un-gated HTTP path to the PEP. The one exception to the header
+ * carriage is an attenuation presentation (#1756): it authorizes exactly one
+ * `tools/call` and rides that call's `_meta`, on a request that carries no
+ * `Authorization` header and opens no session.
  *
  * This is additive: the in-memory transport and its no-bypass proof are untouched.
  * Two transports, one PEP ({@link McpPaymentsServer}); only the TokenFacts SOURCE

@@ -62914,7 +62914,7 @@
    "observation": {
     "normative": "an invocation that the substrate permits but whose operation's facts do not satisfy the leaf's mission_constraints for the invoked tool is refused; the facts come from the resource server's records where the operation acts on one, never from an argument's claim about such a record"
    },
-   "level": "unit",
+   "level": "cross-component",
    "coverage": "tested",
    "tests": [
     {
@@ -62932,11 +62932,11 @@
     {
      "file": "src/services/mcp-payments/test/attenuation.test.ts",
      "name": "attenuation chain: the leaf's restrictions bound the action (@spec runtime#input-authority, #825) > refuses an invoice above the leaf's narrowed amount bound before any PDP call, and admits one within it",
-     "level": "unit",
+     "level": "cross-component",
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. The leaf's resource_contract is enforced by the same bound's contract comparison (entryCoversFacts), witnessed by the Resource Access contract rows rather than end to end here."
+   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. The leaf's resource_contract is enforced by the same bound's contract comparison (entryCoversFacts), witnessed by the Resource Access contract rows rather than end to end here. The row level is cross-component (B1 had placed unit on the blocked row): each witness mints at the AS kernel, verifies at the payments server and enforces at the PEP."
   },
   {
    "id": "attenuation.root-mapping.mission-constraints-ceiling",
