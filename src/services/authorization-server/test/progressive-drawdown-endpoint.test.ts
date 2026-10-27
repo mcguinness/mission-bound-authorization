@@ -368,7 +368,7 @@ function expansionParams(
   };
 }
 
-type Completed = { access_token: string; mission_id: string; error?: string };
+type Completed = { access_token: string; mission_id: string; mission_expires_at?: string; error?: string };
 
 /** Expand and expect a synchronous drawdown: the 200 body. */
 async function drawdown(
@@ -664,8 +664,13 @@ describe("policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion)",
     const predecessor = as.kernel.get(pred.missionId) as MissionRecord;
     const crid = crypto.randomUUID();
     const body = await drawdown(pred.accessToken, crid, READ_LIST);
+    // @spec mission#mission-response-parameters (#1719, D845): the completing
+    // response first delivers the successor, so it carries both members.
+    const delivers = (decodeJwt(body.access_token) as { mission: { id: string } }).mission.id;
+    expect(body.mission_id).toBe(delivers);
     const successor = as.kernel.get(body.mission_id) as MissionRecord;
-    expect((decodeJwt(body.access_token) as { mission: { id: string } }).mission.id).toBe(successor.id);
+    expect(successor.id).toBe(delivers);
+    expect(body.mission_expires_at).toBe(successor.expires_at);
     expect(successor.state).toBe("active");
     expect(successor.predecessor).toBe(pred.missionId);
     expect(as.kernel.get(pred.missionId)?.termination).toMatchObject({ reason: "superseded", successor: successor.id });

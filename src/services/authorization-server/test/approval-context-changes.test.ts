@@ -341,7 +341,11 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const decided = await held;
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
     const resumed = await fetch(decided.location as string, { redirect: "manual", headers: { cookie: flow.cookie } });
-    expect(new URL(resumed.headers.get("location") as string).searchParams.get("error")).toBe("invalid_request");
+    // @spec mission#approval-commit (#1721, D845): the commit's own expiry
+    // check refuses `access_denied`, creating no Mission and issuing no code.
+    const completed = new URL(resumed.headers.get("location") as string).searchParams;
+    expect(completed.get("error")).toBe("access_denied");
+    expect(completed.get("code")).toBeNull();
     expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
   });
 
@@ -544,7 +548,7 @@ describe("a pushed request that no longer validates is refused, never a 500 (@sp
     expect(page.revision).toBeNull();
   });
 
-  it("a decision after the request's expires_at passed completes the request invalid_request and creates nothing", async () => {
+  it("a decision after the request's expires_at passed completes the request access_denied, with no Mission, grant or code (@spec mission#approval-commit, #1721)", async () => {
     const t0 = Math.floor(Date.now() / 1000) * 1000;
     const flow = await open(expiringAt(t0));
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
@@ -554,7 +558,9 @@ describe("a pushed request that no longer validates is refused, never a 500 (@sp
     const decided = await decide(flow.uid, headers, approve(revision));
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
     const resumed = await fetch(decided.location as string, { redirect: "manual", headers: { cookie: flow.cookie } });
-    expect(new URL(resumed.headers.get("location") as string).searchParams.get("error")).toBe("invalid_request");
+    const completed = new URL(resumed.headers.get("location") as string).searchParams;
+    expect(completed.get("error")).toBe("access_denied");
+    expect(completed.get("code")).toBeNull();
     await expectNothingCreated(flow.uid);
   });
 });

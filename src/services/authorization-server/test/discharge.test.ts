@@ -33,7 +33,7 @@
  */
 
 import { type Server } from "node:http";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { openStore } from "@mission/store";
 import { createRemoteJWKSet, decodeJwt } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -1391,6 +1391,7 @@ describe("the discharge operation on the lifecycle endpoint", () => {
       nonce: body.nonce as string,
       missionId: record.id,
       now: Math.floor(Date.now() / 1000),
+      statusKids: [TOPOLOGY.keys.asStatus.kid],
     };
     const verified = await verifyStatusResponse(replayed, opts);
     expect(verified.discharge_result).toEqual({ ...result, prior_version: 1, current_version: 2 });
