@@ -23213,12 +23213,20 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published as revoked in the AS's historical key set, so the archived responses it signed stay verifiable and classifiable"
+    "normative": "a key the AS signed Mission Status or Lifecycle responses under that is known or suspected compromised is published as revoked in the AS's historical key set, so the archived responses it signed stay verifiable and classifiable",
+    "local": "The AS lists its Status role's generations withdrawn as compromised in the historical key set it serves at mission_historical_jwks_uri (kernel/historical-key-set.ts)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
@@ -23234,12 +23242,38 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK"
+    "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > never verifies a current response under a key the set lists, though a cached jwks_uri still carries it",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set through the configured issuer (@spec status#historical-key-set, status#mission-status, #831 B3, D901) > refuses, through missionStatusIssuer, a key the advertised set lists while the cached jwks_uri still carries it",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder now keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -23260,12 +23294,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every key the AS signed a Mission Status or Lifecycle response under stays resolvable for the Mission's audit horizon: a retired key in its jwks_uri, a compromised key in its historical key set"
+    "normative": "every key the AS signed a Mission Status or Lifecycle response under stays resolvable for the Mission's audit horizon: a retired key in its jwks_uri, a compromised key in its historical key set",
+    "local": "A retired Status generation stays in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime (#831 B2); a compromised one stays resolvable in the historical key set (#831 B3)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/signing-key-rotation.test.ts",
+     "name": "rotating, retiring and compromising a role's generations (@spec #831 B2) > retirement waits for the retention deadline from the confirmed stop, refuses when none can be established, and refuses a Status generation a standing consent depends on",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842). #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.compromised-withdrawn",
@@ -23286,12 +23334,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a key known or suspected compromised signs no further response and is absent from the AS's jwks_uri"
+    "normative": "a key known or suspected compromised signs no further response and is absent from the AS's jwks_uri",
+    "local": "Compromising a generation withdraws it from the jwks_uri and stops signing under it, activating a replacement in the same write (#831 B2)."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/signing-key-rotation.test.ts",
+     "name": "rotating, retiring and compromising a role's generations (@spec #831 B2) > compromising the active generation withdraws it at once and activates a fresh replacement in the same write",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842). #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.no-historical-fallback",
@@ -23307,12 +23369,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer never verifies a response for a current reliance decision under a key it found only in the historical key set, whatever the key's state"
+    "normative": "a consumer never verifies a response for a current reliance decision under a key it found only in the historical key set, whatever the key's state",
+    "local": "The current-reliance keys never resolve a key from the historical key set; auditKeys alone reads one, to verify an archived response."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > never falls back to the set for a current reliance decision once the jwks_uri no longer carries a listed key; only audit verification reads it",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.bounded-jwks-cache",
@@ -23328,12 +23398,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime"
+    "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime",
+    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
+     "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > relies on a cached jwks_uri only within the freshness lifetime its response declares",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -23349,12 +23427,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a jwks_uri response without valid explicit freshness information is stale when received and is revalidated before reuse; the consumer never assigns it a heuristic lifetime"
+    "normative": "a jwks_uri response without valid explicit freshness information is stale when received and is revalidated before reuse; the consumer never assigns it a heuristic lifetime",
+    "local": "A jwks_uri response without explicit freshness is stale when received, so the Status consumer revalidates it at every verification."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
+     "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > gives a jwks_uri response without explicit freshness no lifetime: every verification revalidates",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.failed-revalidation-refuses",
@@ -23370,12 +23456,20 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status or Lifecycle response until a fetch or revalidation of the jwks_uri succeeds"
+    "normative": "when the cached jwks_uri set is stale and revalidation fails, the consumer refuses current reliance on a Status or Lifecycle response until a fetch or revalidation of the jwks_uri succeeds",
+    "local": "When the stale jwks_uri cannot be revalidated, the Status consumer refuses the response, with no stale fallback."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
+     "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > refuses a Status response when the stale jwks_uri cannot be revalidated, never falling back to the stale copy",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.historical-key-set.signed",
@@ -23396,12 +23490,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement, never another published key"
+    "normative": "the historical key set is a jwk-set+jwt signed under the AS's active Mission Status signing key, the key it currently signs Mission Status responses under; never under a listed key, a retired key or another role's key, and after that key's own compromise under its replacement, never another published key",
+    "local": "signHistoricalKeySet signs once at boot under the active Status key, the replacement after a Status compromise, and refuses a signer whose kid or key material the set lists."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "the historical key set's listing and signer (@spec status#historical-key-set, #831 B3) > signs nothing when no key is withdrawn, and never under a key the set lists, by kid or by key material",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.historical-key-set.consumer-validates-signer",
@@ -23417,12 +23525,26 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a consumer refuses a historical key set signed under any key other than the Mission Status signing key its trusted configuration authorizes, including another role's key, a retired key, a key the set lists, and a replacement its configuration does not yet authorize"
+    "normative": "a consumer refuses a historical key set signed under any key other than the Mission Status signing key its trusted configuration authorizes, including another role's key, a retired key, a key the set lists, and a replacement its configuration does not yet authorize",
+    "local": "verifyHistoricalKeySet accepts a set only with typ jwk-set+jwt, the expected iss, and a signature under the consumer's configured Status keys; a replacement Status key signs only once the configuration names it."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a historical key set's signer, from the consumer's configuration (@spec status#historical-key-set, #831 B3) > accepts a set signed under the configured Status key, and refuses one signed under another role's published key or an unconfigured replacement until the configuration names it",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -23443,12 +23565,26 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each JWK in the historical key set carries revoked with reason compromised, revoked_at as the revocation time, and compromised_at as the established compromise time when one is established"
+    "normative": "each JWK in the historical key set carries revoked with reason compromised, revoked_at as the revocation time, and compromised_at as the established compromise time when one is established",
+    "local": "historicalKeys converts the ring's ISO times to NumericDates and adds compromised_at only when the compromise recorded one."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "the historical key set's listing and signer (@spec status#historical-key-set, #831 B3) > lists each withdrawn key under its kid, with revoked: reason compromised, revoked_at and, only when established, compromised_at, as NumericDates",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
@@ -23469,12 +23605,20 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "while the historical key set lists a key, the AS advertises its https URL as mission_historical_jwks_uri in its authorization server metadata"
+    "normative": "while the historical key set lists a key, the AS advertises its https URL as mission_historical_jwks_uri in its authorization server metadata",
+    "local": "The AS advertises mission_historical_jwks_uri only while its historical key set lists a key, and serves no set otherwise."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3. #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
@@ -57530,6 +57674,90 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "cross-domain.resource-as.rejects-replayed-grant",
+   "spec": "draft-mcguinness-oauth-mission-cross-domain.md",
+   "anchor": "validation-at-resource-as",
+   "text": "MUST reject a replayed cross-domain grant: it MUST track the grant's `jti` for the grant's validity window and refuse a second presentation with `invalid_grant` ({{RFC7523}} Section 3), so a grant cannot be replayed even by the party it is bound to.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-domain.projection"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Resource AS refuses with invalid_grant a second presentation of a cross-domain grant it has redeemed, base or continuation, for as long as the grant could otherwise be accepted: across a restart of the Resource AS, with the issuer's clock ahead of its own, and under concurrent presentation, where exactly one presentation releases a token; the claim is scoped to the grant's issuer and jti",
+    "local": "the reference keeps its claims in a durable store when one is configured, refuses to start on a missing store or one its init command did not create, and keeps each claim until the grant's exp plus a 300 s margin for clock adjustment"
+   },
+   "level": "cross-component",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-saas/test/cross-domain.test.ts",
+     "name": "M9 scenario 12: cross-domain via EMA/ID-JAG > a replayed ID-JAG is rejected at the RAS (one-time jti)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses, after a restart on the same store, a base ID-JAG redeemed before it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses, after a restart on the same store, a continuation ID-JAG redeemed before it",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses the replay after a restart when the issuer's clock runs ahead of the RAS's: the grant's iat is after the RAS started, both times",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > redeems once, after a restart, a grant issued before it and never redeemed",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS durable redemption records across a restart (@spec cross-domain#validation-at-resource-as, #1767, D887) > releases one token for concurrent redemptions of one grant",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption store: missing or lost history refuses (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses to boot on a missing store, names the command that creates it, and never creates one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption store: missing or lost history refuses (@spec cross-domain#validation-at-resource-as, #1767, D887) > refuses to boot on a store file init did not create: an empty file is lost history, not an empty one",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > scopes a claim to its issuer: one jti from two issuers is two claims, and each is claimed once",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/ras/test/durable-redemptions.test.ts",
+     "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > keeps a claim through its grant's exp and the margin past it, and prunes it only after",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. Partial: the durable store is opt-in (`RasConfig.redemptions`), and the composed stack and its launchers do not yet give it to the RAS, so the composed RAS tracks `jti` only for its process's lifetime (the launcher follow-up on #1767); and until the owner reviews the witnesses (D842)."
   },
   {
    "id": "cross-domain.resource-as.authenticates-redeeming-client",
