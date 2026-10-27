@@ -542,6 +542,37 @@ approved Authority Set.
 | Standing consent (AS) | Only under a companion profile's standing-consent basis | {{standing-consent-bases}} |
 {: title="Applicability of this document's surfaces"}
 
+The following table lists the choices this document leaves to a
+deployment, who makes each, and, for each party that needs to learn
+it, the existing signal, if any, from which that party learns it. A
+signal serves only the party entitled to read it: a client treats an
+access token as opaque ({{Section 6 of RFC9068}}), so a token's header
+and claims are resource-server signals. Where no signal exists, the
+table says so, and the party relies on the deployment's documentation
+or configuration. The cited sections govern.
+
+| Choice point | Decided by | Who learns it, and how |
+| --- | --- | --- |
+| Access-token format: JWT or opaque reference token ({{mission-bound-tokens}}) | AS | Resource server: a JWT's `typ` header parameter value `at+jwt` ({{token-claims}}, {{Section 4 of RFC9068}}); no in-band signal marks an opaque token, which it resolves as its deployment arranges ({{introspected-consumption}}). Client: none; it treats every access token as opaque |
+| Introspection, and issuer-local resolution of an opaque token ({{introspection}}, {{introspected-consumption}}) | AS | Resource server: the `introspection_endpoint` AS metadata ({{RFC8414}}); for issuer-local resolution, none, since the AS authorizes each reader inside its trusted implementation boundary |
+| Sender constraint: bearer, DPoP, or mTLS ({{token-claims}}) | AS, on the client's proof, if any | Resource server: the token's `cnf` claim, or the `cnf` member of an active introspection response ({{rs-enforcement}}, {{introspected-consumption}}). Client: for DPoP, the binding applied to the issued token, from `token_type` `DPoP` in the token response ({{Section 5 of RFC9449}}); for mTLS, the AS's mTLS metadata ({{Section 3.3 of RFC8705}}) states only that the AS supports certificate-bound tokens, and no token-response member says a given token is bound. A resource's DPoP requirement or mTLS support comes from its protected resource metadata ({{RFC9728}}), which also states support, not the binding of a given token. Settled for delegation: a designation is requested with a sender-constrained token, and a delegated token is bound to the delegate's own key ({{designation}}, {{delegated-exchange}}) |
+| Authorization-code binding: PKCE `S256` or a DPoP-bound code ({{approval-code-protection}}) | Client, among the methods the AS accepts | AS: the request's `code_challenge` ({{RFC7636}}), or its `dpop_jkt` parameter or DPoP proof ({{Section 10 of RFC9449}}). Client: the `code_challenge_methods_supported` ({{RFC8414}}) and `dpop_signing_alg_values_supported` ({{Section 5.1 of RFC9449}}) AS metadata |
+| Refresh-token binding: client authentication, sender constraint, or rotation ({{refresh-tokens}}) | AS | Client: under rotation, a new refresh token in each refresh response ({{Section 6 of RFC6749}}); for a DPoP binding, none beyond its own proof when it obtained the refresh token ({{Section 5 of RFC9449}}) |
+| Mission support ({{discovery}}) | AS | Client: the `mission_bound_authorization_supported` AS metadata; otherwise, out of band |
+| Supported types and their schemas ({{other-types}}) | AS; each resource server, for the types it accepts | Client: the AS's `authorization_details_types_supported` metadata ({{RFC9396}}) and, where advertised, its types metadata endpoint ({{discovery}}); a resource server's `authorization_details_types_supported` metadata ({{protected-resource-metadata}}) |
+| Derivation mode: authority proposal or configured mapping ({{derivation-modes}}) | Client, by proposing or not; deployment, by configuring mappings | Client: no metadata signal; the deployment publishes its mapping space as deployment documentation |
+| Transformation capabilities per type: `narrowing`, `delegation`, `projection` ({{transformation-capabilities}}) | AS operator, per type | Client, in order of preference: a `mission_transformation_capabilities` member in the type's entry at the types metadata endpoint, an equivalently shaped member of supported-type documentation, or deployment documentation. Resource server: none needed; it enforces entries as carried ({{delegation-constraints}}). Settled: the first carrier that declares a member governs, and a declared `narrowing` also governs Authority Set derivation |
+| Each entry's audience ({{transformation-capabilities}}) | Deployment | AS: a trusted entry-to-audience mapping, such as authenticated configuration or protected resource metadata ({{RFC9728}}). Client: none; it requests an audience with `resource` and reads the granted entries from the token response ({{token-response}}) |
+| Scope projection for a target ({{scope-projection}}) | Deployment, per target | AS: the target's protected resource metadata ({{RFC9728}}) or authenticated out-of-band configuration |
+| Mission-governed resources ({{authority-proposal}}) | Deployment, or the resource through its metadata | AS and client: the `mission_bound_authorization_required` protected resource metadata ({{protected-resource-metadata}}), which the AS authenticates; a deployment's own classification has no signal, and `false` or omission does not clear it. Resource server: its own configuration ({{rs-requirements}}) |
+| Delegation support ({{delegation}}) | AS | Delegating party and delegate: `grant_types_supported` listing the Token Exchange grant type ({{discovery}}); otherwise, out of band or by attempt. Settled: a delegate is identified by its client authentication, an `actor_token` is refused, and a public client is not a delegate ({{delegated-exchange}}) |
+| Audiences that process the `act` chain ({{rs-mission-unaware}}) | Deployment | AS: no protocol signal; neither parsing `act` nor `mission_bound_authorization_required` establishes it, and the AS establishes it by deployment means, for example its configuration |
+| Designated-client separation ({{designation}}) | Deployment | AS: no protocol signal; the AS establishes by deployment means, for example its configuration, that no resource server accepts the client's identifier as an audience |
+| Designation redemption count ({{designation}}) | AS | Delegate: no protocol signal; the AS's policy governs, and deployment documentation may describe it. An attempt reveals only its own outcome, not the permitted count |
+| Subject-authentication conveyance ({{rs-denials}}) | Deployment | Resource server: the `acr`, `amr`, and `auth_time` claims ({{token-authentication-lifetime}}), or introspection ({{Section 6 of RFC9470}}); where no Subject authentication applies, they are absent |
+| Revocation means ({{revocation}}) | Deployment | A party authorized to revoke: none in this document; a deployment-defined surface, or Mission Status's `revoke` operation |
+{: title="Deployment choices and how each party learns them"}
+
 ## Applicability {#applicability}
 
 This document targets OAuth deployments where authority serves a
@@ -833,6 +864,38 @@ Mission-bound token:
   carries the gating guarantee of this document; a token that only
   references or carries Mission data without the gates is not
   Mission-bound ({{conformance}}).
+
+Applicable entry:
+: An `authorization_details` entry that applies, under the entry's
+  type, to a request to a resource server: where the type defines a
+  `resource`, the request's operation target matches it under that type
+  ({{token-response}}). {{rs-requirements}} governs an entry whose type
+  the resource server does not implement, or whose type-defined
+  enforcement it cannot complete.
+
+Delegate:
+: A sub-agent, service, or tool, itself an OAuth client authenticated
+  as a distinct actor, that obtains a delegated token by Token Exchange
+  ({{delegation}}).
+
+Delegating party:
+: The holder of a Mission-bound access token that obtains a
+  designation for a delegate: the Mission's approved agent, or a
+  delegate delegating further ({{designation}}).
+
+Designation:
+: The delegating party's authorization, obtained by Token Exchange,
+  for one delegate to obtain delegated tokens ({{designation}}).
+
+Delegated exchange (delegated token):
+: The Token Exchange in which a delegate redeems a designation naming
+  it for a delegated token, whose `act` claim names that delegate as
+  the current actor ({{delegated-exchange}}).
+
+Self-exchange (no-actor exchange):
+: A Token Exchange with no actor in which an agent presents its own
+  Mission-bound access token to obtain a narrowed one; it delegates
+  nothing ({{self-exchange}}).
 
 ## Principal Model {#principal-model}
 
@@ -3566,10 +3629,9 @@ specifies.
 A resource server consults the issuer about a Mission-bound token in
 one of three cases, with different obligations:
 
-- **JWT state observation.** A Mission-state-aware resource server
-  holding a JWT Mission-bound token introspects it to observe the
-  Mission's current state per request instead of waiting for the
-  token to expire.
+- **JWT state observation.** A resource server that observes Mission
+  state per request introspects the JWT Mission-bound token it holds,
+  instead of waiting for the token to expire.
 - **Opaque-token consumption.** For an opaque Mission-bound token,
   introspection is the claims carriage: an active response carries
   what the JWT would ({{introspected-consumption}}).
@@ -7810,6 +7872,13 @@ Cross-Domain:
   identified from client identity information the AS trusts, and
   presents `goal` and `task_bounds` as recorded, without truncation
   (Rendering Safeguards; #1532, D859).
+- Editorial, no requirement change: Terminology defines "applicable
+  entry" by the matching rule Audience and Token Response states, and
+  adds the delegation terms; Mission State via Token Introspection
+  describes a resource server that observes Mission state in plain
+  terms; and the Implementation Map gains a table of deployment
+  choices, naming for each who decides, which party learns it, and the
+  existing signal, if any, it learns from (#1723, #1504, D845).
 
 -01
 

@@ -35,6 +35,7 @@ import {
   MISSION_TEMPLATE_TYP,
   proposalHash,
   refusedEntryMember,
+  ResourceContractDeclarations,
   unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
@@ -64,6 +65,7 @@ import { CreationIdempotencyStore, type CreationReservation, creationFingerprint
 import { deriveAuthoritySetWithProvenance, isSubsetSet } from "./derive.js";
 import type { RetainedOrigin } from "./eligibility-provenance.js";
 import { IntentError } from "./intent.js";
+import { assembleResourceContracts, assertCarriedContractsResolvable } from "./resource-contract.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
 import {
@@ -296,17 +298,10 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
     if (family !== undefined) {
       throw new TemplateError(`ceiling[${i}] carries the action family ${family}, which this authorization server does not support`);
     }
-    // @spec resource-access#resource-contract (#249, D553): template consent
-    // does not assemble or validate a contract reference against
-    // configuration, so this surface takes the conformance alternative: "An
-    // authorization server that does not implement this section refuses a
-    // proposed or carried entry that carries `resource_contract` ... and never
-    // drops the member."
-    if (entry.resource_contract !== undefined) {
-      throw new TemplateError(
-        `ceiling[${i}] carries resource_contract, which template consent does not assemble from configuration; refusing rather than dropping it`,
-      );
-    }
+    // @spec resource-access#resource-contract (#249, D875): a carried
+    // reference is checked against configuration where the ceiling is
+    // assembled ({@link templateContracts}), at the proposal, the consent page
+    // and the commit.
   });
   // @spec resource-access#matching-allowed-delegates, child-delegation#fanout
   // (#1373): a template ceiling entry whose `allowed_delegates` or
@@ -348,6 +343,28 @@ export function assertTemplateBody(input: TemplateProposalBody): void {
  * trusted bindings are resolved fresh. The consent page renders this ceiling,
  * so the human reviews what the template commits.
  */
+/**
+ * @spec resource-access#resource-contract (#249, D875): template consent is a
+ * new approval, so its ceiling's contract references are assembled from
+ * configuration as a fresh approval's are: a carried reference must be one
+ * configuration names as current for the entry, and where configuration
+ * requires a reference and the entry carries none, the current one is
+ * recorded. The proposal, the consent page and the commit each assemble, and
+ * the page refuses when the result differs from what was proposed, so no
+ * reference is substituted after the Approver saw the ceiling. Absent
+ * declarations, nothing is current, so a carried reference refuses.
+ */
+export function templateContracts(
+  ceiling: AuthorityEntry[],
+  contracts: ResourceContractDeclarations = ResourceContractDeclarations.NONE,
+): AuthorityEntry[] {
+  return assembleResourceContracts(ceiling, contracts);
+}
+
+/** The entries without their `resource_contract`: a policy-derived set carries none ("a policy ceiling need not carry one"). */
+const withoutResourceContracts = (entries: readonly AuthorityEntry[]): AuthorityEntry[] =>
+  entries.map(({ resource_contract: _ref, ...entry }) => entry as AuthorityEntry);
+
 export function templateCeiling(ceiling: AuthorityEntry[], resolver?: CapabilitySourceResolver): AuthorityEntry[] {
   return resolver
     ? resolveFreshCapabilitySources(ceiling.map(({ capability_sources: _drop, ...entry }) => entry), resolver)
@@ -427,6 +444,12 @@ export function createTemplate(
      * meeting the workflow's conditions and its budget identity pinned.
      */
     standingPayment?: StandingPaymentConsentOptions;
+    /**
+     * @spec resource-access#resource-contract (#249, D875): the contract
+     * declarations the ceiling is assembled against ({@link templateContracts}).
+     * Absent, nothing is current.
+     */
+    resourceContracts?: ResourceContractDeclarations;
   },
 ): MissionTemplate {
   assertTemplateBody(input);
@@ -450,7 +473,13 @@ export function createTemplate(
   if (existing) return existing;
 
   const { authority_source, source_bindings } = establishTemplateAuthoritySource(input, options);
-  const ceiling = templateCeiling(input.ceiling, options.capabilityResolver);
+  let ceiling: AuthorityEntry[];
+  try {
+    ceiling = templateContracts(templateCeiling(input.ceiling, options.capabilityResolver), options.resourceContracts);
+  } catch (e) {
+    if (e instanceof IntentError) throw new TemplateError(e.message);
+    throw e;
+  }
 
   const dispatch_policy = pinDispatchPolicy(input.issuer, options.dispatchPolicies, input.dispatch_policy);
   // @spec mission-template#template-consent (#813): the consent provenance
@@ -1084,7 +1113,10 @@ export function dispatchFromTemplate(
   // structurally carries none and an inherited binding would read as one the
   // grantor lacks. Keep the two halves separate; recombining them refuses
   // every dispatch from a ceiling that records a binding.
-  if (!isSubsetSet(final, derived)) {
+  // @spec resource-access#resource-contract (#249, D875): the policy-derived
+  // half compares without references, since a policy ceiling need not carry
+  // one and the second derivation preserves the template ceiling's.
+  if (!isSubsetSet(withoutResourceContracts(final), withoutResourceContracts(derived))) {
     throw new Error(`dispatch from ${template.id} violated the double-intersection invariant`);
   }
   // @spec capability-binding#capability-source-binding — carry the template
@@ -1094,8 +1126,22 @@ export function dispatchFromTemplate(
   // proposal contributes nothing here.
   final = inheritCapabilitySources(final, template.ceiling);
   if (!isSubsetSet(final, template.ceiling)) {
+    // @spec resource-access#resource-contract (#249, D875): Dispatch is
+    // preservation-only, so against the template ceiling the reference stays
+    // exact. A Dispatcher reference the ceiling does not carry is input, not
+    // a fault: refused, never added at dispatch.
+    if (isSubsetSet(withoutResourceContracts(final), withoutResourceContracts(template.ceiling))) {
+      throw new DispatchError(
+        "out_of_template_ceiling",
+        `the proposal carries a resource_contract template ${template.id}'s ceiling does not, which a Dispatch never adds`,
+      );
+    }
     throw new Error(`dispatch from ${template.id} violated the double-intersection invariant`);
   }
+  // @spec resource-access#resource-contract (#249, D875): the ceiling's
+  // reference is carried into the instance as approved: a superseded version
+  // within its declared retention stands, and a retired one refuses here.
+  assertCarriedContractsResolvable(final, kernel.resourceContracts(), kernel.nowDate());
 
   // d. Prohibited-class guard: refuse high-consequence actions regardless of
   // ceiling membership. @spec mission-template#prohibited-classes (#813):

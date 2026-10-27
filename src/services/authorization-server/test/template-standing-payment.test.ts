@@ -14,7 +14,12 @@
  * rules, the Approval Governance Record and its recency boundary, and the
  * dispatch accounting committed in the instance's own transaction.
  */
-import { DERIVATION_POLICY, DISPATCH_PROHIBITED_ACTIONS } from "@mission/demo-data";
+import {
+  APPROVAL_FLOOR,
+  DERIVATION_POLICY,
+  DISPATCH_PROHIBITED_ACTIONS,
+  PROGRESSIVE_PROFILE,
+} from "@mission/demo-data";
 import { type CryptoKey, exportJWK, generateKeyPair } from "jose";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -34,6 +39,7 @@ import {
   issueCrossDomainGrant,
   MissionKernel,
   type ProhibitedPredicateMapping,
+  publishedProhibitedPredicateMapping,
   recheckTemplateApprovalRecord,
   STANDING_PAYMENT_OPERATION,
   StandingPaymentLineageError,
@@ -43,6 +49,7 @@ import {
   TemplateError,
   TemplateStore,
 } from "../src/index.js";
+import { standingPaymentPredicateRefusal } from "../src/kernel/standing-payment.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -1064,6 +1071,91 @@ describe("standing-payment dispatch-time re-checks (@spec mission-template#prohi
     );
     expect(missionCount()).toBe(before);
   });
+});
+
+describe("the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877)", () => {
+  const LEDGER = "http://localhost:4406/mcp";
+  const LEDGER_ACTIONS = ["ledger:vendor.read", "ledger:journal.write"] as const;
+  /** The shipped published mapping, read from configuration alone. */
+  const published = () =>
+    publishedProhibitedPredicateMapping(APPROVAL_FLOOR, PROGRESSIVE_PROFILE.external_communication_actions);
+  const vendorRead: AuthorityEntry = {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:vendor.read"],
+    constraints: { vendors: ["acme"] },
+  };
+  const ledgerEntry = (action: string): AuthorityEntry => ({
+    type: "mission_resource_access",
+    resource: LEDGER,
+    actions: [action],
+    constraints: { vendors: ["acme"] },
+  });
+
+  it("refuses dispatch_prohibited_class, committing nothing, a designating template whose ceiling also carries payments:vendor.read, under the shipped set and published mapping (#1710)", () => {
+    const t = consentTo({ ceiling: [paymentEntry(), vendorRead] });
+    const before = missionCount();
+    const r = refusal(() => dispatch(t.id, {}, published()));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      "payments:vendor.read is a dispatch-prohibited action no standing payment waives",
+    );
+    expect(missionCount()).toBe(before);
+  });
+
+  it("refuses the vendor read by its external-communication predicate, committing nothing, even under a configured set that leaves it out (#1710)", () => {
+    const t = consentTo({ ceiling: [paymentEntry(), vendorRead] });
+    const before = missionCount();
+    const narrower = DISPATCH_PROHIBITED_ACTIONS.filter((a) => a !== "payments:vendor.read");
+    const r = refusal(() => dispatch(t.id, { dispatchProhibitedActions: narrower }, published()));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      `payments:vendor.read at ${RESOURCE} satisfies the prohibited predicate external_communication, which no standing payment waives`,
+    );
+    expect(missionCount()).toBe(before);
+  });
+
+  it.each(LEDGER_ACTIONS)(
+    "refuses at consent a designating template whose ceiling also carries %s at the ledger resource (#1710)",
+    (action) => {
+      expect(() => consentTo({ ceiling: [paymentEntry(), ledgerEntry(action)] })).toThrow(
+        `the Template Ceiling: entry 1 names ${LEDGER}; a standing-payment ceiling names exactly one resource, ${RESOURCE}`,
+      );
+    },
+  );
+
+  it.each(LEDGER_ACTIONS)(
+    "refuses dispatch_prohibited_class at dispatch, committing nothing, a designating template whose stored ceiling has gained %s at the ledger resource (#1710)",
+    (action) => {
+      const t = consentTo();
+      tamper(t.id, { ceiling_json: JSON.stringify([paymentEntry(), ledgerEntry(action)]) });
+      const before = missionCount();
+      const r = refusal(() => dispatch(t.id, {}, published()));
+      expect(r.reason).toBe("dispatch_prohibited_class");
+      expect(r.message).toBe(
+        `the Template Ceiling: entry 1 names ${LEDGER}; a standing-payment ceiling names exactly one resource, ${RESOURCE}`,
+      );
+      expect(missionCount()).toBe(before);
+    },
+  );
+
+  it.each(LEDGER_ACTIONS)(
+    "the standing-payment admission refuses %s in an instance's authority by the configured set, and under a set that leaves it out by the cross-domain predicate (#1710)",
+    (action) => {
+      const authority = [paymentEntry(), ledgerEntry(action)];
+      expect(
+        standingPaymentPredicateRefusal(published(), TERMS as never, authority, DISPATCH_PROHIBITED_ACTIONS),
+      ).toBe(`${action} is a dispatch-prohibited action no standing payment waives`);
+      const narrower = DISPATCH_PROHIBITED_ACTIONS.filter((a) => a !== action);
+      expect(standingPaymentPredicateRefusal(published(), TERMS as never, authority, narrower)).toBe(
+        `${action} at ${LEDGER} satisfies the prohibited predicate cross_domain, which no standing payment waives`,
+      );
+      // The payment alone is still admitted: only its irreversible_action is waived.
+      expect(
+        standingPaymentPredicateRefusal(published(), TERMS as never, [paymentEntry()], DISPATCH_PROHIBITED_ACTIONS),
+      ).toBeUndefined();
+    },
+  );
 });
 
 describe("standing-payment budget commitment (@spec mission-template#prohibited-classes, #813 ruling 1)", () => {

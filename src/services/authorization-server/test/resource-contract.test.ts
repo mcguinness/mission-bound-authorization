@@ -30,6 +30,8 @@ import {
   type BuiltAs,
   buildAuthorizationServer,
   ChildDelegationError,
+  DispatchError,
+  dispatchFromTemplate,
   createChildMission,
   createTemplate,
   deriveAuthoritySet,
@@ -38,11 +40,14 @@ import {
   missionResourceAccessProfile,
   OperationProfileRegistry,
   projectThroughEffective,
+  TemplateError,
   TemplateStore,
   validateMissionIntent,
   validateMissionResourceAccessSchema,
 } from "../src/index.js";
+import { TemplateConsentProposals, templateConsentDisclosure } from "../src/adapters/template-consent.js";
 import { inheritResourceContract } from "../src/kernel/child-delegation.js";
+import { pinDispatchPolicy, templateContracts } from "../src/kernel/template.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
@@ -216,29 +221,129 @@ describe("the reference is preserved exactly by derivation and projection (@spec
   });
 });
 
-describe("a surface that does not implement the reference refuses it and never drops it (@spec resource-access#resource-contract, #249)", () => {
-  it("template consent refuses a ceiling entry carrying resource_contract, naming it", () => {
-    expect(() =>
-      createTemplate(
-        new TemplateStore(),
-        {
-          template_version: "tmpl-rc-1",
-          issuer: "https://as.test",
-          approver: { iss: "https://as.test", sub: "bob" },
-          ceiling: proposal(V2),
-          dispatch_policy: { id: "rc", version: "1" },
-          dispatchers: ["orchestrator"],
-          recipients: { subjects: [{ iss: "https://as.test", sub: "alice" }], agents: ["worker"] },
-          per_instance_lifetime_s: 3600,
-          max_active: 1,
-          rate_per_min: 1,
-          review_cadence_s: 86400,
-          approval_event_id: "tmpl-rc",
-          expires_at: "2027-01-01T00:00:00Z",
-        } as never,
-        {} as never,
-      ),
-    ).toThrow(/ceiling\[0\] carries resource_contract, which template consent does not assemble/);
+// @spec resource-access#resource-contract (#249, D875): template consent is a
+// new approval, so its ceiling's references are assembled from configuration
+// at the proposal, the consent page and the commit, and never substituted
+// after the Approver saw the ceiling; a Dispatch from the template preserves
+// them, preservation-only.
+describe("template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875)", () => {
+  const TISS = "https://as.test";
+  const POLICIES = {
+    rc: { version: "1", content_type: "application/json", content: JSON.stringify({ id: "rc", rule: "dispatch within the template ceiling" }) },
+  };
+  /** v2 current, required for the read, and a v3 configuration that supersedes v2. */
+  const LATER = declarations(
+    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [READ],
+  );
+  const CURRENT_V1 = declarations([declared("v1", "current")]);
+  const RETIRED = declarations([declared("v1", "retired"), declared("v2", "current")]);
+  let tkey: CryptoKey;
+  beforeAll(async () => {
+    tkey = (await generateKeyPair("ES256")).privateKey;
+  });
+  const kernelFor = (resourceContracts: ResourceContractDeclarations) => {
+    const opts: ConstructorParameters<typeof MissionKernel>[0] = {
+      issuer: TISS,
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent", "worker", "orchestrator"], ["bob"]),
+      statusKey: tkey,
+      statusKid: "as-status",
+      resourceContracts,
+      now: () => NOW,
+    };
+    return { opts, kernel: new MissionKernel(opts) };
+  };
+  let seq = 0;
+  const body = (ceiling: AuthorityEntry[]) => ({
+    template_version: "tmpl-rc-1",
+    issuer: TISS,
+    approver: { iss: TISS, sub: "bob" },
+    ceiling,
+    dispatch_policy: { id: "rc", version: "1" },
+    dispatchers: ["orchestrator"],
+    recipients: { subjects: [{ iss: TISS, sub: "alice" }], agents: ["worker"] },
+    per_instance_lifetime_s: 3600,
+    max_active: 3,
+    rate_per_min: 5,
+    review_cadence_s: 86400,
+    expires_at: "2027-01-01T00:00:00Z",
+  });
+  const create = (kernel: MissionKernel, store: TemplateStore, ceiling: AuthorityEntry[], resourceContracts?: ResourceContractDeclarations) =>
+    createTemplate(store, { ...body(ceiling), approval_event_id: `tmpl-rc-${seq++}` } as never, {
+      ...kernel.authoritySourceOptions(),
+      dispatchPolicies: POLICIES,
+      ...(resourceContracts ? { resourceContracts } : {}),
+    });
+  const dispatch = (kernel: MissionKernel, store: TemplateStore, templateId: string, proposedAuthority?: AuthorityEntry[]) =>
+    dispatchFromTemplate(kernel, store, {
+      templateId,
+      dispatchEventId: `dsp-rc-${seq++}`,
+      dispatcher: "orchestrator",
+      intent: validateMissionIntent(JSON.stringify(TASK_INTENT)),
+      subject: { iss: TISS, sub: "alice" },
+      policyVersion: DERIVATION_POLICY.policy_version,
+      dispatchPolicies: POLICIES,
+      ...(proposedAuthority ? { proposedAuthority } : {}),
+    });
+
+  it("records the current reference in a ceiling entry whose resource requires one, at a commit with no consent page", () => {
+    const { kernel } = kernelFor(REQUIRED);
+    const template = create(kernel, new TemplateStore(), proposal(), REQUIRED);
+    expect(template.ceiling[0]?.resource_contract).toEqual(V2);
+  });
+
+  it("keeps a carried current reference, and refuses a carried reference configuration does not name as current, or one with no declarations", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    expect(create(kernel, new TemplateStore(), proposal(V2), SUPERSEDED).ceiling[0]?.resource_contract).toEqual(V2);
+    expect(() => create(kernel, new TemplateStore(), proposal(V1), SUPERSEDED)).toThrow(TemplateError);
+    expect(() => create(kernel, new TemplateStore(), proposal(V2))).toThrow(TemplateError);
+  });
+
+  it("the consent page refuses a ceiling whose references configuration would now assemble differently, never substituting one", () => {
+    const proposals = new TemplateConsentProposals(() => NOW.getTime());
+    const pinned = pinDispatchPolicy(TISS, POLICIES, { id: "rc", version: "1" });
+    const disclose = (ceiling: AuthorityEntry[], resourceContracts: ResourceContractDeclarations) =>
+      templateConsentDisclosure(proposals.propose({ ...body(ceiling) } as never, pinned), POLICIES, {
+        issuer: TISS,
+        asyncDelegation: false,
+        resourceContracts,
+      });
+    // As proposed: assembled under REQUIRED, rendered under REQUIRED.
+    const assembled = templateContracts(proposal(), REQUIRED);
+    expect(assembled[0]?.resource_contract).toEqual(V2);
+    expect("disclosure" in disclose(assembled, REQUIRED)).toBe(true);
+    // v2 superseded before the page renders: refused, not re-pinned to v3.
+    const changed = disclose(assembled, LATER);
+    expect("refusal" in changed && changed.refusal).toMatch(/configured contract references of the Template Ceiling changed/);
+    // Proposed while nothing was required, rendered once a reference is: refused, never added.
+    const added = disclose(proposal(), REQUIRED);
+    expect("refusal" in added && added.refusal).toMatch(/configured contract references of the Template Ceiling changed/);
+  });
+
+  it("a Dispatch from a pinned ceiling carries the ceiling's reference without the Dispatcher restating it", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    const store = new TemplateStore();
+    const template = create(kernel, store, proposal(V2), SUPERSEDED);
+    const { mission } = dispatch(kernel, store, template.id);
+    expect(mission.authority_set[0]?.resource_contract).toEqual(V2);
+  });
+
+  it("a Dispatcher reference the template ceiling does not carry is refused, never added", () => {
+    const { kernel } = kernelFor(SUPERSEDED);
+    const store = new TemplateStore();
+    const template = create(kernel, store, proposal(), SUPERSEDED);
+    expect(() => dispatch(kernel, store, template.id, proposal(V2))).toThrow(DispatchError);
+  });
+
+  it("a superseded ceiling reference within its retention survives the Dispatch, and a retired one refuses", () => {
+    const { opts, kernel } = kernelFor(CURRENT_V1);
+    const store = new TemplateStore();
+    const template = create(kernel, store, proposal(V1), CURRENT_V1);
+    opts.resourceContracts = SUPERSEDED;
+    expect(dispatch(kernel, store, template.id).mission.authority_set[0]?.resource_contract).toEqual(V1);
+    opts.resourceContracts = RETIRED;
+    expect(() => dispatch(kernel, store, template.id)).toThrow(IntentError);
   });
 });
 
