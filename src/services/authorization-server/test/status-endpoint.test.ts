@@ -22,7 +22,7 @@
 
 import type { Server } from "node:http";
 import { CANONICAL_RESOURCE } from "@mission/demo-data";
-import { createLocalJWKSet, decodeJwt, generateKeyPair, type JWK, jwtVerify } from "jose";
+import { createLocalJWKSet, decodeJwt, generateKeyPair, type JWK, jwtVerify, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { STATUS_ENDPOINT_PATH } from "../src/adapters/lifecycle-endpoint.js";
 import {
@@ -503,5 +503,49 @@ describe("Mission Status parsing, repeated parameters and authentication precede
       expect(twoNonces.json?.error).toBe("invalid_request");
       expect(twoNonces.json?.nonce).toBeUndefined();
     });
+  });
+});
+
+/** Registry client authentication methods that authenticate with a shared client secret, and `none`. */
+const SHARED_SECRET_OR_NONE = ["client_secret_basic", "client_secret_post", "client_secret_jwt", "none"];
+/** The OAuth Token Endpoint Authentication Methods registry values that use no shared secret. */
+const NO_SHARED_SECRET_METHODS = ["private_key_jwt", "tls_client_auth", "self_signed_tls_client_auth"];
+/** A client_secret_jwt assertion: the jwt-bearer client assertion signed with an HMAC over a shared secret. */
+const clientSecretJwt = (issuer: string, clientId: string): Promise<string> =>
+  new SignJWT({})
+    .setProtectedHeader({ alg: "HS256", typ: "client-authentication+jwt" })
+    .setIssuer(clientId)
+    .setSubject(clientId)
+    .setAudience(issuer)
+    .setIssuedAt()
+    .setExpirationTime("1m")
+    .setJti(crypto.randomUUID())
+    .sign(new TextEncoder().encode("a-shared-client-secret-of-thirty-two-bytes"));
+
+describe("Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata)", () => {
+  it("advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method", async () => {
+    const methods = (await discovery(ISSUER)).mission_status_endpoint_auth_methods_supported as string[];
+    expect(methods.length).toBeGreaterThan(0);
+    for (const method of methods) expect(NO_SHARED_SECRET_METHODS, method).toContain(method);
+    for (const forbidden of [...SHARED_SECRET_OR_NONE, "access_token"]) expect(methods).not.toContain(forbidden);
+  });
+
+  it("answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential", async () => {
+    const record = approve();
+    const n = nonce();
+    const members = { mission_id: record.id, audience: CANONICAL_RESOURCE, nonce: n };
+    const outcome = (a: LifecycleAnswer) => ({ status: a.status, error: a.json?.error, nonce: a.json?.nonce, challenge: a.wwwAuthenticate });
+    const absent = outcome(await post(members));
+    expect(absent).toEqual({ status: 400, error: "invalid_client", nonce: n, challenge: null });
+    const cases: Array<[string, LifecycleAnswer]> = [
+      ["client_secret_basic", await post(members, { authorization: `Basic ${Buffer.from(`${reader.clientId}:s3cret`).toString("base64")}` })],
+      ["client_secret_post", await post({ ...members, client_id: reader.clientId, client_secret: "s3cret" })],
+      [
+        "client_secret_jwt",
+        await post({ ...members, client_assertion_type: CLIENT_ASSERTION_TYPE, client_assertion: await clientSecretJwt(ISSUER, reader.clientId) }),
+      ],
+      ["none", await post({ ...members, client_id: reader.clientId })],
+    ];
+    for (const [method, answer] of cases) expect(outcome(answer), method).toEqual(absent);
   });
 });

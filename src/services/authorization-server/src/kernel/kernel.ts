@@ -4761,12 +4761,22 @@ export class MissionKernel {
    * {@link MissionKernel.effectiveAuthoritySet} (see
    * kernel/derive.ts#projectThroughEffective) and audience-minimize that
    * result, never this method's return value.
+   *
+   * @spec status#introspection-projection (#1724 C4): the issuer's projection
+   * carries `fresh_until`, the point until which the consumer may rely on the
+   * reported `state` without re-checking. This kernel answers only for the
+   * Missions it issued, so every projection it builds is the issuer's. The
+   * horizon is `freshnessSeconds` or the default, capped at the advertised
+   * `mission_max_stale_seconds` from the time of the response
+   * ({@link MissionKernel.statusFreshnessSeconds}).
    */
   introspectionProjection(
     record: MissionRecord,
     caller: { disclose: ReadonlySet<string> },
+    options: { freshnessSeconds?: number } = {},
   ): Record<string, unknown> {
     const fresh = this.applyExpiry(record);
+    const nowS = Math.floor(this.now().getTime() / 1000);
     return {
       ...this.missionClaim(fresh),
       state: fresh.state,
@@ -4776,6 +4786,7 @@ export class MissionKernel {
       // (@spec child-delegation#carryover-evidence).
       ...(fresh.termination ? { termination: fresh.termination } : {}),
       version: fresh.version,
+      fresh_until: new Date((nowS + this.statusFreshnessSeconds(options.freshnessSeconds)) * 1000).toISOString(),
       ...(caller.disclose.has("budget") && fresh.derivation_limit !== null
         ? { derivations_remaining: Math.max(0, fresh.derivation_limit - fresh.derivation_count) }
         : {}),
@@ -4873,6 +4884,19 @@ export class MissionKernel {
   }
 
   /**
+   * @spec status#mission-status-caching, status#introspection-projection:
+   * the reliance horizon, in seconds from the response, of a report of Mission
+   * state: the requested lifetime or the default, never more than the
+   * advertised `mission_max_stale_seconds`. The ONE cap for both surfaces that
+   * stamp `fresh_until`, the signed Mission Status Response and the
+   * introspection projection, so neither publishes a longer horizon than the
+   * metadata document advertises.
+   */
+  private statusFreshnessSeconds(requested?: number): number {
+    return Math.min(requested ?? DEFAULT_STATUS_FRESHNESS_SECONDS, Number(MISSION_MAX_STALE_SECONDS));
+  }
+
+  /**
    * The observation body, for a caller that already holds the kernel
    * transaction: the committed operation and its observation are then one
    * atomic domain, so no response can report an outcome that did not commit
@@ -4881,10 +4905,7 @@ export class MissionKernel {
   observeInCallerTx(id: string, opts: StatusObservationOptions): StatusObservation {
     const record = this.applyExpiry(this.mustGet(id));
     const nowS = Math.floor(this.now().getTime() / 1000);
-    const freshness = Math.min(
-      opts.freshnessSeconds ?? DEFAULT_STATUS_FRESHNESS_SECONDS,
-      Number(MISSION_MAX_STALE_SECONDS),
-    );
+    const freshness = this.statusFreshnessSeconds(opts.freshnessSeconds);
     // Audience-scoped entries project the EFFECTIVE set (approved minus
     // containment); a contained entry never appears on the Status surface.
     // @spec resource-access#resource-matching (#1440): an entry is scoped to

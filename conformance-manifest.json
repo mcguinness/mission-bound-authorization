@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "5eb18d4e40e828c9ac35ce71980c3aa7aae3f425",
-    "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
+    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
+    "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
-    "content_sha256": "b5440314c1763d7dacbc85a656de939a27d08031ed4c9ff8ea35e9e0d6c9edef"
+    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
+    "content_sha256": "dfe3d738f273c53f9ce005ddd2494b7f0c6f21eca3cde9acf53720fa7685400c"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -83,8 +83,8 @@
     "content_sha256": "171abe8a5a1d594ae501de1e97b9acd7cc21cd9602161d6051bce8f2d73bd86b"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "ae2b7c7c41e6d5aad953148194c3ac0a741c00a5aee6b05d4bb598fb3c579fc7"
+    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
+    "content_sha256": "466ca49adc94e89990ca4106712b27b7b917d6c425ece61b9a9984094ca4d573"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -2749,7 +2749,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries `fresh_until` through the same capped horizon (#1724 C4); status.introspection.fresh-until-cap witnesses it there."
   },
   {
    "id": "status.response.consumer-authorized-signer",
@@ -20073,12 +20073,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an implementation that serves suspend also serves resume, and the authorization for each stays as Authorization assigns it",
-    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume"
+    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume; a lifecycle client's deployment policy names the operations it may request, checked per operation, so serving both grants neither to a client authorized for the other"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C8 (D847), normative. Structural in the reference; no witness refuses a configuration serving suspend alone."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > in every assembly, suspend is served only together with resume",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > where both are served, a client authorized for suspend alone is refused resume, and one authorized for resume alone is refused suspend, as an unknown Mission is refused",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C8 (D847), normative. Witnessed over three assemblies (revoke only, revoke with lifecycle-extended, the full provider). Proved by three defects: resume served under another capability than suspend; a client authorized for suspend allowed to resume; a client authorized for resume allowed to suspend."
   },
   {
    "id": "status.lifecycle.endpoint-advertised",
@@ -20267,7 +20280,7 @@
    "id": "status.lifecycle.private-key-jwt-params",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "private-key-jwt",
    "role": "AS",
    "strength": "stated",
@@ -20295,13 +20308,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200)."
+   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200). Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.client-id-mtls",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "mtls-client-id",
    "role": "AS",
    "strength": "stated",
@@ -20313,12 +20326,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Lifecycle request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+    "normative": "a Lifecycle request authenticating by mTLS client authentication (`tls_client_auth`) carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -21030,7 +21043,7 @@
    "id": "status.auth.mechanism-supported",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST support at least one of the following mechanisms.",
+   "text": "The AS MUST support at least one of the following paths.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21045,8 +21058,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Status and Lifecycle endpoints each authenticate a request by mTLS, a sender-constrained access token or private-key JWT",
-    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept private-key JWT (#1407); the Status operation's development GET route keeps the service-token stand-in and is not advertised"
+    "normative": "the Status and Lifecycle endpoints each authenticate a request on at least one of the two paths: client authentication with a method of the OAuth Token Endpoint Authentication Methods registry that the AS advertises for that endpoint and that uses no shared client secret (for example `tls_client_auth` or `private_key_jwt`), or a sender-constrained access token",
+    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept client authentication by `private_key_jwt` (#1407), the one method they advertise; neither accepts the access-token path; the Status operation's development GET route keeps the service-token stand-in and is not advertised"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21070,13 +21083,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.auth.unauthenticated-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST refuse a request not authenticated by one of the three mechanisms, with the outcome {{mission-status-auth-failures}} assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400).",
+   "text": "The AS MUST refuse a request not authenticated on one of the two paths, with the outcome {{mission-status-auth-failures}} assigns.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21091,8 +21104,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request carrying no credential, or only a client secret (Basic or POST), or a mechanism the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
-    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts no access-token scheme, so a request with no credential, a client secret, Basic or an access token is 400 invalid_client; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
+    "normative": "a request carrying no credential, one whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`, included), or a path the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
+    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts `private_key_jwt` and no access-token scheme, so a request with no credential, `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `none` (a bare `client_id`), or an access token is 400 invalid_client, the shared-secret methods and `none` exactly as no credential; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21108,9 +21121,95 @@
      "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. A shared-secret method or none answered other than as no credential (client_secret_post, Basic, client_secret_jwt and none each made retryable) failed the new witnesses. #1763 review: the refusal clause no longer fixes the two error codes; the outcome is the auth-failures section's, which preserves a method's own error response and defaults to 400 invalid_client."
+  },
+  {
+   "id": "status.auth.client-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A method that authenticates with a shared client secret, such as `client_secret_basic`, `client_secret_post`, or `client_secret_jwt`, MUST NOT be used, and `none` is not client authentication.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client of the Status or Lifecycle endpoint never authenticates with a shared client secret (`client_secret_basic`, `client_secret_post`, `client_secret_jwt`) and never relies on `none`",
+    "local": "the PDP's Mission Status resolver (services/pdp/src/mission-status-resolver.ts), the reference's Status client, presents private_key_jwt alone: an ES256 client assertion with no Authorization header, no client_secret and no bare client_id; the witness captures the request it sends. The AS side, a shared-secret request answered as one with no credential, is status.auth.unadvertised-method-as-no-credential"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver authenticates without a shared client secret (@spec status#mission-status-authentication) > presents private_key_jwt alone: an asymmetrically signed client assertion, with no Authorization header, no client_secret and no bare client_id",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: the resolver sending a Basic Authorization header failed the witness."
+  },
+  {
+   "id": "status.auth.unadvertised-method-as-no-credential",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A request whose selected method the endpoint does not advertise, including a shared-secret method such as HTTP Basic, is answered as one that presented no credential",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`) receives exactly the outcome a request with no credential receives",
+    "local": "at both endpoints, which accept no access-token scheme, the outcome is 400 invalid_client with no challenge and the request's nonce echoed, for no credential and for each of client_secret_basic, client_secret_post, client_secret_jwt (an HS256 assertion) and none (a bare client_id)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth); the AS side of status.auth.client-no-shared-secret. Mutation-proved: answering client_secret_post, Basic, client_secret_jwt or none as retryable instead of as no credential each failed a witness."
   },
   {
    "id": "status.auth.advertised-assertion-algs",
@@ -21563,7 +21662,7 @@
    "id": "status.metadata.lifecycle-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when the Mission Lifecycle endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21577,8 +21676,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving the Lifecycle endpoint, in either Lifecycle conformance class, advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
-    "local": "[\"private_key_jwt\"]"
+    "normative": "a deployment whose Lifecycle endpoint, in either Lifecycle conformance class, accepts client authentication advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the client authentication methods it accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"]; the reference Lifecycle endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever the endpoint is served and the member is advertised there"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21596,7 +21695,40 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Lifecycle discovery witness."
+  },
+  {
+   "id": "status.metadata.lifecycle-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_lifecycle_endpoint_auth_methods_supported` takes the Status member's value space and constraints: it lists only registry values that use no shared client secret, never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method",
+    "local": "[\"private_key_jwt\"] (LIFECYCLE_ENDPOINT_AUTH_METHODS), a constant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Twin of status.metadata.status-auth-methods-no-shared-secret for the Lifecycle member, whose MUST NOT arrives through \"the value space and constraints of\" the Status member. Mutation-proved: listing client_secret_basic, and listing none, each failed the witness."
   },
   {
    "id": "status.metadata.lifecycle-assertion-algs",
@@ -21647,7 +21779,7 @@
    "id": "status.metadata.status-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Status endpoint.",
+   "text": "REQUIRED when the Mission Status endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21658,8 +21790,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an AS serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods that endpoint accepts",
-    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407)"
+    "normative": "an AS whose Mission Status endpoint accepts client authentication advertises `mission_status_endpoint_auth_methods_supported` naming exactly the client authentication methods that endpoint accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407); the reference Mission Status endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever it is served"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21671,7 +21803,37 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability."
+   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Status discovery witness."
+  },
+  {
+   "id": "status.metadata.status-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "It MUST NOT list a method that authenticates with a shared client secret, or `none`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_status_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret: never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method (the access-token path is described by Protected Resource Metadata)",
+    "local": "[\"private_key_jwt\"] (STATUS_ENDPOINT_AUTH_METHODS in services/authorization-server/src/adapters/lifecycle-endpoint.ts), a constant: no deployment configuration can add a method, so no load-time guard is needed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: listing client_secret_basic, and listing access_token, each failed the witness."
   },
   {
    "id": "status.metadata.status-assertion-algs",
@@ -21917,7 +22079,7 @@
    "id": "status.auth.invalid-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-auth-failures",
-   "text": "A request whose mTLS or private-key-JWT client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "text": "Where the method defines none, the request receives HTTP 400 with the `invalid_client` error code",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -21932,7 +22094,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
+    "normative": "a failed client authentication whose method defines no error response of its own (for example `tls_client_auth` or `private_key_jwt`) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
     "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Mission Status endpoint authenticates the same way and refuses the same way (#1407)"
    },
    "level": "endpoint",
@@ -21963,7 +22125,33 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint."
+   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. #1763 review: 400 invalid_client is the default where the method defines no error response; private_key_jwt defines none, so the existing witnesses still hold."
+  },
+  {
+   "id": "status.auth.method-defined-failure-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose client authentication fails at the HTTP layer receives the error response that the method's specification defines for that failure, with any error code, status, and challenge it requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -22296,7 +22484,7 @@
    "id": "status.lifecycle.direct-client-grant",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "When the caller authenticates directly as a client (mTLS client authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
+   "text": "When the caller authenticates directly as a client ({{mission-status-authentication}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -22307,7 +22495,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a client authenticated by private-key JWT is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
+    "normative": "a client that authenticates directly as a client, with an advertised client authentication method (`private_key_jwt` in the reference), is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
     "local": "the grant is the deployment's lifecycleClientGrants entry for the client_id, or a dedicated client registered through lifecycleClients with its public key and grants; the shipped launchers bind mission_lifecycle to one lifecycle console and to no other client; an unknown grant name fails the boot"
    },
    "level": "endpoint",
@@ -22332,7 +22520,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.acting-party-reflected",
@@ -22914,12 +23102,19 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "a retransmit concurrent with its original commits no second transition, and every answer reports the one committed operation's outcome",
-    "local": "the nonce claim commits inside the transition's transaction, and a retransmit finding a committed claim is finalized from it, never re-executed"
+    "local": "the nonce claim commits inside the transition's transaction; a retransmit that finds the claim still committed (the original still signing) finalizes it from the retained observation, never re-executing the operation, and every exchange delivers the response retained first, so the original, a concurrent retransmit and a later replay carry the same bytes"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847). The reference's single-writer store serializes the claim with the transition; no concurrent witness yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-concurrent-retransmit.test.ts",
+     "name": "a retransmit concurrent with its original commits once and answers with the one response (@spec status#idempotency, #1724 C1) > a resume retransmitted while the original is still being signed commits one transition, and the original, the retransmit and a later replay answer the same 200 response byte for byte",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C1 (D847). The witness holds the original `resume` at its signature, after its commit, and retransmits in that window. Proved by two defects: dropping the deduplication lookup (the retransmit re-executes and answers `conflict`), and delivering each exchange's own signature instead of the retained one (the original and the retransmit answer with different envelopes, which the reference did before this change)."
   },
   {
    "id": "status.lifecycle.client-expired-replay-confirmation",
@@ -22939,12 +23134,62 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established"
+    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts, verifyLifecycleResponse) verifies through the shared verifier's report-expiry mode, which classifies a response as expired when it is verified on or after its exp whatever the skew tolerance, with keys read afresh from the validated metadata's jwks_uri at each verification and limited to its trusted Status kids; an expired replay that correlates and passes every other check returns a confirmation carrying no Mission object"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847), normative client rule; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > accepts the AS's replay of its retained request, verified after its exp, only as confirmation of that request's outcome, which carries no Mission state",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that does not correlate to the retained request: another request's nonce, or another Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that fails any other check: an audience or a sub naming another client, or a kid its configuration does not trust",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > takes a replay at or past its exp as confirmation only, inside the 30 second skew allowance and beyond it, and one second before its exp as an observation (#1757 review)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses the AS's replay of its retained request once the Status key that signed it is compromised, before and after its exp",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > refuses a response whose exp has passed by default, and on request returns it marked expired once every other check passes",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > classifies expiry by exp and the verification time alone: current one second before exp, expired at exp and after it, inside the tolerance and beyond it, at the profile's tolerance and at zero (#1757 review)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > still refuses an expired response that fails any other check: another audience, another issuer, another Mission, a fresh_until after exp, or a key it does not hold, at its exp, just after it and long after, at the profile's tolerance and at zero",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 C1 (D847), normative client rule. Every observation clause witnessed: correlation (the non-correlating replays are refused), every other check (audience, sub, an untrusted kid; and in the shared verifier, issuer, Mission, fresh_until and key), no compromised key (the AS's replay of the original bytes under the Status key compromised after a restart on the same kernel store is refused), and confirmation only (no Mission object). Proved by eight defects: correlation skipped when expired; the expected Mission taken from the response; report mode accepting any claim failure; the client sub check dropped; published keys cached across verifications; every published key accepted; expiry reported by default; an expired replay returned as an observation. #1757 review: expiry is classified by the verified exp and the verification time, never the skew tolerance (a replay just past exp inside the tolerance had come back as an observation, and at zero tolerance the re-verification at exp refused a valid expired replay); boundary witnesses at exp - 1, exp, exp + 1, inside and beyond the tolerance, and at zero tolerance. Proved by two more defects: tolerance-based classification, and re-verification at exp."
   },
   {
    "id": "status.signing-keys.compromise-published",
@@ -49636,7 +49881,7 @@
    "id": "issuance-grant.minting-errors.client-auth-failure",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "minting-errors",
-   "text": "| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed",
+   "text": "| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49646,12 +49891,12 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a grant request whose mutual-TLS or private-key-JWT client authentication fails, or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
+    "normative": "a grant request whose client authentication fails under a method that defines no error response of its own (for example mutual TLS or private-key JWT), or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists. #1763 review: re-quoted; a method's own error response governs where it defines one."
   },
   {
    "id": "issuance-grant.minting-errors.access-token-challenge",
@@ -76693,6 +76938,48 @@
    "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
   },
   {
+   "id": "mas.metadata.submission-auth-methods-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "REQUIRED when the mission submission endpoint accepts client authentication.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS whose mission submission endpoint accepts client authentication publishes `mission_submission_endpoint_auth_methods_supported` naming the client authentication methods that endpoint accepts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+  },
+  {
+   "id": "mas.metadata.submission-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_submission_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret, never `none`, and no `access_token` pseudo-method; a sender-constrained access token accepted there is described by the endpoint's Protected Resource Metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+  },
+  {
    "id": "mas.join-assertion.mint-requires-active",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-request",
@@ -77767,6 +78054,27 @@
    "notes": "Added for #1581 (D702 scope, D707: the fields stay out of the envelope, the Intent and their commitments, while the authenticated client identity is still recorded). Todo: the reference serves no MAS submission endpoint."
   },
   {
+   "id": "mas.submission.header-credentials-stay",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the submission endpoint, and its credentials are not carried as members of the JSON body"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): the JSON-body carriage covers only parameters a method defines as form parameters. Todo: the reference serves no MAS submission endpoint."
+  },
+  {
    "id": "mas.submission.json-client-id-mtls",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-submission",
@@ -78025,7 +78333,7 @@
    "id": "mas.errors.invalid-client",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "submission-errors",
-   "text": "A failed mTLS or private-key-JWT client authentication receives 400 `invalid_client`, not a token challenge",
+   "text": "A failed client authentication receives the response Mission Status assigns to it, the method's own error response or by default 400 `invalid_client`, not a token challenge",
    "role": "Controller",
    "strength": "stated",
    "applicability": {
@@ -78035,7 +78343,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client",
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets the method's own error response where the method defines one, and otherwise 400 invalid_client, never a token challenge",
     "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the join-assertion endpoint URL, to the issuer beside another audience or to another issuer, and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
    },
    "level": "endpoint",
@@ -78048,7 +78356,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint."
+   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint. #1763 review: re-quoted; the reference's join-assertion endpoint accepts private_key_jwt, which defines no error response of its own, so the 400 invalid_client witnesses still hold for the default; no reference method defines its own error response."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
@@ -89404,12 +89712,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request"
+    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts) draws a random UUID per new operation (newLifecycleRequest) and retransmits only from the retained record (transmitLifecycle); the MAS pilot operator console draws its nonces through it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D9 (D847), a client duty; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's nonces (@spec status#lifecycle-operations, status#idempotency) > draws a fresh nonce for each new operation on a Mission and repeats it only to retransmit that request, so the AS replays the original response with no second transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 D9 (D847), a client duty. Proved by two defects: a constant nonce, and a transmission that draws a new nonce instead of repeating the record's (the retry re-suspends the Mission)."
   },
   {
    "id": "status.introspection.fresh-until-cap",
@@ -89426,12 +89742,32 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound"
+    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound",
+    "local": "the issuer's projection carries fresh_until (the MAY adopted so this bound has a witness), stamped through the one horizon the signed Mission Status Response uses (kernel statusFreshnessSeconds): the requested or default lifetime, never more than the advertised mission_max_stale_seconds from the time of the response; the reference's introspection response is unsigned"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C4 (D847). The reference emits no introspection fresh_until."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the issuer's projection carries fresh_until no later than the response time plus the advertised mission_max_stale_seconds (@spec status#introspection-projection, #1724 C4) > an active and a non-active projection each carry a fresh_until within the advertised ceiling of the response time",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > caps a requested horizon longer than the advertised ceiling at the ceiling, from the time of the response",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > honors a horizon within the ceiling, the default included",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1724 C4 (D847). Proved by two defects: a horizon not capped at the ceiling (the kernel witness fails, with the signed response's cap test), and a projection horizon past the advertised ceiling (the endpoint witness fails)."
   },
   {
    "id": "status.consumer.expected-issuer-trust",
@@ -89449,12 +89785,37 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a consumer takes the expected issuer from its own trust or configuration, validates the issuer's metadata (its issuer equal to the identifier used to retrieve it), and verifies with that issuer's jwks_uri keys",
-    "local": "the PDP's Mission Status resolver is configured with its issuer (services/pdp/src/mission-status-resolver.ts)"
+    "local": "the separated MAS pilot configures its resolver through missionStatusIssuer (@mission/pdp): the configured Mission issuer's metadata, read at the MAS's configured URL and refused unless its issuer is that identifier (RFC 8414 Section 3.3 applied to the configured identifier), the advertised mission_status_endpoint, and the declared Status keys at its jwks_uri; the PDP's Mission Status resolver verifies iss and mission.issuer against its configured issuer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D5 (D847)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > retrieves the expected issuer's metadata, at that identifier unless the configuration places it elsewhere, and takes the endpoint it advertises",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > refuses metadata whose issuer is not the identifier it expects, and metadata advertising no Status endpoint or no jwks_uri",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > verifies only under the declared Status keys at the validated metadata's jwks_uri, never a key served elsewhere",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 D5 (D847). Proved by five defects: the resolver's expected issuer taken from the response (only the throughout-impostor witness fails; the existing iss-only test is caught by check 4 regardless); metadata naming another issuer accepted; keys from a fixed path at the issuer instead of the metadata's jwks_uri; the Status endpoint guessed from where the metadata was read. The launcher's own issuer check (mas-pilot-launcher.test.ts) is not cited: without it the helper still refuses, so its test fails only on the message."
   }
  ]
 }

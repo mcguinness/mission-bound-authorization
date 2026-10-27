@@ -654,7 +654,7 @@ endpoints, naming this endpoint's Protected Resource Metadata.
 | `error` | HTTP | Condition |
 |---|---|---|
 | `invalid_request` | 400 | A missing or malformed member, or an unparseable body |
-| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed, only one of `client_assertion_type` and `client_assertion` is present, or no credential was presented where no access-token scheme is accepted |
+| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error, only one of `client_assertion_type` and `client_assertion` is present, or no credential was presented where no access-token scheme is accepted |
 | `invalid_dpop_proof`, `use_dpop_nonce` | 400 | A DPoP proof presented for key binding ({{minting-request}}), with no DPoP-bound access token authenticating the request, fails the checks of {{Section 4.3 of RFC9449}}, carries `ath`, or lacks a nonce the MAS requires ({{Section 8 of RFC9449}}); a proof that constrains an authenticating access token fails as `unauthorized` |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted |
 | `not_found` | 404 | Unknown `mission_id`, or the requester is not the Mission's recorded client |

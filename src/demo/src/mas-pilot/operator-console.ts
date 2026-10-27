@@ -36,7 +36,7 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { type ActorRecords, createHttpMediatedClient, type DpopKeys } from "@mission/mcp-payments";
 import { generateKeyPair } from "jose";
 import { resolveMissionApproval } from "../approval-console.js";
-import { requestLifecycle } from "../lifecycle-client.js";
+import { newLifecycleRequest, transmitLifecycle } from "../lifecycle-client.js";
 import { redeemMissionApproval, submitMissionApproval } from "../oauth-client.js";
 import type { MasPilotParts } from "./compose.js";
 import { obtainEstateToken } from "./estate-client.js";
@@ -150,7 +150,7 @@ export function masConsoleRoutes(
     const lifecycle = /^\/missions\/([^/]+)\/(revoke|contain)$/.exec(path);
     if (method === "POST" && lifecycle) {
       const [, missionId, operation] = lifecycle as unknown as [string, string, "revoke" | "contain"];
-      const members: Record<string, string> = { mission_id: missionId, operation, nonce: crypto.randomUUID() };
+      const members: Record<string, string> = { operation };
       if (operation === "contain") {
         const actions = stringArray(body.actions);
         if (!actions) return { status: 400, body: { error: "contain needs actions, a non-empty array of strings" } };
@@ -162,7 +162,8 @@ export function masConsoleRoutes(
         });
         members.remove = JSON.stringify([{ resource: CANONICAL_RESOURCE, actions }]);
       }
-      const res = await requestLifecycle(issuer, operator.lifecycle, members);
+      // @spec status#lifecycle-operations: a new operation, under a fresh nonce.
+      const res = await transmitLifecycle(issuer, operator.lifecycle, newLifecycleRequest(missionId, members));
       // A revocation answers with a signed Mission Status; a containment with
       // the Mission's state as JSON.
       const answered = res.contentType.includes("jwt") ? (decodePayload(res.text).mission as Json | undefined) : parseJson(res.text);
