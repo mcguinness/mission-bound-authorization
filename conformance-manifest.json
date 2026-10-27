@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
-    "content_sha256": "dfe3d738f273c53f9ce005ddd2494b7f0c6f21eca3cde9acf53720fa7685400c"
+    "revision": "a601b1ce5e807d9e737a19efada94687db37dee2",
+    "content_sha256": "d1f6b6d582bfa1448d9829e46b3a392c83a1316e67c774035f15742de76b027c"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -22146,12 +22146,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client"
+    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client, in this document's error body: the method's error code as `error`, with `error_description`, any `nonce` echo, and the method's challenge header"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client."
+   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client. Release-check note N1 (D893): the method's error code rides this document's error body."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -23606,7 +23606,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; a revoke schedule no longer passes without authorization of its own (management.bulk.scheduled-revoke-authorization-dry-run)."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint, dry run of a bulk suspend with each on_expiry value from callers with and without the resume grant. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; a revoke schedule no longer passes without authorization of its own (management.bulk.scheduled-revoke-authorization-dry-run). #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.scheduled-resume-grant-execute",
@@ -23627,7 +23627,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; the revoke half is management.bulk.scheduled-revoke-authorization-execute."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run with the resume grant, withdraw the grant, execute with the valid bulk token, and assert the refusal and every pinned member unchanged. #1535 (D649): re-quoted to the sentence that names both scheduled kinds; the revoke half is management.bulk.scheduled-revoke-authorization-execute. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.scheduled-revoke-authorization-dry-run",
@@ -23690,7 +23690,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: dry run a bulk suspend with a schedule, then execute with a changed suspend_until, a changed on_expiry, and both omitted. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.schedule-committing-party",
@@ -23711,7 +23711,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: bulk suspend with a schedule over active and already-suspended members, then read each member's schedule record. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.schedule-omission-preserves",
@@ -23732,7 +23732,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party."
+   "notes": "#1002 (D285 item 3). No reference implementation of Mission Management exists. Planned test surface: the Mission Management endpoint: arm schedules on some members through the lifecycle endpoint, then bulk suspend the set without schedule members and read each member's schedule and committing party. #1002 closes with this witness deferred, not passed (the D675 handoff): it is tracked here until the reference implementation builds a Management bulk endpoint."
   },
   {
    "id": "management.bulk.already-terminal-no-revocation",
@@ -33451,7 +33451,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack by reopening the retention file (#821 PR B item 2), and across SIGKILL: after the PEP is killed, a fresh process's next record takes a value past every one the killed process signed (#1709 review P2-2). The stack keeps its published key sets in memory, because evidence keys are generated per boot under fixed kids (#831); records and sequences are what the file keeps. Proved by allocating in memory instead (M8-5, M10-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
+   "notes": "Restart witnessed at the resource's transaction tier and on the composed stack by reopening the retention file (#821 PR B item 2), and across SIGKILL: after the PEP is killed, a fresh process's next record takes a value past every one the killed process signed (#1709 review P2-2). With evidence keys generated per boot (the default), the stack keeps its published key sets in memory, since a durable set would refuse the next boot's key under the same kid; records and sequences are what the file keeps. With durable evidence key files (#831), the key sets live in a durable file beside it. Proved by allocating in memory instead (M8-5, M10-5), wiring the stack's retention in memory (M2-1), and putting the per-boot key sets in the durable file (M2-2, which fails the restart at publishKey)."
   },
   {
    "id": "runtime.compromise-resistant.key-custody-condition",
@@ -46310,7 +46310,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations. #853 (D487): key authorization comes from the declared Enforcement Scope Statement versions (enforcement_boundaries): the verifier resolves a key only when the record's (audience, kid) pair determines one authorization naming its emitter and role and one published key, a key authorized for one boundary never verifies a record for another, and the PEP's evidence store refuses to sign for a boundary its key is not authorized for. Still partial: the keys remain per-boot, in-process key material. #853 review: each boundary publishes its keys at its own key-set location bound to it, so across a declared change a record verifies under its own boundary's set and never under the other's."
+   "notes": "The Decision Evidence, Refusal Record and Execution Evidence `emitter` member definitions each restate this rule with an explicit in-text cross-reference back to this anchor; treated as duplicate-of-another-row rather than three additional rows. The vacuity the prior note recorded is closed (#741): the emitter id and audience are the deployment's real values (its canonical resource and the request audience) rather than the ephemeral signer's placeholders, the binding is enforced on the emission side too (an emitter refuses to sign for a scope its key does not serve), and a record whose emitter id or audience does not resolve is refused at retention with nothing retained. #594 W4-5 adds the configured key-set lookup: exact kid, emitter, role and audience for all three producer roles, with an absent or empty audience refused rather than wildcarded. Still partial: the keys are per-boot, in-process key material, not resolved through a published, deployment-scoped key set, because this deployment publishes no Enforcement Scope Statement instance carrying extensions.evidence.signing_key_locations. #853 (D487): key authorization comes from the declared Enforcement Scope Statement versions (enforcement_boundaries): the verifier resolves a key only when the record's (audience, kid) pair determines one authorization naming its emitter and role and one published key, a key authorized for one boundary never verifies a record for another, and the PEP's evidence store refuses to sign for a boundary its key is not authorized for. Still partial: the keys remain in-process key material, per boot by default; durable evidence key files (#831, opt-in) give the same material at every boot but do not change how a key is resolved. #853 review: each boundary publishes its keys at its own key-set location bound to it, so across a declared change a record verifies under its own boundary's set and never under the other's."
   },
   {
    "id": "evidence.integrity.historical-version",
@@ -48615,9 +48615,21 @@
      "name": "the deployment's evidence declaration and published key sets (@spec runtime#runtime-conformance) > refuses to republish a kid over different material or bindings, and rotates under a new kid instead",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/durable-evidence-stack.test.ts",
+     "name": "the composed stack's PEP evidence retention across a restart (@spec runtime-evidence#execution-evidence-object, runtime#record-integrity, #821) > verifies, after a restart, the Decision and Execution Evidence an earlier boot signed under durable evidence keys, and not under keys generated per boot (#831)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/demo/test/durable-evidence-stack.test.ts",
+     "name": "the composed stack's PEP evidence retention across a restart (@spec runtime-evidence#execution-evidence-object, runtime#record-integrity, #821) > refuses to boot on a regenerated evidence key file: the durable key set takes no new material under a published kid (#831)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "#594 W4-8: retirement is anchored on the LAST artifact the key signed, not on its creation or its retirement instant, and the published document keeps the retired kid until that window elapses; a record signed before the rotation still verifies at the boundary and resolves key_not_resolvable one second past it. The retirement metadata is durable, so the anchor survives a restart. A rotation is a NEW kid: republishing a published kid over different material or a different binding is refused, since accepting it would strand every record that kid signed inside the window."
+   "notes": "#594 W4-8: retirement is anchored on the LAST artifact the key signed, not on its creation or its retirement instant, and the published document keeps the retired kid until that window elapses; a record signed before the rotation still verifies at the boundary and resolves key_not_resolvable one second past it. The retirement metadata is durable, so the anchor survives a restart; on the composed stack that holds with durable evidence key files (#831), whose key sets live in a durable file, and not with keys generated per boot, whose key sets the stack keeps in memory. The two composed-stack restart witnesses (D887) show the records an earlier boot signed verifying after a restart with durable evidence key files, and not with per-boot keys, and a regenerated key file refused at publication: what stays resolvable is retained, authorized public verification material, and nothing here retains a private key for verification. A rotation is a NEW kid: republishing a published kid over different material or a different binding is refused, since accepting it would strand every record that kid signed inside the window."
   },
   {
    "id": "evidence.security.transport-tls-and-encryption-at-rest",
