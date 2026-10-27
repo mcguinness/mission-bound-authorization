@@ -519,6 +519,108 @@ supports, such as `mission_resource_access`
 Mission-aware Resource Server enforces each applicable entry its tokens
 carry under that entry's type ({{rs-requirements}}).
 
+The following index names every section an implementer of each
+operation needs, by phase, including delegation, which the starting
+path excludes; the cited sections govern. Each issuing operation
+names the issuance checks ({{issuance-checks}}) and the sections they
+cite for it.
+
+Mission creation (client, AS):
+: From discovery to the first token response:
+
+  - submission: {{mission-intent}}, {{intent-members}},
+    {{submission-via-par}}, {{authority-proposal}},
+    {{intent-submission-evidence}}, {{submission-processing}},
+    {{commitment-mechanisms}}, {{discovery}};
+  - authority: {{authorization-derivation}}, {{derivation-modes}},
+    {{consented-authority-set}}, {{subset}}, {{other-types}},
+    {{transformation-capabilities}};
+  - approval: {{approval-event}}, {{approval-code-protection}},
+    {{direct-approval-steps}}, {{approval-preparation}},
+    {{approval-commit}}, {{subject-establishment}},
+    {{rendering-safeguards}}, {{approval-context-changes}},
+    {{authority-sources}}, {{approval-authentication}},
+    {{grant-binding-resolution}};
+  - Mission Record: {{mission-record}}, {{lifecycle}},
+    {{record-identity-members}}, {{record-content-members}},
+    {{record-principal-members}}, {{record-provenance-members}},
+    {{mission-id}}, {{integrity-anchors}}, {{canonicalization}};
+  - code redemption: {{issuance-checks}}, with
+    {{mission-response-parameters}}, {{issuance-gating}},
+    {{token-claims}}, {{token-response}}, {{refresh-tokens}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}}, and, for an
+    opaque token, {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}, {{conformance-roles}},
+    {{claiming-conformance}}.
+
+Refresh (client, AS):
+: A refresh under a Mission-bound refresh token, narrowing or not:
+
+  - request and grant: {{refresh-tokens}}, {{authority-proposal}},
+    {{grant-binding-resolution}}, {{grant-binding-state}};
+  - issuance: {{issuance-checks}}, with {{subset}},
+    {{transformation-capabilities}}, {{lifecycle}}, {{termination}},
+    {{revocation}}, {{mission-response-parameters}},
+    {{issuance-gating}}, {{token-claims}}, {{token-response}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}},
+    {{remediation-grains}}, and, for an opaque token,
+    {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}, {{conformance-roles}}.
+
+Designation and delegated exchange (delegating party, delegate, AS):
+: Obtaining a designation and redeeming it:
+
+  - support and selection: {{delegation}}, {{self-exchange}},
+    {{discovery}}, {{optional-capabilities}};
+  - designation: {{designation}}, {{authority-proposal}},
+    {{grant-binding-resolution}}, {{grant-binding-related}},
+    {{composite-active}};
+  - delegated exchange: {{delegated-exchange}},
+    {{grant-binding-state}}, {{rs-mission-unaware}},
+    {{delegated-instance-context}}, {{delegation-constraints}},
+    {{worked-example-delegated-token}}, {{client-id-rebinding}};
+  - issuance, for both: {{issuance-checks}}, with {{subset}},
+    {{transformation-capabilities}}, {{lifecycle}},
+    {{mission-response-parameters}}, {{issuance-gating}},
+    {{token-claims}}, {{token-response}},
+    {{token-authentication-lifetime}}, {{scope-projection}},
+    {{mission-claim}}, {{mission-claim-reservation}}, and, for an
+    opaque token, {{introspected-consumption}}; and
+  - throughout: {{error-mapping}}.
+
+Resource-server enforcement of a JWT (RS):
+: Validating and enforcing a JWT Mission-bound token:
+
+  - validation: {{rs-enforcement}}, {{token-claims}},
+    {{mission-claim}}, {{mission-claim-reservation}},
+    {{protected-resource-metadata}};
+  - enforcement: {{rs-requirements}}, {{token-response}},
+    {{rs-carried-authority}}, {{delegated-instance-context}},
+    {{delegation-constraints}};
+  - denial: {{rs-denials}}, {{remediation-grains}}, {{error-mapping}},
+    {{denial-disclosure}}; and
+  - where it introspects to observe Mission state: {{introspection}},
+    {{lifecycle}}, {{termination}}, {{composite-active}},
+    {{integrity-anchors}}.
+
+Resource-server enforcement by introspection (RS):
+: Resolving an opaque Mission-bound token through introspection or
+  issuer-local resolution:
+
+  - resolution: {{introspected-consumption}}, {{lifecycle}},
+    {{termination}}, {{introspection}},
+    {{caller-authorization-and-minimization}}, {{composite-active}},
+    {{only-issuer-reports-state}}, {{examples}}, {{integrity-anchors}},
+    {{discovery}};
+  - enforcement, under the rules for a JWT: {{rs-enforcement}},
+    {{rs-requirements}}, {{token-response}}, {{mission-claim}},
+    {{rs-carried-authority}}, {{delegated-instance-context}},
+    {{delegation-constraints}}, {{protected-resource-metadata}}; and
+  - denial: {{rs-denials}}, {{remediation-grains}}, {{error-mapping}},
+    {{denial-disclosure}}.
+
 The following table summarizes which surfaces apply, to whom, and
 when; the cited sections govern. Ordinary JWT consumption does not
 require retrieving the Mission Record or recomputing the complete
