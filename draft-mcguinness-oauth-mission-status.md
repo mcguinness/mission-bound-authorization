@@ -176,7 +176,7 @@ speeds learning of transitions without replacing the Status operation
 
 This document uses the terms defined in the issuance profile
 {{I-D.draft-mcguinness-oauth-mission}}, in particular Mission,
-Mission Issuer, Authority Set, the `mission` claim, and `mission_id`,
+Mission Issuer, Authority Set, the `mission` claim, and `mission_id`;
 and the `mission_resource_access` authorization details type defined
 in its Mission Resource Access Profile
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). The Mission
@@ -407,7 +407,8 @@ client-authentication path, the AS advertises the accepted methods in
 `mission_status_endpoint_auth_methods_supported` and, for
 `private_key_jwt`, the accepted client-assertion signing algorithms
 in `mission_status_endpoint_auth_signing_alg_values_supported`, not
-in the token endpoint's metadata ({{as-metadata}}).
+read from the token endpoint's `token_endpoint_auth_methods_supported`
+({{as-metadata}}).
 
 ## Authentication Failures {#mission-status-auth-failures}
 
@@ -711,8 +712,8 @@ own validity and the deployment's advertised revocation-propagation
 tolerance. The skew tolerance is a clock-skew allowance on the
 `mission.fresh_until` comparison only, bounding the disagreement
 between the AS's and the consumer's clocks, not a property of state
-reversibility. The clock-skew tolerance of the response checks
-({{mission-status-response}}) decides only whether a response is
+reversibility. By contrast, the clock-skew tolerance of the response
+checks ({{mission-status-response}}) decides only whether a response is
 accepted, never how long it is relied on, so a response accepted
 after its `exp` supports no decision ({{mission-status-failures}}).
 The reliance bound holds for non-`active` states too, so a consumer
@@ -740,7 +741,7 @@ bound.
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
 A `mission_id` is never a bearer capability. The AS MUST authenticate
-the caller and authorize it for the requested `mission_id` and
+the requester and authorize it for the requested `mission_id` and
 audience.
 
 Unknown `mission_id` values and known-but-unauthorized references MUST
@@ -821,8 +822,8 @@ A client authentication method's own error codes and statuses
 `unauthorized` and `invalid_client` mean the request carried no valid
 authentication; a request authenticated but not authorized for the
 referenced Mission receives `not_found`, never an authentication
-failure ({{mission-status-anti-oracle}}). An example not-found
-response:
+failure ({{mission-status-anti-oracle}}). The error body, shown here
+for a not-found response:
 
 ~~~ http-message
 HTTP/1.1 404 Not Found
@@ -977,14 +978,16 @@ its otherwise-valid grant solely because of that suspension. The
 check does not replace issuance-time state validation: a concurrent
 suspension can still refuse issuance after the check, and preserving
 refresh capability across that interval requires coordination with
-the issuance commit. It leaves refresh-token rotation and reuse
-detection intact, and a `resume` does not revive a credential that
+the issuance commit. The check leaves refresh-token rotation and
+reuse detection intact, and a `resume` does not revive a credential that
 expired or was revoked independently.
 
-When the issuance profile's gating refuses a derivation because the
-Mission is `suspended`, or `terminated` with reason `completed`, the
-AS SHOULD include, alongside `error`, the `mission_error`
-token-error-response member ({{I-D.draft-mcguinness-oauth-mission}},
+An error code alone does not tell a client whether a `resume` can
+lift a refusal. When the issuance profile's gating refuses a
+derivation because the Mission is `suspended`, or `terminated` with
+reason `completed`, the AS SHOULD include, alongside `error`, the
+`mission_error` token-error-response member
+({{I-D.draft-mcguinness-oauth-mission}},
 Section "Issuance Gating") with the value `suspended` or `completed`,
 respectively. `suspended` reports a refusal that a `resume` can lift;
 `completed` reports a terminal one. The issuance profile's rules for
@@ -1184,7 +1187,8 @@ operation defines. A private-key JWT
 `client_assertion` names the AS's issuer identifier in `aud`, and a
 presented access token MUST be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
-endpoint.
+endpoint. A caller that authenticates directly as a client carries
+the deployment-defined equivalent grant, never a scope.
 
 ## Authorization {#lifecycle-authorization}
 
@@ -1394,7 +1398,6 @@ already seen for that client and `mission_id`, together with request
 members identical to the original's, the AS MUST replay the original
 response rather than re-execute the operation, once the retransmit has
 passed authorization ({{lifecycle-processing}}).
-
 The comparison covers the operation's request members (`operation`,
 `reason`, `suspend_until`, `on_expiry`, `expected_version`, and any
 member an extension operation defines), present or absent alike, and
@@ -2022,7 +2025,9 @@ two issuance-profile registries. It defines no registry of its own:
 endpoint authentication methods are values of the existing OAuth Token
 Endpoint Authentication Methods registry {{RFC7591}}
 ({{as-metadata}}), and Mission Lifecycle `operation` values have no
-IANA registry ({{lifecycle-operations}}). The `mission_error` values
+IANA registry: a companion profile registers an extension operation
+by defining it in its own specification ({{lifecycle-operations}}).
+The `mission_error` values
 `suspended` and `completed` ({{mission-lifecycle-endpoint}}) need no
 registration, because the issuance profile's `mission_error` member
 has no registry of values; {{iana-lifecycle-registrations}} requests
