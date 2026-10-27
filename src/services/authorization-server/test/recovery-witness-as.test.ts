@@ -335,9 +335,14 @@ describe("the AS on a witnessed kernel store: review fixes (@spec control-plane#
  * is uncertain), the AS refuses rather than serving from what it last knew.
  */
 describe("the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4)", () => {
-  it("an uncertain kernel refuses a delegated Token Exchange 503 and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were", async () => {
+  it("an uncertain kernel refuses the agent's self Token Exchange for a delegation handle 503, though the same exchange succeeded before, and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were", async () => {
     const t = await start(14976);
     const m = await issue(t);
+    // The control: the same exchange (the agent's own token, audienced to
+    // itself) succeeds while the kernel is certain.
+    const control = await token(t, delegationHandleParams(m.accessToken, "ap-agent"), m.keys);
+    expect(control.status, JSON.stringify(control.body)).toBe(200);
+    expect(control.body.access_token).toBeDefined();
     const before = { version: t.as.kernel.get(m.missionId)?.version, marker: marker(t) };
     const guard = t.as.kernel.recovery as unknown as { persist(record: RecoveryWitnessRecord): void };
     vi.spyOn(guard, "persist").mockImplementationOnce(() => {

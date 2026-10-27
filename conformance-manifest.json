@@ -4861,7 +4861,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -4890,7 +4890,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. Not witnessed: the consumer-side clauses (#1747), that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -5093,7 +5093,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
+   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested (#1749). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -5182,14 +5182,14 @@
    "assertion": "refusal",
    "observation": {
     "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.",
-    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, a delegated Token Exchange, introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
+    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, the agent's self Token Exchange for a delegation handle (which succeeds before the uncertainty), introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
    },
    "level": "cross-component",
    "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
-     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses a delegated Token Exchange 503 and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
+     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses the agent's self Token Exchange for a delegation handle 503, though the same exchange succeeded before, and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -5206,7 +5206,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion and child creation are refused by the same middleware and kernel guard but are not exercised one by one. No waiver of existing binding-level requirements."
+   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion, child creation and a designation redeemed by another client are refused by the same middleware and kernel guard but are not exercised one by one. The single-writer limitation is accepted as declared (D874); it does not prove the unexercised clauses. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-deny",
@@ -5242,7 +5242,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache; a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
+   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache (an accepted declared limitation, D874, which does not prove those clauses); a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-authority",
@@ -5272,7 +5272,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured. The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
+   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured (an accepted declared limitation, D874, which does not prove the clause). The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.isolation",
@@ -5319,7 +5319,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
   },
   {
    "id": "control-plane.consistency.fanout",

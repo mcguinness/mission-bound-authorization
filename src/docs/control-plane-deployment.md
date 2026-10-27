@@ -214,8 +214,8 @@ observation whose commit point advanced is available as an optional declared
 policy (`strictObservationWatermark`), off by default: the governing rule
 permits delivering an authenticated authoritative observation inside its own
 validity, and refusal costs churn on a busy Mission and reader starvation under
-sustained writes. The Status conditional-request surface remains follow-on
-work, so the fresh-observation claim stays partial.
+sustained writes. The fresh-observation claim stays partial until the other
+signed state observations are inventoried and witnessed (#1750).
 
 A terminal transition writes its tombstone in that same transaction: canonical
 issuer and Mission identity, terminal state, final version, transition time and
@@ -505,7 +505,10 @@ the record, with the expiry clock materialized in that read, and it carries its
 read and are never restamped; its freshness is 60 seconds, within
 `mission_max_stale_seconds` (300). Introspection reads the same record, the
 Mission Status List is rebuilt from the record set, and the Signals event is
-the committed lifecycle event, published after its commit. Refusing an
+the committed lifecycle event, published after its commit. These four are the
+deployment's whole set of state-observation surfaces: it defines no parallel
+signed state-snapshot protocol (a deployment-inventory conclusion, D874).
+Refusing an
 observation whose commit point advanced is an optional policy
 (`strictObservationWatermark`), off. There is no lease and no replica read.
 
@@ -533,14 +536,21 @@ observation whose commit point advanced is an optional policy
 
 ### Recovery objectives
 
-- **Recovery point:** on the witnessed file-backed kernel, no committed
-  transaction is lost. The store is opened with `synchronous=FULL`, and the
-  witness records an intent before every commit, so a crash between the intent
-  and its finalization leaves a pending intent that refuses the restart until
-  `acknowledge` records the commit the store holds or `abandon` clears one it
-  does not. On the in-memory default a restart loses the whole store. The
-  provider's Grants, refresh tokens, sessions and interactions have no recovery
-  point: a restart loses them.
+- **Recovery point:** two cases, kept apart.
+  - *Crash:* on the witnessed file-backed kernel, under the declared storage
+    assumptions (the store opened with `synchronous=FULL`, on storage that
+    honors its flushes), a committed transaction survives a crash. The witness
+    records an intent before every commit, so a crash between the intent and
+    its finalization leaves a pending intent that refuses the restart until
+    `acknowledge` records the commit the store holds or `abandon` clears one it
+    does not.
+  - *Backup or media loss:* no zero-loss guarantee is made. The witness detects
+    a store restored from an older backup and refuses it, but it cannot
+    reconstruct the transactions the backup lacks; the way back is restoring
+    the witnessed store.
+  - On the in-memory default a restart loses the whole store. The provider's
+    Grants, refresh tokens, sessions and interactions have no recovery point: a
+    restart loses them.
 - **Recovery time:** no bound is declared. A restart on a matching store and
   witness serves once boot recovery has published unpublished commits and
   drained the outbox. A restored older store, a lost witness, a commit in flight
@@ -587,25 +597,28 @@ makes no claim:
 - `control-plane.consistency.serialization`: a counted derivation and the
   provider token it pays for are not one transaction (#935); no multi-process
   serialization (#641).
-- `control-plane.consistency.fresh-observation`: the Status conditional-request
-  surface and the remaining signed state observations.
-- `control-plane.consistency.state-surfaces`: the absence of a parallel snapshot
-  surface, and the consumer-side reconciliation clauses, are not witnessed.
+- `control-plane.consistency.fresh-observation`: the other signed state
+  observations are not yet inventoried and witnessed (#1750).
+- `control-plane.consistency.state-surfaces`: the consumer-side reconciliation
+  clauses are not witnessed (#1747); the absence of a parallel snapshot protocol
+  is a documented inventory conclusion (D874).
 - `control-plane.consistency.rollback`: one writer on one host only, and no way
   back from an older store but restoring the witnessed one (D820).
 - `control-plane.consistency.rollback-retaining-consumer`: the Signals receiver
   keeps its high-water mark across a restart, but a restore of its store from an
   older backup loses the marks taken since; the receiver has no recovery
-  admission.
+  admission (#1749).
 - `control-plane.consistency.partitions`: the refusal is witnessed in the
-  single-writer topology; the multi-node cases cannot be constructed here.
+  single-writer topology; the multi-node cases cannot be constructed here, an
+  accepted declared limitation (D874).
 - `control-plane.consistency.emergency-deny`: the deny-entry clauses have no
-  subject, since the AS keeps no deny cache.
+  subject, since the AS keeps no deny cache, an accepted declared limitation
+  (D874).
 - `control-plane.consistency.emergency-authority`: the refusal of positive
   emergency configuration is witnessed; excluding actions that rely on it has no
-  subject.
+  subject, an accepted declared limitation (D874).
 - `control-plane.consistency.isolation`: the cross-issuer seam and
-  resource-isolation inventory is incomplete.
+  resource-isolation inventory is incomplete (#1748).
 - `control-plane.consistency.claim`: the reference makes no claim.
 
 Outside those rows: the provider's Grants and refresh tokens do not survive a

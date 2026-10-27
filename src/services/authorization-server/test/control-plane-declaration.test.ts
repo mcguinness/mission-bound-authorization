@@ -48,6 +48,10 @@ describe("the control-plane deployment declaration (@spec control-plane#deployme
     const objectives = items.get("Recovery objectives") ?? "";
     expect(objectives).toContain("**Recovery point:**");
     expect(objectives).toContain("**Recovery time:**");
+    // Crash durability under the declared storage assumptions is kept apart
+    // from backup or media loss, for which no zero-loss guarantee is made.
+    expect(objectives).toContain("*Crash:*");
+    expect(objectives).toMatch(/\*Backup or media loss:\* no zero-loss guarantee is made/);
   });
 
   it("makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested", () => {
