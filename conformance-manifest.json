@@ -22032,12 +22032,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client"
+    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client, in this document's error body: the method's error code as `error`, with `error_description`, any `nonce` echo, and the method's challenge header"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client."
+   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client. Release-check note N1 (D893): the method's error code rides this document's error body."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
