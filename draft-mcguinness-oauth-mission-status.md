@@ -1285,14 +1285,13 @@ mission_id=msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-
 
 Revoke success response: the AS returns the updated status as a signed
 Mission Status Response ({{mission-status-response}}). Because the
-Lifecycle request carries no `audience`, the response is state-only: the
+lifecycle request carries no `audience`, the response is state-only: the
 AS sets `aud` to the authenticated client's `client_id` and omits
 `authorization_details` (a lifecycle confirmation reports `state`, not
-audience-scoped authority). Here the response envelope's `sub`,
-distinct from any access token's `sub`, carries the acting party: the
-calling client identified by `client_id`. The AS records that acting
-party and reflects it in this signed response as well as in its audit
-log.
+audience-scoped authority). Here `sub` carries the acting party
+({{lifecycle-authorization}}), the calling client identified by
+`client_id`; the AS records that party in its audit log with the
+operation, time, and any `reason`.
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -1328,10 +1327,6 @@ Decoded JWS payload:
 }
 ~~~
 
-The AS records the operation, actor, time, and any `reason` in its
-audit log; the response confirms the outcome through the updated
-`state`.
-
 The next two examples use another Mission.
 
 Suspend request with a deadline, here also carrying the OPTIONAL
@@ -1355,8 +1350,8 @@ mission_id=msn_TaLyTFRdyHq4zLDxwrwkEbj062oXcTX5
 ~~~
 
 Suspend success response: the signed Mission Status Response reports
-`suspended` and surfaces the pending outcome, carrying `suspend_until`
-and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
+`suspended` with the pending outcome, `suspend_until` and `on_expiry`,
+in `mission`. Decoded JWS payload:
 
 ~~~ json
 {
@@ -1380,8 +1375,7 @@ and `on_expiry` in `mission` alongside `state`. Decoded JWS payload:
 ~~~
 
 When `suspend_until` passes without a `resume`, the AS applies
-`on_expiry` and transitions the Mission to `terminated` with reason
-`revoked` without a further request.
+`on_expiry`, terminating the Mission with reason `revoked`.
 
 ## Idempotency and Conflicts {#idempotency}
 
@@ -1391,33 +1385,34 @@ The AS
 treats an absent, empty, longer, or non-string `nonce` as malformed
 (`invalid_request`, with no `nonce` echoed).
 
-The AS MUST deduplicate
-lifecycle requests by the
-triple (client, `mission_id`, `nonce`) for a bounded window, the
-client being the acting party ({{lifecycle-authorization}}), whose
-authorization, delegation context included, is checked before every
-replay ({{lifecycle-processing}}). On a
-retransmit carrying a `nonce` already seen for that client and
-`mission_id`, together with request members identical to the
-original's, the AS MUST replay the original response rather than
-re-execute the operation, once the retransmit has passed
-authorization ({{lifecycle-processing}}). The comparison covers the
-operation's request members (`operation`, `reason`, `suspend_until`,
-`on_expiry`, `expected_version`, and any member an extension operation
-defines), present or absent alike, and excludes client authentication
-parameters and HTTP headers, which a retry regenerates. Members are
-compared as decoded values, character for character, in any order,
-so two spellings of one instant differ. The same
-`nonce` paired with request members that differ from the original's
-MUST be refused `invalid_request` ({{mission-status-errors}}); the AS
-MUST NOT answer it with the unrelated original response. A retransmit
-whose original response was `rate_limited`, or was `unavailable` or
-another 5xx response, is processed as a new request, not replayed. A
-request refused before deduplication ({{lifecycle-processing}}) claims
-no `nonce`: the AS retains nothing for the refusal and leaves any
-response already retained under that `nonce` unchanged, so the rules
-above apply to a later request carrying it as though the refused
-request had never arrived.
+The AS MUST deduplicate lifecycle requests by the triple (client,
+`mission_id`, `nonce`) for a bounded window, the client being the
+acting party ({{lifecycle-authorization}}), whose authorization,
+delegation context included, is checked before every replay
+({{lifecycle-processing}}). On a retransmit carrying a `nonce`
+already seen for that client and `mission_id`, together with request
+members identical to the original's, the AS MUST replay the original
+response rather than re-execute the operation, once the retransmit has
+passed authorization ({{lifecycle-processing}}).
+
+The comparison covers the operation's request members (`operation`,
+`reason`, `suspend_until`, `on_expiry`, `expected_version`, and any
+member an extension operation defines), present or absent alike, and
+excludes client authentication parameters and HTTP headers, which a
+retry regenerates. Members are compared as decoded values, character
+for character, in any order, so two spellings of one instant differ.
+The same `nonce` paired with request members that differ from the
+original's MUST be refused `invalid_request`
+({{mission-status-errors}}); the AS MUST NOT answer it with the
+unrelated original response.
+
+A retransmit whose original response was `rate_limited`, or was
+`unavailable` or another 5xx response, is processed as a new request,
+not replayed. A request refused before deduplication
+({{lifecycle-processing}}) claims no `nonce`: the AS retains nothing
+for the refusal and leaves any response already retained under that
+`nonce` unchanged, so the rules above apply to a later request
+carrying it as though the refused request had never arrived.
 
 A retransmit that arrives while the original is still being
 processed never commits the operation a second time: the AS answers
@@ -1426,9 +1421,9 @@ it with the original response once that is retained, or with
 operation's outcome. A replay is the original response unchanged,
 with its original `iat` and `exp`.
 
-A Lifecycle client verifies a response by the checks of
-{{mission-status-response}}, with keys from the AS's `jwks_uri` and
-never a key the AS has published as compromised. A replay whose `exp`
+A lifecycle client verifies a response by the checks of
+{{mission-status-response}}, never with a key the AS has published as
+compromised. A replay whose `exp`
 has passed fails check 9, except that the client MAY accept it as
 confirmation of its original operation's outcome when it correlates
 the response to that retained request (its `mission_id` and `nonce`)
@@ -1442,12 +1437,12 @@ span of the signed response the AS would replay (its `iat` to `exp`,
 {{mission-status-response}}), so any retransmit that could still
 present a live response is deduplicated. A deployment MAY use a longer
 window. Within the window a retransmit is safe against reordering: a
-delayed `suspend` retry that arrives after a `resume` is recognized as
-a duplicate and replays the original `suspend` response, so it cannot
-re-suspend an already-resumed Mission. A retransmit that arrives after
-the window is processed as a new request; past that point only an
-`expected_version` the client supplied (below) keeps it from acting on
-state its sender has not observed.
+delayed `suspend` retry arriving after a `resume` is a duplicate,
+answered with the original `suspend` response, so it cannot
+re-suspend an already-resumed Mission. After the window a retransmit
+is processed as a new request, and only an `expected_version` the
+client supplied (below) keeps it from acting on state its sender has
+not observed.
 
 Deduplication guards a retransmitted request; it does not guard a
 valid request decided over stale state, a fresh `suspend` issued from
@@ -1459,32 +1454,27 @@ the AS MUST refuse the operation with HTTP 409 and error symbol
 current state version differs. The AS applies this check before the
 transition rule below, so a stale `expected_version` is refused even
 where the operation would otherwise be idempotent success. A
-deployment SHOULD require
-`expected_version` on the operations it classifies high-risk. The
-`nonce` remains the replay key; the two guards are independent, one
-against duplicate delivery, one against stale decisions.
+deployment SHOULD require `expected_version` on the operations it
+classifies high-risk.
 
 Lifecycle operations that change Mission state follow one rule. An
 operation whose resulting state ({{legal-transitions}}) and, for
 `terminated`, termination reason equal the Mission's current ones is
 idempotent success: the AS returns the current Mission Status
 Response, with no state change and, except for the schedule
-replacement below, no event emitted. Any other
-operation not legal from the current state (for example `suspend`
-against a `terminated` Mission, or `revoke` against one terminated
-with reason `completed`) is a conflict: the AS MUST refuse it with
-HTTP 409 and a JSON body whose error symbol is `conflict`, leaving
-the Mission state unchanged. The `nonce` replay and request-mismatch
-handling above applies independently of this rule. An extension
-operation that changes no Mission state is not bound by this rule;
-the companion that registers it defines its idempotency and outcome
-vocabulary ({{lifecycle-operations}}).
+replacement below, no event emitted. Any other operation not legal
+from the current state (for example `suspend` against a `terminated`
+Mission, or `revoke` against one terminated with reason `completed`)
+is a conflict: the AS MUST refuse it with HTTP 409 and a JSON body
+whose error symbol is `conflict`, leaving the Mission state
+unchanged. Deduplication applies independently of this rule.
+An extension operation that changes no Mission state is outside this
+rule ({{lifecycle-operations}}).
 
 `resume` is the sole exception to the idempotent-success arm. It is
-legal only from `suspended`, and its resulting state `active` is also
-the baseline a Mission holds before any suspension, so `resume` on an
-`active` Mission (one never suspended, or already resumed) or on a
-`terminated` Mission is not idempotent success but a conflict.
+legal only from `suspended`, so `resume` on a `terminated` Mission, or
+on an `active` one (never suspended, or already resumed) whose state
+already equals its result, is a conflict, not idempotent success.
 
 A `suspend` against a `suspended` Mission leaves its state unchanged
 but can change its schedule. One that carries a `suspend_until` and
@@ -1517,13 +1507,12 @@ the first step that fails:
    the AS does not serve, is refused `invalid_request`; a request that
    includes a parameter more than once is malformed, as at the token
    endpoint ({{Section 3.2 of RFC6749}}).
-3. Authorize the request. For a base operation this is the lifecycle
+3. Authorize the request: for a base operation, the lifecycle
    authorization of {{lifecycle-authorization}} for the acting party,
-   the operation and the Mission, together with the authorization for
-   any transition the request schedules; for an extension operation it
-   is the authorization its companion defines. An unknown Mission and
-   every failed authorization are refused alike with the not-found
-   response.
+   the operation and the Mission, together with that for any
+   transition the request schedules; for an extension operation, the
+   authorization its companion defines. An unknown Mission and every
+   failed authorization are refused alike with the not-found response.
 4. Apply deduplication ({{idempotency}}): replay the original response
    to a retransmit, or refuse a reused `nonce` whose request members
    differ.
@@ -1575,16 +1564,11 @@ request to this endpoint nor an additional scope.
 This endpoint operates on one Mission at a time. Mission enumeration
 and bulk lifecycle operations for incident response, such as revoking
 every Mission for a compromised Subject, client, or tenant, are left
-to companion profiles; this document does not require them.
+to companion profiles.
 
-The following capabilities remain deferred to future
-work:
-
-- Approver transfer or re-anchoring, changing the party that
-  anchors a Mission's consent, is not defined here.
-- Administrative
-  monotonic narrowing, such as shortening a Mission's `expires_at`, is
-  not defined here.
+Approver transfer or re-anchoring (changing the party that anchors a
+Mission's consent) and administrative monotonic narrowing (such as
+shortening a Mission's `expires_at`) remain deferred to future work.
 
 # Revocation Propagation {#revocation-enforcement-classes}
 
@@ -1595,8 +1579,7 @@ introspection ({{I-D.draft-mcguinness-oauth-mission}}, Section
 effect faster than token lifetime alone combines the propagation
 mechanisms below and sizes token lifetimes to match.
 
-The mechanisms are each discovered from their own metadata, not from a
-separate posture list:
+Each mechanism is discovered from its own metadata:
 
 - consulting Mission state at each derivation event (the token
   endpoint, refresh, Token Exchange), the issuance profile's
@@ -1610,27 +1593,26 @@ separate posture list:
   state checks by high-assurance resource servers, discovered from
   `mission_status_endpoint`; and
 - any further mechanism a companion profile defines, such as
-  event-driven propagation of state changes, discovered from that
-  profile's own metadata.
+  event-driven propagation, discovered from that profile's own
+  metadata.
 
 A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
 the ceiling, in seconds, on reliance on an observation of Mission
 state: the freshness cap of {{mission-status-caching}} applies it to a
-Mission Status response, and the issuer applies it to an introspection
+Mission Status Response, and the issuer applies it to an introspection
 projection's `fresh_until` ({{introspection-projection}}). It does
 not bound a self-contained token, which a consumer relies on for its
 lifetime unless that lifetime is sized to the bound (below). When the
-member is absent, no such ceiling is declared: a consumer relies
-on a self-contained token for its lifetime, and on a Mission Status
-response within the reliance bound of {{mission-status-caching}}. A
-fresh observation bounds only how stale the consumer's view of
-Mission state is; it does not bound reconciliation delay upstream of
-the issuer or effects already underway.
+member is absent, no such ceiling is declared, and a consumer relies
+on a Mission Status Response within the reliance bound of
+{{mission-status-caching}}. A fresh observation bounds only how stale
+the consumer's view of Mission state is; it does not bound
+reconciliation delay upstream of the issuer or effects already
+underway.
 
 Where the member is present, a status response's `mission.fresh_until`
 MUST NOT exceed the response's issuance time plus the advertised
-bound ({{mission-status-caching}}). The 60-second value in this
-document's
+bound ({{mission-status-caching}}). The 60-second value in the
 examples is a tight deployment's choice, not a floor.
 
 Where a deployment needs Mission revocation to take effect but only
@@ -1641,41 +1623,40 @@ Deployments where revocation propagates out of band (token
 introspection, per-request status checks, or a companion profile's
 push mechanism) MAY use longer TTLs.
 
-Sizing to the bound is itself a propagation mechanism: expiry
-performs the state check, and the consumer integrates nothing.
-Introspection and per-request
-status checks tighten specific paths; they are upgrades, not
-prerequisites.
+Sizing token lifetimes to the bound is itself a propagation
+mechanism: expiry performs the state check, and the consumer
+integrates nothing. Introspection and per-request status checks
+tighten specific paths as upgrades, not prerequisites.
 
 # Operational Considerations {#status-operational}
 
-A deployment declaring revocation propagation SHOULD publish the recovery
-objective considered when choosing `mission_max_stale_seconds` and the
-availability consequence when recovery takes longer than that bound.
-The documentation its `service_documentation` metadata {{RFC8414}}
-names is one place to publish them.
+A deployment declaring revocation propagation SHOULD publish the
+recovery objective considered when choosing `mission_max_stale_seconds`
+and the availability consequence when recovery takes longer than that
+bound. The documentation its `service_documentation` metadata
+{{RFC8414}} names is one place to publish them.
 
-The security ceiling governs the choice: an operational recovery objective
+That bound is a security ceiling: an operational recovery objective
 never authorizes extending a reliance bound
 ({{mission-status-caching}}) or the advertised
-`mission_max_stale_seconds` during an incident.
-An existing observation's remaining validity is not reset when an outage is
-detected. An issuer outage and a state-source outage are distinct where the
-topology provides an independently available authoritative source.
+`mission_max_stale_seconds` during an incident, and detecting an
+outage does not reset an existing observation's remaining validity.
+Where the topology provides an authoritative state source available
+independently of the issuer, an issuer outage is distinct from a
+state-source outage.
 
-The deployment describes its distribution posture per surface: Status
-responses are reused only within their reliance bound
-({{mission-status-caching}}), and a companion mechanism follows its own
-freshness rules. A push mechanism accelerates learning of transitions
-over a correctly bounded state source; it does not replace that source
-after confidence is lost.
+The deployment describes its distribution posture per surface: Mission
+Status Responses follow {{mission-status-caching}}, and a companion
+mechanism its own freshness rules. A push mechanism accelerates
+learning of transitions over a correctly bounded state source; it does
+not replace that source after confidence is lost.
 
-Operators watch observation age and remaining validity, failed refreshes,
-stream gaps, fallback availability, clock health, and catch-up after recovery.
-A recovery check reconciles committed state and versions before publishing
-newly fresh observations. A successful HTTP response or a new signature
-alone does not establish that reconciliation. No new endpoint, metadata
-member, availability target, or replication protocol is defined here.
+Operators watch observation age and remaining validity, failed
+refreshes, stream gaps, fallback availability, clock health, and
+catch-up after recovery. A recovery check reconciles committed state
+and versions before publishing newly fresh observations; a successful
+HTTP response or a new signature alone does not establish that
+reconciliation.
 
 # Authorization Server Metadata {#as-metadata}
 
