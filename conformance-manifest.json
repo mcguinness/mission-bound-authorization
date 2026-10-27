@@ -5284,6 +5284,12 @@
      "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > commits nothing when the witness write fails: the SET is not acknowledged, and its redelivery is applied",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-restore.test.ts",
+     "name": "Signals receiver restore admission (@spec control-plane#rollback, #1749) > the in-process emitter keeps a held SET pending under its backoff, and redelivers it once Mission Status has resynchronized the Mission",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
    "notes": "Partial (#250, #1749, D898): recovery from an older backup of the consumer's store is witnessed for a receiver configured with its recovery witness: the owner's reproduction (a termination retained at version 3, a store backed up at version 1 restored, an old signed version-2 active event replayed) is held and the Status read re-establishes the termination; a Mission absent from the restored store is held; an unavailable or unverifiable Status response, an interrupted recovery, a response to a request made before a later restore and one behind the store release nothing; each proved by removing its check. The witness is optional in the package, and a receiver without one does not detect a restore; no shipped service runs a receiver. Promotion is the owner's call (D898: partial until the evidence passes). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."

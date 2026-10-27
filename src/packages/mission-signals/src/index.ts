@@ -273,9 +273,10 @@ export type ApplyResult =
   /**
    * @spec control-plane#rollback (#1749): the receiver's store was restored
    * from an older backup and this Mission has not been resynchronized from
-   * Mission Status. Nothing was applied or recorded, so the SET is not
-   * acknowledged and its redelivery after resynchronization is processed
-   * afresh.
+   * Mission Status. Nothing was applied or recorded, not even the `jti`, so a
+   * redelivery after resynchronization is judged afresh. A transport should
+   * not acknowledge it; the in-process emitter ({@link
+   * MissionSignalEmitter.register}) keeps it pending and redelivers it.
    */
   | { status: "held"; reason: "recovery" };
 
@@ -1409,7 +1410,17 @@ export class MissionSignalEmitter {
 
   /** Register a receiver to be handed every SET for its own audience. */
   register(receiver: MissionSignalReceiver): void {
-    this.onDeliver(receiver.audience, (set) => receiver.verifyAndApply(set));
+    // @spec control-plane#rollback (#1749): a SET the receiver holds while a
+    // Mission awaits resynchronization after a restore is not acknowledged.
+    // The job stays pending under the backoff, and its redelivery is judged
+    // afresh once Mission Status has resynchronized the Mission.
+    this.onDeliver(receiver.audience, async (set) => {
+      const result = await receiver.verifyAndApply(set);
+      if (result.status === "held") {
+        throw new Error("the receiver holds this Mission until Mission Status resynchronizes it");
+      }
+      return result;
+    });
   }
 
   /**

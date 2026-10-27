@@ -36,6 +36,7 @@ import type { LifecycleCommit } from "@mission/authorization-server";
 import { type CryptoKey, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  MissionSignalEmitter,
   MissionSignalReceiver,
   type ReceiverOptions,
   type ReceiverWitness,
@@ -480,6 +481,50 @@ describe("Signals receiver restore admission (@spec control-plane#rollback, #174
     ).toThrow(SignalReceiverRecoveryError);
     expect(() => open(paths, { store: {} })).toThrow(SignalReceiverRecoveryError);
     expect(() => open(paths, { status: undefined })).toThrow(SignalReceiverRecoveryError);
+  });
+
+  it("the in-process emitter keeps a held SET pending under its backoff, and redelivers it once Mission Status has resynchronized the Mission", async () => {
+    const paths = layout();
+    const first = open(paths);
+    await first.verifyAndApply(await set("msn_e", 1, "active"));
+    first.close();
+    rmSync(paths.store);
+    const restored = open(paths);
+    let clock = Date.parse("2026-10-27T00:00:00Z");
+    const emitter = new MissionSignalEmitter({
+      key: setKey,
+      kid: "as-signals",
+      consumers: [{ audience: AUD }],
+      now: () => new Date(clock),
+      retry: { baseMs: 100, capMs: 400 },
+    });
+    try {
+      emitter.register(restored);
+      emitter.onCommit({
+        id: "msn_e",
+        issuer: ISS,
+        prior_state: "active",
+        state: "suspended",
+        version: 2,
+        committed_at: "2026-10-27T00:00:00Z",
+        expires_at: EXPIRES_AT,
+      } as LifecycleCommit);
+      await emitter.drain();
+      // Held: not acknowledged, so the job stays pending.
+      expect(emitter.pending()).toBe(1);
+      expect(restored.recovering("msn_e")).toBe(true);
+      expect(await resync(restored, "msn_e", 1, "active")).toMatchObject({
+        status: "resynchronized",
+        version: 1,
+      });
+      clock += 100;
+      await emitter.drain();
+      expect(emitter.pending()).toBe(0);
+      expect(restored.viewState("msn_e")).toMatchObject({ state: "suspended", version: 2 });
+    } finally {
+      emitter.close();
+      restored.close();
+    }
   });
 
   it("commits nothing when the witness write fails: the SET is not acknowledged, and its redelivery is applied", async () => {
