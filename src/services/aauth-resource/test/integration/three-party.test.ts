@@ -204,6 +204,12 @@ describe("three-party propagation through the real agent, PS and Resource (@spec
     const agent = await w.agent();
     const M = await w.approve(agent);
     const narrow = await agent.authorize(RESOURCE, "documents.read");
+    // The authorization endpoint's resource token copies the person token's mission too.
+    expect(w.resource.issuedResourceTokens[0]).toMatchObject({
+      route: "POST /authorize",
+      claims: { mission_s256: M },
+    });
+    expect(decodeClaims(narrow).mission_s256).toBe(M);
 
     const res = await agent.call(RESOURCE, "/api/documents", {
       method: "POST",
