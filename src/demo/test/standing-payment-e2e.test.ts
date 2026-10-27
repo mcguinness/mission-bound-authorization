@@ -36,6 +36,7 @@ import {
   type BudgetCounterState,
   budgetCounterId,
   CLAIM_SETTLEMENT_INTAKE,
+  type ClaimChannel,
   Fga,
   RUNTIME_POSTURE,
   type RuntimePosture,
@@ -276,6 +277,9 @@ const wires = (stack: DemoStack) =>
   stack.connectors.ledgerEntries().map((e) => [e.invoice_id, e.payee_account, e.amount]);
 
 /** The commit-phase Decision Evidence the PDP signed for `missionId`, in order. */
+/** The executing PEP's claim channel; the stack's public type narrows its decision channel to `close`. */
+const claimChannel = (stack: DemoStack): ClaimChannel => (stack.decisionChannel as unknown as { claims: ClaimChannel }).claims;
+
 const commitDecisions = (stack: DemoStack, missionId: string) =>
   stack.evidence
     .forMission(missionId)
@@ -560,13 +564,19 @@ describe("standing-payment dispatch metered end to end through the composed stac
         audience: applied.content.audience,
         outcome: "completed",
       });
-      expect(await stack.decisionChannel.claims.settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(await claimChannel(stack).settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
       expect(alerts()).toEqual([
         expect.objectContaining({ kind: "settlement_conflict", evaluation_id: applied.content.evaluation_id, mission_id: instance, cause: "completed_then_completed" }),
       ]);
       expect(stack.pdpClaims.settlementConflicts(applied.content.evaluation_id)).toEqual([
         expect.objectContaining({ execution_id: conflicting.content.execution_id, outcome: "completed", applied_execution_id: applied.content.execution_id }),
       ]);
+      // The applied settlement is unchanged: its own record, redelivered, is
+      // acknowledged as the duplicate, and the conflicting one is still refused,
+      // with no second alert.
+      expect(await claimChannel(stack).settle(applied.content)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(await claimChannel(stack).settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(alerts()).toHaveLength(1);
       expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
     } finally {
       stderr.mockRestore();
@@ -617,6 +627,57 @@ describe("standing-payment dispatch metered end to end through the composed stac
       expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "150.00" });
       expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "150.00" });
       expect(stack.pdpClaims.budgetCounter(instanceCounter(stack, successor.id))).toBeUndefined();
+    } finally {
+      await closeStack(stack);
+    }
+  });
+
+  it("refuses an expansion successor's re-presentation of a paid invoice under the instance's key with nothing wired twice: the successor's claim is its own, so a fresh permit reserves on both counters, the ledger refuses the wire already_settled, and that suppression releases the reservation, leaving the amount committed once (@spec metering#retry, metering#settlement-states, metering#capacity-across-missions, #816, D877)", async () => {
+    const stack = await compose(15030, newFiles());
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      seedAcmeInvoices(stack, [["inv-6", "25.00"]]);
+      const key = `idem_${randomUUID()}`;
+      const pay = (missionId: string) =>
+        stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-6", idempotency_key: key }, tokenFor(stack, missionId));
+      const first = await pay(instance);
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      const { successor } = createExpansion(stack.kernel, {
+        predecessorId: instance,
+        intent: stack.kernel.validateIntent(
+          JSON.stringify({
+            goal: "pay approved Acme invoices",
+            target_resources: [CANONICAL_RESOURCE],
+            expires_at: FAR_FUTURE,
+            max_budget: { amount: "150.00", currency: "USD" },
+          }),
+          { admitMaxBudget: true },
+        ),
+        approver: { iss: stack.issuer, sub: "bob" },
+        approvalEventId: `sp-expansion-${randomUUID()}`,
+        approvedUntil: FAR_FUTURE,
+      });
+      // The idempotency scope names the Mission, so the successor's key meets no claim and its permit is fresh.
+      expect(await pay(successor.id)).toMatchObject({ ok: false, refusal_reason: "already_settled" });
+      const permits = commitDecisions(stack, successor.id).filter((d) => d.decision === "permit");
+      expect(permits).toHaveLength(1);
+      const evaluationId = String(permits[0]?.evaluation_id);
+      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => [r.counter_scope, r.state, r.cause])).toEqual(
+        expect.arrayContaining([
+          ["mission", "released", "settled_suppressed"],
+          ["standing_consent", "released", "settled_suppressed"],
+        ]),
+      );
+      expect(
+        stack.evidence
+          .forMission(successor.id)
+          .filter((e) => e.kind === "execution")
+          .map((e) => [e.content.outcome, (e.content as { error?: string }).error]),
+      ).toEqual([["suppressed", expect.stringContaining("already_settled")]]);
+      expect(wires(stack)).toEqual([["inv-6", ACME_ACCOUNT, "25.00"]]);
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "25.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "25.00" });
     } finally {
       await closeStack(stack);
     }
