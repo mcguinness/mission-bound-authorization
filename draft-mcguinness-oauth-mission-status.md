@@ -152,6 +152,7 @@ profile:
   ({{revocation-enforcement-classes}}): the `mission_max_stale_seconds`
   ceiling on reliance on an observation of Mission state, and how to
   size token lifetimes to the propagation mechanisms in use.
+
 Each extension is independently optional ({{conformance}}). The
 authorization server metadata an AS publishes ({{as-metadata}})
 follows from the extensions and authentication paths it supports.
@@ -1345,8 +1346,9 @@ this revocation each advanced it.
 The next two examples use another Mission.
 
 Suspend request with a deadline from `admin-console`, an
-administrator client the deployment authorizes for `suspend`
-({{lifecycle-authorization}}), here also carrying the OPTIONAL
+administrator client the deployment authorizes for `suspend` and
+the scheduled `revoke` ({{lifecycle-authorization}}), here also
+carrying the OPTIONAL
 `expected_version` guard against deciding over stale state
 ({{idempotency}}):
 
