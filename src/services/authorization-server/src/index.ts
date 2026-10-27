@@ -1,5 +1,6 @@
 /** Assembly: kernel + adapters + keys. Used by server.ts and tests. */
 
+import type { MissionStatusRateLimit } from "./adapters/status-rate-limit.js";
 import {
   INTROSPECTION_PRINCIPALS,
   DESIGNABLE_CLIENTS,
@@ -26,6 +27,8 @@ import {
   USERS,
   APPROVAL_FLOOR,
   WRITE_ACTIONS,
+  ACTION_APPROVAL_POLICY,
+  type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import { randomBytes } from "node:crypto";
@@ -46,9 +49,11 @@ import {
 } from "./kernel/signing-key-ring.js";
 import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
+import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
+export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
 export {
   governedResourceRefusal,
   isMissionGovernedResource,
@@ -748,7 +753,44 @@ export {
   type CreateTemplateInput,
   type DispatchInput,
   type DispatchResult,
+  type StandingPaymentConsentOptions,
+  type StandingPaymentDispatchOptions,
 } from "./kernel/template.js";
+export { prohibitedPredicateMappingOf } from "./adapters/provider.js";
+export {
+  ALL_PROHIBITED_PREDICATES,
+  assertDispatchProhibitedCoverage,
+  assertNotStandingPaymentLineage,
+  assertStandingPaymentCoverage,
+  assertStandingPaymentExactProfile,
+  CLASS_PREDICATES,
+  CONSUMPTION_BOUND_CLASS,
+  DispatchProhibitedCoverageError,
+  dispatchProhibitedCoverageGaps,
+  type ProhibitedPredicateMapping,
+  prohibitedPredicatesOf,
+  STANDING_PAYMENT_MEMBER,
+  STANDING_PAYMENT_OPERATION,
+  type StandingPaymentAdmission,
+  StandingPaymentConfigError,
+  StandingPaymentLineageError,
+  StandingPaymentStore,
+  type StandingPaymentBudgetBinding,
+  type StandingPaymentBudgetBindingResult,
+  type StandingPaymentTerms,
+  standingPaymentBudgetBindingOf,
+  standingPaymentExactProfileGap,
+  standingPaymentRootOf,
+  standingPaymentTermsOf,
+  type TemplateConsentProvenance,
+} from "./kernel/standing-payment.js";
+export {
+  recheckTemplateApprovalRecord,
+  TEMPLATE_RECORDING_RULE_ID,
+  TemplateApprovalRecordStore,
+  templateGovernanceGate,
+  type TemplateRecordInputs,
+} from "./kernel/template-approval-record.js";
 export {
   AUTHORITY_SOURCE_TYPES,
   assertLocalPrincipal,
@@ -919,6 +961,14 @@ export interface BuiltAs {
    */
   authorityDependency?: AuthorityDependencyEnforcement;
   /**
+   * @spec runtime#input-authority-dependency (#830, D798): the reconciler
+   * of a declared dependency under lifecycle-mediated enforcement. Present
+   * exactly where the declaration declares it.
+   */
+  authorityReconciler?: AuthorityReconciler;
+  /** Stops the declared dependency's scheduled source reads and reconciliation passes; present with the dependency. */
+  stopAuthorityDependency?: () => void;
+  /**
    * @spec expansion#creation-idempotency — the creation-idempotency store
    * (observe recorded operations; perturb delivery artifacts in tests).
    */
@@ -1029,6 +1079,23 @@ export async function buildAuthorizationServer(opts: {
    * digest at consent and Dispatch verifies it before evaluating anything.
    */
   dispatchPolicies?: DispatchPolicies;
+  /**
+   * @spec runtime#action-approval, mission-template#prohibited-classes
+   * (#813): the deployment's action-approval predicate a standing-payment
+   * consent renders. Defaults to {@link ACTION_APPROVAL_POLICY}, the shipped
+   * declaration the runtime decision policy also reads.
+   */
+  actionApprovalPolicy?: ActionApprovalPolicy;
+  /**
+   * @spec mission-template#standing-payment-exception (#813, #816): the
+   * deployment's Enforcement Scope Statement, the one its PDP meters under.
+   * Read only under the opt-in `standing-payment-dispatch` capability:
+   * construction refuses a Dispatch Policy designating the standing payment
+   * whose budget the statement does not declare under `budget_metering` with
+   * the Exact profile, the policy's currency and limit, and a `policies`
+   * entry equal to the policy's committed `{id, version, digest}`.
+   */
+  enforcementScopeStatement?: unknown;
   /**
    * @spec mission#standing-consent-bases — the activation policies the kernel
    * evaluates for a policy-adjudicated child creation, keyed by policy `id`.
@@ -1265,6 +1332,11 @@ export async function buildAuthorizationServer(opts: {
    */
   dpopProofReplay?: DpopProofReplay;
   /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation. Defaults to DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
+  /**
    * @spec authority-server#mission-join (#557) — DEV ONLY: serve
    * `POST /dev/ordinary-token`, which mints an ORDINARY DPoP-bound access
    * token (a `scope`, the join route's audience, no `mission` claim) on a
@@ -1305,6 +1377,13 @@ export async function buildAuthorizationServer(opts: {
     evidence?: AuthorityDependencyEvidence;
     now?: () => number;
     refreshIntervalMs?: number;
+    /**
+     * Under lifecycle-mediated enforcement (the declaration's
+     * `enforcement.lifecycle`), the reconciler's period: a pass reads the
+     * source and commits `suspend` or `revoke` through the lifecycle
+     * operations (`AuthorityReconciler`). Absent, the caller runs passes.
+     */
+    reconcileIntervalMs?: number;
   };
   /**
    * @spec discharge#discharge-authority — additional service-token principals and
@@ -1597,6 +1676,10 @@ export async function buildAuthorizationServer(opts: {
     // @spec mission#transformation-capabilities (D733): the same trusted
     // mapping the kernel below reads, retained at this consent.
     entryAudiences: (entries) => entries.map((entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry)),
+    // @spec mission-template#prohibited-classes (#813): the boot seed is no
+    // human consent at the approval floor, so under the capability a seed
+    // whose Dispatch Policy designates the standing payment refuses startup.
+    ...(capabilityEnabled(opts, "standing-payment-dispatch") ? { standingPayment: {} } : {}),
   });
   // @spec async-delegation — forward reference to the provider (assigned after
   // buildProvider, like statusListPublisher). Captured by the terminal subscriber in
@@ -1628,6 +1711,21 @@ export async function buildAuthorizationServer(opts: {
   // gates' dependency check, over the resolver's cached observation.
   const dependency = opts.authorityDependency;
   const dependencyNow = dependency?.now ?? (() => Date.now());
+  // @spec runtime#state-freshness (#830): a composition may run the declared
+  // observation path faster than its external-change bound states, never
+  // slower.
+  const declaredBound = dependency?.declaration.external_change_bound;
+  if (declaredBound) {
+    const periods = [
+      ["refreshIntervalMs", dependency?.refreshIntervalMs, declaredBound.detection_period_seconds],
+      ["reconcileIntervalMs", dependency?.reconcileIntervalMs, declaredBound.reconciliation_period_seconds],
+    ] as const;
+    for (const [option, intervalMs, periodSeconds] of periods) {
+      if (intervalMs !== undefined && periodSeconds !== undefined && intervalMs > periodSeconds * 1000) {
+        throw new Error(`authorityDependency.${option} ${intervalMs} exceeds the declared period of ${periodSeconds} s`);
+      }
+    }
+  }
   const authorityDependencyGate: ConstructorParameters<typeof MissionKernel>[0]["authorityDependencyGate"] = dependency
     ? (candidate, surface) => {
         if (!(dependency.declaration.governs.authority_sources as readonly string[]).includes(candidate.authoritySource)) return undefined;
@@ -1651,11 +1749,14 @@ export async function buildAuthorizationServer(opts: {
         return { failure: evaluated.failure };
       }
     : undefined;
+  // The observation path's schedules, stopped together (`stopAuthorityDependency`).
+  const dependencyTimers: ReturnType<typeof setInterval>[] = [];
   if (dependency?.refreshIntervalMs !== undefined) {
     // Re-read the source on its period, outside any store transaction; an
     // unref'd timer never keeps the process alive.
     const timer = setInterval(() => void dependency.resolver.refresh(), dependency.refreshIntervalMs);
     timer.unref();
+    dependencyTimers.push(timer);
   }
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
@@ -1770,6 +1871,17 @@ export async function buildAuthorizationServer(opts: {
   // kernel's database and are written in its committing transactions; the
   // adapters reach them through these names.
   const continuationStore = kernel.continuations;
+  // @spec runtime#input-authority-dependency (#830, D798): lifecycle-mediated
+  // enforcement of the declared dependency, where the declaration declares it.
+  const authorityReconciler =
+    dependency?.declaration.enforcement.lifecycle === true
+      ? new AuthorityReconciler({ kernel, declaration: dependency.declaration, resolver: dependency.resolver })
+      : undefined;
+  if (authorityReconciler && dependency?.reconcileIntervalMs !== undefined) {
+    const timer = setInterval(() => void authorityReconciler.reconcile(), dependency.reconcileIntervalMs);
+    timer.unref();
+    dependencyTimers.push(timer);
+  }
   const delegationFamilyStore = kernel.delegationFamilies;
   if (schedulesAdopted) {
     suspensionScheduler = new SuspensionScheduler(kernel, {
@@ -2067,6 +2179,8 @@ export async function buildAuthorizationServer(opts: {
     continuationGrantKid: continuationKeys.kid,
     templateStore,
     dispatchPolicies,
+    actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
+    ...(opts.enforcementScopeStatement !== undefined ? { enforcementScopeStatement: opts.enforcementScopeStatement } : {}),
     protectedEventSources,
     issuerEvidence,
     // @spec issuance-grant#effective-set-projection (#617 review 1) — the
@@ -2079,6 +2193,7 @@ export async function buildAuthorizationServer(opts: {
       ? { stateRecoveryRetryAfter: opts.stateRecoveryRetryAfter }
       : {}),
     dpopProofReplay,
+    ...(opts.missionStatusRateLimit ? { missionStatusRateLimit: opts.missionStatusRateLimit } : {}),
     ...(joinAssertionService ? { joinAssertionService } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
@@ -2145,6 +2260,8 @@ export async function buildAuthorizationServer(opts: {
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(suspensionScheduler ? { suspensionScheduler } : {}),
     ...(joinAssertionService ? { joinAssertions: joinAssertionService } : {}),
+    ...(authorityReconciler ? { authorityReconciler } : {}),
+    ...(dependency ? { stopAuthorityDependency: () => dependencyTimers.forEach((timer) => clearInterval(timer)) } : {}),
     ...(dependency
       ? {
           authorityDependency: {
@@ -2152,6 +2269,7 @@ export async function buildAuthorizationServer(opts: {
             resolver: dependency.resolver,
             ...(dependency.evidence ? { evidence: dependency.evidence } : {}),
             ...(dependency.now ? { now: dependency.now } : {}),
+            ...(authorityReconciler ? { reconciliation: () => authorityReconciler.lag() } : {}),
             // The principal and client a Mission's dependency is evaluated for,
             // from this kernel's record: only a Mission this AS holds, under an
             // authority source the declaration governs.
@@ -2213,3 +2331,8 @@ export function startupRemediationNotices(
       : []),
   ];
 }
+export {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./adapters/status-rate-limit.js";

@@ -1,7 +1,14 @@
 export { defaultRemittanceAddress, PaymentsStore, type Invoice, type ResolvedRecipients, type Vendor } from "./payments-store.js";
 export { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 export { type MissionViewSource, type ViewPreparation, type ViewSourceRefusal } from "./view-source.js";
-export { type KeyRole, type KeyRoles, roleKeyResolvers } from "./key-roles.js";
+export {
+  type KeyAlgorithms,
+  type KeyRole,
+  type KeyRoles,
+  type RefreshingRoleKeys,
+  refreshingRoleKeyResolvers,
+  roleKeyResolvers,
+} from "./key-roles.js";
 export {
   buildEffectiveParams,
   buildListEffectiveParams,
@@ -136,9 +143,12 @@ export { TransactionEngine, operationKey, type OpState } from "./transaction.js"
 export { reconcile, type ReconciliationReport } from "./reconcile.js";
 export { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 export {
+  budgetOverspendAlert,
   CollectingAlertSink,
+  heldReservationAlert,
   indeterminateClaimAlert,
   type OperatorAlert,
+  releasedReservationNotice,
   type OperatorAlertKind,
   type OperatorAlertSink,
   type OutcomeReconciliationRun,
@@ -150,6 +160,7 @@ export {
 } from "./outcome-reconciler.js";
 export {
   CONSUMED_PERMIT_RETENTION_MARGIN_MS,
+  type ExecutionAttemptRecord,
   openEphemeralWriteReservationStore,
   openWriteReservationStore,
   type PaymentSchedule,
@@ -181,6 +192,7 @@ export {
   evidenceKeySetLocation,
   EVIDENCE_RETENTION_SCHEMA,
   EvidenceRetentionStore,
+  openEvidenceRetentionStore,
   publishedEvidenceJwk,
   type EvidenceRetentionOptions,
   type PublishEvidenceKeyInput,

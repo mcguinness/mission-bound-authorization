@@ -63,6 +63,7 @@ export {
   type AuthorityDependencyRefusal,
   AuthorityDependencyResolver,
   checkAuthorityDependency,
+  classifyObservedInvalidation,
   type DependencyEvaluation,
   type DependencyFailure,
   type DependencyPrincipal,
@@ -70,10 +71,13 @@ export {
   type GovernedAuthoritySource,
   type IdentityStateRecord,
   type InvalidatingChange,
+  type ObservedInvalidation,
   type PrincipalStateObservation,
   type PrincipalStateView,
   type PrincipalStatus,
   parseAuthorityDependencyDeclarations,
+  type ReconciledInvalidation,
+  type ReconcilerOperation,
 } from "./authority-dependency.js";
 export type {
   AuthorityEntry,
@@ -242,6 +246,17 @@ export {
   VOLATILE_SCOPE_MEMBERS,
 } from "./idempotency.js";
 export {
+  explicitFreshnessSeconds,
+  freshUntil,
+  IssuerKeyError,
+  type IssuerKeyRefusal,
+  type IssuerKeyRole,
+  IssuerKeys,
+  type IssuerKeysFetch,
+  type IssuerKeysOptions,
+  keyThumbprint,
+} from "./issuer-keys.js";
+export {
   type LocalApprovedSetRetrieval,
   LocalApprovedSetVerificationError,
   type LocalApprovedSetVerificationReason,
@@ -271,9 +286,11 @@ export {
   type PropagatedWorkItem,
   parseMcpReferenceMeta,
   parseMissionReferenceField,
+  reconcilePropagatedReferences,
 } from "./mission-reference.js";
 export {
   type ArgumentDerivedContract,
+  carriesHttpUserinfo,
   contractCanEstablish,
   ENFORCED_RESOURCE_MATCHES,
   entryMatchesTarget,

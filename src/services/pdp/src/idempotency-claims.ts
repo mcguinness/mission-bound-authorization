@@ -29,6 +29,20 @@
  * `indeterminate`. `tombstoned` is not a state: it is a terminal row whose
  * stored decision was compacted away after the reconciliation window, with
  * its commitments kept and its refusal unchanged.
+ *
+ * @spec metering#retry, metering#settlement-states, metering#aggregate-bounds
+ * (#816, D830): where the statement claims `budget_metering`, the same file
+ * holds the exact budget counters, and a metered claim reserves on both of
+ * its counters in the claim's own transaction, so of two concurrent requests
+ * against one counter neither can pass on headroom the other took. A
+ * reservation is `reserved`, `committed`, `released` or `held`, and is never
+ * deleted when its claim is purged: committed spend persists. It is released
+ * only where no permit left the PDP, on affirmative non-execution before
+ * redemption (the redeeming attempt's `suppressed` record, held or not), or
+ * by operator reconciliation ({@link IdempotencyClaimDomain.reconcileHeldReservation});
+ * `completed` commits it; anything uncertain (`failed`, a lease that
+ * elapsed, a restart) holds it, raising the declared operator alert. Time,
+ * restart and the PEP's `unredeemed` answer never release a held one.
  */
 
 import { randomUUID } from "node:crypto";
@@ -36,6 +50,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  type ActionPhase,
   canonicalIdempotencyScope,
   canonicalize,
   IDEMPOTENCY_SCOPE_DIMENSIONS,
@@ -45,6 +60,17 @@ import {
   type JsonValue,
 } from "@mission/core";
 import { afterCommit, type Database, DurableStoreError, openDurableStore, withTransaction } from "@mission/store";
+import {
+  BUDGET_METERING_EXTENSION,
+  type BudgetAmount,
+  type BudgetMeteringDeclaration,
+  decimalOf,
+  declaresMeteredAction,
+  metersAction,
+  type MissionBudgetBinding,
+  resolveBudgetCharge,
+} from "./budget-metering.js";
+import type { DecisionEvidenceSequences, DecisionMeteringEntry } from "./decision-evidence.js";
 import { type BoundaryConsumer, lineageScopeDigests, versionInForceAt } from "./enforcement-boundary.js";
 import {
   type EnforcementScopeStatement,
@@ -156,6 +182,143 @@ export interface ClaimDomainOptions {
    * never reaches the decision or the transaction.
    */
   onIndeterminate?: (claim: IndeterminateClaim) => void;
+  /**
+   * @spec metering#settlement-states (#816, D830 rulings 7 and 10): told of
+   * every budget reservation that becomes `held`, once, after the
+   * transaction that held it commits, on whichever path held it (a `failed`
+   * settlement, a lease that elapsed, the open-time sweep after a restart).
+   * A held reservation stays charged until an operator reconciles it, so the
+   * deployment wires this to the alerting obligation its statement declares.
+   * A hook that throws is ignored, as `onIndeterminate` is.
+   */
+  onReservationHeld?: (reservation: HeldReservation) => void;
+  /**
+   * @spec metering#settlement-states (#816): told of every counter a
+   * `completed` settlement pushes past its limit when it commits a
+   * reservation that had been released (the money moved after all). The
+   * spend is committed regardless and never dropped; the deployment wires
+   * this to the alerting obligation its statement declares. A hook that
+   * throws is ignored.
+   */
+  onBudgetOverspend?: (overspend: BudgetOverspend) => void;
+  /**
+   * @spec metering#settlement-states (#813, #816): told of every held
+   * reservation that is later released (the redeeming attempt's own
+   * `suppressed` settlement, an operator's `not_executed`), once, after the
+   * transaction that released it commits: the resolution of the alert
+   * {@link onReservationHeld} raised. A hook that throws is ignored.
+   */
+  onReservationReleased?: (released: ReleasedReservation) => void;
+}
+
+/** A held reservation since released, as the operator notice reports it: identifiers and the cause only. */
+export interface ReleasedReservation {
+  evaluation_id: string;
+  mission_id: string;
+  /** What released it: `settled_suppressed`, or the operator's reconciliation. */
+  cause: string;
+  released_at: string;
+}
+
+/** A counter pushed past its limit by a late `completed`, as the operator alert reports it. */
+export interface BudgetOverspend {
+  evaluation_id: string;
+  mission_id: string;
+  counter_scope: string;
+  counter_id: string;
+  /** The amount committed by the late settlement. */
+  amount: BudgetAmount;
+  /** The limit the reserving decision applied to this counter. */
+  limit: BudgetAmount;
+  /** The counter's reserved, held and committed total after the commit. */
+  used: BudgetAmount;
+  detected_at: string;
+}
+
+/**
+ * A budget reservation that became `held`, as the operator alert reports
+ * it: identifiers, counters and amounts, never the stored decision or the
+ * request's parameters.
+ */
+export interface HeldReservation {
+  evaluation_id: string;
+  mission_id: string;
+  /** What held it: `failed`, `lease_elapsed`, `restart_unknown`, `window_closed`. */
+  cause: string;
+  held_at: string;
+  counters: Array<{ counter_scope: string; counter_id: string; amount: BudgetAmount }>;
+}
+
+/** A budget reservation's state. Only `reserved` and `held` still count as open. */
+export type ReservationState = "reserved" | "committed" | "released" | "held";
+
+/** One counter's charge for one evaluation, as the operator reads it. */
+export interface ReservationRecord {
+  evaluation_id: string;
+  counter_scope: string;
+  counter_id: string;
+  mission_id: string;
+  amount: BudgetAmount;
+  state: ReservationState;
+  cause: string;
+}
+
+/** One counter's totals, as the operator reads it. */
+export interface BudgetCounterState {
+  counter_scope: string;
+  counter_id: string;
+  reserved: BudgetAmount;
+  held: BudgetAmount;
+  committed: BudgetAmount;
+}
+
+/**
+ * @spec metering#settlement-states (#816, D830 ruling 7): the authoritative
+ * reconciliation an operator records for a held reservation. `not_executed`
+ * releases it (the permit was never redeemed, or the effect is established
+ * not to have happened); `executed` commits it. `reference` names the
+ * evidence the operator relied on and is logged with the transition.
+ */
+export interface HeldReservationResolution {
+  kind: "not_executed" | "executed";
+  reference: string;
+}
+
+export type HeldReservationResult =
+  /** `duplicate`: an `executed` correction for a reservation already committed changed nothing. */
+  | { accepted: true; state: "released" | "committed"; duplicate?: true }
+  | { accepted: false; reason: string };
+
+/**
+ * @spec metering#metering (#816): the charge a metered request asks the claim
+ * step to make. Built by `evaluate` from the PDP-local view and the request's
+ * amount; resolved against this domain's own declaration inside the claim
+ * transaction.
+ */
+export interface BudgetChargeRequest {
+  /** The loaded view's budget binding (`MissionView.budget`). */
+  binding: MissionBudgetBinding;
+  /** The view's issuer, which qualifies the instance counter's Mission. */
+  issuer: string;
+  /** The Mission the decision is for; recorded on each reservation. */
+  missionId: string;
+  /** The request's amount: the same `context.amount` the `max_amount` step reads. */
+  amount: BudgetAmount;
+}
+
+/**
+ * @spec metering#metering, #816 (decision f): this domain's budget store as
+ * a decision point binds it. Only the co-resident decision point
+ * (`createDecisionPoint`) binds one; it exists only where the statement
+ * claims `budget_metering`.
+ */
+export interface BudgetMetering {
+  /** The claim domain the reservations share a transaction with. */
+  readonly domain: IdempotencyClaimDomain;
+  /** Whether the declaration meters this action at this phase. */
+  meters(action: string, phase: ActionPhase | undefined): boolean;
+  /** Whether the declaration names this action at any phase (#816, decision h). */
+  declaresAction(action: string): boolean;
 }
 
 /**
@@ -221,12 +384,32 @@ export interface ClaimInput {
    * consumption-status query) is never the one a decision rests on.
    */
   clock: () => number;
+  /**
+   * @spec metering#metering (#816): present for a metered request. The claim
+   * then reserves on both of the charge's counters in the same transaction,
+   * or claims nothing at all.
+   */
+  budget?: BudgetChargeRequest;
 }
 
 /** What the claim step tells the decision it is part of. */
 export type ClaimOutcome =
-  /** This evaluation holds the claim: it persists its permit, or releases on abort. */
-  | { kind: "claimed"; ticket: ClaimTicket }
+  /**
+   * This evaluation holds the claim: it persists its permit, or releases on
+   * abort. A metered claim also holds its reservations, described by
+   * `metering` for the decision's evidence.
+   */
+  | { kind: "claimed"; ticket: ClaimTicket; metering?: DecisionMeteringEntry[] }
+  /**
+   * @spec metering#aggregate-bounds, metering#authzen-binding (#816): a
+   * counter would be exceeded. Nothing was claimed or reserved; `metering`
+   * shows the requested quantity and each counter's unchanged remainder.
+   */
+  | { kind: "quota_exceeded"; metering: DecisionMeteringEntry[] }
+  /** #816 (decision b): the binding names a budget this domain does not meter as bound. Nothing claimed. */
+  | { kind: "budget_unsupported" }
+  /** #816: the request's amount is not one the declared unit counts exactly. Nothing claimed. */
+  | { kind: "budget_amount_invalid" }
   /** Same key, different operation identity: terminal in every state. */
   | { kind: "conflict" }
   /** Same key and identity, and no permit may issue. */
@@ -257,7 +440,19 @@ export interface ClaimTicket {
 }
 
 export type SettlementResult =
-  | { accepted: true; state: "completed" | "failed"; duplicate: boolean }
+  | {
+      accepted: true;
+      state: "completed" | "failed";
+      duplicate: boolean;
+      /**
+       * @spec metering#settlement-states (#816, owner review of #1713): the
+       * claim did not take this `completed` record (its window closed, it was
+       * purged, or it was settled otherwise), but the budget did: the
+       * evaluation's released reservations were committed (or already were).
+       * The claim itself is unchanged.
+       */
+      budget_corrected?: true;
+    }
   | { accepted: false; reason: string };
 
 /** A claim the declared reconciler is asked to resolve. */
@@ -289,6 +484,7 @@ export type ClaimResolution =
  * settle at all.)
  */
 const NON_REDEEMING_ERRORS = new Set(["permit_consumed"]);
+
 
 const MIGRATIONS = [
   `CREATE TABLE claims (
@@ -327,7 +523,107 @@ const MIGRATIONS = [
   // generation each claim was made under. A row from before this column
   // holds NULL, and a NULL row never retransmits.
   "ALTER TABLE claims ADD COLUMN statement_version TEXT;",
+  // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+  // (#821, D814): the PDP's Decision Evidence counters, one row per
+  // (Mission, emitter, role) key, so a restart continues each stream.
+  `CREATE TABLE evidence_sequences (
+    scope TEXT PRIMARY KEY,
+    next INTEGER NOT NULL
+  ) STRICT;`,
+  // @spec metering#retry, metering#settlement-states, metering#aggregate-bounds
+  // (#816, D830): the exact budget counters and their reservations. Neither
+  // is ever deleted when a claim is purged at its horizon: committed spend
+  // persists, and a held reservation stays charged until reconciled.
+  `CREATE TABLE budget_counters (
+    counter_id TEXT PRIMARY KEY,
+    counter_scope TEXT NOT NULL CHECK (counter_scope IN ('mission', 'standing_consent')),
+    counter_key TEXT NOT NULL,
+    currency TEXT NOT NULL,
+    exponent INTEGER NOT NULL,
+    reserved_minor INTEGER NOT NULL DEFAULT 0,
+    held_minor INTEGER NOT NULL DEFAULT 0,
+    committed_minor INTEGER NOT NULL DEFAULT 0,
+    created_at_ms INTEGER NOT NULL
+  ) STRICT;
+  CREATE TABLE budget_reservations (
+    evaluation_id TEXT NOT NULL,
+    counter_id TEXT NOT NULL,
+    scope_digest TEXT NOT NULL,
+    idempotency_key TEXT NOT NULL,
+    mission_id TEXT NOT NULL,
+    amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+    limit_minor INTEGER NOT NULL,
+    pep_id TEXT NOT NULL,
+    pep_epoch TEXT NOT NULL,
+    state TEXT NOT NULL CHECK (state IN ('reserved', 'committed', 'released', 'held')),
+    reserved_at_ms INTEGER NOT NULL,
+    updated_at_ms INTEGER NOT NULL,
+    cause TEXT NOT NULL,
+    PRIMARY KEY (evaluation_id, counter_id)
+  ) STRICT;
+  CREATE TABLE budget_transitions (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_id TEXT NOT NULL,
+    counter_id TEXT NOT NULL,
+    from_state TEXT,
+    to_state TEXT NOT NULL,
+    cause TEXT NOT NULL,
+    at_ms INTEGER NOT NULL
+  ) STRICT;`,
 ];
+
+/**
+ * The claim file's schema version this build writes: the number of
+ * migrations. A test reading the file through a raw opener names it.
+ */
+export const CLAIM_SCHEMA_VERSION = MIGRATIONS.length;
+
+interface ReservationRow {
+  evaluation_id: string;
+  counter_id: string;
+  scope_digest: string;
+  idempotency_key: string;
+  mission_id: string;
+  amount_minor: number;
+  /** The counter's limit the reserving decision applied: an overspend is judged against it. */
+  limit_minor: number;
+  /** The PEP and redemption-store epoch the reserving permit was issued to: the only source of a budget correction. */
+  pep_id: string;
+  pep_epoch: string;
+  state: ReservationState;
+  reserved_at_ms: number;
+  updated_at_ms: number;
+  cause: string;
+}
+
+interface CounterRow {
+  counter_id: string;
+  counter_scope: string;
+  counter_key: string;
+  currency: string;
+  exponent: number;
+  reserved_minor: number;
+  held_minor: number;
+  committed_minor: number;
+}
+
+/** The counter column an open or settled reservation state is totalled in; `released` counts nowhere. */
+/**
+ * The release causes under which no permit ever left the PDP (the decision
+ * was never persisted): nothing could have executed, so no correction
+ * commits such a reservation.
+ */
+const NO_PERMIT_RELEASES: ReadonlySet<string> = new Set(["not_persisted", "prior_boot_unpersisted", "abandoned_unpersisted"]);
+
+/** The causes a budget correction commits under: a redelivery of one is acknowledged as a duplicate. */
+const CORRECTION_CAUSE = /^(corrected_completed:|operator_reconciled:executed:)/;
+
+const STATE_COLUMN: Record<ReservationState, "reserved_minor" | "held_minor" | "committed_minor" | undefined> = {
+  reserved: "reserved_minor",
+  held: "held_minor",
+  committed: "committed_minor",
+  released: undefined,
+};
 
 const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === "object" && !Array.isArray(v);
 
@@ -404,6 +700,11 @@ function readClassDomain(decl: TransactionAssuranceDeclaration, owner: string): 
  */
 export function openIdempotencyClaimDomain(options: ClaimDomainOptions): IdempotencyClaimDomain {
   const { classes, windowMs } = readClassDomains(options.statement, options.owner);
+  // @spec metering#topology (#816): the declaration was validated with the
+  // statement above; it is in force only where the statement claims it.
+  const budgets = options.statement.claims?.includes(BUDGET_METERING_EXTENSION)
+    ? options.statement.extensions?.budget_metering
+    : undefined;
   let db: Database;
   try {
     db = openDurableStore({ file: options.file, migrations: MIGRATIONS, owner: options.owner });
@@ -411,7 +712,7 @@ export function openIdempotencyClaimDomain(options: ClaimDomainOptions): Idempot
     if (e instanceof DurableStoreError) throw new ClaimDomainConfigError(e.message);
     throw e;
   }
-  const domain = new IdempotencyClaimDomain(db, classes, windowMs, options);
+  const domain = new IdempotencyClaimDomain(db, classes, windowMs, options, budgets);
   domain.sweep();
   return domain;
 }
@@ -443,6 +744,7 @@ export class IdempotencyClaimDomain {
     private readonly classes: ReadonlyMap<string, ClassDomain>,
     private readonly windowMs: number,
     private readonly options: ClaimDomainOptions,
+    private readonly budgets?: BudgetMeteringDeclaration,
   ) {
     this.now = options.now ?? (() => new Date());
   }
@@ -450,6 +752,21 @@ export class IdempotencyClaimDomain {
   /** Whether the statement names a claim domain for this class. */
   declares(actionClass: string | undefined): boolean {
     return actionClass !== undefined && this.classes.has(actionClass);
+  }
+
+  /**
+   * @spec metering#metering, metering#topology (#816): this domain's budget
+   * store, for the co-resident decision point to bind; `undefined` where the
+   * statement does not claim `budget_metering`.
+   */
+  budgetMetering(): BudgetMetering | undefined {
+    const declaration = this.budgets;
+    if (!declaration) return undefined;
+    return {
+      domain: this,
+      meters: (action, phase) => metersAction(declaration, action, phase),
+      declaresAction: (action) => declaresMeteredAction(declaration, action),
+    };
   }
 
   /**
@@ -470,6 +787,32 @@ export class IdempotencyClaimDomain {
         const own = declared.find((v) => v.version === version.version);
         return own !== undefined && canonicalize(own as unknown as JsonValue) === canonicalize(version as unknown as JsonValue);
       },
+    };
+  }
+
+  /**
+   * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+   * (#821, D814): this PDP's Decision Evidence sequence source, on the same
+   * durable, single-writer file as its claims, for the decision point to
+   * bind to its emitter (`DecisionEvidenceEmitterConfig.sequences`). Each
+   * position is committed before it is returned, so a reopened domain
+   * continues every stream and never re-issues a number a retained record
+   * already carries. A closed or failing domain throws, and the emission
+   * fails with it.
+   */
+  evidenceSequences(): DecisionEvidenceSequences {
+    return {
+      next: (key) =>
+        this.tx(() => {
+          const row = this.db.prepare("SELECT next FROM evidence_sequences WHERE scope = ?").get(key) as
+            | { next: number }
+            | undefined;
+          const next = row?.next ?? 0;
+          this.db
+            .prepare("INSERT INTO evidence_sequences (scope, next) VALUES (?, ?) ON CONFLICT(scope) DO UPDATE SET next = excluded.next")
+            .run(key, next + 1);
+          return next;
+        }),
     };
   }
 
@@ -497,8 +840,13 @@ export class IdempotencyClaimDomain {
     const nowMs = input.clock();
     const row = this.heldRow(input, nowMs);
     if (!row) {
+      // @spec metering#retry (#816): a fresh key reserves on both counters
+      // or claims nothing; a retry or replay under the key finds the row
+      // below and reserves nothing more.
+      const reserved = input.budget ? this.reserve(input, input.budget, nowMs) : undefined;
+      if (reserved && reserved.kind !== "reserved") return reserved;
       this.insert(input, nowMs);
-      return { kind: "claimed", ticket: this.ticket(input.evaluationId) };
+      return { kind: "claimed", ticket: this.ticket(input.evaluationId), ...(reserved ? { metering: reserved.metering } : {}) };
     }
     if (row.operation_identity !== input.operationIdentity) return { kind: "conflict" };
     switch (row.state) {
@@ -506,8 +854,14 @@ export class IdempotencyClaimDomain {
         // Adoptable only with proof no permit left this PDP: no decision was
         // ever persisted, and no evaluation in this boot is still holding it.
         if (row.decision_json === null && (row.pdp_boot !== this.boot || !this.inFlight.has(row.evaluation_id))) {
+          // @spec metering#settlement-states (#816): the abandoned evaluation
+          // issued no permit, so its reservations are released before this
+          // one reserves afresh.
+          this.transitionReservations(row.evaluation_id, ["reserved"], "released", "abandoned_unpersisted", nowMs);
+          const reserved = input.budget ? this.reserve(input, input.budget, nowMs) : undefined;
+          if (reserved && reserved.kind !== "reserved") return reserved;
           this.adopt(row, input, nowMs);
-          return { kind: "claimed", ticket: this.ticket(input.evaluationId) };
+          return { kind: "claimed", ticket: this.ticket(input.evaluationId), ...(reserved ? { metering: reserved.metering } : {}) };
         }
         return { kind: "suppressed", state: "claimed", transient: true, retryAfterSeconds: 1 };
       case "permit_issued":
@@ -534,6 +888,337 @@ export class IdempotencyClaimDomain {
         // as a NEW operation under a new key (deployment policy).
         return { kind: "suppressed", state: row.state, transient: false };
     }
+  }
+
+  /**
+   * @spec metering#metering, metering#aggregate-bounds,
+   * metering#capacity-across-missions (#816, D830 rulings 1, 2 and 8):
+   * reserve one charge on both of its counters, inside the claim's
+   * transaction and with no await in it, so the check and the debit are one
+   * step against the authoritative balance (the Exact profile, by the single
+   * serializing PDP). Both counters are checked before either is debited:
+   * either one refuses, and a refusal leaves both unchanged. Every open or
+   * settled quantity, reserved, held or committed, counts against a limit.
+   * The binding is resolved against this domain's own declaration here, so a
+   * statement reloaded with another policy version refuses a binding to the
+   * old one.
+   */
+  private reserve(
+    input: ClaimInput,
+    request: BudgetChargeRequest,
+    nowMs: number,
+  ):
+    | { kind: "reserved"; metering: DecisionMeteringEntry[] }
+    | { kind: "quota_exceeded"; metering: DecisionMeteringEntry[] }
+    | { kind: "budget_unsupported" }
+    | { kind: "budget_amount_invalid" } {
+    if (!this.budgets) return { kind: "budget_unsupported" };
+    const charge = resolveBudgetCharge(this.budgets, request.binding, request.issuer, request.amount);
+    if (charge.kind === "unsupported") return { kind: "budget_unsupported" };
+    if (charge.kind === "amount_invalid") return { kind: "budget_amount_invalid" };
+    const { amountMinor, currency, exponent } = charge;
+    const quantity = (minor: number): BudgetAmount => ({ amount: decimalOf(minor, exponent), currency });
+    const counters: Array<{ counter: (typeof charge.counters)[number]; remainingMinor: number }> = [];
+    for (const counter of charge.counters) {
+      const row = this.counterRow(counter.id);
+      // A counter kept in another unit is one this declaration cannot meter.
+      if (row && (row.currency !== currency || row.exponent !== exponent)) return { kind: "budget_unsupported" };
+      const used = row ? row.reserved_minor + row.held_minor + row.committed_minor : 0;
+      counters.push({ counter, remainingMinor: Math.max(0, counter.limitMinor - used) });
+    }
+    if (counters.some((c) => amountMinor > c.remainingMinor)) {
+      return {
+        kind: "quota_exceeded",
+        metering: counters.map((c) => ({
+          bound: "max_budget",
+          counter_scope: c.counter.scope,
+          counter_id: c.counter.id,
+          requested: quantity(amountMinor),
+          remaining: quantity(c.remainingMinor),
+        })),
+      };
+    }
+    for (const { counter } of counters) {
+      this.db
+        .prepare(
+          `INSERT INTO budget_counters (counter_id, counter_scope, counter_key, currency, exponent, created_at_ms)
+           VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(counter_id) DO NOTHING`,
+        )
+        .run(counter.id, counter.scope, canonicalize(counter.key), currency, exponent, nowMs);
+      this.db
+        .prepare(
+          `INSERT INTO budget_reservations (evaluation_id, counter_id, scope_digest, idempotency_key, mission_id, amount_minor, limit_minor,
+             pep_id, pep_epoch, state, reserved_at_ms, updated_at_ms, cause)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'reserved', ?, ?, 'reserved')`,
+        )
+        .run(
+          input.evaluationId,
+          counter.id,
+          input.scopeDigest,
+          input.key,
+          request.missionId,
+          amountMinor,
+          counter.limitMinor,
+          input.requester.pep_id,
+          input.requester.pep_epoch,
+          nowMs,
+          nowMs,
+        );
+      this.db.prepare("UPDATE budget_counters SET reserved_minor = reserved_minor + ? WHERE counter_id = ?").run(amountMinor, counter.id);
+      this.logReservation(input.evaluationId, counter.id, null, "reserved", "reserved", nowMs);
+    }
+    return {
+      kind: "reserved",
+      metering: counters.map((c) => ({
+        bound: "max_budget",
+        counter_scope: c.counter.scope,
+        counter_id: c.counter.id,
+        requested: quantity(amountMinor),
+        reserved: quantity(amountMinor),
+        remaining: quantity(c.remainingMinor - amountMinor),
+        settlement_state: "reserved" as const,
+      })),
+    };
+  }
+
+  private counterRow(counterId: string): CounterRow | undefined {
+    return this.db.prepare("SELECT * FROM budget_counters WHERE counter_id = ?").get(counterId) as CounterRow | undefined;
+  }
+
+  /**
+   * Move one evaluation's reservations that are in one of `from` to `to`,
+   * keeping each counter's totals in the same transaction, and log each move.
+   * A move into `held` queues the operator alert, and a released
+   * reservation committed after all (its effect happened) queues the
+   * overspend alert for each counter it pushes past the limit its decision
+   * applied. Reservations in any other state are untouched, so every caller
+   * is idempotent: a duplicate settlement, a second sweep or a second listing
+   * changes nothing.
+   */
+  private transitionReservations(
+    evaluationId: string,
+    from: readonly ReservationState[],
+    to: ReservationState,
+    cause: string,
+    nowMs: number,
+  ): ReservationRow[] {
+    const rows = (
+      this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[]
+    ).filter((r) => from.includes(r.state));
+    const overspent: BudgetOverspend[] = [];
+    for (const r of rows) {
+      this.db
+        .prepare("UPDATE budget_reservations SET state = ?, cause = ?, updated_at_ms = ? WHERE evaluation_id = ? AND counter_id = ?")
+        .run(to, cause, nowMs, r.evaluation_id, r.counter_id);
+      const out = STATE_COLUMN[r.state];
+      const into = STATE_COLUMN[to];
+      if (out) this.db.prepare(`UPDATE budget_counters SET ${out} = ${out} - ? WHERE counter_id = ?`).run(r.amount_minor, r.counter_id);
+      if (into) this.db.prepare(`UPDATE budget_counters SET ${into} = ${into} + ? WHERE counter_id = ?`).run(r.amount_minor, r.counter_id);
+      this.logReservation(r.evaluation_id, r.counter_id, r.state, to, cause, nowMs);
+      if (r.state === "released" && to === "committed") {
+        const counter = this.counterRow(r.counter_id);
+        const used = counter ? counter.reserved_minor + counter.held_minor + counter.committed_minor : 0;
+        if (counter && used > r.limit_minor) {
+          const q = (minor: number): BudgetAmount => ({ amount: decimalOf(minor, counter.exponent), currency: counter.currency });
+          overspent.push({
+            evaluation_id: r.evaluation_id,
+            mission_id: r.mission_id,
+            counter_scope: counter.counter_scope,
+            counter_id: r.counter_id,
+            amount: q(r.amount_minor),
+            limit: q(r.limit_minor),
+            used: q(used),
+            detected_at: new Date(nowMs).toISOString(),
+          });
+        }
+      }
+    }
+    if (to === "held" && rows.length > 0) this.notifyHeld(evaluationId, rows, cause, nowMs);
+    // #813: a held reservation that is later released resolves its alert.
+    const resolved = rows.filter((r) => r.state === "held");
+    if (to === "released" && resolved.length > 0) this.notifyReleased(evaluationId, resolved, cause, nowMs);
+    if (overspent.length > 0) this.notifyOverspend(overspent);
+    return rows;
+  }
+
+  /**
+   * @spec metering#settlement-states (#816): queue
+   * {@link ClaimDomainOptions.onBudgetOverspend} for after the enclosing
+   * transaction commits, once per overspent counter, as
+   * {@link notifyIndeterminate} does.
+   */
+  private notifyOverspend(overspent: readonly BudgetOverspend[]): void {
+    const hook = this.options.onBudgetOverspend;
+    if (!hook) return;
+    afterCommit(this.db, () => {
+      for (const o of overspent) {
+        try {
+          hook(o);
+        } catch {
+          /* the alert sink's failure never reaches the claim domain */
+        }
+      }
+    });
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, D830 ruling 7): queue
+   * {@link ClaimDomainOptions.onReservationHeld} for after the enclosing
+   * transaction commits, as {@link notifyIndeterminate} does.
+   */
+  private notifyHeld(evaluationId: string, rows: readonly ReservationRow[], cause: string, nowMs: number): void {
+    const hook = this.options.onReservationHeld;
+    if (!hook) return;
+    const held: HeldReservation = {
+      evaluation_id: evaluationId,
+      mission_id: rows[0]?.mission_id ?? "unknown",
+      cause,
+      held_at: new Date(nowMs).toISOString(),
+      counters: rows.map((r) => {
+        const counter = this.counterRow(r.counter_id);
+        return {
+          counter_scope: counter?.counter_scope ?? "unknown",
+          counter_id: r.counter_id,
+          amount: { amount: decimalOf(r.amount_minor, counter?.exponent ?? 0), currency: counter?.currency ?? "" },
+        };
+      }),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(held);
+      } catch {
+        /* the alert sink's failure never reaches the claim domain */
+      }
+    });
+  }
+
+  /**
+   * @spec metering#settlement-states (#813, #816): queue
+   * {@link ClaimDomainOptions.onReservationReleased} for after the enclosing
+   * transaction commits, for a held reservation now released, as
+   * {@link notifyHeld} does for the hold.
+   */
+  private notifyReleased(evaluationId: string, rows: readonly ReservationRow[], cause: string, nowMs: number): void {
+    const hook = this.options.onReservationReleased;
+    if (!hook) return;
+    const released: ReleasedReservation = {
+      evaluation_id: evaluationId,
+      mission_id: rows[0]?.mission_id ?? "unknown",
+      cause,
+      released_at: new Date(nowMs).toISOString(),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(released);
+      } catch {
+        /* the alert sink's failure never reaches the claim domain */
+      }
+    });
+  }
+
+  private logReservation(evaluationId: string, counterId: string, from: string | null, to: string, cause: string, atMs: number): void {
+    this.db
+      .prepare(
+        "INSERT INTO budget_transitions (evaluation_id, counter_id, from_state, to_state, cause, at_ms) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run(evaluationId, counterId, from, to, cause, atMs);
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, D830 rulings 7 and 10): the
+   * operator's authoritative reconciliation of a held reservation. Besides
+   * the redeeming attempt's own `suppressed` record (affirmative
+   * non-execution), it is the only release from `held`: fresh consent, a new
+   * policy version, a restart, a timeout, an elapsed lease and the PEP's
+   * `unredeemed` reconciliation never release one. A reservation in any
+   * other state is refused unchanged.
+   *
+   * A `not_executed` answer is refused while the permit or its lease could
+   * still be used (until its `valid_until` plus the class's longest lease, the
+   * guard the PEP's `unredeemed` reconciliation has): no evidence available
+   * then establishes that the effect will not happen. Should a released
+   * reservation's permit complete after all, the `completed` settlement
+   * commits it anyway ({@link settleReservations}), as does a later
+   * `executed` answer here: the operator's correction of an incorrect
+   * release, accepted whatever the claim's state or window, and idempotent.
+   */
+  reconcileHeldReservation(evaluationId: string, resolution: HeldReservationResolution): HeldReservationResult {
+    return this.tx(() => {
+      const nowMs = this.now().getTime();
+      const rows = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
+      if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
+      if (resolution.kind !== "not_executed" && resolution.kind !== "executed") return { accepted: false, reason: "unknown_resolution" };
+      if (typeof resolution.reference !== "string" || resolution.reference.length === 0) return { accepted: false, reason: "no_reference" };
+      // #813: an operator's not_executed on a reservation already released
+      // (by an earlier answer, or the redeeming attempt's suppression) is an
+      // idempotent no-op.
+      if (resolution.kind === "not_executed" && rows.every((r) => r.state === "released")) return { accepted: true, state: "released" };
+      // @spec metering#settlement-states (#816, owner review of #1713): an
+      // operator correction recording execution after an incorrect release,
+      // independent of the claim and its window: a released reservation
+      // commits (an excess is reported through `onBudgetOverspend`), and one
+      // already committed is acknowledged unchanged.
+      if (resolution.kind === "executed" && !rows.some((r) => r.state === "held")) {
+        const corrected = this.commitReleased(rows, evaluationId, `operator_reconciled:executed:${resolution.reference}`, nowMs);
+        if (!corrected.accepted) return { accepted: false, reason: corrected.reason.replace(/^not_released_/, "not_held_") };
+        return corrected.duplicate ? { accepted: true, state: "committed", duplicate: true } : { accepted: true, state: "committed" };
+      }
+      if (!rows.some((r) => r.state === "held")) return { accepted: false, reason: `not_held_${rows[0]?.state}` };
+      if (resolution.kind === "not_executed") {
+        const claim = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
+        if (claim && nowMs <= claim.valid_until_ms + this.leaseMaxMs(claim)) return { accepted: false, reason: "lease_not_elapsed" };
+      }
+      const to = resolution.kind === "not_executed" ? "released" : "committed";
+      this.transitionReservations(evaluationId, ["held"], to, `operator_reconciled:${resolution.kind}:${resolution.reference}`, nowMs);
+      return { accepted: true, state: to };
+    });
+  }
+
+  /** @spec metering#settlement-states (#816): every held reservation, oldest first, for the operator reconciling them. */
+  listHeldReservations(): ReservationRecord[] {
+    return this.tx(() =>
+      (this.db.prepare("SELECT * FROM budget_reservations WHERE state = 'held' ORDER BY reserved_at_ms, evaluation_id").all() as ReservationRow[]).map(
+        (r) => this.recordOf(r),
+      ),
+    );
+  }
+
+  /** @spec metering#metering-evidence (#816): one evaluation's reservations, one per counter it charged. */
+  reservationsFor(evaluationId: string): ReservationRecord[] {
+    return this.tx(() =>
+      (this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ? ORDER BY counter_id").all(evaluationId) as ReservationRow[]).map(
+        (r) => this.recordOf(r),
+      ),
+    );
+  }
+
+  /** @spec metering#aggregate-bounds (#816): one counter's totals, or `undefined` before its first reservation. */
+  budgetCounter(counterId: string): BudgetCounterState | undefined {
+    return this.tx(() => {
+      const row = this.counterRow(counterId);
+      if (!row) return undefined;
+      const q = (minor: number): BudgetAmount => ({ amount: decimalOf(minor, row.exponent), currency: row.currency });
+      return {
+        counter_scope: row.counter_scope,
+        counter_id: row.counter_id,
+        reserved: q(row.reserved_minor),
+        held: q(row.held_minor),
+        committed: q(row.committed_minor),
+      };
+    });
+  }
+
+  private recordOf(r: ReservationRow): ReservationRecord {
+    const counter = this.counterRow(r.counter_id);
+    return {
+      evaluation_id: r.evaluation_id,
+      counter_scope: counter?.counter_scope ?? "unknown",
+      counter_id: r.counter_id,
+      mission_id: r.mission_id,
+      amount: { amount: decimalOf(r.amount_minor, counter?.exponent ?? 0), currency: counter?.currency ?? "" },
+      state: r.state,
+      cause: r.cause,
+    };
   }
 
   /**
@@ -641,7 +1326,71 @@ export class IdempotencyClaimDomain {
       if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
     }
     const outcomeRef = typeof content.evidence_id === "string" ? content.evidence_id : executionId;
-    return this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
+    const settled = this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
+    if (settled.accepted || next !== "completed") return settled;
+    // @spec metering#settlement-states (#816, owner review of #1713): the
+    // claim refused the record (its window closed, it was purged, or it was
+    // settled otherwise), but the budget's accounting does not depend on the
+    // claim's window. The verified record establishes execution, so a
+    // released reservation of the permit it names commits.
+    const corrected = this.tx(() =>
+      this.correctReleasedReservations(requester, evaluationId, `corrected_completed:${outcomeRef}`, this.now().getTime()),
+    );
+    return corrected.accepted ? { accepted: true, state: "completed", duplicate: corrected.duplicate, budget_corrected: true } : settled;
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, owner review of #1713): the
+   * budget correction from the executing PEP's verified `completed` record,
+   * on the reservation rather than the claim, so it holds whatever the
+   * claim's state or window. Only the PEP and epoch the reserving permit was
+   * issued to may correct it. A released reservation commits (an excess is
+   * reported through `onBudgetOverspend`); one already committed is a
+   * duplicate; one released because no permit ever left the PDP is refused,
+   * since nothing could have executed under it. Idempotent per evaluation.
+   */
+  private correctReleasedReservations(
+    requester: ClaimRequester,
+    evaluationId: string,
+    cause: string,
+    nowMs: number,
+  ): { accepted: true; duplicate: boolean } | { accepted: false; reason: string } {
+    const rows = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
+    if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
+    if (rows.some((r) => r.pep_id !== requester.pep_id || r.pep_epoch !== requester.pep_epoch)) {
+      return { accepted: false, reason: "not_the_permit_holder" };
+    }
+    const result = this.commitReleased(rows, evaluationId, cause, nowMs);
+    // A redelivered correction is acknowledged; a reservation the claim's own
+    // settlement committed is not re-acknowledged here, so a conflicting
+    // record keeps the claim's refusal.
+    if (result.accepted && result.duplicate && !rows.every((r) => CORRECTION_CAUSE.test(r.cause))) {
+      return { accepted: false, reason: "already_committed" };
+    }
+    return result;
+  }
+
+  /**
+   * Commit one evaluation's released reservations: the shared step of both
+   * corrections (the PEP's verified `completed` record and the operator's
+   * `executed` answer). Committed already: a duplicate. Released because no
+   * permit left the PDP: refused.
+   */
+  private commitReleased(
+    rows: readonly ReservationRow[],
+    evaluationId: string,
+    cause: string,
+    nowMs: number,
+  ): { accepted: true; duplicate: boolean } | { accepted: false; reason: string } {
+    const released = rows.filter((r) => r.state === "released");
+    if (released.length === 0) {
+      return rows.every((r) => r.state === "committed")
+        ? { accepted: true, duplicate: true }
+        : { accepted: false, reason: `not_released_${rows[0]?.state}` };
+    }
+    if (released.some((r) => NO_PERMIT_RELEASES.has(r.cause))) return { accepted: false, reason: "no_permit_issued" };
+    this.transitionReservations(evaluationId, ["released"], "committed", cause, nowMs);
+    return { accepted: true, duplicate: false };
   }
 
   /** The redemption owner's answer; `undefined` for none, a failure, or no answer in time. */
@@ -697,7 +1446,37 @@ export class IdempotencyClaimDomain {
       )
       .run(next, executionId, outcome, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
     this.log(row, row.state, next, cause, nowMs);
+    this.settleReservations(evaluationId, next, outcome, nowMs);
     return { accepted: true, state: next, duplicate: false };
+  }
+
+  /**
+   * @spec metering#settlement-states (#816, D830 ruling 10): settle the
+   * claim's reservations on the evidence state, never on a generic failure
+   * signal, in the settling transaction. `completed` commits the reserved
+   * quantity (the payment's amount is the quantity: no actual measure is
+   * conveyed). `suppressed` from the redeeming attempt for this permit's own
+   * evaluation is affirmative non-execution before redemption, the
+   * authoritative evidence a held reservation waits for: it releases the
+   * reservation, `reserved` or `held`. Anything else, a `failed` attempt or
+   * the redemption owner's `unredeemed` answer (not authoritative: after a
+   * restart the redemption store holds no record), holds it, and a held one
+   * stays held for operator reconciliation ({@link reconcileHeldReservation}).
+   * A duplicate settlement never reaches here.
+   */
+  private settleReservations(evaluationId: string, next: "completed" | "failed", outcome: string, nowMs: number): void {
+    if (next === "completed") {
+      // The money moved: a reservation an operator released commits too,
+      // and the overspend alert fires for each counter it pushes past its
+      // limit. No other release can meet a later `completed`: an unpersisted
+      // claim is not settleable, an adopted evaluation has no claim row, and
+      // `suppressed` has already settled the claim.
+      this.transitionReservations(evaluationId, ["reserved", "held", "released"], "committed", `settled_${outcome}`, nowMs);
+    } else if (outcome === "suppressed") {
+      this.transitionReservations(evaluationId, ["reserved", "held"], "released", "settled_suppressed", nowMs);
+    } else {
+      this.transitionReservations(evaluationId, ["reserved"], "held", outcome === "failed" ? "failed" : outcome, nowMs);
+    }
   }
 
   /**
@@ -719,6 +1498,7 @@ export class IdempotencyClaimDomain {
       )
       .run(`pdp:${row.evaluation_id}`, outcome, row.evaluation_id, nowMs, nowMs + horizonMs, row.evaluation_id);
     this.log(row, "permit_issued", "completed", outcome, nowMs);
+    this.settleReservations(row.evaluation_id, "completed", outcome, nowMs);
   }
 
   /**
@@ -790,6 +1570,19 @@ export class IdempotencyClaimDomain {
       .prepare("SELECT * FROM claims WHERE state != 'claimed' OR pdp_boot != ?")
       .all(this.boot) as ClaimRow[];
     for (const row of rows) this.advance(row, nowMs);
+    // @spec metering#settlement-states (#816): this boot's claims that never
+    // persisted a decision and that no evaluation still holds issued no
+    // permit. Their reservations are released here when the evaluation's own
+    // release could not run (the store failed with the persist), rather than
+    // staying charged until a retry adopts the claim or the PDP restarts.
+    const abandoned = this.db
+      .prepare("SELECT evaluation_id FROM claims WHERE state = 'claimed' AND decision_json IS NULL AND pdp_boot = ?")
+      .all(this.boot) as Array<{ evaluation_id: string }>;
+    for (const { evaluation_id } of abandoned) {
+      if (!this.inFlight.has(evaluation_id)) {
+        this.transitionReservations(evaluation_id, ["reserved"], "released", "abandoned_unpersisted", nowMs);
+      }
+    }
   }
 
   /** Apply what time and restart alone decide for one row; `undefined` when it was purged. */
@@ -804,12 +1597,26 @@ export class IdempotencyClaimDomain {
         .prepare("DELETE FROM claims WHERE scope_digest = ? AND idempotency_key = ?")
         .run(current.scope_digest, current.idempotency_key);
       this.log(current, current.state, "purged", "horizon_elapsed", nowMs);
+      // @spec metering#settlement-states (#816): the claim's reservations
+      // are kept: committed spend persists, and a held one stays charged.
       return undefined;
+    }
+    // @spec metering#settlement-states (#816): a prior boot's claim that
+    // never persisted a decision issued no permit, so its reservations are
+    // released (the claim itself stays adoptable, as before).
+    if (current.state === "claimed" && current.decision_json === null && current.pdp_boot !== this.boot) {
+      this.transitionReservations(current.evaluation_id, ["reserved"], "released", "prior_boot_unpersisted", nowMs);
     }
     if (current.state === "permit_issued") {
       const restarted = current.pdp_boot !== this.boot;
       if (restarted || nowMs > current.valid_until_ms + this.leaseMaxMs(current)) {
-        current = this.move(current, "unresolved", restarted ? "restart_unknown" : "lease_elapsed", nowMs);
+        const cause = restarted ? "restart_unknown" : "lease_elapsed";
+        current = this.move(current, "unresolved", cause, nowMs);
+        // @spec metering#settlement-states (#816, D830 rulings 7 and 10): an
+        // issued permit whose outcome is now unknown may have been redeemed.
+        // Its reservation is held, never released, by a restart or an
+        // elapsed lease alike.
+        this.transitionReservations(current.evaluation_id, ["reserved"], "held", cause, nowMs);
       }
     }
     if (current.state === "unresolved" && nowMs >= this.windowCloseMs(current)) {
@@ -818,6 +1625,7 @@ export class IdempotencyClaimDomain {
         .run(nowMs, current.evaluation_id);
       this.log(current, "unresolved", "indeterminate", "window_closed", nowMs);
       this.notifyIndeterminate(current, nowMs);
+      this.transitionReservations(current.evaluation_id, ["reserved"], "held", "window_closed", nowMs);
       current = { ...current, state: "indeterminate", terminal_at_ms: nowMs, retain_until_ms: null };
     }
     if (
@@ -931,12 +1739,27 @@ export class IdempotencyClaimDomain {
       (row.state === "completed" && row.outcome === LEASE_EXTENSION_OUTCOME);
     return (
       holdsPermit &&
+      !this.metered(row, input) &&
       row.cache_key === input.cacheKey &&
       row.statement_version === this.generationAt(nowMs) &&
       nowMs < row.valid_until_ms &&
       row.pep_id === input.requester.pep_id &&
       row.pep_epoch === input.requester.pep_epoch &&
       row.decision_json !== null
+    );
+  }
+
+  /**
+   * @spec metering#retry, authzen#projections (#816, decision d): a metered
+   * decision is never answered from a stored one. The budget binding it was
+   * charged under is PDP-local and absent from the cache key, so a stored
+   * permit could be returned under a binding it was never charged against.
+   * A metered retry is suppressed instead, and reserves nothing more.
+   */
+  private metered(row: ClaimRow, input: ClaimInput): boolean {
+    return (
+      input.budget !== undefined ||
+      this.db.prepare("SELECT 1 FROM budget_reservations WHERE evaluation_id = ? LIMIT 1").get(row.evaluation_id) !== undefined
     );
   }
 
@@ -996,6 +1819,7 @@ export class IdempotencyClaimDomain {
   }
 
   private ticket(evaluationId: string): ClaimTicket {
+    let persisted = false;
     return {
       evaluationId,
       persist: (decision: Decision, settled?: typeof LEASE_EXTENSION_OUTCOME) => {
@@ -1012,11 +1836,34 @@ export class IdempotencyClaimDomain {
           this.log(row, "claimed", "permit_issued", "persisted", nowMs);
           if (settled === LEASE_EXTENSION_OUTCOME) this.settleObserved(row, settled, nowMs);
         });
+        persisted = true;
       },
       release: () => {
         this.inFlight.delete(evaluationId);
+        if (!persisted) this.releaseUnpersisted(evaluationId);
       },
     };
+  }
+
+  /**
+   * @spec metering#settlement-states (#816): an evaluation that ended
+   * without persisting its permit issued none, so its reservations are
+   * released. Best effort, never thrown into the evaluation's own unwinding:
+   * a release that cannot run now runs when a retry adopts the claim, or at
+   * the next boot's sweep, and until then the reservation stays charged.
+   */
+  private releaseUnpersisted(evaluationId: string): void {
+    if (this.closed) return;
+    try {
+      this.tx(() => {
+        const row = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
+        if (row?.state === "claimed" && row.decision_json === null && row.pdp_boot === this.boot) {
+          this.transitionReservations(evaluationId, ["reserved"], "released", "not_persisted", this.now().getTime());
+        }
+      });
+    } catch {
+      /* the reservation stays charged until adoption or the next sweep releases it */
+    }
   }
 
   private log(row: ClaimRow, from: string | null, to: string, cause: string, atMs: number): void {

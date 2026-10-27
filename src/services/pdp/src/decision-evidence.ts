@@ -25,7 +25,9 @@ import {
   canonicalDigest,
   isActionPhase,
   isEvaluationContextBindingRef,
+  isCurrencyCode,
   isEvaluationContextDigest,
+  isValidAmount,
   type JsonValue,
 } from "@mission/core";
 import {
@@ -197,6 +199,80 @@ export function runtimeCapabilitySourceOf(presented: unknown): RuntimeCapability
   };
 }
 
+/**
+ * @spec metering#metering-evidence (#816): a quantity in the `max_budget`
+ * bound's native unit shape, `{amount, currency}`. The only bound this PDP
+ * meters; the other bound classes' shapes are not implemented.
+ */
+export interface MeteringQuantity {
+  amount: string;
+  currency: string;
+}
+
+/** @spec metering#metering-evidence `counter_scope`: the counter's key class. */
+export const METERING_COUNTER_SCOPES = ["mission", "subject", "client", "lineage", "standing_consent"] as const;
+export type MeteringCounterScope = (typeof METERING_COUNTER_SCOPES)[number];
+
+/**
+ * @spec metering#metering-evidence (#816): one entry of the coordinated
+ * `metering` member, one per counter the evaluation metered. In Decision
+ * Evidence `requested` and `remaining` are REQUIRED; a permit under the
+ * reserving posture also carries `reserved` and `settlement_state`, and a
+ * refusal carries neither: its `remaining` is the unchanged quantity the
+ * request exceeded.
+ */
+export interface DecisionMeteringEntry {
+  bound: string;
+  counter_scope: MeteringCounterScope;
+  counter_id: string;
+  requested: MeteringQuantity;
+  reserved?: MeteringQuantity;
+  remaining: MeteringQuantity;
+  settlement_state?: "reserved" | "committed";
+}
+
+function meteringQuantityOf(value: unknown): MeteringQuantity {
+  const q = objectOf(value);
+  if (!q || typeof q.amount !== "string" || !isValidAmount(q.amount) || !isCurrencyCode(q.currency)) {
+    throw new Error("Decision Evidence metering quantity must be {amount, currency}");
+  }
+  return { amount: q.amount, currency: q.currency };
+}
+
+/**
+ * @spec metering#metering-evidence: the entries a record carries, rebuilt
+ * member by member (never a cast), with the decision-dependent members
+ * checked: `reserved` and `settlement_state` on a permit only, and both
+ * there. The PDP builds them, so a malformed entry is a defect that refuses
+ * the emission rather than a partial record signed.
+ */
+function meteringEntriesOf(value: unknown, decision: "permit" | "deny"): DecisionMeteringEntry[] {
+  if (!Array.isArray(value) || value.length === 0) throw new Error("Decision Evidence metering must be a non-empty array");
+  return value.map((raw) => {
+    const e = objectOf(raw);
+    if (!e) throw new Error("Decision Evidence metering entry must be an object");
+    if (!(METERING_COUNTER_SCOPES as readonly unknown[]).includes(e.counter_scope)) {
+      throw new Error("Decision Evidence metering entry names an unknown counter_scope");
+    }
+    const permit = decision === "permit";
+    if (permit !== (e.reserved !== undefined) || permit !== (e.settlement_state !== undefined)) {
+      throw new Error("Decision Evidence metering reserved and settlement_state belong to a permit, and a permit carries both");
+    }
+    if (e.settlement_state !== undefined && e.settlement_state !== "reserved" && e.settlement_state !== "committed") {
+      throw new Error("Decision Evidence metering settlement_state must be reserved or committed");
+    }
+    return {
+      bound: requiredString(e.bound),
+      counter_scope: e.counter_scope as MeteringCounterScope,
+      counter_id: requiredString(e.counter_id),
+      requested: meteringQuantityOf(e.requested),
+      ...(e.reserved !== undefined ? { reserved: meteringQuantityOf(e.reserved) } : {}),
+      remaining: meteringQuantityOf(e.remaining),
+      ...(e.settlement_state !== undefined ? { settlement_state: e.settlement_state as "reserved" | "committed" } : {}),
+    };
+  });
+}
+
 /** @spec runtime-evidence#decision-evidence-object (lines 331-573): the closed wire object. */
 export interface DecisionEvidenceObject {
   evidence_id: string;
@@ -265,6 +341,12 @@ export interface DecisionEvidenceObject {
    */
   authority_bound?: AuthorityBound;
   contributing_constraints?: string[];
+  /**
+   * @spec metering#metering-evidence (#816): the coordinated `metering`
+   * member, carried on every record of a metered evaluation, permit or
+   * refusal, one entry per counter the evaluation charged.
+   */
+  metering?: DecisionMeteringEntry[];
   entry_digest?: string;
   sequence: number;
   emitter: { id: string; role: "pdp" };
@@ -383,6 +465,8 @@ export interface DecisionEvidenceEmissionInput {
   denial_reason?: string;
   authority_bound?: AuthorityBound;
   contributing_constraints?: readonly string[];
+  /** @spec metering#metering-evidence (#816): the counters this evaluation metered, from the claim step. */
+  metering?: readonly DecisionMeteringEntry[];
   entry_digest?: string;
 }
 
@@ -418,15 +502,47 @@ export interface DecisionEvidenceEmitterConfig {
    * for no boundary the active version does not authorize it for.
    */
   authorizesAudience?: (audience: string) => boolean;
+  /**
+   * @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+   * (#821, D814): where this emitter's per-Mission counters live. Present,
+   * every sequence position comes from it, so a durable source (the PDP's
+   * claim domain, `IdempotencyClaimDomain.evidenceSequences`) continues
+   * each stream across a restart instead of re-issuing numbers already signed
+   * into retained records. A source that throws fails the emission, and the
+   * PDP issues no decision. Absent, the counters are in memory and restart at
+   * zero with the process.
+   */
+  sequences?: DecisionEvidenceSequences;
+}
+
+/**
+ * A per-emitter sequence source: `next(key)` returns the next position for
+ * one opaque (Mission, emitter id, role) key, starting at 0, and never
+ * returns a position twice for that key.
+ */
+export interface DecisionEvidenceSequences {
+  next(key: string): number;
+}
+
+/** The default source: this process's memory, so every counter restarts at zero with it. */
+function inMemorySequences(): DecisionEvidenceSequences {
+  const counters = new Map<string, number>();
+  return {
+    next: (key) => {
+      const n = counters.get(key) ?? 0;
+      counters.set(key, n + 1);
+      return n;
+    },
+  };
 }
 
 /**
  * @spec runtime-evidence#decision-evidence-object (line 508): "each emitter
  * maintains its own monotonically increasing per-Mission sequence."
  * `emitter` is the `{id, role}` object, so the counter is scoped per
- * (Mission, emitter id, role). In-memory and per process: a durable counter
- * and instance-epoch binding are a separate concern from the emission
- * boundary this module establishes.
+ * (Mission, emitter id, role). The counters live in the configured
+ * {@link DecisionEvidenceEmitterConfig.sequences} source, or in this
+ * process's memory when none is configured.
  */
 /** @spec authzen#evidence `authority_bound`: the bound an authority deny failed. */
 export type AuthorityBound = "credential" | "mission";
@@ -434,13 +550,9 @@ const AUTHORITY_BOUNDS: readonly string[] = ["credential", "mission"];
 const AUTHORITY_BOUND_REASONS: readonly string[] = ["out_of_authority", "parameter_violation"];
 
 export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterConfig): DecisionEvidenceEmitter {
-  const sequences = new Map<string, number>();
-  const nextSequence = (mission: RuntimeMissionRef): number => {
-    const key = JSON.stringify([mission.issuer, mission.id, config.emitterId, "pdp"]);
-    const n = sequences.get(key) ?? 0;
-    sequences.set(key, n + 1);
-    return n;
-  };
+  const sequences = config.sequences ?? inMemorySequences();
+  const nextSequence = (mission: RuntimeMissionRef): number =>
+    sequences.next(JSON.stringify([mission.issuer, mission.id, config.emitterId, "pdp"]));
 
   return {
     emit: async (input: DecisionEvidenceEmissionInput): Promise<DecisionEvidenceObject> => {
@@ -452,7 +564,14 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
           `DecisionEvidenceEmitter: refusing to sign a record for audience "${input.audience}"; this emitter's key is published for "${config.audience}"`,
         );
       }
-      const action_class = input.action_class ?? "consequential_read";
+      // @spec runtime-evidence#decision-evidence-object, runtime#classification
+      // (#956, D814): `action_class` is the class the PDP applied. A request
+      // with none is refused before evaluation (`action_class_missing`), so
+      // no class is ever manufactured here.
+      if (typeof input.action_class !== "string" || input.action_class.length === 0) {
+        throw new Error("Decision Evidence requires the action class the PDP applied");
+      }
+      const action_class = input.action_class;
       if (input.parameter_digest !== undefined) requiredString(input.parameter_digest);
       if (input.conditions?.use_limit !== undefined && (!Number.isSafeInteger(input.conditions.use_limit) || input.conditions.use_limit < 1)) {
         throw new Error("Decision Evidence use_limit must be a positive integer");
@@ -505,7 +624,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
       ) {
         throw new Error("Decision Evidence authority_bound names a bound on a deny one decided");
       }
-      const class_source: RuntimeClassSource = input.action_class !== undefined ? "deployment" : "default";
+      const class_source: RuntimeClassSource = "deployment";
       if (input.parameter_digest === undefined && !(typeof input.evaluation_request_digest === "string" && input.evaluation_request_digest.length > 0)) {
         throw new Error("Decision Evidence requires the evaluation request digest when parameter_digest is absent");
       }
@@ -569,6 +688,7 @@ export function createDecisionEvidenceEmitter(config: DecisionEvidenceEmitterCon
         ...(input.contributing_constraints?.length ? {
           contributing_constraints: [...new Set(input.contributing_constraints.map(requiredString))],
         } : {}),
+        ...(input.metering !== undefined ? { metering: meteringEntriesOf(input.metering, input.decision) } : {}),
         ...(input.entry_digest !== undefined ? { entry_digest: input.entry_digest } : {}),
         sequence: nextSequence(mission),
         emitter: { id: config.emitterId, role: "pdp" as const },

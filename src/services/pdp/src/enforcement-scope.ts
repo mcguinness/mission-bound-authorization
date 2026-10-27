@@ -31,6 +31,7 @@ import {
   type ResourceContractDeclaration,
   ResourceContractDeclarations,
 } from "@mission/core";
+import { type BudgetMeteringDeclaration, budgetMeteringFindings } from "./budget-metering.js";
 import type { EnforcementBoundaries } from "./enforcement-boundary.js";
 
 /**
@@ -59,7 +60,11 @@ export interface EnforcementScopeBaseline {
     pep_locations: readonly string[];
     /** May be empty: a deployment that excludes no path still declares the (empty) set. */
     excluded_paths: ReadonlyArray<DeclaredExcludedPath>;
-    mission_establishment_mode: string;
+    /**
+     * @spec runtime#mission-binding (#956, D814): the modes this scope serves,
+     * one value or a non-empty, duplicate-free list of them.
+     */
+    mission_establishment_mode: MissionEstablishmentMode | readonly MissionEstablishmentMode[];
   };
   authority_entry_types: ReadonlyArray<{ type: string; evaluator: string }>;
   pdps: readonly string[];
@@ -88,7 +93,14 @@ export type EnforcementExtensionName =
   | "evidence"
   | "high_assurance_agent"
   | "outcome_reconciliation"
-  | "evaluation_context_binding";
+  | "evaluation_context_binding"
+  /**
+   * @spec metering#topology, metering#aggregate-bounds (#816): the PDP's
+   * exact `max_budget` metering ({@link BudgetMeteringDeclaration}). Claimed,
+   * the co-resident PDP meters the declared actions; without the claim it
+   * meters nothing, and a budget-bound Mission is refused.
+   */
+  | "budget_metering";
 
 /**
  * @spec runtime#execution-reverification — one `transaction_assurance`
@@ -328,6 +340,15 @@ export interface EnforcementExtensionDeclarations {
    * representation, not a Runtime wire member.
    */
   authority_dependencies?: ReadonlyArray<AuthorityDependencyDeclaration>;
+  /**
+   * @spec metering#topology, metering#retry, metering#aggregate-bounds
+   * (#816): the budgets this PDP meters exactly, in the claim domain's own
+   * transaction, each with its owner, the disclosure copy of its approved
+   * limit, and every committed Dispatch Policy (`id`, `version`, `digest`)
+   * that commits it ({@link budgetMeteringFindings}). A reference-statement representation,
+   * not a Runtime wire member.
+   */
+  budget_metering?: BudgetMeteringDeclaration;
 }
 
 /**
@@ -380,6 +401,21 @@ function isNonEmptyString(v: unknown): v is string {
 }
 function isNonEmptyStringArray(v: unknown): v is readonly string[] {
   return Array.isArray(v) && v.length > 0 && v.every((x) => isNonEmptyString(x));
+}
+
+/** @spec runtime#mission-binding (#956, D814): the two Mission-establishment modes. */
+export const MISSION_ESTABLISHMENT_MODES = ["credential_carried", "externally_established"] as const;
+export type MissionEstablishmentMode = (typeof MISSION_ESTABLISHMENT_MODES)[number];
+
+/**
+ * @spec runtime#mission-binding (#956, D814): `mission_establishment_mode` is
+ * one named mode, or a non-empty list of named modes without duplicates. Any
+ * other value, an empty list and a repeated mode are malformed.
+ */
+export function isMissionEstablishmentModes(v: unknown): v is MissionEstablishmentMode | readonly MissionEstablishmentMode[] {
+  const named = (x: unknown): boolean => (MISSION_ESTABLISHMENT_MODES as readonly unknown[]).includes(x);
+  if (typeof v === "string") return named(v);
+  return Array.isArray(v) && v.length > 0 && v.every(named) && new Set(v).size === v.length;
 }
 function object(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -459,11 +495,11 @@ export function validateEnforcementScopeStatement(
     isNonEmptyStringArray(scope.execution_paths) &&
     isNonEmptyStringArray(scope.pep_locations) &&
     Array.isArray(scope.excluded_paths) &&
-    isNonEmptyString(scope.mission_establishment_mode);
+    isMissionEstablishmentModes(scope.mission_establishment_mode);
   if (!scopeOk) {
     push(
       "mediated_scope",
-      "missing the mediated resources/action classes/execution paths, PEP locations, excluded paths, or Mission-establishment mode",
+      "missing the mediated resources/action classes/execution paths, PEP locations or excluded paths, or a Mission-establishment mode that is not credential_carried, externally_established, or a non-empty duplicate-free list of them",
     );
   } else {
     findings.push(...indexEntries(scope.resources as unknown[], "resources").findings);
@@ -647,6 +683,9 @@ export function validateEnforcementScopeStatement(
   }
 
   findings.push(...reversibleWriteFindings(stmt, scopeOk && object(scope) ? scope : undefined));
+  // @spec metering#topology (#816): like `outcome_reconciliation`, the
+  // budget-metering declaration is shape-checked wherever it appears.
+  findings.push(...budgetMeteringFindings(stmt));
 
   return findings;
 }

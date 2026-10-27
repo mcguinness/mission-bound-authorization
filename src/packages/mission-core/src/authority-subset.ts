@@ -11,7 +11,12 @@ import {
   validCommonConstraint,
 } from "./common-constraints.js";
 import { compareAmounts, isCurrencyCode, isValidAmount } from "./decimal-amount.js";
-import { isAbsoluteUri, isEnforceablePrefixBase, prefixAdmits } from "./operation-target.js";
+import {
+  carriesHttpUserinfo,
+  isAbsoluteUri,
+  isEnforceablePrefixBase,
+  prefixAdmits,
+} from "./operation-target.js";
 import { resourceContractViolation, sameResourceContract } from "./resource-contract.js";
 
 /**
@@ -362,7 +367,13 @@ export function isAuthorityEntry(value: unknown): value is AuthorityEntry {
   // rules proposal intake applies, so this guard is never looser than intake: a
   // `resource` that is one RFC 3986 absolute URI, and every action value inside
   // the action grammar.
-  if (!isAbsoluteUri(e.resource) || actionOutsideGrammar(e) !== undefined) return false;
+  if (
+    !isAbsoluteUri(e.resource) ||
+    carriesHttpUserinfo(e.resource) ||
+    actionOutsideGrammar(e) !== undefined
+  ) {
+    return false;
+  }
   // @spec resource-access#resource-access-type, resource-access#entry-validation
   // (#1276): `resource_match` is one of the two values Resource Access
   // defines, and a `prefix` entry's `resource` is a base the shared matcher

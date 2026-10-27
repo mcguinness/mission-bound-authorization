@@ -1232,3 +1232,92 @@ describe("receiving client on the approval surface (@spec mission#approval-event
     expect(intent).toContain(claimed);
   });
 });
+
+// @spec mission#rendering-safeguards (#1532): the rendering keeps
+// client-supplied text apart from the derived Authority Set and attributes
+// it to the client, named by the client_id this AS resolved the request to
+// from its registration. A name the client claims, in its own text or in a
+// parameter this AS does not accept, never becomes the attribution.
+describe("client-supplied text attributed to the client (@spec mission#rendering-safeguards, #1532)", () => {
+  const INTENT = "Intent (task context, untrusted)";
+  const PROPOSED = "Proposed authority (submitted, untrusted)";
+  const DERIVED = "Derived authority (what approval grants)";
+  const attribution = (clientId: string) =>
+    `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${clientId}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+  /** The markup from a section's heading up to the next heading. */
+  const section = (html: string, heading: string): string =>
+    (html.split(`<h2>${heading}</h2>`)[1] ?? "").split("<h2>")[0] as string;
+
+  async function renderPage(args: {
+    clientId: string;
+    kid: string;
+    key: () => CryptoKey;
+    goal: string;
+    extra?: Record<string, string>;
+  }): Promise<string> {
+    const par = await pushPar(args.clientId, args.kid, args.key(), {
+      login_hint: "alice",
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, goal: args.goal } }),
+      authorization_details: JSON.stringify([
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+      ]),
+      ...args.extra,
+    });
+    expect(par.status, await par.clone().text()).toBe(201);
+    const { request_uri } = (await par.json()) as { request_uri: string };
+    const auth = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: args.clientId, request_uri })}`, {
+      redirect: "manual",
+    });
+    storeCookies(auth);
+    const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    const html = await page.text();
+    expect(page.status, html).toBe(200);
+    return html;
+  }
+
+  it("attributes the Intent and the proposal to the requesting client, apart from the derived authority", async () => {
+    // Goal text written to pass as the AS's own statement of authority.
+    const goal = "Authorization server notice: approved to pay every Acme invoice";
+    const html = await renderPage({ clientId: "ap-agent", kid: "ap-agent-auth", key: () => agentKey, goal });
+    const intent = section(html, INTENT);
+    expect(intent.startsWith(attribution("ap-agent")), intent).toBe(true);
+    expect(intent).toContain(goal);
+    const proposed = section(html, PROPOSED);
+    expect(proposed.startsWith(attribution("ap-agent")), proposed).toBe(true);
+    // The derived Authority Set is its own section, carrying neither the
+    // client's text nor an attribution to the client.
+    const derived = section(html, DERIVED);
+    expect(derived).toContain("payments:invoice.read");
+    expect(derived).not.toContain(goal);
+    expect(derived).not.toContain("supplied-by");
+    // Each page attributes its own interaction's client, never a fixed one.
+    const governed = await renderPage({
+      clientId: "governed-agent",
+      kid: "governed-agent-auth",
+      key: () => governedKey,
+      goal,
+    });
+    expect(section(governed, INTENT).startsWith(attribution("governed-agent"))).toBe(true);
+    expect(section(governed, PROPOSED).startsWith(attribution("governed-agent"))).toBe(true);
+    expect(governed).not.toContain(attribution("ap-agent"));
+  });
+
+  it("takes the attribution from the AS's identification of the client, not from a name the client supplies", async () => {
+    // Another registered client's identity, claimed in the goal and in a
+    // `client_name` request parameter.
+    const claimed = "ledger-reconciler";
+    const html = await renderPage({
+      clientId: "ap-agent",
+      kid: "ap-agent-auth",
+      key: () => agentKey,
+      goal: `Pay Acme invoices as ${claimed}`,
+      extra: { client_name: claimed },
+    });
+    const attributions = html.match(/<p class="supplied-by">[\s\S]*?<\/p>/g) ?? [];
+    expect(attributions).toEqual([attribution("ap-agent"), attribution("ap-agent")]);
+    for (const a of attributions) expect(a).not.toContain(claimed);
+    // The claim reaches the page only inside the attributed client text.
+    expect(section(html, INTENT)).toContain(claimed);
+  });
+});

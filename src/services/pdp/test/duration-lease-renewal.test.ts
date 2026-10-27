@@ -37,7 +37,7 @@ import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-vi
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { operationIdentity } from "../src/projections.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
-import { CLAIM_OWNER, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
+import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
 
 const AUDIENCE = "http://localhost:4403/mcp";
@@ -346,7 +346,7 @@ function keyedHarness(
 
 /** The claim rows, read from the file after the domain released it, through the same single-writer opener. */
 function claimRowsOf(file: string): Array<{ evaluation_id: string; state: string; outcome: string | null }> {
-  const db = openDurableStore({ file, migrations: ["-- claims schema v1", "-- claims schema v2"], owner: CLAIM_OWNER });
+  const db = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
   try {
     return db.prepare("SELECT evaluation_id, state, outcome FROM claims ORDER BY claimed_at_ms").all() as Array<{
       evaluation_id: string;
