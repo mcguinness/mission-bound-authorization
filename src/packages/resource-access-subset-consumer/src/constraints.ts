@@ -96,14 +96,29 @@ const maxAmount: ConstraintRule<Amount> = {
   omissionEquivalent: never,
 };
 
+/**
+ * A Common Constraint date-time value. resource-access#initial-common-constraints:
+ * "RFC 3339 date-time values in the Common Constraints defined by this
+ * specification MUST NOT use `60` for the seconds field", and
+ * resource-access#entry-validation refuses an entry when "one of its Common
+ * Constraint date-time values uses `60` for the seconds field". The rule is
+ * applied here, where the draft states it: parseInstant stays an RFC 3339
+ * parser, which admits an actual leap second (23:59:60 UTC in any offset)
+ * and refuses a 60 anywhere else as outside RFC 3339 section 5.7.
+ */
+function parseConstraintInstant(
+  name: string,
+  value: unknown,
+): { value: Instant } | { refusal: string } {
+  const instant = parseInstant(value);
+  if (instant === undefined) return { refusal: `${name} is not an RFC 3339 date-time` };
+  if (instant.leap) return { refusal: `${name} uses 60 for the seconds field` };
+  return { value: instant };
+}
+
 function instantRule(name: string, laterIsNarrower: boolean): ConstraintRule<Instant> {
   return {
-    parse(value) {
-      const instant = parseInstant(value);
-      return instant === undefined
-        ? { refusal: `${name} is not an RFC 3339 date-time` }
-        : { value: instant };
-    },
+    parse: (value) => parseConstraintInstant(name, value),
     noBroader: (c, r) => (laterIsNarrower ? compareInstant(c, r) >= 0 : compareInstant(c, r) <= 0),
     omissionEquivalent: never,
   };
@@ -155,16 +170,14 @@ const timeWindow: ConstraintRule<Window> = {
     }
     const window: { notBefore?: Instant; notAfter?: Instant } = {};
     if ("not_before" in value) {
-      const nb = parseInstant(value.not_before);
-      if (nb === undefined)
-        return { refusal: "time_window.not_before is not an RFC 3339 date-time" };
-      window.notBefore = nb;
+      const nb = parseConstraintInstant("time_window.not_before", value.not_before);
+      if ("refusal" in nb) return nb;
+      window.notBefore = nb.value;
     }
     if ("not_after" in value) {
-      const na = parseInstant(value.not_after);
-      if (na === undefined)
-        return { refusal: "time_window.not_after is not an RFC 3339 date-time" };
-      window.notAfter = na;
+      const na = parseConstraintInstant("time_window.not_after", value.not_after);
+      if ("refusal" in na) return na;
+      window.notAfter = na.value;
     }
     // resource-access#entry-validation: refused when it "has a not_before later
     // than its not_after, a window that admits no instant". Equal bounds admit

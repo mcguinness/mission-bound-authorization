@@ -615,6 +615,67 @@ describe("recipient_domain (@spec resource-access#initial-common-constraints)", 
   });
 });
 
+// @spec resource-access#entry-validation (#1376, D858): an xn-- label of a
+// recipient_domain is a structurally valid A-label, judged alike by the entry
+// guard and the credential reader; the ASCII label's letter case is free.
+describe("recipient_domain A-labels (@spec resource-access#entry-validation, #1376, D858)", () => {
+  const rd = (v: string) => ({ recipient_domain: v });
+
+  it("refuses an xn-- label that is not a structurally valid A-label, in the entry guard and the credential reader", () => {
+    for (const bad of [
+      "xn--9.example",
+      "mail.xn--mnchen-psa.example",
+      "xn--menchen-uge.example",
+      "xn--mnchen-hxd.example",
+      "xn---mnchen-o2a.example",
+      "xn--m--nchen-65a.example",
+    ]) {
+      expect(isAuthorityEntry(entry(rd(bad))), bad).toBe(false);
+      expect(() => parseCredentialAuthority([entry(rd(bad))]), bad).toThrow(
+        CredentialAuthorityError,
+      );
+    }
+  });
+
+  it("admits a valid A-label in any ASCII letter case (positive control)", () => {
+    for (const good of ["xn--mnchen-3ya.example", "Mail.XN--Mnchen-3YA.example"]) {
+      expect(isAuthorityEntry(entry(rd(good))), good).toBe(true);
+      expect(parseCredentialAuthority([entry(rd(good))])[0]?.constraints).toEqual(rd(good));
+    }
+  });
+});
+
+// @spec resource-access#initial-common-constraints (#1376, D858): "RFC 3339
+// date-time values in the Common Constraints defined by this specification
+// MUST NOT use `60` for the seconds field", for every date-time member.
+describe("Common Constraint date-time values never use 60 seconds (@spec resource-access#initial-common-constraints, #1376, D858)", () => {
+  const LEAP = ["2016-12-31T23:59:60Z", "2017-01-01T00:59:60+01:00", "2026-09-01T12:00:60Z"];
+  const VALID = ["2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z", "2017-01-01T00:59:59+01:00"];
+  const members = (v: string) => [
+    { resource_issued_after: v },
+    { resource_issued_before: v },
+    { time_window: { not_before: v } },
+    { time_window: { not_after: v } },
+  ];
+
+  it("refuses an actual leap second, its offset equivalent and an invalid :60 in each member", () => {
+    for (const v of LEAP) {
+      for (const c of members(v)) {
+        expect(isAuthorityEntry(entry(c)), JSON.stringify(c)).toBe(false);
+        expect(() => parseCredentialAuthority([entry(c)]), JSON.stringify(c)).toThrow(
+          CredentialAuthorityError,
+        );
+      }
+    }
+  });
+
+  it("admits ordinary timestamps around the leap second in each member (positive control)", () => {
+    for (const v of VALID) {
+      for (const c of members(v)) expect(isAuthorityEntry(entry(c)), JSON.stringify(c)).toBe(true);
+    }
+  });
+});
+
 describe("data_classification (@spec resource-access#initial-common-constraints)", () => {
   const dc = (v: unknown) => ({ data_classification: v });
 

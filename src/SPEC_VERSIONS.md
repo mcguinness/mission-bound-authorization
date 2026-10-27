@@ -122,7 +122,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable; deliberately not advanced to 2026-07-28, disposition in Notes, #533) | M4/M8/M9 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
-| `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | I-D in progress (no published revision) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`) |
+| `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | `-02` (2026-10-26; external pin `AAT`) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` + the chain consumer in `services/mcp-payments/src/server.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`). The reference diverges from -02 (its Appendix E.3 records the first two): holder keys bound as `cnf.jkt`, each child's key read from its JWS header `jwk`, where -02 requires `cnf.jwk` and forbids header-supplied keys; possession proved with DPoP, not the PoP JWT; ES256 only, where -02 requires Ed25519 support; an `enum` constraint type, which no revision defines (-02 has `one_of`), and no `wildcard`, `all`, `any`, `optional` or closed-world argument check; `typ` checked on the root only (every token's `aud` is checked against the enforcement point since #1758); `jti` and `iat` optional and the I3 `iat` relations unchecked |
 
 ## Notes
 

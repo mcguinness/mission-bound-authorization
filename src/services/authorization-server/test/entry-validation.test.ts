@@ -230,8 +230,42 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
     }
   });
 
+  // D858: structural A-label checks; the RFC 5892 code-point classes, the
+  // contextual rules and the Bidi rule are not checked.
+  it("refuses a recipient_domain whose xn-- label is not a structurally valid A-label", async () => {
+    for (const recipient_domain of [
+      "xn--9.example",
+      "xn--mnchen-psa.example",
+      "xn--menchen-uge.example",
+      "xn--mnchen-hxd.example",
+      "xn---mnchen-o2a.example",
+      "xn--m--nchen-65a.example",
+    ]) {
+      await expectRefused(
+        entry({ constraints: { recipient_domain } }),
+        /constraints\.recipient_domain is malformed/,
+      );
+    }
+  });
+
+  it("refuses a Common Constraint date-time value that uses 60 for the seconds field, in each member", async () => {
+    for (const v of ["2016-12-31T23:59:60Z", "2017-01-01T00:59:60+01:00", "2026-09-01T12:00:60Z"]) {
+      await expectRefused(entry({ constraints: { resource_issued_after: v } }), /constraints\.resource_issued_after is malformed/);
+      await expectRefused(entry({ constraints: { resource_issued_before: v } }), /constraints\.resource_issued_before is malformed/);
+      await expectRefused(entry({ constraints: { time_window: { not_before: v } } }), /constraints\.time_window is malformed/);
+      await expectRefused(entry({ constraints: { time_window: { not_after: v } } }), /constraints\.time_window is malformed/);
+    }
+  });
+
+  it("accepts ordinary timestamps around the leap second in each member (positive control)", async () => {
+    for (const v of ["2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z", "2017-01-01T00:59:59+01:00"]) {
+      await expectAccepted(entry({ constraints: { resource_issued_after: v, resource_issued_before: "2027-01-01T00:00:00Z" } }));
+      await expectAccepted(entry({ constraints: { time_window: { not_before: v, not_after: "2027-01-01T00:00:00Z" } } }));
+    }
+  });
+
   it("accepts a recipient_domain in A-label form, in any letter case (positive control)", async () => {
-    for (const recipient_domain of ["xn--exmple-cua.com", "Mail.Example.COM"]) {
+    for (const recipient_domain of ["xn--exmple-cua.com", "Mail.Example.COM", "Mail.XN--Mnchen-3YA.example"]) {
       await expectAccepted(entry({ constraints: { recipient_domain } }));
     }
   });

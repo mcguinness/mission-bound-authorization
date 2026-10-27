@@ -10,6 +10,10 @@
  * kept as digits rather than rounded to milliseconds, so two instants that
  * differ below a millisecond still compare unequal. A leap second (`:60`) is
  * refused: this module cannot place it on the UTC timeline without guessing.
+ * For the Common Constraints Resource Access defines, that refusal is the
+ * profile's rule (resource-access#initial-common-constraints, #1376, D858:
+ * their date-time values "MUST NOT use `60` for the seconds field"); for
+ * other callers it is this module's stricter-than-RFC-3339 choice.
  */
 
 const DATE_TIME =

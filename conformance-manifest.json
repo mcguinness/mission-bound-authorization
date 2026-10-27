@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "3f81b0a0c13c1f26caafd69cd3f5d2ca6ca6616205c03fd458e99f6da5909d8d"
+    "revision": "62b6341aa6f5f8c65ccc4accd00d1117fdd07bd6",
+    "content_sha256": "b9105f772d8d0a9223f255a412aff29fb30eeb355a5b76fff77708625ea5f3c6"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -51,8 +51,8 @@
     "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
-    "revision": "cfad6a684188e0ae6a3585a00dd22597de09bae0",
-    "content_sha256": "3ee577a53011c4453d6b8a3c571a38e89430d5994e67ddf1feccab112dc4da43"
+    "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
+    "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
     "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
@@ -75,12 +75,12 @@
     "content_sha256": "69a15b7d2282b92ee0f1d0a424770d9ca985ee5466550f4d2defa7878922f999"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
-    "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
+    "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
+    "content_sha256": "29ab6b61f162fec24ca027aa42b9c99c1b776cb273692180b99ba44badc430b0"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
-    "content_sha256": "1e23fc90eeccb463c3ad04f8959da9809246e9c626f150d072fa59cf9d129ff9"
+    "revision": "32e1ebcbe589e865b854cc4e5e673d0c3a9a48da",
+    "content_sha256": "171abe8a5a1d594ae501de1e97b9acd7cc21cd9602161d6051bce8f2d73bd86b"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1a34e033976b0007776170a413b11008427948d8",
@@ -4898,7 +4898,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -4927,7 +4927,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. Not witnessed: the consumer-side clauses (#1747), that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -4944,7 +4944,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
+    "normative": "After restore or failover, the Mission Issuer MUST NOT issue a lower state `version` for an existing Mission, and MUST refuse state-dependent service while its durable version or commit metadata is uncertain. A legitimate higher-version resume to active is accepted under the other validity checks; state names are not ordered by severity. Issuer durability is required even when a consumer has never seen the pre-restore version."
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -5088,7 +5088,49 @@
      "surface": "verification"
     }
    ],
-   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); the retaining-consumer high-water mark; and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements."
+   "notes": "A restart on the declared file-backed single-writer store keeps the state version and the terminal tombstone, so no lower version is served after recovery and the committed-but-unpublished transition replays at its own version. With a recovery witness configured (#250 step 3, slice A), the kernel holds its store and its witness's lock exclusively (so a copied store cannot share the witness), and opens only when the store's recovery marker matches the witness, a file outside the database restore unit that every write transaction advances (intent before the commit, finalized after it): a restored older store, a lost, unreadable or foreign witness and an unresolved intent refuse to open, a witnessed store refuses to open without its witness, and a run-time witness or commit failure, a witness changed underneath it, or a write that bypassed the guard (every statement API that can write is guarded), stops every further write and is recorded in the witness, so a restart refuses until reconciled. Offline reconciliation under both locks acknowledges or abandons an intent, or accepts a store with a recorded uncertainty under a new generation, and never lowers the witness. The Authorization Server builds only on an admitted store (a shipped launcher requires the witness with MISSION_KERNEL_STORE, and `pnpm as-native` refuses to start on a restored older store), and while a running kernel is uncertain it answers every request but discovery metadata and the key set with 503 temporarily_unavailable, a request already in flight included (the release fence checks again after every await). The transaction inventory (control-plane-deployment.md) names every kernel table and how its writes are witnessed, and a test fails on a table it does not name. Not yet covered: a way back from an older store other than restoring the witnessed one, by invalidating authority under a new generation (slice B); and any topology beyond one writer on one host. The escape detector notices a bypassing write only at the next guarded transaction, after that write committed. No waiver of existing binding-level requirements. The retaining consumer's high-water obligation is its own row, control-plane.consistency.rollback-retaining-consumer."
+  },
+  {
+   "id": "control-plane.consistency.rollback-retaining-consumer",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "rollback",
+   "text": "A retaining consumer MUST key its high-water mark by the canonical (issuer, mission_id) tuple, reject a lower version, and retain the high-water mark across its own recovery.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a retaining consumer keys its high-water mark by (issuer, mission_id), rejects an event at a lower version, and keeps the high-water mark across its own recovery",
+    "local": "the Signals receiver (#1323) keys its state by (issuer, audience, mission_id), finer than the tuple, and keeps it in the consumer's store across a restart. A SET with a fresh jti at an equal or lower version is answered stale, before and after a restart; a redelivery of a SET whose jti it has seen is answered duplicate, before and after a restart; and the same Mission identifier at another issuer keeps its own sequence. A restore of the consumer's store from an older backup is not detected"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > never regresses on a lower or equal version, before or after a restart, and keeps a retained termination",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps the high-water, the observation, the gap and rematerialization markers, the retained SET and the seen jti values across a restart",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
+     "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested (#1749). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -5176,12 +5218,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.",
+    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, the agent's self Token Exchange for a delegation handle (which succeeds before the uncertainty), introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses the agent's self Token Exchange for a delegation handle 503, though the same exchange succeeded before, and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion, child creation and a designation redeemed by another client are refused by the same middleware and kernel guard but are not exercised one by one. The single-writer limitation is accepted as declared (D874); it does not prove the unexercised clauses. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-deny",
@@ -5198,12 +5260,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior.",
+    "local": "containment, from the Lifecycle endpoint or from a protected event through the issuer's own ContainmentPolicy, commits a narrower effective set at a new version and nothing else: state, expiry, derivation limit and observation freshness do not move, a suspended Mission is not resumed, the answer carries no observation, and the narrowing has no expiry"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane emergency narrowing (@spec control-plane#emergency-deny, #250) > a protected event narrows a suspended Mission without resuming it or moving its expiry, derivation limit or observation freshness, and the narrowing does not lapse",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle containment creates no authority and no freshness (@spec control-plane#emergency-deny, #250) > contain answers its commit alone, leaves an active and a suspended Mission in their state with their expiry, and the next observation is a new read with the ordinary freshness span",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache (an accepted declared limitation, D874, which does not prove those clauses); a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-authority",
@@ -5220,12 +5296,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one.",
+    "local": "the PEP publishes break_glass absent in its Enforcement Scope Statement and does not start under a statement declaring any other emergency mode, so no positive emergency permission exists to be represented as Mission authority"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes positive emergency permission absent, and refuses to start under a statement declaring any other emergency mode",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured (an accepted declared limitation, D874, which does not prove the clause). The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.isolation",
@@ -5272,7 +5356,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -5438,12 +5522,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+    "local": "src/docs/control-plane-deployment.md's Deployment declaration states each item under its own heading, with a recovery point and a recovery time, and lists as residual risks exactly the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > documents each item the declaration requires under its own heading: serialization domains, authoritative observation mechanism, replication and recovery model, recovery objectives, tenant isolation and residual risks",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. The reference makes no claim (control-plane.consistency.claim) and still writes the declaration, so a reader can check it against the ledger. The tests check that each item is present and that the residual risks match the ledger, not the prose against the code; each item points to the section, and that section's witnesses, that carry its accuracy."
   },
   {
    "id": "control-plane.consistency.claim",
@@ -5460,12 +5558,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+    "local": "the reference makes no claim: its Deployment declaration says so and lists as residual risks the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the obligation binds a claiming deployment, and the reference makes no claim because these rows are not tested: serialization, fresh-observation, state-surfaces, rollback, rollback-retaining-consumer, partitions, emergency-deny, emergency-authority and isolation (each row's notes name its gap). The cited test fails when the declaration's residual risks and the ledger disagree."
   },
   {
    "id": "core.submission.front-channel-refusal",
@@ -19368,7 +19474,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST verify, before relying on a Discharge Receipt, for example before it stops retrying:",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST",
    "applicability": {
     "kind": "capability",
@@ -19442,7 +19548,7 @@
    "spec": "draft-mcguinness-oauth-mission-discharge.md",
    "anchor": "discharge-receipt",
    "text": "A consumer MUST validate `typ` exactly and MUST NOT accept a Discharge Receipt as a Mission Status Response, or a Mission Status Response as a Discharge Receipt",
-   "role": "AS",
+   "role": "verifier",
    "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
@@ -59356,6 +59462,44 @@
    "notes": "#1375. Witnessed at the helper the payments PEP calls; the PDP credential bound is witnessed in evaluate-constraint-satisfaction.test.ts (a PDP witness). In the reference the payments resource server's decision is the PDP's (runtime-enforced profile). Since #1375 its Mission bound weighs every applicable Authority Set entry: each entry-scoped check narrows the candidates, the request is refused only when none survives, and the permit binds the first surviving entry. Vector cases: the PDP's rs-authorize executor (services/pdp/test/resource-access-rs-cases.test.ts) runs cc-satisfaction-alternative, -no-alternative and -fragments, all agreeing; cc-satisfaction-absent-* require rs.enforcement and stay skipped. Proved by mutation (#1375): judging any one narrowing step (resource contract, containment, discharge, capability bindings, unevaluated keys, vendors, collection members, max_amount, Common Constraints, approval) on the first applicable entry only fails its Mission-bound witness; eleven mutations, each alone. Kept partial on the owner's review of #1646 until writes and transaction-assured operations were witnessed; they now are (#1375): at the payments resource a read, a vendor-scoped list read, a write (schedule_payment) and a transaction-assured operation (execute_wire_transfer, committing one ledger entry) each authorize through a later entry that covers them whole, and parts of two entries never combine for any of them. No PEP path selects an entry: the list-scope derivation was the only one (#1646); every other operation's decision is the PDP's, which weighs each applicable entry. Proved by mutation: judging max_amount, or the Common Constraints, on the first applicable entry only fails these witnesses."
   },
   {
+   "id": "resource-access.common-constraints.date-time-no-leap-second",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "initial-common-constraints",
+   "text": "RFC 3339 date-time values in the Common Constraints defined by this specification MUST NOT use `60` for the seconds field",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "no entry the authorization server derives carries a resource_issued_after, resource_issued_before or time_window endpoint value whose seconds field is 60: the entry guard every derivation and configured ceiling passes refuses one in each member (an actual leap second, its offset form, or a :60 at no leap second), and a configured ceiling carrying one fails to load",
+    "local": "the reference's RFC 3339 parser refuses every :60 for every caller; for date-times outside these Common Constraints that is its own stricter-than-RFC-3339 choice, not this rule"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/common-constraints.test.ts",
+     "name": "Common Constraint date-time values never use 60 seconds (@spec resource-access#initial-common-constraints, #1376, D858) > refuses an actual leap second, its offset equivalent and an invalid :60 in each member",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/constraint-value-config.test.ts",
+     "name": "a configured ceiling carrying a forbidden Common Constraint value fails to load (#1376, D858) > refuses a date-time value that uses 60 for the seconds field: an actual leap second, its offset equivalent, an invalid :60",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "D858. RFC 3339 Section 5.7 permits an actual leap second, so this is a normative restriction, not a clarification; it covers the Common Constraints Resource Access defines and does not extend to companion-defined ones (D865). A client generating a proposal is bound too; the authorization server's refusal of one is resource-access.entry-validation.date-time-leap-second-refused. The reference enforced it before the rule through its shared parser. Proved by mutation: a parser admitting :60 fails both witnesses. An actual leap second on the last day of a year is still refused under that mutation by the calendar roll-over check, so the offset form and the :60 at no leap second carry the proof. Positive controls: ordinary timestamps beside the leap second are admitted in each member and load in a ceiling. Cases ev-tw-04 to ev-tw-06 and ev-iss-01 to ev-iss-03 run (entry-validation)."
+  },
+  {
    "id": "resource-access.common-constraints.max-amount-currency-no-intersection",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "initial-common-constraints",
@@ -62097,6 +62241,198 @@
    "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping; re-proved by mutation (dropping the guard fails the prefix case)."
   },
   {
+   "id": "attenuation.root.substrate-token-format",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root",
+   "text": "The root is an attenuation-substrate token, not a JWT access token: its JWS header carries the substrate's `typ` value `aat+jwt` ({{Section 3.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) in place of the issuance profile's `at+jwt`, its `cnf` carries the holder's public key as `jwk` ({{Section 3.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), and the token endpoint returns it with the substrate's `token_type` value `aat` ({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound attenuation root carries typ aat+jwt in its JWS header, not at+jwt, binds the holder's public key as cnf.jwk, and is returned from the token endpoint with token_type aat",
+    "local": "the reference mints the root in process with typ aat+jwt but binds the holder as cnf.jkt, and has no token endpoint route that returns a root"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. todo: the typ clause is met (AAT_TYP) but no test asserts the minted header; the cnf.jwk clause is unmet, since the reference binds cnf.jkt and reads each child's key from its JWS header, which -02 Section 3.5 forbids (src/SPEC_VERSIONS.md lists the divergence); token_type has no surface. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.client-req-cnf",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The client MUST carry the holder's public key in the substrate's `req_cnf` parameter",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client requesting a Mission-bound attenuation root sends the holder's public key as the jwk member of req_cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Replaces the unrowed 'MUST carry the holder's confirmation key'. No reference client requests a root. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.verify-req-cnf-possession",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The Mission Issuer verifies that the client possesses the corresponding private key and binds that key as the root's `cnf.jwk`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a root request whose client does not prove possession of the req_cnf key's private key issues no root; an issued root's cnf.jwk is the req_cnf key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. -02 Section 6.1.3 step 5 leaves the proof mechanism deployment-specific. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.detail-selects-root",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The request carries an `attenuating_agent_token` authorization detail {{RFC9396}} whose tools and argument constraints are the requested root authority; that detail on a Mission-bound token request selects root issuance ({{root}}) rather than an ordinary `mission_resource_access` token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound token request carrying an attenuating_agent_token authorization detail yields a Mission-bound attenuation root, and one without it an ordinary mission_resource_access token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Owner decision in the alignment PR: replaces the withdrawn mission_attenuation_root selector and the full mapped root for a request without a detail. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.refuse-beyond-mapped-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The Mission Issuer MUST validate the detail against the root mapping ({{root-mapping}}). It MUST refuse the request with `invalid_authorization_details` when any tool or argument constraint is not within the mapped Authority Set, rather than issue a root for the rest",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a root request whose attenuating_agent_token detail names a tool or argument constraint outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. The code was invalid_request; it now matches the OAuth binding's subset refusal and -02 Section 6.1.3 step 7. The validation itself (root mapping) is exercised in process by attenuation.root-mapping.*, not at a token endpoint. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.discovery.lists-aat-type",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "Such an issuer also lists `attenuating_agent_token` in `authorization_details_types_supported`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization server whose metadata sets mission_attenuation_supported to true also lists attenuating_agent_token in authorization_details_types_supported"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Vacuous for the reference today: no assembly advertises mission_attenuation_supported (D186, #927), so no metadata document is bound by it. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.consumer.substrate-verification.every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "conformance",
+   "text": "MUST verify the attenuation chain and proof-of-possession per the attenuation substrate",
+   "facet": "the audience of every token in the chain (AAT -02 Section 8, step 6c)",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
+    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses at the consumer a child narrowed to another resource server, and accepts the same chain narrowed to this one",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+  },
+  {
+   "id": "attenuation.consumer.child-identity-claims-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-binding-check",
+   "text": "The substrate gives a claim it does not define no authority in a derived token unless a profile defines how it carries across derivation",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a child's `sub` and `client_id`, claims neither the substrate nor this profile carries across derivation, are ignored: the consumer's subject and client are the root's, so a holder-set value changes neither the decision subject, the recorded effect nor its evidence",
+    "local": "the payments consumer reads sub and client_id from the verified root, whose profile requires them; a root without sub refuses, with no fallback to a child (D882); the child mint copies neither"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses a root without its subject rather than falling back to a child's sub",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). TokenFacts.sub was leafPayload.sub ?? rootPayload.sub, so a holder chose the decision, idempotency and recorded subject. Mutations: a leaf-first sub, a leaf-first client_id and dropping the root profile's sub requirement each fail a witness; restoring the child mint's sub and client_id copy fails the mint test in the same block."
+  },
+  {
    "id": "resource-access.subset.same-matcher",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "subset",
@@ -62550,7 +62886,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, or a contract not defining an action the entry lists) is refused invalid_authorization_details and no Mission is created"
+    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, a contract not defining an action the entry lists, or the current reference of a contract configuration names current only for another resource) is refused invalid_authorization_details and no Mission is created"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -62564,6 +62900,12 @@
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses an unconfigured or malformed reference with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses the configured current reference on a resource the configuration does not name it current for",
      "level": "endpoint",
      "surface": "par"
     },
@@ -62586,7 +62928,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610). Resource applicability (#249, D712, D865): the shipped current reference proposed on a resource the configuration names no contract current for is refused at PAR. Proved by mutation: making a declaration apply to every resource fails that witness, and before it only case ev-rc-02. Cases ev-rc-01 to ev-rc-04 run (entry-validation, with the inline configuration the subset fixture's payments-contract-applicability-2026-10-26.json states)."
   },
   {
    "id": "resource-access.resource-contract.no-new-approval-non-current",
@@ -62693,6 +63035,78 @@
     }
    ],
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference is assembled before authority_hash is computed, so the record's anchor is the anchor over the set carrying it and differs from the set without it. Proved by not recording the reference."
+  },
+  {
+   "id": "resource-access.resource-contract.derivation-preserves",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "Every derivation, narrowing, and delegation preserves it exactly",
+   "observation": {
+    "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
+    "local": "witnessed for child delegation only; token derivation, refresh, token exchange, template dispatch, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry carrying a reference carries the same reference without restating it, under authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a superseded reference within its declared retention survives the derivation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a conflicting proposed reference is refused by the strict-subset proof, never replaced",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed."
+  },
+  {
+   "id": "resource-access.resource-contract.no-reference-without-approval",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
+   "observation": {
+    "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
+    "local": "witnessed for child delegation only; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry without a reference carries none",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). Partial until refresh and token exchange are witnessed."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
@@ -64733,6 +65147,37 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). The published schema and validateMissionResourceAccessSchema admit exactly id (an absolute URI), version (non-empty) and digest (sha-256: base64url); PAR refuses an extra member invalid_authorization_details. Proved by removing the shape check."
   },
   {
+   "id": "resource-access.entry-validation.date-time-leap-second-refused",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "entry-validation",
+   "text": "a date-time value in a Common Constraint defined by this specification uses `60` for the seconds field",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "par",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a proposed entry whose resource_issued_after, resource_issued_before, time_window not_before or time_window not_after uses 60 for the seconds field (an actual leap second, its offset form, or a :60 at no leap second) is refused invalid_authorization_details, creating no Mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a Common Constraint date-time value that uses 60 for the seconds field, in each member",
+     "level": "endpoint",
+     "surface": "par"
+    }
+   ],
+   "notes": "#1376, D858; scoped to this specification's Common Constraints (D865). Positive control: ordinary timestamps beside the leap second are accepted at PAR in each member. Proved by mutation: a parser admitting :60 fails the witness. Cases ev-tw-04 to ev-tw-06 and ev-iss-01 to ev-iss-03 run (entry-validation); ev-tw-07 and ev-iss-04 are valid controls."
+  },
+  {
    "id": "resource-access.entry-validation.time-window-ordering",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "entry-validation",
@@ -64781,8 +65226,8 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed entry whose recipient_domain carries a non-ASCII label, an empty label or a trailing dot is refused invalid_authorization_details, creating no Mission",
-    "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall; it does not decode an xn-- label to confirm it is a valid A-label"
+    "normative": "a proposed entry whose recipient_domain carries a non-ASCII label, an empty label, a trailing dot, or an xn-- label that is not an A-label is refused invalid_authorization_details, creating no Mission",
+    "local": "the reference checks letter-digit-hyphen labels of 1 to 63 octets and 253 octets overall and, for an xn-- label read in lower case, the structural checks: it decodes under Punycode (RFC 3492) and encodes back to itself (RFC 5891 Section 5.3), and the decoded form holds a non-ASCII character, is in NFC and lower case as decoded, does not begin with a combining mark (Section 4.2.3.2), and meets the hyphen restrictions (Section 4.2.3.1). It does not check the RFC 5892 code-point classes (RFC 5891 Section 4.2.2), the contextual rules (CONTEXTJ and CONTEXTO, Section 4.2.3.3) or the Bidi rule (Section 4.2.3.4, RFC 5893), so a label only those refuse, such as xn--n3h (U+2603, DISALLOWED), is admitted"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -64792,9 +65237,15 @@
      "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a recipient_domain that is not an ASCII DNS name or that ends in a dot",
      "level": "endpoint",
      "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/entry-validation.test.ts",
+     "name": "entry validation at PAR (@spec resource-access#entry-validation, #1376) > refuses a recipient_domain whose xn-- label is not a structurally valid A-label",
+     "level": "endpoint",
+     "surface": "par"
     }
    ],
-   "notes": "#1376 states the rule the reference already enforced through the shared recipient_domain value syntax. Exercised: a non-ASCII label, an empty label and a trailing dot are refused at PAR, and an A-label is accepted (resource-access.entry-validation.recipient-domain-case). Not exercised: the reference does not decode an xn-- label, so a label that only looks like an A-label is accepted, hence partial. Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com. Cases ev-rd-01 and ev-rd-02 run (entry-validation)."
+   "notes": "#1376 states the rule. D858 accepts structural A-label checks as partial implementation coverage, and D865 keeps the row partial: structural checks and agreement between two consumers do not establish full IDNA2008 validity. Exercised at PAR: a non-ASCII label, an empty label, a trailing dot, and an xn-- label that does not decode or decodes to a form not in lower case, not in NFC, beginning with a combining mark, beginning with a hyphen, or with hyphens in its third and fourth positions; an A-label is accepted in any ASCII letter case (resource-access.entry-validation.recipient-domain-case). Not checked, hence partial: the RFC 5892 code-point classes, the contextual rules and the Bidi rule (observation.local). Proved by mutation, each alone: stripping a trailing dot before the label check admits example.com.; a label pattern admitting any non-dot character admits exämple.com; removing the NFC, lower-case, leading-combining-mark, leading-or-trailing-hyphen or third-and-fourth-hyphen check admits its case at PAR; and a recipient_domain syntax without the A-label checks admits them all. The round-trip check, which RFC 5891 Section 5.3 requires explicitly, has no witness found in 500,000 random inputs: none decoded but failed to encode back to itself. It is kept. The decoder never throws (unit witnesses for a truncated integer, an overflow, a code point past U+10FFFF and a surrogate). Cases ev-rd-01, ev-rd-02 and ev-rd-04 to ev-rd-10 run (entry-validation); ev-rd-03 and ev-rd-11 are valid controls. The second consumer checks the same structural subset."
   },
   {
    "id": "resource-access.entry-validation.recipient-domain-case",
@@ -64825,7 +65276,7 @@
      "surface": "par"
     }
    ],
-   "notes": "#1376. Comparison is case-insensitive (resource-access.value-space.recipient-domain-labels); this row covers validity only. Proved by mutation: a lowercase-only label pattern refuses Mail.Example.COM (expected 400 to be 201). Case ev-rd-03 runs (entry-validation)."
+   "notes": "#1376. Comparison is case-insensitive (resource-access.value-space.recipient-domain-labels); this row covers validity only. Proved by mutation: a lowercase-only label pattern refuses Mail.Example.COM (expected 400 to be 201); and decoding an xn-- label in its given case instead of reading it in lower case (D858) refuses Mail.XN--Mnchen-3YA.example. Cases ev-rd-03 and ev-rd-11 run (entry-validation)."
   },
   {
    "id": "resource-access.entry-validation.max-depth-zero-no-delegation",
