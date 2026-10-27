@@ -5,7 +5,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { domainToASCII, fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   type ConsumerConfig,
@@ -294,6 +294,77 @@ describe("instants (resource-access#value-space-comparison)", () => {
   });
 });
 
+describe("Common Constraint date-times never use 60 for the seconds field (resource-access#initial-common-constraints; D858)", () => {
+  // Each place a Common Constraint carries a date-time, as an entry's
+  // constraints member.
+  const places: Record<string, (v: string) => Record<string, unknown>> = {
+    "time_window.not_before": (v) => ({ time_window: { not_before: v } }),
+    "time_window.not_after": (v) => ({ time_window: { not_after: v } }),
+    resource_issued_after: (v) => ({ resource_issued_after: v }),
+    resource_issued_before: (v) => ({ resource_issued_before: v }),
+  };
+  const constrained = (constraints: Record<string, unknown>) => ({ ...base, constraints });
+
+  // "MUST NOT use `60` for the seconds field", though RFC 3339 permits it for
+  // an actual leap second: the 2016 leap second in UTC and in an offset form,
+  // and a 60 at no leap second.
+  const sixty = ["2016-12-31T23:59:60Z", "2017-01-01T00:59:60+01:00", "2026-09-01T12:00:60Z"];
+  // Ordinary timestamps either side of that leap second.
+  const ordinary = [
+    "2016-12-31T23:59:59Z",
+    "2016-12-31T23:59:59.999Z",
+    "2017-01-01T00:00:00Z",
+    "2017-01-01T00:59:59+01:00",
+  ];
+
+  it("refuses a 60 seconds field in every Common Constraint date-time", () => {
+    for (const [place, build] of Object.entries(places)) {
+      for (const v of sixty) {
+        const result = entryValidationCheck(constrained(build(v)), config);
+        expect(result.outcome, `${place}: ${v}`).toBe("refuse");
+        expect(result.error, `${place}: ${v}`).toBe("invalid_authorization_details");
+      }
+    }
+  });
+
+  it("names the seconds field when the value is an actual leap second", () => {
+    const result = entryValidationCheck(
+      constrained({ resource_issued_after: "2016-12-31T23:59:60Z" }),
+      config,
+    );
+    expect(result.reason).toContain("uses 60 for the seconds field");
+  });
+
+  it("admits ordinary timestamps beside a leap second", () => {
+    for (const [place, build] of Object.entries(places)) {
+      for (const v of ordinary)
+        expect(validate(constrained(build(v))), `${place}: ${v}`).toBe("valid");
+    }
+    expect(
+      validate(
+        constrained({
+          time_window: { not_before: "2016-12-31T23:59:59Z", not_after: "2017-01-01T00:00:00Z" },
+        }),
+      ),
+    ).toBe("valid");
+  });
+
+  it("refuses a leap second in either operand of a subset comparison", () => {
+    const valid = constrained({ resource_issued_after: "2016-12-31T23:59:59Z" });
+    const leap = constrained({ resource_issued_after: "2016-12-31T23:59:60Z" });
+    expect(subsetCheck(leap, valid).outcome).toBe("refuse");
+    expect(subsetCheck(valid, leap).outcome).toBe("refuse");
+    expect(subsetCheck(valid, valid).outcome).toBe("subset");
+  });
+
+  it("keeps the RFC 3339 parser itself admitting an actual leap second", () => {
+    // The restriction is the Common Constraints', applied where the draft
+    // states it; parseInstant still reads RFC 3339 (see "instants" above).
+    expect(parseInstant("2016-12-31T23:59:60Z")?.leap).toBe(true);
+    expect(parseInstant("2017-01-01T00:59:60+01:00")?.leap).toBe(true);
+  });
+});
+
 describe("recipient_domain (resource-access#entry-validation)", () => {
   it("admits ASCII DNS names with A-label internationalized labels, in any case", () => {
     for (const v of [
@@ -322,6 +393,93 @@ describe("recipient_domain (resource-access#entry-validation)", () => {
       "xn--example-.com",
     ];
     for (const v of bad) expect(isValidRecipientDomain(v), v).toBe(false);
+  });
+
+  // A-label structure (RFC 5890 section 2.3.2.1; RFC 5891 sections 4.2.3.1,
+  // 4.2.3.2, 5.3 and 5.4; D858). The invalid A-labels below were produced with
+  // Python's punycode codec, an encoder independent of this package, since a
+  // UTS 46 converter does not emit them.
+  it("admits an A-label in lower, mixed and upper case", () => {
+    for (const v of [
+      "xn--mnchen-3ya.example",
+      "Mail.XN--mnchen-3ya.example",
+      "mail.Xn--MnChEn-3yA.example",
+      "MAIL.XN--MNCHEN-3YA.EXAMPLE",
+      // U+20000, outside the Basic Multilingual Plane, then "--ab": the
+      // hyphens are the second and third code points, not the third and
+      // fourth, though they are the third and fourth UTF-16 code units.
+      "xn----ab-kq84c.example",
+    ]) {
+      expect(isValidRecipientDomain(v), v).toBe(true);
+    }
+  });
+
+  it("admits the A-label of each valid lower-case NFC U-label, url.domainToASCII as the oracle", () => {
+    // domainToASCII is used here only, as a converter this package does not
+    // share; it returns "" for input it rejects.
+    const uLabels = [
+      "münchen",
+      "bücher",
+      "español",
+      "пример",
+      "ελληνικά",
+      "日本語",
+      "例え",
+      "中文",
+      "한국어",
+      "عربي",
+      "עברית",
+      "\u{20000}",
+    ];
+    for (const u of uLabels) {
+      expect(u.normalize("NFC"), u).toBe(u);
+      expect(u.toLowerCase(), u).toBe(u);
+      const aLabel = domainToASCII(`${u}.example`);
+      expect(aLabel.startsWith("xn--"), `${u}: ${aLabel}`).toBe(true);
+      expect(isValidRecipientDomain(aLabel), aLabel).toBe(true);
+      expect(isValidRecipientDomain(aLabel.toUpperCase()), aLabel).toBe(true);
+    }
+  });
+
+  it("refuses an xn-- label that is not a structurally valid A-label, checked as decoded", () => {
+    const bad: Record<string, string> = {
+      // Does not decode under RFC 3492.
+      "a truncated integer": "xn--9.example",
+      "a code point past U+10FFFF": "xn--rf96i.example",
+      // The digit 9 has value 35; the eighth overflows 2^31 - 1.
+      "an integer past 2^31 - 1": "xn--99999999999.example",
+      // Decodes, but the decoded form is not a U-label.
+      "not in lower case (mÜnchen)": "xn--mnchen-psa.example",
+      "not in NFC (me, U+0301, nchen)": "xn--menchen-uge.example",
+      "not in NFC (münchen, U+0301)": "xn--mnchen-3ya552b.example",
+      "a leading combining mark (U+0301, mnchen)": "xn--mnchen-hxd.example",
+      "a leading combining mark (U+0301, münchen)": "xn--mnchen-3ya842b.example",
+      "a leading hyphen (-münchen)": "xn---mnchen-o2a.example",
+      "a trailing hyphen (münchen-)": "xn--mnchen--n2a.example",
+      "hyphens third and fourth (mü--nchen)": "xn--m--nchen-65a.example",
+      // U+20000, "a--b": the hyphens are the third and fourth code points
+      // though the fourth and fifth UTF-16 code units.
+      "hyphens third and fourth code points (U+20000, a--b)": "xn--a--b-kq84c.example",
+    };
+    for (const [name, v] of Object.entries(bad)) {
+      expect(isValidRecipientDomain(v), name).toBe(false);
+      const entry = { ...base, constraints: { recipient_domain: v } };
+      const result = entryValidationCheck(entry, config);
+      expect(result.outcome, name).toBe("refuse");
+      expect(result.error, name).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("returns false, never throws, on malformed Punycode", () => {
+    // Every two-character tail over the Punycode digit alphabet, and long
+    // runs of the largest digit, which overflow a 31-bit integer.
+    const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789-";
+    const tails: string[] = ["9".repeat(59), "z".repeat(59), `a-${"9".repeat(57)}`];
+    for (const x of alphabet) for (const y of alphabet) tails.push(`${x}${y}`);
+    for (const tail of tails) {
+      const v = `xn--${tail}.example`;
+      expect(() => isValidRecipientDomain(v), v).not.toThrow();
+    }
   });
 
   it("compares case-insensitively on whole labels", () => {

@@ -23,6 +23,8 @@ import {
   DuplicateMemberError,
   intentHash,
   isAbsoluteUri,
+  isCurrencyCode,
+  isValidAmount,
   type JsonValue,
   MISSION_INTENT_EVIDENCE_TYP,
   parseStrictJson,
@@ -258,6 +260,19 @@ export class IntentError extends Error {
     message: string,
   ) {
     super(message);
+  }
+}
+
+/**
+ * @spec mission#approval-commit (#1721, D845): the requested ceiling, or the
+ * effective expiry a commit establishes, is not later than the instant it is
+ * judged at. Its code stays `invalid_request`, the refusal at submission
+ * acceptance and on every surface that maps it as it always has; a direct
+ * approval decision tells it apart and completes the request `access_denied`.
+ */
+export class ExpiryPassedError extends IntentError {
+  constructor(message: string) {
+    super("invalid_request", message);
   }
 }
 
@@ -565,6 +580,15 @@ export function validateMissionIntent(raw: string, opts: IntentIntakeOptions = {
  */
 export interface IntentIntakeOptions {
   now?: Date;
+  /**
+   * @spec metering#bounds (#813, ruling 2): admit the `max_budget` member, an
+   * object of exactly `amount` (a decimal amount) and `currency` (three
+   * upper-case ASCII letters). Set only by a dispatch intake under the
+   * `standing-payment-dispatch` capability and by the expansion of a
+   * standing-payment instance; every other carrier refuses the member as
+   * unknown.
+   */
+  admitMaxBudget?: boolean;
 }
 
 /** The semantic-Intent rules over a parsed object (shared by the envelope
@@ -575,8 +599,22 @@ function validateMissionIntentObject(
 ): MissionIntent {
   // Closed top level (@spec mission#submission-via-par).
   for (const key of Object.keys(obj)) {
-    if (!TOP_LEVEL.has(key)) {
+    if (!TOP_LEVEL.has(key) && !(key === "max_budget" && opts.admitMaxBudget === true)) {
       throw new IntentError("invalid_request", `unknown top-level member: ${key}`);
+    }
+  }
+  if (obj.max_budget !== undefined) {
+    const cap = obj.max_budget;
+    if (
+      cap === null ||
+      typeof cap !== "object" ||
+      Array.isArray(cap) ||
+      Object.keys(cap).length !== 2 ||
+      typeof cap.amount !== "string" ||
+      !isValidAmount(cap.amount) ||
+      !isCurrencyCode(cap.currency)
+    ) {
+      throw new IntentError("invalid_request", "max_budget must be {amount, currency} with a decimal amount and a currency code");
     }
   }
 
@@ -611,9 +649,11 @@ function validateMissionIntentObject(
   // value is never rewritten forward: a Mission whose lifetime has already run
   // out is refused here rather than accepted and expired on arrival.
   // Acceptance does not freeze time; Mission creation re-checks the effective
-  // expiry atomically at the commit (@spec mission#approval-event).
+  // expiry atomically at the commit (@spec mission#approval-event). A direct
+  // approval decision that re-validates the request after this ceiling passed
+  // maps the refusal to `access_denied` (@spec mission#approval-commit, #1721).
   if (Date.parse(expiresAt) <= (opts.now ?? new Date()).getTime()) {
-    throw new IntentError("invalid_request", "expires_at is already past");
+    throw new ExpiryPassedError("expires_at is already past");
   }
 
   if (

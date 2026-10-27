@@ -415,6 +415,10 @@ describe("deferred Mission approval wire path (@spec deferred-approval#deferred-
     const delivered = await poll(deferralCode, keys);
     expect(delivered.status, JSON.stringify(delivered.body)).toBe(200);
     expect(missionCount()).toBe(before + 1);
+    // @spec mission#mission-response-parameters (#1719, D845): the resolving
+    // poll first delivers the new Mission, so it carries both members.
+    const delivers = (decodeJwt(delivered.body.access_token as string) as { mission: { id: string } }).mission.id;
+    expect(delivered.body.mission_id).toBe(delivers);
     const mission = as.kernel.get(delivered.body.mission_id as string) as MissionRecord;
     expect(mission.state).toBe("active");
     expect(delivered.body.mission_expires_at).toBe(mission.expires_at);

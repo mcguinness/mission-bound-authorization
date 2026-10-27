@@ -430,6 +430,18 @@ a vendor whose record names its own remittance routing, the object also
 carries `recipients`: the sorted final recipients, so a routing or list
 change between decision and commit is a mismatch.
 
+Under a Mission bound to a standing-payment budget (#813, #816; the
+`standing-payment-dispatch` capability and the `budget_metering`
+declaration, both disabled and unclaimed), an invoice-scoped decision
+request also carries `action.properties.parameters`: the effective
+parameters object above without `capability_snapshot`, the exact object
+`parameter_digest` is computed over. The PDP recomputes the digest over
+it and, for every crossing of `payments:payment.execute`, compares its
+`payee_account` with the destination the approved Dispatch Policy commits
+for its `vendor_id` (`parameter_violation` otherwise), so the payee it
+compared is the one execution reverification binds. Every other request
+keeps its decision bytes.
+
 ## Evaluation-Context Binding (#773)
 
 The deployment claims Runtime's Evaluation-Context Binding at the verified

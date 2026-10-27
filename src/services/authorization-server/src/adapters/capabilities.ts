@@ -68,7 +68,15 @@ export type ProviderCapability =
    * cancellation by revocation, and `governed_policy` completion. Opt-in:
    * off unless a set names it, and it needs `token-revocation`.
    */
-  | "deferred-approval";
+  | "deferred-approval"
+  /**
+   * @spec mission-template#prohibited-classes (#813, D814, D830): the one
+   * standing-payment dispatch workflow, where a human-consented Mission
+   * Template dispatches `payments:payment.execute` unattended and only that
+   * operation's `irreversible_action` predicate is waived. Opt-in: off unless
+   * a set names it, never claimed or shipped, and it needs `templates`.
+   */
+  | "standing-payment-dispatch";
 
 /** Every capability an absent set enables, in declaration order. */
 export const ALL_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
@@ -109,12 +117,14 @@ export const TOKEN_EXCHANGE_CAPABILITIES: readonly ProviderCapability[] = [
  * only where a capability set names it. Device authorization is experimental;
  * delegation is the core's optional Delegation capability, which neither
  * baseline elects (D415, D449); Deferred Mission Approval is an optional
- * companion tracking an early substrate.
+ * companion tracking an early substrate; standing-payment dispatch stays
+ * disabled and unclaimed until its enablement is separately approved (D830).
  */
 export const OPT_IN_PROVIDER_CAPABILITIES: readonly ProviderCapability[] = [
   "device-authorization",
   "delegation",
   "deferred-approval",
+  "standing-payment-dispatch",
 ];
 
 /**

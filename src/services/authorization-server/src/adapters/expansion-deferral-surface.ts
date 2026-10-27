@@ -109,6 +109,14 @@ function escapeHtml(s: string): string {
 
 const json = (value: unknown): string => escapeHtml(JSON.stringify(value, null, 2));
 
+/**
+ * @spec mission#rendering-safeguards (#1532), as the approval page does:
+ * client-supplied text is attributed to the client, named by the `client_id`
+ * this AS authenticated for the expansion request, never by its own text.
+ */
+const suppliedBy = (clientId: string): string =>
+  `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+
 /** The taint statement, as the Approver reads it. */
 const TAINT_TEXT: Record<EncounterDisclosure["taint"], string> = {
   untrusted_content_ingested: "The session had ingested untrusted content.",
@@ -230,8 +238,8 @@ ${why}
 <h2>Mission being widened</h2><p class="deferral-predecessor"><code>${escapeHtml(review.predecessor.id)}</code></p>
 <h2>Client (requests and receives the authority)</h2><p class="deferral-client"><code>${escapeHtml(review.clientId)}</code>${view.clientName ? ` ${escapeHtml(view.clientName)}` : ""}</p>
 <h2>Subject (the authority is granted for)</h2><p class="deferral-subject"><code>${escapeHtml(review.predecessor.subject.sub)}</code></p>
-<h2>Intent (task context, untrusted)</h2><pre class="deferral-intent">${json(review.intent)}</pre>
-${review.proposal ? `<h2>Proposed authority (submitted, untrusted)</h2><pre class="deferral-proposal">${json(review.proposal)}</pre>\n` : ""}<h2>Successor authority (what approval grants)</h2><pre class="successor-authority">${json(review.successor)}</pre>
+<h2>Intent (task context, untrusted)</h2>${suppliedBy(review.clientId)}<pre class="deferral-intent">${json(review.intent)}</pre>
+${review.proposal ? `<h2>Proposed authority (submitted, untrusted)</h2>${suppliedBy(review.clientId)}<pre class="deferral-proposal">${json(review.proposal)}</pre>\n` : ""}<h2>Successor authority (what approval grants)</h2><pre class="successor-authority">${json(review.successor)}</pre>
 ${view.bindings ? `${view.bindings}\n` : ""}<h2>Expiry (when the approved authority ends)</h2><p><time class="successor-expires-at" datetime="${escapeHtml(context.expires_at)}">${escapeHtml(context.expires_at)}</time></p>
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}

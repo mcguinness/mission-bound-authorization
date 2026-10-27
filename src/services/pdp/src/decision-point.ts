@@ -24,6 +24,12 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import type { AuthorityDependencyEnforcement, EvaluationContextBindingDeclarations, ResourceContractDeclarations } from "@mission/core";
 import {
+  BudgetMeteringConfigError,
+  isMissionBudgetBinding,
+  type MissionBudgetSource,
+  UNDERIVABLE_BUDGET,
+} from "./budget-metering.js";
+import {
   createDecisionEvidenceEmitter,
   type DecisionEvidenceEmitter,
   type DecisionEvidenceSequences,
@@ -38,6 +44,7 @@ import {
 } from "./evaluate.js";
 import { isResourcePolicy, type ResourcePolicy, ResourcePolicyConfigError } from "./resource-policy.js";
 import type {
+  BudgetMetering,
   ClaimRequester,
   ClaimResolution,
   ConsumptionStatusFn,
@@ -46,6 +53,7 @@ import type {
   SettlementResult,
   UnresolvedClaim,
 } from "./idempotency-claims.js";
+import type { MissionView } from "./policy-view.js";
 import type { EvidenceKeyLike, EvidenceSigningKey } from "./runtime-evidence-integrity.js";
 
 /**
@@ -139,6 +147,19 @@ export interface DecisionPointConfig {
    */
   claims?: IdempotencyClaimDomain;
   /**
+   * @spec metering#metering, mission-template#standing-payment-exception
+   * (#816, #813, decision d): this decision point's own source of each
+   * Mission's budget binding, derived from the Mission Issuer's committed
+   * policy snapshot, bound here for the reason the claim domain is: an
+   * enforcement component that could supply the binding could drop it and
+   * make every spend unmetered, or supply another budget's. Every decision
+   * takes the binding from here, replacing whatever the caller's view
+   * carries, absence included. Absent, this point has no source, and a
+   * caller's view that carries a binding is evaluated as one it cannot
+   * derive (`constraint_unsupported`), never metered.
+   */
+  budgetBindings?: MissionBudgetSource;
+  /**
    * @spec authzen#context-work-item (#815): the action classes this decision
    * point's Enforcement Scope Statement claims work-item attribution for
    * (`readWorkItemAttribution(statement).claimedClasses`), bound here for the
@@ -229,6 +250,10 @@ export interface DecisionPoint {
 interface PointBindings {
   emitter: DecisionEvidenceEmitter | undefined;
   claims: IdempotencyClaimDomain | undefined;
+  /** @spec metering#metering (#816, decision f): bound by {@link createDecisionPoint} only. */
+  budgets?: BudgetMetering | undefined;
+  /** @spec metering#metering (#816, #813, decision d): bound by {@link createDecisionPoint} only. */
+  budgetBindings?: MissionBudgetSource | undefined;
   workItemAttributedClasses?: ReadonlySet<string> | undefined;
   resourcePolicy: ResourcePolicy | undefined;
   authorityDependency?: AuthorityDependencyEnforcement | undefined;
@@ -240,6 +265,31 @@ interface PointBindings {
 }
 
 /**
+ * @spec metering#metering (#816, #813, decision d): the view's budget binding
+ * (`MissionView.budget`) is never the caller's. It is removed from the view
+ * the caller built and replaced with what this point's own source
+ * ({@link DecisionPointConfig.budgetBindings}) derives for the Mission the
+ * view names: a binding, the underivable marker, or nothing. A source that
+ * throws or answers with something other than a binding counts as
+ * underivable. A point with no source evaluates a caller's binding as the
+ * underivable marker, so the caller can only refuse its own requests, never
+ * have one metered or unmetered by what it supplied.
+ */
+function attachBudgetBinding(view: MissionView, source: MissionBudgetSource | undefined): MissionView {
+  if (view === null || typeof view !== "object") return view;
+  const { budget: presented, ...unbound } = view;
+  if (source === undefined) return presented === undefined ? unbound : { ...unbound, budget: UNDERIVABLE_BUDGET };
+  let derived: ReturnType<MissionBudgetSource>;
+  try {
+    derived = source({ id: view.id, issuer: view.issuer });
+  } catch {
+    derived = UNDERIVABLE_BUDGET;
+  }
+  if (derived === undefined) return unbound;
+  return { ...unbound, budget: isMissionBudgetBinding(derived) ? derived : UNDERIVABLE_BUDGET };
+}
+
+/**
  * Bind one emission path, one claim domain, one Resource policy and one
  * requester to one decision function. The returned function strips any
  * `evidence`, `claims`, `resourcePolicy`, `requester` or `consumptionStatus`
@@ -248,7 +298,8 @@ interface PointBindings {
  * elsewhere and widened is still structurally assignable, so they are removed
  * rather than merely overwritten. None of them can be supplied, replaced, or
  * suppressed from the enforcement side. A decision point bound to no Resource
- * policy forwards none, and `evaluate` refuses to decide.
+ * policy forwards none, and `evaluate` refuses to decide. The view's budget
+ * binding is this point's own ({@link attachBudgetBinding}).
  */
 function bindDecide(
   bindings: PointBindings,
@@ -270,6 +321,8 @@ function bindDecide(
     const forwarded = { ...opts } as Partial<EvaluateOptions>;
     delete forwarded.evidence;
     delete forwarded.claims;
+    delete forwarded.budgets;
+    if (bindings.budgets) forwarded.budgets = bindings.budgets;
     delete forwarded.workItemAttributedClasses;
     if (bindings.workItemAttributedClasses) forwarded.workItemAttributedClasses = bindings.workItemAttributedClasses;
     delete forwarded.resourcePolicy;
@@ -290,6 +343,7 @@ function bindDecide(
     if (resourceContracts) forwarded.resourceContracts = resourceContracts;
     if (phasedActions) forwarded.phasedActions = phasedActions;
     if (evaluationContextBinding) forwarded.evaluationContextBinding = evaluationContextBinding;
+    if (forwarded.view !== undefined) forwarded.view = attachBudgetBinding(forwarded.view, bindings.budgetBindings);
     forwarded.requester = requester;
     if (consumptionStatus) forwarded.consumptionStatus = consumptionStatus;
     return evaluate(req, forwarded as EvaluateOptions);
@@ -322,6 +376,15 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   if (!isResourcePolicy(config?.resourcePolicy)) {
     throw new ResourcePolicyConfigError("createDecisionPoint requires a Resource policy");
   }
+  // @spec metering#metering (#813, #816, decision d): a point that meters
+  // budgets takes every binding from its own source; without one, a caller's
+  // view that omits the binding would be evaluated unmetered.
+  const budgets = config.claims?.budgetMetering();
+  if (budgets !== undefined && config.budgetBindings === undefined) {
+    throw new BudgetMeteringConfigError(
+      "createDecisionPoint over a claim domain that meters budgets requires a budget binding source (budgetBindings)",
+    );
+  }
   const emitter = config.evidence
     ? createDecisionEvidenceEmitter({
         signer: config.evidence.signer,
@@ -334,6 +397,14 @@ export function createDecisionPoint(config: DecisionPointConfig & Required<Pick<
   const bindings: PointBindings = {
     emitter,
     claims: config.claims,
+    // @spec metering#metering, metering#topology (#816, decision f): the
+    // co-resident PDP meters budgets in its own claim domain, where that
+    // domain's statement claims `budget_metering`. The ephemeral decision
+    // point and the remote server never bind one.
+    budgets,
+    // @spec metering#metering (#816, #813, decision d): and takes each
+    // Mission's budget binding from its own source, never from the caller.
+    budgetBindings: config.budgetBindings,
     workItemAttributedClasses: config.workItemAttributedClasses,
     resourcePolicy: config.resourcePolicy,
     authorityDependency: config.authorityDependency,
