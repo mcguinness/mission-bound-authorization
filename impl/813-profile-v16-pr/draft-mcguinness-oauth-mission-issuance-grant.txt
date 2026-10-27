@@ -621,10 +621,10 @@ Table of Contents
    |                               |      | unparseable body           |
    +-------------------------------+------+----------------------------+
    | invalid_client                | 400  | Direct client              |
-   |                               |      | authentication (mutual     |
-   |                               |      | TLS or private-key JWT)    |
-   |                               |      | failed, only one of        |
-   |                               |      | client_assertion_type      |
+   |                               |      | authentication failed      |
+   |                               |      | and its method defines     |
+   |                               |      | no other error, only one   |
+   |                               |      | of client_assertion_type   |
    |                               |      | and client_assertion is    |
    |                               |      | present, or no             |
    |                               |      | credential was presented   |
