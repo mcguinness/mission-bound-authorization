@@ -63456,9 +63456,21 @@
      "name": "a proposed contract no longer current after the push is refused, never a 500 (@spec resource-access#resource-contract, mission#error-mapping, #1610) > at the decision: the request completes invalid_authorization_details and no Mission is created",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > the consent page refuses a ceiling whose references configuration would now assemble differently, never substituting one",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > keeps a carried current reference, and refuses a carried reference configuration does not name as current, or one with no declarations",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1)."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -63491,9 +63503,27 @@
      "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > records the current contract's reference in an entry whose resource requires one when the proposal carries none, so the Approver approves it with it",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "template consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > records the current reference at the proposal, renders it on the page, and commits it with the template",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-consent-page.test.ts",
+     "name": "template consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > assembles the reference at the commit of the service-token stand-in, which has no consent page",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > records the current reference in a ceiling entry whose resource requires one, at a commit with no consent page",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -63548,7 +63578,7 @@
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation only; token derivation, refresh, token exchange, template dispatch, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
+    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
    },
    "tests": [
     {
@@ -63568,9 +63598,27 @@
      "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a conflicting proposed reference is refused by the strict-subset proof, never replaced",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > a Dispatch from a pinned ceiling carries the ceiling's reference without the Dispatcher restating it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > a Dispatcher reference the template ceiling does not carry is refused, never added",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > a superseded ceiling reference within its retention survives the Dispatch, and a retired one refuses",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -63632,18 +63680,12 @@
     },
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
-     "name": "a surface that does not implement the reference refuses it and never drops it (@spec resource-access#resource-contract, #249) > template consent refuses a ceiling entry carrying resource_contract, naming it",
-     "level": "unit",
-     "surface": "approval-ceremony"
-    },
-    {
-     "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "the authorization server assembles the reference from configuration before approval (@spec resource-access#resource-contract, #249) > refuses invalid_authorization_details at intake and at approval for a proposed %s, creating no Mission",
      "level": "unit",
      "surface": "par"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference AS implements the section at proposal intake, approval and derivation. Template consent does not assemble a reference, so it refuses a ceiling entry carrying one; and an authorization server with no contract configured refuses a pushed entry carrying one invalid_authorization_details at PAR and at approval, never issuing it without the member. Proved by removing the template refusal, by removing the intake check (PAR then admitted the entry), and by dropping the member in derivation (approval then issued the entry without it)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference AS implements the section at proposal intake, approval and derivation. Template consent implements the section since #249 B.1 (D875), so it no longer takes this alternative. An authorization server with no contract configured refuses a pushed entry carrying one invalid_authorization_details at PAR and at approval, never issuing it without the member. Proved by removing the intake check (PAR then admitted the entry), and by dropping the member in derivation (approval then issued the entry without it)."
   },
   {
    "id": "resource-access.resource-contract.rs-performs-only-referenced",
