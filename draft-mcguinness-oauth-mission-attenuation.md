@@ -381,9 +381,12 @@ The client MAY carry an `attenuating_agent_token` authorization detail
 Set: its tools and argument constraints are the requested subset.
 
 When the detail is present, the Mission Issuer MUST validate it against
-the root mapping ({{root-mapping}}). It MUST reject, with
-`invalid_request`, any tool or argument constraint not within the
-mapped Authority Set. When the detail is absent, the Mission Issuer
+the root mapping ({{root-mapping}}). It MUST refuse the request with
+`invalid_authorization_details` when any tool or argument constraint
+is not within the mapped Authority Set, rather than issue a root for
+the rest, as the issuance profile refuses a requested subset beyond
+the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}).
+When the detail is absent, the Mission Issuer
 derives the full mapped root from the Mission's delegable Authority Set
 entries ({{root-mapping}}). A client-requested root is therefore always
 at most the mapped Authority Set, never broader.
@@ -924,6 +927,11 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Requesting a Root and Discovery: a requested tool or argument
+  constraint beyond the mapped Authority Set refuses the request with
+  `invalid_authorization_details` (was `invalid_request`), as in the
+  issuance profile and the substrate.
 
 - Mission-Bound Attenuation Roots: the root carries the substrate's
   `typ` (`aat+jwt`, not `at+jwt`) and a `cnf.jwk`, and is returned
