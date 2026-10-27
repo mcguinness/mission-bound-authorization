@@ -22,6 +22,7 @@ import {
   seedLedgerReconcilerClient,
   seedTrustedSources,
   type SeededTrustedSource,
+  RESOURCE_CONTRACTS,
   SCOPE_PROJECTION,
   TOPOLOGY,
   USERS,
@@ -1673,6 +1674,9 @@ export async function buildAuthorizationServer(opts: {
     authoritySourceCatalog: bindAuthoritySourceCatalog(AUTHORITY_SOURCES as never, opts.issuer, opts.issuer),
     capabilityResolver: trustedCapabilityResolver(),
     dispatchPolicies,
+    // @spec resource-access#resource-contract (#249, D875): the declarations the
+    // kernel below reads, so the seeded ceiling is assembled as a consent's is.
+    resourceContracts: opts.resourceContracts ?? RESOURCE_CONTRACTS,
     // @spec mission#transformation-capabilities (D733): the same trusted
     // mapping the kernel below reads, retained at this consent.
     entryAudiences: (entries) => entries.map((entry) => mappedAudiences(opts.scopeProjection ?? SCOPE_PROJECTION, entry)),

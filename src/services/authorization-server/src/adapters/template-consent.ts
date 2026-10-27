@@ -15,14 +15,20 @@
  * to; the proposal is then refused and proposed again.
  */
 import { randomBytes } from "node:crypto";
-import { type ActivationPolicyRef, type AuthorityEntry, canonicalize, type JsonValue } from "@mission/core";
+import {
+  type ActivationPolicyRef,
+  type AuthorityEntry,
+  canonicalize,
+  type JsonValue,
+  type ResourceContractDeclarations,
+} from "@mission/core";
 import { verifiedActivationPolicy } from "../kernel/activation-policy.js";
 import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
 import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
 import type { ActionApprovalPolicy } from "@mission/demo-data";
 import { contentDigest } from "./approval-render-revision.js";
-import { type DispatchPolicies, type TemplateProposalBody, templateCeiling } from "../kernel/template.js";
+import { type DispatchPolicies, type TemplateProposalBody, templateCeiling, templateContracts } from "../kernel/template.js";
 
 /** Prefix of a template proposal's identifier. */
 export const TEMPLATE_CONSENT_PREFIX = "tcon_";
@@ -122,6 +128,8 @@ export function templateConsentDisclosure(
     standingPayment?: boolean;
     /** @spec runtime#action-approval (#813): the deployment's action-approval predicate. */
     actionApprovalPolicy?: ActionApprovalPolicy;
+    /** @spec resource-access#resource-contract (#249, D875): the contract declarations the ceiling is assembled against. */
+    resourceContracts?: ResourceContractDeclarations;
   },
 ): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
   const { body } = proposal;
@@ -160,6 +168,22 @@ export function templateConsentDisclosure(
     return {
       refusal:
         "The trusted capability bindings of the Template Ceiling changed since this template was proposed, so the ceiling shown would not be the one committed. This consent is refused; propose the template again.",
+    };
+  }
+  // @spec resource-access#resource-contract (#249, D875): likewise the
+  // ceiling's contract references, assembled again from configuration: a
+  // reference no longer current, or one configuration now requires, refuses
+  // rather than shows a ceiling the approval would not commit.
+  let assembled: AuthorityEntry[] | undefined;
+  try {
+    assembled = templateContracts(current, opts.resourceContracts);
+  } catch {
+    assembled = undefined;
+  }
+  if (!assembled || canonicalize(assembled as unknown as JsonValue) !== canonicalize(body.ceiling as unknown as JsonValue)) {
+    return {
+      refusal:
+        "The configured contract references of the Template Ceiling changed since this template was proposed, so the ceiling shown would not be the one committed. This consent is refused; propose the template again.",
     };
   }
   return {
