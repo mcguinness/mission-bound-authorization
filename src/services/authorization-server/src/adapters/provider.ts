@@ -592,6 +592,7 @@ import {
   type DispatchReason,
   type TemplateProposalBody,
   templateCeiling,
+  templateContracts,
 } from "../kernel/template.js";
 import {
   renderTemplateConsentPage,
@@ -4163,6 +4164,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ...(standingPaymentOn ? { standingPayment: true } : {}),
       ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
       ...(authenticated ? { budgetExposure: { port: opts.budgetExposure, unit: exposureUnit } } : {}),
+      resourceContracts: kernel.resourceContracts(),
     });
   };
   /**
@@ -5941,6 +5943,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // as `authority_source` is never taken from client assertion.
         const template = createTemplate(opts.templateStore, body as unknown as CreateTemplateInput, {
           ...kernel.authoritySourceOptions(),
+          // @spec resource-access#resource-contract (#249, D875): no consent page,
+          // so the ceiling's references are assembled at this commit only.
+          resourceContracts: kernel.resourceContracts(),
           ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
           // @spec mission#transformation-capabilities (D733): retained at consent.
           entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
@@ -6009,7 +6014,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // @spec capability-binding#conformance: the ceiling as the template
         // will commit it, caller-supplied bindings discarded and the trusted
         // ones resolved, so the consent page renders what approval commits.
-        const ceiling = templateCeiling(proposed.ceiling, kernel.authoritySourceOptions().capabilityResolver);
+        // @spec resource-access#resource-contract (#249, D875): and its contract
+        // references assembled from configuration, before the page renders it.
+        const ceiling = templateContracts(
+          templateCeiling(proposed.ceiling, kernel.authoritySourceOptions().capabilityResolver),
+          kernel.resourceContracts(),
+        );
         const proposal = templateProposals.propose(
           { ...proposed, ceiling },
           pinDispatchPolicy(opts.issuer, opts.dispatchPolicies, proposed.dispatch_policy),
@@ -6226,6 +6236,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           },
           {
             ...kernel.authoritySourceOptions(),
+            resourceContracts: kernel.resourceContracts(),
             ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
             // @spec mission#transformation-capabilities (D733): retained at consent.
             entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
