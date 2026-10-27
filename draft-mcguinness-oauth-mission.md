@@ -3965,11 +3965,9 @@ subject to all of the following:
   admits one; deployment policy alone does not.
 - **Subject is stable.** `sub` remains the Mission's Subject. The
   delegate is an actor, not the Subject.
-- **`client_id` keeps its ordinary meaning.** A delegated token's
-  `client_id` is the OAuth client that requested it
-  ({{Section 4.3 of RFC8693}}, {{Section 2.2 of RFC9068}}). The
-  originally-approved agent remains recorded in the Mission Record
-  ({{mission-record}}, {{client-id-rebinding}}).
+- **`client_id` keeps its ordinary meaning.** It names the client that
+  requested the token ({{token-claims}}); the originally-approved agent
+  stays in the Mission Record ({{client-id-rebinding}}).
 - **The `act` chain identifies the delegates.** The delegated token
   carries an `act` claim per {{Section 4.1 of RFC8693}} and the Actor
   Profile {{I-D.draft-mcguinness-oauth-actor-profile}}: the outermost
@@ -3978,9 +3976,8 @@ subject to all of the following:
   members that profile defines (for example, `sub`, `iss`, and the
   `sub_profile` actor-type classification, such as `ai_agent`).
 - **The audience processes the chain.** The AS issues the delegated
-  token only for an audience it has established as a Mission-aware
-  Resource Server that also processes the `act` chain, and refuses
-  any other with `invalid_target` ({{rs-mission-unaware}}).
+  token only for an audience that meets the issuance rule of
+  {{rs-mission-unaware}}, and refuses any other with `invalid_target`.
 - **Authority only narrows.** The delegated token's
   `authorization_details` MUST be a subset ({{subset}}) of the
   designation's authority, hence of the delegating token's and of the
