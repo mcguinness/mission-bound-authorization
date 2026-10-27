@@ -149,6 +149,15 @@ importers:
         specifier: workspace:*
         version: link:../services/pdp
 
+  packages/aauth-testkit:
+    dependencies:
+      '@mission/aauth-wire':
+        specifier: workspace:*
+        version: link:../aauth-wire
+      structured-headers:
+        specifier: ^2.1.0
+        version: 2.1.0
+
   packages/aauth-wire:
     dependencies:
       jose:
