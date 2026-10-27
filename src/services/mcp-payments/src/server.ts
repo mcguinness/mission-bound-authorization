@@ -1464,7 +1464,7 @@ export class McpPaymentsServer {
     }
     // @spec operation-profile-payments-v1 intake (D316): every later step,
     // execution included, uses the normalized arguments.
-    const intake = await this.deps.pep.intake(tool, args, token);
+    const intake = await this.deps.pep.intake(tool, args, token, signals?.invocation);
     if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
     args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
@@ -1573,7 +1573,7 @@ export class McpPaymentsServer {
   ): Promise<WriteToolResult> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     // @spec operation-profile-payments-v1 intake (D316), as in callReadTool.
-    const intake = await this.deps.pep.intake(tool, args, token);
+    const intake = await this.deps.pep.intake(tool, args, token, signals?.invocation);
     if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
     args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
@@ -1984,7 +1984,7 @@ export class McpPaymentsServer {
     // @spec operation-profile-payments-v1 intake (D316), before the
     // transaction-token check below reads `invoice_id`, so the challenged
     // operation's digest is recomputed from the normalized arguments too.
-    const intake = await this.deps.pep.intake(tool, args, token);
+    const intake = await this.deps.pep.intake(tool, args, token, signals?.invocation);
     if (!intake.ok) return { ok: false, refusal_reason: intake.refusal_reason };
     args = intake.args;
 

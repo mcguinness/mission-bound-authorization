@@ -118,6 +118,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
+import { originalArgumentsMatch } from "./invocation-arguments.js";
 import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 import { accessTokenHash } from "./dpop.js";
 import type { JoinAssertionSource } from "./join-assertion-client.js";
@@ -1304,6 +1305,25 @@ export interface RequestSignals {
    * placed on a decision request or in evidence.
    */
   accessToken?: string;
+  /**
+   * @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the invocation's
+   * original arguments as the transport received them, before intake
+   * normalizes them ({@link Pep.intake}).
+   */
+  invocation?: InvocationArguments;
+}
+
+/**
+ * @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): a tool invocation's
+ * original arguments, as JSON text from the transport's validated parse. The
+ * HTTP channel derives it from the request body read once and parsed
+ * losslessly (duplicate members refused, numbers in their source spelling).
+ * The in-memory channel's object API carries the one JSON snapshot its client
+ * serialized; it cannot see members or spellings a parser upstream of it
+ * already discarded, and does not claim to.
+ */
+export interface InvocationArguments {
+  argumentsJson: string;
 }
 
 export interface ActionApprovalInput {
@@ -2268,6 +2288,7 @@ export class Pep {
     tool: string,
     args: Record<string, unknown>,
     token: TokenFacts,
+    invocation?: InvocationArguments,
   ): Promise<{ ok: true; args: Record<string, unknown> } | { ok: false; refusal_reason: string }> {
     const mapping = this.toolAction(tool);
     if (!mapping) return { ok: true, args };
@@ -2276,6 +2297,15 @@ export class Pep {
     const established = await this.requestBoundary(token, mapping.action);
     if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
     const boundary = established.boundary;
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the seam where the
+    // invocation's original arguments are checked before normalization. The
+    // transport's original text must describe exactly the arguments it
+    // dispatched; a presentation's `hta` is verified against this same text
+    // here, before `admitArguments` normalizes anything (#1756 slice B3).
+    if (invocation !== undefined && !originalArgumentsMatch(invocation, args)) {
+      await this.recordRefusal(boundary, token, "invalid_request", mapping.action);
+      return { ok: false, refusal_reason: "invalid_request" };
+    }
     let inputSchema: unknown;
     try {
       inputSchema = (this.capabilityCatalog.toolDefinitions([tool])[0] as { inputSchema?: unknown } | undefined)?.inputSchema;

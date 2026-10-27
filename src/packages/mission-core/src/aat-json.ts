@@ -380,3 +380,23 @@ export function toPlainJson(v: AatJson): unknown {
   }
   return v;
 }
+
+/**
+ * @spec AAT -02 Section 3.4 and Section 8 steps 6b and 7f (#1756, D902): `v`
+ * as JSON text that keeps each number's source spelling, so that
+ * {@link parseAatJson} of the result yields `v` again: the same members, the
+ * same string values, and numbers with the same `raw`. Member order follows
+ * the object's own key order (integer-like keys first, as JavaScript orders
+ * them), which neither JCS nor the closed-world argument check depends on.
+ */
+export function serializeAatJson(v: AatJson): string {
+  if (v === null) return "null";
+  if (v === true) return "true";
+  if (v === false) return "false";
+  if (typeof v === "string") return JSON.stringify(v);
+  if (v instanceof AatNumber) return v.raw;
+  if (Array.isArray(v)) return `[${v.map(serializeAatJson).join(",")}]`;
+  return `{${Object.keys(v)
+    .map((k) => `${JSON.stringify(k)}:${serializeAatJson(v[k] as AatJson)}`)
+    .join(",")}}`;
+}

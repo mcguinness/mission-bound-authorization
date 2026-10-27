@@ -15,9 +15,11 @@ export {
   AatJsonError,
   AatNumber,
   type AatObject,
+  isAatObject as aatIsObject,
   isAdmissibleNumber as aatIsAdmissibleNumber,
   jcs as aatJcs,
   parseAatJson,
+  serializeAatJson as aatSerializeJson,
   toPlainJson as aatToPlainJson,
 } from "./aat-json.js";
 export {
