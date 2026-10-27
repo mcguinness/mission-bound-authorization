@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "3f81b0a0c13c1f26caafd69cd3f5d2ca6ca6616205c03fd458e99f6da5909d8d"
+    "revision": "71cb475bd36afe6323f0b4dc0dc1382032289433",
+    "content_sha256": "6d95c934303e3502c31574786ffcd5a53f8c56c399160007ba5676a9e79a3878"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -79,8 +79,8 @@
     "content_sha256": "e3f62576d3f69696ab87d0e4d2c29759478532ca150f994386f835a4060f6842"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
-    "revision": "dffb5f036c98b5d0a07ce1cb4a8f52282cf3b021",
-    "content_sha256": "1e23fc90eeccb463c3ad04f8959da9809246e9c626f150d072fa59cf9d129ff9"
+    "revision": "32e1ebcbe589e865b854cc4e5e673d0c3a9a48da",
+    "content_sha256": "171abe8a5a1d594ae501de1e97b9acd7cc21cd9602161d6051bce8f2d73bd86b"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
     "revision": "1a34e033976b0007776170a413b11008427948d8",
@@ -62025,6 +62025,133 @@
     }
    ],
    "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping; re-proved by mutation (dropping the guard fails the prefix case)."
+  },
+  {
+   "id": "attenuation.root.substrate-token-format",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "root",
+   "text": "The root is an attenuation-substrate token, not a JWT access token: its JWS header carries the substrate's `typ` value `aat+jwt` ({{Section 3.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) in place of the issuance profile's `at+jwt`, its `cnf` carries the holder's public key as `jwk` ({{Section 3.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), and the token endpoint returns it with the substrate's `token_type` value `aat` ({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound attenuation root carries typ aat+jwt in its JWS header, not at+jwt, binds the holder's public key as cnf.jwk, and is returned from the token endpoint with token_type aat",
+    "local": "the reference mints the root in process with typ aat+jwt but binds the holder as cnf.jkt, and has no token endpoint route that returns a root"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. todo: the typ clause is met (AAT_TYP) but no test asserts the minted header; the cnf.jwk clause is unmet, since the reference binds cnf.jkt and reads each child's key from its JWS header, which -02 Section 3.5 forbids (src/SPEC_VERSIONS.md lists the divergence); token_type has no surface. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.client-req-cnf",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The client MUST carry the holder's public key in the substrate's `req_cnf` parameter",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client requesting a Mission-bound attenuation root sends the holder's public key as the jwk member of req_cnf"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Replaces the unrowed 'MUST carry the holder's confirmation key'. No reference client requests a root. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.verify-req-cnf-possession",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The Mission Issuer verifies that the client possesses the corresponding private key and binds that key as the root's `cnf.jwk`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a root request whose client does not prove possession of the req_cnf key's private key issues no root; an issued root's cnf.jwk is the req_cnf key"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. -02 Section 6.1.3 step 5 leaves the proof mechanism deployment-specific. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.detail-selects-root",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The request carries an `attenuating_agent_token` authorization detail {{RFC9396}} whose tools and argument constraints are the requested root authority; that detail on a Mission-bound token request selects root issuance ({{root}}) rather than an ordinary `mission_resource_access` token.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission-bound token request carrying an attenuating_agent_token authorization detail yields a Mission-bound attenuation root, and one without it an ordinary mission_resource_access token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Owner decision in the alignment PR: replaces the withdrawn mission_attenuation_root selector and the full mapped root for a request without a detail. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.request.refuse-beyond-mapped-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "The Mission Issuer MUST validate the detail against the root mapping ({{root-mapping}}). It MUST refuse the request with `invalid_authorization_details` when any tool or argument constraint is not within the mapped Authority Set, rather than issue a root for the rest",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a root request whose attenuating_agent_token detail names a tool or argument constraint outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. The code was invalid_request; it now matches the OAuth binding's subset refusal and -02 Section 6.1.3 step 7. The validation itself (root mapping) is exercised in process by attenuation.root-mapping.*, not at a token endpoint. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.discovery.lists-aat-type",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "request-discovery",
+   "text": "Such an issuer also lists `attenuating_agent_token` in `authorization_details_types_supported`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authorization server whose metadata sets mission_attenuation_supported to true also lists attenuating_agent_token in authorization_details_types_supported"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Added with the alignment to Attenuating Agent Tokens -02. Vacuous for the reference today: no assembly advertises mission_attenuation_supported (D186, #927), so no metadata document is bound by it. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
   },
   {
    "id": "resource-access.subset.same-matcher",
