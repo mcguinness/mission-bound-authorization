@@ -43,6 +43,8 @@ const ISSUED_AUDIENCE = TOPOLOGY.resources.hrFiles;
 const ALIAS_CLIENT = "test-alias-client";
 const UNDECLARED = "test-undeclared-delegate";
 const INELIGIBLE = "test-ineligible-delegate";
+/** A public client (`token_endpoint_auth_method` `none`), designable and eligible, so only its missing client authentication refuses its redemption (#1718). */
+const PUBLIC = "test-public-delegate";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
 const RS_ALIAS = ["rs-alias", "dev-introspection-rs-alias"] as const;
 const RS_LATE = ["rs-late", "dev-introspection-rs-late"] as const;
@@ -86,6 +88,14 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     jwks: { keys: [{ ...(await exportJWK(secondKeys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
     authorization_details_types: ["mission_resource_access"],
   });
+  const publicClient = {
+    client_id: PUBLIC,
+    grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+    response_types: [],
+    redirect_uris: [],
+    token_endpoint_auth_method: "none",
+    authorization_details_types: ["mission_resource_access"],
+  };
   const as = await buildAuthorizationServer({
     issuer,
     allowHeadlessAdjudication: true,
@@ -93,10 +103,11 @@ async function harness(port: number, options: Record<string, unknown>): Promise<
     approvalSessions: sessions,
     // A second ai_agent delegate; a client whose identifier is an audience
     // the AS issues; one a registered resource server accepts as an alias;
-    // and an eligible client the deployment does not list as designable.
-    testClients: await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED, INELIGIBLE].map(testClient)),
-    actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent" },
-    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, INELIGIBLE],
+    // an eligible client the deployment does not list as designable; and a
+    // designable, eligible public client.
+    testClients: [...(await Promise.all([SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, UNDECLARED, INELIGIBLE].map(testClient))), publicClient],
+    actorProfiles: { [SECOND]: "ai_agent", [ISSUED_AUDIENCE]: "ai_agent", [ALIAS_CLIENT]: "ai_agent", [UNDECLARED]: "ai_agent", [PUBLIC]: "ai_agent" },
+    designableClients: [SUBAGENT, SECOND, ISSUED_AUDIENCE, ALIAS_CLIENT, INELIGIBLE, PUBLIC],
     ...options,
   } as never);
   const server = as.provider.listen(port);
@@ -139,6 +150,24 @@ async function token(h: Harness, client: Client, keys: Keys, params: Record<stri
         client_assertion: await assertion(h, client),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
+    });
+  let res = await send();
+  const nonce = res.headers.get("dpop-nonce");
+  if (res.status === 400 && nonce) res = await send({ nonce });
+  return { status: res.status, body: (await res.json()) as Body };
+}
+
+/**
+ * A token request that names `clientId` by the `client_id` parameter alone,
+ * with no client authentication, proving `keys` by DPoP: what a public client
+ * sends, and what a party holding only another client's identifier can send.
+ */
+async function unauthenticatedToken(h: Harness, clientId: string, keys: Keys, params: Record<string, string>): Promise<{ status: number; body: Body }> {
+  const send = async (extra: Record<string, unknown> = {}) =>
+    fetch(`${h.issuer}/token`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", dpop: await proof(h, keys, extra) },
+      body: new URLSearchParams({ ...params, client_id: clientId }).toString(),
     });
   let res = await send();
   const nonce = res.headers.get("dpop-nonce");
@@ -652,8 +681,9 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
   });
 
   it("the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request", async () => {
-    const { accessToken } = await baseMission(on);
+    const { missionId, accessToken } = await baseMission(on);
     const designation = (await designate(on, accessToken, SUBAGENT)).body.access_token as string;
+    const before = derivations(on, missionId);
     const res = await redeem(on, designation, SUBAGENT, undefined, {
       actor_token: designation,
       actor_token_type: "urn:ietf:params:oauth:token-type:jwt",
@@ -661,6 +691,8 @@ describe("who presents which proof (@spec mission#designation, mission#delegatio
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_request");
     expect(res.body.error_description).toMatch(/actor_token is not supported/);
+    expect(res.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
   });
 
   it("a redemption names its target: without a resource it is refused invalid_request", async () => {
@@ -1484,5 +1516,257 @@ describe("the delegated exchange carries only the entries approved for the reque
     } finally {
       delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
     }
+  });
+});
+
+/**
+ * @spec mission#token-response, mission#transformation-capabilities (#1717,
+ * D845): a designation's `aud` names its redeemer and reassigns no entry's
+ * original approved audience. The audience rules test the resource audiences
+ * associated with the entries it carries, never the designated client; the
+ * delegated token issued at its redemption is subject to every audience rule.
+ */
+describe("a designation keeps its entries' resource-audience associations, and its redemption applies the audience rules (@spec mission#token-response, mission#transformation-capabilities, #1717, D845)", () => {
+  /** An audience the mapping names only after the Mission's approval: the whole payments origin. */
+  const ORIGIN_AUDIENCE = "http://localhost:4403/";
+  const mapping = structuredClone(SCOPE_PROJECTION) as typeof SCOPE_PROJECTION;
+  let h: Harness;
+  beforeAll(async () => {
+    h = await harness(14877, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      scopeProjection: mapping,
+    });
+  });
+  afterAll(() => {
+    h?.server.close();
+  });
+
+  /** A payments entry whose delegation policy admits no delegate (max_depth 0), so it narrows out of every designation. */
+  const vendorRead = () => ({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:vendor.read"],
+    constraints: { vendors: ["acme"] },
+    delegation: { max_depth: 0, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+  });
+  /** The original approved audience the Mission retains for the entry granting `action`. */
+  const approvedAudiencesOf = (missionId: string, action: string) => {
+    const record = h.as.kernel.get(missionId);
+    return record?.approved_audiences?.[record.authority_set.findIndex((e) => e.actions.includes(action))];
+  };
+  const entriesOf = (jwt: string) => (decodeJwt(jwt) as { authorization_details: Body[] }).authorization_details;
+
+  it("a designation carrying a permitted subset of the presented token's entries is issued to the designated client, each entry unchanged with its approved audience kept, and its redemption for that audience is issued", async () => {
+    const { missionId, accessToken } = await baseMission(h, [delegable(), vendorRead()]);
+    expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    const presentedRead = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:invoice.read"));
+    expect(presentedRead).toBeDefined();
+
+    // The designation is issued although its aud, the designated client, is
+    // approved for no entry: the audience rules test its entries' associations.
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect((decodeJwt(designation.body.access_token as string) as Body).aud).toBe(SUBAGENT);
+    // The permitted subset: the delegable entry, equal to the presented token's;
+    // the entry no delegate may receive at depth 1 narrows out.
+    expect(entriesOf(designation.body.access_token as string)).toEqual([presentedRead]);
+    expect(designation.body.authorization_details).toEqual([presentedRead]);
+    // The entry keeps the association the Mission retained for it.
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect((decodeJwt(delegated.body.access_token as string) as Body).aud).toBe(RESOURCE);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presentedRead]);
+    expect(delegated.body.authorization_details).toEqual([presentedRead]);
+  });
+
+  it("a redemption for a resource audience the carried entry is not approved for is refused invalid_target, issuing nothing and counting nothing, while the same designation redeems for its approved audience", async () => {
+    const { missionId, accessToken } = await baseMission(h);
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    const payments = mapping.audiences[RESOURCE] as Record<string, unknown>;
+    // The mapping then names the payments origin, Mission-aware: the read
+    // overlaps it but was not approved for it.
+    (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE] = { ...payments, version: "1717-origin-1", mission_aware: true };
+    try {
+      const designation = await designate(h, accessToken, SUBAGENT);
+      expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+      const before = derivations(h, missionId);
+
+      const refused = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: ORIGIN_AUDIENCE });
+      expect(refused.status).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      // The exchange's own audience rule refuses it, before any count, not
+      // the save-time backstop.
+      expect(refused.body.error_description).toMatch(/is not an original approved audience of any entry the token would carry/);
+      expect(refused.body.access_token).toBeUndefined();
+      expect(derivations(h, missionId)).toBe(before);
+
+      // Control: the same designation redeems for the audience its entry is approved for.
+      const control = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+      expect(control.status, JSON.stringify(control.body)).toBe(200);
+      expect((decodeJwt(control.body.access_token as string) as Body).aud).toBe(RESOURCE);
+      expect(actionsOf(control.body.access_token as string)).toEqual(["payments:invoice.read"]);
+    } finally {
+      delete (mapping.audiences as Record<string, unknown>)[ORIGIN_AUDIENCE];
+    }
+  });
+
+  /** A second delegable payments entry, approved for the same audience as the invoice read. */
+  const delegableVendorRead = () => ({ ...vendorRead(), delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] } });
+  /** Replace the Mission's stored original approved audiences (null: the record retains none). */
+  const storeAudiences = (missionId: string, retained: string[][] | null) =>
+    h.as.kernel.db
+      .prepare("UPDATE missions SET approved_audiences_json = ? WHERE id = ?")
+      .run(retained === null ? null : JSON.stringify(retained), missionId);
+
+  it("a designation whose presented token carries one entry with an original approved audience and one without carries only the first, in the designation, its response and its accounting (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h, [delegable(), delegableVendorRead()]);
+    expect(actionsOf(accessToken)).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+    const presentedRead = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:invoice.read"));
+    expect(presentedRead).toBeDefined();
+    // After the token is issued, the vendor read loses its recorded
+    // association: the Mission retains no audience for it.
+    const record = h.as.kernel.get(missionId);
+    expect(record?.authority_set).toHaveLength(2);
+    storeAudiences(
+      missionId,
+      (record?.authority_set ?? []).map((e) => (e.actions.includes("payments:vendor.read") ? [] : [RESOURCE])),
+    );
+    expect(approvedAudiencesOf(missionId, "payments:invoice.read")).toEqual([RESOURCE]);
+    expect(approvedAudiencesOf(missionId, "payments:vendor.read")).toEqual([]);
+    const before = derivations(h, missionId);
+
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const jwt = designation.body.access_token as string;
+    expect(entriesOf(jwt)).toEqual([presentedRead]);
+    expect(designation.body.authorization_details).toEqual([presentedRead]);
+    expect(h.as.tokenIssuanceStore.resolve(h.issuer, jtiOf(jwt))?.authorizationDetails).toEqual([presentedRead]);
+    expect(derivations(h, missionId)).toBe(before + 1);
+
+    // Its redemption for the read's approved audience carries the read alone.
+    const delegated = await redeem(h, jwt, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presentedRead]);
+  });
+
+  it("a designation whose every carried entry lacks an original approved audience is refused invalid_target, issuing nothing and counting no derivation (#1717, D859)", async () => {
+    const { missionId, accessToken } = await baseMission(h);
+    // The owner's probe: the Mission's recorded association is removed, so
+    // no entry's original approved audience can be established.
+    storeAudiences(missionId, null);
+    expect(h.as.kernel.get(missionId)?.approved_audiences).toBeUndefined();
+    const before = derivations(h, missionId);
+    const recorded = vi.spyOn(h.as.tokenIssuanceStore, "recordDelegation");
+    try {
+      const refused = await designate(h, accessToken, SUBAGENT);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toBe("no entry the designation would carry has an original approved audience");
+      expect(refused.body.access_token).toBeUndefined();
+      expect(recorded).not.toHaveBeenCalled();
+      expect(derivations(h, missionId)).toBe(before);
+    } finally {
+      recorded.mockRestore();
+    }
+  });
+});
+
+/**
+ * @spec mission#delegated-exchange (#1718, D845): the AS authenticates the
+ * requesting client at a delegated exchange, by a method it relies on to
+ * identify the client, and refuses any other with `invalid_client`, issuing
+ * no token. A claimed `client_id`, the designation, and an independently
+ * chosen DPoP key do not authenticate a client, and a public client is not a
+ * delegate.
+ */
+describe("the delegated exchange authenticates the designated client (@spec mission#delegated-exchange, #1718, D845)", () => {
+  const redemption = (designation: string): Record<string, string> => ({
+    grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+    subject_token: designation,
+    subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+    resource: RESOURCE,
+  });
+
+  it("a designation for the sub-agent, presented with its client_id but without its client authentication and with a fresh DPoP key, is refused invalid_client, issuing nothing and counting nothing; the sub-agent authenticating redeems it", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const before = derivations(on, missionId);
+
+    // The presenter holds the designation and the sub-agent's client_id, and
+    // proves a key of its own choosing.
+    const fresh = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, SUBAGENT, fresh, redemption(designation.body.access_token as string));
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+
+    // Control: the same designation, redeemed by the sub-agent authenticating
+    // and proving its own key, is issued.
+    const control = await redeem(on, designation.body.access_token as string);
+    expect(control.status, JSON.stringify(control.body)).toBe(200);
+    expect((decodeJwt(control.body.access_token as string) as Body).act).toMatchObject({ sub: SUBAGENT });
+    expect(derivations(on, missionId)).toBe(before + 1);
+  });
+
+  it("a public client registered for no client authentication, redeeming a designation naming itself with its own DPoP key, is refused invalid_client, issuing nothing and counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    // The designation is issued: the public client is registered, designable
+    // and eligible.
+    const designation = await designate(on, accessToken, PUBLIC);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect((decodeJwt(designation.body.access_token as string) as Body).aud).toBe(PUBLIC);
+    const before = derivations(on, missionId);
+
+    const own = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, PUBLIC, own, redemption(designation.body.access_token as string));
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("an actor_token does not take the place of client authentication: a public client presenting one beside its client_id is refused invalid_client, issuing nothing and counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, PUBLIC);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const before = derivations(on, missionId);
+
+    const own = await generateKeyPair("ES256", { extractable: true });
+    const refused = await unauthenticatedToken(on, PUBLIC, own, {
+      ...redemption(designation.body.access_token as string),
+      actor_token: designation.body.access_token as string,
+      actor_token_type: "urn:ietf:params:oauth:token-type:jwt",
+    });
+    expect(refused.body.error, JSON.stringify(refused.body)).toBe("invalid_client");
+    expect(refused.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+  });
+
+  it("an actor_token is refused after client authentication: the sub-agent's client_id with an actor_token and no client authentication is refused invalid_client, and the sub-agent authenticating with the same actor_token is refused invalid_request, neither issuing nor counting anything", async () => {
+    const { missionId, accessToken } = await baseMission(on);
+    const designation = await designate(on, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    const subject = designation.body.access_token as string;
+    const withActor = { ...redemption(subject), actor_token: subject, actor_token_type: "urn:ietf:params:oauth:token-type:jwt" };
+    const before = derivations(on, missionId);
+
+    // Not authenticated: the client authentication refusal comes first.
+    const fresh = await generateKeyPair("ES256", { extractable: true });
+    const unauthenticated = await unauthenticatedToken(on, SUBAGENT, fresh, withActor);
+    expect(unauthenticated.body.error, JSON.stringify(unauthenticated.body)).toBe("invalid_client");
+    expect(unauthenticated.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
+
+    // Authenticated: the actor_token is refused.
+    const authenticated = await token(on, SUBAGENT, dpop.get(SUBAGENT) as Keys, withActor);
+    expect(authenticated.status, JSON.stringify(authenticated.body)).toBe(400);
+    expect(authenticated.body.error).toBe("invalid_request");
+    expect(authenticated.body.error_description).toMatch(/actor_token is not supported/);
+    expect(authenticated.body.access_token).toBeUndefined();
+    expect(derivations(on, missionId)).toBe(before);
   });
 });

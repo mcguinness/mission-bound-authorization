@@ -1557,7 +1557,9 @@ per the progressive profile's prohibited set
 ({{I-D.draft-mcguinness-oauth-mission-progressive}}); under
 `governed_policy`, a policy decides one only under a committed,
 class-named exception
-({{I-D.draft-mcguinness-mission-approval-governance}}).
+({{I-D.draft-mcguinness-mission-approval-governance}}), and a Mission
+Template admits one bounded exception for recurring payment of
+approved invoices ({{I-D.draft-mcguinness-oauth-mission-template}}).
 
 ### Mission Creation Paths {#creation-paths}
 

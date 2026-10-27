@@ -3446,9 +3446,9 @@ async function handleDeferredGrant(
     }
     // #1348: the deferred token is a token of this Mission, minted on its own
     // grant, so only the Mission's own client may open a deferral on it. Another
-    // client gets the same answer as for an unknown Mission (the store's), and
-    // gets it before the store's subset check, so the refusal discloses neither
-    // the Mission's state nor its authority.
+    // client gets the same answer as for an unknown Mission, and gets it before
+    // the store's state and subset checks, so the refusal discloses neither the
+    // Mission's state nor its authority (#1740, D862).
     const clientId = ctx.oidc.client?.clientId as string;
     if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
       throw new errors.InvalidRequest("mission is not active");
@@ -3474,9 +3474,23 @@ async function handleDeferredGrant(
         },
       });
     } catch (e) {
-      // Requested authority exceeds the active Mission (or it is not active):
-      // AROP never widens -> not a deferrable request.
-      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      // @spec mission#subset, mission#error-mapping (#1720 item 3, D859): AROP
+      // never widens, so requested authority the comparison cannot establish
+      // as a subset of the active Mission, whether it exceeds it or the
+      // comparison cannot decide, is refused invalid_authorization_details,
+      // as the originating grant's own validation would refuse it (DTR -00
+      // Section 5.3.1). The ownership and authentication refusals above keep
+      // their codes.
+      if (e instanceof DeferralError) {
+        if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
+        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862,
+        // D863): only the Mission's own client reaches the store, so a Mission
+        // that is not active, suspension included, is refused invalid_grant,
+        // as any grant other than a Token Exchange is. The refusal carries no
+        // mission_error: that diagnostic goes only to a client presenting the
+        // Mission's grant, and this initiation presents none.
+        throw new errors.InvalidGrant(e.message);
+      }
       throw e;
     }
     // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
