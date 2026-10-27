@@ -45,6 +45,7 @@ import {
   type IndeterminateClaim,
   type ReleasedReservation,
   retentionWindowSeconds,
+  type SettlementConflict,
 } from "@mission/pdp";
 import { type ClaimReconciliationReport, reconcileClaims } from "./claim-reconciliation.js";
 import type { Connectors } from "./connectors.js";
@@ -80,6 +81,12 @@ export type OperatorAlertKind =
    * committed a released reservation and pushed a counter past its limit.
    */
   | "budget_overspend"
+  /**
+   * @spec metering#settlement-contract "Conflicting redelivery" (#816, D877):
+   * a settlement record conflicted with the one applied to its claim; the
+   * applied settlement is unchanged and the record is retained.
+   */
+  | "settlement_conflict"
   /** A transaction-tier disposition record could not be written after one retry (#821). */
   | "evidence_emission_failed";
 
@@ -167,6 +174,22 @@ export function budgetOverspendAlert(overspend: BudgetOverspend): OperatorAlert 
     mission_id: overspend.mission_id,
     cause: `${overspend.counter_scope}_limit_exceeded`,
     at: overspend.detected_at,
+  };
+}
+
+/**
+ * @spec metering#settlement-contract "Conflicting redelivery" (#816, D877):
+ * the alarm for a settlement record that conflicts with the applied one: a
+ * second attempt, or the same attempt with another outcome. Identifiers and
+ * the two outcomes only.
+ */
+export function settlementConflictAlert(conflict: SettlementConflict): OperatorAlert {
+  return {
+    kind: "settlement_conflict",
+    evaluation_id: conflict.evaluation_id,
+    ...(conflict.mission_id !== undefined ? { mission_id: conflict.mission_id } : {}),
+    cause: `${conflict.applied_outcome}_then_${conflict.outcome}${conflict.execution_id === conflict.applied_execution_id ? "_same_attempt" : ""}`,
+    at: conflict.detected_at,
   };
 }
 
