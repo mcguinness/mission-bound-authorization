@@ -1023,3 +1023,37 @@ describe("signed status freshness cap (@spec status#mission-status-caching)", ()
     }
   });
 });
+
+describe("introspection projection freshness cap (@spec status#introspection-projection, #1724 C4)", () => {
+  // "The AS sets `fresh_until` no later than the time of the response plus
+  // any advertised `mission_max_stale_seconds`." The projection shares the
+  // signed response's cap, so a requested horizon beyond the ceiling is cut
+  // to it.
+  const ceiling = Number(MISSION_MAX_STALE_SECONDS);
+  const project = (n: number, freshnessSeconds?: number) => {
+    const r = approve(intent(), n);
+    const beforeS = Math.floor(Date.now() / 1000);
+    const projected = kernel.introspectionProjection(
+      r,
+      { disclose: new Set() },
+      freshnessSeconds === undefined ? {} : { freshnessSeconds },
+    );
+    const afterS = Math.floor(Date.now() / 1000);
+    return { beforeS, afterS, freshUntilS: Date.parse(projected.fresh_until as string) / 1000 };
+  };
+
+  it("caps a requested horizon longer than the advertised ceiling at the ceiling, from the time of the response", () => {
+    const { beforeS, afterS, freshUntilS } = project(535001, ceiling * 10 + 600);
+    expect(freshUntilS).toBeGreaterThanOrEqual(beforeS + ceiling);
+    expect(freshUntilS).toBeLessThanOrEqual(afterS + ceiling);
+  });
+
+  it("honors a horizon within the ceiling, the default included", () => {
+    const requested = Math.max(1, Math.floor(ceiling / 10));
+    const shorter = project(535002, requested);
+    expect(shorter.freshUntilS).toBeGreaterThanOrEqual(shorter.beforeS + requested);
+    expect(shorter.freshUntilS).toBeLessThanOrEqual(shorter.afterS + requested);
+    const byDefault = project(535003);
+    expect(byDefault.freshUntilS).toBeLessThanOrEqual(byDefault.afterS + ceiling);
+  });
+});

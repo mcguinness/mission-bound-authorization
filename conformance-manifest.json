@@ -2635,7 +2635,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries `fresh_until` through the same capped horizon (#1724 C4); status.introspection.fresh-until-cap witnesses it there."
   },
   {
    "id": "status.response.consumer-authorized-signer",
@@ -88790,12 +88790,32 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound"
+    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound",
+    "local": "the issuer's projection carries fresh_until (the MAY adopted so this bound has a witness), stamped through the one horizon the signed Mission Status Response uses (kernel statusFreshnessSeconds): the requested or default lifetime, never more than the advertised mission_max_stale_seconds from the time of the response; the reference's introspection response is unsigned"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C4 (D847). The reference emits no introspection fresh_until."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the issuer's projection carries fresh_until no later than the response time plus the advertised mission_max_stale_seconds (@spec status#introspection-projection, #1724 C4) > an active and a non-active projection each carry a fresh_until within the advertised ceiling of the response time",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > caps a requested horizon longer than the advertised ceiling at the ceiling, from the time of the response",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > honors a horizon within the ceiling, the default included",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1724 C4 (D847). Proved by two defects: a horizon not capped at the ceiling (the kernel witness fails, with the signed response's cap test), and a projection horizon past the advertised ceiling (the endpoint witness fails)."
   },
   {
    "id": "status.consumer.expected-issuer-trust",
