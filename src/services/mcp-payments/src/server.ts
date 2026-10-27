@@ -1344,6 +1344,11 @@ export class McpPaymentsServer {
         throw new Error("attenuation child not signed by the parent cnf key");
       }
       const { payload } = await jwtVerify(chain[i] as string, jwk as never, { algorithms: ["ES256"] });
+      // @spec attenuation#mission-binding-check, AAT -02 Section 8 step 6c
+      // (#1758): every token in the chain names this resource, not only the
+      // root. A child narrowed to another resource server is refused here even
+      // though its `aud` nests within its parent's.
+      this.requireAudience(payload, header.typ, this.deps.issuer);
       parentCnfJkt = (payload.cnf as { jkt?: string } | undefined)?.jkt;
       if (!parentCnfJkt) throw new Error("attenuation child missing cnf.jkt");
       leafPayload = payload;
@@ -1380,7 +1385,12 @@ export class McpPaymentsServer {
     // way as the other credential classes.
     const missionClaim = readTxnMissionClaim(rootPayload.mission);
     return {
-      sub: (leafPayload.sub ?? rootPayload.sub) as string,
+      // @spec attenuation#mission-binding-check, AAT -02 Section 3.3 (#1758):
+      // the subject is the issuer-signed root's, which the root profile
+      // requires. A child's `sub` is whatever its holder wrote and carries no
+      // authority, so it never becomes the decision, idempotency or recorded
+      // subject.
+      sub: root.sub,
       clientId: root.clientId,
       iss: this.deps.issuer,
       credential: verifiedCredentialRef(leafPayload),
