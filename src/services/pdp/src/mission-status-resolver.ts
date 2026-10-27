@@ -62,6 +62,7 @@ import { type KeyObject, randomUUID } from "node:crypto";
 import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey, SignJWT } from "jose";
 import { deriveJoinDelegation, type KernelDelegationPolicy } from "./mas-join.js";
 import type { AuthorityEntry, MissionView } from "./policy-view.js";
+import { excludingCompromised, HistoricalKeySetHolder } from "./historical-key-set.js";
 import { verifyMissionStatusResponse } from "./state-observation.js";
 
 /** @spec status#mission-status-errors: the states a Mission Status Response reports. */
@@ -177,18 +178,39 @@ export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[])
 export function refreshingStatusKeys(
   jwksUri: string,
   kids: readonly string[],
-  opts: { algs: readonly string[]; now?: () => number; fetch?: IssuerKeysFetch },
-): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void } {
+  opts: {
+    algs: readonly string[];
+    now?: () => number;
+    fetch?: IssuerKeysFetch;
+    /**
+     * @spec status#historical-key-set (#831 B3): the issuer's
+     * `mission_historical_jwks_uri`, from its validated metadata. With it,
+     * `keys` refuses a key the held set lists, and `historical` holds the set
+     * for audit verification.
+     */
+    historical?: { uri: string; issuer: string };
+  },
+): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void; historical?: HistoricalKeySetHolder } {
   const held = new IssuerKeys({
     jwksUri,
     roles: { status: { kids, algs: opts.algs } },
     ...(opts.now ? { now: opts.now } : {}),
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
   });
-  return {
-    keys: held.resolver("status") as unknown as JWTVerifyGetKey,
-    trust: (next) => held.setRoles({ status: { kids: next, algs: opts.algs } }),
-  };
+  const current = held.resolver("status") as unknown as JWTVerifyGetKey;
+  const trust = (next: readonly string[]) => held.setRoles({ status: { kids: next, algs: opts.algs } });
+  if (!opts.historical) return { keys: current, trust };
+  // The set verifies under the configured Status keys themselves, never under
+  // the resolver that consults it.
+  const historical = new HistoricalKeySetHolder({
+    uri: opts.historical.uri,
+    issuer: opts.historical.issuer,
+    statusKeys: current,
+    algs: opts.algs,
+    ...(opts.now ? { now: opts.now } : {}),
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+  });
+  return { keys: excludingCompromised(current, historical), trust, historical };
 }
 
 /**

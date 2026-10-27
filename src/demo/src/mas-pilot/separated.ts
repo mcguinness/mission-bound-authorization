@@ -159,6 +159,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     mission_status_endpoint?: unknown;
     mission_join_assertion_endpoint?: unknown;
     mission_status_signing_alg_values_supported?: unknown;
+    mission_historical_jwks_uri?: unknown;
   };
   if (metadata.issuer !== config.mission_issuer) {
     throw new Error(`the MAS at ${base} is issuer ${metadata.issuer}, not the configured Mission issuer ${config.mission_issuer}`);
@@ -182,9 +183,14 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   // @spec #831 C2: the MAS's Status keys, held through its jwks_uri: the
   // trusted Status kids only, refreshed within the freshness the MAS
   // declares, so a Status key rotation is followed without a restart.
+  // @spec status#historical-key-set (#831 B3): where the MAS advertises a
+  // historical key set, a key it lists never verifies a Status response the
+  // pilot relies on now, though a cached jwks_uri still carries it.
+  const historicalUri = metadata.mission_historical_jwks_uri;
   const { keys: statusKeys, trust: trustStatusKids } = refreshingStatusKeys(metadata.jwks_uri, trustedKids(TOPOLOGY.keys.asStatus), {
     algs: [TOPOLOGY.keys.asStatus.alg],
     ...(resolverNow ? { now: () => resolverNow().getTime() } : {}),
+    ...(typeof historicalUri === "string" ? { historical: { uri: historicalUri, issuer: metadata.issuer } } : {}),
   });
   // @spec authority-server#join-assertion-request, #join-assertion-pdp
   // (#1454): where the configuration declares a Join Assertion path, the PEP
