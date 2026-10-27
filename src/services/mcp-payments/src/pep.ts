@@ -177,9 +177,12 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * live Operation Profile; one naming another performs under that retained
  * profile (`PepDeps.retainedOperationProfiles`, by default
  * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
- * compensate crossing `reverse_wire_transfer`.
+ * compensate crossing `reverse_wire_transfer`. v15 (#1693, D873, D879)
+ * changes only that crossing: its tenant is the current tenant of the vendor
+ * the committed wire paid, and it does not depend on the vendor the invoice
+ * names now.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v15";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -533,20 +536,34 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
 
+/** The live table without the compensate crossing: every crossing it names performs as the live profile does. */
+const WITHOUT_REVERSAL: Readonly<Record<string, ActionMapping>> = Object.freeze(
+  Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
+);
+
 /**
- * @spec runtime#resource-contract rule 3 (#249, #252): the Operation Profiles
- * of the superseded contract versions this resource still performs within
- * their declared retention, keyed by the `operation_profile` their documents
- * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
- * live profile without the compensate crossing `reverse_wire_transfer`, which
- * v14 added: every crossing it names performs exactly as it did, and the
- * crossing it does not name is not performed under it. A snapshot taken at
- * load, never the live table.
+ * @spec runtime#resource-contract rule 3 (#249, #252, #1693): the Operation
+ * Profiles of the superseded contract versions this resource still performs
+ * within their declared retention, keyed by the `operation_profile` their
+ * documents name. A snapshot taken at load, never the live table.
+ *
+ * - `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
+ *   live profile without the compensate crossing `reverse_wire_transfer`,
+ *   which v14 added.
+ * - `payments-runtime-profile-v14` (contract version `2026-10-24`) named that
+ *   crossing, under the tenant of the vendor the invoice names now. v15
+ *   changed only that crossing (D873, D879), and this resource no longer
+ *   performs the v14 reversal, so v14 is retained without it: a reversal
+ *   pinned to `2026-10-24` is never performed under v15's semantics, and is
+ *   refused `resource_contract_unresolvable` before any decision request,
+ *   while every other v14 crossing performs exactly as it did.
+ *
+ * Every crossing a retained profile names performs exactly as it did, and a
+ * crossing it does not name is not performed under it.
  */
 export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
-  "payments-runtime-profile-v13": Object.freeze(
-    Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
-  ),
+  "payments-runtime-profile-v13": WITHOUT_REVERSAL,
+  "payments-runtime-profile-v14": WITHOUT_REVERSAL,
 });
 
 /**

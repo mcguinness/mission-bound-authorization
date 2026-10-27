@@ -273,8 +273,8 @@ describe("the payments resource declares its contract versions (@spec runtime#re
   });
 
   it("performs the superseded 2026-10-20 version under the retained v13 profile: each crossing it names as the live profile does, and not the compensate crossing it lacks (#252)", () => {
-    const superseded = shipped?.versions.find((v) => v.state === "superseded");
-    expect(superseded?.version).toBe("2026-10-20");
+    const superseded = shipped?.versions.find((v) => v.version === "2026-10-20");
+    expect(superseded?.state).toBe("superseded");
     expect(superseded?.operation_profile).toBe("payments-runtime-profile-v13");
     const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
     expect(named).toEqual(Object.keys(TOOL_ACTIONS).filter((tool) => tool !== "reverse_wire_transfer").sort());
@@ -285,6 +285,42 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       if (named.includes(tool)) expect(retained, tool).toEqual(TOOL_ACTIONS[tool]);
       else expect(retained, tool).toBeUndefined();
     }
+  });
+
+  it("performs the superseded 2026-10-24 version under the retained v14 profile: each crossing as the live profile does, and not the compensate crossing, whose v15 semantics it never gets (#1693, D879)", () => {
+    const superseded = shipped?.versions.find((v) => v.version === "2026-10-24");
+    expect(superseded?.state).toBe("superseded");
+    expect(superseded?.retained_until).toEqual(expect.any(String));
+    expect(superseded?.operation_profile).toBe("payments-runtime-profile-v14");
+    // Its document names the reversal: v14 performed it, under other semantics.
+    const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
+    expect(named).toEqual(Object.keys(TOOL_ACTIONS).sort());
+    // No deployment-supplied retained profiles: the shipped default applies.
+    const pep = new Pep({} as never);
+    for (const tool of Object.keys(TOOL_ACTIONS)) {
+      const retained = pep.toolActionUnder(tool, superseded?.operation_profile);
+      if (tool === "reverse_wire_transfer") expect(retained, tool).toBeUndefined();
+      else expect(retained, tool).toEqual(TOOL_ACTIONS[tool]);
+    }
+  });
+
+  it("the current 2026-10-26 document differs from 2026-10-24's only in its version, its Operation Profile and the reversal's tenant fact (#1693)", () => {
+    const docOf = (version: string) =>
+      structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
+        version: string;
+        operation_profile: string;
+        constraints: Record<string, string>;
+      };
+    const v15 = docOf("2026-10-26");
+    const v14 = docOf("2026-10-24");
+    expect(current?.version).toBe("2026-10-26");
+    expect([v15.version, v15.operation_profile]).toEqual(["2026-10-26", "payments-runtime-profile-v15"]);
+    expect(v15.constraints.tenant).toMatch(/for reverse_wire_transfer, the current record of the reversed wire's recorded vendor/);
+    expect(v14.constraints.tenant).not.toMatch(/reverse_wire_transfer/);
+    v15.version = v14.version;
+    v15.operation_profile = v14.operation_profile;
+    v15.constraints.tenant = v14.constraints.tenant as string;
+    expect(v15).toEqual(v14);
   });
 
   it("refuses at load a statement whose declared document no longer hashes to its digest: published bytes are immutable for a reference", () => {

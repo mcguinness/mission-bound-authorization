@@ -69,13 +69,16 @@ interface Case {
 }
 
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
-// #252: contract version 2026-10-24 (payments-runtime-profile-v14) added the
-// compensate operation and is current, so the subset frozen against it is the
-// one checked here. The 2026-10-20 files stay frozen, unedited, and the
-// version they name stays declared as superseded (checked below).
-const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-24.json"));
+// #1693: contract version 2026-10-26 (payments-runtime-profile-v15) is
+// current, so the subset frozen against it is the one checked here. #252's
+// 2026-10-24 (v14), which added the compensate operation, and the original
+// 2026-10-20 (v13) stay frozen, unedited, and the versions they name stay
+// declared as superseded (checked below).
+const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-26.json"));
 const contract = read<ContractFile>(join(SUBSET_DIR, subset.contract.file));
-const supersededContract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-20.json"));
+const supersededContracts = ["payments-contract-2026-10-20.json", "payments-contract-2026-10-24.json"].map((f) =>
+  read<ContractFile>(join(SUBSET_DIR, f)),
+);
 const sorted = (values: Iterable<string>) => [...values].sort();
 const readCases = () =>
   readdirSync(CASES_DIR)
@@ -139,12 +142,17 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
-  it("keeps the superseded version 2026-10-20 declared exactly as it was frozen, with a declared retention (#252)", () => {
-    const declared = RESOURCE_CONTRACTS.versionOf(supersededContract.reference);
-    expect(declared?.version.state).toBe("superseded");
-    expect(declared?.version.retained_until).toEqual(expect.any(String));
-    expect(declared?.version.digest).toBe(supersededContract.reference.digest);
-    expect(declared?.version.document).toEqual(supersededContract.document);
+  it("keeps the superseded versions 2026-10-20 and 2026-10-24 declared exactly as they were frozen, each with a declared retention (#252, #1693)", () => {
+    expect(supersededContracts.map((c) => c.reference.version)).toEqual(["2026-10-20", "2026-10-24"]);
+    for (const superseded of supersededContracts) {
+      const version = superseded.reference.version;
+      const declared = RESOURCE_CONTRACTS.versionOf(superseded.reference);
+      expect(declared?.version.state, version).toBe("superseded");
+      expect(declared?.version.retained_until, version).toEqual(expect.any(String));
+      expect(declared?.version.digest, version).toBe(superseded.reference.digest);
+      expect(declared?.version.document, version).toEqual(superseded.document);
+      expect(resourceContractDigest(superseded.document as unknown as JsonValue), version).toBe(superseded.reference.digest);
+    }
   });
 
   it("lists exactly the actions the contract covers, each an explicit identifier: no action family", () => {

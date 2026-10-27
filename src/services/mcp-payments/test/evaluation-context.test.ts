@@ -17,8 +17,8 @@
 
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue } from "@mission/core";
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue, type ResourceContractRef } from "@mission/core";
+import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type Decision,
@@ -35,6 +35,7 @@ import {
   captureEvaluationContext,
   Connectors,
   createEphemeralEvidenceKeys,
+  credentialAuthorityFrom,
   type DecisionEvidence,
   EvaluationContextSalts,
   EvidenceStore,
@@ -48,6 +49,7 @@ import {
   type RefusalRecord,
   type TokenFacts,
   TOOL_ACTIONS,
+  TOOLS,
   TransactionEngine,
   type Vendor,
 } from "../src/index.js";
@@ -112,7 +114,7 @@ const missionToken = (id: string): TokenFacts => ({
 const TOKEN = missionToken("msn_773");
 const TOKEN_B = missionToken("msn_773b");
 
-const view = (id: string, constraints: Record<string, unknown> = {}): MissionView => ({
+const view = (id: string, constraints: Record<string, unknown> = {}, contract?: ResourceContractRef): MissionView => ({
   id,
   issuer: ISSUER,
   state: "active",
@@ -130,6 +132,7 @@ const view = (id: string, constraints: Record<string, unknown> = {}): MissionVie
         "payments:invoice.read",
       ],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"], ...constraints },
+      ...(contract !== undefined ? { resource_contract: contract } : {}),
     },
   ] as MissionView["authority_set"],
   subject: { iss: ISSUER, sub: "alice" },
@@ -169,6 +172,8 @@ function harness(
     classification?: string;
     /** Common Constraints added to the Mission's entry. */
     constraints?: Record<string, unknown>;
+    /** The resource contract the Mission's entry pins (#1693, D879). */
+    contract?: ResourceContractRef;
   } = {},
 ): Harness {
   const now = () => new Date(BASE_MS);
@@ -192,7 +197,7 @@ function harness(
   let constraints = o.constraints;
   const loadView = (ref: { id: string; issuer: string }) =>
     (ref.id === "msn_773" || ref.id === "msn_773b") && ref.issuer === ISSUER
-      ? { view: view(ref.id, constraints), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(ref.id, constraints, o.contract), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
   const claims = openEphemeralClaimDomain({
@@ -1298,6 +1303,105 @@ describe("the compensate crossing does not depend on the invoice's current vendo
       expect(h.connectors.committedEffects(), tool).toHaveLength(0);
     }
   });
+});
+
+/** The shipped reference to a declared version of the payments contract. */
+function contractRef(version: string): ResourceContractRef {
+  const [declared] = RESOURCE_CONTRACTS.declarations;
+  const v = declared?.versions.find((x) => x.version === version);
+  if (!declared || !v) throw new Error(`payments contract ${version} is declared`);
+  return { id: declared.id, version: v.version, digest: v.digest };
+}
+/** Contract version 2026-10-24, naming payments-runtime-profile-v14 (#252), superseded by v15 (#1693). */
+const V14_CONTRACT = contractRef("2026-10-24");
+/** Contract version 2026-10-26, naming payments-runtime-profile-v15 (#1693), current. */
+const V15_CONTRACT = contractRef("2026-10-26");
+
+/** `TOKEN` whose credential's one entry pins `contract`, as the Mission's entry does. */
+const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
+  ...TOKEN,
+  credentialAuthority: credentialAuthorityFrom([
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: [...new Set(TOOLS.map((t) => t.action))],
+      resource_contract: contract,
+    },
+  ]),
+});
+
+const commitArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+
+describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879)", () => {
+  it("declares 2026-10-26 current under v15 and 2026-10-24 superseded under v14, with a retention", () => {
+    const [declared] = RESOURCE_CONTRACTS.declarations;
+    const byVersion = (v: string) => declared?.versions.find((x) => x.version === v);
+    expect(byVersion("2026-10-26")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v15" });
+    expect(byVersion("2026-10-24")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v14" });
+    expect(byVersion("2026-10-24")?.retained_until).toEqual(expect.any(String));
+  });
+
+  it("an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects", async () => {
+    const h = harness({ contract: V14_CONTRACT, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    const token = pinnedToken(V14_CONTRACT);
+    // The wire this reversal would offset commits under the same pin.
+    const committed = await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const sent = h.requests.length;
+    const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), token);
+    expect(refused).toEqual({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(h.requests).toHaveLength(sent);
+    expect(compensating(h)).toBeUndefined();
+    expect(refusals(h).at(-1)).toMatchObject({
+      denial_reason: "resource_contract_unresolvable",
+      action: { name: "payments:payment.reverse" },
+    });
+    expect(executions(h).filter((r) => r.outcome === "suppressed")).toHaveLength(0);
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+  });
+
+  it("the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets", async () => {
+    const pinned = harness({ contract: V14_CONTRACT });
+    const token = pinnedToken(V14_CONTRACT);
+    const committed = await pinned.server.callTransactionTool(COMMIT.tool, commitArgs(), token);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const commitRequest = pinned.requests.at(-1);
+    expect(commitRequest?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
+    expect(pinned.connectors.committedEffects()).toHaveLength(1);
+    const read = await pinned.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token);
+    expect(read.ok, JSON.stringify(read)).toBe(true);
+    expect(pinned.requests.at(-1)?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
+
+    // The same execute under an unpinned entry binds the same parameters.
+    const unpinned = harness();
+    expect((await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), TOKEN)).ok).toBe(true);
+    const commitDecision = (h: Harness) =>
+      decisions(h).find((d) => d.action.name === "payments:payment.execute" && d.action_phase === "commit");
+    expect(commitDecision(pinned)?.decision).toBe("permit");
+    expect(commitDecision(pinned)?.parameter_digest).toMatch(/^sha-256:/);
+    expect(commitDecision(pinned)?.parameter_digest).toBe(commitDecision(unpinned)?.parameter_digest);
+  });
+
+  for (const [mode, contract] of [
+    ["pinned to 2026-10-26", V15_CONTRACT],
+    ["unpinned", undefined],
+  ] as const) {
+    it(`an entry ${mode} performs the reversal under the paid vendor's current tenant`, async () => {
+      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, ...(contract ? { contract } : {}) });
+      const token = contract ? pinnedToken(contract) : TOKEN;
+      expect((await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), token);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      const properties = h.requests.at(-1)?.resource.properties;
+      expect(properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      if (contract) expect(properties?.resource_contract).toEqual(contract);
+      else expect(properties).not.toHaveProperty("resource_contract");
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ reversed_op_key: wire?.op_key })]);
+    });
+  }
 });
 
 describe("restart loses bindings, on every covered dispatch path (@spec runtime#evaluation-context-binding, runtime#single-use-identifiers, #773)", () => {
