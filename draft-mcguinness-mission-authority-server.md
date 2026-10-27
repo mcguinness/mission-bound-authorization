@@ -464,9 +464,11 @@ MAS's mission submission endpoint, published as
 `mission_submission_endpoint` ({{discovery}}). The endpoint MUST be
 served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
 recommendations of {{RFC9325}}. The endpoint MUST authenticate the
-client using the authentication mechanisms of the Mission Status
-endpoint ({{I-D.draft-mcguinness-oauth-mission-status}}): mTLS client
-authentication, a DPoP- or mTLS-bound access token, or private-key JWT.
+client on one of the two paths of the Mission Status endpoint
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Authentication"): client authentication with a method the MAS
+advertises that uses no shared client secret, or a DPoP- or
+mTLS-bound access token.
 An access token's audience names this endpoint, and a client
 assertion's `aud` is the MAS's issuer identifier as its sole value,
 the client-authentication audience Mission Status requires. The MAS
@@ -477,14 +479,15 @@ advertises the accepted methods in the
 Client registration with a MAS is deployment-defined. The MAS records
 the client identifier it authenticates as the Mission's `client_id`.
 
-A request whose body is `application/json` carries the client
-authentication parameters of the mechanism it uses as top-level JSON
-string members, with the values Mission Status defines for them as
-form parameters ({{I-D.draft-mcguinness-oauth-mission-status}},
-Section "Authentication"): `client_id` with mTLS client
-authentication, and `client_assertion_type` and `client_assertion`
-with private-key-JWT client authentication
-({{Section 2.2 of RFC7523}}). These are request-level members, not
+A request whose body is `application/json` carries, as top-level
+JSON string members, the client authentication parameters that its
+method defines as form parameters, with the values Mission Status
+gives them ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
+"Authentication"): `client_id` with mTLS client authentication, and
+`client_assertion_type` and `client_assertion` with private-key-JWT
+client authentication ({{Section 2.2 of RFC7523}}). A method that
+carries its credentials in HTTP header fields keeps them there. These
+JSON members are request-level members, not
 members of the Mission Intent Submission envelope or the Intent. The
 MAS MUST remove them, and authenticate the request with them, before
 it validates the rest of the body, so a partial or unverifiable pair
@@ -795,9 +798,10 @@ for its endpoints ({{I-D.draft-mcguinness-oauth-mission-status}},
 Section "Authentication Failures"). A 401 `unauthorized` response
 carries the `WWW-Authenticate` challenges that Mission Status defines
 for its endpoints, naming the Protected Resource Metadata of the
-endpoint called. A failed mTLS or private-key-JWT client
-authentication receives 400 `invalid_client`, not a token challenge,
-and an authenticated caller to whom a submission or Mission is not
+endpoint called. A failed client authentication receives the
+response Mission Status assigns to it, the method's own error response
+or by default 400 `invalid_client`, not a token challenge, and an
+authenticated caller to whom a submission or Mission is not
 visible still receives `not_found`.
 
 | `error` | HTTP | Returned by | Description |
@@ -806,7 +810,7 @@ visible still receives `not_found`.
 | `invalid_authority` | 400 | submission | Well-formed Intent, but no valid Authority Set is derivable under policy. |
 | `invalid_mission_intent_evidence` | 400 | submission | An evidence entry of unsupported type or failing its type's verification, or a policy-required evidence type absent from the submission. |
 | `unsupported_media_type` | 415 | submission | The request media type is neither of the two the endpoint dispatches on ({{mission-submission}}). |
-| `invalid_client` | 400 | submission, join assertion | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
+| `invalid_client` | 400 | submission, join assertion | Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted, as Mission Status defines. |
 | `unauthorized` | 401 | submission, join assertion | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges Mission Status defines. |
 | `invalid_join_request` | 400 | join assertion | The request body is not a JSON object carrying `mission_id`, a string `audience`, and exactly one token form ({{join-assertion-request}}). |
 | `join_failed` | 403 | join assertion | The referenced Mission is not `active`, the `audience` names no enrollee holding the PDP role, or the acting token is inactive, carries no `cnf` confirmation, or does not join the referenced Mission ({{join-assertion-request}}). |
@@ -2184,13 +2188,14 @@ resolved from the MAS metadata document instead:
   ({{mission-submission}}).
 
 `mission_submission_endpoint_auth_methods_supported`:
-: REQUIRED. A JSON array of strings naming the authentication methods
-  the mission submission endpoint accepts, from the value space of
-  `mission_status_endpoint_auth_methods_supported`
-  ({{I-D.draft-mcguinness-oauth-mission-status}}). Here `access_token`
-  names a sender-constrained access token whose audience, required
-  scope, and sender constraint the MAS publishes in this endpoint's
-  Protected Resource Metadata {{RFC9728}}.
+: REQUIRED when the mission submission endpoint accepts client
+  authentication. A JSON array of strings naming the client
+  authentication methods that endpoint accepts, with the value space
+  and constraints of `mission_status_endpoint_auth_methods_supported`
+  ({{I-D.draft-mcguinness-oauth-mission-status}}). Where the endpoint
+  accepts a sender-constrained access token, the MAS publishes the
+  token's audience, required scope, and sender constraint in this
+  endpoint's Protected Resource Metadata {{RFC9728}}.
 
 `mission_submission_endpoint_auth_signing_alg_values_supported`:
 : REQUIRED when `mission_submission_endpoint_auth_methods_supported`
@@ -2204,7 +2209,7 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
+: Presence and semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_status_endpoint_auth_signing_alg_values_supported`:
@@ -2224,7 +2229,7 @@ resolved from the MAS metadata document instead:
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_lifecycle_endpoint_auth_methods_supported`:
-: REQUIRED. Semantics per
+: Presence and semantics per
   {{I-D.draft-mcguinness-oauth-mission-status}}.
 
 `mission_lifecycle_endpoint_auth_signing_alg_values_supported`:
@@ -2265,20 +2270,20 @@ The following is an example of a MAS metadata document:
   "mission_submission_endpoint":
     "https://mas.example.com/mas/mission/submit",
   "mission_submission_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_submission_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_endpoint":
     "https://mas.example.com/mas/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_status_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://mas.example.com/mas/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_join_assertion_endpoint":
@@ -3506,6 +3511,15 @@ shows the denial:
 
 \[\[ To be removed from the final specification ]]
 
+- The mission submission endpoint, and the join-assertion and
+  issuance-grant endpoints that inherit its rules, authenticate on
+  Mission Status's two paths: client authentication with an advertised
+  method from the OAuth Token Endpoint Authentication Methods registry
+  that uses no shared client secret, or a sender-constrained access
+  token, which Protected Resource Metadata describes rather than an
+  `access_token` method value. A JSON body carries as members only the
+  parameters a method defines as form parameters; header-carried
+  credentials stay in their header fields.
 - A client join counts as `delegate_depth` 0 in the assertion
   comparison: a reported 0 agrees and any other value is denied, and
   the `join` claim still carries no `depth` for a client (#1592, D681).
