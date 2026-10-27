@@ -7,8 +7,8 @@
     "content_sha256": "13471a3de4ae6618ab8415db928cf360ca27d86b396db4a80f23e540820f5875"
    },
    "draft-mcguinness-mission-authority-server.md": {
-    "revision": "5eb18d4e40e828c9ac35ce71980c3aa7aae3f425",
-    "content_sha256": "abc6086f27dc02ea41a48bccb7408faa0aeafdd8464d78a79af5c370084a70e5"
+    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
+    "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
     "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "b4e09a7f202c4116b77920caf4d4e5da169cb28a",
-    "content_sha256": "b5440314c1763d7dacbc85a656de939a27d08031ed4c9ff8ea35e9e0d6c9edef"
+    "revision": "a601b1ce5e807d9e737a19efada94687db37dee2",
+    "content_sha256": "d1f6b6d582bfa1448d9829e46b3a392c83a1316e67c774035f15742de76b027c"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -83,8 +83,8 @@
     "content_sha256": "171abe8a5a1d594ae501de1e97b9acd7cc21cd9602161d6051bce8f2d73bd86b"
    },
    "draft-mcguinness-oauth-mission-issuance-grant.md": {
-    "revision": "1a34e033976b0007776170a413b11008427948d8",
-    "content_sha256": "ae2b7c7c41e6d5aad953148194c3ac0a741c00a5aee6b05d4bb598fb3c579fc7"
+    "revision": "1b8fbc683e40486899d9efbbd59bbe4be9c4379d",
+    "content_sha256": "466ca49adc94e89990ca4106712b27b7b917d6c425ece61b9a9984094ca4d573"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
     "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
@@ -505,9 +505,45 @@
      "name": "a compensating decision and its context are one observation of the live facts (@spec runtime#evaluation-context-binding, resource-access#initial-common-constraints, #773, #252) > the classification moved while the link's evidence is verified reaches the decision as moved: the PDP's bound denies, and the request and its committed context carry the same value",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > an invoice reassigned to another vendor between the decision and release still releases the reversal of the paid vendor's wire: the context re-established at release is the paid vendor's and equal",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record gone before the decision is refused unknown_vendor with no decision request, though the invoice's current vendor resolves (claiming the binding)",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > a compensate capture resolves the invoice and the vendor the committed wire paid: read from the store it takes the paid vendor, never the invoice's current vendor, and records handed in naming another vendor do not capture",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the resolver of the tenant of the vendor an invoice names does not serve the compensate crossing: a descriptor naming it there does not capture",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing does not depend on the invoice's current vendor (@spec runtime#compound-actions, runtime#evaluation-context-binding, resource-access#initial-common-constraints, #1693, D879) > an invoice moved to another vendor whose record is then deleted still reverses the wire it paid under a bound on the paid vendor's tenant, offsetting that wire (claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#773. The PEP resolves every declared fact from the payments store records the request's invoice names: arguments naming the authoritative facts (amount, payee_account, invoice_version) do not change the captured digest, while a change to the store's record does; the composition test shows the committed facts are the store's values. Mutation M6 (an argument entering the commitment) fails the first. #252: the compensate crossing's authoritative interface is the committed wire's ledger record: an invoice changed after its wire committed, and again before release, leaves the captured context equal to one computed from the wire's record, and the reversal offsets the wire's USD 125. Mutation C1 (the compensate crossing's facts read from the live invoice) fails it; S1 (a resolver reading a record other than its own) fails the shipped-agreement test, which also shows the compensate descriptor's facts do not resolve from the invoice. Each resolver names the crossings it serves: the compensate crossing reads its effect facts only from the wire record and from the store only the live facts its decision evaluates, so a descriptor naming the invoice's amount for it does not capture (S2, the restriction removed, fails that test; L4, the live facts withheld from the compensate crossing, fails every compensate test). #1663 review 3: the compensating decision's live properties and its context capture are built from one synchronous observation of the store records, taken after the link's awaits: a tenant, issuance or classification moved during the awaited verification of the link's evidence reaches the request as moved, the PDP's bound denies at the decision, and the committed context is that same observation. Mutations: R1 (the live properties read before the awaits) and R1b (that plus the capture re-reading the store) fail all three; R2 (the capture re-reading the store right after the snapshot) survives, as an equivalent mutation: no await separates the two reads, which is the property the single snapshot guarantees."
+   "notes": "#773. The PEP resolves every declared fact from the payments store records the request's invoice names: arguments naming the authoritative facts (amount, payee_account, invoice_version) do not change the captured digest, while a change to the store's record does; the composition test shows the committed facts are the store's values. Mutation M6 (an argument entering the commitment) fails the first. #252: the compensate crossing's authoritative interface is the committed wire's ledger record: an invoice changed after its wire committed, and again before release, leaves the captured context equal to one computed from the wire's record, and the reversal offsets the wire's USD 125. Mutation C1 (the compensate crossing's facts read from the live invoice) fails it; S1 (a resolver reading a record other than its own) fails the shipped-agreement test, which also shows the compensate descriptor's facts do not resolve from the invoice. Each resolver names the crossings it serves: the compensate crossing reads its effect facts only from the wire record and from the store only the live facts its decision evaluates, so a descriptor naming the invoice's amount for it does not capture (S2, the restriction removed, fails that test; L4, the live facts withheld from the compensate crossing, fails every compensate test). #1663 review 3: the compensating decision's live properties and its context capture are built from one synchronous observation of the store records, taken after the link's awaits: a tenant, issuance or classification moved during the awaited verification of the link's evidence reaches the request as moved, the PDP's bound denies at the decision, and the committed context is that same observation. Mutations: R1 (the live properties read before the awaits) and R1b (that plus the capture re-reading the store) fail all three; R2 (the capture re-reading the store right after the snapshot) survives, as an equivalent mutation: no await separates the two reads, which is the property the single snapshot guarantees. #1693 (D873): the compensate crossing's tenant fact is the current tenant of the vendor the committed wire paid, read by the wire's vendor in the decision snapshot and at release, never the vendor the invoice names now (resolver payments-store:paid-vendor.tenant, which serves only the compensate crossing; descriptor payment-reverse version 2026-10-26). After the invoice moves from the paid vendor to another, the decision request carries the paid vendor and its tenant: a bound naming that tenant permits and the reversal offsets the paid vendor's wire, and one naming the new vendor's tenant is denied at the decision. An invoice reassigned between the decision and release still releases, its context re-established equal. A paid vendor gone before the decision is refused unknown_vendor with no decision request, though the invoice's current vendor resolves. A capture reads the paid vendor from the store and does not resolve handed-in records naming another vendor (target_unresolvable), and payments-store:vendor.tenant (the tenant of the vendor an invoice names) does not serve the compensate crossing. Mutations: PV1 (the snapshot reads the invoice's current vendor) fails the moved-invoice and gone-before-decision witnesses (the vendor-id check refuses the capture evaluation_context_unresolvable; with PV3 as well, the decision evaluates the new vendor's tenant and the paid vendor's bound is denied); PV2 (the recompute reads the invoice's current vendor) fails the moved-invoice, reassigned-before-release and store-read witnesses, as does PV2 with PV3; PV3 (the vendor-id check on handed-in records removed) fails the records witness, the only one that can reach it, since the PEP hands in only the paid vendor's record; PV4 (payments-store:vendor.tenant serving the compensate crossing) fails the resolver witness. D879: with the invoice's current vendor deleted after it moved, the reversal's context is captured from the invoice and the paid vendor and re-established equal at release (I1 fails it)."
   },
   {
    "id": "runtime.evaluation-context.preserve-approval-and-operation-bindings",
@@ -741,9 +777,21 @@
      "name": "the compensate crossing binds the live resource facts its decision evaluates (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #773, #252) > the vendor record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is refused target_drift with zero reversal entries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: on the compensate crossing, a moved fact of the committed wire's record (C2 turns it into parameter_mismatch) and a record that no longer answers (C1 leaves an effective context digest) each refuse before any reversal. #252 owner review of #1663: the compensating decision also evaluates live resource facts (the invoice's issuance and classification and its vendor's tenant, through the Common Constraints), so the compensate descriptor declares them beside the committed wire's effect facts. A reversal approved under a tenant, issuance or classification bound whose fact moves before release is refused target_drift with zero effects, the wire's parameter pair equal and the context pair unequal. Mutations: L1, L2 and L3 (each live fact frozen) each fail its test; M1+C2 (no context check at the compensate crossing's use) fails all three. #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both)."
+   "notes": "#773. Each clause refuses before any effect: a permit lacking the condition (M9); a changed descriptor, refused by its own check with the context recomputed under the committed descriptor and equal (X2, M1+M2); an unequal digest after a moved fact (M2); and an unavailable fact while the parameters still resolve (M1+M2 turns it into parameter_mismatch) or an unrecoverable salt or committed descriptor (M4, X3, M1+M2). Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: on the compensate crossing, a moved fact of the committed wire's record (C2 turns it into parameter_mismatch) and a record that no longer answers (C1 leaves an effective context digest) each refuse before any reversal. #252 owner review of #1663: the compensating decision also evaluates live resource facts (the invoice's issuance and classification and the current tenant of the vendor the committed wire paid (#1693), through the Common Constraints), so the compensate descriptor declares them beside the committed wire's effect facts. A reversal approved under a tenant, issuance or classification bound whose fact moves before release is refused target_drift with zero effects, the wire's parameter pair equal and the context pair unequal. Mutations: L1, L2 and L3 (each live fact frozen) each fail its test; M1+C2 (no context check at the compensate crossing's use) fails all three. #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is target_drift with zero reversal entries, the wire's parameter pair equal and the context pair unequal, and the paid vendor's record removed after the decision is target_drift with zero reversal entries and no effective context digest. Mutations: PV1 fails both; PV2 with PV3 (the recompute reads and accepts the invoice's current vendor) fails the removal witness, which then records an effective context digest."
   },
   {
    "id": "runtime.evaluation-context.per-phase-capture",
@@ -832,7 +880,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial only for the prepare-stable SHOULD: no shipped descriptor declares a prepare-stable fact (the descriptor reader refuses any member it does not implement, so none can be declared), so that branch is inapplicable to the shipped claim and is not implemented. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: the compensate crossing of payments:payment.reverse captures its own context under its own descriptor, after its link to the committed wire is established, and is checked at its own use; mutations C3 (no capture there), C4 (its fresh parameters re-derived from the invoice) and C5 (recomputation ignoring the committed wire) each fail that test. The compensate crossing's context also covers the live facts its own decision evaluates (L1 fails the tenant witness). #1663 review 3: the compensating decision's live properties and its context capture are built from one synchronous observation of the store records, taken after the link's awaits: a tenant, issuance or classification moved during the awaited verification of the link's evidence reaches the request as moved, the PDP's bound denies at the decision, and the committed context is that same observation. Mutations: R1 (the live properties read before the awaits) and R1b (that plus the capture re-reading the store) fail all three; R2 (the capture re-reading the store right after the snapshot) survives, as an equivalent mutation: no await separates the two reads, which is the property the single snapshot guarantees."
+   "notes": "#773 ruling 5. Each crossing of payments:payment.execute captures its own context with its own phase committed (one parameter digest, three context digests) and is checked at its own use on its own dispatch path (read, write, transaction), as is payments:remittance.send; a commit permit carrying the prepare crossing's context binding is refused. partial only for the prepare-stable SHOULD: no shipped descriptor declares a prepare-stable fact (the descriptor reader refuses any member it does not implement, so none can be declared), so that branch is inapplicable to the shipped claim and is not implemented. Mutations: M23 (phase not committed) fails the distinct-digest and prepare-on-commit tests; M1 fails the read-path test and M2 the write and transaction tests. Zero effects: committedEffects() is the zero-effect witness on the transaction path only; on the read and write paths it is the refused call, which returns no result. #252: the compensate crossing of payments:payment.reverse captures its own context under its own descriptor, after its link to the committed wire is established, and is checked at its own use; mutations C3 (no capture there), C4 (its fresh parameters re-derived from the invoice) and C5 (recomputation ignoring the committed wire) each fail that test. The compensate crossing's context also covers the live facts its own decision evaluates (L1 fails the tenant witness); its tenant fact is the current tenant of the vendor the committed wire paid (#1693, witnessed under runtime.evaluation-context.capture-authoritative). #1663 review 3: the compensating decision's live properties and its context capture are built from one synchronous observation of the store records, taken after the link's awaits: a tenant, issuance or classification moved during the awaited verification of the link's evidence reaches the request as moved, the PDP's bound denies at the decision, and the committed context is that same observation. Mutations: R1 (the live properties read before the awaits) and R1b (that plus the capture re-reading the store) fail all three; R2 (the capture re-reading the store right after the snapshot) survives, as an equivalent mutation: no await separates the two reads, which is the property the single snapshot guarantees."
   },
   {
    "id": "runtime.evaluation-context.atomic-enforced-property",
@@ -1269,9 +1317,15 @@
      "name": "the compensate crossing binds the live resource facts its decision evaluates (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #773, #252) > the vendor record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a committed descriptor no longer published, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead). Mutation X3 (an unrecoverable committed descriptor replaced by the live one) fails the unrecoverable test's absent-digest assertion. #252: on the compensate crossing, a committed wire record that no longer answers, or a lost salt version, leaves the effective context digest absent (C1 fails the first). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both)."
+   "notes": "#773, unblocked by #786's suppression representation. A context the PEP cannot establish (a lost salt version on every covered dispatch path, a committed descriptor no longer published, a declared fact that stops resolving, a deleted invoice) leaves effective_evaluation_context_digest absent, never copied or invented, with error target_drift. Mutations: M4 fails the restart and unrecoverable tests on the absent-digest assertion; M1+M2 fails the fact-stops-resolving test (parameter_mismatch instead). Mutation X3 (an unrecoverable committed descriptor replaced by the live one) fails the unrecoverable test's absent-digest assertion. #252: on the compensate crossing, a committed wire record that no longer answers, or a lost salt version, leaves the effective context digest absent (C1 fails the first). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): the record of the vendor the committed wire paid removed between the decision and release, with the invoice on another vendor that still resolves, is target_drift with zero reversal entries and the effective context digest absent. Mutation PV2 with PV3 (the recompute reads and accepts the invoice's current vendor) records an effective context digest and fails it."
   },
   {
    "id": "runtime.evaluation-context.salt-rotation",
@@ -1463,9 +1517,21 @@
      "name": "the compensate crossing binds the live resource facts its decision evaluates (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #773, #252) > the vendor record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is refused target_drift with zero reversal entries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error, the changed-descriptor rows included (X1, X2). The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it). A moved live fact of the compensating decision with the wire's parameters unchanged is target_drift with both pairs recorded (L1 fails it). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both)."
+   "notes": "#773 ruling 3, Runtime's pointer to Runtime Evidence's Context Drift and Parameter Deviation. Witnesses and mutations as evidence.execution.context-drift-primary-error, the changed-descriptor rows included (X1, X2). The agent-supplied deviation is constructed at the PEP's own API (the parameter object the executor uses is changed between the permit and verifyPermitAtUse); the reference re-derives the parameters from the bound invoice, so no request through the server can change an agent-supplied parameter at use. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it). A moved live fact of the compensating decision with the wire's parameters unchanged is target_drift with both pairs recorded (L1 fails it). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): the compensate crossing's tenant fact is the current tenant of the vendor the committed wire paid. With the invoice moved to another vendor, that tenant moved after the decision is target_drift with the wire's parameter pair equal and the context pair unequal, and that vendor's record removed after the decision is target_drift with the parameter pair kept and the effective context digest absent. Mutations: PV1 fails both; PV2 with PV3 fails the removal witness."
   },
   {
    "id": "evidence.refusal.pep-evaluation-context-unresolvable",
@@ -1593,9 +1659,21 @@
      "name": "the compensate crossing binds the live resource facts its decision evaluates (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #773, #252) > the vendor record removed between the decision and release is refused target_drift with zero effects, the wire's parameter pair kept and no effective context digest",
      "level": "cross-component",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is refused target_drift with zero reversal entries",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#773 ruling 3, with the owner's P2 correction. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), unchanged facts under a changed descriptor (target_drift by the descriptor-change check, both pairs equal, no divergence), a fact moved under a changed descriptor (target_drift, the context digest diverging under the committed descriptor), and an unrecoverable salt or committed descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M10, X1 (recompute under the live descriptor), X2 (descriptor-change check removed) and X3 (an unrecoverable committed descriptor replaced by the live one) each fail the rows they target. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it). A moved live fact of the compensating decision with the wire's parameters unchanged is target_drift with both pairs recorded (L1 fails it). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both)."
+   "notes": "#773 ruling 3, with the owner's P2 correction. Each table row is witnessed with the digest pairs the record keeps: a moved declared fact (both pairs unequal, target_drift), an agent-supplied change (parameter_mismatch, both pairs unequal), both (parameter_mismatch, the context divergence kept), an unavailable context with an agent change (target_drift, the parameter divergence kept), an unavailable fact (both effective digests absent), unchanged facts under a changed descriptor (target_drift by the descriptor-change check, both pairs equal, no divergence), a fact moved under a changed descriptor (target_drift, the context digest diverging under the committed descriptor), and an unrecoverable salt or committed descriptor (parameter pair kept, effective context absent). The agent-supplied deviation is constructed at the PEP's own API; see runtime.evaluation-context.primary-error. Mutations: M2, M3, M26, M10, X1 (recompute under the live descriptor), X2 (descriptor-change check removed) and X3 (an unrecoverable committed descriptor replaced by the live one) each fail the rows they target. #252: the compensate crossing classifies the same way: a moved declared fact of the committed wire's record is target_drift with both pairs recorded and unequal (C2 fails it). A moved live fact of the compensating decision with the wire's parameters unchanged is target_drift with both pairs recorded (L1 fails it). #1663 review 3, ruling 3: an invoice or vendor record removed between the decision and release on the compensate crossing is target_drift with zero reversal entries, the wire's parameter pair kept and the effective context digest absent (M1+C2 and D2, an unestablishable context classified parameter_mismatch, each fail both). #1693 (D873): the compensate crossing's tenant fact is the current tenant of the vendor the committed wire paid. With the invoice moved to another vendor, that tenant moved after the decision is target_drift with the wire's parameter pair equal and the context pair unequal, and that vendor's record removed after the decision is target_drift with the parameter pair kept and the effective context digest absent. Mutations: PV1 fails both; PV2 with PV3 fails the removal witness."
   },
   {
    "id": "evidence.execution.context-drift-audit-reports-each-pair",
@@ -2315,9 +2393,45 @@
      "name": "the compensate crossing captures and checks its own context, from the committed wire (@spec runtime#evaluation-context-binding, runtime#compound-actions, authzen#context-compensation-link, #773, #252) > the descriptor's facts are the committed wire's, not the invoice as it reads now: an invoice that moved after the wire, and again before release, leaves the context unchanged",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693) > after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (not claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing does not depend on the invoice's current vendor (@spec runtime#compound-actions, runtime#evaluation-context-binding, resource-access#initial-common-constraints, #1693, D879) > an invoice moved to another vendor whose record is then deleted still reverses the wire it paid under a bound on the paid vendor's tenant, offsetting that wire (claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "the compensate crossing does not depend on the invoice's current vendor (@spec runtime#compound-actions, runtime#evaluation-context-binding, resource-access#initial-common-constraints, #1693, D879) > an invoice moved to another vendor whose record is then deleted still reverses the wire it paid under a bound on the paid vendor's tenant, offsetting that wire (not claiming the binding)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/reversal-challenge.test.ts",
+     "name": "a challenged reversal is approved and retried with its transaction token (@spec txn-authorization#offline-verification, runtime#compound-actions, #252, #1693, D889) > the challenge binds the reversal form, and the retry releases exactly one reversal of the committed wire (claiming the binding)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/reversal-challenge.test.ts",
+     "name": "a challenged reversal is approved and retried with its transaction token (@spec txn-authorization#offline-verification, runtime#compound-actions, #252, #1693, D889) > an invoice reassigned to another vendor whose record is then deleted between the challenge and the retry still retries to one reversal of the paid wire under tenant-a (claiming the binding)",
+     "level": "cross-component",
+     "surface": "verification"
     }
    ],
-   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use: target_drift under the shipped Evaluation-Context Binding claim, which covers the compensate crossing and declares the wire's amount a fact (#773), and parameter_mismatch in a deployment that does not claim it. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the non-claiming at-use witness (U1, #773: under the shipped claim the context check refuses the changed record first, so that witness no longer isolates the comparison). After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness. #773: binding the compensate crossing's live resource facts does not move its effect parameters: an invoice amount changed after the wire, and again before release, still reverses the wire's USD 125 under the parameter digest the Decision bound (P1, the reversal's amount taken from the invoice, fails that witness too)."
+   "notes": "Owner review of PR #1656 (P1). Committing USD 125, changing the invoice to USD 1 and requesting a reversal under a USD 10 reversal ceiling is denied parameter_violation, the request carrying USD 125, with zero connector effects; within the ceiling the reversal offsets exactly USD 125, and the request, Decision Evidence, operation key and completed Execution Evidence carry the digest of the wire's reversal form; a wire record that changes after the Decision is refused at use: target_drift under the shipped Evaluation-Context Binding claim, which covers the compensate crossing and declares the wire's amount a fact (#773), and parameter_mismatch in a deployment that does not claim it. Mutations: binding the invoice as it reads now fails the denial assertion (the permit is then refused at use); doing so with the at-use comparison and the connector check also off reverses USD 125 (the zero-effect assertion fails on its own); binding the current amount into the reversal form with both downstream guards off fails the committed-amount assertion; skipping the at-use comparison fails the non-claiming at-use witness (U1, #773: under the shipped claim the context check refuses the changed record first, so that witness no longer isolates the comparison). After #786: a wire record that no longer answers at use leaves the effective parameters unestablished, suppressed target_drift with the authorized digest kept and the effective one absent. Mutation: recording that case as parameter_mismatch fails the target_drift witness. #773: binding the compensate crossing's live resource facts does not move its effect parameters: an invoice amount changed after the wire, and again before release, still reverses the wire's USD 125 under the parameter digest the Decision bound (P1, the reversal's amount taken from the invoice, fails that witness too). #1693 (D873): after the invoice moves from the vendor its wire paid to another, the compensating decision request still carries the wire's vendor, with that vendor's current tenant, and the reversal offsets the paid vendor's wire under a bound naming that tenant, with or without the Evaluation-Context Binding claim; a bound naming the new vendor's tenant is denied at the decision. Mutations: PV5 (the decision's vendor_id taken from the invoice as it reads now) and PV6 (the reversal form's vendor_id taken from it) each fail both. D879: the compensate crossing never reads the vendor the invoice names now. With the invoice moved to another vendor whose record is then deleted, the reversal still carries the wire's vendor and that vendor's current tenant, permits under a bound on that tenant and offsets the paid vendor's wire, with or without the Evaluation-Context Binding claim; an ordinary invoice-scoped operation still refuses that missing vendor unknown_vendor before any decision request. Mutation I1 (the generic unknown_vendor requirement restored on the compensate path) fails both. D889: the transaction-token retry of a challenged reversal recomputes the same reversal form from the committed effect's retained record, so the approved retry releases one reversal of the paid wire, also when the invoice was reassigned to a vendor deleted between the challenge and the retry. Mutation A1 (the invoice form on the retry path) fails both."
   },
   {
    "id": "runtime.compound-actions.offset-refuses-differing-parameters",
@@ -2635,7 +2749,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries no `fresh_until`, so the cap is witnessed where the reference stamps it, on the signed Mission Status Response."
+   "notes": "The advertised ceiling and the enforced ceiling are one number: the metadata document serves `mission_max_stale_seconds` from config/enforcement-scope.json and `signedStatus` caps every response, requested or default, at it. #1535 (D649, finding 2) added the `exp` cap, which binds every AS, so the row is no longer gated on revocation propagation; the ceiling half stays conditional in its own text. `signedStatus` stamps fresh_until and exp at one instant. Proven by stamping fresh_until 20 s past exp: the new exp test fails at a requested lifetime the ceiling alone admits. #1563 review: also gated on status.introspection-projection, whose issuer projection MAY carry `fresh_until` governed by this caching rule. The reference's introspection projection carries `fresh_until` through the same capped horizon (#1724 C4); status.introspection.fresh-until-cap witnesses it there."
   },
   {
    "id": "status.response.consumer-authorized-signer",
@@ -4898,7 +5012,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -4927,7 +5041,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. Not witnessed: the consumer-side clauses (#1747), that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -5130,7 +5244,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
+   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested (#1749). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -5218,12 +5332,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.",
+    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, the agent's self Token Exchange for a delegation handle (which succeeds before the uncertainty), introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses the agent's self Token Exchange for a delegation handle 503, though the same exchange succeeded before, and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion, child creation and a designation redeemed by another client are refused by the same middleware and kernel guard but are not exercised one by one. The single-writer limitation is accepted as declared (D874); it does not prove the unexercised clauses. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-deny",
@@ -5240,12 +5374,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior.",
+    "local": "containment, from the Lifecycle endpoint or from a protected event through the issuer's own ContainmentPolicy, commits a narrower effective set at a new version and nothing else: state, expiry, derivation limit and observation freshness do not move, a suspended Mission is not resumed, the answer carries no observation, and the narrowing has no expiry"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane emergency narrowing (@spec control-plane#emergency-deny, #250) > a protected event narrows a suspended Mission without resuming it or moving its expiry, derivation limit or observation freshness, and the narrowing does not lapse",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle containment creates no authority and no freshness (@spec control-plane#emergency-deny, #250) > contain answers its commit alone, leaves an active and a suspended Mission in their state with their expiry, and the next observation is a new read with the ordinary freshness span",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache (an accepted declared limitation, D874, which does not prove those clauses); a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-authority",
@@ -5262,12 +5410,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one.",
+    "local": "the PEP publishes break_glass absent in its Enforcement Scope Statement and does not start under a statement declaring any other emergency mode, so no positive emergency permission exists to be represented as Mission authority"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes positive emergency permission absent, and refuses to start under a statement declaring any other emergency mode",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured (an accepted declared limitation, D874, which does not prove the clause). The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.isolation",
@@ -5314,7 +5470,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -5480,12 +5636,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+    "local": "src/docs/control-plane-deployment.md's Deployment declaration states each item under its own heading, with a recovery point and a recovery time, and lists as residual risks exactly the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > documents each item the declaration requires under its own heading: serialization domains, authoritative observation mechanism, replication and recovery model, recovery objectives, tenant isolation and residual risks",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. The reference makes no claim (control-plane.consistency.claim) and still writes the declaration, so a reader can check it against the ledger. The tests check that each item is present and that the residual risks match the ledger, not the prose against the code; each item points to the section, and that section's witnesses, that carry its accuracy."
   },
   {
    "id": "control-plane.consistency.claim",
@@ -5502,12 +5672,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+    "local": "the reference makes no claim: its Deployment declaration says so and lists as residual risks the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the obligation binds a claiming deployment, and the reference makes no claim because these rows are not tested: serialization, fresh-observation, state-surfaces, rollback, rollback-retaining-consumer, partitions, emergency-deny, emergency-authority and isolation (each row's notes name its gap). The cited test fails when the declaration's residual risks and the ledger disagree."
   },
   {
    "id": "core.submission.front-channel-refusal",
@@ -19895,12 +20073,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an implementation that serves suspend also serves resume, and the authorization for each stays as Authorization assigns it",
-    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume"
+    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume; a lifecycle client's deployment policy names the operations it may request, checked per operation, so serving both grants neither to a client authorized for the other"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C8 (D847), normative. Structural in the reference; no witness refuses a configuration serving suspend alone."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > in every assembly, suspend is served only together with resume",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > where both are served, a client authorized for suspend alone is refused resume, and one authorized for resume alone is refused suspend, as an unknown Mission is refused",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C8 (D847), normative. Witnessed over three assemblies (revoke only, revoke with lifecycle-extended, the full provider). Proved by three defects: resume served under another capability than suspend; a client authorized for suspend allowed to resume; a client authorized for resume allowed to suspend."
   },
   {
    "id": "status.lifecycle.endpoint-advertised",
@@ -20089,7 +20280,7 @@
    "id": "status.lifecycle.private-key-jwt-params",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "private-key-jwt",
    "role": "AS",
    "strength": "stated",
@@ -20117,13 +20308,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200)."
+   "notes": "#1535 finding 12 (D649). Witness: dropping the client_assertion_type comparison from authenticateLifecycleClient fails the cited test (an untyped assertion is answered 200). Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.client-id-mtls",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-lifecycle-endpoint",
-   "text": "The request also carries the client authentication parameters of the mechanism it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
+   "text": "The request also carries the client authentication parameters of the method it uses, as at the Mission Status endpoint ({{mission-status-request}}).",
    "facet": "mtls-client-id",
    "role": "AS",
    "strength": "stated",
@@ -20135,12 +20326,12 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Lifecycle request authenticating by mTLS carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
+    "normative": "a Lifecycle request authenticating by mTLS client authentication (`tls_client_auth`) carries `client_id` in its form body, and one that omits it is not authenticated and is refused `invalid_client`"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows."
+   "notes": "#1535 finding 12 (D649). todo: the reference Lifecycle endpoint accepts private_key_jwt only, and mTLS client authentication (tls_client_auth) is implemented nowhere in src. Applies only where the endpoint accepts mTLS; the model has no capability for that mode. D405: specified, not implemented. #1563 review: the authentication capability is scoped to the endpoint using it, so supporting a mode at one endpoint does not activate the other endpoint's rows. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.unserved-operation-refused",
@@ -20852,7 +21043,7 @@
    "id": "status.auth.mechanism-supported",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST support at least one of the following mechanisms.",
+   "text": "The AS MUST support at least one of the following paths.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -20867,8 +21058,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Status and Lifecycle endpoints each authenticate a request by mTLS, a sender-constrained access token or private-key JWT",
-    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept private-key JWT (#1407); the Status operation's development GET route keeps the service-token stand-in and is not advertised"
+    "normative": "the Status and Lifecycle endpoints each authenticate a request on at least one of the two paths: client authentication with a method of the OAuth Token Endpoint Authentication Methods registry that the AS advertises for that endpoint and that uses no shared client secret (for example `tls_client_auth` or `private_key_jwt`), or a sender-constrained access token",
+    "local": "the Lifecycle endpoint and the advertised Mission Status endpoint each accept client authentication by `private_key_jwt` (#1407), the one method they advertise; neither accepts the access-token path; the Status operation's development GET route keeps the service-token stand-in and is not advertised"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -20892,13 +21083,13 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.auth.unauthenticated-refused",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-authentication",
-   "text": "The AS MUST refuse a request not authenticated by one of the three mechanisms, with the outcome {{mission-status-auth-failures}} assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400).",
+   "text": "The AS MUST refuse a request not authenticated on one of the two paths, with the outcome {{mission-status-auth-failures}} assigns.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -20913,8 +21104,8 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a request carrying no credential, or only a client secret (Basic or POST), or a mechanism the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
-    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts no access-token scheme, so a request with no credential, a client secret, Basic or an access token is 400 invalid_client; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
+    "normative": "a request carrying no credential, one whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`, included), or a path the endpoint does not accept, is refused with the auth-failure outcome and nothing is executed",
+    "local": "witnessed on the Lifecycle endpoint and the Mission Status endpoint (#1407): each accepts `private_key_jwt` and no access-token scheme, so a request with no credential, `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `none` (a bare `client_id`), or an access token is 400 invalid_client, the shared-secret methods and `none` exactly as no credential; the Status operation's development GET route, not advertised, authenticates the service-token stand-in"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -20930,9 +21121,95 @@
      "name": "Mission Status endpoint errors (@spec status#mission-status-auth-failures, status#mission-status-errors, #1407) > refuses a failed or absent client authentication invalid_client (HTTP 400) with no challenge, before any Mission is read",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. A shared-secret method or none answered other than as no credential (client_secret_post, Basic, client_secret_jwt and none each made retryable) failed the new witnesses. #1763 review: the refusal clause no longer fixes the two error codes; the outcome is the auth-failures section's, which preserves a method's own error response and defaults to 400 invalid_client."
+  },
+  {
+   "id": "status.auth.client-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A method that authenticates with a shared client secret, such as `client_secret_basic`, `client_secret_post`, or `client_secret_jwt`, MUST NOT be used, and `none` is not client authentication.",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client of the Status or Lifecycle endpoint never authenticates with a shared client secret (`client_secret_basic`, `client_secret_post`, `client_secret_jwt`) and never relies on `none`",
+    "local": "the PDP's Mission Status resolver (services/pdp/src/mission-status-resolver.ts), the reference's Status client, presents private_key_jwt alone: an ES256 client assertion with no Authorization header, no client_secret and no bare client_id; the witness captures the request it sends. The AS side, a shared-secret request answered as one with no credential, is status.auth.unadvertised-method-as-no-credential"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver authenticates without a shared client secret (@spec status#mission-status-authentication) > presents private_key_jwt alone: an asymmetrically signed client assertion, with no Authorization header, no client_secret and no bare client_id",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: the resolver sending a Basic Authorization header failed the witness."
+  },
+  {
+   "id": "status.auth.unadvertised-method-as-no-credential",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-authentication",
+   "text": "A request whose selected method the endpoint does not advertise, including a shared-secret method such as HTTP Basic, is answered as one that presented no credential",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request whose selected client authentication method the endpoint does not advertise (a shared-secret method such as `client_secret_basic`, `client_secret_post` or `client_secret_jwt`, or `none`) receives exactly the outcome a request with no credential receives",
+    "local": "at both endpoints, which accept no access-token scheme, the outcome is 400 invalid_client with no challenge and the request's nonce echoed, for no credential and for each of client_secret_basic, client_secret_post, client_secret_jwt (an HS256 assertion) and none (a bare client_id)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > answers a shared-secret method (client_secret_basic, client_secret_post, client_secret_jwt) and none exactly as a request that presented no credential, leaving the Mission unchanged",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth); the AS side of status.auth.client-no-shared-secret. Mutation-proved: answering client_secret_post, Basic, client_secret_jwt or none as retryable instead of as no credential each failed a witness."
   },
   {
    "id": "status.auth.advertised-assertion-algs",
@@ -21385,7 +21662,7 @@
    "id": "status.metadata.lifecycle-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Lifecycle endpoint.",
+   "text": "REQUIRED when the Mission Lifecycle endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21399,8 +21676,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a deployment serving the Lifecycle endpoint, in either Lifecycle conformance class, advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the methods it accepts",
-    "local": "[\"private_key_jwt\"]"
+    "normative": "a deployment whose Lifecycle endpoint, in either Lifecycle conformance class, accepts client authentication advertises `mission_lifecycle_endpoint_auth_methods_supported` naming exactly the client authentication methods it accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"]; the reference Lifecycle endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever the endpoint is served and the member is advertised there"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21418,7 +21695,40 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. #1535 finding 5 (D649): REQUIRED for a served endpoint, no longer a SHOULD; gated on either Lifecycle class, since both conformance classes advertise it. Witness: dropping the member from the discovery builder fails both cited tests. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Lifecycle discovery witness."
+  },
+  {
+   "id": "status.metadata.lifecycle-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_lifecycle_endpoint_auth_methods_supported` takes the Status member's value space and constraints: it lists only registry values that use no shared client secret, never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method",
+    "local": "[\"private_key_jwt\"] (LIFECYCLE_ENDPOINT_AUTH_METHODS), a constant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Twin of status.metadata.status-auth-methods-no-shared-secret for the Lifecycle member, whose MUST NOT arrives through \"the value space and constraints of\" the Status member. Mutation-proved: listing client_secret_basic, and listing none, each failed the witness."
   },
   {
    "id": "status.metadata.lifecycle-assertion-algs",
@@ -21469,7 +21779,7 @@
    "id": "status.metadata.status-auth-methods",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "as-metadata",
-   "text": "REQUIRED when the AS serves the Mission Status endpoint.",
+   "text": "REQUIRED when the Mission Status endpoint accepts client authentication.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21480,8 +21790,8 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an AS serving the Mission Status endpoint advertises `mission_status_endpoint_auth_methods_supported` naming exactly the methods that endpoint accepts",
-    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407)"
+    "normative": "an AS whose Mission Status endpoint accepts client authentication advertises `mission_status_endpoint_auth_methods_supported` naming exactly the client authentication methods that endpoint accepts, as values of the OAuth Token Endpoint Authentication Methods registry",
+    "local": "[\"private_key_jwt\"], advertised exactly where the status capability is enabled (#1407); the reference Mission Status endpoint accepts client authentication only (private_key_jwt, no access-token path), so the condition holds wherever it is served"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -21493,7 +21803,37 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability."
+   "notes": "#1535 finding 5 (D649); #1407: the advertised Mission Status endpoint advertises it. Proved by a defect that advertises the endpoint's metadata without the status capability. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. Re-proved: dropping the member from the discovery builder fails the Status discovery witness."
+  },
+  {
+   "id": "status.metadata.status-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "as-metadata",
+   "text": "It MUST NOT list a method that authenticates with a shared client secret, or `none`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "status.mission-status"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_status_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret: never `client_secret_basic`, `client_secret_post`, `client_secret_jwt` or `none`, and never an `access_token` pseudo-method (the access-token path is described by Protected Resource Metadata)",
+    "local": "[\"private_key_jwt\"] (STATUS_ENDPOINT_AUTH_METHODS in services/authorization-server/src/adapters/lifecycle-endpoint.ts), a constant: no deployment configuration can add a method, so no load-time guard is needed"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/status-endpoint.test.ts",
+     "name": "Mission Status endpoint client authentication methods (@spec status#mission-status-authentication, status#as-metadata) > advertises only registry client authentication methods that use no shared secret: no shared-secret method, no none, and no access_token pseudo-method",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). Mutation-proved: listing client_secret_basic, and listing access_token, each failed the witness."
   },
   {
    "id": "status.metadata.status-assertion-algs",
@@ -21739,7 +22079,7 @@
    "id": "status.auth.invalid-client",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-auth-failures",
-   "text": "A request whose mTLS or private-key-JWT client authentication fails at the HTTP layer receives HTTP 400 with the `invalid_client` error code",
+   "text": "Where the method defines none, the request receives HTTP 400 with the `invalid_client` error code",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -21754,7 +22094,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication (mTLS or private_key_jwt) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
+    "normative": "a failed client authentication whose method defines no error response of its own (for example `tls_client_auth` or `private_key_jwt`) gets 400 invalid_client with no WWW-Authenticate challenge; so does a request with no credential at an endpoint that accepts no access-token scheme",
     "local": "the Lifecycle endpoint accepts private_key_jwt and no access-token scheme: a failed assertion (audience, type, exp, jti, signature, algorithm, registration) and a request with no credential, a client secret, Basic or an access token are each 400 invalid_client with no WWW-Authenticate; the Mission Status endpoint authenticates the same way and refuses the same way (#1407)"
    },
    "level": "endpoint",
@@ -21785,7 +22125,33 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint."
+   "notes": "#972 item 18, #1099 review; #1191 (D416). #1407: the advertised Mission Status endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text. #1763 review: 400 invalid_client is the default where the method defines no error response; private_key_jwt defines none, so the existing witnesses still hold."
+  },
+  {
+   "id": "status.auth.method-defined-failure-response",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-auth-failures",
+   "text": "A request whose client authentication fails at the HTTP layer receives the error response that the method's specification defines for that failure, with any error code, status, and challenge it requires",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a failed client authentication under a method that defines its own error response (error code, HTTP status, and any challenge header) receives that response rather than the default 400 invalid_client, in this document's error body: the method's error code as `error`, with `error_description`, any `nonce` echo, and the method's challenge header"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): a registered method such as attestation-based client authentication defines its own challenge and freshness errors. todo: the reference supports only private_key_jwt, which defines no error response of its own; its default outcome is status.auth.invalid-client. Release-check note N1 (D893): the method's error code rides this document's error body."
   },
   {
    "id": "status.lifecycle.resume-distinct-authorization",
@@ -22118,7 +22484,7 @@
    "id": "status.lifecycle.direct-client-grant",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "lifecycle-authorization",
-   "text": "When the caller authenticates directly as a client (mTLS client authentication {{RFC8705}} or private-key JWT {{RFC7523}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
+   "text": "When the caller authenticates directly as a client ({{mission-status-authentication}}), the authenticated client is the acting party. The AS MUST check the deployment-defined lifecycle grant bound to that client.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -22129,7 +22495,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a client authenticated by private-key JWT is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
+    "normative": "a client that authenticates directly as a client, with an advertised client authentication method (`private_key_jwt` in the reference), is authorized by the lifecycle grant the deployment binds to that client: one holding none, or another grant only, is refused as an unknown Mission and the Mission is unchanged",
     "local": "the grant is the deployment's lifecycleClientGrants entry for the client_id, or a dedicated client registered through lifecycleClients with its public key and grants; the shipped launchers bind mission_lifecycle to one lifecycle console and to no other client; an unknown grant name fails the boot"
    },
    "level": "endpoint",
@@ -22154,7 +22520,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint."
+   "notes": "#1191 (D416): the advertised Mission Lifecycle endpoint. Status registry client authentication (spec/status-registry-client-auth): re-quoted from the two-path text."
   },
   {
    "id": "status.lifecycle.acting-party-reflected",
@@ -22736,12 +23102,19 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "a retransmit concurrent with its original commits no second transition, and every answer reports the one committed operation's outcome",
-    "local": "the nonce claim commits inside the transition's transaction, and a retransmit finding a committed claim is finalized from it, never re-executed"
+    "local": "the nonce claim commits inside the transition's transaction; a retransmit that finds the claim still committed (the original still signing) finalizes it from the retained observation, never re-executing the operation, and every exchange delivers the response retained first, so the original, a concurrent retransmit and a later replay carry the same bytes"
    },
    "level": "concurrency",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847). The reference's single-writer store serializes the claim with the transition; no concurrent witness yet."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-concurrent-retransmit.test.ts",
+     "name": "a retransmit concurrent with its original commits once and answers with the one response (@spec status#idempotency, #1724 C1) > a resume retransmitted while the original is still being signed commits one transition, and the original, the retransmit and a later replay answer the same 200 response byte for byte",
+     "level": "concurrency",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C1 (D847). The witness holds the original `resume` at its signature, after its commit, and retransmits in that window. Proved by two defects: dropping the deduplication lookup (the retransmit re-executes and answers `conflict`), and delivering each exchange's own signature instead of the retained one (the original and the retransmit answer with different envelopes, which the reference did before this change)."
   },
   {
    "id": "status.lifecycle.client-expired-replay-confirmation",
@@ -22761,12 +23134,62 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established"
+    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts, verifyLifecycleResponse) verifies through the shared verifier's report-expiry mode, which classifies a response as expired when it is verified on or after its exp whatever the skew tolerance, with keys read afresh from the validated metadata's jwks_uri at each verification and limited to its trusted Status kids; an expired replay that correlates and passes every other check returns a confirmation carrying no Mission object"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847), normative client rule; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > accepts the AS's replay of its retained request, verified after its exp, only as confirmation of that request's outcome, which carries no Mission state",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that does not correlate to the retained request: another request's nonce, or another Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that fails any other check: an audience or a sub naming another client, or a kid its configuration does not trust",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > takes a replay at or past its exp as confirmation only, inside the 30 second skew allowance and beyond it, and one second before its exp as an observation (#1757 review)",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses the AS's replay of its retained request once the Status key that signed it is compromised, before and after its exp",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > refuses a response whose exp has passed by default, and on request returns it marked expired once every other check passes",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > classifies expiry by exp and the verification time alone: current one second before exp, expired at exp and after it, inside the tolerance and beyond it, at the profile's tolerance and at zero (#1757 review)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > still refuses an expired response that fails any other check: another audience, another issuer, another Mission, a fresh_until after exp, or a key it does not hold, at its exp, just after it and long after, at the profile's tolerance and at zero",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 C1 (D847), normative client rule. Every observation clause witnessed: correlation (the non-correlating replays are refused), every other check (audience, sub, an untrusted kid; and in the shared verifier, issuer, Mission, fresh_until and key), no compromised key (the AS's replay of the original bytes under the Status key compromised after a restart on the same kernel store is refused), and confirmation only (no Mission object). Proved by eight defects: correlation skipped when expired; the expected Mission taken from the response; report mode accepting any claim failure; the client sub check dropped; published keys cached across verifications; every published key accepted; expiry reported by default; an expired replay returned as an observation. #1757 review: expiry is classified by the verified exp and the verification time, never the skew tolerance (a replay just past exp inside the tolerance had come back as an observation, and at zero tolerance the re-verification at exp refused a valid expired replay); boundary witnesses at exp - 1, exp, exp + 1, inside and beyond the tolerance, and at zero tolerance. Proved by two more defects: tolerance-based classification, and re-verification at exp."
   },
   {
    "id": "status.signing-keys.compromise-published",
@@ -25829,8 +26252,27 @@
      "name": "M5 transaction-assurance tier > executes exactly once for a verified transaction token that matches the retained operation (@spec txn-authorization#offline-verification)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/reversal-challenge.test.ts",
+     "name": "a challenged reversal is approved and retried with its transaction token (@spec txn-authorization#offline-verification, runtime#compound-actions, #252, #1693, D889) > the challenge binds the reversal form, and the retry releases exactly one reversal of the committed wire (claiming the binding)",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/reversal-challenge.test.ts",
+     "name": "a challenged reversal is approved and retried with its transaction token (@spec txn-authorization#offline-verification, runtime#compound-actions, #252, #1693, D889) > a retry after the wire's ledger record changed between the challenge and the retry is refused txn_parameter_mismatch, with no reversal",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/reversal-challenge.test.ts",
+     "name": "a challenged reversal is approved and retried with its transaction token (@spec txn-authorization#offline-verification, runtime#compound-actions, #252, #1693, D889) > a retry after the link can no longer be established between the challenge and the retry is refused txn_parameter_mismatch, with no reversal",
+     "level": "cross-component",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1693 (D889): for a challenged compensate crossing (reverse_wire_transfer) the recomputed parameter_digest is the reversal form, rebuilt from the compensation link the PEP establishes again from its retained, verified evidence for the challenged Mission and from the committed wire's ledger record; it never reads the invoice's current vendor and never takes the token's or the pending operation's digest. The retry of an approved, challenged reversal releases one reversal of the committed wire; a ledger record that changed, or a link that no longer establishes, between the challenge and the retry is refused txn_parameter_mismatch with no decision request and no reversal. Mutations: A1 (the invoice form recomputed for the reversal, the pre-fix behavior) refuses every reversal retry txn_parameter_mismatch and fails the retry witness; A2 (the pending operation's digest substituted for the recomputed one) passes both drifted retries through the token check (one is then denied action_approval_required at the PDP, the other refused compensation_link_unavailable) and fails both drift witnesses. Coverage stays partial for the rest of the row."
   },
   {
    "id": "txn-authorization.verification.current-effective-authority-set",
@@ -29647,7 +30089,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten, and the supported-subset fixture test checks that both superseded versions stay declared as frozen."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -29688,7 +30130,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879): the shipped statement declares three versions: 2026-10-26 current (payments-runtime-profile-v15), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z)."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -29873,9 +30315,33 @@
      "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > performs the superseded 2026-10-24 version under the retained v14 profile: each crossing as the live profile does, and not the compensate crossing, whose v15 semantics it never gets (#1693, D879)",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets",
+     "level": "cross-component",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-26 performs the reversal under the paid vendor's current tenant",
+     "level": "cross-component",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): the shipped contract is 2026-10-26 (payments-runtime-profile-v15, current), with 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under v15; an entry pinned to 2026-10-26 performs the reversal under v15. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -45251,9 +45717,15 @@
      "name": "a reference that does not resolve at the PEP refuses before the decision request (@spec resource-access#resource-contract, runtime-evidence#pre-decision-refusal, #249) > where the resource requires a reference, an entry without one provides no authority, unless another fully enforceable entry covers the operation",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A v1 reference the PEP cannot resolve (a v2-only resource, a changed digest, a retired version), and an unpinned entry where a reference is required, yield one signed Refusal Record with denial_reason resource_contract_unresolvable, no decision request and no effect. Proved by suppressing the PEP's pre-decision refusal. #1693 (D879): a reversal under an entry pinned to 2026-10-24, whose retained v14 profile omits the reversal, signs one Refusal Record resource_contract_unresolvable naming payments:payment.reverse, with no decision request, no suppressed Execution Evidence and no reversal entry. Mutation P1 fails it."
   },
   {
    "id": "evidence.refusal.pdp-operation-target-invalid",
@@ -49449,7 +49921,7 @@
    "id": "issuance-grant.minting-errors.client-auth-failure",
    "spec": "draft-mcguinness-oauth-mission-issuance-grant.md",
    "anchor": "minting-errors",
-   "text": "| `invalid_client` | 400 | Direct client authentication (mutual TLS or private-key JWT) failed",
+   "text": "| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -49459,12 +49931,12 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "a grant request whose mutual-TLS or private-key-JWT client authentication fails, or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
+    "normative": "a grant request whose client authentication fails under a method that defines no error response of its own (for example mutual TLS or private-key JWT), or that presents no credential where no access-token scheme is accepted, gets HTTP 400 invalid_client with no WWW-Authenticate challenge, and no grant is minted"
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists."
+   "notes": "Spec-only: this repository implements neither the MAS grant endpoint nor an issuance-grant redemption path (inventoried #589; no grant wire names in src). Added with the D685 rulings on #1556 (Q1); todo until that path exists. #1763 review: re-quoted; a method's own error response governs where it defines one."
   },
   {
    "id": "issuance-grant.minting-errors.access-token-challenge",
@@ -62618,6 +63090,71 @@
    "notes": "Added with the alignment to Attenuating Agent Tokens -02. Vacuous for the reference today: no assembly advertises mission_attenuation_supported (D186, #927), so no metadata document is bound by it. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
   },
   {
+   "id": "attenuation.consumer.substrate-verification.every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "conformance",
+   "text": "MUST verify the attenuation chain and proof-of-possession per the attenuation substrate",
+   "facet": "the audience of every token in the chain (AAT -02 Section 8, step 6c)",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
+    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses at the consumer a child narrowed to another resource server, and accepts the same chain narrowed to this one",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+  },
+  {
+   "id": "attenuation.consumer.child-identity-claims-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-binding-check",
+   "text": "The substrate gives a claim it does not define no authority in a derived token unless a profile defines how it carries across derivation",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a child's `sub` and `client_id`, claims neither the substrate nor this profile carries across derivation, are ignored: the consumer's subject and client are the root's, so a holder-set value changes neither the decision subject, the recorded effect nor its evidence",
+    "local": "the payments consumer reads sub and client_id from the verified root, whose profile requires them; a root without sub refuses, with no fallback to a child (D882); the child mint copies neither"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses a root without its subject rather than falling back to a child's sub",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). TokenFacts.sub was leafPayload.sub ?? rootPayload.sub, so a holder chose the decision, idempotency and recorded subject. Mutations: a leaf-first sub, a leaf-first client_id and dropping the root profile's sub requirement each fail a witness; restoring the child mint's sub and client_id copy fails the mint test in the same block."
+  },
+  {
    "id": "resource-access.subset.same-matcher",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "subset",
@@ -63113,7 +63650,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610). Resource applicability (#249, D712, D865): the shipped current reference proposed on a resource the configuration names no contract current for is refused at PAR. Proved by mutation: making a declaration apply to every resource fails that witness, and before it only case ev-rc-02. Cases ev-rc-01 to ev-rc-04 run (entry-validation, with the inline configuration the subset fixture's payments-contract-applicability-2026-10-26.json states)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610). Resource applicability (#249, D712, D865): the shipped current reference proposed on a resource the configuration names no contract current for is refused at PAR. Proved by mutation: making a declaration apply to every resource fails that witness, and before it only case ev-rc-02. Cases ev-rc-01 to ev-rc-04 run (entry-validation, with the inline configuration the subset fixture's payments-contract-applicability-2026-10-26.json states, the historical configuration naming 2026-10-24). #1693 (D889): cases ev-rc-05 to ev-rc-08 run the same four under the current configuration payments-contract-applicability-v15.json states (2026-10-26 current for the payments resource; 2026-10-24 refused as not current); the same mutation fails ev-rc-02 and ev-rc-06."
   },
   {
    "id": "resource-access.resource-contract.no-new-approval-non-current",
@@ -63431,9 +63968,15 @@
      "name": "a retained version is performed under its own Operation Profile (@spec runtime#resource-contract, #249) > normalizes and performs a v1 entry under v1's profile and a v2 entry under v2's, while both resolve: a v1 approval still executes at the resource",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects",
+     "level": "cross-component",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded v1 is performed within its retention and refused past it, and a retired v1 is never performed. Proved by suppressing the PEP's pre-decision refusal. Re-quoted (owner, 2026-10-21, Resource Access published alone) when Resource Access stopped depending normatively on Runtime's version states: the resource declares which versions it performs, and the reference's declaration follows Runtime's lifecycle, so the same witnesses apply. #1693 (D879): the payments resource no longer performs v14's reversal, so an entry pinned to 2026-10-24 authorizes no reversal: refused resource_contract_unresolvable before any decision request, with zero effects, though the same entry still performs v14's other operations. Mutation P1 (v14 mapped to the live table) performs the reversal and fails it."
   },
   {
    "id": "resource-access.delegate-eligibility.inherited-eligibility",
@@ -76743,6 +77286,48 @@
    "notes": "The reference composition publishes no MAS metadata document. Todo (#972)."
   },
   {
+   "id": "mas.metadata.submission-auth-methods-required",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "REQUIRED when the mission submission endpoint accepts client authentication.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a MAS whose mission submission endpoint accepts client authentication publishes `mission_submission_endpoint_auth_methods_supported` naming the client authentication methods that endpoint accepts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+  },
+  {
+   "id": "mas.metadata.submission-auth-methods-no-shared-secret",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "discovery",
+   "text": "with the value space and constraints of `mission_status_endpoint_auth_methods_supported`",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "`mission_submission_endpoint_auth_methods_supported` lists only OAuth Token Endpoint Authentication Methods registry values that use no shared client secret, never `none`, and no `access_token` pseudo-method; a sender-constrained access token accepted there is described by the endpoint's Protected Resource Metadata"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "Status registry client authentication (spec/status-registry-client-auth). The reference composition publishes no MAS metadata document and serves no mission submission endpoint. Todo (#972)."
+  },
+  {
    "id": "mas.join-assertion.mint-requires-active",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "join-assertion-request",
@@ -77817,6 +78402,27 @@
    "notes": "Added for #1581 (D702 scope, D707: the fields stay out of the envelope, the Intent and their commitments, while the authenticated client identity is still recorded). Todo: the reference serves no MAS submission endpoint."
   },
   {
+   "id": "mas.submission.header-credentials-stay",
+   "spec": "draft-mcguinness-mission-authority-server.md",
+   "anchor": "mission-submission",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the submission endpoint, and its credentials are not carried as members of the JSON body"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1763 review (P2): the JSON-body carriage covers only parameters a method defines as form parameters. Todo: the reference serves no MAS submission endpoint."
+  },
+  {
    "id": "mas.submission.json-client-id-mtls",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-submission",
@@ -78075,7 +78681,7 @@
    "id": "mas.errors.invalid-client",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "submission-errors",
-   "text": "A failed mTLS or private-key-JWT client authentication receives 400 `invalid_client`, not a token challenge",
+   "text": "A failed client authentication receives the response Mission Status assigns to it, the method's own error response or by default 400 `invalid_client`, not a token challenge",
    "role": "Controller",
    "strength": "stated",
    "applicability": {
@@ -78085,7 +78691,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets 400 invalid_client",
+    "normative": "a failed direct client authentication at the submission or join-assertion endpoint gets the method's own error response where the method defines one, and otherwise 400 invalid_client, never a token challenge",
     "local": "witnessed at the join-assertion endpoint, the reference's one MAS endpoint of the two: no credential, an assertion audienced to the join-assertion endpoint URL, to the issuer beside another audience or to another issuer, and an unregistered client each get 400 invalid_client with no WWW-Authenticate challenge. The reference serves no MAS submission endpoint"
    },
    "level": "endpoint",
@@ -78098,7 +78704,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint."
+   "notes": "#972 item 18, #1099 review; #1454: the MAS join-assertion endpoint. #1763 review: re-quoted; the reference's join-assertion endpoint accepts private_key_jwt, which defines no error response of its own, so the 400 invalid_client witnesses still hold for the default; no reference method defines its own error response."
   },
   {
    "id": "authzen.instance-context.no-upstream-actor",
@@ -89454,12 +90060,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request"
+    "normative": "a Lifecycle client sends each new operation on a Mission with a nonce it has not used for that Mission within the deduplication window, and reuses a nonce only to retransmit the same request",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts) draws a random UUID per new operation (newLifecycleRequest) and retransmits only from the retained record (transmitLifecycle); the MAS pilot operator console draws its nonces through it"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D9 (D847), a client duty; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's nonces (@spec status#lifecycle-operations, status#idempotency) > draws a fresh nonce for each new operation on a Mission and repeats it only to retransmit that request, so the AS replays the original response with no second transition",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 D9 (D847), a client duty. Proved by two defects: a constant nonce, and a transmission that draws a new nonce instead of repeating the record's (the retry re-suspends the Mission)."
   },
   {
    "id": "status.introspection.fresh-until-cap",
@@ -89476,12 +90090,32 @@
    "surface": "introspection",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound"
+    "normative": "an introspection projection's fresh_until is no later than the response time plus the advertised bound",
+    "local": "the issuer's projection carries fresh_until (the MAY adopted so this bound has a witness), stamped through the one horizon the signed Mission Status Response uses (kernel statusFreshnessSeconds): the requested or default lifetime, never more than the advertised mission_max_stale_seconds from the time of the response; the reference's introspection response is unsigned"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C4 (D847). The reference emits no introspection fresh_until."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/introspection-endpoint.test.ts",
+     "name": "the issuer's projection carries fresh_until no later than the response time plus the advertised mission_max_stale_seconds (@spec status#introspection-projection, #1724 C4) > an active and a non-active projection each carry a fresh_until within the advertised ceiling of the response time",
+     "level": "endpoint",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > caps a requested horizon longer than the advertised ceiling at the ceiling, from the time of the response",
+     "level": "unit",
+     "surface": "introspection"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "introspection projection freshness cap (@spec status#introspection-projection, #1724 C4) > honors a horizon within the ceiling, the default included",
+     "level": "unit",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1724 C4 (D847). Proved by two defects: a horizon not capped at the ceiling (the kernel witness fails, with the signed response's cap test), and a projection horizon past the advertised ceiling (the endpoint witness fails)."
   },
   {
    "id": "status.consumer.expected-issuer-trust",
@@ -89499,12 +90133,37 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a consumer takes the expected issuer from its own trust or configuration, validates the issuer's metadata (its issuer equal to the identifier used to retrieve it), and verifies with that issuer's jwks_uri keys",
-    "local": "the PDP's Mission Status resolver is configured with its issuer (services/pdp/src/mission-status-resolver.ts)"
+    "local": "the separated MAS pilot configures its resolver through missionStatusIssuer (@mission/pdp): the configured Mission issuer's metadata, read at the MAS's configured URL and refused unless its issuer is that identifier (RFC 8414 Section 3.3 applied to the configured identifier), the advertised mission_status_endpoint, and the declared Status keys at its jwks_uri; the PDP's Mission Status resolver verifies iss and mission.issuer against its configured issuer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D5 (D847)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > retrieves the expected issuer's metadata, at that identifier unless the configuration places it elsewhere, and takes the endpoint it advertises",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > refuses metadata whose issuer is not the identifier it expects, and metadata advertising no Status endpoint or no jwks_uri",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > verifies only under the declared Status keys at the validated metadata's jwks_uri, never a key served elsewhere",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 D5 (D847). Proved by five defects: the resolver's expected issuer taken from the response (only the throughout-impostor witness fails; the existing iss-only test is caught by check 4 regardless); metadata naming another issuer accepted; keys from a fixed path at the issuer instead of the metadata's jwks_uri; the Status endpoint guessed from where the metadata was read. The launcher's own issuer check (mas-pilot-launcher.test.ts) is not cited: without it the helper still refuses, so its test fails only on the message."
   }
  ]
 }

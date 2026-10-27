@@ -139,11 +139,13 @@ export interface StoredLifecycleResponse {
  *
  * A retransmission that finds a `final` row is served THOSE EXACT BYTES: the
  * profile says the original response, and re-signing an ECDSA envelope yields
- * different bytes every time. Only a `committed` row, the crash case where
- * finalization never happened, is reproduced from its retained material, and
- * for a signed envelope that means the recorded observation is signed again:
- * the payload, including its `iat` and `exp`, is the ORIGINAL observation's, so
- * recovery never re-dates it.
+ * different bytes every time. Only a `committed` row is reproduced from its
+ * retained material: the crash case where finalization never happened, or a
+ * retransmit arriving while the original is still being signed (whichever
+ * exchange finalizes first is the one response,
+ * {@link LifecycleResponseStore.record}). For a signed envelope that means the
+ * recorded observation is signed again: the payload, including its `iat` and
+ * `exp`, is the ORIGINAL observation's, so recovery never re-dates it.
  */
 export type LifecycleResponseState = "committed" | "final";
 
@@ -284,8 +286,17 @@ export class LifecycleResponseStore {
    * success that had already committed. The guard names BOTH the committed
    * state and the request digest the claim was made under, so only the exchange
    * that claimed the row can finalize it.
+   *
+   * Returns the response retained for this request, which is what the
+   * exchange delivers (@spec status#idempotency, "A retransmit that arrives
+   * while the original is still being processed"). Two exchanges can finalize
+   * one claim: the original once its signature exists, and a retransmit with
+   * the same digest that found the claim still `committed` and reproduced it
+   * from its material. Re-signing yields other bytes, so whichever finalizes
+   * first wins and the other delivers the winner's bytes: every answer, and
+   * every later replay, is one response.
    */
-  record(key: LifecycleNonceKey, response: StoredLifecycleResponse): void {
+  record(key: LifecycleNonceKey, response: StoredLifecycleResponse): StoredLifecycleResponse {
     const finalized = this.db
       .prepare(
         `UPDATE lifecycle_responses
@@ -303,7 +314,7 @@ export class LifecycleResponseStore {
         key.nonce,
         response.requestDigest,
       );
-    if (finalized.changes === 1) return;
+    if (finalized.changes === 1) return response;
     const nowMs = this.options.now().getTime();
     this.db
       .prepare(
@@ -330,6 +341,14 @@ export class LifecycleResponseStore {
         nowMs,
         nowMs + this.retentionMs,
       );
+    const retained = this.row(key);
+    if (retained?.state !== "final" || retained.request_digest !== response.requestDigest) return response;
+    return {
+      requestDigest: response.requestDigest,
+      status: retained.status as number,
+      contentType: retained.content_type as string,
+      body: retained.body as string,
+    };
   }
 
   private row(key: LifecycleNonceKey): Record<string, unknown> | undefined {

@@ -2398,6 +2398,175 @@
         "D712",
         "D865"
       ]
+    },
+    {
+      "id": "ev-rc-05",
+      "description": "An entry on the payments resource referencing the version the v15 configuration names as current for it (2026-10-26)",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "valid",
+        "reason": "the reference equals, member for member, the one configuration names as current for the entry's resource, and that version defines payments:invoice.read"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-06",
+      "description": "An entry on an unrelated resource referencing the payments contract version the v15 configuration names as current for the payments resource",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://ledger.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "configuration names the payments contract current for https://payments.example/mcp only; no contract is current for this resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-07",
+      "description": "An entry on the payments resource referencing 2026-10-24, a version the v15 configuration does not name as current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-24",
+            "digest": "sha-256:XmDUu1kbDM82CuNuhCzNYaIEmZeZqFVvbVresqKClYc"
+          }
+        },
+        "contracts": [
+          {
+            "resource": "https://payments.example/mcp",
+            "reference": {
+              "id": "https://payments.example/contracts/payments",
+              "version": "2026-10-26",
+              "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "the reference is not the version configuration names as current for the entry's resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
+    },
+    {
+      "id": "ev-rc-08",
+      "description": "An entry referencing the payments contract's 2026-10-26 version with no configuration naming any contract current",
+      "role": "authorization-server",
+      "requires": [
+        "member.resource_contract"
+      ],
+      "check": "entry-validation",
+      "input": {
+        "entry": {
+          "type": "mission_resource_access",
+          "resource": "https://payments.example/mcp",
+          "actions": [
+            "payments:invoice.read"
+          ],
+          "resource_contract": {
+            "id": "https://payments.example/contracts/payments",
+            "version": "2026-10-26",
+            "digest": "sha-256:9tkXmN3j-_3C7Y0cjlWOgKec1jMQ_knbwmx_JXQM5Iw"
+          }
+        }
+      },
+      "expected": {
+        "outcome": "refuse",
+        "reason": "an absent contracts names no contract current for any resource",
+        "error": "invalid_authorization_details"
+      },
+      "refs": [
+        "#249",
+        "D712",
+        "D865",
+        "#1693",
+        "D889"
+      ]
     }
   ]
 }
