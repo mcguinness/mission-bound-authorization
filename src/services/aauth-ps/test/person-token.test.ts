@@ -136,6 +136,17 @@ describe("person token endpoint: issuance", () => {
     expect(claims(await personToken(w, helper, RS)).sub).not.toBe(a);
   });
 
+  it("copies only the public key members of the agent's cnf.jwk", async () => {
+    const { s256 } = await approve(w, assistant);
+    const decorated = await makeAgent(w.ap, w.clock, assistant.id, {
+      cnf: { jwk: { ...assistant.key.publicJwk, kid: "agent-key-1", use: "sig" } },
+    });
+    const c = claims(await personToken(w, { ...assistant, token: decorated.token }, RS, s256));
+    expect(c.cnf).toEqual({
+      jwk: { kty: "OKP", crv: "Ed25519", x: assistant.key.publicJwk.x, alg: "Ed25519" },
+    });
+  });
+
   it("V14: issues a missionless person token to an agent admitted missionless", async () => {
     const helper = await makeAgent(w.ap, w.clock, HELPER);
     const c = claims(await personToken(w, helper, RS));
@@ -214,6 +225,9 @@ describe("person token endpoint: the Mission association", () => {
     });
     expect(shape(foreign)).toEqual(shape(absent));
     expect(issuedCount(w)).toBe(0);
+    const probes = w.ps.securityEvents.filter((e) => e.type === "unowned_mission_reference");
+    expect(probes).toHaveLength(2);
+    expect(JSON.stringify(probes)).not.toContain(theirs.s256);
   });
 
   it("P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated", async () => {
@@ -258,6 +272,19 @@ describe("person token endpoint: the Mission association", () => {
     const r = await requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
     refused(r, 403, "mission_terminated");
     expect(r.body.termination_reason).toBe("expired");
+  });
+
+  it("treats a mission as active only while the current time precedes its expires_at", async () => {
+    const expiresAt = w.clock.s + 60;
+    const { s256 } = await approve(w, assistant, {
+      description: "Summarize",
+      expires_at: rfc3339(expiresAt),
+    });
+    // Each signed request advances the clock one second before signing.
+    w.clock.ms = (expiresAt - 2) * 1000;
+    expect(claims(await personToken(w, assistant, RS, s256)).exp).toBe(expiresAt);
+    const atExpiry = await requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
+    refused(atExpiry, 403, "mission_terminated", 1);
   });
 
   it("V12: refuses when the mission's state cannot be established: server_error", async () => {
