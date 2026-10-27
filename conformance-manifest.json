@@ -325,7 +325,10 @@
    "harness.work-item-attachment",
    "runtime.work-item-attribution",
    "template.standing-payment",
-   "metering.exact-budget"
+   "metering.exact-budget",
+   "metering.child-accounting",
+   "metering.escrow-allocation",
+   "consent-evidence.recording"
   ]
  },
  "profiles": [
@@ -39140,8 +39143,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "consent-evidence.recording"
+    ]
    },
    "profiles": [],
    "surface": "approval-ceremony",
@@ -39152,7 +39158,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: no test renders the authority summary of a Mission carrying max_budget in recorded Consent Evidence (standing-payment instances are dispatched unattended); the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test renders the authority summary of a Mission carrying max_budget in recorded Consent Evidence (standing-payment instances are dispatched unattended); the capability stays disabled and unclaimed. D877 (2026-10-26) ruling 2: gated on metering and on recording Consent Evidence (consent-evidence.recording), since the authority summary this row constrains is the Consent Evidence rendering; todo there. The separate obligations to render bounds at human approval and to disclose consumption and outstanding exposure stay ungated by this and are the AS track's (template.standing-payment.consent-disclosure, raise-disclosure-renders-exposure, template.instance-composition.successor-approval-renders-consumption)."
   },
   {
    "id": "metering.consent.enforced-only-if-metered",
@@ -39702,8 +39708,11 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.child-accounting"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -39714,7 +39723,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.child-accounting, a ledger reporting distinction (not a protocol capability) for charging a Child Mission to its ancestors' counters. Stays todo, deferred by D830. A deployment cannot escape the accounting requirement by omitting the label while allowing children: refusing a Child Mission under a metered instance is a prerequisite of the exact-budget claim and must be tested before it (metering.capacity-across-missions.child-refused-without-accounting, metering.capacity-across-missions.standing-consent-child-refused and template.instance-composition.child-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-within-ancestor-remaining",
@@ -39724,8 +39733,11 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "token-endpoint",
@@ -39736,7 +39748,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-closed-at-terminal",
@@ -39746,8 +39758,11 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -39758,7 +39773,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-remainder-after-closure",
@@ -39768,8 +39783,11 @@
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -39780,7 +39798,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.successor-continues-counter",
