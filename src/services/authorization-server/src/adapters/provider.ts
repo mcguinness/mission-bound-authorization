@@ -442,6 +442,10 @@ import {
   childMissionClaim,
 } from "../kernel/child-delegation.js";
 import { CreationIdempotencyStore } from "../kernel/creation-idempotency.js";
+import {
+  HISTORICAL_JWKS_PATH,
+  HISTORICAL_KEY_SET_MEDIA_TYPE,
+} from "../kernel/historical-key-set.js";
 import { JWKS_MAX_AGE_SECONDS } from "../kernel/signing-key-ring.js";
 import { type DpopProofReplay, newDpopProofReplay, refuseTokenEndpointProof } from "./dpop-replay.js";
 import {
@@ -513,7 +517,7 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
-import { actionClassesAt, evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
@@ -604,7 +608,9 @@ import {
 import {
   assertStandingPaymentCoverage,
   assertStandingPaymentExactProfile,
+  deploymentCrossDomain,
   type ProhibitedPredicateMapping,
+  publishedProhibitedPredicateMapping,
   type TemplateConsentProvenance,
 } from "../kernel/standing-payment.js";
 import type { TemplateStore } from "../kernel/template-store.js";
@@ -873,6 +879,13 @@ export interface AdapterOptions {
    * Absent with keys generated at boot.
    */
   jwksRevision?: number;
+  /**
+   * @spec status#historical-key-set (#831 B3): the historical key set, signed
+   * at boot under the active Mission Status signing key, present while it
+   * lists a key. Served at `HISTORICAL_JWKS_PATH` and advertised as
+   * `mission_historical_jwks_uri`; absent, neither is.
+   */
+  historicalKeySet?: string;
   /** Accept a scoped approver service principal, never skip authentication. */
   allowHeadlessAdjudication?: boolean;
   approvalSessions?: ApprovalSessionStore;
@@ -2899,6 +2912,23 @@ export function buildProvider(opts: AdapterOptions): Provider {
       ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
       if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
     }
+  });
+  // @spec status#historical-key-set (#831 B3): the historical key set, while
+  // it lists a key. Its `typ` is `jwk-set+jwt`, served as that media type;
+  // it declares the same explicit freshness as `/jwks`, and the ring
+  // revision as its `ETag`, since it changes only with the ring.
+  provider.use(async (ctx, next) => {
+    if (ctx.path !== HISTORICAL_JWKS_PATH || opts.historicalKeySet === undefined) return next();
+    if (ctx.method !== "GET" && ctx.method !== "HEAD") {
+      ctx.status = 405;
+      ctx.set("allow", "GET, HEAD");
+      return;
+    }
+    ctx.status = 200;
+    ctx.set("content-type", HISTORICAL_KEY_SET_MEDIA_TYPE);
+    ctx.set("cache-control", `max-age=${JWKS_MAX_AGE_SECONDS}`);
+    if (opts.jwksRevision !== undefined) ctx.set("etag", `"${opts.jwksRevision}"`);
+    ctx.body = opts.historicalKeySet;
   });
 
   // @spec control-plane#rollback (#250 step 3): a witnessed kernel whose durable
@@ -6576,6 +6606,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       if (enabled("status") || lifecycleServed) {
         meta.mission_status_signing_alg_values_supported = [STATUS_SIGNING_ALG];
       }
+      // @spec status#as-metadata, status#historical-key-set (#831 B3):
+      // REQUIRED while the historical key set lists a key.
+      if (opts.historicalKeySet !== undefined) {
+        meta.mission_historical_jwks_uri = `${opts.issuer}${HISTORICAL_JWKS_PATH}`;
+      }
       // @spec status#as-metadata, status#mission-lifecycle-endpoint: the
       // Lifecycle endpoint, the methods it accepts and, for private_key_jwt,
       // the client-assertion algorithms, wherever it is served.
@@ -6707,20 +6742,21 @@ async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC,
 }
 
 /**
- * @spec mission-template#prohibited-classes (#813): the deployment's
+ * @spec mission-template#prohibited-classes (#813, #1710): the deployment's
  * published prohibited-predicate mapping: the approval-authentication floor's
- * classification (resource-scoped runtime action classes), the published
- * external-communication actions, and the resource-to-AS map, where a
- * resource another AS serves is cross-domain (no map: none is known local).
+ * classification (resource-scoped runtime action classes and the resources it
+ * states are cross-domain), the published external-communication actions,
+ * and the resource-to-AS map, where a resource another AS serves is also
+ * cross-domain (no map: none is known local).
  */
 export function prohibitedPredicateMappingOf(opts: AdapterOptions): ProhibitedPredicateMapping {
-  const resourceToAs = opts.resourceToAs;
   return {
-    classesOf: (entry, action) => actionClassesAt(opts.approvalFloor, entry, action),
-    externalCommunicationActions: new Set(
+    ...publishedProhibitedPredicateMapping(
+      opts.approvalFloor,
       opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
     ),
-    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+    // The same decision the Progressive drawdown reads (continuation-grant.ts).
+    isCrossDomain: deploymentCrossDomain(opts.approvalFloor, opts.issuer, opts.resourceToAs),
   };
 }
 

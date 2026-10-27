@@ -183,16 +183,15 @@ importers:
       '@mission/core':
         specifier: workspace:*
         version: link:../mission-core
+      '@mission/pdp':
+        specifier: workspace:*
+        version: link:../../services/pdp
       '@mission/store':
         specifier: workspace:*
         version: link:../store
       jose:
         specifier: ^6.1.3
         version: 6.2.3
-    devDependencies:
-      '@mission/pdp':
-        specifier: workspace:*
-        version: link:../../services/pdp
 
   packages/orchestration:
     dependencies:
@@ -1009,12 +1008,14 @@ packages:
   '@opentelemetry/sdk-trace-base@1.30.1':
     resolution: {integrity: sha512-jVPgBbH1gCy2Lb7X0AVQ8XAfgg0pJ4nvl8/IiQA6nxOsPvS+0zMJaFSs2ltXe0J6C8dqjcnpyqINDJmU30+uOg==}
     engines: {node: '>=14'}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
   '@opentelemetry/sdk-trace-node@1.30.1':
     resolution: {integrity: sha512-cBjYOINt1JxXdpw1e5MlHmFRc5fgj4GW/86vsKFxJCJ8AL4PdVtYH41gWwl4qd4uQjqEL1oJVrXkSy5cnduAnQ==}
     engines: {node: '>=14'}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 

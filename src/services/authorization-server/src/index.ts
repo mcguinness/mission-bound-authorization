@@ -42,6 +42,7 @@ import {
   evaluateAuthorityDependency,
 } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
+import { signHistoricalKeySet } from "./kernel/historical-key-set.js";
 import {
   generateEphemeralSigningKeys,
   loadSigningKeyRingState,
@@ -211,6 +212,13 @@ export {
   verifySigningKeyRing,
   type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
+export {
+  HISTORICAL_JWKS_PATH,
+  HISTORICAL_KEY_SET_MEDIA_TYPE,
+  HISTORICAL_KEY_SET_TYP,
+  historicalKeys,
+  signHistoricalKeySet,
+} from "./kernel/historical-key-set.js";
 export {
   attachCapabilitySources,
   type CapabilitySourceResolution,
@@ -767,9 +775,12 @@ export {
   CLASS_PREDICATES,
   CONSUMPTION_BOUND_CLASS,
   DispatchProhibitedCoverageError,
+  deploymentCrossDomain,
   dispatchProhibitedCoverageGaps,
+  type ProhibitedPredicate,
   type ProhibitedPredicateMapping,
   prohibitedPredicatesOf,
+  publishedProhibitedPredicateMapping,
   STANDING_PAYMENT_MEMBER,
   STANDING_PAYMENT_OPERATION,
   type StandingPaymentAdmission,
@@ -1574,6 +1585,15 @@ export async function buildAuthorizationServer(opts: {
     tokenVerification = tokenPublished;
   }
   const statusKeys = { privateKey: signing.asStatus.privateKey, kid: signing.asStatus.kid };
+  // @spec status#historical-key-set (#831 B3): the Status role's generations
+  // withdrawn as compromised, signed once here, at boot, under the active
+  // Status key (after a Status compromise, its replacement).
+  const historicalKeySet = await signHistoricalKeySet({
+    issuer: opts.issuer,
+    withdrawn: signing.asStatus.withdrawn,
+    signer: { key: signing.asStatus.privateKey, kid: signing.asStatus.kid, publicJwk: signing.asStatus.publicJwk },
+    now: new Date(),
+  });
   const txnKeys = { privateKey: signing.asTxn.privateKey, kid: signing.asTxn.kid };
   const continuationKeys = { privateKey: signing.asContinuation.privateKey, kid: signing.asContinuation.kid };
 
@@ -2095,6 +2115,7 @@ export async function buildAuthorizationServer(opts: {
     },
     publicJwks,
     ...(ringState.revision !== undefined ? { jwksRevision: ringState.revision } : {}),
+    ...(historicalKeySet !== undefined ? { historicalKeySet } : {}),
     accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),

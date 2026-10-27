@@ -23,7 +23,19 @@ import {
   parseRfc3339Instant,
   resolveCoResolvedLocalPrincipal,
 } from "@mission/core";
-import { openStore, redeemOnce, redemptionSchema, type Database } from "@mission/store";
+import type { Database } from "@mission/store";
+import { claimRedemption, openInMemoryRedemptionStore, openRasRedemptionStore } from "./redemption-store.js";
+
+export {
+  claimRedemption,
+  initRasRedemptionStore,
+  openInMemoryRedemptionStore,
+  openRasRedemptionStore,
+  RAS_REDEMPTION_STORE_OWNER,
+  RasRedemptionStoreError,
+  rasRedemptionsFromEnv,
+  REDEMPTION_RETENTION_MARGIN_S,
+} from "./redemption-store.js";
 import type { KeyObject } from "node:crypto";
 import { createLocalJWKSet, jwtVerify, SignJWT, type CryptoKey, type JWK, type JWSHeaderParameters } from "jose";
 
@@ -45,6 +57,13 @@ export type RasTrustAnchor =
 
 export interface RasConfig {
   issuer: string;
+  /**
+   * @spec #1767 (D887): the durable store of single-use claims
+   * (`initRasRedemptionStore`). Absent, the claims are in memory and die with
+   * the process; a deployment whose issuer keys outlive a RAS restart names
+   * one, since persistent keys require persistent consumption records (D366).
+   */
+  redemptions?: { file: string };
   /** Required destination policy, applied on every redemption before one-time use. */
   localCeiling: readonly AuthorityEntry[];
   localPolicyVersion: string;
@@ -140,9 +159,14 @@ export class ResourceAuthorizationServer {
     if (cfg.resourceConstraintsSupported !== undefined && !isConstraintsSupportedMap(cfg.resourceConstraintsSupported)) {
       throw new Error("RAS resourceConstraintsSupported must map each resource to an array of constraints keys");
     }
-    this.db = openStore(redemptionSchema("jag_redemptions"));
+    this.db = cfg.redemptions ? openRasRedemptionStore(cfg.redemptions.file) : openInMemoryRedemptionStore();
     this.now = cfg.now ?? (() => new Date());
     this.registeredClients = new Map(Object.entries(cfg.registeredClients ?? {}));
+  }
+
+  /** Release the redemption store: a durable one stays locked until this. */
+  close(): void {
+    this.db.close();
   }
 
   /**
@@ -391,7 +415,10 @@ export class ResourceAuthorizationServer {
     // observation's freshness horizon.
     const nowS = Math.floor(now.getTime() / 1000);
     const ttl = this.cfg.localTokenTtlSeconds ?? 120;
-    const grantExp = payload.exp as number;
+    const grantExp = payload.exp;
+    // A grant without exp has no acceptance period to retain its claim
+    // through (#1767), and would leave the clamp below unbounded.
+    if (typeof grantExp !== "number") throw new RasError("invalid_grant", "grant has no exp");
     const entitlementHorizonS = Math.floor((entitlementObservedMs ?? nowS * 1000) / 1000) + this.cfg.entitlementStalenessBoundSeconds;
     const bounds = [nowS + ttl, grantExp, entitlementHorizonS];
     if (mappingValidUntilMs !== undefined) bounds.push(Math.floor(mappingValidUntilMs / 1000));
@@ -408,8 +435,12 @@ export class ResourceAuthorizationServer {
     // the existing client-registration check above (@spec
     // cross-domain#origin-principal-mapping: run mapping, entitlement, and
     // the expiry clamp before consuming the grant's one-time use).
-    const jti = payload.jti as string;
-    if (!jti || !redeemOnce(this.db, "jag_redemptions", jti, "ras")) {
+    // @spec #1767 (D887): the claim is scoped to the grant's issuer, made
+    // atomically before the token is released, and kept, in a durable store
+    // where one is configured, through the grant's acceptance period.
+    const jti = payload.jti;
+    if (typeof jti !== "string" || !jti) throw new RasError("invalid_grant", "grant replay or missing jti");
+    if (!claimRedemption(this.db, issuer, jti, grantExp, nowS)) {
       throw new RasError("invalid_grant", "grant replay or missing jti");
     }
 
