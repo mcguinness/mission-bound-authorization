@@ -28848,7 +28848,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/attenuation.test.ts",
-     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose aat_hash commits to the root rather than the leaf",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -28883,7 +28883,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825, #1756: an attenuation chain's proof of possession is the -02 PoP JWT, verified under the leaf's cnf.jwk and bound to the leaf (aat_id, aat_hash), the invoked tool (aat_tool) and its arguments (hta), with a fresh iat and, for a side-effecting tool, a jti refused on reuse (a full replay state refuses retryably). #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -43850,13 +43850,13 @@
      "surface": "derivation"
     },
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "verifyAttenuationChain > WIDEN by raising the cap on the child is refused (capability_widened)",
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a child whose constraints are not within its parent's, or whose resource_contract changed, and admits a narrowing",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation-chain verifier (packages/mission-core) tests the no-broader-than narrowing check extensively (widen refused on tools, ranges, aud, exp, and delegation depth) for core's own claim. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -60100,7 +60100,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "at the point of use, an applicable entry whose max_amount currency is malformed provides no authority: the decision is a denial, even when the input's currency is spelled the same",
-    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, credential parsing refuses a credential whose authority carries one, and an AAT amount_ argument whose suffix is not three lower-case letters is refused rather than folded"
+    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, and credential parsing refuses a credential whose authority carries one, an access token's authorization_details or an attenuation leaf's mission_constraints (#1756); the cross-organization wire refuses an amount_ argument whose suffix is not three lower-case letters rather than folding it"
    },
    "level": "unit",
    "coverage": "tested",
@@ -60118,13 +60118,13 @@
      "surface": "decision-request"
     },
     {
-     "file": "src/packages/mission-core/test/credential-authority.test.ts",
-     "name": "credentialEntriesFromAatTools: attenuation tools keep every restriction (#825) > refuses an upper-case currency suffix rather than dropping it",
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "readMissionConstraints and credentialEntriesFromMissionAat (@spec attenuation#mission-constraints, #1756) > refuses a max_amount currency that is not three upper-case letters rather than dropping it",
      "level": "unit",
      "surface": "decision-request"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness. #1756: the attenuation witness moved from the retired tools-to-credential reader to mission_constraints, read by the same credential parser; admitting a lower-case currency there fails it."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-exact",
@@ -62541,7 +62541,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), the attenuation target-restriction proof. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, covers that invoice alone at the payments resource: under the argument-derived invoice contract another invoice is refused out_of_authority, and under the shipped service-level contract the service target is refused out_of_authority too. Mutations: mapping each entry at the root's first aud instead of its resource fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The root is presented at one of its two audiences; that aud is not the boundary at any audience rests on the construction (the mapping never reads aud) and on the first mutation. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
+   "notes": "#1276 (D457), #1756 slice B3. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, under the invoice-level deployment's declaration of its operations, maps the invoice read at that invoice alone. At the payments resource the consumer names the invoked tool by the operation's target, so another invoice under the invoice contract, and the service target under the shipped service-level contract, are refused by the substrate (the leaf does not authorize the tool), and the credential bound refuses both out_of_authority as well. Mutations: naming the invoked tool by the service identifier instead of the operation target fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The mapping never reads aud. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
   },
   {
    "id": "attenuation.root-mapping.refuse-unestablishable-tool",
@@ -62558,7 +62558,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an entry whose target restriction a tool cannot carry is not mapped to that tool; the root is never minted with that tool narrowed, widened or relaxed to a different restriction",
-    "local": "the reference refuses the whole root mapping (throws) for an entry whose resource_match is present and not exact, and for an action whose tool identifier would read back as a different (resource, action) pair"
+    "local": "the mapped ceiling leaves out a tool for an entry whose resource_match is present and not exact, or whose tool identifier would read back as a different (resource, action) pair, and a request naming such a tool is refused; the cross-organization mapping (#1759) refuses the whole mapping (throws) for the same entries"
    },
    "level": "unit",
    "coverage": "tested",
@@ -62576,7 +62576,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping; re-proved by mutation (dropping the guard fails the prefix case)."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
@@ -62593,12 +62593,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission-bound attenuation root carries typ aat+jwt in its JWS header, not at+jwt, binds the holder's public key as cnf.jwk, and is returned from the token endpoint with token_type aat",
-    "local": "the reference mints the root in process with typ aat+jwt but binds the holder as cnf.jkt, and has no token endpoint route that returns a root"
+    "local": "the reference mints the root in process with typ aat+jwt and the holder's public key as cnf.jwk, and has no token endpoint route that returns a root"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the alignment to Attenuating Agent Tokens -02. todo: the typ clause is met (AAT_TYP) but no test asserts the minted header; the cnf.jwk clause is unmet, since the reference binds cnf.jkt and reads each child's key from its JWS header, which -02 Section 3.5 forbids (src/SPEC_VERSIONS.md lists the divergence); token_type has no surface. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > binds the holder's public key as cnf.jwk on an aat+jwt root with a UUIDv7 jti and integer iat and exp, which the substrate's chain verification admits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a holder key carrying a private member or of a type the substrate does not take, before any count",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3. partial: the typ and cnf.jwk clauses are met and witnessed (the minted root's header and claims, verified by the -02 substrate verifier); the token_type clause has no surface, since the reference issues no root over HTTP: the token endpoint takes no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts). Proved by mutation: binding cnf.jkt fails the format witness, and admitting a private holder key fails the key witness."
   },
   {
    "id": "attenuation.request.client-req-cnf",
@@ -62680,9 +62693,16 @@
     "normative": "a root request whose attenuating_agent_token detail names a tool, argument constraint or mission_constraints value outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the alignment to Attenuating Agent Tokens -02. The code was invalid_request; it now matches the OAuth binding's subset refusal and -02 Section 6.1.3 step 7. The validation itself (root mapping) is exercised in process by attenuation.root-mapping.*, not at a token endpoint. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a request beyond the ceiling rather than issuing a root for the rest",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling, an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
   },
   {
    "id": "attenuation.discovery.lists-aat-type",
@@ -62721,7 +62741,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
-    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+    "local": "the payments consumer passes the substrate verifier, as its audiences, only the values its boundary accepts for the issuer's aat+jwt tokens; a token whose aud names none of them is refused at step 6c before any claim becomes a decision input"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -62733,7 +62753,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+   "notes": "#1758 (D876, D882), moved onto the -02 substrate verifier by #1756 slice B3: verifyAatPresentation's step 6c checks every token's aud against the audiences this boundary accepts. Before #1758 only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: passing every named audience through unfiltered fails the witness. The rest of Section 8 runs in the same verifier (the published vector suite, mission-core aat-vectors.test.ts)."
   },
   {
    "id": "attenuation.consumer.child-identity-claims-no-authority",
@@ -62787,10 +62807,22 @@
     "normative": "a Mission-bound chain any token of which lacks mission_constraints, or carries one without exactly one member per tool, is refused"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a token without the member, without a value for one of its tools, or with a value for a tool it does not carry",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a chain whose child removes mission_constraints or a tool's value, and records each refusal",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The Mission layer (verifyMissionAatChain) refuses a root or a child without the member, without a value for one of its tools, with a value for a tool it does not carry, or with a value lacking constraints. End to end, the payments consumer refuses a child its holder re-signed without the member, with an empty member, or with a value lacking constraints, after the substrate permits the chain, and records a token_invalid Refusal Record naming the root's subject and no Mission. Proved by mutation: admitting a tool with no value, and reading a missing member as empty, each fail the unit witness; the end-to-end witness fails when the credential mapping's own check of a missing value is dropped as well, since either check alone refuses the chain."
   },
   {
    "id": "attenuation.mission-constraints.per-hop-narrowing",
@@ -62809,10 +62841,28 @@
     "normative": "a child whose mission_constraints drops a member, drops constraints, carries constraints that are not a subset of its parent's under the Resource Access subset rule's step 3, or changes resource_contract refuses the whole chain"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a child whose constraints are not within its parent's, or whose resource_contract changed, and admits a narrowing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a token without the member, without a value for one of its tools, or with a value for a tool it does not carry",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). Each hop's member is held to its parent's with the Resource Access subset rule (isSubsetEntry over one-action entries: step 3 for constraints, step 4 for the contract). Witnessed: a raised or removed cap, a removed or widened vendor bound, an emptied constraints object, a dropped or changed resource_contract, and (with required-member) a dropped member, value or constraints each refuse the whole chain, while a narrowing with the contract kept is admitted. Proved by mutation: a narrowing check that passes everything fails both the unit and the end-to-end witness."
   },
   {
    "id": "attenuation.mission-constraints.unknown-key-refused",
@@ -62831,10 +62881,22 @@
     "normative": "a mission_constraints key the consumer does not understand or cannot enforce refuses the chain"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a key the consumer does not understand or cannot enforce, and a malformed constraint, rather than ignoring it",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses malformed or unsupported constraints and an unknown member key, rather than ignoring them",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). A value member other than constraints and resource_contract, a constraints key the credential reader does not enforce, a malformed max_amount (a JSON number amount, a lower-case currency), a malformed vendor bound or resource_contract, and constraints that are not an object each refuse the chain, on the root and on a child. Proved by mutation: ignoring an unknown value member, and dropping an unenforceable constraints key, each fail both witnesses."
   },
   {
    "id": "attenuation.consumer.enforce-mission-constraints",
@@ -62853,10 +62915,28 @@
     "normative": "an invocation that the substrate permits but whose operation's facts do not satisfy the leaf's mission_constraints for the invoked tool is refused; the facts come from the resource server's records where the operation acts on one, never from an argument's claim about such a record"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > admits a valid substrate proof whose Mission constraints then fail against the invoice, refusing the invocation at the PEP with a Refusal Record",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a write whose invoice changed after the presentation was validated, before the decision and between decision and execution",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the leaf's restrictions bound the action (@spec runtime#input-authority, #825) > refuses an invoice above the leaf's narrowed amount bound before any PDP call, and admits one within it",
+     "level": "unit",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. The leaf's resource_contract is enforced by the same bound's contract comparison (entryCoversFacts), witnessed by the Resource Access contract rows rather than end to end here."
   },
   {
    "id": "attenuation.root-mapping.mission-constraints-ceiling",
@@ -62875,10 +62955,34 @@
     "normative": "the mapped ceiling carries, for each tool, the mapped entry's constraints and resource_contract unchanged as that tool's mission_constraints value; an issued root carries that value or constraints that are a subset of it under step 3 of the Resource Access subset rule, with resource_contract unchanged"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record. Renamed from mission-constraints-unchanged at the #1782 review (D904): the mapping is a ceiling."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > carries each entry's constraints and resource_contract unchanged as the tool's mission_constraints value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > issues exactly a requested narrowing within the ceiling: USD 100 under USD 500, and one period where the tool admits any",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a request beyond the ceiling rather than issuing a root for the rest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: verify + leaf enforcement > maps the root from the payments declaration: every argument explicit, the entry's restrictions as mission_constraints, and no tool whose facts the PEP does not establish",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902, D904). mapAuthorityToCeiling carries each mapped entry's constraints and resource_contract unchanged as the tool's value, and an issued root carries that value or a requested subset of it, never an added, dropped or changed resource_contract. Proved by mutation: dropping resource_contract from the ceiling fails the unit witness."
   },
   {
    "id": "attenuation.request.issued-mission-constraints-within-request",
@@ -62894,13 +62998,20 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an issued root's mission_constraints value for each tool is no broader than the value the request carried for it, under step 3 of the Resource Access subset rule, with resource_contract unchanged; a request without a value for a tool receives at most the ceiling's"
+    "normative": "an issued root's mission_constraints value for each tool is no broader than the value the request carried for it, under step 3 of the Resource Access subset rule, with resource_contract unchanged; a request without a value for a tool receives at most the ceiling's",
+    "local": "the reference issues each requested value exactly, and the ceiling's value for a requested tool with none"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1782 review (D904): the substrate's request-subset check (-02 Section 6.1.3 step 7) does not cover the member, which it gives no authority. Blocked on #1756 slice B3 by the D902 plan of record; the reference also has no HTTP root issuance (D186)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > issues exactly a requested narrowing within the ceiling: USD 100 under USD 500, and one period where the tool admits any",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). The reference mints roots in process (deriveAttenuationRoot); no token endpoint takes a root request (#927, D186). The issued root carries exactly the request: each tool's argument map and mission_constraints value as requested, and the ceiling's value for a tool the request names none for. Proved by mutation: issuing the ceiling's value in place of the requested one fails the witness."
   },
   {
    "id": "attenuation.root-mapping.one-entry-per-tool",
@@ -62916,13 +63027,26 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where several entries map to one tool identifier, a minted root carries one entry's restrictions for that tool, or the issuer mints separate roots; restrictions are never merged"
+    "normative": "where several entries map to one tool identifier, a minted root carries one entry's restrictions for that tool, or the issuer mints separate roots; restrictions are never merged",
+    "local": "the derived ceiling leaves out a tool that entries with different restrictions map to; a request naming it is issued only within one entry's restrictions, and a request naming no value for it is refused"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > leaves out a tool that two entries with different restrictions map to, never merging them, and maps identical restrictions once",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > takes a tool two entries map to within one entry's restrictions when the request names it, never their merge",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). Proved by mutation: letting the first entry's restrictions win in the derived ceiling, and admitting a requested value within the entries' merge, each fail their witness."
   },
   {
    "id": "attenuation.root-mapping.facts-established",
@@ -62938,13 +63062,32 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an entry whose constraints restrict a fact the resource server does not establish for an operation the tool identifier names is not mapped to that tool"
+    "normative": "an entry whose constraints restrict a fact the resource server does not establish for an operation the tool identifier names is not mapped to that tool",
+    "local": "the payments declaration names vendors and max_amount only; an entry restricting any other Common Constraint is not mapped at the payments resource"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > maps no tool unless every operation it names establishes each fact the entry restricts",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "the payments declaration of its operations to the mint (@spec attenuation#root-mapping, #1756) > declares each action's tools with their catalog arguments, and as established only the facts this PEP establishes from its records",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: verify + leaf enforcement > maps the root from the payments declaration: every argument explicit, the entry's restrictions as mission_constraints, and no tool whose facts the PEP does not establish",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The mint takes the resource server's declaration of the operations a tool identifier names and the constraint keys each establishes (AttenuationOperations); a tool whose operations are undeclared, or any of which does not establish a restricted key, is not mapped. The payments declaration (paymentsAttenuationOperations) names each action's tools, their catalog arguments, and only vendors and, for an amount-bearing invoice action, max_amount, the facts its PEP establishes from its records; so an amount-capped entry maps invoice.read and not invoice.list. Proved by mutation: dropping the mint's check, and declaring an amount fact a list never reads, each fail a witness; withdrawing the amount fact from an amount-bearing read fails the declaration witnesses."
   },
   {
    "id": "attenuation.root-mapping.arguments-explicit",
@@ -62963,10 +63106,16 @@
     "normative": "a minted root's argument constraints name each argument the operations' definitions declare, with no \"*\" entry; an argument only some of the operations take is optional"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > names every argument the operations declare as an explicit wildcard, optional where not every operation requires it, with no \"*\"",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The argument map is the union of the operations' declared arguments, each a wildcard, optional unless every operation declares it required; for the payments execute action (preflight, prepare, commit) only the commit tool takes an idempotency key, which the map makes optional. A tool whose operations declare no argument maps to an empty map, which -02 reads as an admitting \"*\" (open question in the slice B3 report). Proved by mutation: making every argument required, and adding a \"*\" entry, each fail the witness."
   },
   {
    "id": "attenuation.holder.narrow-mission-constraints",
@@ -62985,10 +63134,16 @@
     "normative": "a child an Attenuating Holder mints carries mission_constraints no broader than its parent's"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > mintChildOffline (@spec attenuation#attenuation, #1756) > refuses a child broader than its parent: a tool, an argument, mission_constraints, aud or exp",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The reference holder mint (mintChildOffline) refuses a child that adds a tool or an argument, raises or removes a mission_constraints restriction, drops a tool's value, or widens aud or exp, and mints the parent's own authority unchanged. The consumer's own refusal of a broader child is attenuation.mission-constraints.per-hop-narrowing. Proved by mutation: skipping the member narrowing, and skipping the argument attenuation, each fail the witness."
   },
   {
    "id": "resource-access.subset.same-matcher",
