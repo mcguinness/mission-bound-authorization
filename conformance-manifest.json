@@ -4898,7 +4898,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The Status conditional-request surface and the remaining signed state observations are still unimplemented."
+   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -4927,7 +4927,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. Not witnessed: that no parallel snapshot surface exists (a negative over the deployment), and the consumer-side clauses, that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. Not witnessed: the consumer-side clauses (#1747), that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -5130,7 +5130,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
+   "notes": "Partial (#250): the cited tests witness retention across a normal restart, not across the consumer's recovery from an older backup of its store. A restored store has lost every high-water mark taken after its backup, so an older signed event above the restored mark is applied: with a termination retained at version 3, restoring a store backed up at version 1 lets an old signed version-2 active event be applied, leaving the Mission active at version 2 (owner review of #1702). The receiver has no recovery admission or protected high-water mark; the row stays partial until one is built and tested (#1749). Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -5218,12 +5218,32 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write."
+    "normative": "The Mission Issuer MUST perform issuance, refresh, expansion, child creation, and lifecycle mutation against authoritative current state within the operation's serialization domain, and MUST refuse when it cannot establish that condition. A read from a node called a replica is not inherently forbidden if the consistency mechanism establishes its authority and currency for this operation. A stale or non-authoritative read is forbidden regardless of node name. The data plane may rely on already-valid observations only within its separate Runtime bounds; that does not authorize a stale control-plane write.",
+    "local": "one writer and no replica, so every operation reads and writes the kernel record in its own transaction; while the kernel is uncertain, the AS answers 503 temporarily_unavailable to a refresh, the agent's self Token Exchange for a delegation handle (which succeeds before the uncertainty), introspection and PAR, a refresh already in flight included, and the kernel refuses every lifecycle mutation and containment, with nothing committed"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS refuses control-plane mutation while its state is uncertain (@spec control-plane#partitions, #250 step 4) > an uncertain kernel refuses the agent's self Token Exchange for a delegation handle 503, though the same exchange succeeded before, and every lifecycle mutation, and nothing moves: the Mission's version and the store's marker stay where they were",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store (@spec control-plane#rollback, #250 step 3) > a running AS whose kernel became uncertain answers every state-dependent request 503 temporarily_unavailable, and still serves discovery and the key set",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/recovery-witness-as.test.ts",
+     "name": "the AS on a witnessed kernel store: review fixes (@spec control-plane#rollback, #250 step 3) > review: refuses a refresh whose kernel becomes uncertain during the final awaited drain, releasing no token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: tested within the declared single-writer topology (control-plane-deployment.md, Deployment declaration). The clause is unconditional, and its multi-node cases (a replica read, a partition that outlasts the freshness horizon) cannot be constructed here; expansion, child creation and a designation redeemed by another client are refused by the same middleware and kernel guard but are not exercised one by one. The single-writer limitation is accepted as declared (D874); it does not prove the unexercised clauses. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-deny",
@@ -5240,12 +5260,26 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior."
+    "normative": "An issuer or deny cache MUST NOT use emergency deny information to create authority or extend the freshness of an active observation. A separately authenticated suspend, revoke, or containment operation may narrow immediately under its own governed authorization, idempotency, versioning, and evidence. A non-terminal deny entry MUST carry version, authenticated source, and expiry or a reconciliation rule. Expiration of such an entry only removes that additional denial; ordinary positive checks still apply. A terminal tombstone MUST NOT expire into active behavior.",
+    "local": "containment, from the Lifecycle endpoint or from a protected event through the issuer's own ContainmentPolicy, commits a narrower effective set at a new version and nothing else: state, expiry, derivation limit and observation freshness do not move, a suspended Mission is not resumed, the answer carries no observation, and the narrowing has no expiry"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-faults.test.ts",
+     "name": "control-plane emergency narrowing (@spec control-plane#emergency-deny, #250) > a protected event narrows a suspended Mission without resuming it or moving its expiry, derivation limit or observation freshness, and the narrowing does not lapse",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle containment creates no authority and no freshness (@spec control-plane#emergency-deny, #250) > contain answers its commit alone, leaves an active and a suspended Mission in their state with their expiry, and the next observation is a new read with the ordinary freshness span",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the issuer clauses are tested. The deny-entry clauses (version, authenticated source, expiry or a reconciliation rule, and expiry removing only the added denial) have no subject in the reference, which keeps no deny cache (an accepted declared limitation, D874, which does not prove those clauses); a containment is a committed narrowing of the Mission, not a deny entry, and authority it removed returns only through a new approval (an expansion successor, another Mission). The terminal-tombstone clause is control-plane.consistency.tombstones. The Signals receiver package, which no shipped service runs, is a retaining consumer rather than a deny cache; its lease does not consult the rematerialization latch a narrowing sets, which its consumer reads separately. No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.emergency-authority",
@@ -5262,12 +5296,20 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one."
+    "normative": "A deployment MUST NOT represent positive emergency permission as a Mission permit, active Mission state, or Authority Set authorization, and MUST exclude actions relying on that permission from its Mission enforcement claim. The ordinary Mission path still fails closed. Operator-facing emergency-mode activation and truthful evidence belong to the operational profile; narrowing emergency control is described in {{emergency-deny}}. No emergency flag turns a failed Mission check into a successful one.",
+    "local": "the PEP publishes break_glass absent in its Enforcement Scope Statement and does not start under a statement declaring any other emergency mode, so no positive emergency permission exists to be represented as Mission authority"
    },
    "level": "cross-component",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/runtime-posture-metadata.test.ts",
+     "name": "runtime posture publication on the resource metadata surface > publishes positive emergency permission absent, and refuses to start under a statement declaring any other emergency mode",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the refusal of positive emergency configuration is tested at the PEP, as comment 14 asks (refuse it rather than define an emergency field). Excluding actions that rely on such permission from the Mission enforcement claim has no subject while none can be configured (an accepted declared limitation, D874, which does not prove the clause). The PDP's loader refuses the same statement (runtime-posture.test.ts). No waiver of existing binding-level requirements."
   },
   {
    "id": "control-plane.consistency.isolation",
@@ -5314,7 +5356,7 @@
      "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete."
+   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -5480,12 +5522,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks."
+    "normative": "A claiming deployment MUST document its serialization domains, authoritative observation mechanism, replication and recovery model, applicable recovery objectives, tenant isolation, and residual risks.",
+    "local": "src/docs/control-plane-deployment.md's Deployment declaration states each item under its own heading, with a recovery point and a recovery time, and lists as residual risks exactly the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > documents each item the declaration requires under its own heading: serialization domains, authoritative observation mechanism, replication and recovery model, recovery objectives, tenant isolation and residual risks",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. The reference makes no claim (control-plane.consistency.claim) and still writes the declaration, so a reader can check it against the ledger. The tests check that each item is present and that the residual risks match the ledger, not the prose against the code; each item points to the section, and that section's witnesses, that carry its accuracy."
   },
   {
    "id": "control-plane.consistency.claim",
@@ -5502,12 +5558,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs."
+    "normative": "A deployment claiming Mission Control-Plane Consistency MUST satisfy every applicable requirement for the issuer, binding, and consumer roles it runs.",
+    "local": "the reference makes no claim: its Deployment declaration says so and lists as residual risks the control-plane rows not marked tested"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Spec foundation only. Fault-table cases and all duties in this invariant remain unimplemented; no waiver of existing binding-level requirements."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/control-plane-declaration.test.ts",
+     "name": "the control-plane deployment declaration (@spec control-plane#deployment-declaration, control-plane#conformance, #250 step 4) > makes no claim, and lists as residual risks exactly the control-plane rows the ledger has not marked tested",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#250 step 4. Partial: the obligation binds a claiming deployment, and the reference makes no claim because these rows are not tested: serialization, fresh-observation, state-surfaces, rollback, rollback-retaining-consumer, partitions, emergency-deny, emergency-authority and isolation (each row's notes name its gap). The cited test fails when the declaration's residual risks and the ledger disagree."
   },
   {
    "id": "core.submission.front-channel-refusal",
@@ -62407,6 +62471,71 @@
    "coverage": "todo",
    "tests": [],
    "notes": "Added with the alignment to Attenuating Agent Tokens -02. Vacuous for the reference today: no assembly advertises mission_attenuation_supported (D186, #927), so no metadata document is bound by it. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+  },
+  {
+   "id": "attenuation.consumer.substrate-verification.every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "conformance",
+   "text": "MUST verify the attenuation chain and proof-of-possession per the attenuation substrate",
+   "facet": "the audience of every token in the chain (AAT -02 Section 8, step 6c)",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
+    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses at the consumer a child narrowed to another resource server, and accepts the same chain narrowed to this one",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+  },
+  {
+   "id": "attenuation.consumer.child-identity-claims-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-binding-check",
+   "text": "The substrate gives a claim it does not define no authority in a derived token unless a profile defines how it carries across derivation",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a child's `sub` and `client_id`, claims neither the substrate nor this profile carries across derivation, are ignored: the consumer's subject and client are the root's, so a holder-set value changes neither the decision subject, the recorded effect nor its evidence",
+    "local": "the payments consumer reads sub and client_id from the verified root, whose profile requires them; a root without sub refuses, with no fallback to a child (D882); the child mint copies neither"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses a root without its subject rather than falling back to a child's sub",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). TokenFacts.sub was leafPayload.sub ?? rootPayload.sub, so a holder chose the decision, idempotency and recorded subject. Mutations: a leaf-first sub, a leaf-first client_id and dropping the root profile's sub requirement each fail a witness; restoring the child mint's sub and client_id copy fails the mint test in the same block."
   },
   {
    "id": "resource-access.subset.same-matcher",
