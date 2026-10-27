@@ -1005,8 +1005,9 @@ signs Mission Status responses under
 ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"),
 published in its `jwks_uri`. The Status profile's signing-key
 retention ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
-"Signing-Key Retention for Audit") keeps that key resolvable, so an
-archived receipt stays verifiable for audit. Its JWS header carries
+"Signing-Key Retention for Audit") keeps that key resolvable for at
+least the Mission's audit horizon, so an archived receipt stays
+verifiable for audit. Its JWS header carries
 `typ` of `mission-discharge-receipt+jwt` and a `kid` identifying the
 signing key, and the HTTP `Content-Type` is
 `application/mission-discharge-receipt+jwt` ({{iana-receipt}}). A
