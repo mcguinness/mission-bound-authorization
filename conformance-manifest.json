@@ -19853,12 +19853,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an implementation that serves suspend also serves resume, and the authorization for each stays as Authorization assigns it",
-    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume"
+    "local": "suspend, resume and complete share one capability (adapters/capabilities.ts, lifecycle-extended), so the reference cannot serve suspend without resume; a lifecycle client's deployment policy names the operations it may request, checked per operation, so serving both grants neither to a client authorized for the other"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C8 (D847), normative. Structural in the reference; no witness refuses a configuration serving suspend alone."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > in every assembly, suspend is served only together with resume",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-suspend-resume-class.test.ts",
+     "name": "a Lifecycle deployment that serves suspend serves resume, without widening who may perform either (@spec status#conformance, #1724 C8) > where both are served, a client authorized for suspend alone is refused resume, and one authorized for resume alone is refused suspend, as an unknown Mission is refused",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1724 C8 (D847), normative. Witnessed over three assemblies (revoke only, revoke with lifecycle-extended, the full provider). Proved by three defects: resume served under another capability than suspend; a client authorized for suspend allowed to resume; a client authorized for resume allowed to suspend."
   },
   {
    "id": "status.lifecycle.endpoint-advertised",
