@@ -22,6 +22,7 @@ import type { MissionBoundTokenFacts } from "@mission/mcp-payments";
 import { CANONICAL_RESOURCE, TOPOLOGY } from "@mission/demo-data";
 import { shapeIntent } from "@mission/agent";
 import { callWithTransactionCredential, composeStack } from "./stack.js";
+import { evidenceKeysFromEnv } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { ACTION_LABELS, REASON_LABELS, TOOL_LABELS } from "./labels.js";
 import {
@@ -186,12 +187,15 @@ function decodeClaims(jwt: string): Record<string, unknown> {
 
 async function main() {
   const ca = `${process.cwd()}/certs/openfga.crt`;
+  const evidenceKeys = evidenceKeysFromEnv(process.env);
   const stack = await composeStack({
     openfgaUrl: process.env.OPENFGA_HTTP_URL ?? TOPOLOGY.openfga.url,
     presharedKey: process.env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
     resourcePolicyStore: resourcePolicyStoreFromEnv(),
     caCertPath: ca,
     withAuthServer: true,
+    // @spec #831 (scope inventory): durable evidence keys, or keys generated per boot.
+    ...(evidenceKeys ? { evidenceKeys } : {}),
   });
   if (!stack.authServer) throw new Error("expected authServer extras (composeStack withAuthServer)");
   // @spec runtime#evidence (outcome reconciliation) (#1103): the declared

@@ -558,6 +558,12 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
     expect(loadApprovalFloor(JSON.stringify(valid)).floors[0]?.accepted_acr).toEqual(["mfa"]);
   });
 
+  it("loads a classification's cross_domain statement, and leaves it absent where the classification states none (@spec mission-template#prohibited-classes, #1710)", () => {
+    const stated = { ...valid, classification: [{ ...valid.classification[0], cross_domain: true }] };
+    expect(loadApprovalFloor(JSON.stringify(stated)).classification[0]?.cross_domain).toBe(true);
+    expect(Object.hasOwn(loadApprovalFloor(JSON.stringify(valid)).classification[0] ?? {}, "cross_domain")).toBe(false);
+  });
+
   it.each([
     ["an unknown member", { ...valid, extra: true }],
     ["an unknown action class", { ...valid, classification: [{ ...valid.classification[0], actions: { "a:b": "risky" } }] }],
@@ -566,6 +572,7 @@ describe("the published floor policy loads strictly (@spec mission#approval-auth
     ["a second classification for one type and resource", { ...valid, classification: [valid.classification[0], valid.classification[0]] }],
     ["no floors", { ...valid, floors: [] }],
     ["a headless approval surface", { ...valid, floors: [{ ...valid.floors[0], approval_surface: "headless" }] }],
+    ["a cross_domain statement that is not a boolean (#1710)", { ...valid, classification: [{ ...valid.classification[0], cross_domain: "yes" }] }],
   ])("refuses %s", (_case, policy) => {
     expect(() => loadApprovalFloor(JSON.stringify(policy))).toThrow(/approval-floor\.json/);
   });

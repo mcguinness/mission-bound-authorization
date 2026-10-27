@@ -113,6 +113,7 @@ try {
   stack.pdpClaims.close();
   stack.writeReservations.close();
   stack.evidenceRetention.close();
+  stack.evidenceKeySets.close();
   stack.payments.db.close();
   stack.kernel.db.close();
 }
