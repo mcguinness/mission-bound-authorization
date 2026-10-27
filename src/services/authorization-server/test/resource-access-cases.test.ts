@@ -13,7 +13,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { establishOperationTarget, isAuthorityEntry, matchResource, resolveOperationTarget } from "@mission/core";
+import {
+  establishOperationTarget,
+  isAuthorityEntry,
+  matchResource,
+  ResourceContractDeclarations,
+  resolveOperationTarget,
+} from "@mission/core";
 import { type CryptoKey, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
@@ -28,11 +34,51 @@ import {
   validateAuthorityProposal,
   validateMissionIntent,
 } from "../src/index.js";
+import { assertProposedContractsCurrent } from "../src/kernel/resource-contract.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 import { EXECUTABLE_CHECKS, IMPLEMENTED, knownCapability } from "./resource-access-capabilities.helper.js";
 
 const DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access/", import.meta.url));
 const FORMAT = "mission-resource-access-cases/1";
+const SUBSET_DIR = fileURLToPath(new URL("../../../../vectors/mission-resource-access-subset/", import.meta.url));
+
+interface ContractRef {
+  id: string;
+  version: string;
+  digest: string;
+}
+
+/** The subset fixture's frozen contract files (`mission-resource-contract/1`). */
+const FROZEN_CONTRACTS = readdirSync(SUBSET_DIR)
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => JSON.parse(readFileSync(join(SUBSET_DIR, f), "utf8")) as { format: string; reference: ContractRef; document: unknown })
+  .filter((c) => c.format === "mission-resource-contract/1");
+
+/**
+ * @spec resource-access#resource-contract (#249, D712, D865): an
+ * `entry-validation` case's `contracts`, the configuration naming the current
+ * contract for each resource, as the declarations proposal intake reads.
+ * Absent, nothing is current. Each reference resolves to its frozen contract
+ * file, whose document the declaration carries.
+ */
+function contractConfiguration(raw: unknown): ResourceContractDeclarations {
+  if (raw === undefined) return ResourceContractDeclarations.NONE;
+  return new ResourceContractDeclarations(
+    (raw as { resource: string; reference: ContractRef }[]).map(({ resource, reference }) => {
+      const frozen = FROZEN_CONTRACTS.find(
+        (c) => c.reference.id === reference.id && c.reference.version === reference.version && c.reference.digest === reference.digest,
+      );
+      if (frozen === undefined) throw new Error(`no frozen contract file has the reference ${JSON.stringify(reference)}`);
+      return {
+        resource,
+        resource_match: "exact",
+        id: reference.id,
+        requires_reference: [],
+        versions: [{ version: reference.version, state: "current", digest: reference.digest, document: frozen.document }],
+      };
+    }),
+  );
+}
 
 /** The outcomes each check may expect. */
 const OUTCOMES: Record<string, readonly string[]> = {
@@ -188,9 +234,15 @@ function run(c: Case): void {
       return;
     case "entry-validation": {
       // #1376: the authorization server's intake of one proposed entry, the
-      // validation PAR and the other proposal intakes run (validateAuthorityProposal).
+      // validation PAR and the other proposal intakes run: the proposal's own
+      // validation, then (#249) the contract currency check against the case's
+      // configuration, as MissionKernel.validateProposal composes them.
       const entry = input.entry as { resource?: unknown };
-      const validate = () => validateAuthorityProposal(JSON.stringify([entry]), [String(entry.resource)]);
+      const validate = () =>
+        assertProposedContractsCurrent(
+          validateAuthorityProposal(JSON.stringify([entry]), [String(entry.resource)]),
+          contractConfiguration(input.contracts),
+        );
       if (c.expected.outcome === "refuse") {
         let error: unknown;
         try {
