@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            26 October 2026
-Expires: 29 April 2027
+Intended status: Experimental                            27 October 2026
+Expires: 30 April 2027
 
 
                       Mission Consumption Metering
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 29 April 2027.
+   This Internet-Draft will expire on 30 April 2027.
 
 Copyright Notice
 
@@ -626,7 +626,11 @@ Table of Contents
       against the authoritative balance: a single serializing PDP for
       the counter, a shared linearizable counter, or per-PDP sub-budgets
       that are structurally exact because they sum to the cap.  The
-      bound never over-consumes; it is a hard cap.
+      bound never over-consumes; it is a hard cap.  The Exact guarantee
+      depends on correct reconciliation evidence: if corrected evidence
+      establishes execution after an incorrect release, accounting
+      records that consumption, reports any excess, and refuses further
+      reservations while no headroom remains.
 
    Bounded-consistency enforcement profile:  Multiple or distributed
       PDPs (for example, resource server-hosted PDPs) share the counter
@@ -1515,7 +1519,10 @@ Appendix A.  Document History
       remains charged nor resets consumption.  A Child Mission is
       refused under an instance the budget meters unless charged to it.
       A metering entry is one per counter, and a restart never releases
-      a reservation.
+      a reservation.  The Exact guarantee depends on correct
+      reconciliation evidence: corrected evidence of execution after an
+      incorrect release is recorded, any excess is reported, and further
+      reservations are refused while no headroom remains.
 
    *  max_budget's currency takes the form Resource Access gives
       max_amount's currency: exactly three upper-case ASCII letters,
