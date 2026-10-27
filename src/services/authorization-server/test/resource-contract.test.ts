@@ -845,6 +845,24 @@ describe("progressive ceiling consent assembles the ceiling's references and a d
     });
     const rendered = store.pendingReview(pending.deferral_code)?.offer;
     expect(rendered?.authority_ceiling[0]?.resource_contract).toEqual(V2);
+    // Decided and completed under the configuration it rendered under: the successor's ceiling carries it.
+    const kept = store.open({
+      predecessorId: approveWith(kernel, assembledCeilingOffer(offer(), REQUIRED)).id,
+      intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read Acme's Q3 and Q4 invoices" })),
+      proposedAuthority: proposal(),
+      clientId: "ap-agent",
+      jkt: "jkt-rc-pg",
+      creationRequestId: `crid-rc-pg-${seq++}`,
+    });
+    const keptOffer = store.pendingReview(kept.deferral_code)?.offer;
+    store.approve(kept.deferral_code, {
+      approver: { iss: "https://as.test", sub: "bob" },
+      approvalEventId: `rc-pg-dec-${seq++}`,
+      approvedUntil: "2027-01-01T00:00:00Z",
+      ceiling: keptOffer,
+    } as never);
+    const done = store.redeem(kept.deferral_code);
+    expect("successor" in done && kernel.get(done.successor.id)?.authority_ceiling?.[0]?.resource_contract).toEqual(V2);
     opts.resourceContracts = LATER;
     expect(() =>
       store.approve(pending.deferral_code, {

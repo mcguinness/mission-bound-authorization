@@ -34,6 +34,7 @@ import {
 
 import { type Server } from "node:http";
 import {
+  RESOURCE_CONTRACTS,
   APPROVAL_FLOOR,
   CANONICAL_RESOURCE,
   DERIVATION_POLICY,
@@ -41,13 +42,21 @@ import {
   PROGRESSIVE_PROFILE,
   TRUSTED_TOOL_CATALOGS,
 } from "@mission/demo-data";
-import { authorityHash, capabilitySourceDigest, computeAnchor, extractMcpToolDefinition, type JsonValue } from "@mission/core";
+import {
+  authorityHash,
+  capabilitySourceDigest,
+  computeAnchor,
+  extractMcpToolDefinition,
+  type JsonValue,
+  ResourceContractDeclarations,
+} from "@mission/core";
 import { type CryptoKey, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import type { RegisteredActivationPolicy } from "../src/kernel/activation-policy.js";
 import { IntentError } from "../src/kernel/intent.js";
 import {
+  assembledCeilingOffer,
   ceilingAuthorityLeftUndrawn,
   consentCeiling,
   drawdownRulesOf,
@@ -83,6 +92,26 @@ const RECORDING_ISSUER = `http://localhost:${RECORDING_PORT}`;
 // classification, while its resource-to-AS map keeps it local (#1710).
 const CLASSIFIED_PORT = 14856;
 const CLASSIFIED_ISSUER = `http://localhost:${CLASSIFIED_PORT}`;
+/** @spec resource-access#resource-contract (#249, D875): an assembly whose configuration requires a reference for the read. */
+const CONTRACT_PORT = 14867;
+const CONTRACT_ISSUER = `http://localhost:${CONTRACT_PORT}`;
+/** The shipped declaration, requiring a reference for the read (#249, D875). */
+const [SHIPPED_DECLARED] = RESOURCE_CONTRACTS.declarations;
+const SHIPPED_REQUIRED = new ResourceContractDeclarations([
+      {
+        resource: SHIPPED_DECLARED?.resource,
+        resource_match: SHIPPED_DECLARED?.resource_match,
+        id: SHIPPED_DECLARED?.id,
+        requires_reference: ["payments:invoice.read"],
+        versions: (SHIPPED_DECLARED?.versions ?? []).map((v) => ({
+          version: v.version,
+          state: v.state,
+          digest: v.digest,
+          ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+          ...(v.document !== undefined ? { document: v.document } : {}),
+        })),
+      },
+    ]);
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
 const FAR_EXP = "2027-01-01T00:00:00Z";
@@ -103,6 +132,8 @@ let apOff: Client;
 let apRefuse: Client;
 let apRecording: Client;
 let apClassified: Client;
+let apContract: Client;
+let asContract: BuiltAs;
 let second: Client;
 let verifierSeq = 0;
 const commits: LifecycleCommit[] = [];
@@ -113,6 +144,7 @@ const approvalSessions = new Map([
   [REFUSE_ISSUER, new ApprovalSessionStore()],
   [RECORDING_ISSUER, new ApprovalSessionStore()],
   [CLASSIFIED_ISSUER, new ApprovalSessionStore()],
+  [CONTRACT_ISSUER, new ApprovalSessionStore()],
 ]);
 
 /** The deployment's drawdown policies: a JSON snapshot stating the per-drawdown bound and the review cadence. */
@@ -280,6 +312,8 @@ async function issueMission(
     proposal?: Record<string, unknown>[];
     /** Further pushed-request parameters the client sends. */
     parExtra?: Record<string, string>;
+    /** The ceiling the decision posts, where it differs from the offer: the page's rendering of it. */
+    decided?: CeilingDecision;
   } = {},
 ): Promise<{ missionId: string; accessToken: string }> {
   currentOffer = ceiling;
@@ -324,7 +358,7 @@ async function issueMission(
     method: "POST",
     redirect: "manual",
     headers: { ...decideHeaders, "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve", render_revision, ...(ceiling ?? {}) }),
+    body: JSON.stringify({ decision: "approve", render_revision, ...((opts.decided ?? ceiling) ?? {}) }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -481,18 +515,27 @@ beforeAll(async () => {
       classification: APPROVAL_FLOOR.classification.map((c) => (c.resource === RESOURCE ? { ...c, cross_domain: true } : c)),
     },
   });
+  asContract = await buildAuthorizationServer({
+    issuer: CONTRACT_ISSUER,
+    approvalSessions: approvalSessions.get(CONTRACT_ISSUER) as ApprovalSessionStore,
+    activationPolicies: POLICIES,
+    progressive: PROGRESSIVE,
+    resourceContracts: SHIPPED_REQUIRED,
+  });
   servers = [
     as.provider.listen(PORT),
     asOff.provider.listen(OFF_PORT),
     asRefuse.provider.listen(REFUSE_PORT),
     asRecording.provider.listen(RECORDING_PORT),
     asClassified.provider.listen(CLASSIFIED_PORT),
+    asContract.provider.listen(CONTRACT_PORT),
   ];
   ap = await shippedClient("ap-agent", "ap-agent-auth", as.agentClientJwk);
   apOff = await shippedClient("ap-agent", "ap-agent-auth", asOff.agentClientJwk);
   apRefuse = await shippedClient("ap-agent", "ap-agent-auth", asRefuse.agentClientJwk);
   apRecording = await shippedClient("ap-agent", "ap-agent-auth", asRecording.agentClientJwk);
   apClassified = await shippedClient("ap-agent", "ap-agent-auth", asClassified.agentClientJwk);
+  apContract = await shippedClient("ap-agent", "ap-agent-auth", asContract.agentClientJwk);
 });
 
 describe("recorded ceiling drawdowns at the token endpoint (@spec approval-governance#recency-high-risk, approval-governance#atomic-commitment, #1470 slice 2)", () => {
@@ -588,6 +631,26 @@ describe("the approval page discloses the derivation inheritance a ceiling conse
     expect(await approvalPage(OFF_ISSUER, apOff, { requested_derivation_limit: 4 })).not.toContain(
       "If you also consent to an authority ceiling",
     );
+  });
+});
+
+// @spec resource-access#resource-contract (#249, D875): the authorization
+// page's ceiling offer is assembled before it renders, so the consented ceiling
+// carries the configured current reference, as the Approver saw it.
+describe("ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875)", () => {
+  it("the consented ceiling's entries carry the configured current reference, and the drawdown policy is kept", async () => {
+    // The page renders the offer assembled; the decision posts what it rendered.
+    const decided = assembledCeilingOffer(ceilingOf(), SHIPPED_REQUIRED) as CeilingDecision;
+    const m = await issueMission(READ, ceilingOf(), { client: apContract, issuer: CONTRACT_ISSUER, decided });
+    const record = asContract.kernel.get(m.missionId) as MissionRecord;
+    const [declared] = RESOURCE_CONTRACTS.declarations;
+    const current = declared?.versions.find((v) => v.state === "current");
+    const reads = (record.authority_ceiling ?? []).filter((e) => e.actions.includes("payments:invoice.read"));
+    expect(reads.length).toBeGreaterThan(0);
+    for (const entry of reads) {
+      expect(entry.resource_contract).toEqual({ id: declared?.id, version: current?.version, digest: current?.digest });
+    }
+    expect(record.drawdown_policy?.id).toBe("drawdown-std");
   });
 });
 
