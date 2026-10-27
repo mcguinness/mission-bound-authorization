@@ -679,13 +679,14 @@ const CONFLICTING_SETTLEMENT = "already_settled";
 /**
  * @spec metering#settlement-contract (#816, D877, #1771 review): a settlement
  * record's `error` as settlement compares and stores it: a string as it is,
- * any other value as its JSON, and `null` where the record carries none. The
- * applied record's is kept on its claim; a conflicting record's keys its
- * retention.
+ * any other value as its JSON, and `null` where the record carries none or
+ * carries `null`, so a redelivery that sends `"error": null` for an applied
+ * record without one is the same record. The applied record's is kept on its
+ * claim; a conflicting record's keys its retention.
  */
 function settlementError(record: unknown): string | null {
   const error = object(record) ? record.error : undefined;
-  if (error === undefined) return null;
+  if (error === undefined || error === null) return null;
   return typeof error === "string" ? error : JSON.stringify(error);
 }
 

@@ -137,7 +137,7 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
-  o: { error?: string; signer?: CryptoKeyLike } = {},
+  o: { error?: string | null; signer?: CryptoKeyLike } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
@@ -1908,6 +1908,38 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
       expect(claimRowOf(file, a)).toMatchObject({ state: "failed", outcome: "suppressed", error: "target_drift" });
       expect(claimRowOf(file, b)).toMatchObject({ state: "failed", outcome: "failed", error: "connector_timeout" });
+    });
+
+    it("a redelivery of an applied record that carried no error, now carrying error null, is acknowledged as the duplicate and retains and alarms nothing, for an applied failed record and an applied completed one (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const b = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      const failedId = `exe_${randomUUID()}`;
+      const completedId = `exe_${randomUUID()}`;
+      const failed = await executionRecord(a, "failed", failedId);
+      const completed = await executionRecord(b, "completed", completedId);
+      expect(failed).not.toHaveProperty("error");
+      expect(completed).not.toHaveProperty("error");
+      expect(await claims.settle(REQUESTER, failed, () => failedId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const failedNull = await executionRecord(a, "failed", failedId, { error: null });
+      const completedNull = await executionRecord(b, "completed", completedId, { error: null });
+      expect(failedNull).toHaveProperty("error", null);
+      expect(completedNull).toHaveProperty("error", null);
+      expect(await claims.settle(REQUESTER, failedNull, () => failedId)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      expect(await claims.settle(REQUESTER, completedNull)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(claims.settlementConflicts(b)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "200.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", outcome: "failed", error: null });
+      expect(claimRowOf(file, b)).toMatchObject({ state: "completed", outcome: "completed", error: null });
     });
   });
 
