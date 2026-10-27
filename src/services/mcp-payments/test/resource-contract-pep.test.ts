@@ -155,6 +155,8 @@ async function build(
     pdpContracts?: ResourceContractDeclarations;
     now?: () => Date;
     requiresActionApproval?: (action: string, actionClass: string | undefined) => boolean;
+    /** Perform under the shipped `RETAINED_OPERATION_PROFILES` rather than this file's retained table. */
+    shippedRetainedProfiles?: boolean;
   } = {},
 ): Promise<Built> {
   const now = opts.now ?? NOW;
@@ -210,7 +212,7 @@ async function build(
     instanceEpoch: "epoch-249",
     now,
     resourceContracts: () => pepContracts,
-    retainedOperationProfiles: () => ({ [RETAINED_PROFILE]: RETAINED_TABLE }),
+    ...(opts.shippedRetainedProfiles ? {} : { retainedOperationProfiles: () => ({ [RETAINED_PROFILE]: RETAINED_TABLE }) }),
     ...(opts.requiresActionApproval ? { requiresActionApproval: opts.requiresActionApproval } : {}),
     decide: (req, o) => {
       decided.push(req);
@@ -273,8 +275,8 @@ describe("the payments resource declares its contract versions (@spec runtime#re
   });
 
   it("performs the superseded 2026-10-20 version under the retained v13 profile: each crossing it names as the live profile does, and not the compensate crossing it lacks (#252)", () => {
-    const superseded = shipped?.versions.find((v) => v.state === "superseded");
-    expect(superseded?.version).toBe("2026-10-20");
+    const superseded = shipped?.versions.find((v) => v.version === "2026-10-20");
+    expect(superseded?.state).toBe("superseded");
     expect(superseded?.operation_profile).toBe("payments-runtime-profile-v13");
     const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
     expect(named).toEqual(Object.keys(TOOL_ACTIONS).filter((tool) => tool !== "reverse_wire_transfer").sort());
@@ -284,6 +286,89 @@ describe("the payments resource declares its contract versions (@spec runtime#re
       const retained = pep.toolActionUnder(tool, superseded?.operation_profile);
       if (named.includes(tool)) expect(retained, tool).toEqual(TOOL_ACTIONS[tool]);
       else expect(retained, tool).toBeUndefined();
+    }
+  });
+
+  it("performs the superseded 2026-10-24 version under the retained v14 profile: each crossing as the live profile does, and not the compensate crossing, whose v15 semantics it never gets (#1693, D879)", () => {
+    const superseded = shipped?.versions.find((v) => v.version === "2026-10-24");
+    expect(superseded?.state).toBe("superseded");
+    expect(superseded?.retained_until).toEqual(expect.any(String));
+    expect(superseded?.operation_profile).toBe("payments-runtime-profile-v14");
+    // Its document names the reversal: v14 performed it, under other semantics.
+    const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
+    expect(named).toEqual(Object.keys(TOOL_ACTIONS).sort());
+    // No deployment-supplied retained profiles: the shipped default applies.
+    const pep = new Pep({} as never);
+    for (const tool of Object.keys(TOOL_ACTIONS)) {
+      const retained = pep.toolActionUnder(tool, superseded?.operation_profile);
+      if (tool === "reverse_wire_transfer") expect(retained, tool).toBeUndefined();
+      else expect(retained, tool).toEqual(TOOL_ACTIONS[tool]);
+    }
+  });
+
+  it("the 2026-10-26 document differs from 2026-10-24's only in its version, its Operation Profile and the reversal's tenant fact (#1693)", () => {
+    const docOf = (version: string) =>
+      structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
+        version: string;
+        operation_profile: string;
+        constraints: Record<string, string>;
+      };
+    const v15 = docOf("2026-10-26");
+    const v14 = docOf("2026-10-24");
+    expect([v15.version, v15.operation_profile]).toEqual(["2026-10-26", "payments-runtime-profile-v15"]);
+    expect(v15.constraints.tenant).toMatch(/for reverse_wire_transfer, the current record of the reversed wire's recorded vendor/);
+    expect(v14.constraints.tenant).not.toMatch(/reverse_wire_transfer/);
+    v15.version = v14.version;
+    v15.operation_profile = v14.operation_profile;
+    v15.constraints.tenant = v14.constraints.tenant as string;
+    expect(v15).toEqual(v14);
+  });
+
+  it("the current 2026-10-27 document differs from 2026-10-26's only in its version and its Operation Profile (#813, #816, D877)", () => {
+    const docOf = (version: string) =>
+      structuredClone(shipped?.versions.find((v) => v.version === version)?.document) as {
+        version: string;
+        operation_profile: string;
+      };
+    const v16 = docOf("2026-10-27");
+    const v15 = docOf("2026-10-26");
+    expect(current?.version).toBe("2026-10-27");
+    expect([v16.version, v16.operation_profile]).toEqual(["2026-10-27", "payments-runtime-profile-v16"]);
+    v16.version = v15.version;
+    v16.operation_profile = v15.operation_profile;
+    expect(v16).toEqual(v15);
+  });
+
+  it("performs the superseded 2026-10-26 version under the retained v15 profile: every crossing the live v16 profile names, each exactly as the live profile does, the reversal included (#813, #816, D877)", () => {
+    const superseded = shipped?.versions.find((v) => v.version === "2026-10-26");
+    expect(superseded?.state).toBe("superseded");
+    expect(superseded?.retained_until).toBe("2027-10-27T00:00:00Z");
+    expect(superseded?.operation_profile).toBe("payments-runtime-profile-v15");
+    const named = Object.keys((superseded?.document as { operations: Record<string, unknown> }).operations).sort();
+    expect(named).toEqual(Object.keys(TOOL_ACTIONS).sort());
+    // No deployment-supplied retained profiles: the shipped default applies.
+    const pep = new Pep({} as never);
+    for (const tool of Object.keys(TOOL_ACTIONS)) {
+      expect(pep.toolActionUnder(tool, superseded?.operation_profile), tool).toEqual(TOOL_ACTIONS[tool]);
+    }
+  });
+
+  it("resolves the current 2026-10-27 version, naming payments-runtime-profile-v16, for every operation, and the superseded 2026-10-26 version through its retained_until instant and not after it (#813, #816, D877)", () => {
+    const refOf = (version: string): ResourceContractRef => {
+      const v = shipped?.versions.find((x) => x.version === version);
+      return { id: CONTRACT, version, digest: v?.digest as string };
+    };
+    const at = (iso: string, action: string) => ({ target: CANONICAL_RESOURCE, action, now: new Date(iso) });
+    for (const action of ACTIONS) {
+      const resolved = RESOURCE_CONTRACTS.resolve(refOf("2026-10-27"), at("2030-01-01T00:00:00Z", action));
+      expect(resolved.ok, action).toBe(true);
+      expect(resolved.ok ? resolved.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v16");
+      const within = RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:00Z", action));
+      expect(within.ok ? within.version.operation_profile : undefined, action).toBe("payments-runtime-profile-v15");
+      expect(RESOURCE_CONTRACTS.resolve(refOf("2026-10-26"), at("2027-10-27T00:00:01Z", action)), action).toEqual({
+        ok: false,
+        reason: "outside_retention",
+      });
     }
   });
 
@@ -679,6 +764,36 @@ describe("a retained version is performed under its own Operation Profile (@spec
         } finally {
           await x.close();
         }
+      }
+    }
+  });
+});
+
+describe("the shipped superseded 2026-10-26 version is still performed within its retention (@spec runtime#resource-contract, #813, #816, D877)", () => {
+  const [shipped] = RESOURCE_CONTRACTS.declarations;
+  const v15 = shipped?.versions.find((v) => v.version === "2026-10-26");
+  const V15_REF: ResourceContractRef = { id: CONTRACT, version: "2026-10-26", digest: v15?.digest as string };
+  const view = viewOf([entry(V15_REF)]);
+
+  it("a read and a write decided under the 2026-10-26 reference are performed under the retained v15 profile within its retention, and refused before any decision past it (#813, #816, D877)", async () => {
+    for (const mode of MODES) {
+      const within = await build(mode, view, RESOURCE_CONTRACTS, { now: () => new Date("2026-10-28T12:00:00Z"), shippedRetainedProfiles: true });
+      try {
+        const read = await within.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        expect(read.ok, `${mode}: ${JSON.stringify(read)}`).toBe(true);
+        const write = await within.server.callWriteTool("schedule_payment", { invoice_id: "inv-2", idempotency_key: `idem-v15-retained-${mode}` }, tokenFor(view));
+        expect(write.ok, `${mode}: ${JSON.stringify(write)}`).toBe(true);
+        expect(within.decided.map((r) => r.resource.properties.resource_contract), mode).toEqual([V15_REF, V15_REF]);
+      } finally {
+        await within.close();
+      }
+      const past = await build(mode, view, RESOURCE_CONTRACTS, { now: () => new Date("2027-10-27T00:00:01Z"), shippedRetainedProfiles: true });
+      try {
+        const res = await past.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, tokenFor(view));
+        expect(res, mode).toMatchObject({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+        expect(past.decided, mode).toHaveLength(0);
+      } finally {
+        await past.close();
       }
     }
   });

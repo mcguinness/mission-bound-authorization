@@ -93,13 +93,14 @@ import {
   normalizedParameters,
   parameterDigest,
 } from "./effective-params.js";
-import type {
-  DecisionEvidence,
-  EvidenceStore,
-  ExecutionEvidence,
-  ExecutionEvidenceObject,
-  PepRefusalDenialReason,
-  RuntimeHopReference,
+import {
+  type DecisionEvidence,
+  type EvidenceStore,
+  type ExecutionEvidence,
+  type ExecutionEvidenceObject,
+  ExecutionRedispositionError,
+  type PepRefusalDenialReason,
+  type RuntimeHopReference,
 } from "./evidence.js";
 import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
 import {
@@ -178,9 +179,13 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * live Operation Profile; one naming another performs under that retained
  * profile (`PepDeps.retainedOperationProfiles`, by default
  * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
- * compensate crossing `reverse_wire_transfer`.
+ * compensate crossing `reverse_wire_transfer`. v15 (#1693, D873, D879)
+ * changes only that crossing: its tenant is the current tenant of the vendor
+ * the committed wire paid, and it does not depend on the vendor the invoice
+ * names now. v16 (#813, #816, D877) states the budget metering of
+ * `payments:payment.execute` and changes no crossing.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v16";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -534,20 +539,39 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
 
+/** The live table without the compensate crossing: every crossing it names performs as the live profile does. */
+const WITHOUT_REVERSAL: Readonly<Record<string, ActionMapping>> = Object.freeze(
+  Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
+);
+
 /**
- * @spec runtime#resource-contract rule 3 (#249, #252): the Operation Profiles
- * of the superseded contract versions this resource still performs within
- * their declared retention, keyed by the `operation_profile` their documents
- * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
- * live profile without the compensate crossing `reverse_wire_transfer`, which
- * v14 added: every crossing it names performs exactly as it did, and the
- * crossing it does not name is not performed under it. A snapshot taken at
- * load, never the live table.
+ * @spec runtime#resource-contract rule 3 (#249, #252, #1693): the Operation
+ * Profiles of the superseded contract versions this resource still performs
+ * within their declared retention, keyed by the `operation_profile` their
+ * documents name. A snapshot taken at load, never the live table.
+ *
+ * - `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
+ *   live profile without the compensate crossing `reverse_wire_transfer`,
+ *   which v14 added.
+ * - `payments-runtime-profile-v14` (contract version `2026-10-24`) named that
+ *   crossing, under the tenant of the vendor the invoice names now. v15
+ *   changed only that crossing (D873, D879), and this resource no longer
+ *   performs the v14 reversal, so v14 is retained without it: a reversal
+ *   pinned to `2026-10-24` is never performed under v15's semantics, and is
+ *   refused `resource_contract_unresolvable` before any decision request,
+ *   while every other v14 crossing performs exactly as it did.
+ * - `payments-runtime-profile-v15` (contract version `2026-10-26`) names
+ *   every crossing the live profile does, each performed exactly as it is,
+ *   the reversal under the paid vendor's current tenant: v16 only states the
+ *   budget metering.
+ *
+ * Every crossing a retained profile names performs exactly as it did, and a
+ * crossing it does not name is not performed under it.
  */
 export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
-  "payments-runtime-profile-v13": Object.freeze(
-    Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
-  ),
+  "payments-runtime-profile-v13": WITHOUT_REVERSAL,
+  "payments-runtime-profile-v14": WITHOUT_REVERSAL,
+  "payments-runtime-profile-v15": Object.freeze({ ...TOOL_ACTIONS }),
 });
 
 /**
@@ -1407,6 +1431,15 @@ export interface EnforceResult {
    */
   attempt?: ExecutionAttempt;
   /**
+   * @spec runtime-evidence#execution-evidence-object (#786, #1715): present on
+   * a refusal this PEP made inside enforcement after the permit (an
+   * unrecognized condition, a dependency not established, an obligation not
+   * fulfilled). The permit's attempt and the outcome of its suppressed
+   * disposition, so the caller surfaces a record that could not be written
+   * rather than dropping it.
+   */
+  suppressed?: { attempt: ExecutionAttempt; disposition: SuppressOutcome };
+  /**
    * @spec runtime#idempotency (#918): present on a permit for a keyed
    * reversible write. The (idempotency scope, `idempotency_key`) pair this
    * PEP reserves, and the operation identity it is reserved under, projected
@@ -1449,9 +1482,11 @@ export interface EnforceResult {
  * @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
  * (#1266, #773): the live resource facts a decision request carries for an
  * invoice-scoped crossing, from one observation of the store records: the
- * vendor the invoice names, the invoice's issuance instant (an invoice with
- * none carries no fact, which satisfies no issuance bound), the tenant that
- * owns it (its vendor's), and its own classification label. The context
+ * vendor the records name (the vendor the invoice names now, or on a
+ * compensate crossing the vendor the committed wire paid, #1693), the
+ * invoice's issuance instant (an invoice with none carries no fact, which
+ * satisfies no issuance bound), that vendor's current tenant, and the
+ * invoice's own classification label. The context
  * capture commits the same records, so the facts the decision evaluates and
  * the facts its binding commits are one observation, with no await between
  * them (the owner's #1663 review 3).
@@ -1702,9 +1737,14 @@ export interface AttemptEvaluationContext {
  * whose context-bound permit's effective context digest could not be (#773).
  * A suppression never reports either: it emits without the effective digest,
  * "comparison unavailable" (#786).
+ *
+ * `prior: true` (#1715) marks a suppression of an attempt whose one
+ * disposition is already retained under its execution identity (an attempt
+ * replayed into the effect step): this refusal records nothing further, and
+ * no record is missing.
  */
 export type SuppressOutcome =
-  | { recorded: true }
+  | { recorded: true; prior?: true }
   | {
       recorded: false;
       gap: "effective_parameter_digest_unobservable" | "effective_evaluation_context_digest_unobservable" | "emission_failed";
@@ -2628,6 +2668,8 @@ export class Pep {
     /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
     let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
+    /** A compensate crossing's named invoice, whose committed wire the link below establishes (#252). */
+    let compensatedInvoiceId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
     if (mapping.targetsVendor) {
@@ -2656,7 +2698,22 @@ export class Pep {
         },
       };
     }
-    if (mapping.needsInvoice) {
+    if (mapping.needsInvoice && mapping.compensates) {
+      // @spec runtime#compound-actions (#252, #1693, D879): a compensate
+      // crossing names the invoice whose committed wire it offsets, and that
+      // invoice must exist; the link below requires the wire it establishes
+      // to be that invoice's. Its vendor is the vendor the committed wire
+      // paid, which only the link names, and its effect parameters are that
+      // wire's. Nothing here reads the vendor the invoice names now (its
+      // record, its routing, or parameters built from it), so an invoice
+      // reassigned to a vendor that has no record still reverses the wire it
+      // paid. The snapshot taken once the link is established reads the
+      // invoice and the paid vendor.
+      const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+      if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
+      compensatedInvoiceId = invoice.id;
+      resourceObj = { type: "invoice", id: invoice.id };
+    } else if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
       if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
@@ -2849,8 +2906,8 @@ export class Pep {
         return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
       }
       const established =
-        mapping.compensates && effective
-          ? await this.compensatedEffect(missionAnchor, effective.invoice_id, mapping.compensates)
+        mapping.compensates && compensatedInvoiceId !== undefined
+          ? await this.compensatedEffect(missionAnchor, compensatedInvoiceId, mapping.compensates)
           : undefined;
       if (!established) {
         return await this.refuse(boundary, token, "compensation_link_unavailable", mapping.action, view, undefined, {
@@ -2872,19 +2929,29 @@ export class Pep {
       // invoice names, taken now, after the last await of link
       // establishment, is what both the decision's live properties and the
       // context capture below are built from, with no await between them.
-      // A record gone by now is the same pre-decision refusal as above.
+      // An invoice gone by now is refused `unknown_invoice`, as above.
+      //
+      // @spec resource-access#initial-common-constraints, runtime#compound-actions
+      // (#1693, D873): the vendor record read is the vendor the committed wire
+      // paid, never the vendor the invoice names now. The wire fixes which
+      // vendor the reversal concerns, and that vendor's record supplies its
+      // current tenant, so `vendor_id`, the tenant bound and the offset
+      // effect name one vendor. An invoice reassigned since neither blocks
+      // nor widens the reversal; a paid vendor the store no longer holds is
+      // refused here, before the decision request.
       const snapshotInvoice = this.deps.payments.getInvoice(established.wire.invoiceId);
       if (!snapshotInvoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
-      const snapshotVendor = this.deps.payments.getVendor(snapshotInvoice.vendor_id);
+      const snapshotVendor = this.deps.payments.getVendor(established.wire.vendorId);
       if (!snapshotVendor) {
         return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
           resource: { type: "invoice", id: snapshotInvoice.id },
         });
       }
       const snapshot: StoreRecords = { invoice: snapshotInvoice, vendor: snapshotVendor, payments: this.deps.payments };
-      // The vendor the decision evaluates stays the wire's: only the live
-      // facts are read from the store (the owner's ruling: the existing
-      // decision semantics are preserved).
+      // The vendor the decision evaluates is the wire's, the vendor the
+      // snapshot read, so the explicit `vendor_id` below repeats what the
+      // live properties already carry: only the live facts come from the
+      // store.
       resourceObj = {
         type: "invoice",
         id: snapshotInvoice.id,
@@ -3573,8 +3640,8 @@ export class Pep {
       // Post-permit: a permit was obtained and is unusable, so this is a
       // suppressed disposition of that permit, never a Refusal Record
       // (@spec runtime-evidence#pre-decision-refusal boundary rule).
-      await this.suppressExecution(attempt, "condition_unrecognized");
-      return { permitted: false, refusal_reason: "unrecognized_condition" };
+      const disposition = await this.suppressExecution(attempt, "condition_unrecognized");
+      return { permitted: false, refusal_reason: "unrecognized_condition", suppressed: { attempt, disposition } };
     }
 
     // @spec runtime#input-authority-dependency (#830, D798): the composed
@@ -3589,8 +3656,8 @@ export class Pep {
         action: mapping.action,
       });
       if (!checked.ok) {
-        await this.suppressExecution(attempt, "resource_policy");
-        return { permitted: false, decision, denial_reason: "resource_policy" };
+        const disposition = await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy", suppressed: { attempt, disposition } };
       }
       // The ceiling travels with the permit into execution admission and is
       // enforced at release (the `authority_dependency` use check).
@@ -3626,10 +3693,10 @@ export class Pep {
         // ("one object per attached obligation, in the order the decision
         // returned them"): every attached obligation has its entry, a malformed
         // one included, with no `id` or `type` invented for it (#786).
-        await this.suppressExecution(attempt, "obligation_unfulfilled", {
+        const disposition = await this.suppressExecution(attempt, "obligation_unfulfilled", {
           ...(processed.outcomes ? { obligationOutcomes: processed.outcomes } : {}),
         });
-        return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+        return { permitted: false, refusal_reason: "unfulfillable_obligation", suppressed: { attempt, disposition } };
       }
       // Fulfilled: every obligation identified itself and was performed.
       attempt.obligationOutcomes = processed.outcomes;
@@ -3788,6 +3855,45 @@ export class Pep {
       effectiveParameterDigest: freshDigest,
       ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
     };
+  }
+
+  /**
+   * @spec txn-authorization#offline-verification, runtime#compound-actions
+   * (#252, #1693, D889): the parameter digest of a challenged compensate
+   * crossing, recomputed for its transaction-token retry exactly as the
+   * enforcement path builds it. The link is established again from this PEP's
+   * own retained, verified evidence for the challenged Mission and the named
+   * invoice, the committed wire's ledger record is read through it, and the
+   * reversal form is built from that record. The invoice's current vendor is
+   * never read, and no digest the token or the pending record carries is
+   * used. A link or record that no longer answers yields none, so the retry
+   * refuses; a record that changed yields a different digest.
+   */
+  async compensationParameterDigest(
+    tool: string,
+    args: Readonly<Record<string, unknown>>,
+    mission: { id: string; issuer: string },
+  ): Promise<string | undefined> {
+    const mapping = this.toolAction(tool);
+    if (!mapping?.compensates) return undefined;
+    const target = this.operationTargetFor(tool, args);
+    if (!target.ok) return undefined;
+    const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+    if (!invoice) return undefined;
+    const established = await this.compensatedEffect(
+      { id: mission.id, issuer: mission.issuer },
+      invoice.id,
+      mapping.compensates,
+    );
+    if (!established) return undefined;
+    return parameterDigest(
+      buildReversalParams({
+        action: mapping.action,
+        wire: established.wire,
+        resource: target.target,
+        reverses: established.link.opKey,
+      }),
+    );
   }
 
   /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */
@@ -3954,6 +4060,7 @@ export class Pep {
       // "recorded as the executing PEP attributed it".
       ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
     };
+    let disposedEarlier = false;
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
@@ -3969,11 +4076,18 @@ export class Pep {
         // reservation stays charged until the permit and its lease elapse.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
-      } catch {
+      } catch (e) {
         /* one retry, on the SAME execution identity: a retained record is
            returned rather than duplicated, so this cannot double-emit. */
+        disposedEarlier = e instanceof ExecutionRedispositionError && e.held === "retained";
       }
     }
+    // @spec runtime-evidence#execution-evidence-object (#786, #1715): one
+    // execution identity, one disposition. A refusal of an attempt whose
+    // disposition is already retained records nothing further, and nothing is
+    // missing. A completed disposition refused that way stays a gap: its
+    // effect stands and its identity's record says otherwise.
+    if (disposedEarlier && disposition.outcome === "suppressed") return { recorded: true, prior: true };
     return { recorded: false, gap: "emission_failed" };
   }
 

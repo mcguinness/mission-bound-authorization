@@ -17,8 +17,8 @@
 
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue } from "@mission/core";
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue, type ResourceContractRef } from "@mission/core";
+import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type Decision,
@@ -35,6 +35,7 @@ import {
   captureEvaluationContext,
   Connectors,
   createEphemeralEvidenceKeys,
+  credentialAuthorityFrom,
   type DecisionEvidence,
   EvaluationContextSalts,
   EvidenceStore,
@@ -48,7 +49,9 @@ import {
   type RefusalRecord,
   type TokenFacts,
   TOOL_ACTIONS,
+  TOOLS,
   TransactionEngine,
+  type Vendor,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 
@@ -111,7 +114,7 @@ const missionToken = (id: string): TokenFacts => ({
 const TOKEN = missionToken("msn_773");
 const TOKEN_B = missionToken("msn_773b");
 
-const view = (id: string, constraints: Record<string, unknown> = {}): MissionView => ({
+const view = (id: string, constraints: Record<string, unknown> = {}, contract?: ResourceContractRef): MissionView => ({
   id,
   issuer: ISSUER,
   state: "active",
@@ -129,6 +132,7 @@ const view = (id: string, constraints: Record<string, unknown> = {}): MissionVie
         "payments:invoice.read",
       ],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"], ...constraints },
+      ...(contract !== undefined ? { resource_contract: contract } : {}),
     },
   ] as MissionView["authority_set"],
   subject: { iss: ISSUER, sub: "alice" },
@@ -153,6 +157,8 @@ interface Harness {
   restart: () => void;
   /** Rewrite each decision after the PDP returns it, before the PEP sees it. */
   rewrite: (fn: ((d: Decision) => Decision) | undefined) => void;
+  /** Replace the Common Constraints on the Mission's entry from the next view on. */
+  constrain: (c: Record<string, unknown> | undefined) => void;
 }
 
 function harness(
@@ -166,6 +172,8 @@ function harness(
     classification?: string;
     /** Common Constraints added to the Mission's entry. */
     constraints?: Record<string, unknown>;
+    /** The resource contract the Mission's entry pins (#1693, D879). */
+    contract?: ResourceContractRef;
   } = {},
 ): Harness {
   const now = () => new Date(BASE_MS);
@@ -186,9 +194,10 @@ function harness(
       { id: "inv-2", vendor_id: "acme", amount: "75.00", currency: "USD", payee_account: "acct-acme", status: "payable" },
     ],
   );
+  let constraints = o.constraints;
   const loadView = (ref: { id: string; issuer: string }) =>
     (ref.id === "msn_773" || ref.id === "msn_773b") && ref.issuer === ISSUER
-      ? { view: view(ref.id, o.constraints), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
+      ? { view: view(ref.id, constraints, o.contract), observation: { state: "active", version: 1, mode: "fresh", freshness_at: now().toISOString() } }
       : undefined;
   let pepKeys: EvidenceKeyResolver | undefined;
   const claims = openEphemeralClaimDomain({
@@ -263,6 +272,9 @@ function harness(
     },
     rewrite: (fn) => {
       rewrite = fn;
+    },
+    constrain: (c) => {
+      constraints = c;
     },
   };
 }
@@ -1004,6 +1016,395 @@ describe("a compensating decision and its context are one observation of the liv
       const sameObservation = captureFromWire(h, decision);
       if (!sameObservation.ok) throw new Error(JSON.stringify(sameObservation));
       expect(request?.context.evaluation_context_digest).toBe(sameObservation.digest);
+    });
+  }
+});
+
+/** Add a vendor record: a direct store edit (#1693). */
+function addVendor(payments: PaymentsStore, id: string, tenant: string): void {
+  payments.db.prepare("INSERT INTO vendors (id, name, status, tenant) VALUES (?, ?, 'approved', ?)").run(id, id, tenant);
+}
+
+/**
+ * Reassign `inv-1` to another vendor: a direct store edit, since the
+ * reference store has no operation that moves an invoice (#1693). A changed
+ * authoritative fact, so it bumps the invoice's version.
+ */
+function reassignInvoice(payments: PaymentsStore, vendorId: string): void {
+  payments.db.prepare("UPDATE invoices SET vendor_id = ?, version = version + 1 WHERE id = 'inv-1'").run(vendorId);
+}
+
+/** The committed wire's ledger record for `inv-1`: its operation key and the vendor it paid. */
+const ledgerWire = (h: Harness) =>
+  h.connectors.db.prepare("SELECT op_key, vendor_id FROM ledger WHERE invoice_id = 'inv-1'").get() as
+    | { op_key: string; vendor_id: string }
+    | undefined;
+
+const reverseArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+
+describe("the compensate crossing checks the current tenant of the vendor the committed wire paid (@spec runtime#evaluation-context-binding, runtime#compound-actions, resource-access#initial-common-constraints, #1693)", () => {
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`after the invoice moves from the vendor its wire paid to another, a tenant bound naming the paid vendor's tenant permits reversing that wire, and one naming the new vendor's tenant is denied at the decision (${mode})`, async () => {
+      // The wire pays acme (tenant-a); the invoice then moves to globex (tenant-b).
+      const h = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      expect(wire?.vendor_id).toBe("acme");
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      // The decision evaluated the vendor the wire paid and that vendor's tenant.
+      expect(h.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      // The reversal offsets the paid vendor's wire.
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([
+        expect.objectContaining({ reversed_op_key: wire?.op_key, amount: "125.00", currency: "USD" }),
+      ]);
+
+      // The same move under a bound naming the new vendor's tenant: the
+      // PDP's own bound denies it at the decision, and nothing is offset.
+      const other = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(other, COMMIT)).ok).toBe(true);
+      addVendor(other.payments, "globex", "tenant-b");
+      reassignInvoice(other.payments, "globex");
+      other.constrain({ tenant: "tenant-b" });
+      const denied = await other.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(denied).toMatchObject({ ok: false, denial_reason: "parameter_violation" });
+      expect(denied).not.toHaveProperty("refusal_reason");
+      expect(other.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      expect(compensating(other)?.decision).toBe("deny");
+      expect(executions(other).filter((r) => r.outcome === "suppressed")).toHaveLength(0);
+      expect(other.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    });
+  }
+
+  it("with the invoice moved to another vendor, the paid vendor's tenant moved after the decision is refused target_drift with zero reversal entries", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    addVendor(h.payments, "globex", "tenant-b");
+    reassignInvoice(h.payments, "globex");
+    expectLiveFactDrift(h, await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => h.payments.setVendorTenant("acme", "tenant-c")));
+  });
+
+  it("an invoice reassigned to another vendor between the decision and release still releases the reversal of the paid vendor's wire: the context re-established at release is the paid vendor's and equal", async () => {
+    const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    const wire = ledgerWire(h);
+    addVendor(h.payments, "globex", "tenant-b");
+    const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => reassignInvoice(h.payments, "globex"));
+    expect(done.ok, JSON.stringify(done)).toBe(true);
+    const decision = compensating(h);
+    const completed = executions(h).filter((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+    expect(completed).toHaveLength(1);
+    expect(completed[0]?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(completed[0]?.effective_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ reversed_op_key: wire?.op_key })]);
+  });
+
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`the paid vendor's record gone before the decision is refused unknown_vendor with no decision request, though the invoice's current vendor resolves (${mode})`, async () => {
+      const h = harness({ pep: declarations, pdp: declarations });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run();
+      const sent = h.requests.length;
+      const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(refused).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+      expect(h.requests).toHaveLength(sent);
+      expect(compensating(h)).toBeUndefined();
+      expect(refusals(h).at(-1)).toMatchObject({
+        denial_reason: "target_unresolvable",
+        action: { name: "payments:payment.reverse" },
+      });
+      expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    });
+  }
+
+  it("the paid vendor's record removed between the decision and release, with the invoice on another vendor, is refused target_drift with zero reversal entries and no effective context digest", async () => {
+    const h = harness();
+    expect((await cross(h, COMMIT)).ok).toBe(true);
+    addVendor(h.payments, "globex", "tenant-b");
+    reassignInvoice(h.payments, "globex");
+    const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN, () => {
+      h.payments.db.prepare("DELETE FROM vendors WHERE id = 'acme'").run();
+    });
+    expect(refused).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+    const decision = compensating(h);
+    expect(decision?.decision).toBe("permit");
+    const [suppressed] = executions(h).filter((r) => r.outcome === "suppressed");
+    expect(suppressed?.error).toBe("target_drift");
+    expect(suppressed?.authorized_parameter_digest).toBe(decision?.parameter_digest);
+    expect(suppressed?.effective_parameter_digest).toBe(suppressed?.authorized_parameter_digest);
+    expect(suppressed?.authorized_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+    expect(suppressed).not.toHaveProperty("effective_evaluation_context_digest");
+  });
+
+  it("a compensate capture resolves the invoice and the vendor the committed wire paid: read from the store it takes the paid vendor, never the invoice's current vendor, and records handed in naming another vendor do not capture", () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [
+        { id: "acme", name: "Acme", status: "approved", tenant: "tenant-a" },
+        { id: "globex", name: "Globex", status: "approved", tenant: "tenant-b" },
+      ],
+      // The invoice names globex now; its wire paid acme.
+      [{ id: "inv-1", vendor_id: "globex", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const wire = connectors.committedWire("op-wire", "evl-wire");
+    const invoice = payments.getInvoice("inv-1");
+    if (!wire || !invoice) throw new Error("fixture");
+    const salts = new EvaluationContextSalts();
+    const capture = (vendorId?: string) =>
+      captureEvaluationContext({
+        declarations: CLAIMED,
+        salts,
+        mission: { issuer: ISSUER, id: "msn_773" },
+        operation: reverseOperation,
+        invoiceId: "inv-1",
+        payments,
+        compensates: { opKey: "op-wire", evaluationId: "evl-wire" },
+        committedEffects: connectors,
+        ...(vendorId !== undefined
+          ? { records: { invoice, vendor: payments.getVendor(vendorId) as Vendor, payments }, wire }
+          : {}),
+      });
+    const paid = capture("acme");
+    if (!paid.ok) throw new Error(JSON.stringify(paid));
+    // Read from the store, the vendor is the one the wire paid.
+    const read = capture();
+    if (!read.ok) throw new Error(JSON.stringify(read));
+    expect(read.digest).toBe(paid.digest);
+    // Records naming the invoice's current vendor are not the paid vendor's.
+    expect(capture("globex")).toEqual({ ok: false, reason: "target_unresolvable" });
+  });
+
+  it("the resolver of the tenant of the vendor an invoice names does not serve the compensate crossing: a descriptor naming it there does not capture", () => {
+    const payments = new PaymentsStore();
+    payments.seed(
+      [{ id: "acme", name: "Acme", status: "approved", tenant: "tenant-a" }],
+      [{ id: "inv-1", vendor_id: "acme", amount: "125.00", currency: "USD", payee_account: "acct-acme", status: "payable" }],
+    );
+    const connectors = new Connectors(() => new Date(BASE_MS));
+    connectors.postWire({
+      opKey: "op-wire",
+      invoiceId: "inv-1",
+      vendorId: "acme",
+      payeeAccount: "acct-acme",
+      amount: "125.00",
+      currency: "USD",
+      permitId: "evl-wire",
+      missionId: "msn_773",
+    });
+    const invoiceVendorTenant = new EvaluationContextBindingDeclarations(
+      claimedStatement((st) => {
+        const ecb = st.extensions.evaluation_context_binding as {
+          operations: Array<{ operation: string; descriptor: { id: string; version: string; digest: string } }>;
+          descriptors: DescriptorEntry[];
+        };
+        const current = ecb.descriptors.find((d) => d.id.endsWith("/payment-reverse")) as DescriptorEntry;
+        const facts = (current.document.facts as Array<Record<string, unknown>>).map((f) =>
+          f.name === "vendor_tenant" ? { ...f, resolver: "payments-store:vendor.tenant" } : f,
+        );
+        const document = { ...current.document, version: "2026-10-26-invoice-vendor-tenant", facts };
+        const digest = canonicalDigest(document as JsonValue);
+        ecb.descriptors.push({ id: current.id, version: "2026-10-26-invoice-vendor-tenant", digest, document });
+        for (const op of ecb.operations) {
+          if (op.operation === "payments:payment.reverse") op.descriptor = { id: current.id, version: "2026-10-26-invoice-vendor-tenant", digest };
+        }
+        return st;
+      }),
+    );
+    const capture = (declarations: EvaluationContextBindingDeclarations) =>
+      captureEvaluationContext({
+        declarations,
+        salts: new EvaluationContextSalts(),
+        mission: { issuer: ISSUER, id: "msn_773" },
+        operation: reverseOperation,
+        invoiceId: "inv-1",
+        payments,
+        compensates: { opKey: "op-wire", evaluationId: "evl-wire" },
+        committedEffects: connectors,
+      });
+    expect(capture(CLAIMED).ok).toBe(true);
+    expect(capture(invoiceVendorTenant)).toEqual({ ok: false, reason: "fact_unresolvable" });
+  });
+});
+
+/** Move `inv-1` to a new vendor `globex`, then delete that vendor's record: the invoice's current vendor no longer resolves (#1693, D879). */
+function orphanInvoice(payments: PaymentsStore): void {
+  addVendor(payments, "globex", "tenant-b");
+  reassignInvoice(payments, "globex");
+  payments.db.prepare("DELETE FROM vendors WHERE id = 'globex'").run();
+  expect(payments.getVendor(payments.getInvoice("inv-1")?.vendor_id ?? "")).toBeUndefined();
+}
+
+describe("the compensate crossing does not depend on the invoice's current vendor (@spec runtime#compound-actions, runtime#evaluation-context-binding, resource-access#initial-common-constraints, #1693, D879)", () => {
+  for (const [mode, declarations] of [
+    ["claiming the binding", CLAIMED],
+    ["not claiming the binding", UNCLAIMED],
+  ] as const) {
+    it(`an invoice moved to another vendor whose record is then deleted still reverses the wire it paid under a bound on the paid vendor's tenant, offsetting that wire (${mode})`, async () => {
+      const h = harness({ pep: declarations, pdp: declarations, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+      expect((await cross(h, COMMIT)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      expect(wire?.vendor_id).toBe("acme");
+      orphanInvoice(h.payments);
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), TOKEN);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      // The decision evaluated the paid vendor and its tenant.
+      expect(h.requests.at(-1)?.resource.properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      const decision = compensating(h);
+      expect(decision?.decision).toBe("permit");
+      // The reversal offsets the paid vendor's wire.
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([
+        expect.objectContaining({ reversed_op_key: wire?.op_key, amount: "125.00", currency: "USD" }),
+      ]);
+      const completed = executions(h).filter((r) => r.outcome === "completed" && r.evaluation_id === decision?.evaluation_id);
+      expect(completed).toHaveLength(1);
+      expect(completed[0]?.effective_parameter_digest).toBe(decision?.parameter_digest);
+      if (declarations === CLAIMED) {
+        expect(completed[0]?.effective_evaluation_context_digest).toBe(decision?.evaluation_context_digest);
+      }
+    });
+  }
+
+  it("an ordinary invoice-scoped operation still refuses unknown_vendor when the invoice's current vendor has no record, before any decision request", async () => {
+    for (const [tool, call] of [
+      ["get_invoice", (h: Harness) => h.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN)],
+      ["execute_wire_transfer", (h: Harness) => cross(h, COMMIT)],
+    ] as const) {
+      const h = harness();
+      orphanInvoice(h.payments);
+      const refused = await call(h);
+      expect(refused, tool).toEqual({ ok: false, refusal_reason: "unknown_vendor" });
+      expect(h.requests, tool).toHaveLength(0);
+      expect(refusals(h).at(-1), tool).toMatchObject({
+        denial_reason: "target_unresolvable",
+        action: { name: TOOL_ACTIONS[tool]?.action },
+      });
+      expect(h.connectors.committedEffects(), tool).toHaveLength(0);
+    }
+  });
+});
+
+/** The shipped reference to a declared version of the payments contract. */
+function contractRef(version: string): ResourceContractRef {
+  const [declared] = RESOURCE_CONTRACTS.declarations;
+  const v = declared?.versions.find((x) => x.version === version);
+  if (!declared || !v) throw new Error(`payments contract ${version} is declared`);
+  return { id: declared.id, version: v.version, digest: v.digest };
+}
+/** Contract version 2026-10-24, naming payments-runtime-profile-v14 (#252), superseded by v15 (#1693). */
+const V14_CONTRACT = contractRef("2026-10-24");
+/** Contract version 2026-10-26, naming payments-runtime-profile-v15 (#1693), superseded by v16 (#813). */
+const V15_CONTRACT = contractRef("2026-10-26");
+/** Contract version 2026-10-27, naming payments-runtime-profile-v16 (#813, #816), current. */
+const V16_CONTRACT = contractRef("2026-10-27");
+
+/** `TOKEN` whose credential's one entry pins `contract`, as the Mission's entry does. */
+const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
+  ...TOKEN,
+  credentialAuthority: credentialAuthorityFrom([
+    {
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: [...new Set(TOOLS.map((t) => t.action))],
+      resource_contract: contract,
+    },
+  ]),
+});
+
+const commitArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
+
+describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879)", () => {
+  it("declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)", () => {
+    const [declared] = RESOURCE_CONTRACTS.declarations;
+    const byVersion = (v: string) => declared?.versions.find((x) => x.version === v);
+    expect(byVersion("2026-10-27")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v16" });
+    expect(byVersion("2026-10-26")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v15" });
+    expect(byVersion("2026-10-26")?.retained_until).toEqual(expect.any(String));
+    expect(byVersion("2026-10-24")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v14" });
+    expect(byVersion("2026-10-24")?.retained_until).toEqual(expect.any(String));
+  });
+
+  it("an entry pinned to 2026-10-24 that requests the reversal is refused resource_contract_unresolvable before any decision request, with zero effects", async () => {
+    const h = harness({ contract: V14_CONTRACT, tenant: "tenant-a", constraints: { tenant: "tenant-a" } });
+    const token = pinnedToken(V14_CONTRACT);
+    // The wire this reversal would offset commits under the same pin.
+    const committed = await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const sent = h.requests.length;
+    const refused = await h.server.callTransactionTool(REVERSE, reverseArgs(), token);
+    expect(refused).toEqual({ ok: false, refusal_reason: "resource_contract_unresolvable" });
+    expect(h.requests).toHaveLength(sent);
+    expect(compensating(h)).toBeUndefined();
+    expect(refusals(h).at(-1)).toMatchObject({
+      denial_reason: "resource_contract_unresolvable",
+      action: { name: "payments:payment.reverse" },
+    });
+    expect(executions(h).filter((r) => r.outcome === "suppressed")).toHaveLength(0);
+    expect(h.connectors.reversalEntries("msn_773")).toHaveLength(0);
+  });
+
+  it("the same 2026-10-24 entry still performs the wire execute and a read as before: each under its pinned contract, with the parameter digest an unpinned entry gets", async () => {
+    const pinned = harness({ contract: V14_CONTRACT });
+    const token = pinnedToken(V14_CONTRACT);
+    const committed = await pinned.server.callTransactionTool(COMMIT.tool, commitArgs(), token);
+    expect(committed.ok, JSON.stringify(committed)).toBe(true);
+    const commitRequest = pinned.requests.at(-1);
+    expect(commitRequest?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
+    expect(pinned.connectors.committedEffects()).toHaveLength(1);
+    const read = await pinned.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, token);
+    expect(read.ok, JSON.stringify(read)).toBe(true);
+    expect(pinned.requests.at(-1)?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
+
+    // The same execute under an unpinned entry binds the same parameters.
+    const unpinned = harness();
+    expect((await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), TOKEN)).ok).toBe(true);
+    const commitDecision = (h: Harness) =>
+      decisions(h).find((d) => d.action.name === "payments:payment.execute" && d.action_phase === "commit");
+    expect(commitDecision(pinned)?.decision).toBe("permit");
+    expect(commitDecision(pinned)?.parameter_digest).toMatch(/^sha-256:/);
+    expect(commitDecision(pinned)?.parameter_digest).toBe(commitDecision(unpinned)?.parameter_digest);
+  });
+
+  for (const [mode, contract] of [
+    ["pinned to 2026-10-26", V15_CONTRACT],
+    ["pinned to 2026-10-27", V16_CONTRACT],
+    ["unpinned", undefined],
+  ] as const) {
+    it(`an entry ${mode} performs the reversal under the paid vendor's current tenant`, async () => {
+      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, ...(contract ? { contract } : {}) });
+      const token = contract ? pinnedToken(contract) : TOKEN;
+      expect((await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token)).ok).toBe(true);
+      const wire = ledgerWire(h);
+      addVendor(h.payments, "globex", "tenant-b");
+      reassignInvoice(h.payments, "globex");
+      const done = await h.server.callTransactionTool(REVERSE, reverseArgs(), token);
+      expect(done.ok, JSON.stringify(done)).toBe(true);
+      const properties = h.requests.at(-1)?.resource.properties;
+      expect(properties).toMatchObject({ vendor_id: "acme", tenant: "tenant-a" });
+      if (contract) expect(properties?.resource_contract).toEqual(contract);
+      else expect(properties).not.toHaveProperty("resource_contract");
+      expect(h.connectors.reversalEntries("msn_773")).toEqual([expect.objectContaining({ reversed_op_key: wire?.op_key })]);
     });
   }
 });

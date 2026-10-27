@@ -2068,15 +2068,24 @@ export interface DemoTemplateInput {
 export const DEMO_TEMPLATE_REVIEW_CADENCE_S = 30 * 24 * 60 * 60;
 
 /**
- * @spec mission-template — the demo READ-ONLY reconciliation template: read
- * invoices / ledger, NO execute. Its ceiling is built from DERIVATION_POLICY by
- * keeping only the read/list actions and the ceiling constraints verbatim while
- * DROPPING delegation, so every template entry is entry-wise within the policy
- * ceiling (a dispatched instance cannot widen past either). Issuer-parameterized
- * because the AS issuer is a runtime value (exported like the demo clients).
+ * @spec mission-template. The demo READ-ONLY reconciliation template reads
+ * invoices and reports, and executes nothing. Its ceiling is built from DERIVATION_POLICY
+ * by keeping only the read/list actions and the ceiling constraints verbatim
+ * while DROPPING delegation, so every template entry is entry-wise within the
+ * policy ceiling (a dispatched instance cannot widen past either).
+ * Issuer-parameterized because the AS issuer is a runtime value (exported like
+ * the demo clients).
+ *
+ * @spec mission-template#prohibited-classes (#1710, D877): the ceiling also
+ * leaves out every action in the configured dispatch-prohibited set, so no
+ * Dispatch of this template grants one. That drops the vendor read (external
+ * communication) and the ledger reads (cross-domain, served by the RAS). A
+ * run that needs them is an ordinary Mission a human approves, not a Dispatch.
  */
 export function demoReconciliationTemplate(issuer: string): DemoTemplateInput {
-  const isReadOnly = (a: string) => a.endsWith(".read") || a.endsWith(".list");
+  const prohibited = new Set(DISPATCH_PROHIBITED_ACTIONS);
+  const isReadOnly = (a: string) =>
+    (a.endsWith(".read") || a.endsWith(".list")) && !prohibited.has(a);
   const ceiling: CeilingEntry[] = DERIVATION_POLICY.ceiling
     .map((e) => {
       const entry: CeilingEntry = {
@@ -2648,6 +2657,14 @@ export interface ApprovalFloor {
 export interface ApprovalFloorClassification {
   type: string;
   resource: string;
+  /**
+   * @spec mission-template#prohibited-classes (#1710, D877): whether
+   * authority at this resource is cross-domain, served by another trust
+   * domain's authorization server. Every action classified here then
+   * satisfies the cross-domain prohibited predicate. Absent means not
+   * cross-domain; the shipped file states it on every classification.
+   */
+  cross_domain?: boolean;
   actions: Record<string, ApprovalFloorActionClass>;
 }
 
@@ -2666,8 +2683,9 @@ export interface ApprovalFloorPolicy {
 
 /**
  * Load + validate config/approval-floor.json. Parsed strictly: a duplicated
- * member, an unknown member, an unknown action class, an empty floor or a
- * second classification for one type and resource refuses at load. The
+ * member, an unknown member, an unknown action class, an empty floor, a
+ * non-boolean `cross_domain` or a second classification for one type and
+ * resource refuses at load. The
  * payments resource resolves to the possibly env-overridden
  * CANONICAL_RESOURCE, like the ceiling.
  */
@@ -2733,9 +2751,12 @@ export function loadApprovalFloor(
   const classification = asArray(file, root.classification, "classification").map((rawEntry, i) => {
     const ctx = `classification[${i}]`;
     const e = asObject(file, rawEntry, ctx);
-    only(e, ["type", "resource", "actions"], ctx);
+    only(e, ["type", "resource", "cross_domain", "actions"], ctx);
     const type = reqString(file, e, "type", ctx);
     const resource = remap(reqString(file, e, "resource", ctx));
+    if (Object.hasOwn(e, "cross_domain") && typeof e.cross_domain !== "boolean") {
+      throw new ConfigError(file, `${ctx}.cross_domain must be a boolean`);
+    }
     const key = JSON.stringify([type, resource]);
     if (seen.has(key))
       throw new ConfigError(file, `${ctx} classifies ${type} at ${resource} a second time`);
@@ -2747,7 +2768,12 @@ export function loadApprovalFloor(
       if (!isClass(cls))
         throw new ConfigError(file, `${ctx}.actions.${action} is not a known action class`);
     }
-    return { type, resource, actions: actions as Record<string, ApprovalFloorActionClass> };
+    return {
+      type,
+      resource,
+      ...(typeof e.cross_domain === "boolean" ? { cross_domain: e.cross_domain } : {}),
+      actions: actions as Record<string, ApprovalFloorActionClass>,
+    };
   });
   return {
     policy_id: reqString(file, root, "policy_id", "approval-floor"),

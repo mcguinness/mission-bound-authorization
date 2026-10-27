@@ -63,6 +63,7 @@ export {
 export { createPdpRefusalRecorder, type PdpRefusalRecord, type PdpRefusalRecorderConfig } from "./refusal-record.js";
 export {
   type MissionStateObservation,
+  type MissionStatusVerifyOptions,
   parseStateObservation,
   type ParsedStateObservation,
   STATE_OBSERVATION_MODES,
@@ -71,10 +72,20 @@ export {
   type VerifiedMissionStatus,
 } from "./state-observation.js";
 export {
+  auditKeys,
+  excludingCompromised,
+  HISTORICAL_KEY_SET_TYP,
+  type HistoricalKey,
+  HistoricalKeySetHolder,
+  verifyHistoricalKeySet,
+} from "./historical-key-set.js";
+export {
   declaredStatusKeys,
   refreshingStatusKeys,
   MISSION_STATUS_SKEW_SECONDS,
   MISSION_STATUS_STATES,
+  type MissionStatusIssuer,
+  missionStatusIssuer,
   type MissionStatusFailure,
   type MissionStatusResolution,
   MissionStatusResolver,

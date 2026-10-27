@@ -62,6 +62,7 @@ import { type KeyObject, randomUUID } from "node:crypto";
 import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey, SignJWT } from "jose";
 import { deriveJoinDelegation, type KernelDelegationPolicy } from "./mas-join.js";
 import type { AuthorityEntry, MissionView } from "./policy-view.js";
+import { excludingCompromised, HistoricalKeySetHolder } from "./historical-key-set.js";
 import { verifyMissionStatusResponse } from "./state-observation.js";
 
 /** @spec status#mission-status-errors: the states a Mission Status Response reports. */
@@ -177,17 +178,111 @@ export function declaredStatusKeys(jwks: JSONWebKeySet, kids: readonly string[])
 export function refreshingStatusKeys(
   jwksUri: string,
   kids: readonly string[],
-  opts: { algs: readonly string[]; now?: () => number; fetch?: IssuerKeysFetch },
-): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void } {
+  opts: {
+    algs: readonly string[];
+    now?: () => number;
+    fetch?: IssuerKeysFetch;
+    /**
+     * @spec status#historical-key-set (#831 B3): the issuer's
+     * `mission_historical_jwks_uri`, from its validated metadata. With it,
+     * `keys` refuses a key the held set lists, and `historical` holds the set
+     * for audit verification.
+     */
+    historical?: { uri: string; issuer: string };
+  },
+): { keys: JWTVerifyGetKey; trust: (kids: readonly string[]) => void; historical?: HistoricalKeySetHolder } {
   const held = new IssuerKeys({
     jwksUri,
     roles: { status: { kids, algs: opts.algs } },
     ...(opts.now ? { now: opts.now } : {}),
     ...(opts.fetch ? { fetch: opts.fetch } : {}),
   });
+  const current = held.resolver("status") as unknown as JWTVerifyGetKey;
+  const trust = (next: readonly string[]) => held.setRoles({ status: { kids: next, algs: opts.algs } });
+  if (!opts.historical) return { keys: current, trust };
+  // The set verifies under the configured Status keys themselves, never under
+  // the resolver that consults it.
+  const historical = new HistoricalKeySetHolder({
+    uri: opts.historical.uri,
+    issuer: opts.historical.issuer,
+    statusKeys: current,
+    algs: opts.algs,
+    ...(opts.now ? { now: opts.now } : {}),
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+  });
+  return { keys: excludingCompromised(current, historical), trust, historical };
+}
+
+/** One Mission issuer's Status operation, as a consumer configures it ({@link missionStatusIssuer}). */
+export interface MissionStatusIssuer {
+  /** The issuer's validated metadata document. */
+  metadata: Record<string, unknown>;
+  /** Its advertised `mission_status_endpoint`. */
+  statusEndpoint: string;
+  /** The declared Status keys at its `jwks_uri`, and the means to replace the declared `kid`s ({@link refreshingStatusKeys}). */
+  keys: JWTVerifyGetKey;
+  trust: (kids: readonly string[]) => void;
+  /** Its historical key set, held for audit verification, when its metadata advertises one. */
+  historical?: HistoricalKeySetHolder;
+}
+
+/**
+ * @spec status#mission-status (#1724 D5): a consumer resolves the Mission
+ * Status endpoint "from the expected issuer, which comes from its own issuer
+ * trust or configuration, never from the response under verification". The
+ * issuer is `expected`; its metadata is validated as RFC 8414 Section 3.3
+ * requires, its `issuer` equal to the identifier the consumer looked up; the
+ * endpoint is the one that metadata advertises; and responses verify only
+ * under the declared Status `kids` at that metadata's `jwks_uri`.
+ *
+ * `location` is where the consumer's configuration says the issuer's metadata
+ * is served: the issuer identifier itself unless the deployment places it
+ * elsewhere (the MAS pilot names its MAS by URL). `read` fetches one JSON
+ * document. Metadata for another issuer, or advertising no
+ * `mission_status_endpoint` or no `jwks_uri`, is refused, naming why.
+ *
+ * @spec status#historical-key-set (#831 B3, D901): where the validated
+ * metadata advertises `mission_historical_jwks_uri`, `keys` refuses a key the
+ * set it holds lists, though the cached `jwks_uri` still carries it; a member
+ * that is present but not a URL is refused rather than ignored.
+ */
+export async function missionStatusIssuer(
+  expected: string,
+  opts: {
+    read: (url: string) => Promise<unknown>;
+    location?: string;
+    kids: readonly string[];
+    algs: readonly string[];
+    now?: () => number;
+    fetch?: IssuerKeysFetch;
+  },
+): Promise<MissionStatusIssuer> {
+  const at = (opts.location ?? expected).replace(/\/$/, "");
+  const metadata = await opts.read(`${at}/.well-known/openid-configuration`);
+  if (!isRecord(metadata) || metadata.issuer !== expected) {
+    const named = isRecord(metadata) ? String(metadata.issuer) : "nothing";
+    throw new Error(`the issuer metadata at ${at} names ${named}, not the expected issuer ${expected}`);
+  }
+  if (typeof metadata.mission_status_endpoint !== "string") {
+    throw new Error(`the issuer at ${at} advertises no mission_status_endpoint`);
+  }
+  if (typeof metadata.jwks_uri !== "string") throw new Error(`the issuer at ${at} advertises no jwks_uri`);
+  const historicalUri = metadata.mission_historical_jwks_uri;
+  if (historicalUri !== undefined && (typeof historicalUri !== "string" || !URL.canParse(historicalUri))) {
+    throw new Error(`the issuer at ${at} advertises a mission_historical_jwks_uri that is not a URL`);
+  }
+  const { keys, trust, historical } = refreshingStatusKeys(metadata.jwks_uri, opts.kids, {
+    algs: opts.algs,
+    ...(opts.now ? { now: opts.now } : {}),
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+    ...(historicalUri !== undefined ? { historical: { uri: historicalUri, issuer: expected } } : {}),
+  });
   return {
-    keys: held.resolver("status") as unknown as JWTVerifyGetKey,
-    trust: (next) => held.setRoles({ status: { kids: next, algs: opts.algs } }),
+    metadata,
+    statusEndpoint: metadata.mission_status_endpoint,
+    keys,
+    trust,
+    ...(historical ? { historical } : {}),
   };
 }
 

@@ -41,8 +41,8 @@ import {
   type JoinAssertionPolicy,
   type MissionView,
   MissionStatusResolver,
+  missionStatusIssuer,
   privateKeyJwtClient,
-  refreshingStatusKeys,
   type ResolvedMission,
 } from "@mission/pdp";
 import { importJWK, type JWK } from "jose";
@@ -151,23 +151,32 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     const answer = fetch(url, startup ? { signal: startup.signal } : {}).then((r) => r.json());
     return startup ? startup.step(answer) : answer;
   };
-  // Configured from what the MAS publishes, over HTTP.
-  const metadata = (await read(`${base}/.well-known/openid-configuration`)) as {
+  const resolverNow = opts.resolverNow ?? opts.now;
+  // Configured from what the MAS publishes, over HTTP (@spec
+  // status#mission-status, #1724 D5): the configured Mission issuer's
+  // metadata, read at the MAS's URL and refused unless it names that issuer;
+  // the endpoint it advertises, never a path guessed from its URL (#1407);
+  // and, @spec #831 C2, its Status keys held through its jwks_uri: the
+  // trusted Status kids only, refreshed within the freshness the MAS
+  // declares, so a Status key rotation is followed without a restart.
+  // @spec status#historical-key-set (#831 B3, D901): where the validated
+  // metadata advertises a historical key set, a key it lists never verifies a
+  // Status response the pilot relies on now, though a cached jwks_uri still
+  // carries it (`missionStatusIssuer` passes the set's URI to the keys).
+  const statusIssuer = await missionStatusIssuer(config.mission_issuer, {
+    read,
+    location: base,
+    kids: trustedKids(TOPOLOGY.keys.asStatus),
+    algs: [TOPOLOGY.keys.asStatus.alg],
+    ...(resolverNow ? { now: () => resolverNow().getTime() } : {}),
+  });
+  const metadata = statusIssuer.metadata as {
     issuer: string;
-    jwks_uri: string;
     mission_max_stale_seconds: number;
-    mission_status_endpoint?: unknown;
     mission_join_assertion_endpoint?: unknown;
     mission_status_signing_alg_values_supported?: unknown;
   };
-  if (metadata.issuer !== config.mission_issuer) {
-    throw new Error(`the MAS at ${base} is issuer ${metadata.issuer}, not the configured Mission issuer ${config.mission_issuer}`);
-  }
-  // @spec status#mission-status, status#as-metadata (#1407): the endpoint the
-  // MAS advertises, never a path guessed from its URL.
-  if (typeof metadata.mission_status_endpoint !== "string") {
-    throw new Error(`the MAS at ${base} advertises no mission_status_endpoint`);
-  }
+  const { keys: statusKeys, trust: trustStatusKids } = statusIssuer;
   const pdpKey = opts.mas.pdpKey;
   if (typeof pdpKey.kid !== "string" || pdpKey.d === undefined) throw new Error("the PDP's key is not a private JWK with a kid");
   const client = privateKeyJwtClient({
@@ -177,14 +186,6 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
     kid: pdpKey.kid,
     ...(pdpKey.alg ? { alg: pdpKey.alg } : {}),
     ...((opts.resolverNow ?? opts.now) ? { now: (opts.resolverNow ?? opts.now) as () => Date } : {}),
-  });
-  const resolverNow = opts.resolverNow ?? opts.now;
-  // @spec #831 C2: the MAS's Status keys, held through its jwks_uri: the
-  // trusted Status kids only, refreshed within the freshness the MAS
-  // declares, so a Status key rotation is followed without a restart.
-  const { keys: statusKeys, trust: trustStatusKids } = refreshingStatusKeys(metadata.jwks_uri, trustedKids(TOPOLOGY.keys.asStatus), {
-    algs: [TOPOLOGY.keys.asStatus.alg],
-    ...(resolverNow ? { now: () => resolverNow().getTime() } : {}),
   });
   // @spec authority-server#join-assertion-request, #join-assertion-pdp
   // (#1454): where the configuration declares a Join Assertion path, the PEP
@@ -230,7 +231,7 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   }
   const resolver = new MissionStatusResolver({
     issuer: metadata.issuer,
-    statusEndpoint: opts.statusEndpoint ?? metadata.mission_status_endpoint,
+    statusEndpoint: opts.statusEndpoint ?? statusIssuer.statusEndpoint,
     audience: CANONICAL_RESOURCE,
     keys: statusKeys,
     client,

@@ -24,12 +24,27 @@ recorded once (simulated; that composition has no Approver identity
 provider) and never at an approval, so it ages out of the floor until the
 demo server's `POST /bff/approver/login` records a new one.
 
+Each classification also states `cross_domain`: whether authority at that
+resource is served by another trust domain's authorization server. The
+ledger resource (`http://localhost:4406/mcp`) is cross-domain, since its path
+goes through the RAS (`https://ras.ledgercloud.test`) with its own client
+registration and policy, grant redemption and RAS-issued token. With
+`progressive.json`'s external-communication actions, this classification is
+the published mapping for Mission Template's prohibited classes (`@spec
+mission-template#prohibited-classes`, #1710, D877). `policy.json`'s
+`dispatch_prohibited_actions` covers every action the mapping makes
+irreversible, external-commitment, privileged-administration,
+external-communication or cross-domain, and a unit check
+(`dispatch-prohibited-coverage.test.ts`) fails on a gap. An absent
+`cross_domain` reads as `false`.
+
 - **Owner.** The deployment's security owner owns the floors; each Resource
   Server's operator owns its actions' classes, which follow that server's
   operation definitions.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown members, duplicate member names, an unknown action class, an empty
-  floor and a second classification for one type and resource. An admitted
+  floor, a non-boolean `cross_domain` and a second classification for one
+  type and resource. An admitted
   action the classification does not name refuses at the approval decision.
   Where the AS selects Progressive ceiling drawdown, an authority ceiling the
   Approver consents is classified with the derived set, and the AS does not

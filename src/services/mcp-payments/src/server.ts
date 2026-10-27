@@ -511,10 +511,14 @@ export interface WriteToolResult {
   next_action?: "retry" | "none";
   insufficient_authorization?: InsufficientAuthorization;
   /**
-   * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4):
-   * present only when a keyed write's effect committed and its `completed`
-   * Execution Evidence could not be recorded. Never a refusal: the effect
-   * stands. Its result is withheld; a retry under the same key retrieves it.
+   * @spec authzen#execution-evidence-requirement (#1640, D770 ruling 4),
+   * runtime-evidence#execution-evidence-object (#1715): a disposition record
+   * that could not be recorded. With no `refusal_reason`, a keyed write's
+   * effect committed and its `completed` Execution Evidence is missing: the
+   * effect stands, its result is withheld, and a retry under the same key
+   * retrieves it. Beside a `refusal_reason`, nothing executed and the
+   * refusal's `suppressed` record is missing (`emission_failed`); the
+   * operator is alerted.
    */
   gap?: DispositionGap;
   /**
@@ -639,10 +643,11 @@ export interface McpServerDeps {
    */
   writeReservations?: WriteReservationStore;
   /**
-   * @spec runtime-evidence#execution-evidence-object (#821): where an
-   * evidence emission failure on the transaction tier is alerted, the
-   * deployment's declared operator sink. Absent, the caller's `gap` is the
-   * only report.
+   * @spec runtime-evidence#execution-evidence-object (#821, #1715): where an
+   * Execution Evidence record that could not be written is alerted, the
+   * deployment's declared operator sink: a refusal's `suppressed` record on
+   * any dispatch path, and the transaction tier's `completed` record. Absent,
+   * the caller's `gap` is the only report.
    */
   alerts?: OperatorAlertSink;
 }
@@ -1451,6 +1456,8 @@ export class McpPaymentsServer {
     refusal_reason?: string;
     insufficient_authorization?: InsufficientAuthorization;
     evidence_gap?: DecisionEvidenceGap;
+    /** @spec runtime-evidence#execution-evidence-object (#1715): beside a refusal, its `suppressed` record is missing. */
+    gap?: DispositionGap;
   }> {
     if (token.txn) return { ok: false, refusal_reason: "txn_action_mismatch" };
     // @spec runtime#idempotency (#918): a keyed reversible write's effect is
@@ -1469,13 +1476,13 @@ export class McpPaymentsServer {
     args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted) {
-      return {
+      return this.notPermitted(res, {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
         ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
-      };
+      });
     }
     // @spec runtime-evidence#execution-evidence-object (#786): the permit's
     // own disposition context, built by the PEP after its Decision Evidence
@@ -1487,8 +1494,12 @@ export class McpPaymentsServer {
     // crossing releases no external effect and still refuses a permit bound
     // to another phase, and it refuses an expired permit before it reads
     // anything.
+    //
+    // @spec runtime-evidence#execution-evidence-object (#1715): every refusal
+    // from here on is a suppressed disposition, and one whose record could
+    // not be written is surfaced ({@link surfaced}), never dropped.
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (!admitted.ok) return this.surfaced(attempt, admitted.disposition, { ok: false, refusal_reason: admitted.error });
     beforeReverify?.();
     const capability = await this.deps.pep.reverifyCapability(
       res.capabilitySnapshot,
@@ -1496,7 +1507,7 @@ export class McpPaymentsServer {
       this.deps.pep.toolAction(tool)?.action ?? tool,
       attempt,
     );
-    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    if (!capability.ok) return this.surfaced(attempt, capability.disposition, { ok: false, refusal_reason: capability.error });
     let listDigest: string | undefined;
     if (res.listEffective) {
       // @spec runtime#read-binding: reverify the bound list read's
@@ -1508,11 +1519,10 @@ export class McpPaymentsServer {
         // nothing, so the PEP cannot confirm the parameters it is about to
         // use are the ones authorized: the same parameter-binding failure,
         // refused rather than executed on an unbound scope.
-        await this.deps.pep.suppressExecution(attempt, "parameter_mismatch");
-        return { ok: false, refusal_reason: "parameter_mismatch" };
+        return this.refuseSuppressed(attempt, "parameter_mismatch", { refusal_reason: "parameter_mismatch" });
       }
       const bound = await this.deps.pep.reverifyList(res.listEffective, digest, token, attempt);
-      if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+      if (!bound.ok) return this.surfaced(attempt, bound.disposition, { ok: false, refusal_reason: bound.error });
       listDigest = bound.effectiveParameterDigest;
     }
     // The whole seam again after the awaited capability and parameter reads,
@@ -1520,7 +1530,7 @@ export class McpPaymentsServer {
     // Profile can stop placing this crossing while one of them is pending, so
     // the admission call above is not the last word on either.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!live.ok) return { ok: false, refusal_reason: live.error };
+    if (!live.ok) return this.surfaced(attempt, live.disposition, { ok: false, refusal_reason: live.error });
     const result = this.execute(tool, args, res.list_vendor_scope, res.listEffective?.members?.map((m) => m.id));
     // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
     // read's completed disposition, recorded before its result is returned.
@@ -1539,11 +1549,13 @@ export class McpPaymentsServer {
    * suppression, recorded where the evidence path still accepts one, and the
    * caller receives no protected data. Only an effect that already committed
    * (a keyed write's local transaction, the transaction tier's connector) is
-   * reported as a gap instead, and even then without its result.
+   * reported as a gap instead, and even then without its result. A
+   * suppression that cannot be recorded either is surfaced (#1715).
    */
-  private async withholdUnevidenced(attempt: ExecutionAttempt): Promise<{ ok: false; refusal_reason: string }> {
-    await this.deps.pep.suppressExecution(attempt, EVIDENCE_UNAVAILABLE_ERROR);
-    return { ok: false, refusal_reason: "evidence_unavailable" };
+  private async withholdUnevidenced(
+    attempt: ExecutionAttempt,
+  ): Promise<{ ok: false; refusal_reason: string; gap?: "emission_failed" }> {
+    return this.refuseSuppressed(attempt, EVIDENCE_UNAVAILABLE_ERROR, { refusal_reason: "evidence_unavailable" });
   }
 
   /** @spec runtime#idempotency (#918): the Operation Profile keys this tool as a reversible write. */
@@ -1578,13 +1590,13 @@ export class McpPaymentsServer {
     args = intake.args;
     const res = await this.deps.pep.enforce(tool, args, token, undefined, signals);
     if (!res.permitted || !res.effective || !res.decision) {
-      return {
+      return this.notPermitted(res, {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
         ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
-      };
+      });
     }
     if (this.isKeyedReversibleWrite(tool)) {
       return this.callKeyedReversibleWrite(tool, token, res, beforeReverify, failpoints);
@@ -1592,8 +1604,10 @@ export class McpPaymentsServer {
     const attempt = res.attempt;
     if (!attempt) return { ok: false, refusal_reason: "state_unavailable" };
     // Admission, ahead of every awaited read (@spec runtime#compound-actions).
+    // Each refusal from here on surfaces a suppressed record it could not
+    // write (#1715).
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (!admitted.ok) return this.surfaced(attempt, admitted.disposition, { ok: false, refusal_reason: admitted.error });
     beforeReverify?.();
     await failpoints?.atReverification?.();
     // A moved catalog snapshot is its own error, not a parameter mismatch:
@@ -1604,14 +1618,14 @@ export class McpPaymentsServer {
       res.effective.action,
       attempt,
     );
-    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    if (!capability.ok) return this.surfaced(attempt, capability.disposition, { ok: false, refusal_reason: capability.error });
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
-    if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+    if (!bound.ok) return this.surfaced(attempt, bound.disposition, { ok: false, refusal_reason: bound.error });
     // The whole seam again immediately before release: both the clock and the
     // Operation Profile can have moved during the reads above.
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!live.ok) return { ok: false, refusal_reason: live.error };
+    if (!live.ok) return this.surfaced(attempt, live.disposition, { ok: false, refusal_reason: live.error });
     // @spec runtime#single-use-identifiers (#1080, D317): a single-use permit
     // is redeemed last, after every check that could refuse it, so an earlier
     // refusal never burns it; redemption and release are synchronous, with no
@@ -1675,8 +1689,7 @@ export class McpPaymentsServer {
 
   /** A single-use refusal, through the one post-permit writer: nothing executes. */
   private async refuseSingleUse(attempt: ExecutionAttempt, error: string): Promise<WriteToolResult> {
-    await this.deps.pep.suppressExecution(attempt, error);
-    return { ok: false, refusal_reason: singleUseRefusalReason(error) };
+    return this.refuseSuppressed(attempt, error, { refusal_reason: singleUseRefusalReason(error) });
   }
 
   /**
@@ -1757,8 +1770,7 @@ export class McpPaymentsServer {
    * never retries the effect on its own.
    */
   private async reservationUnavailable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
-    await this.deps.pep.suppressExecution(attempt, "consumption_unavailable");
-    return { ok: false, refusal_reason: "consumption_unavailable" };
+    return this.refuseSuppressed(attempt, "consumption_unavailable", { refusal_reason: "consumption_unavailable" });
   }
 
   /**
@@ -1770,8 +1782,10 @@ export class McpPaymentsServer {
    * `consumption_unavailable`. Retrying the same request cannot succeed.
    */
   private async actorUnkeyable(attempt: ExecutionAttempt): Promise<WriteToolResult> {
-    await this.deps.pep.suppressExecution(attempt, REVERSIBLE_WRITE_REFUSAL_ERRORS.actor_unkeyable as string);
-    return { ok: false, refusal_reason: "actor_unkeyable", next_action: "none" };
+    return this.refuseSuppressed(attempt, REVERSIBLE_WRITE_REFUSAL_ERRORS.actor_unkeyable as string, {
+      refusal_reason: "actor_unkeyable",
+      next_action: "none" as const,
+    });
   }
 
   /**
@@ -1809,6 +1823,14 @@ export class McpPaymentsServer {
    * written refuses `consumption_unavailable`; neither discloses the record.
    * A later retrieval takes a fresh Decision. Retrieval still admits no
    * operation and runs no effect.
+   *
+   * @spec runtime-evidence#execution-evidence-object, authzen#execution-evidence-requirement
+   * (#1715, D770 ruling 4): a disposition record that could not be written is
+   * surfaced on every return. A refusal stands, with `gap: "emission_failed"`
+   * beside it and one operator alert. A retained result is never disclosed
+   * without this attempt's record: the release is refused
+   * `evidence_unavailable`, `next_action: retry`, with the same gap and
+   * alert, and a later retrieval under its own permit can still disclose it.
    */
   private async releaseRetained(
     attempt: ExecutionAttempt,
@@ -1818,7 +1840,7 @@ export class McpPaymentsServer {
     failpoints: ReversibleWriteFailpoints | undefined,
   ): Promise<WriteToolResult> {
     const current = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!current.ok) return { ok: false, refusal_reason: current.error };
+    if (!current.ok) return this.surfaced(attempt, current.disposition, { ok: false, refusal_reason: current.error });
     if (failpoints?.atRetrieval) await failpoints.atRetrieval();
     if (singleUse) {
       let first: boolean;
@@ -1835,14 +1857,34 @@ export class McpPaymentsServer {
       if (!first) return this.refuseSingleUse(attempt, "permit_consumed");
     }
     const conflict = retained.operationIdentity !== scope.operationIdentity;
-    await this.deps.pep.suppressExecution(attempt, conflict ? "operation_identity_conflict" : "operation_already_claimed");
+    const disposition = await this.deps.pep.suppressExecution(
+      attempt,
+      conflict ? "operation_identity_conflict" : "operation_already_claimed",
+    );
     const atRelease = this.deps.pep.permitUseFailure(attempt);
-    if (atRelease !== undefined) return { ok: false, refusal_reason: atRelease };
-    if (conflict) return { ok: false, refusal_reason: "operation_identity_conflict", next_action: "none" };
+    if (atRelease !== undefined) return this.surfaced(attempt, disposition, { ok: false, refusal_reason: atRelease });
+    if (conflict) {
+      return this.surfaced<WriteToolResult>(attempt, disposition, {
+        ok: false,
+        refusal_reason: "operation_identity_conflict",
+        next_action: "none",
+      });
+    }
     if (retained.state === "reserved") {
       // An outcome this PEP cannot establish: never executed again, and only
       // reconciliation resolves it.
-      return { ok: false, refusal_reason: "duplicate_suppressed", next_action: "retry" };
+      return this.surfaced<WriteToolResult>(attempt, disposition, {
+        ok: false,
+        refusal_reason: "duplicate_suppressed",
+        next_action: "retry",
+      });
+    }
+    if (!disposition.recorded) {
+      return this.surfaced<WriteToolResult>(attempt, disposition, {
+        ok: false,
+        refusal_reason: "evidence_unavailable",
+        next_action: "retry",
+      });
     }
     return { ok: true, deduped: true, result: retained.result };
   }
@@ -1877,8 +1919,10 @@ export class McpPaymentsServer {
     if (!attempt || !res.effective || !res.decision) return { ok: false, refusal_reason: "state_unavailable" };
     const effect = REVERSIBLE_WRITE_EFFECTS[tool];
     if (!effect) throw new Error(`no reversible effect is declared for tool ${tool}`);
+    // Each refusal from here on surfaces a suppressed record it could not
+    // write (#1715).
     const admitted = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!admitted.ok) return { ok: false, refusal_reason: admitted.error };
+    if (!admitted.ok) return this.surfaced(attempt, admitted.disposition, { ok: false, refusal_reason: admitted.error });
     const singleUse = singleUseCondition(attempt, res.decision);
     if (singleUse && "error" in singleUse) return this.refuseSingleUse(attempt, singleUse.error);
     if (res.writeReservationUnkeyable) return this.actorUnkeyable(attempt);
@@ -1892,12 +1936,12 @@ export class McpPaymentsServer {
       res.effective.action,
       attempt,
     );
-    if (!capability.ok) return { ok: false, refusal_reason: capability.error };
+    if (!capability.ok) return this.surfaced(attempt, capability.disposition, { ok: false, refusal_reason: capability.error });
     const digest = permitConditions(res.decision)?.parameter_digest as string;
     const bound = await this.deps.pep.reverify(res.effective, digest, token, attempt);
-    if (!bound.ok) return { ok: false, refusal_reason: bound.error };
+    if (!bound.ok) return this.surfaced(attempt, bound.disposition, { ok: false, refusal_reason: bound.error });
     const live = await this.deps.pep.verifyPermitAtUse(attempt);
-    if (!live.ok) return { ok: false, refusal_reason: live.error };
+    if (!live.ok) return this.surfaced(attempt, live.disposition, { ok: false, refusal_reason: live.error });
 
     // One local transaction, and no await from here to its commit.
     const effective = res.effective;
@@ -1939,11 +1983,10 @@ export class McpPaymentsServer {
     }
     if (outcome.kind === "consumed") return this.refuseSingleUse(attempt, "permit_consumed");
     if (outcome.kind === "refused") {
-      await this.deps.pep.suppressExecution(
-        attempt,
-        REVERSIBLE_WRITE_REFUSAL_ERRORS[outcome.refusal] ?? "consumption_unavailable",
-      );
-      return { ok: false, refusal_reason: outcome.refusal, next_action: "none" };
+      return this.refuseSuppressed(attempt, REVERSIBLE_WRITE_REFUSAL_ERRORS[outcome.refusal] ?? "consumption_unavailable", {
+        refusal_reason: outcome.refusal,
+        next_action: "none" as const,
+      });
     }
     failpoints?.afterCommit?.();
     // @spec authzen#execution-evidence-requirement (#1640, D744 ruling 2): the
@@ -1997,7 +2040,7 @@ export class McpPaymentsServer {
     let derivedApproval: ActionApprovalInput | undefined;
     let consumedTxn: string | undefined;
     if (token.txn) {
-      const verified = this.verifyChallengedOperation(token.txn, tool, args);
+      const verified = await this.verifyChallengedOperation(token.txn, tool, args);
       if (!verified.ok) return { ok: false, refusal_reason: verified.refusal_reason };
       derivedApproval = verified.approval;
       consumedTxn = token.txn.txn;
@@ -2009,7 +2052,7 @@ export class McpPaymentsServer {
     // token is matched against THAT record, never against its own assertions.
     if (res.challenge) this.txnPending.put(res.challenge.pending);
     if (!res.permitted || !res.effective || !res.decision || !res.resolvedMission) {
-      return {
+      return this.notPermitted(res, {
         ok: false,
         ...(res.denial_reason ? { denial_reason: res.denial_reason } : {}),
         ...(res.refusal_reason ? { refusal_reason: res.refusal_reason } : {}),
@@ -2022,7 +2065,7 @@ export class McpPaymentsServer {
           : {}),
         ...(res.insufficient_authorization ? { insufficient_authorization: res.insufficient_authorization } : {}),
         ...(res.evidence_gap ? { evidence_gap: res.evidence_gap } : {}),
-      };
+      });
     }
     // @spec authority-server#mission-join (#557) — the governing Mission for
     // everything past the permit, never `token.mission` directly: on the
@@ -2394,35 +2437,46 @@ export class McpPaymentsServer {
   }
 
   /**
-   * @spec runtime-evidence#execution-evidence-object (#786, #821): a
-   * transaction-tier refusal after the permit, disposed through the one
+   * @spec runtime-evidence#execution-evidence-object (#786, #821, #1715): a
+   * refusal after the permit, on any dispatch path, disposed through the one
    * post-permit writer. A suppressed record that could not be written is
    * surfaced, never dropped ({@link surfaced}).
    */
-  private async refuseSuppressed(
+  private async refuseSuppressed<R extends { refusal_reason: string }>(
     attempt: ExecutionAttempt,
     error: string,
-    refusal: { refusal_reason: string },
-  ): Promise<TransactionToolResult> {
+    refusal: R,
+  ): Promise<{ ok: false } & R & { gap?: "emission_failed" }> {
     const disposition = await this.deps.pep.suppressExecution(attempt, error);
-    return this.surfaced(attempt, disposition, { ok: false, ...refusal });
+    return this.surfaced(attempt, disposition, { ok: false as const, ...refusal });
   }
 
   /**
-   * @spec runtime-evidence#execution-evidence-object (#821): a refusal whose
-   * suppressed disposition could not be recorded says so. The refusal stands
-   * and nothing executed; the caller's result also carries
+   * @spec runtime-evidence#execution-evidence-object (#821, #1715): a refusal
+   * whose suppressed disposition could not be recorded says so. The refusal
+   * stands and nothing executed; the caller's result also carries
    * `gap: "emission_failed"`, and the operator is alerted, as for a completed
    * record that could not be written after its effect.
    */
-  private surfaced(
+  private surfaced<T extends { ok: boolean }>(
     attempt: ExecutionAttempt,
     disposition: SuppressOutcome,
-    result: TransactionToolResult,
-  ): TransactionToolResult {
+    result: T,
+  ): T & { gap?: "emission_failed" } {
     if (disposition.recorded) return result;
     this.alertUnrecorded(attempt, "suppressed_disposition_unrecorded");
     return { ...result, gap: "emission_failed" };
+  }
+
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#786, #1715): a request
+   * enforcement did not permit. Where the PEP refused it after the permit
+   * (an unrecognized condition, a dependency not established, an obligation
+   * not fulfilled), the refusal's suppressed record is surfaced like any
+   * other ({@link surfaced}); every other non-permit is returned as is.
+   */
+  private notPermitted<T extends { ok: boolean }>(res: EnforceResult, result: T): T & { gap?: "emission_failed" } {
+    return res.suppressed ? this.surfaced(res.suppressed.attempt, res.suppressed.disposition, result) : result;
   }
 
   /** One operator alert for a disposition record that could not be written: identifiers and a fixed cause only. */
@@ -2448,17 +2502,17 @@ export class McpPaymentsServer {
    * operation's is refused. The digest is recomputed from authoritative store
    * state, never read off the token.
    */
-  private verifyChallengedOperation(
+  private async verifyChallengedOperation(
     credential: TxnCredential,
     tool: string,
     args: Record<string, unknown>,
-  ): { ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string } {
+  ): Promise<{ ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string }> {
     const pending = this.txnPending.get(CANONICAL_RESOURCE, credential.txn);
     if (!pending) return { ok: false, refusal_reason: "txn_unknown" };
     if (TOOL_ACTIONS[tool]?.action !== pending.action) {
       return { ok: false, refusal_reason: "txn_action_mismatch" };
     }
-    const recomputed = this.recomputeParameterDigest(tool, args);
+    const recomputed = await this.recomputeParameterDigest(tool, args, pending.mission);
     if (
       recomputed === undefined ||
       recomputed !== pending.parameterDigest ||
@@ -2504,10 +2558,22 @@ export class McpPaymentsServer {
    * @spec runtime (parameter binding) — recompute the operation's digest from
    * authoritative store state, exactly as the enforcement path does. The token
    * is matched against THIS value, never against a digest it supplies.
+   *
+   * @spec runtime#compound-actions, txn-authorization#offline-verification
+   * (#252, #1693, D889): a compensate crossing's form is the committed wire's
+   * reversal form, so it is rebuilt from the compensation link the PEP
+   * establishes again from its retained, verified evidence for the challenged
+   * Mission, and from that wire's ledger record; never the invoice form, and
+   * never the vendor the invoice names now.
    */
-  private recomputeParameterDigest(tool: string, args: Record<string, unknown>): string | undefined {
+  private async recomputeParameterDigest(
+    tool: string,
+    args: Record<string, unknown>,
+    mission: { id: string; issuer: string },
+  ): Promise<string | undefined> {
     const mapping = TOOL_ACTIONS[tool];
     if (!mapping?.needsInvoice) return undefined;
+    if (mapping.compensates) return await this.deps.pep.compensationParameterDigest(tool, args, mission);
     // @spec resource-access#resource-matching (#1276): the operation target
     // the enforcement path establishes, from the same trusted contract and
     // the same validated arguments.
