@@ -611,8 +611,8 @@ endpoint's `revoke` is enabled. Every other one is off, and a request for it
 gets the standard refusal its path already uses. With no `capabilities` set,
 the assembly is the full reference provider: every capability except the
 opt-in ones (`OPT_IN_PROVIDER_CAPABILITIES`, today `device-authorization`,
-`delegation` and `deferred-approval`), which are on only where a capability
-set names them.
+`delegation`, `deferred-approval` and `standing-payment-dispatch`), which are
+on only where a capability set names them.
 
 How a capability is turned off:
 

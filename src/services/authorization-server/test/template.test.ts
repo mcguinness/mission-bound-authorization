@@ -880,6 +880,15 @@ describe("template ceiling entries meet the action grammar and the absolute-URI 
     }
   });
 
+  it("refuses an http or https resource carrying userinfo, naming the entry and the value (#1376)", () => {
+    const good = ceilEntry(["payments:invoice.read"]);
+    for (const resource of ["https://user@erp.example.com/invoices", "https://@erp.example.com/invoices"]) {
+      expect(() => mkTemplate({ ceiling: [good, { ...good, resource }] }), resource).toThrow(
+        `ceiling[1] has resource ${JSON.stringify(resource)}, which carries a userinfo subcomponent`,
+      );
+    }
+  });
+
   it("creates a template whose ceiling meets both rules (positive control)", () => {
     expect(mkTemplate({ ceiling: [ceilEntry(["payments:invoice.read", "payments:vendor.read"])] }).id).toBeDefined();
   });

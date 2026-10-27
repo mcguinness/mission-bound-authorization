@@ -30,6 +30,14 @@ export interface MissionIntent {
    *  derivations; the AS-established effective ceiling is
    *  `MissionRecord.derivation_limit`, never copied verbatim. */
   requested_derivation_limit?: number;
+  /**
+   * @spec metering#bounds (#813, ruling 2): the cumulative monetary cap of a
+   * standing-payment instance, `{amount, currency}`. Admitted only on a
+   * dispatch intake under the `standing-payment-dispatch` capability and on
+   * the successor expansions of such an instance; every other carrier refuses
+   * it as an unknown member.
+   */
+  max_budget?: { amount: string; currency: string };
 }
 
 /**

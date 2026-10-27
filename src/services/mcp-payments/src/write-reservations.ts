@@ -25,6 +25,13 @@
  * result takes that permit's single use with one `consumePermit` insert
  * before anything is disclosed (D342).
  *
+ * @spec runtime#evidence (pre-effect durability) (#821, D814): the same file
+ * also holds the transaction tier's pre-effect attempt records
+ * ({@link WriteReservationStore.recordAttempt}): this PEP's durable record,
+ * before a connector effect is released, of the operation identity needed to
+ * recover its disposition. They join no reservation transaction and change
+ * nothing about redemption, which stays the transaction tier's own.
+ *
  * The reversible effect itself, a payment schedule, lives in the same file,
  * so the effect and its completed reservation and result commit in ONE local
  * transaction: a reservation row exists exactly when its effect does, and an
@@ -44,7 +51,8 @@ import { type Database, openDurableStore, withTransaction } from "@mission/store
  * carries its result and its retention bound; a `reserved` row is a
  * reservation whose effect is not known to have committed (a two-phase,
  * non-local effect), which no tool here produces and which time never purges.
- * Version 2 adds the consumed single-use identifiers.
+ * Version 2 adds the consumed single-use identifiers, and version 3 the
+ * transaction tier's pre-effect attempt records.
  */
 const MIGRATIONS: readonly string[] = [
   `
@@ -95,6 +103,24 @@ CREATE TABLE consumed_permits (
   consumed_at_ms INTEGER NOT NULL,
   retain_until_ms INTEGER NOT NULL
 ) STRICT;
+`,
+  // Version 3 (#821, D814): the transaction tier's pre-effect attempt
+  // records. One row per attempt that took a single-use permit, written
+  // before its final checks and its effect, naming its operation and the
+  // Decision Evidence that authorized it. Never swept: a restarted process
+  // reads them back.
+  `
+CREATE TABLE execution_attempts (
+  execution_id TEXT PRIMARY KEY,
+  op_key TEXT NOT NULL,
+  evaluation_id TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  decision_evidence_id TEXT NOT NULL,
+  decision_evidence_digest TEXT NOT NULL,
+  attempted_at_ms INTEGER NOT NULL
+) STRICT;
+CREATE INDEX execution_attempts_evaluation ON execution_attempts (evaluation_id);
 `,
 ];
 
@@ -213,6 +239,44 @@ function fromRow(row: ReservationRow): WriteReservation {
     executionId: row.execution_id,
     ...(row.completed_at_ms !== null ? { completedAtMs: row.completed_at_ms } : {}),
     ...(row.retain_until_ms !== null ? { retainUntilMs: row.retain_until_ms } : {}),
+  };
+}
+
+/**
+ * @spec runtime#evidence (pre-effect durability) (#821): one transaction-tier
+ * attempt as recorded before its effect. Local operation identity, not an
+ * evidence record: it is unsigned and is never presented to a verifier.
+ */
+export interface ExecutionAttemptRecord {
+  executionId: string;
+  opKey: string;
+  evaluationId: string;
+  missionId: string;
+  action: string;
+  decisionEvidence: { evidenceId: string; digest: string };
+  attemptedAtMs: number;
+}
+
+interface AttemptRow {
+  execution_id: string;
+  op_key: string;
+  evaluation_id: string;
+  mission_id: string;
+  action: string;
+  decision_evidence_id: string;
+  decision_evidence_digest: string;
+  attempted_at_ms: number;
+}
+
+function fromAttemptRow(row: AttemptRow): ExecutionAttemptRecord {
+  return {
+    executionId: row.execution_id,
+    opKey: row.op_key,
+    evaluationId: row.evaluation_id,
+    missionId: row.mission_id,
+    action: row.action,
+    decisionEvidence: { evidenceId: row.decision_evidence_id, digest: row.decision_evidence_digest },
+    attemptedAtMs: row.attempted_at_ms,
   };
 }
 
@@ -514,6 +578,59 @@ export class WriteReservationStore {
    */
   sweepConsumedPermits(): number {
     return this.db.prepare("DELETE FROM consumed_permits WHERE retain_until_ms < ?").run(this.now().getTime()).changes;
+  }
+
+  /**
+   * @spec runtime#evidence (pre-effect durability) (#821, D814): record one
+   * transaction-tier attempt before its final checks and its effect: its execution
+   * identity, operation key and evaluation, and the retained Decision
+   * Evidence that authorizes it. One insert, committed before it returns, on
+   * this PEP's durable file. A store that cannot be written throws, and the
+   * caller refuses the action with no effect. An attempt identity already
+   * recorded is refused rather than overwritten.
+   */
+  recordAttempt(input: {
+    executionId: string;
+    opKey: string;
+    evaluationId: string;
+    missionId: string;
+    action: string;
+    decisionEvidence: { evidenceId: string; digest: string };
+  }): ExecutionAttemptRecord {
+    const attemptedAtMs = this.now().getTime();
+    this.db
+      .prepare(
+        `INSERT INTO execution_attempts
+           (execution_id, op_key, evaluation_id, mission_id, action, decision_evidence_id, decision_evidence_digest, attempted_at_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.executionId,
+        input.opKey,
+        input.evaluationId,
+        input.missionId,
+        input.action,
+        input.decisionEvidence.evidenceId,
+        input.decisionEvidence.digest,
+        attemptedAtMs,
+      );
+    return { ...input, attemptedAtMs };
+  }
+
+  /**
+   * The recorded attempt for one evaluation, read-only: the attempt that
+   * took that single-use permit, or `undefined`.
+   */
+  attemptFor(evaluationId: string): ExecutionAttemptRecord | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM execution_attempts WHERE evaluation_id = ? ORDER BY rowid LIMIT 1")
+      .get(evaluationId) as AttemptRow | undefined;
+    return row ? fromAttemptRow(row) : undefined;
+  }
+
+  /** Every recorded attempt, oldest first: what a restarted process reads back. */
+  attempts(): ExecutionAttemptRecord[] {
+    return (this.db.prepare("SELECT * FROM execution_attempts ORDER BY rowid").all() as AttemptRow[]).map(fromAttemptRow);
   }
 
   close(): void {

@@ -119,19 +119,46 @@ function punycodeEncode(input: readonly number[]): string {
   return output;
 }
 
+const HYPHEN = 0x2d;
+
 // An A-label (RFC 5890 section 2.3.2.1): "xn--" followed by the Punycode of a
-// U-label. This consumer checks that the label decodes, that the result holds
-// a non-ASCII code point (so it is an internationalized label), that it is in
-// NFC and lowercase-stable, and that it encodes back to the same label. It
-// does not apply the full IDNA2008 code point and context rules (RFC 5892),
-// which need Unicode property tables this package does not carry.
+// U-label. The caller passes the label in lower case: the ASCII form compares
+// case-insensitively (resource-access#entry-validation: "Letter case does not
+// make a recipient_domain invalid"), and RFC 5891 section 5.3 lowercases an
+// A-label before converting it. The decoded form is then checked exactly as
+// decoded, never case-folded or normalized into a valid one.
+//
+// These are the structural checks of RFC 5891 sections 4.2.3.1, 4.2.3.2, 5.3
+// and 5.4: the label decodes under RFC 3492; it encodes back to itself; the
+// decoded form holds a non-ASCII code point (so it is an internationalized
+// label), is in NFC, is in lower case, does not begin with a combining mark
+// (General_Category M), does not begin or end with a hyphen, and does not
+// have hyphens in both its third and fourth positions, counted in code points.
+//
+// They are not full IDNA2008 validity, which the draft's A-label requirement
+// is. Not implemented: the RFC 5892 code point classes (PVALID, CONTEXTJ,
+// CONTEXTO, DISALLOWED, UNASSIGNED), so a label holding a DISALLOWED or
+// unassigned code point passes; the contextual rules (RFC 5891 section
+// 4.2.3.3, RFC 5892 Appendix A); and the Bidi rule (RFC 5891 section 4.2.3.4,
+// RFC 5893). Each needs Unicode property tables this package does not carry.
+// The lower-case and combining-mark tests use the Unicode data of the
+// JavaScript engine that runs this code.
 function isALabel(lowerLabel: string): boolean {
-  const decoded = punycodeDecode(lowerLabel.slice(4));
+  const encoded = lowerLabel.slice(4);
+  // RFC 3492 decoding; undefined on a truncated integer, an overflow, a code
+  // point above U+10FFFF or a surrogate, never an exception.
+  const decoded = punycodeDecode(encoded);
   if (decoded === undefined || decoded.length === 0) return false;
+  if (punycodeEncode(decoded) !== encoded) return false;
   if (!decoded.some((c) => c >= 0x80)) return false;
   const uLabel = String.fromCodePoint(...decoded);
-  if (uLabel.normalize("NFC") !== uLabel || uLabel.toLowerCase() !== uLabel) return false;
-  return punycodeEncode(decoded) === lowerLabel.slice(4);
+  if (uLabel.normalize("NFC") !== uLabel) return false;
+  if (uLabel.toLowerCase() !== uLabel) return false;
+  if (/^\p{M}/u.test(uLabel)) return false;
+  // RFC 5891 section 4.2.3.1, on code point positions, not UTF-16 units.
+  if (decoded[0] === HYPHEN || decoded[decoded.length - 1] === HYPHEN) return false;
+  if (decoded[2] === HYPHEN && decoded[3] === HYPHEN) return false;
+  return true;
 }
 
 // LDH label: letters, digits and hyphen, not starting or ending with a hyphen,
@@ -148,6 +175,7 @@ export function isValidRecipientDomain(value: unknown): value is string {
   for (const label of value.split(".")) {
     // ASCII form only: a non-ASCII character fails the LDH test.
     if (!LDH_LABEL.test(label)) return false;
+    // The label is ASCII here, so lowering it changes letters A to Z only.
     const lower = label.toLowerCase();
     if (lower.startsWith("xn--") && !isALabel(lower)) return false;
   }

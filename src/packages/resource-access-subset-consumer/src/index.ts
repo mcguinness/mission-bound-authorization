@@ -7,13 +7,16 @@ export { CONSTRAINT_RULES, type ConstraintRule, isCurrencyCode } from "./constra
 export { compareDecimal, type DecimalValue, parseDecimal } from "./decimal.js";
 export { isValidRecipientDomain, isWithinDomain } from "./dns.js";
 export {
-  type ConfiguredContract,
   type ConsumerConfig,
+  type ContractDefinition,
   type ContractReference,
+  type CurrentContract,
   contractApprovalRefusal,
+  contractDefinition,
   ENTRY_TYPE,
   type ParsedEntry,
   type ParseResult,
+  parseContractReference,
   parseEntry,
   REFUSAL_ERROR,
   SUBSET_MEMBERS,
@@ -32,6 +35,7 @@ export {
   type CaseResult,
   entryValidationCheck,
   IMPLEMENTED_CHECKS,
+  parseCurrentContracts,
   runCase,
   SCOPED_OUT_CHECKS,
   type Selection,
@@ -39,4 +43,4 @@ export {
   type VectorCase,
 } from "./runner.js";
 export { type SubsetResult, subsetCheck } from "./subset.js";
-export { type AbsoluteUri, parseAbsoluteUri } from "./uri.js";
+export { type AbsoluteUri, type Authority, parseAbsoluteUri } from "./uri.js";

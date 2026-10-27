@@ -122,7 +122,7 @@ this matrix and the `@spec` tags to the affected code and tests.
 | `draft-mcguinness-mission-audit` + SCITT (RFC 9943) | in-repo current | M10 |
 | MCP authorization profile | 2025-11-25 (stable; deliberately not advanced to 2026-07-28, disposition in Notes, #533) | M4/M8/M9 |
 | OpenFGA | `v1.18.1@sha256:efde89d2...6688` | M0 compose (done) |
-| `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | I-D in progress (no published revision) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`) |
+| `draft-niyikiza-oauth-attenuating-agent-tokens` (AAT substrate) | `-02` (2026-10-26; external pin `AAT`) | attenuation substrate profiled by `services/authorization-server/src/kernel/attenuation.ts` + `packages/mission-core/src/attenuation-chain.ts` + the chain consumer in `services/mcp-payments/src/server.ts` (JWS chain, `par_hash` linkage, capability monotonicity, `del_depth`/`del_max_depth`). The reference diverges from -02 (its Appendix E.3 records the first two): holder keys bound as `cnf.jkt`, each child's key read from its JWS header `jwk`, where -02 requires `cnf.jwk` and forbids header-supplied keys; possession proved with DPoP, not the PoP JWT; ES256 only, where -02 requires Ed25519 support; an `enum` constraint type, which no revision defines (-02 has `one_of`), and no `wildcard`, `all`, `any`, `optional` or closed-world argument check; `typ` checked on the root only, and `aud` checked against the enforcement point on the root only (-02 checks every `aud` in the chain); `jti` and `iat` optional and the I3 `iat` relations unchecked |
 
 ## Notes
 
@@ -147,7 +147,15 @@ this matrix and the `@spec` tags to the affected code and tests.
   Because the folded initiation names the Mission by `mission_id` rather than
   presenting its grant, the client binding is local behavior (#1348). Only the
   Mission's own client opens a deferral; any other client is answered
-  `invalid_request` exactly as an unknown Mission is. The deferral records
+  `invalid_request` exactly as an unknown Mission is. The Mission's own client
+  is refused `invalid_authorization_details` when the subset comparison cannot
+  establish its requested authority as within the active Mission, whether it
+  exceeds it or the comparison cannot decide, as the originating grant's own
+  validation would refuse it (§5.3.1; #1720, D859). It is refused
+  `invalid_grant` when the Mission is not active, suspension included, with
+  no `mission_error`: that diagnostic goes only to a client presenting the
+  Mission's grant, and the initiation presents none (#1740, D862, D863).
+  The deferral records
   that client and its DPoP key. Before redeem, a poll by another client, or of
   a deferral whose recorded client is not the Mission's own, is answered as
   an unknown code (`invalid_grant`, §5.5.1, §5.6), whatever key it uses; only

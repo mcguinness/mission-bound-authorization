@@ -454,6 +454,9 @@ a check at the next guarded transaction, after that write committed.
 | `approval_governance_records` | `approval-governance.ts` | managed |
 | `direct_approval_rules`, `direct_approval_inputs` | `direct-approval-record.ts` | managed |
 | `drawdown_recording_rules`, `drawdown_record_inputs` | `drawdown-approval-record.ts` | managed |
+| `template_recording_rules`, `template_record_inputs` | `template-approval-record.ts` | managed (with the standing-payment instance insert) |
+| `standing_payment_budget_bindings` | `standing-payment.ts` | managed (`bindBudget`, at template consent) |
+| `standing_payment_admissions`, `standing_payment_dispatches` | `standing-payment.ts` | managed (with the standing-payment instance insert) |
 | `governed_policy_roots`, `governed_policy_consents`, `governed_policy_activations` | `governed-policy-approval.ts` | managed (consent, activation); statement (`withdraw`) |
 | `creation_idempotency` | `creation-idempotency.ts` | managed (reserve, complete, advance); statement (`failReserved`, `completeDelivered`, `recordDelivery`, expiry purge) |
 | `expansion_deferrals`, `progressive_refusals` | `deferred.ts` (`ExpansionDeferralStore`) | managed (redemption); statement (open, approve, deny, cancel, polls, refusals) |

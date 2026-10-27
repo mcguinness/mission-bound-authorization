@@ -515,6 +515,43 @@ describe("Mission Lifecycle endpoint authorization and request members (@spec st
     expect(as.kernel.get(m.id)).toEqual(before);
   });
 
+  it("accepts only the canonical decimal form of a positive expected_version, refusing any other form invalid_request and answering a canonical numeral beyond every state version stale_version, never rounded (@spec status#lifecycle-operations, #1724 C6, D847)", async () => {
+    const m = approve();
+    for (const form of ["0", "+1", "-1", "01", " 1", "1 ", "1.0", "1e0", "0x1", "١", ""]) {
+      const refused = await op({ mission_id: m.id, operation: "suspend", nonce: nonce(), expected_version: form });
+      expect(refused.status, `${JSON.stringify(form)}: ${refused.text}`).toBe(400);
+      expect(refused.json?.error).toBe("invalid_request");
+    }
+    // 2^53 + 1 would round to 2^53 as a JavaScript number; neither equals the
+    // Mission's version, so each is stale, after authorization, not malformed.
+    for (const huge of ["9007199254740993", "99999999999999999999999999"]) {
+      const n = nonce();
+      const stale = await op({ mission_id: m.id, operation: "suspend", nonce: n, expected_version: huge });
+      expect(stale.status, `${huge}: ${stale.text}`).toBe(409);
+      expect(stale.json).toMatchObject({ error: "stale_version", nonce: n });
+    }
+    expect(as.kernel.get(m.id)?.version).toBe(m.version);
+    const current = await op({ mission_id: m.id, operation: "suspend", nonce: nonce(), expected_version: String(m.version) });
+    expect(current.status, current.text).toBe(200);
+  });
+
+  it("bounds reason at 1024 Unicode code points: 1024 accepted and 1025 refused invalid_request, ASCII and outside the Basic Multilingual Plane (@spec status#lifecycle-operations, #1724 C11, D847)", async () => {
+    const m = approve();
+    // U+1F600 is one code point and two UTF-16 units.
+    const astral = String.fromCodePoint(0x1f600);
+    for (const reason of ["r".repeat(1025), astral.repeat(1025)]) {
+      const refused = await op({ mission_id: m.id, operation: "suspend", nonce: nonce(), reason });
+      expect(refused.status, refused.text).toBe(400);
+      expect(refused.json?.error).toBe("invalid_request");
+    }
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+    const suspended = await op({ mission_id: m.id, operation: "suspend", nonce: nonce(), reason: "r".repeat(1024) });
+    expect(suspended.status, suspended.text).toBe(200);
+    const resumed = await op({ mission_id: m.id, operation: "resume", nonce: nonce(), reason: astral.repeat(1024) });
+    expect(resumed.status, resumed.text).toBe(200);
+    expect(as.kernel.get(m.id)?.state).toBe("active");
+  });
+
   it("refuses a stale expected_version 409 stale_version before the transition rule, leaving the Mission unchanged, and applies a current one", async () => {
     const m = approve();
     const malformed = await op({ mission_id: m.id, operation: "suspend", nonce: nonce(), expected_version: "01" });

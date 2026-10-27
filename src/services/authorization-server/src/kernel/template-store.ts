@@ -23,6 +23,7 @@
 import type { ActivationPolicyRef } from "@mission/core";
 import { openStore, UniqueViolationError, withTransaction, type Database } from "@mission/store";
 import { type AuthoritySourceBinding, parseRecordedAuthoritySource } from "./authority-source.js";
+import { isHumanFloorConsent, type TemplateConsentProvenance } from "./standing-payment.js";
 import type { AuthorityEntry, AuthoritySource, RecordedAuthoritySource } from "./types.js";
 
 /**
@@ -59,7 +60,8 @@ CREATE TABLE templates (
   approval_event_id TEXT NOT NULL UNIQUE,
   expires_at TEXT NOT NULL,
   state TEXT NOT NULL,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  consent_provenance_json TEXT
 ) STRICT;
 CREATE TABLE template_source_bindings (
   template_id TEXT NOT NULL,
@@ -135,6 +137,14 @@ export interface MissionTemplate {
   expires_at: string;
   state: TemplateState;
   created_at: string;
+  /**
+   * @spec mission-template#template-consent (#813): the provenance of a human
+   * consent at the approval floor, when the approval surface established one.
+   * Provenance like `authority_source`, so it is outside `template_hash`.
+   * Absent for the service-token stand-in and the boot seed; a standing-payment
+   * template never dispatches without it.
+   */
+  consent_provenance?: TemplateConsentProvenance;
 }
 
 /**
@@ -173,6 +183,8 @@ export interface TemplateCreate {
   template_hash: string;
   approval_event_id: string;
   expires_at: string;
+  /** @spec mission-template#template-consent (#813): retained outside `template_hash`. */
+  consent_provenance?: TemplateConsentProvenance;
 }
 
 interface TemplateRow {
@@ -196,6 +208,19 @@ interface TemplateRow {
   expires_at: string;
   state: string;
   created_at: string;
+  consent_provenance_json: string | null;
+}
+
+/** The stored consent provenance, or none where none is stored or it is malformed (fail closed). */
+function consentProvenanceOf(text: string | null): { consent_provenance?: TemplateConsentProvenance } {
+  if (typeof text !== "string" || text === "") return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return {};
+  }
+  return isHumanFloorConsent(parsed) ? { consent_provenance: parsed } : {};
 }
 
 /**
@@ -241,6 +266,7 @@ function rowToTemplate(row: TemplateRow): MissionTemplate {
     expires_at: row.expires_at,
     state: row.state as TemplateState,
     created_at: row.created_at,
+    ...consentProvenanceOf(row.consent_provenance_json),
   };
 }
 
@@ -271,8 +297,8 @@ export class TemplateStore {
             `INSERT INTO templates (id, template_version, issuer, approver_iss, approver_sub,
              authority_source_json, ceiling_json, ceiling_audiences_json, dispatch_policy_json, dispatchers_json,
              recipients_json, per_instance_lifetime_s, max_active, rate_per_min, review_cadence_s,
-             template_hash, approval_event_id, expires_at, state, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+             template_hash, approval_event_id, expires_at, state, created_at, consent_provenance_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`,
           )
           .run(
             input.id,
@@ -294,6 +320,7 @@ export class TemplateStore {
             input.approval_event_id,
             input.expires_at,
             this.now().toISOString(),
+            input.consent_provenance ? JSON.stringify(input.consent_provenance) : null,
           );
         // @spec mission#authority-sources (#827): every recipient pair's
         // root, in the same transaction as the template it was consented for.

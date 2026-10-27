@@ -338,6 +338,12 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     expect(((await badResource.json()) as { error_description: string }).error_description).toBe(
       'ceiling[0] has resource "https:///orders", which is not an RFC 3986 absolute URI',
     );
+    // #1376: nor an http or https resource carrying userinfo.
+    const userinfo = await propose({ ...proposalBody(), ceiling: [{ ...ceiling[0], resource: "https://user@erp.example.com/orders" }, ...ceiling.slice(1)] });
+    expect(userinfo.status).toBe(400);
+    expect(((await userinfo.json()) as { error_description: string }).error_description).toBe(
+      'ceiling[0] has resource "https://user@erp.example.com/orders", which carries a userinfo subcomponent',
+    );
     expect((await page("tcon_unknown")).status).toBe(404);
     expect((await decide("tcon_unknown", "approve", loggedIn("tcon_unknown"))).status).toBe(404);
   });

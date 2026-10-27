@@ -407,4 +407,9 @@ const KERNEL_TABLE_INVENTORY = [
   "missions",
   "progressive_refusals",
   "recovery_marker",
+  "standing_payment_admissions",
+  "standing_payment_budget_bindings",
+  "standing_payment_dispatches",
+  "template_record_inputs",
+  "template_recording_rules",
 ];

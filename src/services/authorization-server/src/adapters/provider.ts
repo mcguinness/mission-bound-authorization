@@ -4,6 +4,11 @@
  * Wiring facts verified by the pre-flight spike (src/spikes/SPIKE-REPORT.md).
  */
 
+import {
+  DEFAULT_MISSION_STATUS_RATE_LIMIT,
+  type MissionStatusRateLimit,
+  MissionStatusRateLimiter,
+} from "./status-rate-limit.js";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
@@ -27,8 +32,10 @@ import {
   DEV_SERVICE_TOKEN,
   type IntrospectionPrincipal,
   DISPATCH_PROHIBITED_ACTIONS,
+  PROGRESSIVE_PROFILE,
   USERS,
   WRITE_ACTIONS,
+  type ActionApprovalPolicy,
   type ApprovalFloorPolicy,
 } from "@mission/demo-data";
 import {
@@ -505,8 +512,8 @@ import {
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
-import { IntentError } from "../kernel/intent.js";
-import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
+import { actionClassesAt, evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
@@ -589,8 +596,16 @@ import {
   renderTemplateConsentPage,
   TemplateConsentProposals,
   templateConsentDisclosure,
+  templateConsentRendering,
+  type TemplateConsentContext,
   type TemplateProposal,
 } from "./template-consent.js";
+import {
+  assertStandingPaymentCoverage,
+  assertStandingPaymentExactProfile,
+  type ProhibitedPredicateMapping,
+  type TemplateConsentProvenance,
+} from "../kernel/standing-payment.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
 import {
@@ -635,6 +650,13 @@ import {
  * distinct from the child-redemption grant type.
  */
 export const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
+
+/**
+ * @spec mission-template#template-consent (#813): the marker a template
+ * consent rendering's render revision carries in place of a client, so a
+ * revision rendered for another surface never approves a template consent.
+ */
+const TEMPLATE_CONSENT_RENDERING = "template-consent";
 
 /**
  * @spec status#mission-status-authentication — the scope the four Mission-state
@@ -1024,6 +1046,22 @@ export interface AdapterOptions {
    */
   dispatchPolicies?: DispatchPolicies;
   /**
+   * @spec runtime#action-approval, mission-template#prohibited-classes
+   * (#813): the deployment's action-approval predicate (which actions need an
+   * action-bound approval, and who gives it), rendered by a standing-payment
+   * consent. Absent, no action is declared to need one.
+   */
+  actionApprovalPolicy?: ActionApprovalPolicy;
+  /**
+   * @spec mission-template#standing-payment-exception (#813, #816): the
+   * deployment's Enforcement Scope Statement, as its runtime enforces it.
+   * Read only under the `standing-payment-dispatch` capability, for its
+   * `budget_metering` declaration: construction refuses a designating
+   * Dispatch Policy whose budget it does not declare under the Exact profile
+   * (`assertStandingPaymentExactProfile`). Absent, every such policy refuses.
+   */
+  enforcementScopeStatement?: unknown;
+  /**
    * @spec containment#protected-events — the trusted protected-event source
    * registry, keyed by source IDENTITY (NOT the transport origin). An incoming
    * report's JWS is verified against the resolved source's key, and the source
@@ -1051,6 +1089,12 @@ export interface AdapterOptions {
    * invalid_dpop_proof.
    */
   dpopProofReplay?: DpopProofReplay;
+  /**
+   * @spec status#security-considerations (#1686): the per-consumer limit on
+   * the Mission Status operation, both routes. Defaults to
+   * DEFAULT_MISSION_STATUS_RATE_LIMIT.
+   */
+  missionStatusRateLimit?: MissionStatusRateLimit;
   /**
    * @spec mission#introspection (issue #541 P1-2) — the (iss, jti) -> grantId
    * issuance index, consulted by introspection's per-token individual-
@@ -1245,6 +1289,21 @@ export function buildProvider(opts: AdapterOptions): Provider {
   const expansionDeferrals = enabled("expansion") ? opts.expansionDeferrals : undefined;
   if (expansionDeferrals && !enabled("token-revocation")) {
     throw new Error("the expansion capability's deferred completion needs token-revocation (the deferred substrate's cancellation)");
+  }
+  // @spec mission-template#prohibited-classes (#813, D814, D830): the
+  // standing-payment dispatch workflow is a Mission Template workflow, and
+  // every Dispatch Policy designating it names an operation the published
+  // mapping covers, or construction is refused.
+  const standingPaymentOn = enabled("standing-payment-dispatch");
+  if (standingPaymentOn && !enabled("templates")) {
+    throw new Error("the standing-payment-dispatch capability needs templates");
+  }
+  if (standingPaymentOn && opts.dispatchPolicies) {
+    assertStandingPaymentCoverage(opts.dispatchPolicies, prohibitedPredicateMappingOf(opts));
+    // @spec mission-template#standing-payment-exception (#813, #816): and
+    // every such policy's budget is metered under the Exact profile, as the
+    // deployment's Enforcement Scope Statement declares.
+    assertStandingPaymentExactProfile(opts.issuer, opts.dispatchPolicies, opts.enforcementScopeStatement);
   }
   const grantEnabled = new Map<string, boolean>([
     // The deferred grant polls an AROP deferral, a Mission approval deferral
@@ -3435,9 +3494,9 @@ async function handleDeferredGrant(
     }
     // #1348: the deferred token is a token of this Mission, minted on its own
     // grant, so only the Mission's own client may open a deferral on it. Another
-    // client gets the same answer as for an unknown Mission (the store's), and
-    // gets it before the store's subset check, so the refusal discloses neither
-    // the Mission's state nor its authority.
+    // client gets the same answer as for an unknown Mission, and gets it before
+    // the store's state and subset checks, so the refusal discloses neither the
+    // Mission's state nor its authority (#1740, D862).
     const clientId = ctx.oidc.client?.clientId as string;
     if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
       throw new errors.InvalidRequest("mission is not active");
@@ -3463,9 +3522,23 @@ async function handleDeferredGrant(
         },
       });
     } catch (e) {
-      // Requested authority exceeds the active Mission (or it is not active):
-      // AROP never widens -> not a deferrable request.
-      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      // @spec mission#subset, mission#error-mapping (#1720 item 3, D859): AROP
+      // never widens, so requested authority the comparison cannot establish
+      // as a subset of the active Mission, whether it exceeds it or the
+      // comparison cannot decide, is refused invalid_authorization_details,
+      // as the originating grant's own validation would refuse it (DTR -00
+      // Section 5.3.1). The ownership and authentication refusals above keep
+      // their codes.
+      if (e instanceof DeferralError) {
+        if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
+        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862,
+        // D863): only the Mission's own client reaches the store, so a Mission
+        // that is not active, suspension included, is refused invalid_grant,
+        // as any grant other than a Token Exchange is. The refusal carries no
+        // mission_error: that diagnostic goes only to a client presenting the
+        // Mission's grant, and this initiation presents none.
+        throw new errors.InvalidGrant(e.message);
+      }
       throw e;
     }
     // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
@@ -3817,6 +3890,14 @@ const LIFECYCLE_OPERATION_CAPABILITY: Readonly<Record<string, ProviderCapability
 function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const { kernel } = opts;
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
+  /** @spec mission-template#prohibited-classes (#813): the opt-in standing-payment dispatch workflow is on. */
+  const standingPaymentOn = enabled("standing-payment-dispatch");
+  // @spec status#security-considerations (#1686): one window per client across
+  // both Mission Status routes.
+  const statusLimiter = new MissionStatusRateLimiter(
+    opts.missionStatusRateLimit ?? DEFAULT_MISSION_STATUS_RATE_LIMIT,
+    () => kernel.nowDate().getTime(),
+  );
   // @spec #831 (role binding): introspection resolves an access token under
   // the access-token key alone, never another AS role's key.
   const jwksResolver = createLocalJWKSet(opts.accessTokenJwks as never);
@@ -4021,8 +4102,28 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       issuer: opts.issuer,
       asyncDelegation: opts.familyStore !== undefined,
       ...(capabilityResolver ? { capabilityResolver } : {}),
+      ...(standingPaymentOn ? { standingPayment: true } : {}),
+      ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
     });
   };
+  /**
+   * @spec mission-template#prohibited-classes, mission-template#template-consent
+   * (#813): under the `standing-payment-dispatch` capability, what a template
+   * consent needs: the kernel's budget store, and the registered clients a
+   * consenting principal must not be. The consent provenance itself comes
+   * only from the approval surface's decision.
+   */
+  const standingPaymentConsent = (consent?: TemplateConsentProvenance) =>
+    standingPaymentOn
+      ? {
+          standingPayment: {
+            budgets: kernel.standingPayments,
+            isClient: (sub: string) => opts.clients.some((c) => c.client_id === sub),
+            now: () => kernel.nowDate(),
+            ...(consent ? { consent } : {}),
+          },
+        }
+      : {};
 
   /**
    * @spec status#mission-status-authentication — the Mission Status operation's
@@ -4033,6 +4134,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    */
   const mayReadStatus = (principal: ServiceTokenPrincipal): boolean =>
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
+
+  /**
+   * @spec status#mission-status-authentication (#1724 D1, D847): the Missions
+   * a reader's read authorization covers, under the deployment's policy: the
+   * `missions` its client policy binds, or every Mission at this AS where its
+   * policy binds none (this reference's documented default). The read grant
+   * alone establishes nothing more. A Mission outside the coverage gets the
+   * not-found response an unknown Mission gets.
+   */
+  const readCovers = (principal: ServiceTokenPrincipal, missionId: string): boolean => {
+    const entry = Object.hasOwn(lifecycleClientGrants, principal.principal_id)
+      ? lifecycleClientGrants[principal.principal_id]
+      : undefined;
+    if (entry === undefined || !("grants" in entry) || entry.missions === undefined) return true;
+    const record = kernel.get(missionId);
+    return record !== undefined && withinLifecycleMissionScope(entry.missions, record);
+  };
 
   /**
    * @spec status#mission-status-response (#1682, D795): whether the
@@ -4462,16 +4580,36 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
     // --- Signed Status (@spec status#mission-status-response) ---
     // A deployment with Mission Status off serves no such route (404).
+    // @spec status#security-considerations, status#mission-status-errors
+    // (#1686): an authenticated client over its limit is answered
+    // `rate_limited` (429) with when to retry, before any Mission is read, so
+    // the answer is the same whichever Mission it asked about.
+    const statusRateLimited = (client: string, nonce: string | undefined): boolean => {
+      const retryAfter = statusLimiter.admit(client);
+      if (retryAfter === undefined) return false;
+      ctx.status = 429;
+      ctx.set("cache-control", "no-store");
+      ctx.set("Retry-After", String(retryAfter));
+      ctx.body = {
+        error: "rate_limited",
+        error_description: "Consumer is rate-limited.",
+        retry_after: retryAfter,
+        ...(nonce ? { nonce } : {}),
+      };
+      return true;
+    };
     const statusMatch = ctx.path.match(/^\/missions\/([^/]+)\/status$/);
     if (statusMatch && ctx.method === "GET" && enabled("status")) {
       const principal = authenticateService(ctx);
       if (!principal) return;
       const statusNonce = str(ctx.query.nonce);
+      if (statusRateLimited(principal.principal_id, statusNonce)) return;
       const statusAudience = str(ctx.query.audience);
       try {
         // A caller without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, statusMatch[1] as string)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
           ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
@@ -4586,6 +4724,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(400, "invalid_request", "audience, when sent, names an audience", echo);
         return;
       }
+      // @spec status#security-considerations, status#mission-status-processing
+      // (#1686): the per-consumer limit falls between request syntax (step 2)
+      // and authorization (step 3), so the processing order's refusals are
+      // unchanged and no Mission has been read.
+      if (statusRateLimited(auth.clientId, echo)) return;
       const principal: ServiceTokenPrincipal = {
         principal_id: auth.clientId,
         scopes: [...lifecycleGrantList(lifecycleClientGrants[auth.clientId])],
@@ -4594,6 +4737,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // A client without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, missionId)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(missionId, {
           ...optional("audience", audience),
           nonce: echo,
@@ -5730,6 +5874,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
           // @spec mission#transformation-capabilities (D733): retained at consent.
           entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
+          // @spec mission-template#prohibited-classes (#813): this stand-in
+          // asserts its approver and establishes no human consent at the
+          // approval floor, so under the capability it creates no template
+          // designating the standing payment.
+          ...standingPaymentConsent(),
         });
         // @spec mission-template#template-consent, derivation-limits#approval-rendering
         // (#1119): the disclosure a human template-consent page would render,
@@ -5817,13 +5966,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // The user agent holding the Approver's login for this proposal gets
       // that login's CSRF secret in the form; any other is offered the login.
       const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
+      const disclosed = templateDisclosure(proposal);
+      // @spec mission#approval-context-changes, mission-template#template-consent
+      // (#1446, D718; #813): under the `standing-payment-dispatch`
+      // capability, a rendering to an authenticated principal retains its
+      // own render revision committing what the page showed; the decision
+      // names it and approves exactly that.
+      let revision: string | undefined;
+      const viewer = standingPaymentOn && proposal.state === "pending" ? renderPrincipal(ctx, proposal.id) : undefined;
+      const rendering = viewer ? templateConsentRendering(proposal, disclosed) : undefined;
+      if (viewer && rendering) {
+        revision = retainRenderRevision<TemplateConsentContext>(
+          provider,
+          proposal.id,
+          viewer.key,
+          { clientId: TEMPLATE_CONSENT_RENDERING, ...rendering },
+          Math.floor(proposal.expires / 1000),
+        );
+        ctx.set(RENDER_REVISION_HEADER, revision);
+      }
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.status = 200;
-      ctx.body = renderTemplateConsentPage(proposal, templateDisclosure(proposal), {
+      ctx.body = renderTemplateConsentPage(proposal, disclosed, {
         ...(opts.approverLogin && opts.approvalSessions
           ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
           : {}),
         ...(csrf ? { csrf } : {}),
+        ...(revision ? { revision } : {}),
       });
       return;
     }
@@ -5930,6 +6099,45 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(403, "access_denied", rendered.refusal);
         return;
       }
+      // @spec mission#approval-context-changes, mission-template#template-consent
+      // (#1446, D718; #813): under the `standing-payment-dispatch`
+      // capability, the decision approves only the latest rendering made to
+      // this principal, and only while the context it committed is unchanged.
+      let consent: TemplateConsentProvenance | undefined;
+      let renderKey: string | undefined;
+      let renderedRevision: string | undefined;
+      if (standingPaymentOn) {
+        renderKey = resolved.interactive
+          ? opts.approvalSessions?.sessionKey(ctx.get("cookie"), id)
+          : serviceRenderKey(ctx.get("x-service-token"), principal.sub, principal.subject ?? principal.sub);
+        const held = renderKey ? currentRenderRevision<TemplateConsentContext>(provider, id, renderKey) : undefined;
+        if (!held || body.render_revision !== held.revision || held.clientId !== TEMPLATE_CONSENT_RENDERING) {
+          refuse(409, "rendering_required", "approve the latest rendering of this template consent made to you; it was not rendered, or was rendered again");
+          return;
+        }
+        const current = templateConsentRendering(proposal, rendered);
+        if (!current || current.commitment !== held.commitment) {
+          retireRenderRevision(provider, id, renderKey as string, held.revision);
+          refuse(409, "approval_context_changed", "the template consent changed since it was rendered; review it again");
+          return;
+        }
+        renderedRevision = held.revision;
+        // @spec mission#approval-authentication, mission-template#template-consent
+        // (#813): the provenance of a human consent at the approval floor:
+        // only a browser login that satisfied an invoked floor establishes it.
+        if (resolved.interactive && floor.outcome === "satisfied") {
+          consent = {
+            interactive: true,
+            principal: { iss: opts.issuer, sub: principal.sub },
+            acr: principal.acr,
+            auth_time: principal.auth_time,
+            floors: floor.floors,
+            render_revision: held.revision,
+            proposal_id: proposal.id,
+            decided_at: kernel.nowDate().toISOString(),
+          };
+        }
+      }
       try {
         // The template commits the policy snapshot and the ceiling just
         // verified against the proposal: nothing runs between.
@@ -5945,8 +6153,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             ...(opts.dispatchPolicies ? { dispatchPolicies: opts.dispatchPolicies } : {}),
             // @spec mission#transformation-capabilities (D733): retained at consent.
             entryAudiences: (entries) => kernel.mappedEntryAudiences(entries),
+            ...standingPaymentConsent(consent),
           },
         );
+        if (renderKey && renderedRevision) retireRenderRevision(provider, id, renderKey, renderedRevision);
         templateProposals.settle(id, { state: "approved", template_id: template.id });
         decided(201, {
           template_id: template.id,
@@ -6474,6 +6684,24 @@ async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC,
   }
 }
 
+/**
+ * @spec mission-template#prohibited-classes (#813): the deployment's
+ * published prohibited-predicate mapping: the approval-authentication floor's
+ * classification (resource-scoped runtime action classes), the published
+ * external-communication actions, and the resource-to-AS map, where a
+ * resource another AS serves is cross-domain (no map: none is known local).
+ */
+export function prohibitedPredicateMappingOf(opts: AdapterOptions): ProhibitedPredicateMapping {
+  const resourceToAs = opts.resourceToAs;
+  return {
+    classesOf: (entry, action) => actionClassesAt(opts.approvalFloor, entry, action),
+    externalCommunicationActions: new Set(
+      opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
+    ),
+    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+  };
+}
+
 async function handleMissionDispatchGrant(
   provider: Provider,
   opts: AdapterOptions,
@@ -6531,9 +6759,14 @@ async function handleMissionDispatchGrant(
 
   // @spec mission#submission-via-par — this carrier adopts the Submission
   // envelope: `mission_intent` carries {intent, evidence?}.
+  // @spec mission-template#prohibited-classes, metering#bounds (#813, ruling
+  // 2): under the `standing-payment-dispatch` capability, a dispatch intake
+  // admits `max_budget`; the kernel refuses it on any dispatch that is not a
+  // standing payment, and requires it on one that is.
+  const standingPaymentOn = capabilityEnabled(opts, "standing-payment-dispatch");
   let submission: ReturnType<typeof kernel.validateSubmission>;
   try {
-    submission = kernel.validateSubmission(missionIntentRaw);
+    submission = kernel.validateSubmission(missionIntentRaw, undefined, standingPaymentOn ? { admitMaxBudget: true } : {});
   } catch (e) {
     ctx.status = 400;
     ctx.body = {
@@ -6599,6 +6832,7 @@ async function handleMissionDispatchGrant(
     subject: { iss: template.issuer, sub: template.approver.sub },
     policyVersion: DERIVATION_POLICY.policy_version,
     dispatchProhibitedActions: DISPATCH_PROHIBITED_ACTIONS,
+    ...(standingPaymentOn ? { standingPayment: { mapping: prohibitedPredicateMappingOf(opts) } } : {}),
   };
   /** A refused Dispatch: the response, or false when `e` is not a Dispatch outcome. */
   const dispatchFailure = (e: unknown): boolean => {
@@ -6841,6 +7075,18 @@ function approvalGrantId(uid: string): string {
   return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 }
 
+/**
+ * @spec mission#approval-commit (#1721, D845): how a direct approval decision
+ * completes the authorization request on an intake or commit refusal. A
+ * requested ceiling that passed while the approval was pending, whether the
+ * decision's re-validation or the commit's own atomic check finds it, is
+ * `access_denied`, with no Mission and no code; every other refusal keeps
+ * its mapped code.
+ */
+function decisionRefusal(e: IntentError): { error: string; error_description: string } {
+  return { error: e instanceof ExpiryPassedError ? "access_denied" : e.code, error_description: e.message };
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -6978,12 +7224,13 @@ async function decide(
   // requested ceiling that passed while the approval pends completes the
   // request with its refusal, as the commit's own expiry check does when it
   // passes during the commit, before anything is written and never a 500.
+  // Both complete `access_denied` (@spec mission#approval-commit, #1721).
   let submission: ReturnType<typeof opts.kernel.validateSubmission>;
   try {
     submission = opts.kernel.validateSubmission(String(params.mission_intent));
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7033,7 +7280,7 @@ async function decide(
         : undefined;
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7141,10 +7388,7 @@ async function decide(
       authority = opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey));
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7173,7 +7417,7 @@ async function decide(
       opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7338,7 +7582,7 @@ async function decide(
       current = currentContext(authority, rendered);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7410,10 +7654,7 @@ async function decide(
         prepared = opts.kernel.prepareApproval(approveInput);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7491,7 +7732,7 @@ async function decide(
         }
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({ error: e.code, error_description: e.message });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7506,10 +7747,7 @@ async function decide(
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7768,6 +8006,15 @@ function renderRegisteredClient(client: { clientId: string; clientName?: string 
 `;
 }
 
+/**
+ * @spec mission#rendering-safeguards (#1532): client-supplied text is
+ * attributed to the client, named by the `client_id` this AS resolved the
+ * request to from its registration, never by text the client supplies.
+ */
+function renderSuppliedBy(clientId: string): string {
+  return `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
@@ -7793,7 +8040,7 @@ function renderApprovalPage(
   // proposal (untrusted client input) from the derived Authority Set (what
   // approval grants); the proposal section appears only when one was submitted.
   const proposalSection = proposal
-    ? `<h2>Proposed authority (submitted, untrusted)</h2><pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
+    ? `<h2>Proposed authority (submitted, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
     : "";
   // @spec mission#intent-submission-evidence — MATERIAL verified provenance is
   // rendered to the Approver as normalized FACTS (never raw artifacts); the
@@ -7877,7 +8124,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}

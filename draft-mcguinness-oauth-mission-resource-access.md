@@ -370,6 +370,8 @@ The authorization server MUST also refuse an entry with the
 - its `resource` is an `http` or `https` URI without the `//` authority
   form naming a non-empty host ({{Section 4.2.1 of RFC9110}},
   {{Section 4.2.2 of RFC9110}});
+- its `resource` is an `http` or `https` URI carrying a userinfo
+  subcomponent ({{Section 4.2.4 of RFC9110}});
 - its `resource_match` is a value the authorization server does not
   recognize ({{resource-access-type}});
 - its `actions` array is empty, or one of its values is neither an
@@ -382,6 +384,9 @@ The authorization server MUST also refuse an entry with the
 - its `resource_contract` is not an object with exactly the members
   `id`, `version`, and `digest`, or one of them does not have the form
   {{resource-access-type}} gives it;
+- a date-time value in a Common Constraint defined by this
+  specification uses `60` for the seconds field
+  ({{initial-common-constraints}});
 - its `time_window` Common Constraint has a `not_before` later than its
   `not_after`, a window that admits no instant; or
 - its `recipient_domain` Common Constraint is not a DNS name in ASCII
@@ -757,7 +762,9 @@ policy decision point in the resource server.
 
 ## Initial Common Constraints {#initial-common-constraints}
 
-This document defines the following Common Constraints.
+This document defines the following Common Constraints. RFC 3339
+date-time values in the Common Constraints defined by this
+specification MUST NOT use `60` for the seconds field.
 
 `max_amount`:
 : A per-action ceiling on a monetary amount.
@@ -1683,6 +1690,12 @@ Omission-Equivalent Value is `false`.
 - `max_amount`'s `currency` is exactly three upper-case ASCII letters,
   compared exactly, with no assignment-list validation; any other value
   is malformed and refused at submission.
+- An `http` or `https` `resource` carrying a userinfo subcomponent is
+  refused at submission.
+- Date-time values in the Common Constraints this specification
+  defines do not use `60` for the seconds field, though RFC 3339 permits
+  it for an actual leap second; an entry carrying one is refused at
+  submission.
 
 -00
 

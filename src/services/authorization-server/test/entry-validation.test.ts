@@ -7,7 +7,7 @@
  * `time_window` whose `not_before` is not later than its `not_after`, a
  * `recipient_domain` in ASCII form without a trailing dot, and a `resource`
  * that is one RFC 3986 `absolute-URI` (no fragment; an `http` or `https`
- * value names a non-empty host). Each is refused at PAR with
+ * value names a non-empty host and carries no userinfo). Each is refused at PAR with
  * `invalid_authorization_details`, before any interaction or Mission.
  *
  * Two values pass validation and carry a defined meaning instead: a
@@ -67,8 +67,8 @@ async function pkceChallenge(): Promise<string> {
   ).toString("base64url");
 }
 
-/** Push one proposal entry with the task Intent through PAR. */
-async function pushEntry(entry: Record<string, unknown>): Promise<Response> {
+/** Push one proposal entry with the task Intent, or one naming `targets`, through PAR. */
+async function pushEntry(entry: Record<string, unknown>, targets = TASK_INTENT.target_resources): Promise<Response> {
   return fetch(`${ISSUER}/request`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -80,7 +80,7 @@ async function pushEntry(entry: Record<string, unknown>): Promise<Response> {
       code_challenge: await pkceChallenge(),
       code_challenge_method: "S256",
       login_hint: "alice",
-      mission_intent: JSON.stringify({ intent: TASK_INTENT }),
+      mission_intent: JSON.stringify({ intent: { ...TASK_INTENT, target_resources: targets } }),
       authorization_details: JSON.stringify([entry]),
       client_assertion: await clientAssertion("ap-agent", "ap-agent-auth", agentKey),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
@@ -109,8 +109,8 @@ async function expectRefused(proposal: Record<string, unknown>, description: Reg
 }
 
 /** PAR accepts the entry. */
-async function expectAccepted(proposal: Record<string, unknown>): Promise<void> {
-  const res = await pushEntry(proposal);
+async function expectAccepted(proposal: Record<string, unknown>, targets?: string[]): Promise<void> {
+  const res = await pushEntry(proposal, targets);
   const body = (await res.json()) as { error_description?: string; request_uri?: string };
   expect(res.status, `${JSON.stringify(proposal)}: ${body.error_description ?? ""}`).toBe(201);
   expect(body.request_uri).toBeDefined();
@@ -230,8 +230,42 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
     }
   });
 
+  // D858: structural A-label checks; the RFC 5892 code-point classes, the
+  // contextual rules and the Bidi rule are not checked.
+  it("refuses a recipient_domain whose xn-- label is not a structurally valid A-label", async () => {
+    for (const recipient_domain of [
+      "xn--9.example",
+      "xn--mnchen-psa.example",
+      "xn--menchen-uge.example",
+      "xn--mnchen-hxd.example",
+      "xn---mnchen-o2a.example",
+      "xn--m--nchen-65a.example",
+    ]) {
+      await expectRefused(
+        entry({ constraints: { recipient_domain } }),
+        /constraints\.recipient_domain is malformed/,
+      );
+    }
+  });
+
+  it("refuses a Common Constraint date-time value that uses 60 for the seconds field, in each member", async () => {
+    for (const v of ["2016-12-31T23:59:60Z", "2017-01-01T00:59:60+01:00", "2026-09-01T12:00:60Z"]) {
+      await expectRefused(entry({ constraints: { resource_issued_after: v } }), /constraints\.resource_issued_after is malformed/);
+      await expectRefused(entry({ constraints: { resource_issued_before: v } }), /constraints\.resource_issued_before is malformed/);
+      await expectRefused(entry({ constraints: { time_window: { not_before: v } } }), /constraints\.time_window is malformed/);
+      await expectRefused(entry({ constraints: { time_window: { not_after: v } } }), /constraints\.time_window is malformed/);
+    }
+  });
+
+  it("accepts ordinary timestamps around the leap second in each member (positive control)", async () => {
+    for (const v of ["2016-12-31T23:59:59Z", "2017-01-01T00:00:00Z", "2017-01-01T00:59:59+01:00"]) {
+      await expectAccepted(entry({ constraints: { resource_issued_after: v, resource_issued_before: "2027-01-01T00:00:00Z" } }));
+      await expectAccepted(entry({ constraints: { time_window: { not_before: v, not_after: "2027-01-01T00:00:00Z" } } }));
+    }
+  });
+
   it("accepts a recipient_domain in A-label form, in any letter case (positive control)", async () => {
-    for (const recipient_domain of ["xn--exmple-cua.com", "Mail.Example.COM"]) {
+    for (const recipient_domain of ["xn--exmple-cua.com", "Mail.Example.COM", "Mail.XN--Mnchen-3YA.example"]) {
       await expectAccepted(entry({ constraints: { recipient_domain } }));
     }
   });
@@ -240,6 +274,23 @@ describe("entry validation at PAR (@spec resource-access#entry-validation, #1376
     for (const resource of [`${RESOURCE}#tools`, "https:///mcp", "https:localhost/mcp"]) {
       await expectRefused(entry({ resource }), /is not an RFC 3986 absolute URI/);
     }
+  });
+
+  it("refuses an http or https resource carrying a userinfo subcomponent, empty or not", async () => {
+    const authority = new URL(RESOURCE).host;
+    for (const resource of [
+      RESOURCE.replace(authority, `agent@${authority}`),
+      RESOURCE.replace(authority, `agent:secret@${authority}`),
+      RESOURCE.replace(authority, `@${authority}`),
+      "HTTPS://agent@erp.example.com/invoices",
+    ]) {
+      await expectRefused(entry({ resource }), /carries a userinfo subcomponent/);
+    }
+  });
+
+  it("accepts an @ in the resource's path (positive control)", async () => {
+    const resource = `${RESOURCE}/a@b`;
+    await expectAccepted(entry({ resource }), [resource]);
   });
 });
 

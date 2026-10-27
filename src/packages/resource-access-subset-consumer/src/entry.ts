@@ -160,6 +160,13 @@ export function parseEntry(value: unknown): ParseResult {
   ) {
     return refuse("an http or https resource lacks the // authority form with a non-empty host");
   }
+  // resource-access#entry-validation: refused when "its resource is an http or
+  // https URI carrying a userinfo subcomponent (Section 4.2.4 of RFC9110)".
+  // Any "@" in the authority delimits a userinfo (RFC 3986 section 3.2.1), so
+  // an empty userinfo is refused too; an "@" in the path or query is not one.
+  if ((scheme === "http" || scheme === "https") && uri.authority?.userinfo !== undefined) {
+    return refuse("an http or https resource carries a userinfo subcomponent");
+  }
 
   // resource-access#resource-access-type resource_match: "exact (the default
   // when the member is absent) or prefix". The subset admits exact only.
@@ -225,18 +232,77 @@ export function parseEntry(value: unknown): ParseResult {
   return { ok: true, entry };
 }
 
-/** A contract the consumer's trusted configuration names as current. */
-export interface ConfiguredContract {
+/**
+ * Parse a resource contract reference: an object with exactly the members id,
+ * version and digest, each in the form resource-access-type gives it.
+ */
+export function parseContractReference(
+  value: unknown,
+): { contract: ContractReference } | { refusal: string } {
+  return parseContract(value);
+}
+
+function sameReference(a: ContractReference, b: ContractReference): boolean {
+  return a.id === b.id && a.version === b.version && a.digest === b.digest;
+}
+
+/** A contract version, as its resource contract document defines it. */
+export interface ContractDefinition {
   readonly reference: ContractReference;
-  /** The action identifiers the contract defines. */
+  /** The action identifiers the version defines: those its operations name. */
   readonly actions: readonly string[];
-  /** The resources it is current for; absent means every resource. */
-  readonly resources?: readonly string[];
+}
+
+/**
+ * Read a frozen `mission-resource-contract/1` file into the definition of the
+ * version it carries (vectors/mission-resource-access-subset/README.md, The
+ * contract). The document names each operation's action identifier; the
+ * frozen documents define no action family. A malformed file is a fixture
+ * error and throws. This reads the reference as the file states it and does
+ * not recompute its digest.
+ */
+export function contractDefinition(file: unknown): ContractDefinition {
+  if (!isObject(file) || file.format !== "mission-resource-contract/1") {
+    throw new Error("not a mission-resource-contract/1 file");
+  }
+  const parsed = parseContract(file.reference);
+  if ("refusal" in parsed)
+    throw new Error(`the contract reference is malformed: ${parsed.refusal}`);
+  const reference = parsed.contract;
+  const document = file.document;
+  if (!isObject(document)) throw new Error("the contract document is not an object");
+  if (document.id !== reference.id || document.version !== reference.version) {
+    throw new Error("the contract document's id and version differ from its reference");
+  }
+  const operations = document.operations;
+  if (!isObject(operations)) throw new Error("the contract document's operations is not an object");
+  const actions: string[] = [];
+  for (const [name, operation] of Object.entries(operations)) {
+    const action = isObject(operation) ? operation.action : undefined;
+    if (typeof action !== "string" || !ACTION_IDENTIFIER.test(action)) {
+      throw new Error(`the operation ${name} names no action identifier`);
+    }
+    if (!actions.includes(action)) actions.push(action);
+  }
+  return { reference, actions };
+}
+
+/** A contract version the trusted configuration names as current for one resource. */
+export interface CurrentContract {
+  /** The resource the version is current for; it is current for no other. */
+  readonly resource: string;
+  readonly reference: ContractReference;
 }
 
 /** The consumer's trusted resource and deployment configuration. */
 export interface ConsumerConfig {
-  readonly currentContracts: readonly ConfiguredContract[];
+  /**
+   * The contract versions configuration names as current, each for exactly
+   * one resource. An empty list names no contract current for any resource.
+   */
+  readonly currentContracts: readonly CurrentContract[];
+  /** The contract versions whose documents the consumer holds. */
+  readonly definitions: readonly ContractDefinition[];
 }
 
 /**
@@ -246,7 +312,8 @@ export interface ConsumerConfig {
  * contract its configuration names as current for the entry's resource and
  * that defines every action and action family the entry lists". Returns a
  * refusal reason, or undefined when the entry passes. A client-proposed
- * reference is never authoritative: only the configuration decides.
+ * reference is never authoritative: only the configuration decides. An entry
+ * without resource_contract is not affected.
  */
 export function contractApprovalRefusal(
   entry: ParsedEntry,
@@ -254,17 +321,26 @@ export function contractApprovalRefusal(
 ): string | undefined {
   const proposed = entry.contract;
   if (proposed === undefined) return undefined;
-  const match = config.currentContracts.find(
-    (c) =>
-      c.reference.id === proposed.id &&
-      c.reference.version === proposed.version &&
-      c.reference.digest === proposed.digest &&
-      (c.resources === undefined || c.resources.includes(entry.resource)),
-  );
-  if (match === undefined) {
-    return "resource_contract is not the reference of a contract current for the entry resource";
+  // A contract is current only for the resource configuration names it for.
+  // The resource is compared character for character, with no normalization
+  // (vectors README, Checks, entry-validation: "a listed contract whose
+  // resource equals the entry's").
+  const current = config.currentContracts.filter((c) => c.resource === entry.resource);
+  if (current.length === 0) {
+    return "configuration names no contract current for the entry resource";
   }
-  const undefinedAction = entry.actions.find((a) => !match.actions.includes(a));
+  if (!current.some((c) => sameReference(c.reference, proposed))) {
+    return "resource_contract does not equal, member for member, the reference configuration names as current for the entry resource";
+  }
+  // The referenced version must define every action the entry lists. An
+  // action family never reaches this point: parseEntry refuses one as input
+  // outside the subset. Without the version's document the consumer cannot
+  // establish that it defines the listed actions, so it refuses.
+  const definition = config.definitions.find((d) => sameReference(d.reference, proposed));
+  if (definition === undefined) {
+    return "no document of the referenced contract is held, so it cannot be shown to define every listed action";
+  }
+  const undefinedAction = entry.actions.find((a) => !definition.actions.includes(a));
   if (undefinedAction !== undefined) {
     return `the referenced contract does not define the action ${undefinedAction}`;
   }

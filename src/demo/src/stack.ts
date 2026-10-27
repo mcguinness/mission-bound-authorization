@@ -6,10 +6,12 @@
  */
 
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { IssuerKeys } from "@mission/core";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type KernelStoreConfig,
+  ALL_PROVIDER_CAPABILITIES,
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
@@ -20,6 +22,7 @@ import {
   CatalogProvider,
   type DeferralStore,
   type DischargeAuthorityPolicy,
+  type DispatchPolicies,
   issueCrossDomainGrant,
   resolveDestinationClientId,
   type IssuerEvidenceStore,
@@ -31,7 +34,8 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
@@ -57,6 +61,7 @@ import {
 import {
   ActorRecords,
   boundaryEvidenceAuthorization,
+  budgetOverspendAlert,
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
@@ -69,8 +74,10 @@ import {
   EVIDENCE_KEY_SET_LOCATION,
   evidenceKeySetLocation,
   EvidenceRetentionStore,
+  openEvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
+  heldReservationAlert,
   indeterminateClaimAlert,
   type KeyRoles,
   type LoadedView,
@@ -85,6 +92,7 @@ import {
   type PepDeps,
   type ReceiptIssuerScope,
   redemptionStatusFor,
+  releasedReservationNotice,
   type ResourceMetadataServer,
   startResourceMetadataServer,
   stderrAlertSink,
@@ -102,7 +110,7 @@ import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResou
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
-import { kernelMissionView } from "./kernel-mission-view.js";
+import { kernelBudgetBinding, kernelMissionView } from "./kernel-mission-view.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -221,12 +229,20 @@ export interface DemoStack {
   payments: PaymentsStore;
   evidence: EvidenceStore;
   /**
-   * @spec runtime-evidence#execution-evidence-object (Retention), #594 W4-8:
-   * the durable retention store behind `evidence`, and the deployment's
-   * published verification key sets. Exposed so an operator surface can read
-   * what is retained and which keys are still resolvable.
+   * @spec runtime-evidence#execution-evidence-object (Retention), #594 W4-8,
+   * #821: the durable retention store behind `evidence`, open single-writer
+   * on its configured file for this stack's lifetime: the records the PEP
+   * retains and its per-emitter sequences. Exposed so an operator surface can
+   * read what is retained. Close it with `evidenceRetention.close()`.
    */
   evidenceRetention: EvidenceRetentionStore;
+  /**
+   * @spec runtime-evidence#evidence-integrity-signing-keys (#821): the
+   * verification key sets this boot publishes, held in memory because every
+   * evidence key is generated per boot under a fixed kid (#831). Exposed so an
+   * operator surface can read which keys are still resolvable.
+   */
+  evidenceKeySets: EvidenceRetentionStore;
   /**
    * The deployment's receipt-issuer designation, or `undefined` where its
    * Enforcement Scope Statement claims no evidence capability, which is what
@@ -297,6 +313,15 @@ export interface DemoStack {
    * a test runs it with `runOnce()`. Every close path stops it first.
    */
   reconciler: OutcomeReconciler;
+  /**
+   * @spec #831 C2 (D825): reload the AS kids the stack's consumers trust
+   * from `topology.json` as it is now, while serving: the payments
+   * resource's pins and the RAS's continuation role. Each consumer replaces
+   * its trust atomically, refusing a configuration that would give one key
+   * two roles. With no AS, nothing AS-signed is verified, and this does
+   * nothing.
+   */
+  reloadTrust(): void;
   /** The issuer this stack's kernel/tokens use (ISS, or the AS URL). */
   issuer: string;
   viewFor: (missionId: string) => MissionView | undefined;
@@ -333,6 +358,25 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
   };
 }
 
+/**
+ * @spec runtime#mission-binding (#956, D814): `statement` declaring exactly the
+ * Mission-establishment modes this stack serves for the payments scope. The
+ * credential-carried mode is always served; the externally established mode
+ * only where the MAS-governed channel's baseline Join governs the payments
+ * resource. Declaring both creates no fallback: the MAS profile's precedence
+ * still lets a credential-carried reference govern. The AS-native target,
+ * which excludes the MAS, therefore declares `credential_carried` only.
+ */
+export function withServedEstablishmentModes(statement: RuntimePosture, servesExternal: boolean): RuntimePosture {
+  return {
+    ...statement,
+    mediated_scope: {
+      ...statement.mediated_scope,
+      mission_establishment_mode: servesExternal ? ["credential_carried", "externally_established"] : "credential_carried",
+    },
+  };
+}
+
 export async function composeStack(opts: {
   openfgaUrl: string;
   presharedKey: string;
@@ -365,6 +409,15 @@ export async function composeStack(opts: {
    * passes its own, as for `claimsFile`.
    */
   writeReservationsFile?: string;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (Retention),
+   * runtime#record-integrity (#821): the PEP's evidence retention file.
+   * Defaults to a file beside `writeReservationsFile` when a caller names
+   * one, so a test's stacks never contend for one single-writer file and a
+   * restart on the same reservation file reopens the same evidence;
+   * otherwise to `topology.json` `stores.pepEvidenceRetention.file`.
+   */
+  evidenceRetentionFile?: string;
   /**
    * @spec runtime#input-resource-policy (#828): attach to a configured
    * Resource-policy store, or bootstrap a development one. No default
@@ -414,6 +467,17 @@ export async function composeStack(opts: {
    */
   testOrdinaryTokenMinting?: boolean;
   /**
+   * TEST FIXTURE ONLY (#813, D830); no launcher sets it, and the shipped
+   * configuration enables neither the capability nor any `budget_metering`
+   * declaration. On the shared composition with the AS (`withAuthServer`),
+   * enable the AS's opt-in `standing-payment-dispatch` capability beside the
+   * full reference assembly and register these Dispatch Policies, so a test
+   * can consent to and dispatch a standing payment. The AS refuses to start
+   * unless `statement` declares each designating policy's budget under the
+   * Exact profile. The `as-native` target refuses it.
+   */
+  testStandingPaymentDispatch?: { dispatchPolicies: DispatchPolicies };
+  /**
    * @spec authority-server#mission-join (#557): the resources this deployment's
    * MAS join governs. Defaults to `config/mas-join.json` `governed_resources`,
    * less the payments resource under the `as-native` target.
@@ -437,6 +501,10 @@ export async function composeStack(opts: {
 }): Promise<DemoStack> {
   const approverLogin = recordApproverLogin({ sub: "bob", acr: "mfa" });
   const asNative = opts.target === "as-native";
+  // #813: the standing-payment fixture is the shared composition's only.
+  if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
+    throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
+  }
   const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -487,7 +555,9 @@ export async function composeStack(opts: {
   // and the AS txn public JWKS + issuer the RS validates a presented txn-token
   // against.
   let challengeSigner: PepDeps["challengeSigner"];
-  let txnTokenJwks: { keys: Record<string, unknown>[] } | undefined;
+  // @spec #831 C2: with the auth server, the RS holds the AS's keys through
+  // its jwks_uri (IssuerKeys) rather than a snapshot taken at assembly.
+  let serverJwksUri: string | undefined;
   let rsAsIssuer: string | undefined;
   // @spec txn-authorization#two-phase-expiry — the resource's PUBLISHED
   // txn-challenge key material: served over real HTTP at the resource's
@@ -515,6 +585,8 @@ export async function composeStack(opts: {
   // Resolved after the RS is constructed; the discovery listener reads it
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
+  // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
+  let rasContinuationKeys: IssuerKeys | undefined;
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -591,7 +663,9 @@ export async function composeStack(opts: {
       ? ordinaryMinting
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
-      : undefined;
+      : opts.testStandingPaymentDispatch
+        ? new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"])
+        : undefined;
     const lifecycleConsole = await constructing(() => newLifecycleConsole());
     const kernelStore = opts.kernelStore;
     if (kernelStore) await constructing(() => mkdirSync(dirname(kernelStore.file), { recursive: true }));
@@ -619,6 +693,11 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
+      ...(opts.testStandingPaymentDispatch ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies } : {}),
+      // @spec mission-template#standing-payment-exception (#813, #816): the
+      // statement this stack's PDP meters under, which the AS reads under the
+      // standing-payment capability alone.
+      enforcementScopeStatement: opts.statement ?? RUNTIME_POSTURE,
       ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
       ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
@@ -702,9 +781,12 @@ export async function composeStack(opts: {
     kernel = as.kernel;
     issuer = asUrl;
     issuerEvidenceStore = as.issuerEvidence;
-    // The RS verifies real tokens against the AS's published public JWKS (the
-    // as-txn public key is published there too; createLocalJWKSet resolves by kid).
-    serverJwks = (await (await fetch(`${asUrl}/jwks`)).json()) as { keys: Record<string, unknown>[] };
+    // @spec #831 C2: the RS verifies real tokens under the AS's jwks_uri,
+    // held through IssuerKeys: the trusted kids of each role only, refreshed
+    // within the freshness the AS declares (the as-txn key is published
+    // there too), so an AS key rotation is followed without a restart.
+    serverJwksUri = `${asUrl}/jwks`;
+    serverJwks = { keys: [] };
     challengeSigner = {
       sign: rsTxnKeys.privateKey,
       kid: rsTxnKey.kid,
@@ -712,15 +794,15 @@ export async function composeStack(opts: {
       asIssuer: asUrl,
       lifetimeSeconds: txnTopo.challengeLifetimeSeconds,
     };
-    txnTokenJwks = serverJwks;
     rsAsIssuer = asUrl;
     // Access tokens verify only under the AS token key and transaction
     // tokens only under its txn key, though both come from one JWKS. The
-    // AS issues no attenuation roots, so that class is refused here.
+    // AS issues no attenuation roots, so that class is refused here. Each
+    // role's kids are the ones the topology's consumers trust (#831 C2).
     rsKeyRoles = {
-      accessToken: [TOPOLOGY.keys.asToken.kid],
+      accessToken: trustedKids(TOPOLOGY.keys.asToken),
       attenuationRoot: [],
-      transactionToken: [TOPOLOGY.keys.asTxn.kid],
+      transactionToken: trustedKids(TOPOLOGY.keys.asTxn),
     };
 
     // Cross-domain (M9): a dedicated ES256 grant key the RAS trusts under the AS
@@ -735,14 +817,19 @@ export async function composeStack(opts: {
     const rasKeys = await generateKeyPair(rasTokenKey.alg, { extractable: true });
     const rasPub = { ...(await exportJWK(rasKeys.publicKey)), kid: rasTokenKey.kid, alg: rasTokenKey.alg };
     // @spec id-continuation-assertion — the continuation ID-JAG is signed by the
-    // dedicated as-continuation key the AS generates per boot and publishes on
-    // its jwks_uri (fetched above). The RAS trusts it under the AS issuer too, so
-    // a continuation ID-JAG redeems into a local token (D39 per-purpose keys).
+    // dedicated as-continuation key the AS publishes on its jwks_uri. The RAS
+    // trusts it under the AS issuer too, so a continuation ID-JAG redeems into a
+    // local token (D39 per-purpose keys). @spec #831 C2: held through IssuerKeys
+    // (the trusted continuation kids only), beside the stack's own cross-domain
+    // key: a grant naming the cross-domain kid resolves locally, and any other
+    // kid resolves only through the AS's continuation role, never falling back.
     const asContinuationKey = TOPOLOGY.keys.asContinuation;
-    const asContinuationPub = serverJwks.keys.find((k) => k.kid === asContinuationKey.kid);
-    if (!asContinuationPub) {
-      throw new Error(`AS jwks_uri is missing the ${asContinuationKey.kid} continuation key`);
-    }
+    rasContinuationKeys = new IssuerKeys({
+      jwksUri: `${asUrl}/jwks`,
+      roles: { continuation: { kids: trustedKids(asContinuationKey), algs: [asContinuationKey.alg] } },
+    });
+    const asContinuationKeys = rasContinuationKeys.resolver("continuation");
+    const rasAnchorKey = composedTrustAnchor([xdPub as never], asContinuationKeys);
     const saas = new SaasMcpServer({
       rasIssuer: RAS_ISS,
       rasJwks: { keys: [rasPub as never] },
@@ -761,7 +848,7 @@ export async function composeStack(opts: {
       localCeiling: RAS_LOCAL_POLICY.ceiling,
       localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
       issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { keys: [xdPub as never, asContinuationPub as never] } },
+      trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
       signKey: rasKeys.privateKey,
       signKid: rasTokenKey.kid,
       localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
@@ -920,9 +1007,12 @@ export async function composeStack(opts: {
   // identifier as an audience alias scoped to this issuer and the `at+jwt`
   // token profile (runtime-oauth#boundary-audience), declared in the
   // statement every consumer here reads and the resource publishes.
-  const statement = withJoinAudienceAlias(
-    opts.statement ?? RUNTIME_POSTURE,
-    masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+  const statement = withServedEstablishmentModes(
+    withJoinAudienceAlias(
+      opts.statement ?? RUNTIME_POSTURE,
+      masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+    ),
+    masGovernedResources.includes(CANONICAL_RESOURCE),
   );
   const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
@@ -957,6 +1047,15 @@ export async function composeStack(opts: {
     statement,
     settlementKeys: buildBoundaryEvidenceKeyResolver(boundary.declaration, settlementKeys),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
+    // @spec metering#settlement-states (#816, D830 rulings 7 and 10): a
+    // budget reservation the domain holds stays charged until an operator
+    // reconciles it, and a late completed settlement that pushes a counter
+    // past its limit commits anyway: both raise the declared alert, after the
+    // move commits, a prior process's reservation included.
+    onReservationHeld: (reservation) => operatorAlerts.alert(heldReservationAlert(reservation)),
+    onBudgetOverspend: (overspend) => operatorAlerts.alert(budgetOverspendAlert(overspend)),
+    // #813: and a held reservation later released resolves its alert.
+    onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
   });
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
@@ -985,8 +1084,18 @@ export async function composeStack(opts: {
       audience: CANONICAL_RESOURCE,
       authorizesAudience: (audience) =>
         boundary.authorizesEvidence({ audience, kid: decisionEvidenceKey.kid, emitter: CANONICAL_RESOURCE, role: "pdp" }, "current"),
+      // @spec runtime-evidence#decision-evidence-object, runtime#record-integrity
+      // (#821, D814): the per-Mission Decision Evidence counters live in the
+      // PDP's own durable claim file, so a restarted PDP continues each
+      // stream rather than re-issuing a sequence a retained record carries.
+      sequences: pdpClaims.evidenceSequences(),
     },
     claims: pdpClaims,
+    // @spec metering#metering, mission-template#standing-payment-exception
+    // (#813, #816, decision d): each Mission's budget binding, derived on the
+    // PDP side from the kernel's committed policy snapshot. The PEP's view is
+    // never consulted for it.
+    budgetBindings: (mission) => kernelBudgetBinding(kernel, mission),
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
     // @spec authzen#pdp-request consistency check 11 (#1276, D457): a request
     // refused before evaluation (`operation_target_invalid`) is recorded as a
@@ -1024,21 +1133,42 @@ export async function composeStack(opts: {
     owner: statement.mediated_scope.pep_locations[0] as string,
   });
   // @spec runtime-evidence#execution-evidence-object (Retention),
-  // #evidence-integrity-signing-keys (#594 W4-8): this deployment's durable
-  // retention store, and the key sets it publishes at its own key-set
-  // location. The window is the retention floor the runtime profile puts
-  // under every runtime-enforced deployment: the Mission audit horizon, since
-  // this deployment's statement claims no evidence capability and so declares
-  // no longer window of its own.
-  const evidenceRetention = new EvidenceRetentionStore({
-    retentionWindowSeconds: deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS),
+  // runtime#record-integrity (#594 W4-8, #821, D814): this deployment's
+  // durable retention store, a single-writer SQLite file named in
+  // configuration and owned by the statement's PEP location. Every record the
+  // PEP retains and every sequence it allocates is written through it, so a
+  // restart keeps them and continues each emitter's stream. The window is the
+  // retention floor the runtime profile puts under every runtime-enforced
+  // deployment: the Mission audit horizon, since this deployment's statement
+  // claims no evidence capability and so declares no longer window of its own.
+  const retentionWindowSeconds = deploymentRetentionWindowSeconds(RUNTIME_SCOPE_CONFIG, AUDIT_HORIZON_SECONDS);
+  const evidenceRetentionFile =
+    opts.evidenceRetentionFile ??
+    (opts.writeReservationsFile
+      ? join(dirname(opts.writeReservationsFile), "pep-evidence-retention.sqlite")
+      : TOPOLOGY.stores.pepEvidenceRetention.file);
+  mkdirSync(dirname(evidenceRetentionFile), { recursive: true });
+  const evidenceRetention = openEvidenceRetentionStore({
+    file: evidenceRetentionFile,
+    owner: statement.mediated_scope.pep_locations[0] as string,
+    retentionWindowSeconds,
   });
+  // @spec runtime-evidence#evidence-integrity-signing-keys (#821): the key
+  // sets this boot publishes, in a store of their own and in memory. Every
+  // evidence key here is generated per boot under a fixed kid (#831), and a
+  // published kid is append-only: a durable key set would refuse the next
+  // boot's key under the same kid. So records and sequences survive a
+  // restart and the key sets do not: a record signed under an earlier boot's
+  // key cannot be verified after the restart until #831 gives evidence keys a
+  // durable identity, and a key's retirement anchor is not moved by the
+  // records retained in the other store.
+  const evidenceKeySets = new EvidenceRetentionStore({ retentionWindowSeconds });
   const heldKeys = [
     ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
     { ...decisionPoint.evidenceVerification, role: "pdp" as const },
   ];
   for (const key of heldKeys) {
-    evidenceRetention.publishKey({
+    evidenceKeySets.publishKey({
       location: EVIDENCE_KEY_SET_LOCATION,
       kid: key.kid,
       emitterId: key.emitterId,
@@ -1061,7 +1191,7 @@ export async function composeStack(opts: {
       for (const authorized of declared.evidence_keys) {
         const key = heldKeys.find((k) => k.kid === authorized.kid && k.emitterId === authorized.emitter && k.role === authorized.role);
         if (!key) continue;
-        evidenceRetention.publishKey({
+        evidenceKeySets.publishKey({
           location: evidenceKeySetLocation(declared.boundary),
           kid: key.kid,
           emitterId: key.emitterId,
@@ -1077,7 +1207,7 @@ export async function composeStack(opts: {
       name: "published-evidence-keys",
       roles: ["pdp", "pep", "executor"],
       audienceBound: true,
-      keys: (declared) => evidenceRetention.publishedVerificationKeys(evidenceKeySetLocation(declared)),
+      keys: (declared) => evidenceKeySets.publishedVerificationKeys(evidenceKeySetLocation(declared)),
     }),
   );
   // @spec runtime-evidence#decision-evidence-integrity (#853, D487): the
@@ -1110,7 +1240,7 @@ export async function composeStack(opts: {
   // issuer and receipt verification is unreachable for it. Switching the claim
   // on is a deployment assertion, gated on the producer and consumer duties
   // #594's W4-3/W4-4/W4-16 still own.
-  const receiptIssuerScope = deploymentReceiptIssuerScope(RUNTIME_SCOPE_CONFIG, evidenceRetention);
+  const receiptIssuerScope = deploymentReceiptIssuerScope(RUNTIME_SCOPE_CONFIG, evidenceKeySets);
   // The egress gate's OWN store (D32); the agent run's EgressGate writes here.
   // Egress stays on the pre-existing unsigned path (issue #649's deferred slice B).
   const egressEvidence = new EvidenceStore();
@@ -1174,7 +1304,9 @@ export async function composeStack(opts: {
   };
 
   const runtimeDecisionPolicy = {
-    requiresActionApproval: (action: string) => action === "payments:remittance.send",
+    // @spec runtime#action-approval (#813): the one declaration the AS's
+    // standing-payment consent disclosure also reads.
+    requiresActionApproval: (action: string) => ACTION_APPROVAL_POLICY.actions.includes(action),
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {
@@ -1276,14 +1408,16 @@ export async function composeStack(opts: {
     pep,
     payments,
     loadView,
-    jwks: serverJwks,
+    ...(serverJwksUri ? { jwksUri: serverJwksUri, txnTokenJwksUri: serverJwksUri } : { jwks: serverJwks }),
     keyRoles: rsKeyRoles,
     issuer,
     transaction: { engine, connectors, evidence },
     writeReservations,
+    // #821: a disposition record the transaction tier could not write is
+    // alerted on the declared operator sink, as an indeterminate claim is.
+    alerts: operatorAlerts,
     // AROP (RS side): validate a presented txn-token against the AS txn public
     // JWKS (published on /jwks under the as-txn kid) and issuer.
-    ...(txnTokenJwks ? { txnTokenJwks } : {}),
     ...(rsAsIssuer ? { asIssuer: rsAsIssuer } : {}),
     ...(txnChallengePublication ? { txnChallenge: txnChallengePublication } : {}),
   });
@@ -1331,6 +1465,7 @@ export async function composeStack(opts: {
       await decisionChannel.close();
       pdpClaims.close();
       writeReservations.close();
+      evidenceRetention.close();
       if (opts.kernelStore) kernel.close();
     };
     try {
@@ -1390,11 +1525,24 @@ export async function composeStack(opts: {
     pdpClaims,
     writeReservations,
     reconciler,
+    reloadTrust: () => {
+      if (!rsAsIssuer) return;
+      const keys = readTopologyKeys();
+      server.reloadKeyRoles({
+        accessToken: trustedKids(keys.asToken),
+        attenuationRoot: [],
+        transactionToken: trustedKids(keys.asTxn),
+      });
+      rasContinuationKeys?.setRoles({
+        continuation: { kids: trustedKids(keys.asContinuation), algs: [keys.asContinuation.alg] },
+      });
+    },
     fga,
     modelId,
     payments,
     evidence,
     evidenceRetention,
+    evidenceKeySets,
     ...(receiptIssuerScope ? { receiptIssuerScope } : {}),
     egressEvidence,
     ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),
