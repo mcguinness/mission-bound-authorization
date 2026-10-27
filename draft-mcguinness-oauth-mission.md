@@ -121,6 +121,15 @@ informative:
       - org: OpenID Foundation
     date: 2026
   I-D.draft-ietf-wimse-aims:
+  I-D.draft-hardt-oauth-aauth-protocol:
+    title: "AAuth Protocol"
+    author:
+      -
+        ins: D. Hardt
+        name: Dick Hardt
+    date: 2026-09-25
+    seriesinfo:
+      Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
@@ -728,6 +737,11 @@ Mission Issuer (authorization server):
 Mission Client:
 : The client conformance role, defined in {{conformance}}.
 
+Mission-governed client:
+: A client that the deployment registers as Mission-governed ("a client
+  registered as Mission-governed"); {{authority-proposal}} states the
+  rule that registration triggers.
+
 Mission-aware Resource Server:
 : The resource server conformance role, defined in {{conformance}}.
 
@@ -946,7 +960,8 @@ The Mission Intent members are:
   protected resource (an OAuth resource per {{RFC8707}}-style indicators
   or a protected resource per {{RFC9728}}). It bounds which resources a
   derived Authority Set entry may name ({{authorization-derivation}})
-  and serves as a configured-mapping lookup key. It is not RFC 8707
+  and serves as a configured-mapping lookup key ({{derivation-modes}});
+  like `purpose`, the key alone grants no authority. It is not RFC 8707
   `resource` carriage: a client separately requests the audience of a
   given token with the standard `resource` parameter
   ({{token-response}}).
@@ -1411,12 +1426,12 @@ entries depend on whether an authority proposal was submitted:
   for a `scope`-only target ({{scope-projection}}), yields the
   candidate entries, which are then narrowed to policy.
 
-  The mapping is a lookup, not synthesis. Because no
-  `authorization_details` object was submitted, the AS refuses an Intent
-  that matches no configured mapping, or whose mapped candidates policy
-  narrows to nothing, with `access_denied` ({{error-mapping}}). Its
-  `error_description` can say whether no mapping matched or policy
-  narrowed the candidates to nothing.
+  The mapping is a lookup, not synthesis, and no key grants authority
+  by itself. Because no `authorization_details` object was submitted,
+  the AS refuses an Intent that matches no configured mapping, or whose
+  mapped candidates policy narrows to nothing, with `access_denied`
+  ({{error-mapping}}). Its `error_description` can say whether no
+  mapping matched or policy narrowed the candidates to nothing.
 
   Either mode is conforming. A deployment publishes its mapping space as
   deployment documentation. Eligibility can be scoped per Subject and
@@ -1633,8 +1648,10 @@ apparatus is type-agnostic toward every supported type:
 - narrowing and delegation use the subset and delegation semantics the
   type defines ({{subset}}, {{delegation-constraints}}), under the
   transformation capabilities the AS declares for the type (below); and
-- evaluating the entry against a concrete request is the runtime
-  layer's responsibility ({{runtime-boundary}}), not the AS's.
+- evaluating the entry against a concrete request is the
+  responsibility of the resource server, under the entry's type
+  ({{rs-requirements}}), or of a composing runtime layer
+  ({{runtime-boundary}}), not the AS's.
 
 ### Declared Transformation Capabilities {#transformation-capabilities}
 
@@ -1970,8 +1987,15 @@ The consent rendering is hardened against client text:
 - The AS SHOULD mitigate Unicode direction-override and
   confusable-character presentation in them.
 - The rendering MUST visually distinguish the AS-derived Authority
-  Set from client-supplied text, so crafted client text cannot pass
-  as derived authority.
+  Set from client-supplied text and attribute that text to the client,
+  identified from client identity information the AS trusts
+  ({{approval-preparation}}), so crafted client text cannot pass as
+  derived authority or as a statement of the AS.
+
+The rendering presents `goal` and `task_bounds` as recorded, without
+truncation: the Intent is recorded verbatim and committed by
+`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
+show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
@@ -2604,7 +2628,13 @@ request to derive a token at the token endpoint: a Token Exchange
 ({{Section 2.2.2 of RFC8693}}), and any other grant, refresh
 included, with the `invalid_grant` error code. The AS MUST refuse a
 derivation request it answers after it has acknowledged a revocation
-of the Mission, with the same error code.
+of the Mission, with the same error code. The AS answers a request
+when it makes its final decision to release the result, not when
+network delivery of the response completes: a result prepared before
+the acknowledgment and released after it is refused. A Token Exchange
+takes `invalid_request` because a presented token whose Mission is
+not `active` is unacceptable for the exchange, a case
+{{Section 2.2.2 of RFC8693}} assigns to that code.
 
 Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
@@ -2636,6 +2666,19 @@ document defines its value: it grants nothing, an unrecognized value
 is ignored and is not authoritative about the Mission's state, and it
 is returned only to the authenticated client presenting the Mission's
 grant.
+
+The `mission_error` values this section names each report a
+terminated Mission ({{termination}}): no retry under the same grant
+cures the refusal. Further work needs a new approval or, for
+`superseded`, the successor Mission
+({{I-D.draft-mcguinness-oauth-mission-expansion}}). A new approval is
+a fresh approval event, not an automatic consequence of the refusal; a
+credential held outside the Mission is no fallback for its task
+({{downgrade-by-omission}}); and the refusal gives no assurance that
+the refresh token remains usable. This reading is keyed on the value,
+not on the error code, because the same refusal covers a Mission in a
+non-terminal state that a companion profile registers
+({{iana-lifecycle-states}}), whose meaning that profile defines.
 
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
@@ -2998,6 +3041,31 @@ This is the type-agnostic form of the rule; a type's own
 specification states when the mapping in step 3 is safe for that
 type's entries (for `mission_resource_access`,
 {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+For example, a payments API at `https://pay.example.com` consumes only
+`scope`. Its trusted mapping states that `payments.small` stands for
+the `payments.create` action there, and that the API enforces a fixed
+500.00 USD ceiling on every operation `payments.small` permits.
+Consider this entry for the API:
+
+~~~ json
+{ "type": "mission_resource_access",
+  "resource": "https://pay.example.com",
+  "actions": ["payments.create"],
+  "constraints": {
+    "max_amount": { "amount": "500.00", "currency": "USD" } } }
+~~~
+
+The entry projects to `payments.small`, since the mapping shows that
+the target independently enforces its constraint. The same entry with
+a `max_amount` of 200.00 USD does not project, since `payments.small`
+does not convey the narrower value. With no other carried entry
+supplying a safe projection, issuance to the API is refused: under
+step 5 with `invalid_target`, or, where the request names
+`payments.small`, with `invalid_scope` under the rule for an
+explicitly requested value above ({{error-mapping}}). The Mission
+Resource Access Profile gives the same pair
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
 
 The runtime profile's enforcement-scope declarations
 ({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
@@ -4335,6 +4403,11 @@ Mission Identifier ({{mission-id}}) identifies it. Its members are
 immutable after creation, except `state` and the `termination` member
 written once when the Mission terminates ({{termination}}).
 
+The record is a logical object: this document constrains its members
+and their values and requires no storage form. Where a surface or
+profile exchanges or signs the record, the record's JSON form, with
+the members this section defines, governs.
+
 Record member names omit the `mission` prefix because the record is
 the Mission. Prefixed names, such as the `mission_intent` request
 parameter and the `mission_id` response parameter, belong to surfaces
@@ -5003,7 +5076,24 @@ This document's extension points are:
 - **Authority types.** The Authority Set is open to any AS-supported
   `authorization_details` type ({{other-types}}); the Mission
   apparatus (commitment, gating, delegation) is type-agnostic, subject
-  to the delegation and projection limits in {{other-types}}.
+  to the delegation and projection limits in {{other-types}}. A type's
+  specification supplies what the apparatus relies on for its entries:
+  - the definition a proposed entry is validated against, alongside
+    any schema advertised for the type or established out of band
+    ({{submission-processing}});
+  - the enforcement semantics a resource server applies to an entry
+    ({{rs-requirements}});
+  - the subset relation, which the AS applies only where it declares
+    `narrowing` for the type; otherwise an entry is carried as approved
+    ({{subset}}, {{transformation-capabilities}});
+  - the delegation policy, which the AS applies only where it declares
+    `delegation`; an entry with no type-defined policy is non-delegable
+    ({{delegation-constraints}});
+  - when a scope-projection mapping is safe for the type's entries,
+    which the AS relies on only where it declares `projection`
+    ({{scope-projection}}); and
+  - any normalization a comparison of its members uses; without one,
+    URI-valued members compare byte for byte ({{canonicalization}}).
 - **Intent Submission Evidence types.** The `evidence` array of the
   Submission envelope is open to evidence types defined by companion
   profiles: each type is a collision-resistant name whose owning
@@ -5270,7 +5360,11 @@ or issuer-local resolution ({{introspected-consumption}}).
 
 In either form, it enforces each applicable entry its tokens carry
 under that entry's type, which for `mission_resource_access` is work
-a plain {{RFC9068}} resource server does not do.
+a plain {{RFC9068}} resource server does not do. Conformance in this
+role implies support for no particular type: an entry of a type the
+resource server does not implement provides no authority there
+({{rs-requirements}}), so interoperable enforcement needs a type that
+both the AS and the resource server implement.
 
 A **Mission Client** implements the client surfaces:
 
@@ -6027,6 +6121,9 @@ Token Claims" registry:
 - Change Controller: IETF
 - Specification Document(s): this document, {{mission-claim}}
 
+{{adjacent-work}} distinguishes this claim from similarly named claims
+and concepts of adjacent work.
+
 ## OAuth Token Introspection Response Registration {#oauth-token-introspection-response-registration}
 
 This document requests registration of the following in the "OAuth Token
@@ -6639,6 +6736,15 @@ unchanged: the agent is the client, and the delegating principal is
 the token `sub` ({{principal-model}}). An agent authenticated and
 delegated per that document uses these mechanisms to obtain
 Mission-bound tokens.
+
+The `mission` claim ({{mission-claim}}) references a Mission, the
+authorization object this document defines. It is distinct from
+AAuth's `mission_s256` claim ({{I-D.draft-hardt-oauth-aauth-protocol}}),
+the SHA-256 digest that identifies an AAuth mission, and from the
+agent's mission that {{I-D.draft-ietf-wimse-aims}} names, the purpose
+this document translates into authorization. The two claim names do
+not collide in the JSON Web Token Claims registry
+({{json-web-token-claims-registration}}).
 
 Decision-layer access-request and approval workflows, such as the
 OpenID AuthZEN Access Request and Approval Profile {{AuthZEN.ARAP}},
@@ -7685,6 +7791,25 @@ Cross-Domain:
   `authorization_details` and need not reject a narrower grant
   (Mission Identifier and Expiry in Responses, Audience and Token
   Response, Conformance Roles; #1719, D845).
+- Editorial, no requirement change: the AS answers a request at its
+  final decision to release the result, so a result prepared before an
+  acknowledged revocation and released after it is refused (Issuance
+  Gating); the Mission Record is a logical object with no required
+  storage form; the Authority types extension point lists what a
+  type's specification supplies; resource-server conformance implies
+  no particular type (Conformance Roles, Authorization Details Types);
+  each `mission_error` value is explained to the client (Issuance
+  Gating); and Scope Projection gains an example (#1722).
+- Editorial, no requirement change: Adjacent Work distinguishes the
+  `mission` claim from AAuth's `mission_s256` claim and the WIMSE AIMS
+  agent mission; `target_resources`, like `purpose`, grants no
+  authority as a configured-mapping key; Terminology defines
+  "Mission-governed client"; and Issuance Gating gives the reason a
+  Token Exchange refusal uses `invalid_request` (#1532).
+- The consent rendering attributes client-supplied text to the client,
+  identified from client identity information the AS trusts, and
+  presents `goal` and `task_bounds` as recorded, without truncation
+  (Rendering Safeguards; #1532, D859).
 
 -01
 

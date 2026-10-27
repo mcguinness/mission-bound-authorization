@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "e14ed3fbad8203863dee5867820bda632fb8ccdf",
-    "content_sha256": "eb99c8005c941524c922a5faefcbb15b6c30458ea79e9cd4599ea572e4123c21"
+    "revision": "ed0de4157152f4453f78eb511485f0011059d32f",
+    "content_sha256": "69a15b7d2282b92ee0f1d0a424770d9ca985ee5466550f4d2defa7878922f999"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "45adefd6ad9e16345428d9dd4c93806cc9c6c71f",
@@ -8746,6 +8746,72 @@
     }
    ],
    "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
+  },
+  {
+   "id": "core.rendering-safeguards.client-text-attributed",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The rendering MUST visually distinguish the AS-derived Authority Set from client-supplied text and attribute that text to the client, identified from client identity information the AS trusts",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering presents the client-supplied Intent text, and any submitted proposal, in sections apart from the derived Authority Set, which carries neither that text nor an attribution to the client; it attributes each client-supplied section to the client by the `client_id` the AS resolved the request to, and a client name the request carries (in the Intent or a request parameter) neither appears in nor changes that attribution",
+    "local": "The reference attributes with a supplied-by line, naming the client_id only, under the Intent and proposal headings of the authorization-code and device approval page (renderApprovalPage) and of Expansion's deferral approval page (renderDeferralPage), which reuses the binding's approval event; the registered name stays in the receiving-client section (core.approval-event.receiving-client-rendering). Template consent renders no client Intent."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "client-supplied text attributed to the client (@spec mission#rendering-safeguards, #1532) > attributes the Intent and the proposal to the requesting client, apart from the derived authority",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "client-supplied text attributed to the client (@spec mission#rendering-safeguards, #1532) > takes the attribution from the AS's identification of the client, not from a name the client supplies",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "the expansion deferral's approval page (@spec expansion#completion-modes, progressive#fresh-approval, progressive#ceiling-reconsent, progressive#ceiling-review, #1558) > attributes the expansion's Intent and proposal to the requesting client, apart from the successor authority (@spec mission#rendering-safeguards, #1532)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1532 item 3 (D845, with #1722). The rendering of client-supplied text is attributed to the client the AS identified (the client_id it resolved the request to from its registration), on both reference approval surfaces that render client text: renderApprovalPage (authorization-code and device approval) and Expansion's renderDeferralPage, since Expansion reuses the binding's approval event. Proved by eight mutants, each killed by a cited test: dropping the Intent attribution or the proposal attribution on either page, attributing no client, attributing from the client's goal text, and rendering the client text inside the derived (or successor) authority section."
+  },
+  {
+   "id": "core.rendering-safeguards.intent-rendered-as-recorded",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The rendering presents `goal` and `task_bounds` as recorded, without truncation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "given an Intent whose goal and task_bounds exceed any display length the AS would otherwise apply, the consent rendering shows each exactly as recorded, with nothing truncated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1532, D859. Replaces the removed misleading-goal refusal, which would have gated issuance on goal text against the binding's prohibition on gating issuance on goal, goal_lang or task_bounds. No test renders an over-long goal and checks it is not truncated."
   },
   {
    "id": "core.approval-event.authority-source-rendering",
