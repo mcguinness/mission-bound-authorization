@@ -13177,7 +13177,7 @@
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "Such a join is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
+   "text": "is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
    "role": "PDP",
    "strength": "stated",
    "applicability": {

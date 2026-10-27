@@ -2534,21 +2534,16 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor. The Template
-  profile's Dispatch Handoff
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
-  grant that establishes no grant lineage; its redemption issues a
-  derived token for the dispatched Mission, creating or extending no
-  grant binding, and the later delegation-family exchange creates
-  that Mission's first grant binding. In the continuation profile's
-  Identity Continuation Transport
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
-  onward exchanges return ID-JAGs that identify the Mission, and the
-  identity provider's hop record is continuation state, not a grant
-  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
-  derived access token. A Resource AS holds a destination-side grant
-  binding only where it separately establishes a redeemable grant
-  lineage mapped to the Mission, such as a refresh-token family.
+  grant, and expansion, which creates a successor. Redeeming the
+  Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) or an identity
+  continuation assertion
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}) issues a
+  derived token and creates or extends no grant binding; each profile
+  states which of its exchanges establish a grant lineage. A Resource
+  AS holds a destination-side grant binding only where it separately
+  establishes a redeemable grant lineage mapped to the Mission, such
+  as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -2565,13 +2560,10 @@ The grant binding relates to other mechanisms as follows:
   binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
 
-A grant binding is also distinct from a decision-time runtime join, such
-as the Mission Join of
+A decision-time runtime join, such as the Mission Join of
 {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request.
-
-Such a join is not a Mission grant binding: it does not make the joined
+request, is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
 and evidence, never on a Mission grant binding.
 
