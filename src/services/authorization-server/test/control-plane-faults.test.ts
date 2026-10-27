@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
+  type ContainmentPolicy,
   deriveAttenuationRoot,
   LifecycleConflictError,
   MissionKernel,
@@ -18,13 +19,13 @@ import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 let statusKey: CryptoKey;
 beforeAll(async () => { statusKey = (await generateKeyPair("ES256")).privateKey; });
-function setup(issuer = "https://issuer-one.test") {
+function setup(issuer = "https://issuer-one.test", options: { containmentPolicy?: ContainmentPolicy } = {}) {
   const expiresAt = "2027-01-01T00:00:00Z";
   const commits = vi.fn();
   const clock = { at: new Date("2026-09-01T00:00:00Z") };
   const kernel = new MissionKernel({ issuer, policy: DERIVATION_POLICY as never,
     authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["agent"], ["bob"]),
-    statusKey, statusKid: "status", now: () => clock.at, onLifecycleCommit: commits });
+    statusKey, statusKid: "status", now: () => clock.at, onLifecycleCommit: commits, ...options });
   const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read an invoice", target_resources: [DERIVATION_POLICY.ceiling[0].resource], expires_at: expiresAt, requested_derivation_limit: 1 })),
     subject: { iss: issuer, sub: "alice" }, approver: { iss: issuer, sub: "bob" }, clientId: "agent", approvalEventId: "approval" });
   commits.mockClear();
@@ -608,6 +609,68 @@ describe("control-plane concurrent derivations under one operation identity", ()
       const next = kernel.exclusiveDerivation(record.id, "op-failed", async () => "the-artifact");
       await expect(failing).rejects.toThrow("signing failed");
       expect(await next).toBe("the-artifact");
+    } finally {
+      kernel.db.close();
+    }
+  });
+});
+
+/**
+ * @spec control-plane#emergency-deny (#250 step 4): event-driven containment is
+ * the deployment's emergency deny intake. The caller supplies only the event,
+ * and the issuer's own ContainmentPolicy picks what narrows. The commit is a
+ * narrower effective set at a new version and nothing else: no state, expiry,
+ * derivation limit or observation freshness moves, and the narrowing carries
+ * no expiry of its own.
+ */
+describe("control-plane emergency narrowing (@spec control-plane#emergency-deny, #250)", () => {
+  const held = DERIVATION_POLICY.ceiling[0];
+  const removed = `${held.resource} ${held.actions[0]}`;
+  const policy: ContainmentPolicy = {
+    policy_version: "emergency-deny-1",
+    rules: [{ rule_id: "contain-on-compromise", event_type: "credential.compromised", remove: [{ resource: held.resource, actions: [held.actions[0]!] }] }],
+  };
+  const pairs = (entries: Array<{ resource?: string; actions?: string[] }>) =>
+    entries.flatMap((e) => (e.actions ?? []).map((a) => `${e.resource} ${a}`)).sort();
+
+  it("a protected event narrows a suspended Mission without resuming it or moving its expiry, derivation limit or observation freshness, and the narrowing does not lapse", () => {
+    const { kernel, record, clock } = setup(undefined, { containmentPolicy: policy });
+    try {
+      const suspended = kernel.transition(record.id, "suspend");
+      const authority = pairs(kernel.effectiveAuthoritySet(suspended));
+      expect(authority).toContain(removed);
+      const prior = kernel.statusObservation(record.id, { requester: "svc:reader" });
+
+      clock.at = new Date(clock.at.getTime() + 60_000);
+      const { record: contained } = kernel.containOnEvent(record.id, {
+        type: "credential.compromised",
+        source: "idp-risk-feed",
+        observed_at: clock.at.toISOString(),
+        event_id: "risk-1",
+      });
+      // Only the narrowing commits: a new version, the same state, expiry and
+      // derivation limit, and a strictly narrower effective set.
+      expect(contained.version).toBe(suspended.version + 1);
+      expect(contained.state).toBe("suspended");
+      expect(contained.expires_at).toBe(suspended.expires_at);
+      expect(contained.derivation_limit).toBe(suspended.derivation_limit);
+      const narrowed = pairs(kernel.effectiveAuthoritySet(contained));
+      expect(narrowed).not.toContain(removed);
+      expect(narrowed.every((p) => authority.includes(p))).toBe(true);
+      expect(contained.containment?.events.map((e) => e.source)).toEqual(["idp-risk-feed"]);
+
+      // The next observation is a new read at the narrowed version, with the
+      // ordinary freshness span: the deny information lengthened nothing.
+      const next = kernel.statusObservation(record.id, { requester: "svc:reader" });
+      expect(next.watermark.version).toBe(contained.version);
+      expect(next.iat).toBe(Math.floor(clock.at.getTime() / 1000));
+      expect(next.exp - next.iat).toBe(prior.exp - prior.iat);
+      expect(next.payload.mission).toMatchObject({ state: "suspended", version: contained.version, containment_version: 1 });
+
+      // The narrowing has no expiry: a resume and a day later, it still holds.
+      kernel.transition(record.id, "resume");
+      clock.at = new Date(clock.at.getTime() + 86_400_000);
+      expect(pairs(kernel.effectiveAuthoritySet(kernel.get(record.id) as MissionRecord))).toEqual(narrowed);
     } finally {
       kernel.db.close();
     }

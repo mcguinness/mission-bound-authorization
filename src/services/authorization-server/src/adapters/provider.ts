@@ -4964,11 +4964,16 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // exact bytes are durable before they are handed to the network, so a
         // crash between the two replays the same response instead of
         // re-executing the operation.
-        lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
-        ctx.status = status;
-        ctx.set("content-type", contentType);
+        //
+        // @spec status#idempotency: what is delivered is what was retained. A
+        // retransmit that found this exchange's claim still `committed` may
+        // have finalized it first, from the same observation; this exchange
+        // then delivers those bytes, so the nonce has one response.
+        const retained = lifecycleResponses.record(nonceKey, { requestDigest: digest, status, contentType, body: text });
+        ctx.status = retained.status;
+        ctx.set("content-type", retained.contentType);
         ctx.set("cache-control", "no-store");
-        ctx.body = text;
+        ctx.body = retained.body;
       };
       const sendJson = (status: number, json: Record<string, unknown>): void =>
         send(status, "application/json", JSON.stringify(json));
@@ -5198,12 +5203,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           // ECDSA envelope would produce different bytes every time.
           //
           // @spec control-plane#serialization — RECOVERY ACROSS THE SIGNING
-          // BOUNDARY, the crash case only. A `committed` row is an operation
-          // that committed and a response whose bytes were never retained. It
-          // is finalized from the retained immutable material, never
-          // re-executed: for a signed envelope the recorded observation is
-          // signed again, carrying its ORIGINAL `iat` and `exp`, so recovery
-          // reports the state at the observation point and re-dates nothing.
+          // BOUNDARY. A `committed` row is an operation that committed and a
+          // response whose bytes are not yet retained: the process was lost
+          // before finalizing it, or the original exchange is still signing
+          // (@spec status#idempotency, a retransmit "while the original is
+          // still being processed"). It is finalized from the retained
+          // immutable material, never re-executed: for a signed envelope the
+          // recorded observation is signed again, carrying its ORIGINAL `iat`
+          // and `exp`, so recovery reports the state at the observation point
+          // and re-dates nothing. Whichever exchange finalizes first wins, and
+          // this one delivers what was retained, so the original exchange and
+          // every retransmit answer with one response.
           const recovered =
             stored.state === "final"
               ? stored.body
@@ -5212,18 +5222,19 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             sendNotFound();
             return;
           }
-          if (stored.state !== "final") {
-            lifecycleResponses.record(nonceKey, {
-              requestDigest: digest,
-              status: stored.status,
-              contentType: stored.contentType,
-              body: recovered,
-            });
-          }
-          ctx.status = stored.status;
-          ctx.set("content-type", stored.contentType);
+          const replayed =
+            stored.state === "final"
+              ? { status: stored.status, contentType: stored.contentType, body: recovered }
+              : lifecycleResponses.record(nonceKey, {
+                  requestDigest: digest,
+                  status: stored.status,
+                  contentType: stored.contentType,
+                  body: recovered,
+                });
+          ctx.status = replayed.status;
+          ctx.set("content-type", replayed.contentType);
           ctx.set("cache-control", "no-store");
-          ctx.body = recovered;
+          ctx.body = replayed.body;
           return;
         }
       } catch {
@@ -8196,12 +8207,15 @@ const RFC3339_RE = /^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-
  * a COMMITTED lifecycle response from its retained immutable material.
  *
  * This is the recovery half of the signing boundary: the operation committed,
- * the response bytes did not survive, and the exact response is reproduced
- * rather than the operation re-executed. A JSON outcome re-serializes to the
- * same bytes. A signed envelope is signed again over the RECORDED observation,
- * so its `iat` and `exp` are the original observation point's and nothing is
- * re-dated. Only this crash case re-signs: a response whose bytes ARE retained
- * replays those exact bytes and never reaches here.
+ * the response bytes are not retained (lost in a crash, or not yet written by
+ * an original exchange still signing them), and the exact response is
+ * reproduced rather than the operation re-executed. A JSON outcome
+ * re-serializes to the same bytes. A signed envelope is signed again over the
+ * RECORDED observation, so its `iat` and `exp` are the original observation
+ * point's and nothing is re-dated. Only a committed row re-signs: a response
+ * whose bytes ARE retained replays those exact bytes and never reaches here,
+ * and the first bytes retained for a claim are the ones every exchange
+ * delivers ({@link LifecycleResponseStore.record}).
  */
 async function finalizeRetainedResponse(
   kernel: MissionKernel,

@@ -38,6 +38,13 @@
 //                               never a failure; an available-but-mismatched
 //                               object always fails, since that is exactly
 //                               the false pin this check exists to catch.
+//   (i) declaration drift     - the Deployment declaration in
+//                               src/docs/control-plane-deployment.md does
+//                               not list, as residual risks, exactly the
+//                               control-plane rows not marked tested
+//                               (#250). Run here because this workflow runs
+//                               on every change, a manifest-only one
+//                               included.
 //
 // source.specs replaces a single global source.revision with one entry per
 // spec file named by a row's "spec": { revision, content_sha256 }. revision
@@ -454,6 +461,36 @@ for (const row of rows) {
   if (row.coverage !== "blocked" && row.blocked_by) fail("coverage", `${id}: blocked_by requires coverage "blocked"`);
 
   if (row.coverage !== "tested") outstanding.push(row);
+}
+
+// ---- (i) control-plane Deployment declaration --------------------------------
+// The section bounds and the bullet pattern are control-plane-declaration.test.ts's,
+// so the two cannot disagree; the test is the ledger's witness, this check is
+// the one a manifest-only change runs.
+
+// A manifest with no control-plane row (a fixture tree) has nothing to declare.
+if (rows.some((r) => nonEmptyString(r.id) && r.id.startsWith("control-plane."))) {
+  const doc = path.join(ROOT, "src/docs/control-plane-deployment.md");
+  const text = fs.existsSync(doc) ? fs.readFileSync(doc, "utf8") : "";
+  const start = text.indexOf("\n## Deployment declaration\n");
+  if (start === -1) {
+    fail("declaration", "src/docs/control-plane-deployment.md has no Deployment declaration section");
+  } else {
+    const rest = text.slice(start + 1);
+    const end = rest.indexOf("\n## ", 1);
+    const section = end === -1 ? rest : rest.slice(0, end);
+    const risks = section.split("\n### ").find((part) => part.startsWith("Residual risks\n")) ?? "";
+    const listed = new Set([...risks.matchAll(/^- `(control-plane\.[a-z0-9.-]+)`/gm)].map((m) => m[1]));
+    const untested = new Set(
+      rows.filter((r) => nonEmptyString(r.id) && r.id.startsWith("control-plane.") && r.coverage !== "tested").map((r) => r.id),
+    );
+    for (const id of untested) {
+      if (!listed.has(id)) fail("declaration", `${id} is not tested, and the control-plane Deployment declaration does not list it as a residual risk`);
+    }
+    for (const id of listed) {
+      if (!untested.has(id)) fail("declaration", `the control-plane Deployment declaration lists ${id} as a residual risk, and the ledger has no such untested row`);
+    }
+  }
 }
 
 // ---- collection check (--collect) -------------------------------------------

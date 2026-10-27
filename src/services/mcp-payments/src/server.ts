@@ -1344,6 +1344,11 @@ export class McpPaymentsServer {
         throw new Error("attenuation child not signed by the parent cnf key");
       }
       const { payload } = await jwtVerify(chain[i] as string, jwk as never, { algorithms: ["ES256"] });
+      // @spec attenuation#mission-binding-check, AAT -02 Section 8 step 6c
+      // (#1758): every token in the chain names this resource, not only the
+      // root. A child narrowed to another resource server is refused here even
+      // though its `aud` nests within its parent's.
+      this.requireAudience(payload, header.typ, this.deps.issuer);
       parentCnfJkt = (payload.cnf as { jkt?: string } | undefined)?.jkt;
       if (!parentCnfJkt) throw new Error("attenuation child missing cnf.jkt");
       leafPayload = payload;
@@ -1380,7 +1385,12 @@ export class McpPaymentsServer {
     // way as the other credential classes.
     const missionClaim = readTxnMissionClaim(rootPayload.mission);
     return {
-      sub: (leafPayload.sub ?? rootPayload.sub) as string,
+      // @spec attenuation#mission-binding-check, AAT -02 Section 3.3 (#1758):
+      // the subject is the issuer-signed root's, which the root profile
+      // requires. A child's `sub` is whatever its holder wrote and carries no
+      // authority, so it never becomes the decision, idempotency or recorded
+      // subject.
+      sub: root.sub,
       clientId: root.clientId,
       iss: this.deps.issuer,
       credential: verifiedCredentialRef(leafPayload),
@@ -1987,7 +1997,7 @@ export class McpPaymentsServer {
     let derivedApproval: ActionApprovalInput | undefined;
     let consumedTxn: string | undefined;
     if (token.txn) {
-      const verified = this.verifyChallengedOperation(token.txn, tool, args);
+      const verified = await this.verifyChallengedOperation(token.txn, tool, args);
       if (!verified.ok) return { ok: false, refusal_reason: verified.refusal_reason };
       derivedApproval = verified.approval;
       consumedTxn = token.txn.txn;
@@ -2438,17 +2448,17 @@ export class McpPaymentsServer {
    * operation's is refused. The digest is recomputed from authoritative store
    * state, never read off the token.
    */
-  private verifyChallengedOperation(
+  private async verifyChallengedOperation(
     credential: TxnCredential,
     tool: string,
     args: Record<string, unknown>,
-  ): { ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string } {
+  ): Promise<{ ok: true; approval: ActionApprovalInput } | { ok: false; refusal_reason: string }> {
     const pending = this.txnPending.get(CANONICAL_RESOURCE, credential.txn);
     if (!pending) return { ok: false, refusal_reason: "txn_unknown" };
     if (TOOL_ACTIONS[tool]?.action !== pending.action) {
       return { ok: false, refusal_reason: "txn_action_mismatch" };
     }
-    const recomputed = this.recomputeParameterDigest(tool, args);
+    const recomputed = await this.recomputeParameterDigest(tool, args, pending.mission);
     if (
       recomputed === undefined ||
       recomputed !== pending.parameterDigest ||
@@ -2494,10 +2504,22 @@ export class McpPaymentsServer {
    * @spec runtime (parameter binding) — recompute the operation's digest from
    * authoritative store state, exactly as the enforcement path does. The token
    * is matched against THIS value, never against a digest it supplies.
+   *
+   * @spec runtime#compound-actions, txn-authorization#offline-verification
+   * (#252, #1693, D889): a compensate crossing's form is the committed wire's
+   * reversal form, so it is rebuilt from the compensation link the PEP
+   * establishes again from its retained, verified evidence for the challenged
+   * Mission, and from that wire's ledger record; never the invoice form, and
+   * never the vendor the invoice names now.
    */
-  private recomputeParameterDigest(tool: string, args: Record<string, unknown>): string | undefined {
+  private async recomputeParameterDigest(
+    tool: string,
+    args: Record<string, unknown>,
+    mission: { id: string; issuer: string },
+  ): Promise<string | undefined> {
     const mapping = TOOL_ACTIONS[tool];
     if (!mapping?.needsInvoice) return undefined;
+    if (mapping.compensates) return await this.deps.pep.compensationParameterDigest(tool, args, mission);
     // @spec resource-access#resource-matching (#1276): the operation target
     // the enforcement path establishes, from the same trusted contract and
     // the same validated arguments.

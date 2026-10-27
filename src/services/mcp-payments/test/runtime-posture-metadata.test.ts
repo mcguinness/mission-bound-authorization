@@ -21,6 +21,37 @@ describe("runtime posture publication on the resource metadata surface", () => {
     } finally { await listener.close(); }
   });
 
+  // @spec control-plane#emergency-authority (#250 step 4): the PEP runs no
+  // positive emergency permission. It publishes `break_glass` absent, and it
+  // does not start under a statement declaring any other emergency mode, so no
+  // emergency flag can turn a failed Mission check into a permit.
+  it("publishes positive emergency permission absent, and refuses to start under a statement declaring any other emergency mode", async () => {
+    const store = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const serve = (statement?: unknown) =>
+      new McpPaymentsServer({
+        issuer: "https://as.test",
+        jwks: { keys: [] },
+        keyRoles: { accessToken: [], attenuationRoot: [], transactionToken: [] },
+        writeReservations: store,
+        ...(statement ? { enforcementScopeStatement: statement } : {}),
+      } as never);
+    try {
+      const listener = await startResourceMetadataServer(() => serve());
+      try {
+        const response = await fetch(`${listener.origin}${PROTECTED_RESOURCE_METADATA_PATH}`);
+        const statement = ((await response.json()) as { enforcement_scope_statement: typeof RUNTIME_POSTURE }).enforcement_scope_statement;
+        expect(statement.state_source.break_glass).toBe("absent");
+      } finally { await listener.close(); }
+      for (const mode of ["enabled", "present", "operator", "", undefined]) {
+        const statement = structuredClone(RUNTIME_POSTURE) as { state_source: Record<string, unknown> };
+        if (mode === undefined) delete statement.state_source.break_glass;
+        else statement.state_source.break_glass = mode;
+        expect(() => serve(statement), String(mode)).toThrow("unsupported unknown-class, replication, or emergency mode");
+      }
+      expect(() => serve(structuredClone(RUNTIME_POSTURE))).not.toThrow();
+    } finally { store.close(); }
+  });
+
   // @spec runtime#idempotency (#917): "The deployment MUST name the Exact
   // claim domain per mediated action class or idempotency scope in its
   // Enforcement Scope Statement, not as an enumeration of individual dynamic
