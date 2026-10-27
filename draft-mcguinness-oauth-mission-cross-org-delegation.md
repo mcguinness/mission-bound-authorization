@@ -32,6 +32,14 @@ normative:
   RFC8693:
   RFC9396:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+    title: "Attenuating Authorization Tokens for Agentic Delegation Chains"
+    author:
+      -
+        ins: N. A. Niyikiza
+        name: Niki Aimable Niyikiza
+    date: 2026-10-26
+    seriesinfo:
+      Internet-Draft: draft-niyikiza-oauth-attenuating-agent-tokens-02
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
