@@ -3,11 +3,12 @@
  * on a `recipient_domain` label carrying the `xn--` prefix, which Resource
  * Access requires to be an A-label as RFC 5890 Section 2.3.2.1 defines it.
  *
- * Checked, as RFC 5891 Sections 4.2.3 and 5.4 give the structure: compared
- * case-insensitively, the ASCII label decodes under Punycode (RFC 3492) and
- * encodes back to itself; the decoded U-label holds a non-ASCII character,
- * is in NFC and in lower case as decoded (never repaired), does not begin
- * with a combining mark, and meets the hyphen restrictions.
+ * Checked: read in lower case, the ASCII label decodes under Punycode (RFC
+ * 3492) and encodes back to itself (RFC 5891 Section 5.3, which also invokes
+ * Sections 5.4 and 5.5); the decoded U-label holds a non-ASCII character, is
+ * in NFC and in lower case as decoded (never repaired), does not begin with a
+ * combining mark (Section 4.2.3.2), and meets the hyphen restrictions
+ * (Section 4.2.3.1).
  *
  * Not checked, a stated residual (D858): the code-point classes of RFC 5892
  * (RFC 5891 Section 4.2.2), the contextual rules (Section 4.2.3.3) and the
