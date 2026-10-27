@@ -69,18 +69,56 @@ interface Case {
 }
 
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
-// #252: contract version 2026-10-24 (payments-runtime-profile-v14) added the
-// compensate operation and is current, so the subset frozen against it is the
-// one checked here. The 2026-10-20 files stay frozen, unedited, and the
-// version they name stays declared as superseded (checked below).
-const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-24.json"));
+// #1693: contract version 2026-10-26 (payments-runtime-profile-v15) is
+// current, so the subset frozen against it is the one checked here. #252's
+// 2026-10-24 (v14), which added the compensate operation, and the original
+// 2026-10-20 (v13) stay frozen, unedited, and the versions they name stay
+// declared as superseded (checked below).
+const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-26.json"));
 const contract = read<ContractFile>(join(SUBSET_DIR, subset.contract.file));
-const supersededContract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-20.json"));
+const supersededContracts = ["payments-contract-2026-10-20.json", "payments-contract-2026-10-24.json"].map((f) =>
+  read<ContractFile>(join(SUBSET_DIR, f)),
+);
 const sorted = (values: Iterable<string>) => [...values].sort();
 const readCases = () =>
   readdirSync(CASES_DIR)
     .filter((f) => f.endsWith(".json"))
     .flatMap((f) => read<{ cases: Case[] }>(join(CASES_DIR, f)).cases);
+
+/**
+ * An applicability file (`mission-resource-contract-applicability/1`): its one
+ * exact-resource configuration, the frozen contract file it names (whose
+ * reference it must carry) and the payments deployment's declaration of that
+ * version.
+ */
+function applicabilityOf(file: string) {
+  const applicability = read<{
+    format: string;
+    contracts: { resource: string; resource_match: string; current: { file: string; reference: ResourceContractRef } }[];
+  }>(join(SUBSET_DIR, file));
+  expect(applicability.format, file).toBe("mission-resource-contract-applicability/1");
+  expect(applicability.contracts, file).toHaveLength(1);
+  const [current] = applicability.contracts;
+  if (!current) throw new Error(`${file} names no contract`);
+  expect(current.resource_match, file).toBe("exact");
+  const frozen = read<ContractFile>(join(SUBSET_DIR, current.current.file));
+  expect(current.current.reference, file).toEqual(frozen.reference);
+  return {
+    configured: [{ resource: current.resource, reference: current.current.reference }],
+    frozen,
+    declared: RESOURCE_CONTRACTS.versionOf(current.current.reference),
+  };
+}
+
+/** The ids of the entry-validation cases carrying exactly `configured` inline. */
+const carryingCases = (configured: unknown): string[] =>
+  readCases()
+    .filter(
+      (c) =>
+        c.check === "entry-validation" &&
+        JSON.stringify((c.input as { contracts?: unknown }).contracts) === JSON.stringify(configured),
+    )
+    .map((c) => c.id);
 
 /** The key names in the draft's "Initial Mission Common Constraints registry" table. */
 function initialRegistryKeys(): string[] {
@@ -139,34 +177,55 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
-  // #249 (D712, D865): the contract's resource applicability, in a file of its
-  // own beside the frozen contract and subset files.
-  it("names, in a separate applicability file, the one resource the current contract applies to, and the contract cases carry exactly that configuration", () => {
-    const applicability = read<{
-      format: string;
-      contracts: { resource: string; resource_match: string; current: { file: string; reference: unknown } }[];
-    }>(join(SUBSET_DIR, "payments-contract-applicability-2026-10-26.json"));
-    expect(applicability.format).toBe("mission-resource-contract-applicability/1");
-    expect(applicability.contracts).toHaveLength(1);
-    const [current] = applicability.contracts;
-    expect(current?.resource_match).toBe("exact");
-    expect(current?.current.reference).toEqual(read<ContractFile>(join(SUBSET_DIR, current?.current.file ?? "")).reference);
-    expect(current?.current.reference).toEqual(contract.reference);
-    expect(RESOURCE_CONTRACTS.versionOf(current?.current.reference)?.version.state).toBe("current");
-    const configured = [{ resource: current?.resource, reference: current?.current.reference }];
+  // #249 (D712, D865), #1693 (D889): the contract's resource applicability,
+  // in files of their own beside the frozen contract and subset files. The
+  // current file names the version the payments deployment declares current;
+  // the historical one, frozen at 2026-10-24 before v15, names a version the
+  // deployment still declares and performs. Each file's configuration is the
+  // one its own cases carry inline, and every case carrying a configuration
+  // carries one of the two.
+  it("names, in the current applicability file, the one resource the current contract applies to, and its contract cases carry exactly that configuration (#1693)", () => {
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-v15.json");
+    expect(frozen.reference).toEqual(contract.reference);
+    expect(declared?.version.state).toBe("current");
+    expect(declared?.version.document).toEqual(frozen.document);
+    expect(carryingCases(configured)).toEqual(["ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+  });
+
+  it("keeps, in the historical applicability file frozen before v15, a declared payments contract version, and its contract cases carry exactly that configuration", () => {
+    const { configured, frozen, declared } = applicabilityOf("payments-contract-applicability-2026-10-26.json");
+    expect(frozen.reference.version).toBe("2026-10-24");
+    expect(declared).toBeDefined();
+    expect(["current", "superseded"]).toContain(declared?.version.state);
+    expect(declared?.version.document).toEqual(frozen.document);
+    expect(carryingCases(configured)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
+  });
+
+  it("every case carrying a contract configuration carries one of the applicability files' configurations", () => {
+    const known = ["payments-contract-applicability-v15.json", "payments-contract-applicability-2026-10-26.json"].map(
+      (f) => applicabilityOf(f).configured,
+    );
     const carrying = readCases().filter(
       (c) => c.check === "entry-validation" && (c.input as { contracts?: unknown }).contracts !== undefined,
     );
-    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
-    for (const c of carrying) expect((c.input as { contracts: unknown }).contracts, c.id).toEqual(configured);
+    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03", "ev-rc-05", "ev-rc-06", "ev-rc-07"]);
+    for (const c of carrying) {
+      const carried = JSON.stringify((c.input as { contracts: unknown }).contracts);
+      expect(known.some((k) => JSON.stringify(k) === carried), c.id).toBe(true);
+    }
   });
 
-  it("keeps the superseded version 2026-10-20 declared exactly as it was frozen, with a declared retention (#252)", () => {
-    const declared = RESOURCE_CONTRACTS.versionOf(supersededContract.reference);
-    expect(declared?.version.state).toBe("superseded");
-    expect(declared?.version.retained_until).toEqual(expect.any(String));
-    expect(declared?.version.digest).toBe(supersededContract.reference.digest);
-    expect(declared?.version.document).toEqual(supersededContract.document);
+  it("keeps the superseded versions 2026-10-20 and 2026-10-24 declared exactly as they were frozen, each with a declared retention (#252, #1693)", () => {
+    expect(supersededContracts.map((c) => c.reference.version)).toEqual(["2026-10-20", "2026-10-24"]);
+    for (const superseded of supersededContracts) {
+      const version = superseded.reference.version;
+      const declared = RESOURCE_CONTRACTS.versionOf(superseded.reference);
+      expect(declared?.version.state, version).toBe("superseded");
+      expect(declared?.version.retained_until, version).toEqual(expect.any(String));
+      expect(declared?.version.digest, version).toBe(superseded.reference.digest);
+      expect(declared?.version.document, version).toEqual(superseded.document);
+      expect(resourceContractDigest(superseded.document as unknown as JsonValue), version).toBe(superseded.reference.digest);
+    }
   });
 
   it("lists exactly the actions the contract covers, each an explicit identifier: no action family", () => {

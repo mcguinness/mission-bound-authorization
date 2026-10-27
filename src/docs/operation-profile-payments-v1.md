@@ -1,12 +1,22 @@
-# payments-runtime-profile-v14
+# payments-runtime-profile-v15
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v14`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v15`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v15** (#1693, D873, D879): changes only `reverse_wire_transfer`. Its
+  `tenant` fact is the current tenant of the vendor the committed wire
+  paid, never the vendor the invoice names now, in the decision request
+  and in its Evaluation-Context Binding descriptor (`payment-reverse`
+  version `2026-10-26`), and the crossing does not read the invoice's
+  current vendor at all. The payments resource contract gains version
+  `2026-10-26`, which names this profile; `2026-10-24` (v14) is
+  superseded, and a reversal pinned to it is refused (Resource contract,
+  below). Every other operation keeps its decision bytes.
 
 - **v14** (#252): adds `reverse_wire_transfer`, the compensate phase of the
   wire (`payments:payment.reverse`). It offsets a committed wire through the
@@ -207,11 +217,29 @@ Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
 Statement's `extensions.resource_contracts`: one contract, `id`
 `https://payments.example/contracts/payments`, served for the canonical
 resource URI under `resource_match: prefix` (so a finer target beneath the
-service, such as an argument-derived invoice target, is covered), with two
-versions: `2026-10-24` in state `current`, naming
-`payments-runtime-profile-v14`, and `2026-10-20` in state `superseded`,
-naming v13, retained until `2027-10-24T00:00:00Z`. Both are frozen in
-`vectors/mission-resource-access-subset/`.
+service, such as an argument-derived invoice target, is covered), with three
+versions, each frozen in `vectors/mission-resource-access-subset/`:
+
+| Version | State | Operation Profile | Retained until |
+|---|---|---|---|
+| `2026-10-26` | `current` | `payments-runtime-profile-v15` | |
+| `2026-10-24` | `superseded` | `payments-runtime-profile-v14` | `2027-10-26T00:00:00Z` |
+| `2026-10-20` | `superseded` | `payments-runtime-profile-v13` | `2027-10-24T00:00:00Z` |
+
+- **Authority pinned to a superseded version.** An entry carrying a
+  superseded reference is performed, within its retention, under the
+  profile that version names, never under the live one
+  (`RETAINED_OPERATION_PROFILES`). v13 has no `reverse_wire_transfer`. v14
+  named it, but v15 changed what it reads (the paid vendor's current
+  tenant, not the invoice's current vendor's), and this resource no
+  longer performs the v14 reversal, so the retained v14 profile omits it.
+  A reversal under an entry pinned to `2026-10-24` is refused
+  `resource_contract_unresolvable` before any decision request, with a
+  Refusal Record and no effect, unless another applicable entry covers it;
+  it never gets v15's semantics silently. Every other crossing pinned to
+  `2026-10-24` performs exactly as under v14, since v15 changes no other
+  crossing. An unpinned entry, and one pinned to `2026-10-26`, reverses
+  under v15.
 
 - **Contract material.** The version's document assembles, for each tool:
   its action identifier and phase, its minimum action class, its
@@ -220,7 +248,9 @@ naming v13, retained until `2027-10-24T00:00:00Z`. Both are frozen in
   takes an idempotency key, and its catalog capability (`tool_id` and the
   extracted-definition `source_digest`). It names, per constraint key, the
   fact the resource reads, and the Operation Profile version it assembles
-  (`operation_profile`: `payments-runtime-profile-v14` for `2026-10-24`).
+  (`operation_profile`: `payments-runtime-profile-v15` for `2026-10-26`).
+  `2026-10-26` differs from `2026-10-24` only in its version, its profile
+  and the `tenant` fact it names for `reverse_wire_transfer`.
   It overrides none of
   those definitions. Resource policy, Mission state, entitlements,
   revocation and resolved resource facts are not contract material.
@@ -330,7 +360,7 @@ and the PDP refuses a matched entry that carries one.
 | Key | Authoritative fact | Decision request member | Targets without the fact |
 |---|---|---|---|
 | `resource_issued_after`, `resource_issued_before` | the invoice record's `issued_at` (RFC 3339), compared as a UTC instant, both bounds inclusive; for `list_invoices`, each invoice returned | `resource.properties.issued_at`; for `list_invoices`, each member's `issued_at` in `resource.properties.members` | `lookup_vendor` (a vendor record has no issuance instant), an invoice with no `issued_at`, and a `list_invoices` read with such a member or with no member: refused |
-| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
+| `tenant` | the vendor record's `tenant` (an invoice belongs to its vendor's tenant), compared as an exact string; for `list_invoices`, each invoice returned; for `reverse_wire_transfer`, the current record of the vendor the committed wire paid (Evaluation-Context Binding, below) | `resource.properties.tenant`; for `list_invoices`, each member's `tenant` in `resource.properties.members` | a vendor record naming no tenant, and a `list_invoices` read with a member whose vendor names none or with no member: refused |
 | `time_window` | the evaluating component's own clock at the point of use (the PEP's credential check and the PDP's decision), both bounds inclusive | none: the PDP reads its own clock | none: every operation has a time |
 | `recipient_domain` | every final recipient `send_remittance_email` reaches: the vendor's remittance addresses with each distribution list expanded to its members, or the vendor's default address; each must be within the domain (case-insensitive, whole labels) | `action.properties.recipients` | every operation that addresses no recipient: refused |
 | `data_classification` | the invoice record's `classification` label, compared as an exact string; every label the operation touches must be named; for `list_invoices`, each invoice returned | `resource.properties.data_classification`; for `list_invoices`, each member's `data_classification` in `resource.properties.members` | `lookup_vendor` (a vendor record has no label), an invoice with no label, and a `list_invoices` read with such a member or with no member: refused |
@@ -466,13 +496,22 @@ names as the targets. None of them is read from the invoice as it reads
 now, so an invoice amount that changes after its wire committed leaves
 them unchanged. The descriptor also declares the live resource facts the
 compensating decision evaluates through the Common Constraints: the
-invoice's issuance instant and classification, and the tenant of the
-vendor the invoice names, each read from the payments store as the
-decision request carries it (the value, or null when the record names
-none). Each resolver names the crossings it serves, so the compensate
-crossing reads no effect fact from the store. A changed or missing ledger
-record, or a moved live fact, is `target_drift`. The request carries
-`compensates_evaluation_id` beside the context members.
+invoice's issuance instant and classification, and the current tenant of
+the vendor the wire paid (`payments-store:paid-vendor.tenant`, #1693), each
+read from the payments store as the decision request carries it (the
+value, or null when the record names none). The wire fixes which vendor
+the reversal concerns, and that vendor's record supplies its tenant now:
+the tenant is not frozen at payment time, and an invoice reassigned to
+another vendor after its wire committed neither blocks nor widens the
+reversal, even when the vendor it names now has no record (D879). A paid
+vendor the store no longer holds is refused
+`unknown_vendor` before the decision request. Each resolver names the
+crossings it serves, so the compensate crossing reads no effect fact from
+the store, and `payments-store:vendor.tenant` (the tenant of the vendor an
+invoice names) serves store crossings only. A changed or missing ledger
+record, a moved live fact, or a paid vendor record gone after the decision
+is `target_drift`. The request carries `compensates_evaluation_id` beside
+the context members.
 
 Every crossing of a covered operation captures its context from the
 payments store, or the compensate crossing from the ledger record, before
@@ -708,6 +747,10 @@ carrying it is issued outside the shipped approval paths.
   form: the invoice and vendor the wire paid, its amount and currency, its
   payee, the operation target, and the wire's operation key (`reverses`).
   The invoice as it reads now never supplies them, and no argument does.
+  The crossing never reads the vendor the invoice names now (D879): the
+  named invoice must exist, and the link must be its wire, but its current
+  vendor need not resolve, while every other invoice-scoped operation
+  refuses a vendor the store does not hold `unknown_vendor`.
   `parameter_digest` over that form is what the decision evaluates (a
   reversal ceiling is compared with the committed amount), and what the
   operation key, the PDP's claim on the idempotency key, any approval bound
@@ -721,6 +764,16 @@ carrying it is issued outside the shipped approval paths.
   Refusal Record of that value and no decision request. The PDP refuses a
   compensate-phase request without a well-formed link before evaluation
   (`compensation_link_invalid`).
+- **Challenged retry.** Where the deployment gates the reversal on an
+  action-bound approval, its challenge binds the reversal form's
+  `parameter_digest`. On the transaction-token retry the resource
+  recomputes that digest itself: it establishes the link again from its
+  own retained evidence for the challenged Mission and reads the wire's
+  ledger record through it, never the invoice form, the invoice's current
+  vendor, or a digest the token or the pending operation carries. A ledger
+  record that changed, or a link that no longer establishes, between the
+  challenge and the retry is refused `txn_parameter_mismatch`, and a second
+  retry under the same token releases no second reversal.
 - **At use.** The wire's own permit presented at this crossing is refused
   by the phase binding (`phase_mismatch`), with suppressed Execution
   Evidence and no effect.
