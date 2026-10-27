@@ -75,6 +75,8 @@ export {
   refreshingStatusKeys,
   MISSION_STATUS_SKEW_SECONDS,
   MISSION_STATUS_STATES,
+  type MissionStatusIssuer,
+  missionStatusIssuer,
   type MissionStatusFailure,
   type MissionStatusResolution,
   MissionStatusResolver,

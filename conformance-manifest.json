@@ -88833,12 +88833,37 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a consumer takes the expected issuer from its own trust or configuration, validates the issuer's metadata (its issuer equal to the identifier used to retrieve it), and verifies with that issuer's jwks_uri keys",
-    "local": "the PDP's Mission Status resolver is configured with its issuer (services/pdp/src/mission-status-resolver.ts)"
+    "local": "the separated MAS pilot configures its resolver through missionStatusIssuer (@mission/pdp): the configured Mission issuer's metadata, read at the MAS's configured URL and refused unless its issuer is that identifier (RFC 8414 Section 3.3 applied to the configured identifier), the advertised mission_status_endpoint, and the declared Status keys at its jwks_uri; the PDP's Mission Status resolver verifies iss and mission.issuer against its configured issuer"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 D5 (D847)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a response that does not verify establishes nothing (@spec status#mission-status-response) > refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > retrieves the expected issuer's metadata, at that identifier unless the configuration places it elsewhere, and takes the endpoint it advertises",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > refuses metadata whose issuer is not the identifier it expects, and metadata advertising no Status endpoint or no jwks_uri",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-issuer.test.ts",
+     "name": "a consumer configures the Mission Status operation from the issuer it expects (@spec status#mission-status, #1724 D5) > verifies only under the declared Status keys at the validated metadata's jwks_uri, never a key served elsewhere",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 D5 (D847). Proved by five defects: the resolver's expected issuer taken from the response (only the throughout-impostor witness fails; the existing iss-only test is caught by check 4 regardless); metadata naming another issuer accepted; keys from a fixed path at the issuer instead of the metadata's jwks_uri; the Status endpoint guessed from where the metadata was read. The launcher's own issuer check (mas-pilot-launcher.test.ts) is not cited: without it the helper still refuses, so its test fails only on the message."
   }
  ]
 }

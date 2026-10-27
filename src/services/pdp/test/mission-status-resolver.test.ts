@@ -286,6 +286,14 @@ describe("MissionStatusResolver: a response that does not verify establishes not
     await expectRefusedUncached(resolver(), "unverifiable");
   });
 
+  it("refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)", async () => {
+    handler = respond((p) => {
+      p.iss = "https://impostor.example";
+      mission(p).issuer = "https://impostor.example";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable");
+  });
+
   it("refuses a response whose mission.issuer is not its iss (consumer check 4, #1535)", async () => {
     handler = respond((p) => {
       mission(p).issuer = "https://impostor.example";
