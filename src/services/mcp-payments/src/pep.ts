@@ -177,9 +177,10 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * live Operation Profile; one naming another performs under that retained
  * profile (`PepDeps.retainedOperationProfiles`, by default
  * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
- * compensate crossing `reverse_wire_transfer`.
+ * compensate crossing `reverse_wire_transfer`; v15 (#813, #816) states the
+ * budget metering of `payments:payment.execute` and changes no crossing.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v15";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -540,10 +541,14 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
  * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
  * live profile without the compensate crossing `reverse_wire_transfer`, which
  * v14 added: every crossing it names performs exactly as it did, and the
- * crossing it does not name is not performed under it. A snapshot taken at
- * load, never the live table.
+ * crossing it does not name is not performed under it.
+ * `payments-runtime-profile-v14` (contract version `2026-10-24`) names every
+ * crossing the live profile does, each performed exactly as it is: v15 only
+ * states the budget metering. Each is a snapshot taken at load, never the
+ * live table.
  */
 export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
+  "payments-runtime-profile-v14": Object.freeze({ ...TOOL_ACTIONS }),
   "payments-runtime-profile-v13": Object.freeze(
     Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
   ),

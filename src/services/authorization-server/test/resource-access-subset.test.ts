@@ -69,13 +69,14 @@ interface Case {
 }
 
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
-// #252: contract version 2026-10-24 (payments-runtime-profile-v14) added the
-// compensate operation and is current, so the subset frozen against it is the
-// one checked here. The 2026-10-20 files stay frozen, unedited, and the
-// version they name stays declared as superseded (checked below).
-const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-24.json"));
+// #813, #816 (D877): contract version 2026-10-26 (payments-runtime-profile-v15)
+// is current, so the subset frozen against it is the one checked here. The
+// 2026-10-20 and 2026-10-24 files stay frozen, unedited, and the versions they
+// name stay declared as superseded (checked below).
+const subset = read<SubsetFile>(join(SUBSET_DIR, "supported-subset-2026-10-26.json"));
 const contract = read<ContractFile>(join(SUBSET_DIR, subset.contract.file));
 const supersededContract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-20.json"));
+const supersededV14Contract = read<ContractFile>(join(SUBSET_DIR, "payments-contract-2026-10-24.json"));
 const sorted = (values: Iterable<string>) => [...values].sort();
 const readCases = () =>
   readdirSync(CASES_DIR)
@@ -145,6 +146,15 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(declared?.version.retained_until).toEqual(expect.any(String));
     expect(declared?.version.digest).toBe(supersededContract.reference.digest);
     expect(declared?.version.document).toEqual(supersededContract.document);
+  });
+
+  it("keeps the superseded version 2026-10-24 declared exactly as it was frozen, naming payments-runtime-profile-v14, with a declared retention (#813, #816, D877)", () => {
+    const declared = RESOURCE_CONTRACTS.versionOf(supersededV14Contract.reference);
+    expect(declared?.version.state).toBe("superseded");
+    expect(declared?.version.retained_until).toBe("2027-10-26T00:00:00Z");
+    expect(declared?.version.operation_profile).toBe("payments-runtime-profile-v14");
+    expect(declared?.version.digest).toBe(supersededV14Contract.reference.digest);
+    expect(declared?.version.document).toEqual(supersededV14Contract.document);
   });
 
   it("lists exactly the actions the contract covers, each an explicit identifier: no action family", () => {
