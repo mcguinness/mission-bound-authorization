@@ -34,6 +34,12 @@ const SKEW_S = 30;
 interface Common {
   /** The AS's published keys (its `jwks_uri`). */
   keys: JWTVerifyGetKey;
+  /**
+   * The key identifiers the consumer's trusted configuration authorizes for
+   * the AS's Mission Status responses (#831, D842, D857). A key the AS
+   * publishes for another role never verifies, though its signature would.
+   */
+  statusKids: readonly string[];
   /** The algorithms the AS advertises for Mission Status signing. */
   algs: readonly string[];
   /** The expected AS issuer URL. */
@@ -61,7 +67,15 @@ async function verifySignature(
   if (typeof header.alg !== "string" || header.alg === "none" || !opts.algs.includes(header.alg)) {
     throw new ConsumerVerificationError("alg", `alg ${String(header.alg)} is not advertised`);
   }
-  // 3. the signature against a current `jwks_uri` key.
+  // 3. the signature against a current `jwks_uri` key the consumer's trusted
+  //    configuration authorizes for Mission Status responses: publication
+  //    alone authorizes nothing.
+  if (typeof header.kid !== "string" || !opts.statusKids.includes(header.kid)) {
+    throw new ConsumerVerificationError(
+      "signature",
+      `kid ${String(header.kid)} is not authorized for Mission Status responses`,
+    );
+  }
   let payload: Uint8Array;
   try {
     ({ payload } = await compactVerify(jws, opts.keys, { algorithms: [...opts.algs] }));
