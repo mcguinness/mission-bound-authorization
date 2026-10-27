@@ -1557,7 +1557,7 @@ this specific request.<a href="#section-3.1-2.6.1" class="pilcrow">¶</a></p>
         <dd class="break"></dd>
 </dl>
 <p id="section-3.1-3">The request also carries the client authentication parameters of the
-mechanism it uses (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): <code>client_id</code>,
+method it uses (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): <code>client_id</code>,
 <span class="bcp14">REQUIRED</span> with mTLS client authentication (<span><a href="https://rfc-editor.org/rfc/rfc8705#section-2" class="relref">Section 2</a> of [<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>),
 and <code>client_assertion_type</code> and <code>client_assertion</code>, <span class="bcp14">REQUIRED</span> with
 private-key-JWT client authentication <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. A sender-constrained
@@ -1582,13 +1582,31 @@ certificate subject. The response's <code>aud</code> is the requested <code>audi
 <a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-authentication" class="section-name selfRef">Authentication</a>
         </h3>
 <p id="section-3.2-1">The request <span class="bcp14">MUST</span> be authenticated. The AS <span class="bcp14">MUST</span> support at least one
-of the following mechanisms. The client <span class="bcp14">MUST</span> use exactly one of them
-per request:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+of the following paths. The client <span class="bcp14">MUST</span> use exactly one of them per
+request:<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-3.2-2">
 <li id="section-3.2-2.1">
-            <p id="section-3.2-2.1.1"><strong>mTLS client authentication</strong> <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. The AS validates the
-client's X.509 certificate against its configured trust anchors and
-the client's registered <code>tls_client_auth</code> metadata.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-3.2-2.1.1"><strong>Client authentication</strong>, with a method from the OAuth Token
+Endpoint Authentication Methods registry <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> that the AS
+advertises for this endpoint (<a href="#as-metadata" class="auto internal xref">Section 8</a>). A method that
+authenticates with a shared client secret, such as
+<code>client_secret_basic</code>, <code>client_secret_post</code>, or <code>client_secret_jwt</code>,
+<span class="bcp14">MUST NOT</span> be used, and <code>none</code> is not client authentication. Each
+method is processed as its specification defines. With
+<code>tls_client_auth</code> <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, the AS validates the client's X.509
+certificate against its configured trust anchors and the client's
+registered <code>tls_client_auth</code> metadata. With <code>private_key_jwt</code>
+              <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>, the
+client presents <code>client_assertion_type</code> with the exact value
+<code>urn:ietf:params:oauth:client-assertion-type:jwt-bearer</code> and a signed
+JWT as <code>client_assertion</code>. The assertion's <code>aud</code> <span class="bcp14">MUST</span> be the AS's
+issuer identifier <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> as its sole value, the client
+authentication audience of <span>[<a href="#I-D.draft-ietf-oauth-rfc7523bis" class="cite xref">I-D.draft-ietf-oauth-rfc7523bis</a>]</span>;
+the AS <span class="bcp14">MUST</span> reject an assertion with any other <code>aud</code>. The client
+<span class="bcp14">SHOULD</span> set the JWS <code>typ</code> header to <code>client-authentication+jwt</code>.
+The AS accepts only the JWS
+<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithms it advertises for that endpoint
+(<a href="#as-metadata" class="auto internal xref">Section 8</a>); <code>none</code> <span class="bcp14">MUST NOT</span> be used.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-2.2">
             <p id="section-3.2-2.2.1"><strong>Sender-constrained access token</strong>. The client presents a
@@ -1601,38 +1619,27 @@ whose <code>cnf.x5t#S256</code> matches the presented client certificate). The
 token <span class="bcp14">MUST</span> be audience-restricted to this endpoint's
 protected-resource identifier (below).<a href="#section-3.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li id="section-3.2-2.3">
-            <p id="section-3.2-2.3.1"><strong>Private-key-JWT client authentication</strong> <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The client
-presents <code>client_assertion_type</code> with the exact value
-<code>urn:ietf:params:oauth:client-assertion-type:jwt-bearer</code> and a signed
-JWT as <code>client_assertion</code>. The assertion's <code>aud</code> <span class="bcp14">MUST</span> be the AS's
-issuer identifier <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> as its sole value, the client
-authentication audience of <span>[<a href="#I-D.draft-ietf-oauth-rfc7523bis" class="cite xref">I-D.draft-ietf-oauth-rfc7523bis</a>]</span>;
-the AS <span class="bcp14">MUST</span> reject an assertion with any other <code>aud</code>. The client
-<span class="bcp14">SHOULD</span> set the JWS <code>typ</code> header to <code>client-authentication+jwt</code>.
-The AS accepts only the JWS
-<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span> algorithms it advertises for that endpoint
-(<a href="#as-metadata" class="auto internal xref">Section 8</a>); <code>none</code> <span class="bcp14">MUST NOT</span> be used.<a href="#section-3.2-2.3.1" class="pilcrow">¶</a></p>
-</li>
         </ol>
-<p id="section-3.2-3">Plain Basic or POST client authentication <span class="bcp14">MUST NOT</span> be used for this
-endpoint. The AS <span class="bcp14">MUST</span> refuse a request not authenticated by one of the
-three mechanisms, with the outcome <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>
-assigns: <code>unauthorized</code> (HTTP 401) or <code>invalid_client</code> (HTTP 400). The
-mechanism is
+<p id="section-3.2-3">The AS <span class="bcp14">MUST</span> refuse a request not authenticated on one of the two
+paths, with the outcome <a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>
+assigns. The
+path and method are
 determined by wire evidence in order: a request presenting an access
-token in <code>Authorization</code> is mechanism 2, and any client certificate is
-then evaluated only as that token's mTLS sender constraint; otherwise a
-request presenting <code>client_assertion</code> is mechanism 3, and any client
-certificate is not treated as client authentication; otherwise a request
-presenting only a client certificate is mechanism 1. This order keeps
-"exactly one mechanism" satisfiable when mTLS terminates at the edge.
-The parameters of a mechanism the order does not select, such as a
-<code>client_assertion</code> beside an access token, are not evaluated as
+token in <code>Authorization</code> takes the access-token path, and any client
+certificate is then evaluated only as that token's mTLS sender
+constraint; otherwise a request presenting the parameters of a method
+other than mTLS client authentication, such as <code>client_assertion</code> for
+<code>private_key_jwt</code>, uses that method, and any client certificate is not
+treated as client authentication; otherwise a request presenting only
+a client certificate uses the mTLS client authentication method
+registered for the client (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>). This order keeps
+"exactly one path" satisfiable when mTLS terminates at the edge.
+The parameters of a path or method the order does not select, such as
+a <code>client_assertion</code> beside an access token, are not evaluated as
 client authentication. A
-request whose selected mechanism the endpoint does not advertise, or
-whose only credential is of a kind no mechanism uses (HTTP Basic, a
-client secret), is answered as one that presented no credential
+request whose selected method the endpoint does not advertise,
+including a shared-secret method such as HTTP Basic, is answered as
+one that presented no credential
 (<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>).<a href="#section-3.2-3" class="pilcrow">¶</a></p>
 <p id="section-3.2-4">An authenticated caller <span class="bcp14">MUST</span> additionally carry an explicit read
 authorization: a <code>mission_status</code> scope on the presented access token,
@@ -1641,7 +1648,7 @@ client. The <code>mission_status</code> scope authorizes the Mission Status read
 operation and mirrors the <code>mission_lifecycle</code> scope of the Mission
 Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>). The token-less
 path is preserved: a consumer that holds only a <code>mission_id</code> and
-authenticates directly as a client (mechanism 1 or 3) carries the
+authenticates directly as a client carries the
 deployment-defined equivalent grant, not a scope, and so resolves
 Mission state without holding an access token the AS issued. A caller
 carrying no such authorization is refused with the not-found response
@@ -1661,23 +1668,24 @@ authorization, with the audience entitlement of
 the authorization for the <code>mission_id</code> and audience that
 <a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a> requires, and a Mission it does not
 cover receives the not-found response.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
-<p id="section-3.2-6">A presented access token (mechanism 2) <span class="bcp14">MUST</span> be audience-restricted to
+<p id="section-3.2-6">A presented access token <span class="bcp14">MUST</span> be audience-restricted to
 this endpoint's protected-resource identifier: the <code>resource</code> value the
 AS publishes for this endpoint in its Protected Resource Metadata
 <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>. For these surfaces that identifier is the endpoint's own URL
 (the <code>mission_status_endpoint</code> or <code>mission_lifecycle_endpoint</code>), not
-the issuer identifier that a private-key-JWT assertion's <code>aud</code> names
-(mechanism 3). The AS <span class="bcp14">MUST</span> reject a token whose audience does
+the issuer identifier that a private-key-JWT assertion's <code>aud</code> names.
+The AS <span class="bcp14">MUST</span> reject a token whose audience does
 not name that identifier. This token audience is distinct from the request body's
 <code>audience</code> parameter (<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>): the token audience
 authorizes the call at this endpoint, whereas the request <code>audience</code>
 carries no authentication weight and only selects the
 Resource-Server-specific authority projection the response returns
 (<a href="#mission-status-response" class="auto internal xref">Section 3.5</a>).<a href="#section-3.2-6" class="pilcrow">¶</a></p>
-<p id="section-3.2-7">Which mechanisms and authorization this endpoint accepts are
+<p id="section-3.2-7">Which paths and authorization this endpoint accepts are
 discoverable per endpoint, not inferred from the token endpoint's
-metadata. The AS advertises the methods this endpoint accepts in
-<code>mission_status_endpoint_auth_methods_supported</code> (<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-3.2-7" class="pilcrow">¶</a></p>
+metadata. The AS advertises the client authentication methods this
+endpoint accepts in <code>mission_status_endpoint_auth_methods_supported</code>
+(<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-3.2-7" class="pilcrow">¶</a></p>
 <p id="section-3.2-8">For
 the sender-constrained access-token path, this endpoint is an OAuth
 protected resource: the AS publishes, in its Protected Resource Metadata
@@ -1685,9 +1693,9 @@ for this resource <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span
 audience <span class="bcp14">MUST</span> name, the <code>mission_status</code> scope it requires
 (<code>scopes_supported</code>), and the presentation and sender constraints it
 accepts (<code>bearer_methods_supported</code>, <code>dpop_bound_access_tokens_required</code>,
-<code>tls_client_certificate_bound_access_tokens</code>). For the retained
-direct-client-authentication path (mTLS <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT
-<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the accepted methods and, for <code>private_key_jwt</code>, the
+<code>tls_client_certificate_bound_access_tokens</code>). For the
+client-authentication path, the accepted methods and, for
+<code>private_key_jwt</code>, the
 accepted client-assertion signing algorithms are advertised for this
 endpoint (<a href="#as-metadata" class="auto internal xref">Section 8</a>), not read from the token endpoint's
 <code>token_endpoint_auth_methods_supported</code> <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. Both paths are
@@ -1711,13 +1719,22 @@ scheme it used: <code>Bearer</code> with the error attributes of
 codes.<a href="#section-3.3-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-2.2">
-            <p id="section-3.3-2.2.1">A request whose mTLS or private-key-JWT client authentication fails
-at the HTTP layer receives HTTP 400 with the <code>invalid_client</code> error
-code, as <span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> answers a failed client
-authentication carried outside the <code>Authorization</code> header. It carries
-no <code>WWW-Authenticate</code> challenge and is not reported as an
-access-token failure. A client certificate rejected during the TLS
-handshake fails at the TLS layer, before any HTTP response.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-3.3-2.2.1">A request whose client authentication fails at the HTTP layer
+receives the error response that the method's specification defines
+for that failure, with any error code, status, and challenge it
+requires, such as a method that answers a missing server-provided
+challenge or a stale credential with its own error. That response
+keeps this document's error body (<a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>): its
+error code is the body's <code>error</code>, with <code>error_description</code> and any
+<code>nonce</code> echo, and a challenge header the method requires is added to
+it. Where the method
+defines none, the request receives HTTP 400 with the <code>invalid_client</code>
+error code, as <span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> answers a failed client
+authentication carried outside the <code>Authorization</code> header, with no
+<code>WWW-Authenticate</code> challenge. A failed client authentication is not
+reported as an access-token failure. A client certificate rejected
+during the TLS handshake fails at the TLS layer, before any HTTP
+response.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.3-2.3">
             <p id="section-3.3-2.3.1">A request that presented no credential receives, where the endpoint
@@ -1729,7 +1746,8 @@ none, it receives HTTP 400 <code>invalid_client</code>.<a href="#section-3.3-2.3
         </ul>
 <p id="section-3.3-3">Every challenge carries the <code>resource_metadata</code> parameter naming the
 endpoint's Protected Resource Metadata (<span><a href="https://rfc-editor.org/rfc/rfc9728#section-5.1" class="relref">Section 5.1</a> of [<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>).
-A 401 response carries the challenge or challenges and a JSON body
+A 401 response this section assigns to an access-token failure or a
+missing credential carries the challenge or challenges and a JSON body
 (<a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>): a challenge's <code>error</code> attribute, when
 present, follows its scheme as above and is distinct from the body's
 <code>error</code>, which is <code>unauthorized</code>.
@@ -2240,7 +2258,7 @@ consumer recognizes it.<a href="#section-3.10-4" class="pilcrow">¶</a></p>
                 <code>invalid_client</code>
 </td>
               <td class="text-left" rowspan="1" colspan="1">400</td>
-              <td class="text-left" rowspan="1" colspan="1">Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted (<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>).</td>
+              <td class="text-left" rowspan="1" colspan="1">Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted (<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>).</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -2287,14 +2305,17 @@ consumer recognizes it.<a href="#section-3.10-4" class="pilcrow">¶</a></p>
             </tr>
           </tbody>
         </table>
-<p id="section-3.10-7">Note the distinction between the access failures: <code>unauthorized</code>
+<p id="section-3.10-7">A client authentication method's own error codes and statuses
+(<a href="#mission-status-auth-failures" class="auto internal xref">Section 3.3</a>) can also appear, in addition to
+those in the table.<a href="#section-3.10-7" class="pilcrow">¶</a></p>
+<p id="section-3.10-8">Note the distinction between the access failures: <code>unauthorized</code>
 (401) and <code>invalid_client</code> (400) mean the request carried no valid
 authentication, whereas a request that is authenticated but not
 authorized for the referenced Mission returns <code>not_found</code> (404), never
 an authentication failure, so that an unauthorized reference is
 indistinguishable from an unknown one
-(<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>). The error body is:<a href="#section-3.10-7" class="pilcrow">¶</a></p>
-<div class="lang-http-message sourcecode" id="section-3.10-8">
+(<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>). The error body is:<a href="#section-3.10-8" class="pilcrow">¶</a></p>
+<div class="lang-http-message sourcecode" id="section-3.10-9">
 <pre>
 HTTP/1.1 404 Not Found
 Content-Type: application/json
@@ -2306,23 +2327,23 @@ Cache-Control: no-store
     "Mission reference is not found or not visible.",
   "nonce": "nonce_zsPy4APqVNO96xAT"
 }
-</pre><a href="#section-3.10-8" class="pilcrow">¶</a>
+</pre><a href="#section-3.10-9" class="pilcrow">¶</a>
 </div>
-<p id="section-3.10-9">The body <span class="bcp14">MUST</span> contain <code>error</code> and <code>error_description</code>, and <span class="bcp14">MUST</span>
+<p id="section-3.10-10">The body <span class="bcp14">MUST</span> contain <code>error</code> and <code>error_description</code>, and <span class="bcp14">MUST</span>
 additionally contain <code>nonce</code> when the request carried a well-formed
 <code>nonce</code>. A request whose <code>nonce</code> is absent or malformed is refused
 <code>invalid_request</code> with no <code>nonce</code> member echoed. The body <span class="bcp14">MUST NOT</span>
 contain any member that would let a caller distinguish unknown from
 unauthorized references. For <code>rate_limited</code>, the response <span class="bcp14">SHOULD</span>
 include a <code>Retry-After</code> header <span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span> and a <code>retry_after</code> body
-member in seconds.<a href="#section-3.10-9" class="pilcrow">¶</a></p>
-<p id="section-3.10-10">The body is <code>application/json</code> with <code>Cache-Control:
+member in seconds.<a href="#section-3.10-10" class="pilcrow">¶</a></p>
+<p id="section-3.10-11">The body is <code>application/json</code> with <code>Cache-Control:
 no-store</code>. <code>error_description</code> is diagnostic and is never
 authorization input. <code>nonce</code> correlates the response to the request in
 support of the signed-response and retry model of <a href="#idempotency" class="auto internal xref">Section 5.6</a> and
 is not, by itself, replay protection, per the absent-or-malformed-<code>nonce</code>
 rule above. These endpoints use this OAuth error-response shape, not
-RFC 9457 <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> problem details.<a href="#section-3.10-10" class="pilcrow">¶</a></p>
+RFC 9457 <span>[<a href="#RFC9457" class="cite xref">RFC9457</a>]</span> problem details.<a href="#section-3.10-11" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2554,7 +2575,7 @@ it only to retransmit that request.<a href="#section-5.1-2.14.1" class="pilcrow"
         <dd class="break"></dd>
 </dl>
 <p id="section-5.1-3">The request also carries the client authentication parameters of the
-mechanism it uses, as at the Mission Status endpoint
+method it uses, as at the Mission Status endpoint
 (<a href="#mission-status-request" class="auto internal xref">Section 3.1</a>).<a href="#section-5.1-3" class="pilcrow">¶</a></p>
 <p id="section-5.1-4">A companion-registered extension operation carries additional
 <span class="bcp14">REQUIRED</span> and <span class="bcp14">OPTIONAL</span> members of its own, defined completely by the
@@ -2751,10 +2772,10 @@ expiry governs: the Mission is <code>terminated</code> with reason <code>expired
         <h3 id="name-authentication-2">
 <a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-authentication-2" class="section-name selfRef">Authentication</a>
         </h3>
-<p id="section-5.3-1">The lifecycle endpoint uses the same authentication mechanisms as the
-Mission Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): mTLS client
-authentication, a sender-constrained access token (DPoP- or mTLS-bound),
-or private-key JWT. Its discovery mirrors that endpoint: the accepted
+<p id="section-5.3-1">The lifecycle endpoint uses the same authentication as the Mission
+Status endpoint (<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>): client
+authentication with an advertised method that uses no shared secret, or
+a sender-constrained access token (DPoP- or mTLS-bound). Its discovery mirrors that endpoint: the accepted
 methods in <code>mission_lifecycle_endpoint_auth_methods_supported</code> and, for
 <code>private_key_jwt</code>, the accepted client-assertion algorithms in
 <code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>
@@ -2771,8 +2792,8 @@ operation defines. A private-key JWT
 <code>client_assertion</code> names the AS's issuer identifier in <code>aud</code>, and a
 presented access token <span class="bcp14">MUST</span> be audience-restricted to this endpoint's
 protected-resource identifier, exactly as at the Mission Status
-endpoint. Direct mTLS or private-key-JWT callers carry the
-deployment-defined equivalent grant, never a scope.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
+endpoint. A caller that authenticates directly as a client carries
+the deployment-defined equivalent grant, never a scope.<a href="#section-5.3-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="lifecycle-authorization">
@@ -2819,9 +2840,9 @@ so identified, and the presented token <span class="bcp14">MUST</span> carry the
 authorization the AS checks against it.<a href="#section-5.4-5.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-5.4-5.2">
-            <p id="section-5.4-5.2.1">When the caller authenticates directly as a client (mTLS client
-authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span> or private-key JWT <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), the
-authenticated client is the acting party. The AS <span class="bcp14">MUST</span> check the
+            <p id="section-5.4-5.2.1">When the caller authenticates directly as a client
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>), the authenticated client is the
+acting party. The AS <span class="bcp14">MUST</span> check the
 deployment-defined lifecycle grant bound to that client.<a href="#section-5.4-5.2.1" class="pilcrow">¶</a></p>
 </li>
         </ol>
@@ -3330,18 +3351,18 @@ when the AS supports it.<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 <dt id="section-8-2.3">
 <code>mission_status_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.4">
-          <p id="section-8-2.4.1">CONDITIONAL. A JSON array of strings naming the authentication methods
-the Mission Status endpoint (<a href="#mission-status" class="auto internal xref">Section 3</a>) accepts. Its value
-space is a closed set defined by this document, not the OAuth Token
-Endpoint Authentication Methods registry: <code>tls_client_auth</code>
-(mutual-TLS client authentication <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), <code>private_key_jwt</code>
-(private-key JWT client authentication <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>), and <code>access_token</code>
-(a <code>mission_status</code>-scoped, sender-constrained access token, whose
-presentation and DPoP or mTLS binding are described by this endpoint's
-Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>). The first two values are
-spelled identically to registered token-endpoint authentication
-methods by intent; this member describes this endpoint, not the token
-endpoint. <span class="bcp14">REQUIRED</span> when the AS serves the Mission Status endpoint.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.4.1">CONDITIONAL. A JSON array of strings naming the client authentication
+methods the Mission Status endpoint (<a href="#mission-status" class="auto internal xref">Section 3</a>) accepts,
+values of the OAuth Token Endpoint Authentication Methods registry
+<span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> alone, not the OAuth Access Token Types values that
+<code>introspection_endpoint_auth_methods_supported</code> also admits
+<span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>. It <span class="bcp14">MUST NOT</span> list a
+method that authenticates with a shared client secret, or <code>none</code>
+(<a href="#mission-status-authentication" class="auto internal xref">Section 3.2</a>). The sender-constrained
+access-token path is not a client authentication method: this
+endpoint's Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span> describes it. This
+member describes this endpoint, not the token endpoint. <span class="bcp14">REQUIRED</span> when
+the Mission Status endpoint accepts client authentication.<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.5">
@@ -3384,12 +3405,11 @@ when the AS supports it.<a href="#section-8-2.10.1" class="pilcrow">¶</a></p>
 <dt id="section-8-2.11">
 <code>mission_lifecycle_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-2.12">
-          <p id="section-8-2.12.1">CONDITIONAL. A JSON array of strings naming the authentication methods
-the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>)
-accepts, from the same closed value space as
-<code>mission_status_endpoint_auth_methods_supported</code> (with <code>access_token</code>
-naming a <code>mission_lifecycle</code>-scoped access token). <span class="bcp14">REQUIRED</span> when the
-AS serves the Mission Lifecycle endpoint.<a href="#section-8-2.12.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.12.1">CONDITIONAL. A JSON array of strings naming the client authentication
+methods the Mission Lifecycle endpoint (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>)
+accepts, with the value space and constraints of
+<code>mission_status_endpoint_auth_methods_supported</code>. <span class="bcp14">REQUIRED</span> when the
+Mission Lifecycle endpoint accepts client authentication.<a href="#section-8-2.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-2.13">
@@ -3455,14 +3475,14 @@ Cache-Control: max-age=3600
   "mission_status_endpoint":
     "https://as.example.com/as/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["tls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt"],
   "mission_status_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://as.example.com/as/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["tls_client_auth", "private_key_jwt", "access_token"],
+    ["tls_client_auth", "private_key_jwt"],
   "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_max_stale_seconds": 60
@@ -3538,10 +3558,8 @@ read authorization of <a href="#mission-status-authentication" class="auto inter
 anti-oracle property
 (<a href="#mission-status-anti-oracle" class="auto internal xref">Section 3.8</a>), and the error shape of
 <a href="#mission-status-errors" class="auto internal xref">Section 3.10</a>; and advertise <code>mission_status_endpoint</code>,
-<code>mission_status_endpoint_auth_methods_supported</code>,
-<code>mission_status_signing_alg_values_supported</code>, and, when it lists
-<code>private_key_jwt</code>,
-<code>mission_status_endpoint_auth_signing_alg_values_supported</code>.<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
+<code>mission_status_signing_alg_values_supported</code>, and the endpoint's
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-9-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.2">
           <p id="section-9-3.2.1"><strong>Introspection projection</strong>: carry the Mission projection on the
@@ -3554,10 +3572,8 @@ with <span>[<a href="#RFC9701" class="cite xref">RFC9701</a>]</span> as that sec
 gate the <code>suspended</code> state and the
 <code>completed</code> termination it introduces exactly as the issuance profile
 gates on non-<code>active</code> state, and advertise <code>mission_lifecycle_endpoint</code>,
-<code>mission_lifecycle_endpoint_auth_methods_supported</code>,
-<code>mission_status_signing_alg_values_supported</code>, and, when it lists
-<code>private_key_jwt</code>,
-<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>.<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
+<code>mission_status_signing_alg_values_supported</code>, and the endpoint's
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>).<a href="#section-9-3.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-9-3.4">
           <p id="section-9-3.4.1"><strong>Mission Lifecycle, revoke only</strong>: serve the Mission Lifecycle endpoint
@@ -3572,10 +3588,8 @@ Status Response, whose <code>aud</code> is the authenticated client's
 operation the implementation has not adopted
 (<a href="#lifecycle-operations" class="auto internal xref">Section 5.1</a>); and advertise
 <code>mission_lifecycle_endpoint</code>,
-<code>mission_lifecycle_endpoint_auth_methods_supported</code>,
-<code>mission_status_signing_alg_values_supported</code>, and, when it lists
-<code>private_key_jwt</code>,
-<code>mission_lifecycle_endpoint_auth_signing_alg_values_supported</code>. The
+<code>mission_status_signing_alg_values_supported</code>, and the endpoint's
+authentication metadata (<a href="#as-metadata" class="auto internal xref">Section 8</a>). The
 class requires no other operation and not the Mission Status
 operation; an implementation that also serves another base operation
 or the Mission Status operation meets that operation's requirements,
@@ -3776,9 +3790,10 @@ profile's privacy considerations.<a href="#section-11.2-1" class="pilcrow">¶</a
 <p id="section-12-1">This document requests IANA actions for OAuth AS metadata members,
 OAuth extensions error codes, a media type, and one entry in each of
 two issuance-profile registries. It defines no new registry of its
-own: the endpoint
-authentication-method value space is a closed set defined inline
-(<a href="#as-metadata" class="auto internal xref">Section 8</a>), and Mission Lifecycle <code>operation</code> values have no
+own: endpoint
+authentication methods are values of the existing OAuth Token Endpoint
+Authentication Methods registry <span>[<a href="#RFC7591" class="cite xref">RFC7591</a>]</span> (<a href="#as-metadata" class="auto internal xref">Section 8</a>), and
+Mission Lifecycle <code>operation</code> values have no
 IANA registry; a companion profile registers an extension operation
 by defining it in its own specification
 (<a href="#mission-lifecycle-endpoint" class="auto internal xref">Section 5</a>). The <code>mission_error</code> values
@@ -4231,6 +4246,10 @@ Mission Termination Reasons registry
 <dt id="RFC7523">[RFC7523]</dt>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7591">[RFC7591]</dt>
+        <dd>
+<span class="refAuthor">Richer, J., Ed.</span>, <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Machulak, M.</span>, and <span class="refAuthor">P. Hunt</span>, <span class="refTitle">"OAuth 2.0 Dynamic Client Registration Protocol"</span>, <span class="seriesInfo">RFC 7591</span>, <span class="seriesInfo">DOI 10.17487/RFC7591</span>, <time datetime="2015-07" class="refDate">July 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7591">https://www.rfc-editor.org/rfc/rfc7591</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7662">[RFC7662]</dt>
         <dd>

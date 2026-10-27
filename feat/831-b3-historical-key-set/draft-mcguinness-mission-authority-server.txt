@@ -345,13 +345,14 @@ Table of Contents
    mission_submission_endpoint (Section 10).  The endpoint MUST be
    served over TLS 1.2 or later (TLS 1.3 RECOMMENDED), following the
    recommendations of [RFC9325].  The endpoint MUST authenticate the
-   client using the authentication mechanisms of the Mission Status
-   endpoint ([I-D.draft-mcguinness-oauth-mission-status]): mTLS client
-   authentication, a DPoP- or mTLS-bound access token, or private-key
-   JWT.  An access token's audience names this endpoint, and a client
-   assertion's aud is the MAS's issuer identifier as its sole value, the
-   client-authentication audience Mission Status requires.  The MAS
-   advertises the accepted methods in the
+   client on one of the two paths of the Mission Status endpoint
+   ([I-D.draft-mcguinness-oauth-mission-status],
+   Section "Authentication"): client authentication with a method the
+   MAS advertises that uses no shared client secret, or a DPoP- or mTLS-
+   bound access token.  An access token's audience names this endpoint,
+   and a client assertion's aud is the MAS's issuer identifier as its
+   sole value, the client-authentication audience Mission Status
+   requires.  The MAS advertises the accepted methods in the
    mission_submission_endpoint_auth_methods_supported metadata member
    (Section 10).
 
@@ -359,25 +360,26 @@ Table of Contents
    records the client identifier it authenticates as the Mission's
    client_id.
 
-   A request whose body is application/json carries the client
-   authentication parameters of the mechanism it uses as top-level JSON
-   string members, with the values Mission Status defines for them as
-   form parameters ([I-D.draft-mcguinness-oauth-mission-status],
+   A request whose body is application/json carries, as top-level JSON
+   string members, the client authentication parameters that its method
+   defines as form parameters, with the values Mission Status gives them
+   ([I-D.draft-mcguinness-oauth-mission-status],
    Section "Authentication"): client_id with mTLS client authentication,
    and client_assertion_type and client_assertion with private-key-JWT
-   client authentication (Section 2.2 of [RFC7523]).  These are request-
-   level members, not members of the Mission Intent Submission envelope
-   or the Intent.  The MAS MUST remove them, and authenticate the
-   request with them, before it validates the rest of the body, so a
-   partial or unverifiable pair fails client authentication
-   (invalid_client) and is never refused as an undefined member.  They
-   never enter the Intent, the authority proposal, its proposal_hash,
-   the integrity anchors, or any submission evidence.  This excludes the
-   parameters, not the identity they establish: the MAS still records
-   the client identifier it authenticates as the Mission's client_id.
-   Every other top-level member is validated as Section 3.1 and
-   Section 9.1 define, and an undefined one is still refused with
-   invalid_mission_intent.
+   client authentication (Section 2.2 of [RFC7523]).  A method that
+   carries its credentials in HTTP header fields keeps them there.
+   These JSON members are request-level members, not members of the
+   Mission Intent Submission envelope or the Intent.  The MAS MUST
+   remove them, and authenticate the request with them, before it
+   validates the rest of the body, so a partial or unverifiable pair
+   fails client authentication (invalid_client) and is never refused as
+   an undefined member.  They never enter the Intent, the authority
+   proposal, its proposal_hash, the integrity anchors, or any submission
+   evidence.  This excludes the parameters, not the identity they
+   establish: the MAS still records the client identifier it
+   authenticates as the Mission's client_id.  Every other top-level
+   member is validated as Section 3.1 and Section 9.1 define, and an
+   undefined one is still refused with invalid_mission_intent.
 
    After request media-type dispatch, an intent-submission or join-
    assertion request whose JSON body cannot be parsed as an object is
@@ -665,9 +667,10 @@ Table of Contents
    Section "Authentication Failures").  A 401 unauthorized response
    carries the WWW-Authenticate challenges that Mission Status defines
    for its endpoints, naming the Protected Resource Metadata of the
-   endpoint called.  A failed mTLS or private-key-JWT client
-   authentication receives 400 invalid_client, not a token challenge,
-   and an authenticated caller to whom a submission or Mission is not
+   endpoint called.  A failed client authentication receives the
+   response Mission Status assigns to it, the method's own error
+   response or by default 400 invalid_client, not a token challenge, and
+   an authenticated caller to whom a submission or Mission is not
    visible still receives not_found.
 
    +=================================+====+===========+================+
@@ -710,13 +713,13 @@ Table of Contents
    +---------------------------------+----+-----------+----------------+
    | invalid_client                  |400 |submission,|Direct client   |
    |                                 |    |join       |authentication  |
-   |                                 |    |assertion  |(mTLS or        |
-   |                                 |    |           |private-key     |
-   |                                 |    |           |JWT) failed, or |
-   |                                 |    |           |no credential   |
-   |                                 |    |           |was presented   |
-   |                                 |    |           |where no        |
-   |                                 |    |           |access-token    |
+   |                                 |    |assertion  |failed and its  |
+   |                                 |    |           |method defines  |
+   |                                 |    |           |no other error, |
+   |                                 |    |           |or no           |
+   |                                 |    |           |credential was  |
+   |                                 |    |           |presented where |
+   |                                 |    |           |no access-token |
    |                                 |    |           |scheme is       |
    |                                 |    |           |accepted, as    |
    |                                 |    |           |Mission Status  |
@@ -2153,14 +2156,15 @@ Table of Contents
    mission_submission_endpoint:  REQUIRED.  A string containing a URL.
       The mission submission endpoint (Section 3).
 
-   mission_submission_endpoint_auth_methods_supported:  REQUIRED.  A
-      JSON array of strings naming the authentication methods the
-      mission submission endpoint accepts, from the value space of
+   mission_submission_endpoint_auth_methods_supported:  REQUIRED when
+      the mission submission endpoint accepts client authentication.  A
+      JSON array of strings naming the client authentication methods
+      that endpoint accepts, with the value space and constraints of
       mission_status_endpoint_auth_methods_supported
-      ([I-D.draft-mcguinness-oauth-mission-status]).  Here access_token
-      names a sender-constrained access token whose audience, required
-      scope, and sender constraint the MAS publishes in this endpoint's
-      Protected Resource Metadata [RFC9728].
+      ([I-D.draft-mcguinness-oauth-mission-status]).  Where the endpoint
+      accepts a sender-constrained access token, the MAS publishes the
+      token's audience, required scope, and sender constraint in this
+      endpoint's Protected Resource Metadata [RFC9728].
 
    mission_submission_endpoint_auth_signing_alg_values_supported:  REQUIRED
       when mission_submission_endpoint_auth_methods_supported lists
@@ -2172,8 +2176,8 @@ Table of Contents
    mission_status_endpoint:  REQUIRED.  A string containing a URL.
       Semantics per [I-D.draft-mcguinness-oauth-mission-status].
 
-   mission_status_endpoint_auth_methods_supported:  REQUIRED.  Semantics
-      per [I-D.draft-mcguinness-oauth-mission-status].
+   mission_status_endpoint_auth_methods_supported:  Presence and
+      semantics per [I-D.draft-mcguinness-oauth-mission-status].
 
    mission_status_endpoint_auth_signing_alg_values_supported:  REQUIRED
       when mission_status_endpoint_auth_methods_supported lists
@@ -2190,8 +2194,8 @@ Table of Contents
    mission_lifecycle_endpoint:  REQUIRED.  A string containing a URL.
       Semantics per [I-D.draft-mcguinness-oauth-mission-status].
 
-   mission_lifecycle_endpoint_auth_methods_supported:  REQUIRED.
-      Semantics per [I-D.draft-mcguinness-oauth-mission-status].
+   mission_lifecycle_endpoint_auth_methods_supported:  Presence and
+      semantics per [I-D.draft-mcguinness-oauth-mission-status].
 
    mission_lifecycle_endpoint_auth_signing_alg_values_supported:  REQUIRED
       when mission_lifecycle_endpoint_auth_methods_supported lists
@@ -2226,20 +2230,20 @@ Table of Contents
      "mission_submission_endpoint":
        "https://mas.example.com/mas/mission/submit",
      "mission_submission_endpoint_auth_methods_supported":
-       ["access_token", "private_key_jwt"],
+       ["private_key_jwt"],
      "mission_submission_endpoint_auth_signing_alg_values_supported":
        ["ES256"],
      "mission_status_endpoint":
        "https://mas.example.com/mas/mission/status",
      "mission_status_endpoint_auth_methods_supported":
-       ["access_token", "private_key_jwt"],
+       ["private_key_jwt"],
      "mission_status_endpoint_auth_signing_alg_values_supported":
        ["ES256"],
      "mission_status_signing_alg_values_supported": ["ES256"],
      "mission_lifecycle_endpoint":
        "https://mas.example.com/mas/mission/lifecycle",
      "mission_lifecycle_endpoint_auth_methods_supported":
-       ["access_token", "private_key_jwt"],
+       ["private_key_jwt"],
      "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
        ["ES256"],
      "mission_join_assertion_endpoint":
@@ -3964,6 +3968,17 @@ B.5.  Revoke
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The mission submission endpoint, and the join-assertion and
+      issuance-grant endpoints that inherit its rules, authenticate on
+      Mission Status's two paths: client authentication with an
+      advertised method from the OAuth Token Endpoint Authentication
+      Methods registry that uses no shared client secret, or a sender-
+      constrained access token, which Protected Resource Metadata
+      describes rather than an access_token method value.  A JSON body
+      carries as members only the parameters a method defines as form
+      parameters; header-carried credentials stay in their header
+      fields.
 
    *  A client join counts as delegate_depth 0 in the assertion
       comparison: a reported 0 agrees and any other value is denied, and
