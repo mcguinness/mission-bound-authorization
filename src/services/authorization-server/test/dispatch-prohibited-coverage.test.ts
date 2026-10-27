@@ -138,7 +138,7 @@ describe("dispatch-prohibited coverage (@spec template#prohibited-classes, #813)
     ["cross_domain", "ledger:journal.write", LEDGER, undefined],
     ["privileged_administration", "hr:role.grant", HR, floorWith(HR, { "hr:role.grant": "privileged_administration" })],
   ] as const)(
-    "fails on a configured set that leaves out a %s action, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+    "fails on a configured set that leaves out an action under %s, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
     (predicate, action, resource, floor) => {
       const policy = floor ?? APPROVAL_FLOOR;
       const mapping = publishedProhibitedPredicateMapping(
