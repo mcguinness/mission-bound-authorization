@@ -201,6 +201,23 @@ export interface ClaimDomainOptions {
    * throws is ignored.
    */
   onBudgetOverspend?: (overspend: BudgetOverspend) => void;
+  /**
+   * @spec metering#settlement-states (#813, #816): told of every held
+   * reservation that is later released (the redeeming attempt's own
+   * `suppressed` settlement, an operator's `not_executed`), once, after the
+   * transaction that released it commits: the resolution of the alert
+   * {@link onReservationHeld} raised. A hook that throws is ignored.
+   */
+  onReservationReleased?: (released: ReleasedReservation) => void;
+}
+
+/** A held reservation since released, as the operator notice reports it: identifiers and the cause only. */
+export interface ReleasedReservation {
+  evaluation_id: string;
+  mission_id: string;
+  /** What released it: `settled_suppressed`, or the operator's reconciliation. */
+  cause: string;
+  released_at: string;
 }
 
 /** A counter pushed past its limit by a late `completed`, as the operator alert reports it. */
@@ -467,6 +484,7 @@ export type ClaimResolution =
  * settle at all.)
  */
 const NON_REDEEMING_ERRORS = new Set(["permit_consumed"]);
+
 
 const MIGRATIONS = [
   `CREATE TABLE claims (
@@ -1016,6 +1034,9 @@ export class IdempotencyClaimDomain {
       }
     }
     if (to === "held" && rows.length > 0) this.notifyHeld(evaluationId, rows, cause, nowMs);
+    // #813: a held reservation that is later released resolves its alert.
+    const resolved = rows.filter((r) => r.state === "held");
+    if (to === "released" && resolved.length > 0) this.notifyReleased(evaluationId, resolved, cause, nowMs);
     if (overspent.length > 0) this.notifyOverspend(overspent);
     return rows;
   }
@@ -1071,6 +1092,30 @@ export class IdempotencyClaimDomain {
     });
   }
 
+  /**
+   * @spec metering#settlement-states (#813, #816): queue
+   * {@link ClaimDomainOptions.onReservationReleased} for after the enclosing
+   * transaction commits, for a held reservation now released, as
+   * {@link notifyHeld} does for the hold.
+   */
+  private notifyReleased(evaluationId: string, rows: readonly ReservationRow[], cause: string, nowMs: number): void {
+    const hook = this.options.onReservationReleased;
+    if (!hook) return;
+    const released: ReleasedReservation = {
+      evaluation_id: evaluationId,
+      mission_id: rows[0]?.mission_id ?? "unknown",
+      cause,
+      released_at: new Date(nowMs).toISOString(),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(released);
+      } catch {
+        /* the alert sink's failure never reaches the claim domain */
+      }
+    });
+  }
+
   private logReservation(evaluationId: string, counterId: string, from: string | null, to: string, cause: string, atMs: number): void {
     this.db
       .prepare(
@@ -1104,6 +1149,10 @@ export class IdempotencyClaimDomain {
       if (rows.length === 0) return { accepted: false, reason: "unknown_evaluation" };
       if (resolution.kind !== "not_executed" && resolution.kind !== "executed") return { accepted: false, reason: "unknown_resolution" };
       if (typeof resolution.reference !== "string" || resolution.reference.length === 0) return { accepted: false, reason: "no_reference" };
+      // #813: an operator's not_executed on a reservation already released
+      // (by an earlier answer, or the redeeming attempt's suppression) is an
+      // idempotent no-op.
+      if (resolution.kind === "not_executed" && rows.every((r) => r.state === "released")) return { accepted: true, state: "released" };
       // @spec metering#settlement-states (#816, owner review of #1713): an
       // operator correction recording execution after an incorrect release,
       // independent of the claim and its window: a released reservation

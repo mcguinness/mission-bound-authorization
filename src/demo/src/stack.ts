@@ -11,6 +11,7 @@ import { IssuerKeys } from "@mission/core";
 import { createRemoteJWKSet, exportJWK, generateKeyPair } from "jose";
 import {
   type KernelStoreConfig,
+  ALL_PROVIDER_CAPABILITIES,
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
@@ -21,6 +22,7 @@ import {
   CatalogProvider,
   type DeferralStore,
   type DischargeAuthorityPolicy,
+  type DispatchPolicies,
   issueCrossDomainGrant,
   resolveDestinationClientId,
   type IssuerEvidenceStore,
@@ -59,6 +61,7 @@ import {
 import {
   ActorRecords,
   boundaryEvidenceAuthorization,
+  budgetOverspendAlert,
   buildEvidenceKeyResolver,
   CANONICAL_RESOURCE,
   Connectors,
@@ -74,6 +77,7 @@ import {
   openEvidenceRetentionStore,
   EvidenceStore,
   type HttpMcpChannel,
+  heldReservationAlert,
   indeterminateClaimAlert,
   type KeyRoles,
   type LoadedView,
@@ -88,6 +92,7 @@ import {
   type PepDeps,
   type ReceiptIssuerScope,
   redemptionStatusFor,
+  releasedReservationNotice,
   type ResourceMetadataServer,
   startResourceMetadataServer,
   stderrAlertSink,
@@ -105,7 +110,7 @@ import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResou
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
-import { kernelMissionView } from "./kernel-mission-view.js";
+import { kernelBudgetBinding, kernelMissionView } from "./kernel-mission-view.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -462,6 +467,17 @@ export async function composeStack(opts: {
    */
   testOrdinaryTokenMinting?: boolean;
   /**
+   * TEST FIXTURE ONLY (#813, D830); no launcher sets it, and the shipped
+   * configuration enables neither the capability nor any `budget_metering`
+   * declaration. On the shared composition with the AS (`withAuthServer`),
+   * enable the AS's opt-in `standing-payment-dispatch` capability beside the
+   * full reference assembly and register these Dispatch Policies, so a test
+   * can consent to and dispatch a standing payment. The AS refuses to start
+   * unless `statement` declares each designating policy's budget under the
+   * Exact profile. The `as-native` target refuses it.
+   */
+  testStandingPaymentDispatch?: { dispatchPolicies: DispatchPolicies };
+  /**
    * @spec authority-server#mission-join (#557): the resources this deployment's
    * MAS join governs. Defaults to `config/mas-join.json` `governed_resources`,
    * less the payments resource under the `as-native` target.
@@ -485,6 +501,10 @@ export async function composeStack(opts: {
 }): Promise<DemoStack> {
   const approverLogin = recordApproverLogin({ sub: "bob", acr: "mfa" });
   const asNative = opts.target === "as-native";
+  // #813: the standing-payment fixture is the shared composition's only.
+  if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
+    throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
+  }
   const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -643,7 +663,9 @@ export async function composeStack(opts: {
       ? ordinaryMinting
         ? new Set<ProviderCapability>([...AS_NATIVE_CAPABILITIES, "dev-token"])
         : AS_NATIVE_CAPABILITIES
-      : undefined;
+      : opts.testStandingPaymentDispatch
+        ? new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"])
+        : undefined;
     const lifecycleConsole = await constructing(() => newLifecycleConsole());
     const kernelStore = opts.kernelStore;
     if (kernelStore) await constructing(() => mkdirSync(dirname(kernelStore.file), { recursive: true }));
@@ -671,6 +693,11 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
+      ...(opts.testStandingPaymentDispatch ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies } : {}),
+      // @spec mission-template#standing-payment-exception (#813, #816): the
+      // statement this stack's PDP meters under, which the AS reads under the
+      // standing-payment capability alone.
+      enforcementScopeStatement: opts.statement ?? RUNTIME_POSTURE,
       ...(opts.signingKeys ? { signingKeys: opts.signingKeys } : {}),
       ...(opts.kernelStore ? { kernelStore: opts.kernelStore } : {}),
       ...(opts.dischargeAuthority ? { dischargeAuthority: opts.dischargeAuthority } : {}),
@@ -1020,6 +1047,15 @@ export async function composeStack(opts: {
     statement,
     settlementKeys: buildBoundaryEvidenceKeyResolver(boundary.declaration, settlementKeys),
     onIndeterminate: (claim) => operatorAlerts.alert(indeterminateClaimAlert(claim)),
+    // @spec metering#settlement-states (#816, D830 rulings 7 and 10): a
+    // budget reservation the domain holds stays charged until an operator
+    // reconciles it, and a late completed settlement that pushes a counter
+    // past its limit commits anyway: both raise the declared alert, after the
+    // move commits, a prior process's reservation included.
+    onReservationHeld: (reservation) => operatorAlerts.alert(heldReservationAlert(reservation)),
+    onBudgetOverspend: (overspend) => operatorAlerts.alert(budgetOverspendAlert(overspend)),
+    // #813: and a held reservation later released resolves its alert.
+    onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
   });
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
@@ -1055,6 +1091,11 @@ export async function composeStack(opts: {
       sequences: pdpClaims.evidenceSequences(),
     },
     claims: pdpClaims,
+    // @spec metering#metering, mission-template#standing-payment-exception
+    // (#813, #816, decision d): each Mission's budget binding, derived on the
+    // PDP side from the kernel's committed policy snapshot. The PEP's view is
+    // never consulted for it.
+    budgetBindings: (mission) => kernelBudgetBinding(kernel, mission),
     resourcePolicy: fgaResourcePolicy(fga, { principals: issuerLocalPrincipals(issuer), clients: issuerLocalClients(issuer) }),
     // @spec authzen#pdp-request consistency check 11 (#1276, D457): a request
     // refused before evaluation (`operation_target_invalid`) is recorded as a

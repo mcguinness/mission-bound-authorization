@@ -15,7 +15,9 @@
  *   `digest`.
  * - A Mission's {@link MissionBudgetBinding}, a PDP-local member of the
  *   loaded Mission view (`MissionView.budget`), derived from the committed
- *   policy snapshot. It never enters `req.context`, so it is not part of the
+ *   policy snapshot by the decision point's own source
+ *   ({@link MissionBudgetSource}), which replaces whatever the caller's view
+ *   carries. It never enters `req.context`, so it is not part of the
  *   authorization binding or the cache key, and a metered decision is never
  *   answered from a stored decision (`idempotency-claims.ts`).
  *
@@ -34,6 +36,18 @@
 
 import { type ActionPhase, canonicalDigest, compareAmounts, isActionPhase, isCurrencyCode, isValidAmount } from "@mission/core";
 import type { EnforcementScopeFinding } from "./enforcement-scope.js";
+
+/**
+ * @spec metering#metering (#813, #816, decision d): a decision point that
+ * would meter budgets without its own binding source, refused at
+ * construction.
+ */
+export class BudgetMeteringConfigError extends Error {
+  constructor(why: string) {
+    super(why);
+    this.name = "BudgetMeteringConfigError";
+  }
+}
 
 /** The extension's name in `claims` and under `extensions`. */
 export const BUDGET_METERING_EXTENSION = "budget_metering";
@@ -103,6 +117,13 @@ export interface MissionBudgetBinding {
   limit: string;
   /** The committed Dispatch Policy the limit was approved under. */
   policy: DispatchPolicyRef;
+  /**
+   * @spec mission-template#standing-payment-exception (#813, D830 ruling 4):
+   * the committed destinations, `{vendor_id: payee_account}`, from the same
+   * policy snapshot. Non-empty. The payee the enforcing PEP establishes for
+   * the metered action is compared with the entry for its vendor.
+   */
+  destinations: Readonly<Record<string, string>>;
   /** The instance bound. */
   instance: {
     /** The instance Intent's `max_budget`. */
@@ -226,6 +247,15 @@ export function budgetCounterId(scope: BudgetCounterScope, key: Record<string, s
   return canonicalDigest({ counter_scope: scope, ...key });
 }
 
+/** Whether `value` is a non-empty `{vendor_id: payee_account}` map of non-empty strings. */
+function isDestinations(value: unknown): value is Record<string, string> {
+  return (
+    object(value) &&
+    Object.keys(value).length > 0 &&
+    Object.entries(value).every(([vendor, account]) => vendor.length > 0 && nonEmpty(account))
+  );
+}
+
 /** Whether `value` is a binding of the documented shape; a malformed one is a budget this PDP cannot meter. */
 export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBinding {
   if (!object(value)) return false;
@@ -237,6 +267,7 @@ export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBi
     typeof value.limit === "string" &&
     isValidAmount(value.limit) &&
     isDispatchPolicyRef(value.policy) &&
+    isDestinations(value.destinations) &&
     object(instance) &&
     nonEmpty(instance.root_mission_id) &&
     object(instance.max_budget) &&
@@ -244,6 +275,77 @@ export function isMissionBudgetBinding(value: unknown): value is MissionBudgetBi
     isValidAmount(instance.max_budget.amount) &&
     isCurrencyCode(instance.max_budget.currency)
   );
+}
+
+/**
+ * @spec metering#metering, mission-template#standing-payment-exception (#813,
+ * #816, decision d): the value a PDP-side source gives for a Mission it
+ * records as budget-bound but whose binding it cannot derive (the committed
+ * policy snapshot is gone or no longer verifies, its terms do not parse, or
+ * they disagree with the admission). Carried as `MissionView.budget` in place
+ * of a binding: every decision on the Mission that would otherwise permit is
+ * denied `constraint_unsupported`, never evaluated as unmetered.
+ */
+export interface UnderivableBudget {
+  readonly underivable: true;
+}
+
+/** The one {@link UnderivableBudget} value. */
+export const UNDERIVABLE_BUDGET: UnderivableBudget = Object.freeze({ underivable: true as const });
+
+/**
+ * @spec metering#metering (#816, decision d): the PDP-side source of a
+ * Mission's budget binding, bound at decision-point construction. It answers
+ * for the Mission the request names: its binding, {@link UNDERIVABLE_BUDGET},
+ * or `undefined` for a Mission that is not budget-bound. What the caller's
+ * view carries is never consulted.
+ */
+export type MissionBudgetSource = (mission: { id: string; issuer: string }) => MissionBudgetBinding | UnderivableBudget | undefined;
+
+/**
+ * @spec mission-template#standing-payment-exception, authzen#parameter-digest,
+ * authzen#pdp-consistency-checks check 8 (#813, D830 ruling 4): whether the
+ * payee the enforcing PEP established for a budget-bound Mission's metered
+ * action is the destination the approved policy commits for its vendor.
+ *
+ * The PEP establishes the payee from the resource's own records, never from
+ * tool arguments, and supplies it inside `action.properties.parameters`, the
+ * normalized parameter object `parameter_digest` is computed over. The PDP
+ * recomputes that digest and requires it to equal the request's
+ * `parameter_digest`, so the payee compared here is the one the permit binds
+ * and execution reverification re-establishes before release. The object's
+ * `vendor_id` must be the request's vendor and its `amount` the request's
+ * amount (the amount the budget is charged), and its `payee_account` must
+ * equal `destinations[vendor_id]`. Absent parameters, a digest that does not
+ * match, a vendor without a committed destination, or another payee account
+ * all fail: a changed bank account inherits no approval.
+ */
+export function committedDestinationHolds(input: {
+  parameters: unknown;
+  parameterDigest: unknown;
+  vendorId: unknown;
+  amount: unknown;
+  destinations: Readonly<Record<string, string>>;
+}): boolean {
+  const { parameters, destinations } = input;
+  if (!object(parameters) || typeof input.parameterDigest !== "string") return false;
+  let recomputed: string;
+  try {
+    recomputed = canonicalDigest(parameters as never);
+  } catch {
+    return false;
+  }
+  if (recomputed !== input.parameterDigest) return false;
+  const vendor = parameters.vendor_id;
+  if (!nonEmpty(vendor) || vendor !== input.vendorId) return false;
+  const stated = parameters.amount;
+  const requested = input.amount;
+  if (!object(stated) || !object(requested) || stated.amount !== requested.amount || stated.currency !== requested.currency) {
+    return false;
+  }
+  // A vendor with no committed destination reads `undefined` (or an inherited
+  // member), which no payee account string equals.
+  return nonEmpty(parameters.payee_account) && parameters.payee_account === destinations[vendor];
 }
 
 /** Whether the declaration meters `action` at `phase`. A request that names no phase is metered whenever its action is. */
