@@ -35,6 +35,7 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { type DurableEvidenceKey, evidenceKeyBundle, loadEvidenceKeyFile } from "./evidence-key-files.js";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
@@ -75,7 +76,9 @@ import {
   evidenceKeySetLocation,
   EvidenceRetentionStore,
   openEvidenceRetentionStore,
+  type EvidenceSigningConfig,
   EvidenceStore,
+  type EvidenceVerificationKey,
   type HttpMcpChannel,
   heldReservationAlert,
   indeterminateClaimAlert,
@@ -237,10 +240,11 @@ export interface DemoStack {
    */
   evidenceRetention: EvidenceRetentionStore;
   /**
-   * @spec runtime-evidence#evidence-integrity-signing-keys (#821): the
-   * verification key sets this boot publishes, held in memory because every
-   * evidence key is generated per boot under a fixed kid (#831). Exposed so an
-   * operator surface can read which keys are still resolvable.
+   * @spec runtime-evidence#evidence-integrity-signing-keys (#821, #831): the
+   * verification key sets this boot publishes: in a durable file beside the
+   * retention file with durable evidence keys (`evidenceKeys`), in memory
+   * with keys generated per boot. Exposed so an operator surface can read
+   * which keys are still resolvable. Close it with `evidenceKeySets.close()`.
    */
   evidenceKeySets: EvidenceRetentionStore;
   /**
@@ -418,6 +422,17 @@ export async function composeStack(opts: {
    * otherwise to `topology.json` `stores.pepEvidenceRetention.file`.
    */
   evidenceRetentionFile?: string;
+  /**
+   * @spec runtime-evidence#evidence-integrity-signing-keys (#831): the PEP's
+   * and the PDP's evidence key files (`initEvidenceKeyFile`). With them every
+   * evidence key is the same at every boot, the key sets are published to a
+   * durable store beside the retention file, and a record an earlier boot
+   * signed still verifies. Absent, the keys are generated per boot.
+   * `pnpm as-native` and `pnpm demo:serve` set it from
+   * `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`
+   * (`evidenceKeysFromEnv`).
+   */
+  evidenceKeys?: { pep: string; pdp: string };
   /**
    * @spec runtime#input-resource-policy (#828): attach to a configured
    * Resource-policy store, or bootstrap a development one. No default
@@ -988,12 +1003,21 @@ export async function composeStack(opts: {
   // key-to-audience binding is checked against what the records actually
   // carry rather than a placeholder.
   const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
-  const decisionEvidenceKeys = await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
+  // @spec #831 (scope inventory): with durable evidence key files, each
+  // holder's keys are the same at every boot; without them, generated now.
+  const durableEvidence = opts.evidenceKeys
+    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
+    : undefined;
+  const decisionEvidenceKeys = durableEvidence
+    ? (durableEvidence.pdp[0] as DurableEvidenceKey)
+    : await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
   // The decision point owns the emission path (#741, PR #753 review): the
   // emitter is constructed inside `createDecisionPoint` and closed over by
   // `decide`. This wiring, and the PEP it wires, hold the decision function
   // and the published verification material, and nothing that can emit.
-  const evidenceKeys = createEphemeralEvidenceKeys();
+  const evidenceKeys: { signing: EvidenceSigningConfig; verification: EvidenceVerificationKey[] } = durableEvidence
+    ? evidenceKeyBundle(durableEvidence.pep, CANONICAL_RESOURCE, CANONICAL_RESOURCE)
+    : createEphemeralEvidenceKeys();
   // @spec runtime#runtime-conformance (#853, D487): the one declared boundary
   // context every producer here reads: the PEP establishes its boundary from
   // it, and the PDP's Decision Evidence and Refusal Records and the PEP's own
@@ -1153,16 +1177,23 @@ export async function composeStack(opts: {
     owner: statement.mediated_scope.pep_locations[0] as string,
     retentionWindowSeconds,
   });
-  // @spec runtime-evidence#evidence-integrity-signing-keys (#821): the key
-  // sets this boot publishes, in a store of their own and in memory. Every
-  // evidence key here is generated per boot under a fixed kid (#831), and a
-  // published kid is append-only: a durable key set would refuse the next
-  // boot's key under the same kid. So records and sequences survive a
-  // restart and the key sets do not: a record signed under an earlier boot's
-  // key cannot be verified after the restart until #831 gives evidence keys a
-  // durable identity, and a key's retirement anchor is not moved by the
-  // records retained in the other store.
-  const evidenceKeySets = new EvidenceRetentionStore({ retentionWindowSeconds });
+  // @spec runtime-evidence#evidence-integrity-signing-keys (#821, #831): the
+  // key sets this boot publishes, in a store of their own, so a key's
+  // retirement anchor is not moved by the records retained in the other.
+  // A published kid is append-only. With durable evidence keys the store is
+  // a file beside the retention file: each boot republishes the same keys,
+  // a no-op, and a lost or regenerated key file is refused here rather than
+  // stranding the records the old key signed. With keys generated per boot it
+  // stays in memory, since a durable set would refuse the next boot's key
+  // under the same kid, and a record an earlier boot signed does not verify
+  // after a restart.
+  const evidenceKeySets = durableEvidence
+    ? openEvidenceRetentionStore({
+        file: join(dirname(evidenceRetentionFile), "pep-evidence-key-sets.sqlite"),
+        owner: statement.mediated_scope.pep_locations[0] as string,
+        retentionWindowSeconds,
+      })
+    : new EvidenceRetentionStore({ retentionWindowSeconds });
   const heldKeys = [
     ...evidenceKeys.verification.filter((k) => k.role !== "pdp"),
     { ...decisionPoint.evidenceVerification, role: "pdp" as const },
@@ -1466,6 +1497,7 @@ export async function composeStack(opts: {
       pdpClaims.close();
       writeReservations.close();
       evidenceRetention.close();
+      evidenceKeySets.close();
       if (opts.kernelStore) kernel.close();
     };
     try {

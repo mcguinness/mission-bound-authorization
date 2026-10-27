@@ -17,7 +17,8 @@
  */
 
 import { type Server } from "node:http";
-import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import { ResourceContractDeclarations, type ResourceContractRef } from "@mission/core";
+import { DERIVATION_POLICY, demoReconciliationTemplate, DEV_SERVICE_TOKEN, RESOURCE_CONTRACTS, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MACHINE_SPEED_STATEMENT,
@@ -346,5 +347,84 @@ describe("the human consent to a Mission Template (@spec mission-template#templa
     );
     expect((await page("tcon_unknown")).status).toBe(404);
     expect((await decide("tcon_unknown", "approve", loggedIn("tcon_unknown"))).status).toBe(404);
+  });
+});
+
+// @spec resource-access#resource-contract (#249, D875): template consent is a
+// new approval. Under a configuration requiring a reference for the ceiling's
+// read, the proposal records the current one, the page renders it, and the
+// template commits exactly what the Approver saw.
+describe("template consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875)", () => {
+  const PORT2 = 14979;
+  const ISSUER2 = `http://localhost:${PORT2}`;
+  const SESSIONS2 = new ApprovalSessionStore();
+  const READ = "payments:invoice.read";
+  const [DECLARED] = RESOURCE_CONTRACTS.declarations;
+  const CURRENT = DECLARED?.versions.find((v) => v.state === "current");
+  const SHIPPED: ResourceContractRef = { id: DECLARED?.id as string, version: CURRENT?.version as string, digest: CURRENT?.digest as string };
+  const REQUIRED = new ResourceContractDeclarations([
+    {
+      resource: DECLARED?.resource,
+      resource_match: DECLARED?.resource_match,
+      id: DECLARED?.id,
+      requires_reference: [READ],
+      versions: [{ version: CURRENT?.version, state: "current", digest: CURRENT?.digest, document: CURRENT?.document }],
+    },
+  ]);
+  let as2: BuiltAs;
+  let server2: Server;
+  beforeAll(async () => {
+    as2 = await buildAuthorizationServer({
+      issuer: ISSUER2,
+      approvalSessions: SESSIONS2,
+      allowHeadlessAdjudication: true,
+      serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+      dispatchPolicies: { "test-limit-3": heldPolicy("test-limit-3", { derivation_limit_ceiling: 3 }) },
+      resourceContracts: REQUIRED,
+    });
+    server2 = as2.provider.listen(PORT2);
+  });
+  afterAll(() => {
+    server2?.close();
+  });
+
+  it("records the current reference at the proposal, renders it on the page, and commits it with the template", async () => {
+    const res = await fetch(`${ISSUER2}/templates/proposals`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      // This issuer's demo template: its recipients are this deployment's principals.
+      body: JSON.stringify((({ approver: _a, approval_event_id: _e, issuer: _i, ...body }) => ({ ...body, dispatch_policy: { id: "test-limit-3", version: "1" } }))(demoReconciliationTemplate(ISSUER2))),
+    });
+    const created = (await res.json()) as { proposal_id: string; error_description?: string };
+    expect(res.status, created.error_description).toBe(201);
+    const id = created.proposal_id;
+    const session = browserApprovalHeaders(SESSIONS2, id, { sub: "bob" }, "");
+    const html = await (await fetch(`${ISSUER2}/templates/proposals/${id}`, { headers: { cookie: session.cookie } })).text();
+    const rendered = renderedCeiling(html);
+    const reads = rendered.filter((e) => (e.actions as string[]).includes(READ));
+    expect(reads.length).toBeGreaterThan(0);
+    for (const entry of reads) expect(entry.resource_contract).toEqual(SHIPPED);
+    const approved = await fetch(`${ISSUER2}/templates/proposals/${id}/decide`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...session },
+      body: JSON.stringify({ decision: "approve" }),
+    });
+    const decided = (await approved.json()) as { template_id: string; error_description?: string };
+    expect(approved.status, decided.error_description).toBe(201);
+    const { template_id } = decided;
+    expect(as2.templateStore.get(template_id)?.ceiling).toEqual(rendered);
+  });
+
+  it("assembles the reference at the commit of the service-token stand-in, which has no consent page", async () => {
+    const created = await fetch(`${ISSUER2}/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+      body: JSON.stringify({ ...demoReconciliationTemplate(ISSUER2), approval_event_id: "rc-standin-1" }),
+    });
+    const body = (await created.json()) as { template_id: string; error_description?: string };
+    expect(created.status, body.error_description).toBe(201);
+    const reads = (as2.templateStore.get(body.template_id)?.ceiling ?? []).filter((e) => e.actions.includes(READ));
+    expect(reads.length).toBeGreaterThan(0);
+    for (const entry of reads) expect(entry.resource_contract).toEqual(SHIPPED);
   });
 });
