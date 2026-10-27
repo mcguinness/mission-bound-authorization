@@ -104,7 +104,7 @@ import {
   openWriteReservationStore,
   type WriteReservationStore,
 } from "@mission/mcp-payments";
-import { ResourceAuthorizationServer } from "@mission/ras";
+import { openRasRedemptionStore, ResourceAuthorizationServer } from "@mission/ras";
 import { SaasMcpServer } from "@mission/mcp-saas";
 import { signStatement, TransparencyService, type Receipt, type SignedStatement } from "@mission/transparency";
 import { ConsoleBff } from "@mission/console-bff";
@@ -463,6 +463,16 @@ export async function composeStack(opts: {
    */
   kernelStore?: KernelStoreConfig;
   /**
+   * @spec #1767 (D901): the RAS's durable redemption store, kept across
+   * restarts. Absent: its single-use claims are in memory. `pnpm as-native`
+   * sets it from `MISSION_RAS_REDEMPTIONS` (`rasRedemptionsFromEnv`), which a
+   * key ring requires. The file is created once by `pnpm ras-redemptions
+   * init`, never here: a missing or uninitialized store refuses before
+   * anything listens. Whoever composed the stack closes it
+   * (`DemoStack.authServer.ras.close()`).
+   */
+  rasRedemptions?: { file: string };
+  /**
    * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
    * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
    * Absent: the published one (`config/enforcement-scope.json`). One value
@@ -606,6 +616,9 @@ export async function composeStack(opts: {
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
     const asUrl = `http://localhost:${asPort}`;
+    // @spec #1767 (D901): a missing, uninitialized or held redemption store
+    // refuses here, before anything listens; the RAS below opens it again.
+    if (opts.rasRedemptions) openRasRedemptionStore(opts.rasRedemptions.file).close();
     // The RS's txn-challenge signing key (rs-txn); the AS is configured with its
     // public half so POST /transaction validates challenges from this RS, and
     // opens the AROP task on the SAME ars this stack adjudicates against.
@@ -859,56 +872,68 @@ export async function composeStack(opts: {
     if (!Array.isArray(saasConstraints) || !saasConstraints.every((k) => typeof k === "string")) {
       throw new Error("SaaS protected resource metadata is missing mission_constraints_supported");
     }
-    const ras = new ResourceAuthorizationServer({
-      localCeiling: RAS_LOCAL_POLICY.ceiling,
-      localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
-      issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
-      signKey: rasKeys.privateKey,
-      signKid: rasTokenKey.kid,
-      localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
-      localTokenAudience: saasResource,
-      // @spec cross-domain#validation-at-resource-as (S-12): no client is
-      // known at boot (the demo agent's DPoP key is generated per session,
-      // exhibit.ts); it is onboarded via ras.registerClient() once that key
-      // exists, before any cross-domain redemption is attempted.
-      registeredClients: {},
-      // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): the
-      // demo's ID-JAG grants are all base grants over the mission subject
-      // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
-      // grant's own (iss, sub) and mission.subject co-resolve via this one
-      // entry). Entitlement is this deployment's own local source (the demo
-      // runs no separate entitlement service).
-      mapping: {
-        id: "demo-ras-mapping",
-        version: "v1",
-        entries: [
-          {
-            origin: { iss: ISS, sub: "alice" },
-            local_sub: "alice-ledgercloud",
-            observed_at: "2020-01-01T00:00:00Z",
-            valid_until: "2099-01-01T00:00:00Z",
-          },
-        ],
-      },
-      // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
-      // grain of the same observation. Alice is a currently entitled
-      // LedgerCloud account, entitled to read vendors but NOT to write the
-      // journal, mirroring the draft's own worked example (invoices.read
-      // entitled, journal-entries.write not). The delegated grant carries
-      // both actions, so redemption narrows to the entitled subset rather
-      // than refusing: the minted local token carries ledger:vendor.read
-      // alone, and the SaaS PEP refuses a journal write presented with it.
-      entitlement: {
-        resolve: async () => ({
-          entitled: true,
-          observed_at: new Date().toISOString(),
-          authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
-        }),
-      },
-      entitlementStalenessBoundSeconds: 86_400,
-      resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
-    });
+    // A RAS that cannot open its store after the AS listens (the file
+    // removed or taken since the check above) releases the listener and what
+    // construction opened, as a failed listen does.
+    let ras: ResourceAuthorizationServer;
+    try {
+      ras = new ResourceAuthorizationServer({
+        localCeiling: RAS_LOCAL_POLICY.ceiling,
+        localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
+        issuer: RAS_ISS,
+        trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
+        signKey: rasKeys.privateKey,
+        signKid: rasTokenKey.kid,
+        localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
+        localTokenAudience: saasResource,
+        // @spec cross-domain#validation-at-resource-as (S-12): no client is
+        // known at boot (the demo agent's DPoP key is generated per session,
+        // exhibit.ts); it is onboarded via ras.registerClient() once that key
+        // exists, before any cross-domain redemption is attempted.
+        registeredClients: {},
+        // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): the
+        // demo's ID-JAG grants are all base grants over the mission subject
+        // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
+        // grant's own (iss, sub) and mission.subject co-resolve via this one
+        // entry). Entitlement is this deployment's own local source (the demo
+        // runs no separate entitlement service).
+        mapping: {
+          id: "demo-ras-mapping",
+          version: "v1",
+          entries: [
+            {
+              origin: { iss: ISS, sub: "alice" },
+              local_sub: "alice-ledgercloud",
+              observed_at: "2020-01-01T00:00:00Z",
+              valid_until: "2099-01-01T00:00:00Z",
+            },
+          ],
+        },
+        // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
+        // grain of the same observation. Alice is a currently entitled
+        // LedgerCloud account, entitled to read vendors but NOT to write the
+        // journal, mirroring the draft's own worked example (invoices.read
+        // entitled, journal-entries.write not). The delegated grant carries
+        // both actions, so redemption narrows to the entitled subset rather
+        // than refusing: the minted local token carries ledger:vendor.read
+        // alone, and the SaaS PEP refuses a journal write presented with it.
+        entitlement: {
+          resolve: async () => ({
+            entitled: true,
+            observed_at: new Date().toISOString(),
+            authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
+          }),
+        },
+        entitlementStalenessBoundSeconds: 86_400,
+        resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
+      ...(opts.rasRedemptions ? { redemptions: opts.rasRedemptions } : {}),
+      });
+    } catch (err) {
+      asServer.closeAllConnections();
+      await new Promise<void>((resolve) => asServer.close(() => resolve()));
+      await releaseConstruction(as);
+      throw err;
+    }
     const resourceToAs = (r: string) => (r === saasResource ? RAS_ISS : asUrl);
     authServer = {
       asUrl,
@@ -1498,6 +1523,7 @@ export async function composeStack(opts: {
       writeReservations.close();
       evidenceRetention.close();
       evidenceKeySets.close();
+      if (opts.rasRedemptions) authServer?.ras.close();
       if (opts.kernelStore) kernel.close();
     };
     try {
