@@ -2370,9 +2370,7 @@ deployment's enforcement mechanism.
 The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation, authorized under its own
-lifecycle authorization policy, which a deployment can serve alone
-under that document's revoke-only conformance class.
+defines an interoperable `revoke` operation.
 
 As {{Section 2.1 of RFC7009}} permits, a deployment's revocation
 policy can treat revoking a Mission's refresh token as revoking the
