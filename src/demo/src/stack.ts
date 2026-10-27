@@ -531,6 +531,12 @@ export async function composeStack(opts: {
   if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
     throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
   }
+  // @spec #831 (D901): durable evidence key files load first, each as its own
+  // holder's, so a missing, mismatched or unreadable file refuses before
+  // anything listens or connects, and nothing is left open to release.
+  const durableEvidence = opts.evidenceKeys
+    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
+    : undefined;
   const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -1026,11 +1032,9 @@ export async function composeStack(opts: {
   // key-to-audience binding is checked against what the records actually
   // carry rather than a placeholder.
   const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
-  // @spec #831 (scope inventory): with durable evidence key files, each
-  // holder's keys are the same at every boot; without them, generated now.
-  const durableEvidence = opts.evidenceKeys
-    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
-    : undefined;
+  // @spec #831 (scope inventory): with durable evidence key files (loaded
+  // first, above), each holder's keys are the same at every boot; without
+  // them, generated now.
   const decisionEvidenceKeys = durableEvidence
     ? (durableEvidence.pdp[0] as DurableEvidenceKey)
     : await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
