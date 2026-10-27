@@ -979,13 +979,16 @@ Table of Contents
 4.4.1.  Discharge Receipt
 
    A Discharge Receipt is a JWS Compact Serialization [RFC7515] signed
-   with a key published in the AS's jwks_uri.  Its JWS header carries
-   typ of mission-discharge-receipt+jwt and a kid identifying the
-   signing key, and the HTTP Content-Type is application/mission-
-   discharge-receipt+jwt (Section 7.2).  A consumer MUST validate typ
-   exactly and MUST NOT accept a Discharge Receipt as a Mission Status
-   Response, or a Mission Status Response as a Discharge Receipt
-   ([RFC8725], Sections 3.11 and 3.12).
+   under the AS's active Mission Status signing key, the key it
+   currently signs Mission Status responses under
+   ([I-D.draft-mcguinness-oauth-mission-status], Section "Response"),
+   published in its jwks_uri.  Its JWS header carries typ of mission-
+   discharge-receipt+jwt and a kid identifying the signing key, and the
+   HTTP Content-Type is application/mission-discharge-receipt+jwt
+   (Section 7.2).  A consumer MUST validate typ exactly and MUST NOT
+   accept a Discharge Receipt as a Mission Status Response, or a Mission
+   Status Response as a Discharge Receipt ([RFC8725], Sections 3.11 and
+   3.12).
 
    Its payload carries iss, aud, nonce, iat, exp, and a
    discharge_receipt object.  The AS MUST set aud to the authenticated
@@ -1019,7 +1022,10 @@ Table of Contents
        Section "Authorization Server Metadata"), rejecting none and any
        algorithm not listed;
 
-   3.  the JWS signature against a current jwks_uri entry for the AS;
+   3.  the JWS signature against a current jwks_uri entry for the AS
+       that the consumer's trusted configuration authorizes for that
+       AS's Mission Status responses; a key's presence in the jwks_uri
+       does not authorize it;
 
    4.  iss equals the expected AS issuer URL;
 
@@ -1359,6 +1365,12 @@ Table of Contents
    *  Relationship to Runtime Enforcement (Section 3.7): issuance-only
       discharge stays conforming; where the runtime profile runs, its
       PDP refuses a discharged entry.
+
+   *  A Discharge Receipt is signed under the AS's active Mission Status
+      signing key, and the consumer's signature check is strengthened: a
+      consumer verifies a receipt only under a key its trusted
+      configuration authorizes for that AS's Mission Status responses,
+      never merely because the key appears in jwks_uri (#831, D857).
 
 Acknowledgments
 
