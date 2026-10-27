@@ -405,9 +405,9 @@ describe("attenuation chain: every token's audience, and the subject from the ro
       .setProtectedHeader(decodeProtectedHeader(root) as never)
       .sign(asKeys.privateKey);
   }
-  /** `child` re-signed by the holder with `sub` set: a holder controls its own key, so it can always do this. */
-  async function withSub(child: string, sub: string): Promise<string> {
-    return new SignJWT({ ...decodeJwt(child), sub })
+  /** `child` re-signed by the holder with `claims` set: a holder controls its own key, so it can always do this. */
+  async function withClaims(child: string, claims: Record<string, string>): Promise<string> {
+    return new SignJWT({ ...decodeJwt(child), ...claims })
       .setProtectedHeader(decodeProtectedHeader(child) as never)
       .sign(holderKeys.privateKey);
   }
@@ -431,9 +431,12 @@ describe("attenuation chain: every token's audience, and the subject from the ro
   });
 
   it("takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence", async () => {
-    const rootSub = decodeJwt(root).sub;
+    const { sub: rootSub, client_id: rootClient } = decodeJwt(root);
     expect(typeof rootSub === "string" && rootSub !== "mallory").toBe(true);
-    const forged = await withSub(await mintChildOffline(root, holderKeys.privateKey, rootTools(), { cnfJkt: delegateJkt }), "mallory");
+    const forged = await withClaims(await mintChildOffline(root, holderKeys.privateKey, rootTools(), { cnfJkt: delegateJkt }), {
+      sub: "mallory",
+      client_id: "mallory-agent",
+    });
 
     const payments = seededPayments();
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
@@ -462,18 +465,20 @@ describe("attenuation chain: every token's audience, and the subject from the ro
 
     const forgedFacts = await present(writer, [root, forged]);
     expect(forgedFacts.sub).toBe(rootSub);
+    expect(forgedFacts.clientId).toBe(rootClient);
     const scheduled = await writer.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: randomUUID() }, forgedFacts);
     expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
     expect(decidedSubjects.length).toBeGreaterThan(0);
     expect(new Set(decidedSubjects)).toEqual(new Set([rootSub]));
     expect(writeReservations.schedules().map((s) => s.subject)).toEqual([rootSub]);
     expect(evidence.all().length).toBeGreaterThan(0);
+    // Neither forged value reaches the recorded evidence ("mallory" covers both).
     expect(JSON.stringify(evidence.all())).not.toContain("mallory");
   });
 
   it("refuses a root without its subject rather than falling back to a child's sub", async () => {
     const subless = await rootWith(({ sub: _sub, ...c }) => c);
-    const child = await withSub(await mintChildOffline(subless, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt }), "alice");
+    const child = await withClaims(await mintChildOffline(subless, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt }), { sub: "alice" });
     await expect(present(server, [subless, child])).rejects.toThrow(/sub must be a non-empty string/);
   });
 });
