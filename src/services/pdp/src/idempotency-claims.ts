@@ -389,6 +389,8 @@ interface ClaimRow {
   execution_id: string | null;
   outcome: string | null;
   outcome_ref: string | null;
+  /** The applied settlement record's `error` ({@link settlementError}); `null` where it carries none or nothing is applied. */
+  error: string | null;
   claimed_at_ms: number;
   terminal_at_ms: number | null;
   retain_until_ms: number | null;
@@ -602,8 +604,12 @@ const MIGRATIONS = [
   // @spec metering#settlement-contract "Conflicting redelivery" (#816, D877):
   // each settlement record that conflicts with the applied one, retained as
   // evidence once per distinct record: per evaluation and per the members
-  // settlement reads (attempt, outcome and error). Never purged.
-  `CREATE TABLE settlement_conflicts (
+  // settlement reads (attempt, outcome and error). Never purged. The claim
+  // keeps the applied record's error beside its attempt and outcome (#1771
+  // review, D907), so a redelivery is the duplicate only when all three
+  // match; NULL where the applied record carries none.
+  `ALTER TABLE claims ADD COLUMN error TEXT;
+  CREATE TABLE settlement_conflicts (
     seq INTEGER PRIMARY KEY AUTOINCREMENT,
     evaluation_id TEXT NOT NULL,
     execution_id TEXT NOT NULL,
@@ -665,10 +671,23 @@ const NO_PERMIT_RELEASES: ReadonlySet<string> = new Set(["not_persisted", "prior
  * settlement record receives. It keeps the reason a second attempt always
  * received (the claim is already settled and the record is not applied to
  * it); what changed is that the record is now retained and alarmed, and that
- * the same attempt with another outcome receives it too instead of a
- * duplicate acknowledgement.
+ * the same attempt with another outcome or error receives it too instead of
+ * a duplicate acknowledgement.
  */
 const CONFLICTING_SETTLEMENT = "already_settled";
+
+/**
+ * @spec metering#settlement-contract (#816, D877, #1771 review): a settlement
+ * record's `error` as settlement compares and stores it: a string as it is,
+ * any other value as its JSON, and `null` where the record carries none. The
+ * applied record's is kept on its claim; a conflicting record's keys its
+ * retention.
+ */
+function settlementError(record: unknown): string | null {
+  const error = object(record) ? record.error : undefined;
+  if (error === undefined) return null;
+  return typeof error === "string" ? error : JSON.stringify(error);
+}
 
 /** The `mission.id` of a claim's idempotency scope, or `undefined` where the stored scope does not parse. */
 function missionIdOf(row: ClaimRow): string | undefined {
@@ -1522,16 +1541,22 @@ export class IdempotencyClaimDomain {
     const row = found ? this.advance(found, nowMs) : undefined;
     if (!row) return { accepted: false, reason: "unknown_evaluation" };
     if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
+    const error = settlementError(record);
     if (row.execution_id !== null) {
-      // A redelivery of the applied record (same attempt, same outcome) is
-      // acknowledged and applied nothing.
-      if (row.execution_id === executionId && row.outcome === outcome && (row.state === "completed" || row.state === "failed")) {
+      // A redelivery of the applied record (same attempt, same outcome, same
+      // error) is acknowledged and applied nothing.
+      if (
+        row.execution_id === executionId &&
+        row.outcome === outcome &&
+        row.error === error &&
+        (row.state === "completed" || row.state === "failed")
+      ) {
         return { accepted: true, state: row.state, duplicate: true };
       }
       // @spec metering#settlement-contract "Conflicting redelivery",
       // metering#settlement-states "Conflicting settlement" (#816, D877): a
-      // second `execution_id`, or the same one with another outcome, fails
-      // closed. The applied settlement is unchanged, the record is retained
+      // second `execution_id`, or the same one with another outcome or
+      // another error (#1771 review), fails closed. The applied settlement is unchanged, the record is retained
       // and the conflict alarmed; it is never acknowledged as a duplicate. A
       // conflicting `completed` proves the money moved, so the claim's
       // reservations commit (a released one included, with the overspend
@@ -1551,10 +1576,10 @@ export class IdempotencyClaimDomain {
     if (horizonMs === undefined) return { accepted: false, reason: "undeclared_class" };
     this.db
       .prepare(
-        `UPDATE claims SET state = ?, execution_id = ?, outcome = ?, outcome_ref = ?, terminal_at_ms = ?, retain_until_ms = ?
+        `UPDATE claims SET state = ?, execution_id = ?, outcome = ?, error = ?, outcome_ref = ?, terminal_at_ms = ?, retain_until_ms = ?
          WHERE evaluation_id = ?`,
       )
-      .run(next, executionId, outcome, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
+      .run(next, executionId, outcome, error, outcomeRef, nowMs, nowMs + horizonMs, evaluationId);
     this.log(row, row.state, next, cause, nowMs);
     this.settleReservations(evaluationId, next, outcome, nowMs);
     return { accepted: true, state: next, duplicate: false };
@@ -1570,7 +1595,6 @@ export class IdempotencyClaimDomain {
    * each retained and alarmed.
    */
   private retainConflict(row: ClaimRow, executionId: string, outcome: string, record: unknown, nowMs: number): void {
-    const error = object(record) ? record.error : undefined;
     const inserted = this.db
       .prepare(
         `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, error, applied_execution_id,
@@ -1581,7 +1605,7 @@ export class IdempotencyClaimDomain {
         row.evaluation_id,
         executionId,
         outcome,
-        error === undefined ? "" : typeof error === "string" ? error : JSON.stringify(error),
+        settlementError(record) ?? "",
         row.execution_id ?? "",
         row.outcome ?? "",
         JSON.stringify(record ?? null),
