@@ -74,6 +74,8 @@ const request = (id: string, action: string): EvaluationRequest => ({
   action: { name: action },
   context: {
     mission: { id, issuer: ISS },
+    // @spec runtime#classification (#956, D814): the class the PEP assigns.
+    action_class: "consequential_read",
     credential: { authority: [{ type: "mission_resource_access", resource: INV1, actions: [READ, LIST] }] },
     parameter_digest: `sha-256:${Buffer.alloc(32, 7).toString("base64url")}`,
   },

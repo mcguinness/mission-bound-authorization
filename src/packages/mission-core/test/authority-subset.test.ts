@@ -81,6 +81,24 @@ describe("shared authority ceiling (#762)", () => {
     ).toEqual([delegated]);
   });
 
+  // @spec resource-access#entry-validation (#1376): an http or https
+  // resource carrying userinfo is no entry, on either operand.
+  it("refuses an http or https resource carrying userinfo on either operand, and admits another scheme's userinfo", () => {
+    for (const resource of [
+      "https://user@resource.test",
+      "https://user:pass@resource.test/x",
+      "HTTP://@resource.test",
+    ]) {
+      const candidate = { ...entry, resource };
+      expect(isAuthorityEntry(candidate), resource).toBe(false);
+      expect(narrowToCeiling([candidate], [entry]), resource).toEqual([]);
+      expect(narrowToCeiling([entry], [candidate]), resource).toEqual([]);
+    }
+    for (const resource of ["https://resource.test/a@b", "ftp://user@resource.test/x"]) {
+      expect(isAuthorityEntry({ ...entry, resource }), resource).toBe(true);
+    }
+  });
+
   it("refuses unsupported or malformed restrictions on either operand", () => {
     const malformed = [
       { ...entry, constraints: { unknown: true } },

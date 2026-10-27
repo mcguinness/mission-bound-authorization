@@ -67,7 +67,8 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
         subject: { id: "alice" },
         resource: { type: "invoice", id: "one", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:invoice.read" },
-        context: { mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash } },
+        // @spec runtime#classification (#956, D814): the class the PEP assigns.
+        context: { mission: { id: x.view.id, issuer: x.view.issuer, authority_hash: x.view.authority_hash }, action_class: "consequential_read" },
       } as EvaluationRequest;
       const submitted = canonicalDigest(JSON.parse(JSON.stringify(request)));
       const decision = await x.channel.decide(request, x.getOptions() as DecisionOptions);

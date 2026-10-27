@@ -370,6 +370,8 @@ The authorization server MUST also refuse an entry with the
 - its `resource` is an `http` or `https` URI without the `//` authority
   form naming a non-empty host ({{Section 4.2.1 of RFC9110}},
   {{Section 4.2.2 of RFC9110}});
+- its `resource` is an `http` or `https` URI carrying a userinfo
+  subcomponent ({{Section 4.2.4 of RFC9110}});
 - its `resource_match` is a value the authorization server does not
   recognize ({{resource-access-type}});
 - its `actions` array is empty, or one of its values is neither an
@@ -1683,6 +1685,8 @@ Omission-Equivalent Value is `false`.
 - `max_amount`'s `currency` is exactly three upper-case ASCII letters,
   compared exactly, with no assignment-list validation; any other value
   is malformed and refused at submission.
+- An `http` or `https` `resource` carrying a userinfo subcomponent is
+  refused at submission.
 
 -00
 

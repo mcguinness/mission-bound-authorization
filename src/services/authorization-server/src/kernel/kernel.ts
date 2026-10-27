@@ -213,6 +213,7 @@ import {
 import { StandingPaymentStore } from "./standing-payment.js";
 import { TemplateApprovalRecordStore } from "./template-approval-record.js";
 import {
+  ExpiryPassedError,
   IntentError,
   type IntentIntakeOptions,
   type IntentSubmissionPresenter,
@@ -419,6 +420,10 @@ export class MissionNotFoundError extends Error {}
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
+/** An `expected_version` for a stale-version message: a canonical numeral beyond any state version is carried as Infinity (#1724 C6). */
+function staleVersionLabel(expected: number): string {
+  return Number.isFinite(expected) ? String(expected) : "beyond any state version";
+}
 /**
  * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a due
  * schedule's transition could not be persisted, and a re-read shows no other
@@ -2208,9 +2213,10 @@ export class MissionKernel {
           `mission ${record.id} would commit expires_at ${record.expires_at} later than the requested ceiling ${record.intent.expires_at}`,
         );
       }
+      // Typed (#1721, D845) so a direct approval decision completes this
+      // refusal `access_denied`; every other creator keeps its own mapping.
       if (!(createdMs < expiresMs)) {
-        throw new IntentError(
-          "invalid_request",
+        throw new ExpiryPassedError(
           `effective expires_at ${record.expires_at} is not later than the creation instant ${record.created_at}`,
         );
       }
@@ -2962,7 +2968,7 @@ export class MissionKernel {
     const record = this.applyExpiry(this.mustGet(id));
     if (opts.expectedVersion !== undefined && opts.expectedVersion !== record.version) {
       throw new StaleVersionError(
-        `expected_version ${opts.expectedVersion} differs from the current state version`,
+        `expected_version ${staleVersionLabel(opts.expectedVersion)} differs from the current state version`,
       );
     }
     const rule = LEGAL_TRANSITIONS[op];
@@ -3140,7 +3146,7 @@ export class MissionKernel {
     const record = this.applyExpiry(this.mustGet(id));
     if (input.expectedVersion !== undefined && input.expectedVersion !== record.version) {
       throw new StaleVersionError(
-        `expected_version ${input.expectedVersion} differs from the current state version`,
+        `expected_version ${staleVersionLabel(input.expectedVersion)} differs from the current state version`,
       );
     }
     if (TERMINAL_STATES.has(record.state)) {

@@ -512,7 +512,7 @@ import {
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
-import { IntentError } from "../kernel/intent.js";
+import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
 import { actionClassesAt, evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
@@ -3494,9 +3494,9 @@ async function handleDeferredGrant(
     }
     // #1348: the deferred token is a token of this Mission, minted on its own
     // grant, so only the Mission's own client may open a deferral on it. Another
-    // client gets the same answer as for an unknown Mission (the store's), and
-    // gets it before the store's subset check, so the refusal discloses neither
-    // the Mission's state nor its authority.
+    // client gets the same answer as for an unknown Mission, and gets it before
+    // the store's state and subset checks, so the refusal discloses neither the
+    // Mission's state nor its authority (#1740, D862).
     const clientId = ctx.oidc.client?.clientId as string;
     if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
       throw new errors.InvalidRequest("mission is not active");
@@ -3522,9 +3522,23 @@ async function handleDeferredGrant(
         },
       });
     } catch (e) {
-      // Requested authority exceeds the active Mission (or it is not active):
-      // AROP never widens -> not a deferrable request.
-      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      // @spec mission#subset, mission#error-mapping (#1720 item 3, D859): AROP
+      // never widens, so requested authority the comparison cannot establish
+      // as a subset of the active Mission, whether it exceeds it or the
+      // comparison cannot decide, is refused invalid_authorization_details,
+      // as the originating grant's own validation would refuse it (DTR -00
+      // Section 5.3.1). The ownership and authentication refusals above keep
+      // their codes.
+      if (e instanceof DeferralError) {
+        if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
+        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862,
+        // D863): only the Mission's own client reaches the store, so a Mission
+        // that is not active, suspension included, is refused invalid_grant,
+        // as any grant other than a Token Exchange is. The refusal carries no
+        // mission_error: that diagnostic goes only to a client presenting the
+        // Mission's grant, and this initiation presents none.
+        throw new errors.InvalidGrant(e.message);
+      }
       throw e;
     }
     // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
@@ -4122,6 +4136,23 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     enabled("status") && principal.scopes.includes(MISSION_STATUS_SCOPE);
 
   /**
+   * @spec status#mission-status-authentication (#1724 D1, D847): the Missions
+   * a reader's read authorization covers, under the deployment's policy: the
+   * `missions` its client policy binds, or every Mission at this AS where its
+   * policy binds none (this reference's documented default). The read grant
+   * alone establishes nothing more. A Mission outside the coverage gets the
+   * not-found response an unknown Mission gets.
+   */
+  const readCovers = (principal: ServiceTokenPrincipal, missionId: string): boolean => {
+    const entry = Object.hasOwn(lifecycleClientGrants, principal.principal_id)
+      ? lifecycleClientGrants[principal.principal_id]
+      : undefined;
+    if (entry === undefined || !("grants" in entry) || entry.missions === undefined) return true;
+    const record = kernel.get(missionId);
+    return record !== undefined && withinLifecycleMissionScope(entry.missions, record);
+  };
+
+  /**
    * @spec status#mission-status-response (#1682, D795): whether the
    * authenticated caller holds the deployment's audit-or-correlation
    * disclosure privilege, `provenance`, in ONE place for every Mission Status
@@ -4578,6 +4609,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // A caller without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, statusMatch[1] as string)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(statusMatch[1] as string, {
           ...optional("audience", statusAudience),
           ...optional("nonce", statusNonce),
@@ -4705,6 +4737,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         // A client without the read grant gets the same not-found body as an
         // unknown reference (@spec status#mission-status-anti-oracle).
         if (!mayReadStatus(principal)) throw new Error("status read not authorized");
+        if (!readCovers(principal, missionId)) throw new Error("mission not within the read authorization");
         const jws = await kernel.signedStatus(missionId, {
           ...optional("audience", audience),
           nonce: echo,
@@ -7042,6 +7075,18 @@ function approvalGrantId(uid: string): string {
   return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 }
 
+/**
+ * @spec mission#approval-commit (#1721, D845): how a direct approval decision
+ * completes the authorization request on an intake or commit refusal. A
+ * requested ceiling that passed while the approval was pending, whether the
+ * decision's re-validation or the commit's own atomic check finds it, is
+ * `access_denied`, with no Mission and no code; every other refusal keeps
+ * its mapped code.
+ */
+function decisionRefusal(e: IntentError): { error: string; error_description: string } {
+  return { error: e instanceof ExpiryPassedError ? "access_denied" : e.code, error_description: e.message };
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -7179,12 +7224,13 @@ async function decide(
   // requested ceiling that passed while the approval pends completes the
   // request with its refusal, as the commit's own expiry check does when it
   // passes during the commit, before anything is written and never a 500.
+  // Both complete `access_denied` (@spec mission#approval-commit, #1721).
   let submission: ReturnType<typeof opts.kernel.validateSubmission>;
   try {
     submission = opts.kernel.validateSubmission(String(params.mission_intent));
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7234,7 +7280,7 @@ async function decide(
         : undefined;
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7342,10 +7388,7 @@ async function decide(
       authority = opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey));
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7374,7 +7417,7 @@ async function decide(
       opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7539,7 +7582,7 @@ async function decide(
       current = currentContext(authority, rendered);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7611,10 +7654,7 @@ async function decide(
         prepared = opts.kernel.prepareApproval(approveInput);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7692,7 +7732,7 @@ async function decide(
         }
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({ error: e.code, error_description: e.message });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7707,10 +7747,7 @@ async function decide(
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7969,6 +8006,15 @@ function renderRegisteredClient(client: { clientId: string; clientName?: string 
 `;
 }
 
+/**
+ * @spec mission#rendering-safeguards (#1532): client-supplied text is
+ * attributed to the client, named by the `client_id` this AS resolved the
+ * request to from its registration, never by text the client supplies.
+ */
+function renderSuppliedBy(clientId: string): string {
+  return `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+}
+
 function renderApprovalPage(
   uid: string,
   intent: unknown,
@@ -7994,7 +8040,7 @@ function renderApprovalPage(
   // proposal (untrusted client input) from the derived Authority Set (what
   // approval grants); the proposal section appears only when one was submitted.
   const proposalSection = proposal
-    ? `<h2>Proposed authority (submitted, untrusted)</h2><pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
+    ? `<h2>Proposed authority (submitted, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(proposal, null, 2))}</pre>`
     : "";
   // @spec mission#intent-submission-evidence — MATERIAL verified provenance is
   // rendered to the Approver as normalized FACTS (never raw artifacts); the
@@ -8078,7 +8124,7 @@ ${inheritance}`
       : "";
   return `<!doctype html><title>Mission approval</title>
 <h1>Approve mission?</h1>
-${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2><pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
+${deviceSection}${clientSection}<h2>Intent (task context, untrusted)</h2>${renderSuppliedBy(client.clientId)}<pre>${escapeHtml(JSON.stringify(intent, null, 2))}</pre>
 ${sourceSection}
 ${proposalSection}
 ${provenanceSection}

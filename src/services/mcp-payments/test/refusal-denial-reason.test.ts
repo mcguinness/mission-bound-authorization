@@ -118,6 +118,7 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
       "compensation_link_invalid",
       "evaluation_context_invalid",
       "work_item_invalid",
+      "action_class_missing",
     ]);
     expect(isRefusalDenialReason("pdp", "operation_target_invalid")).toBe(true);
     expect(isRefusalDenialReason("pep", "operation_target_invalid")).toBe(false);
@@ -165,5 +166,15 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
     const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("compensation_link_unavailable"));
     expect(record.content.denial_reason).toBe("compensation_link_unavailable");
     expect(evidence.all()).toHaveLength(1);
+  });
+
+  it("action_class_missing is the PDP's alone, and a PEP-side store never signs it (#956)", async () => {
+    expect(isRefusalDenialReason("pdp", "action_class_missing")).toBe(true);
+    expect(isRefusalDenialReason("pep", "action_class_missing")).toBe(false);
+    const keys = createEphemeralEvidenceKeys();
+    const evidence = new EvidenceStore(keys.signing, keys.resolver);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput("action_class_missing"))).rejects.toThrow(/not in the closed set/);
+    await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pdp", refusalInput("action_class_missing"))).rejects.toThrow(/no signer configured for emitter role "pdp"/);
+    expect(evidence.all()).toHaveLength(0);
   });
 });

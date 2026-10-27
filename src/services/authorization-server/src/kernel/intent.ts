@@ -264,6 +264,19 @@ export class IntentError extends Error {
 }
 
 /**
+ * @spec mission#approval-commit (#1721, D845): the requested ceiling, or the
+ * effective expiry a commit establishes, is not later than the instant it is
+ * judged at. Its code stays `invalid_request`, the refusal at submission
+ * acceptance and on every surface that maps it as it always has; a direct
+ * approval decision tells it apart and completes the request `access_denied`.
+ */
+export class ExpiryPassedError extends IntentError {
+  constructor(message: string) {
+    super("invalid_request", message);
+  }
+}
+
+/**
  * @spec mission#submission-via-par — parse and validate the Mission Intent
  * Submission envelope: the exact VALUE of the `mission_intent` parameter on
  * every submission carrier (PAR, the expansion and child-creation exchanges,
@@ -636,9 +649,11 @@ function validateMissionIntentObject(
   // value is never rewritten forward: a Mission whose lifetime has already run
   // out is refused here rather than accepted and expired on arrival.
   // Acceptance does not freeze time; Mission creation re-checks the effective
-  // expiry atomically at the commit (@spec mission#approval-event).
+  // expiry atomically at the commit (@spec mission#approval-event). A direct
+  // approval decision that re-validates the request after this ceiling passed
+  // maps the refusal to `access_denied` (@spec mission#approval-commit, #1721).
   if (Date.parse(expiresAt) <= (opts.now ?? new Date()).getTime()) {
-    throw new IntentError("invalid_request", "expires_at is already past");
+    throw new ExpiryPassedError("expires_at is already past");
   }
 
   if (
