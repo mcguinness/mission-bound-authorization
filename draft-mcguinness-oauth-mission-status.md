@@ -1662,14 +1662,11 @@ reconciliation.
 
 This section is OPTIONAL and applies only to a deployment that adopts
 one or more of the extensions above. An AS advertises the surfaces it
-supports through the following members of its authorization server
-metadata document {{RFC8414}}, in addition to the issuance profile's
+supports through the following authorization server metadata members
+{{RFC8414}}, in addition to the issuance profile's
 `mission_bound_authorization_supported`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization Server
-Metadata"). Unlike the issuance profile, which advertises only that
-boolean, this document defines OAuth AS metadata members for the
-surfaces it introduces, so a consumer discovers them
-through standard {{RFC8414}} discovery.
+Metadata").
 
 `mission_status_endpoint`:
 : OPTIONAL. A string containing a URL. The URL of the
@@ -1686,16 +1683,14 @@ through standard {{RFC8414}} discovery.
   method that authenticates with a shared client secret, or `none`
   ({{mission-status-authentication}}). The sender-constrained
   access-token path is not a client authentication method: this
-  endpoint's Protected Resource Metadata {{RFC9728}} describes it. This
-  member describes this endpoint, not the token endpoint. REQUIRED when
-  the Mission Status endpoint accepts client authentication.
+  endpoint's Protected Resource Metadata {{RFC9728}} describes it.
+  REQUIRED when the Mission Status endpoint accepts client
+  authentication.
 
 `mission_status_endpoint_auth_signing_alg_values_supported`:
 : CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Status endpoint.
-  This is the client-assertion verification set, not the response-signing
-  algorithms of `mission_status_signing_alg_values_supported` below.
   `none` MUST NOT be used. REQUIRED when
   `mission_status_endpoint_auth_methods_supported` lists
   `private_key_jwt`.
@@ -1707,9 +1702,9 @@ through standard {{RFC8414}} discovery.
   (the dedicated Mission Status operation, the Lifecycle endpoint, and
   any companion surface that reuses that response), mirroring
   `introspection_signing_alg_values_supported`. These are the
-  response-signing algorithms, not the algorithms the AS accepts on
-  `private_key_jwt` client assertions (the endpoint auth-signing
-  members). REQUIRED when the AS serves any such surface, since a
+  response-signing algorithms, not the `private_key_jwt`
+  client-assertion algorithms of the endpoint auth-signing members.
+  REQUIRED when the AS serves any such surface, since a
   consumer rejects a response signed with an algorithm not listed
   ({{mission-status-response}}).
 
@@ -1729,8 +1724,6 @@ through standard {{RFC8414}} discovery.
 : CONDITIONAL. A JSON array of strings, the JWS {{RFC7515}} algorithm
   values the AS accepts for the `private_key_jwt` client-assertion JWT
   ({{mission-status-authentication}}) at the Mission Lifecycle endpoint.
-  This is the client-assertion verification set, not the response-signing
-  algorithms of `mission_status_signing_alg_values_supported`.
   `none` MUST NOT be used. REQUIRED when
   `mission_lifecycle_endpoint_auth_methods_supported` lists
   `private_key_jwt`.
@@ -1753,15 +1746,11 @@ token endpoint alone and is never read in place of an endpoint's
 DPoP and mTLS support for issued credentials are read from the
 standard `dpop_signing_alg_values_supported` {{RFC9449}} and
 `tls_client_certificate_bound_access_tokens` {{RFC8705}} metadata;
-this document defines no separate sender-constraint member. When the
-introspection projection ({{introspection-projection}}) is signed, the
-signing is discovered through the standard
-`introspection_signing_alg_values_supported` metadata.
+this document defines no sender-constraint member.
 
 A discovery response from
 `https://as.example.com/.well-known/oauth-authorization-server`,
-showing the issuance profile members plus the extension members of
-this document:
+showing the issuance profile and extension members:
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -1798,8 +1787,8 @@ Cache-Control: max-age=3600
 ## Historical Key Set {#historical-key-set}
 
 The historical key set holds the public keys the AS has withdrawn as
-compromised ({{signing-key-retention}}), so that responses signed
-under them stay verifiable for audit. It is a JWT {{RFC7519}} with
+compromised ({{signing-key-retention}}), so responses signed under
+them stay verifiable for audit. It is a JWT {{RFC7519}} with
 `typ` `jwk-set+jwt`, served at `mission_historical_jwks_uri`, which a
 consumer takes only from authorization server metadata it has
 validated ({{Section 3.3 of RFC8414}}). Its claims are `iss` (the AS's
@@ -1808,13 +1797,12 @@ issuer identifier), `iat`, and `keys`: a JWK Set's `keys` array
 `kid`, for at least the audit horizon of every Mission whose responses
 it signed.
 
-The AS signs the set under its active Mission Status signing key, the
-key it currently signs Mission Status responses under, and never under
-a key the set lists or a key of another role. When that key is itself
-compromised, the AS signs the set under its replacement and never
-under another published key. A consumer identifies the authorized
-signer through its trusted configuration, not by its presence in the
-`jwks_uri`, since the `jwks_uri` also carries other roles' keys and
+The AS signs the set under its active Mission Status signing key and
+never under a key the set lists or a key of another role. When that
+key is itself compromised, the AS signs the set under its replacement
+and never under another published key. A consumer identifies the
+authorized signer through its trusted configuration, not by its
+presence in the `jwks_uri`, which also carries other roles' keys and
 retired keys; it accepts a replacement only once that configuration
 authorizes it. A consumer MUST NOT accept a historical key set whose
 signature does not verify under the key its trusted configuration
@@ -1878,15 +1866,15 @@ An implementation claiming an extension MUST meet its requirements:
   ({{lifecycle-operations}}); and advertise
   `mission_lifecycle_endpoint`,
   `mission_status_signing_alg_values_supported`, and the endpoint's
-  authentication metadata ({{as-metadata}}). The
-  class requires no other operation and not the Mission Status
-  operation; an implementation that also serves another base operation
-  or the Mission Status operation meets that operation's requirements,
-  and one that serves `suspend` serves `resume`, without widening who
-  may perform either ({{lifecycle-authorization}}); and
-  the `suspended` state and `completed` termination arrive only with
-  the operations that introduce them. An implementation claiming
-  Mission Lifecycle meets this class.
+  authentication metadata ({{as-metadata}}). The class requires
+  neither another operation nor the Mission Status operation. An
+  implementation that also serves another base operation or the
+  Mission Status operation meets that operation's requirements, and
+  one that serves `suspend` serves `resume`, without widening who
+  may perform either ({{lifecycle-authorization}}). The `suspended`
+  state and `completed` termination arrive only with the operations
+  that introduce them. An implementation claiming Mission Lifecycle
+  meets this class.
 - **Revocation propagation**: advertise `mission_max_stale_seconds`
   and size Mission-bound access-token TTLs as
   {{revocation-enforcement-classes}} provides.
@@ -1903,8 +1891,7 @@ surface reports authority the computation has not reduced.
 # Security Considerations {#security-considerations}
 
 The security considerations of the issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} apply in full. This section
-covers threats specific to the extensions defined here.
+{{I-D.draft-mcguinness-oauth-mission}} apply in full.
 
 ## Mission Status Enumeration
 
@@ -1931,20 +1918,19 @@ consumer MUST NOT use a cached response after that bound.
 
 ## Mission Status Denial of Service
 
-The Mission Status operation is on the consumption path of every
-Mission-bound credential validation in deployments where consumers query
-Mission Status per request.
+Where consumers query Mission Status per request, the operation is on
+the path of every Mission-bound credential validation.
 The AS MUST implement per-consumer rate limiting (returning
 `rate_limited`, {{mission-status-errors}}) and SHOULD encourage
 consumer-side caching ({{mission-status-caching}}) to reduce traffic.
 
 ## Signed Response Format {#rfc-9701-vs-media-type}
 
-When the introspection projection is signed
-({{introspection-projection}}), it uses {{RFC9701}}, which is scoped to
-token introspection. The dedicated Mission Status operation uses a new
-media type (`application/mission-status-response+jwt`, {{iana}}) and a
-JWS {{RFC7515}}, because {{RFC9701}} does not apply to a lookup keyed by
+A signed introspection projection ({{introspection-projection}}) uses
+{{RFC9701}}, which is scoped to token introspection. The dedicated
+Mission Status operation uses its own media type
+(`application/mission-status-response+jwt`, {{iana}}) and a JWS
+{{RFC7515}}, because {{RFC9701}} does not apply to a lookup keyed by
 `mission_id`. Implementations MUST NOT use {{RFC9701}} for the
 dedicated Mission Status operation, and MUST NOT accept an unsigned
 response from the dedicated Mission Status operation in place of the
@@ -1965,17 +1951,16 @@ Rotation"), with the audit horizon as the bound.
 
 A key known or suspected compromised follows the issuance profile's
 compromise rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Signing and Key Rotation"). Rather than only rotating it out, the AS
-stops signing with it and removes it from its `jwks_uri`, and
-publishes it as revoked in its historical key set. Retention keeps an
-archived response verifiable for audit; it is not trust. A consumer
+"Signing and Key Rotation"): the AS stops signing with it and removes
+it from its `jwks_uri`, and publishes it as revoked in its historical
+key set. Retention is for audit, not trust. A consumer
 MUST NOT accept, for a current reliance decision, a response signed
 under a key the AS has published as compromised. A consumer MUST NOT
 use a key from the historical key set to verify a response for a
 current reliance decision. A consumer MUST NOT rely on a cached copy
 of the AS's `jwks_uri` beyond the freshness lifetime its response
 explicitly declares ({{Section 4.2.1 of RFC9111}}). A response without
-valid explicit freshness information is stale when received, and is
+valid explicit freshness information is stale when received and is
 never given a heuristic lifetime ({{Section 4.2.2 of RFC9111}}): the
 consumer revalidates it before reuse. The consumer replaces its cached
 key set with each one it fetches rather than adding to it, so a
@@ -1983,6 +1968,7 @@ removed key stops verifying within that lifetime. When the cached set
 is stale and revalidation fails, the consumer MUST NOT accept a Status
 or Lifecycle response for a current reliance decision until a fetch or
 revalidation succeeds.
+
 An auditor examining an archived response signed under a compromised
 key classifies it by the published compromise information,
 `compromised_at` or its absence.
@@ -2003,8 +1989,7 @@ authenticating at another.
 # Privacy Considerations {#privacy-considerations}
 
 The privacy considerations of the issuance profile
-{{I-D.draft-mcguinness-oauth-mission}} apply in full. This section
-covers privacy specific to the extensions here.
+{{I-D.draft-mcguinness-oauth-mission}} apply in full.
 
 ## Status and Lifecycle as Disclosure Surfaces
 
@@ -2033,22 +2018,19 @@ profile's privacy considerations.
 
 This document requests IANA actions for OAuth AS metadata members,
 OAuth extensions error codes, a media type, and one entry in each of
-two issuance-profile registries. It defines no new registry of its
-own: endpoint
-authentication methods are values of the existing OAuth Token Endpoint
-Authentication Methods registry {{RFC7591}} ({{as-metadata}}), and
-Mission Lifecycle `operation` values have no
-IANA registry; a companion profile registers an extension operation
-by defining it in its own specification
-({{mission-lifecycle-endpoint}}). The `mission_error` values
+two issuance-profile registries. It defines no registry of its own:
+endpoint authentication methods are values of the existing OAuth Token
+Endpoint Authentication Methods registry {{RFC7591}}
+({{as-metadata}}), and Mission Lifecycle `operation` values have no
+IANA registry ({{lifecycle-operations}}). The `mission_error` values
 `suspended` and `completed` ({{mission-lifecycle-endpoint}}) need no
 registration, because the issuance profile's `mission_error` member
-has no registry of values; their registrations as a lifecycle state
-and a termination reason are in {{iana-lifecycle-registrations}}.
+has no registry of values; {{iana-lifecycle-registrations}} requests
+their registration as a lifecycle state and a termination reason.
 
-This document registers no new Well-Known URI: the metadata members of
-{{as-metadata}} are published in the OAuth Authorization Server Metadata
-document at `/.well-known/oauth-authorization-server` {{RFC8414}}.
+This document registers no Well-Known URI: its metadata members
+({{as-metadata}}) are published at
+`/.well-known/oauth-authorization-server` {{RFC8414}}.
 
 ## OAuth Authorization Server Metadata Registration
 
