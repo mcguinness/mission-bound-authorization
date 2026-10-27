@@ -152,10 +152,9 @@ profile:
   ({{revocation-enforcement-classes}}): the `mission_max_stale_seconds`
   ceiling on reliance on an observation of Mission state, and how to
   size token lifetimes to the propagation mechanisms in use.
-- **Authorization server metadata** members
-  ({{as-metadata}}) advertising the endpoints above.
-
-Each extension is independently optional ({{conformance}}).
+Each extension is independently optional ({{conformance}}). The
+authorization server metadata an AS publishes ({{as-metadata}})
+follows from the extensions and authentication paths it supports.
 
 This document does not restate the issuance profile: the Mission
 Intent, authority derivation, the `mission` claim, the integrity
@@ -1608,8 +1607,8 @@ Each mechanism is discovered from its own metadata:
   event-driven propagation, discovered from that profile's own
   metadata.
 
-A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
-the ceiling, in seconds, on reliance on an observation of Mission
+A deployment that claims revocation propagation ({{conformance}})
+advertises `mission_max_stale_seconds` ({{as-metadata}}), the ceiling, in seconds, on reliance on an observation of Mission
 state: the freshness cap of {{mission-status-caching}} applies it to a
 Mission Status Response, and the issuer applies it to an introspection
 projection's `fresh_until` ({{introspection-projection}}). It does
@@ -1743,7 +1742,8 @@ Metadata").
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The ceiling, in seconds, on reliance on an
   observation of Mission state ({{revocation-enforcement-classes}}).
-  When absent, no such ceiling is declared.
+  A deployment claiming revocation propagation ({{conformance}})
+  advertises it. When absent, no such ceiling is declared.
 
 `mission_historical_jwks_uri`:
 : CONDITIONAL. A string containing an `https` URL. The URL of the AS's
