@@ -22,6 +22,7 @@
     { "path": "evals" },
     { "path": "demo" },
     { "path": "services/ras" },
-    { "path": "services/plain-rs" }
+    { "path": "services/plain-rs" },
+    { "path": "services/aauth-resource" }
   ]
 }
