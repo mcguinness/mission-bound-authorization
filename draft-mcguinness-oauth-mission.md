@@ -7807,6 +7807,16 @@ Cross-Domain:
   terms; and the Implementation Map gains a table of deployment
   choices, naming for each who decides, which party learns it, and the
   existing signal, if any, it learns from (#1723, #1504, D845).
+- Editorial, no requirement change: Policy-Language Types drops its
+  Cedar example; Remediation Grains names its three grains in one
+  paragraph; Grant Bindings and Related Mechanisms leaves the Template
+  and Identity Continuation exchange mechanics to their profiles and
+  merges the Mission Join paragraphs; Single Accountable Approver
+  points to the Approval Governance Record for its mechanics, keeping
+  both limitations; Approval Comprehension condenses its practices; and
+  the Enforcement Responsibilities table is removed, with Rendering
+  Safeguards pointing to Enforcement Requirements and Scope Projection
+  (#1793, D919).
 
 -01
 
