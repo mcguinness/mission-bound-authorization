@@ -28,6 +28,7 @@
     "resource-policy": "node scripts/resource-policy.mjs",
     "keys": "node scripts/keys.mjs",
     "kernel-recovery": "node scripts/kernel-recovery.mjs",
+    "ras-redemptions": "node scripts/ras-redemptions.mjs",
     "measure:evidence": "node scripts/measure-evidence.mjs"
   },
   "devDependencies": {
