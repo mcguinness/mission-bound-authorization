@@ -892,8 +892,9 @@ record of offline derivations and protect it accordingly.
 A Mission-bound attenuation root carries the `mission` claim, which the
 issuance profile registers as an open object, and the
 `attenuating_agent_token` authorization detail, which the attenuation
-substrate registers; this profile combines them by reference and defines
-no new claim or registry. It registers one metadata member and one
+substrate defines ({{RFC9396}} establishes no registry of types); this
+profile combines them by reference and defines no new claim or
+registry. It registers one metadata member and one
 request parameter.
 
 This document registers one member in the existing "OAuth Authorization
