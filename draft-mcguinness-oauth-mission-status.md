@@ -360,7 +360,8 @@ constraint; otherwise a request presenting the parameters of a method
 other than mTLS client authentication, such as `client_assertion` for
 `private_key_jwt`, uses that method, and any client certificate is not
 treated as client authentication; otherwise a request presenting only
-a client certificate uses mTLS client authentication. This order keeps
+a client certificate uses the mTLS client authentication method
+registered for the client ({{RFC8705}}). This order keeps
 "exactly one path" satisfiable when mTLS terminates at the edge.
 The parameters of a path or method the order does not select, such as
 a `client_assertion` beside an access token, are not evaluated as
@@ -449,7 +450,11 @@ credential it presented:
   receives the error response that the method's specification defines
   for that failure, with any error code, status, and challenge it
   requires, such as a method that answers a missing server-provided
-  challenge or a stale credential with its own error. Where the method
+  challenge or a stale credential with its own error. That response
+  keeps this document's error body ({{mission-status-errors}}): its
+  error code is the body's `error`, with `error_description` and any
+  `nonce` echo, and a challenge header the method requires is added to
+  it. Where the method
   defines none, the request receives HTTP 400 with the `invalid_client`
   error code, as {{Section 5.2 of RFC6749}} answers a failed client
   authentication carried outside the `Authorization` header, with no
@@ -1762,8 +1767,9 @@ through standard {{RFC8414}} discovery.
 : CONDITIONAL. A JSON array of strings naming the client authentication
   methods the Mission Status endpoint ({{mission-status}}) accepts,
   values of the OAuth Token Endpoint Authentication Methods registry
-  {{RFC7591}}, as `introspection_endpoint_auth_methods_supported` names
-  them for the introspection endpoint {{RFC8414}}. It MUST NOT list a
+  {{RFC7591}} alone, not the OAuth Access Token Types values that
+  `introspection_endpoint_auth_methods_supported` also admits
+  {{RFC8414}}. It MUST NOT list a
   method that authenticates with a shared client secret, or `none`
   ({{mission-status-authentication}}). The sender-constrained
   access-token path is not a client authentication method: this
