@@ -1,6 +1,5 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import type { TLSSocket } from "node:tls";
 import {
   generateSigningKey,
   InMemoryReplayCache,
@@ -49,13 +48,12 @@ export interface PersonServerOptions {
   /** Signature validity window in seconds. Default 60. */
   windowSeconds?: number;
   /**
-   * The origin requests arrive at (`scheme://host:port`), the `@authority`
-   * a signature must cover. Default: the socket's own local address, never
-   * the request's Host field, so a request signed for another server does
-   * not verify here.
+   * The origin metadata publishes the endpoints under, and the one a
+   * signature over a request to them covers: the signature base is built
+   * from this origin and the raw request target, never from the request's
+   * Host field, so a request signed for another server does not verify
+   * here. Default: the issuer.
    */
-  publicOrigin?: string;
-  /** The origin metadata publishes the endpoints under. Default: the issuer. */
   endpointOrigin?: string;
 }
 
@@ -125,14 +123,11 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
   });
 }
 
-/** The origin this request reached, from the socket rather than the Host field. */
-function socketOrigin(req: IncomingMessage): string {
-  const socket = req.socket as TLSSocket;
-  let host = socket.localAddress ?? "";
-  if (host.startsWith("::ffff:")) host = host.slice("::ffff:".length);
-  if (host.includes(":")) host = `[${host}]`;
-  return `${socket.encrypted ? "https" : "http"}://${host}:${socket.localPort}`;
-}
+/**
+ * Metadata and JWKS are cacheable: verifiers MUST cache JWKS responses and
+ * SHOULD respect HTTP cache headers (AAuth -11 Section 11.4).
+ */
+const CACHEABLE = { "cache-control": "max-age=300" };
 
 function send(
   res: ServerResponse,
@@ -652,11 +647,10 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
   };
 
   const authenticate = async (req: IncomingMessage, body: Buffer): Promise<VerifiedRequest> => {
-    const origin = options.publicOrigin ?? socketOrigin(req);
     return verifyRequest(
       {
         method: req.method ?? "GET",
-        url: `${origin}${req.url ?? "/"}`,
+        url: `${endpointOrigin}${req.url ?? "/"}`,
         headers: req.headers,
         body,
       },
@@ -683,7 +677,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
             { error: "invalid_request", detail: "method not allowed" },
             { allow: "GET" },
           );
-        return send(res, 200, path === PS_PATHS.metadata ? metadata : jwks);
+        return send(res, 200, path === PS_PATHS.metadata ? metadata : jwks, CACHEABLE);
       }
       const missionUrl = path.startsWith(`${PS_PATHS.mission}/`)
         ? path.slice(PS_PATHS.mission.length + 1)
@@ -743,7 +737,7 @@ export interface ListenOptions {
 
 export interface RunningServer {
   server: Server;
-  /** `http://host:port`, the origin requests are signed for. */
+  /** `http://host:port`, where the server listens (a transport address, not an identifier). */
   origin: string;
   port: number;
   close(): Promise<void>;

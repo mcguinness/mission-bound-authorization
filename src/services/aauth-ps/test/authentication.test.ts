@@ -1,17 +1,18 @@
 /**
  * Caller authentication at every PS endpoint: an HTTP Message Signature
  * under the Signature-Key `jwt` scheme presenting an agent token (AAuth
- * -11 Sections 7 and 11.3), over the request's real `@authority`, with
- * Content-Digest and Content-Type covered on a body request, verified by
- * `@mission/aauth-wire`. A failure is 401 with Signature-Error.
+ * -11 Sections 7 and 11.3), its base built from the PS's own identifier
+ * and the raw request target, with Content-Digest and Content-Type
+ * covered on a body request, verified by `@mission/aauth-wire`. A failure
+ * is 401 with Signature-Error.
  */
-import { request } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   type Agent,
   approve,
   issuedCount,
   makeAgent,
+  PS2,
   personToken,
   prepare,
   type Reply,
@@ -40,29 +41,6 @@ function unauthenticated(r: Reply, code: string): void {
   expect(r.headers.get("signature-error")).toContain(`error=${code}`);
   expect(r.body.person_token).toBeUndefined();
   expect(issuedCount(w)).toBe(0);
-}
-
-/** Send with node:http, which lets a test set the Host field. */
-function rawPost(
-  port: number,
-  path: string,
-  headers: Record<string, string>,
-  body: string,
-): Promise<Reply> {
-  return new Promise((resolve, reject) => {
-    const req = request({ host: "127.0.0.1", port, path, method: "POST", headers }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (c: Buffer) => chunks.push(c));
-      res.on("end", () => {
-        const text = Buffer.concat(chunks).toString("utf8");
-        const h = new Headers();
-        for (const [k, v] of Object.entries(res.headers)) if (typeof v === "string") h.set(k, v);
-        resolve({ status: res.statusCode ?? 0, headers: h, body: text ? JSON.parse(text) : {} });
-      });
-    });
-    req.on("error", reject);
-    req.end(body);
-  });
 }
 
 describe("PS caller authentication", () => {
@@ -99,20 +77,21 @@ describe("PS caller authentication", () => {
     expect(issuedCount(w)).toBe(1);
   });
 
-  it("verifies the authority the request reached, not the Host field: 401 invalid_signature", async () => {
-    const port = Number(new URL(w.origin).port);
-    const elsewhere = `http://localhost:${port}/person`;
-    const prepared = prepare(w.clock, "POST", elsewhere, assistant, {
+  it("verifies against its own identifier, so a request signed for another server fails even with that Host: 401 invalid_signature", async () => {
+    const prepared = prepare(w.clock, "POST", `${PS2}/person`, assistant, {
       resource: RS,
       mission_s256: s256,
     });
-    const r = await rawPost(
-      port,
-      "/person",
-      { ...prepared.headers, host: `localhost:${port}` },
-      prepared.body as string,
-    );
+    const r = await send("POST", `${w.origin}/person`, prepared, { host: "ps2.test" });
     unauthenticated(r, "invalid_signature");
+  });
+
+  it("accepts the signed request whatever Host field carries, since Host never enters the base", async () => {
+    const url = `${w.origin}/person`;
+    const prepared = prepare(w.clock, "POST", url, assistant, { resource: RS, mission_s256: s256 });
+    const port = new URL(w.loopback).port;
+    const r = await send("POST", url, prepared, { host: `ps.test:${port}` });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
   });
 
   it("refuses a person token in place of the agent token: 401 invalid_jwt", async () => {
@@ -173,7 +152,9 @@ describe("PS caller authentication", () => {
 
 describe("PS metadata", () => {
   it("publishes its issuer, jwks_uri and endpoints, and a JWKS with a fully-specified alg", async () => {
-    const meta = await (await fetch(`${w.origin}/.well-known/aauth-person.json`)).json();
+    const metaResponse = await fetch(`${w.loopback}/.well-known/aauth-person.json`);
+    expect(metaResponse.headers.get("cache-control")).toBe("max-age=300");
+    const meta = await metaResponse.json();
     expect(meta).toEqual({
       issuer: "https://ps.test",
       jwks_uri: "https://ps.test/.well-known/jwks.json",
@@ -181,9 +162,9 @@ describe("PS metadata", () => {
       auth_token_endpoint: "https://ps.test/token",
       mission_endpoint: "https://ps.test/mission",
     });
-    const jwks = (await (await fetch(`${w.origin}/.well-known/jwks.json`)).json()) as {
-      keys: Record<string, unknown>[];
-    };
+    const jwksResponse = await fetch(`${w.loopback}/.well-known/jwks.json`);
+    expect(jwksResponse.headers.get("cache-control")).toBe("max-age=300");
+    const jwks = (await jwksResponse.json()) as { keys: Record<string, unknown>[] };
     expect(jwks.keys).toHaveLength(1);
     expect(jwks.keys[0]).toMatchObject({
       kty: "OKP",

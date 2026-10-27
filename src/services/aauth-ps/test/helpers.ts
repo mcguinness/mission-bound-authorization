@@ -8,14 +8,20 @@
  * mapped test hosts through `admitPrivateDestination` and nothing else,
  * and through the library's pinned `createFetchJson`, which checks and
  * connects to the loopback literal itself. The one bridge is that an
- * `https://<host>` document URL is fetched from that host's loopback
- * `http://127.0.0.1:<port>` origin: the loopback topology carries no TLS.
+ * `https://<host>` URL travels as plain HTTP to that host's loopback port:
+ * the loopback topology carries no TLS.
  *
- * Signed requests go to the PS's real loopback origin, so `@authority` is
- * the real `127.0.0.1:<port>`.
+ * A signed request follows the slice's composition contract (the
+ * testkit's `LoopbackNetwork`): the agent signs the identifier URL
+ * `https://ps.test/<path>` over -11 Section 11.3.3.1's base set (plus
+ * Content-Digest and Content-Type on a body), connects to
+ * `127.0.0.1:<port>`, and sends `Host: ps.test` with the request target as
+ * written. The PS builds the signature base from its own identifier and
+ * the raw target, never from the Host field.
  */
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -85,6 +91,22 @@ export class LoopbackNet {
     if (!origin) return Promise.reject(new Error(`${target.origin} is not on the loopback net`));
     return this.pinned(`${origin}${target.pathname}${target.search}`);
   };
+
+  /** The loopback port an `https://<host>/...` URL travels to, and its raw target. */
+  transport(url: string): { port: number; host: string; path: string } {
+    const target = new URL(url);
+    const origin = this.origins.get(target.hostname);
+    if (target.protocol !== "https:" || target.port !== "" || !origin) {
+      throw new Error(`${url} is not an identifier URL on the loopback net`);
+    }
+    const rest = url.slice(url.indexOf("://") + 3);
+    const start = rest.search(/[/?]/);
+    return {
+      port: Number(new URL(origin).port),
+      host: target.hostname,
+      path: start >= 0 ? rest.slice(start) : "/",
+    };
+  }
 
   resolver(clock: Clock): JwksResolver {
     return new JwksResolver({
@@ -173,9 +195,53 @@ export interface Reply {
   body: Record<string, unknown>;
 }
 
-async function reply(res: Response): Promise<Reply> {
-  const text = await res.text();
-  return { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : {} };
+/**
+ * The loopback net of the running test file's world. Each test file runs
+ * in its own worker, and a file's tests run one at a time.
+ */
+let activeNet: LoopbackNet | undefined;
+
+export interface SendOptions {
+  /** The Host field to send. Default: the identifier URL's host. */
+  host?: string;
+}
+
+/**
+ * Send a request addressed by an identifier URL: plain HTTP to the host's
+ * loopback port, the request target exactly as written, and `Host` the
+ * identifier's host (no port).
+ */
+export function send(
+  method: "GET" | "POST",
+  url: string,
+  prepared: { headers: Record<string, string>; body?: string },
+  options: SendOptions = {},
+): Promise<Reply> {
+  if (!activeNet) throw new Error("no world is running");
+  const { port, host, path } = activeNet.transport(url);
+  const headers = { ...prepared.headers, host: options.host ?? host };
+  return new Promise((resolve, reject) => {
+    const req = request({ host: "127.0.0.1", port, method, path, headers, agent: false }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      res.on("error", reject);
+      res.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        const received = new Headers();
+        for (const [name, values] of Object.entries(res.headersDistinct)) {
+          if (values) received.set(name, values.join(", "));
+        }
+        resolve({
+          status: res.statusCode ?? 0,
+          headers: received,
+          body: text ? JSON.parse(text) : {},
+        });
+      });
+    });
+    req.on("error", reject);
+    if (prepared.body !== undefined) req.write(prepared.body);
+    req.end();
+  });
 }
 
 export interface SignOptions {
@@ -215,17 +281,6 @@ export function prepare(
   return text === undefined
     ? { headers: { ...headers, ...added } }
     : { headers: { ...headers, ...added }, body: text };
-}
-
-/** Send a prepared request. */
-export async function send(
-  method: "GET" | "POST",
-  url: string,
-  prepared: { headers: Record<string, string>; body?: string },
-): Promise<Reply> {
-  const init: RequestInit = { method, headers: prepared.headers };
-  if (prepared.body !== undefined) init.body = prepared.body;
-  return reply(await fetch(url, init));
 }
 
 /** A signed request from `agent`, with its agent token under the `jwt` scheme. */
@@ -315,7 +370,10 @@ export interface World {
   ps2: IssuerStub;
   ps: PersonServer;
   faults: FaultyStore;
+  /** The PS's identifier, under which agents address and sign its endpoints. */
   origin: string;
+  /** Where the PS listens: `http://127.0.0.1:<port>`, a transport address. */
+  loopback: string;
   /** A token signed with the PS's own key, as the PS would never mint it. */
   psMint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
   close(): Promise<void>;
@@ -342,6 +400,7 @@ export async function world(options: WorldOptions = {}): Promise<World> {
   });
   const running = await ps.listen();
   net.register(PS, running.origin);
+  activeNet = net;
   const kid = ps.signingKey.publicJwk.kid as string;
   return {
     clock,
@@ -352,7 +411,8 @@ export async function world(options: WorldOptions = {}): Promise<World> {
     ps2,
     ps,
     faults,
-    origin: running.origin,
+    origin: PS,
+    loopback: running.origin,
     psMint: (typ, c) =>
       mintToken(typ, c, { alg: ps.signingKey.alg, privateKey: ps.signingKey.privateKey, kid }),
     close: async () => {
