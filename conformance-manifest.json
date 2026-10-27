@@ -41264,9 +41264,16 @@
     "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) states it for payments:payment.execute at its commit crossing, execute_wire_transfer: the payment class defines no actual measure, what a wire consumes is the amount the decision charged (the invoice's {amount, currency}), Execution Evidence conveys no consumed, and a completed settlement commits the reserved amount. The PEP's Execution Evidence carries no metering member, and the PDP's claim domain commits the reserved amount on a completed settlement (services/pdp/src/idempotency-claims.ts)."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local). The behavior it states is witnessed under metering.settlement-states.completed-commits (PDP role). Todo: the statement is prose, and no test reads the profile or a machine-readable copy of it, so nothing at this row's unit, deployment-documentation level observes it, and no PEP-role witness ties the rule to the profile; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-states.failed-rule-defined)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local). The behavior it states is witnessed under metering.settlement-states.completed-commits (PDP role). Todo: the statement is prose, and no test reads the profile or a machine-readable copy of it, so nothing at this row's unit, deployment-documentation level observes it, and no PEP-role witness ties the rule to the profile; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-states.failed-rule-defined). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.suppressed-releases",
@@ -41383,9 +41390,16 @@
     "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines the rule for payments:payment.execute at execute_wire_transfer: a failed settlement leaves the reservation held pending reconciliation (D830 ruling 10); a timeout, a restart or an elapsed lease never releases it, and release is only on affirmative non-execution (the redeeming attempt's own suppressed settlement, or an operator's not_executed once the permit and its lease have elapsed). A permit the PEP suppresses before redeeming it stays charged the same way."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local); the PDP behavior it states is witnessed by template.standing-payment.failed-remains-charged and metering.settlement-states.failed-stays-charged (PDP role). Todo: the statement is prose, and no test reads it, so nothing at this row's unit, deployment-documentation level observes it; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-contract.reserved-commits-stated)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local); the PDP behavior it states is witnessed by template.standing-payment.failed-remains-charged and metering.settlement-states.failed-stays-charged (PDP role). Todo: the statement is prose, and no test reads it, so nothing at this row's unit, deployment-documentation level observes it; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-contract.reserved-commits-stated). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.failed-stays-charged",
