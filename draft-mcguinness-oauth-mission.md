@@ -2077,22 +2077,17 @@ resources. The consent object remains the complete derived Authority
 Set. The following non-normative practices can help make it
 reviewable:
 
-- **Group** entries by resource and action, so the Approver reviews
-  kinds of authority rather than a list of entries, while keeping
-  material differences in constraints visible: a group of identical
-  actions still shows an entry whose resource range or consumption
-  bound is much broader than the rest.
-- **Summarize with drill-down**: a summary covering every resource,
-  action, and bound, with each complete entry one interaction away. A
-  summary is a view of the set, never a substitute for it.
-- **Surface high-risk entries**: make the irreversible,
-  external-commitment, privileged-administration, and
-  consumption-bounded authority of {{approval-authentication}}
-  prominent in the initial view, distinguishing materially different
-  risks and bounds.
-- **Split rather than approve**: when the set is too large or varied
-  for one decision, narrower Missions can keep each approval
-  meaningful ({{applicability}}).
+- **Group** entries by resource and action, keeping visible an entry
+  whose constraints, such as its resource range or consumption bound,
+  differ materially from the rest of its group.
+- **Summarize with drill-down**: cover every resource, action, and
+  bound, with each complete entry one interaction away; a summary is a
+  view of the set, never a substitute for it.
+- **Surface high-risk entries**: make the high-risk authority of
+  {{approval-authentication}} prominent in the initial view,
+  distinguishing materially different risks and bounds.
+- **Split rather than approve** when the set is too large or varied
+  for one decision ({{applicability}}).
 
 Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
