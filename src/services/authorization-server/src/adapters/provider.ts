@@ -612,6 +612,7 @@ import {
   type BudgetExposurePort,
   BudgetExposureUnavailableError,
   instanceKey,
+  meteringUnitOf,
   readCounterExposure,
   standingConsentKey,
 } from "../kernel/budget-exposure.js";
@@ -3917,6 +3918,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   /** @spec mission-template#prohibited-classes (#813): the opt-in standing-payment dispatch workflow is on. */
   const standingPaymentOn = enabled("standing-payment-dispatch");
+  /**
+   * @spec mission-template#standing-payment-exception (#813, D877): the unit
+   * the budget counters count in, as the Enforcement Scope Statement declares
+   * it; a reading is refused when it declares none.
+   */
+  const exposureUnit = meteringUnitOf(opts.enforcementScopeStatement);
   // @spec status#security-considerations (#1686): one window per client across
   // both Mission Status routes.
   const statusLimiter = new MissionStatusRateLimiter(
@@ -4090,14 +4097,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   };
 
   /**
-   * @spec expansion#completion-modes (#1558): who may decide an expansion
-   * deferral. The successor's Subject is its predecessor's, so a Subject the
-   * principal selected is that one, and the Approver is that Subject or holds
-   * approve-for authority over it. Read from the stored request alone, so a
-   * denial is authorized without deriving anything (#1633 review). The
-   * reason, or undefined when the principal may.
-   */
-  /**
    * @spec mission-template#instance-composition, metering#capacity-across-missions
    * (#813, #816, D877): the budget exposure a deferral's successor continues,
    * or `null` outside every standing-payment lineage: the dispatched
@@ -4108,17 +4107,24 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const deferralBudgetExposure = (review: DeferralReview): DeferralBudgetExposure | null => {
     const root = standingPaymentRootOf(kernel, review.predecessor);
     if (!root) return null;
-    const currency = root.max_budget.currency;
     return {
       instance: root.mission_id,
       budget: root.budget,
       counters: [
-        readCounterExposure(opts.budgetExposure, instanceKey(opts.issuer, root), currency),
-        readCounterExposure(opts.budgetExposure, standingConsentKey(root.budget), currency),
+        readCounterExposure(opts.budgetExposure, instanceKey(opts.issuer, root), exposureUnit),
+        readCounterExposure(opts.budgetExposure, standingConsentKey(root.budget), exposureUnit),
       ],
     };
   };
 
+  /**
+   * @spec expansion#completion-modes (#1558): who may decide an expansion
+   * deferral. The successor's Subject is its predecessor's, so a Subject the
+   * principal selected is that one, and the Approver is that Subject or holds
+   * approve-for authority over it. Read from the stored request alone, so a
+   * denial is authorized without deriving anything (#1633 review). The
+   * reason, or undefined when the principal may.
+   */
   const deferralSubjectRefusal = (request: PendingDeferral, approver: string, selected: string | undefined): string | undefined => {
     const subject = request.predecessor.subject.sub;
     if (selected !== undefined && selected !== subject) return "the Subject of an expansion is its predecessor's";
@@ -4142,8 +4148,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
   /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
-  /** A proposal's consent disclosure against this issuer's current Dispatch Policies and capability catalog. */
-  const templateDisclosure = (proposal: TemplateProposal) => {
+  /**
+   * A proposal's consent disclosure against this issuer's current Dispatch
+   * Policies and capability catalog. `authenticated` is true only once the
+   * viewer authenticated as an Approver: only then are the budget counters
+   * read and shown (#813, D877).
+   */
+  const templateDisclosure = (proposal: TemplateProposal, authenticated: boolean) => {
     const { capabilityResolver } = kernel.authoritySourceOptions();
     return templateConsentDisclosure(proposal, opts.dispatchPolicies, {
       issuer: opts.issuer,
@@ -4151,7 +4162,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ...(capabilityResolver ? { capabilityResolver } : {}),
       ...(standingPaymentOn ? { standingPayment: true } : {}),
       ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
-      ...(opts.budgetExposure ? { budgetExposure: opts.budgetExposure } : {}),
+      ...(authenticated ? { budgetExposure: { port: opts.budgetExposure, unit: exposureUnit } } : {}),
     });
   };
   /**
@@ -6014,14 +6025,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // The user agent holding the Approver's login for this proposal gets
       // that login's CSRF secret in the form; any other is offered the login.
       const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
-      const disclosed = templateDisclosure(proposal);
       // @spec mission#approval-context-changes, mission-template#template-consent
       // (#1446, D718; #813): under the `standing-payment-dispatch`
       // capability, a rendering to an authenticated principal retains its
       // own render revision committing what the page showed; the decision
-      // names it and approves exactly that.
+      // names it and approves exactly that. Only that rendering reads and
+      // shows the budget counters (D877).
       let revision: string | undefined;
       const viewer = standingPaymentOn && proposal.state === "pending" ? renderPrincipal(ctx, proposal.id) : undefined;
+      const disclosed = templateDisclosure(proposal, viewer !== undefined);
       const rendering = viewer ? templateConsentRendering(proposal, disclosed) : undefined;
       if (viewer && rendering) {
         revision = retainRenderRevision<TemplateConsentContext>(
@@ -6034,7 +6046,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set(RENDER_REVISION_HEADER, revision);
       }
       ctx.set("content-type", "text/html; charset=utf-8");
-      ctx.status = 200;
+      // A page that cannot be decided until the counters can be read says so.
+      ctx.status = "unavailable" in disclosed ? 503 : 200;
       ctx.body = renderTemplateConsentPage(proposal, disclosed, {
         ...(opts.approverLogin && opts.approvalSessions
           ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
@@ -6142,9 +6155,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // (#1119): no consent to a template whose disclosure cannot be
       // rendered, so a Dispatch Policy, or a trusted capability binding of
       // the ceiling, changed since the proposal refuses it.
-      const rendered = templateDisclosure(proposal);
+      const rendered = templateDisclosure(proposal, true);
       if ("refusal" in rendered) {
-        refuse(403, "access_denied", rendered.refusal);
+        // @spec mission-template#standing-payment-exception (#813, D830
+        // ruling 7): counters that cannot be read now decide nothing, and
+        // the proposal stays pending.
+        if (rendered.unavailable) refuse(503, "temporarily_unavailable", rendered.refusal);
+        else refuse(403, "access_denied", rendered.refusal);
         return;
       }
       // @spec mission#approval-context-changes, mission-template#template-consent

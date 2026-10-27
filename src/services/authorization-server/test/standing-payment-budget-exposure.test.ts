@@ -13,16 +13,28 @@
  * that cannot be made refuses the approval.
  */
 import type { Server } from "node:http";
-import { activationPolicyDigest } from "@mission/core";
+import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
-import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
+import { contentDigest, RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import {
   ALL_PROVIDER_CAPABILITIES,
   type ProviderCapability,
 } from "../src/adapters/capabilities.js";
+import {
+  type DeferralBudgetExposure,
+  deferralContext,
+  renderDeferralPage,
+} from "../src/adapters/expansion-deferral-surface.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
+import {
+  type BudgetCounterKey,
+  BudgetExposureUnavailableError,
+  meteringUnitOf,
+  readCounterExposure,
+} from "../src/kernel/budget-exposure.js";
+import type { DeferralReview } from "../src/kernel/deferred.js";
 import {
   ApprovalSessionStore,
   type BuiltAs,
@@ -39,6 +51,7 @@ const FAR_FUTURE = "2099-01-01T00:00:00Z";
 const ON = new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "standing-payment-dispatch"]);
 const SESSIONS = new ApprovalSessionStore();
 const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+const DEFERRED_GRANT = "urn:ietf:params:oauth:grant-type:deferred";
 const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
 const OWNER = "payments-operator";
 const BUDGET_ID = "ap-standing-exposure";
@@ -386,10 +399,11 @@ describe("budget exposure on the standing-payment template consent (@spec templa
     counters.failing = true;
     try {
       const { status, html, revision } = await consentPage(id, login(id, "bob"));
-      expect(status).toBe(200);
+      expect(status).toBe(503);
       expect(html).toContain(
         `The consumption and outstanding reservations of budget ${OWNER}/${BUDGET_ID} cannot be read`,
       );
+      expect(html).toContain("It cannot be decided until they can be read.");
       expect(html).not.toContain('name="decision"');
       expect(revision).toBeNull();
     } finally {
@@ -397,15 +411,15 @@ describe("budget exposure on the standing-payment template consent (@spec templa
     }
   });
 
-  it("refuses a standing-payment consent decision access_denied when the budget counters cannot be read at the decision, creating no template (@spec template#standing-payment-exception, #813, D830 ruling 7)", async () => {
+  it("answers a standing-payment consent decision temporarily_unavailable when the budget counters cannot be read at the decision, creating no template and leaving the proposal pending for a decision once they can be read (@spec template#standing-payment-exception, #813, D830 ruling 7)", async () => {
     const id = await propose();
     const headers = login(id, "bob");
     const { revision } = await consentPage(id, headers);
     counters.failing = true;
     try {
       const refused = await decideConsent(id, headers, revision);
-      expect(refused.status).toBe(403);
-      expect(refused.body.error).toBe("access_denied");
+      expect(refused.status).toBe(503);
+      expect(refused.body.error).toBe("temporarily_unavailable");
       expect(refused.body.error_description).toContain(
         `budget ${OWNER}/${BUDGET_ID} cannot be read`,
       );
@@ -413,6 +427,30 @@ describe("budget exposure on the standing-payment template consent (@spec templa
     } finally {
       counters.failing = false;
     }
+    const again = await consentPage(id, headers);
+    const approved = await decideConsent(id, headers, again.revision);
+    expect(approved.status, JSON.stringify(approved.body)).toBe(201);
+  });
+
+  it("shows no budget figures on the standing-payment consent page to a viewer who has not authenticated as the Approver, and reads no counter for it, while the Approver's rendering shows them (@spec template#standing-payment-exception, #813, D877)", async () => {
+    counters.set(SHARED, { committed: "321.00", reserved: "4.00", held: "5.00" });
+    const id = await propose();
+    const readsBefore = counters.reads;
+    const res = await fetch(`${ISSUER}/templates/proposals/${id}`);
+    const html = await res.text();
+    expect(res.status).toBe(200);
+    expect(res.headers.get(RENDER_REVISION_HEADER)).toBeNull();
+    expect(counters.reads).toBe(readsBefore);
+    expect(html).not.toContain("321.00");
+    expect(html).not.toContain("USD committed");
+    expect(html).toContain(
+      `Budget ${OWNER}/${BUDGET_ID} exposure: its consumption to date and outstanding reservations are shown once the Approver signs in.`,
+    );
+    const shown = await consentPage(id, login(id, "bob"));
+    expect(shown.html).toContain(
+      exposureLine(`Budget ${OWNER}/${BUDGET_ID} exposure`, "321.00", "4.00", "5.00"),
+    );
+    expect(counters.reads).toBeGreaterThan(readsBefore);
   });
 });
 
@@ -475,5 +513,273 @@ describe("budget exposure on a standing-payment successor's approval (@spec temp
       counters.failing = false;
     }
     expect(as.expansionDeferrals.pendingRequest(code)).toBeDefined();
+  });
+});
+
+/**
+ * Swap the port's reading for `reading` while `fn` runs, then restore it. The
+ * swap stands in for a deployment port that is not the shipped synchronous
+ * one: a JavaScript port of another shape, or an asynchronous one.
+ */
+async function withReading<T>(reading: () => unknown, fn: () => Promise<T>): Promise<T> {
+  const original = counters.read;
+  counters.read = reading as typeof counters.read;
+  try {
+    return await fn();
+  } finally {
+    counters.read = original;
+  }
+}
+
+/**
+ * A consent and a successor approval each rendered against a reading the
+ * port makes properly, then rendered and decided while the port answers
+ * `reading`: both renderings and both decisions are refused, naming
+ * `reason`, no template is created and the successor stays pending.
+ */
+async function refusedOnBothSurfaces(reading: () => unknown, reason: string): Promise<void> {
+  const id = await propose();
+  const headers = login(id, "bob");
+  const consent = await consentPage(id, headers);
+  expect(consent.revision).not.toBeNull();
+  const { code } = await standingPaymentSuccessorDeferral();
+  const bob = login(code, "bob");
+  const successor = await deferralPage(code, bob);
+  expect(successor.revision).not.toBeNull();
+  await withReading(reading, async () => {
+    const page = await consentPage(id, headers);
+    expect(page.status).toBe(503);
+    expect(page.html).toContain(reason);
+    expect(page.html).not.toContain("USD committed");
+    expect(page.html).not.toContain('name="decision"');
+    expect(page.revision).toBeNull();
+    const decided = await decideConsent(id, headers, consent.revision);
+    expect(decided.status).toBe(503);
+    expect(decided.body.error).toBe("temporarily_unavailable");
+    expect(decided.body.error_description).toContain(reason);
+    const deferral = await deferralPage(code, bob);
+    expect(deferral.status).toBe(503);
+    expect(deferral.html).toContain(reason);
+    expect(deferral.html).not.toContain("USD committed");
+    expect(deferral.revision).toBeNull();
+    const approved = await decideDeferral(code, bob, successor.revision);
+    expect(approved.status).toBe(503);
+    expect(approved.body.error).toBe("temporarily_unavailable");
+  });
+  expect(as.templateStore.getByApprovalEvent(`apev_${id}`)).toBeUndefined();
+  expect(as.expansionDeferrals.pendingRequest(code)).toBeDefined();
+}
+
+describe("a budget port reading that is not the counters' totals, made now, refuses the approval (@spec template#standing-payment-exception, template#instance-composition, #813, D830 ruling 7, D877)", () => {
+  it("refuses to render and to decide a standing-payment consent and a standing-payment successor approval when the budget port's reading has no totals, creating no template and approving no successor (#813, D830 ruling 7)", async () => {
+    await refusedOnBothSurfaces(() => ({}), "committed total is not a decimal amount in USD at exponent 2");
+  });
+
+  it("refuses to render and to decide a standing-payment consent and a standing-payment successor approval when the budget port answers with a Promise of the totals, creating no template and approving no successor (#813, D830 ruling 7)", async () => {
+    const original = counters.read.bind(counters);
+    await refusedOnBothSurfaces(
+      () => Promise.resolve(original(SHARED)),
+      "reading was deferred, not made now",
+    );
+  });
+
+  it("refuses to render and to decide a standing-payment consent and a standing-payment successor approval when the budget port answers with a rejected Promise, creating no template, approving no successor and leaving no rejection unhandled (#813, D830 ruling 7)", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      await refusedOnBothSurfaces(
+        () => Promise.reject(new Error("the claim domain is down")),
+        "reading was deferred, not made now",
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+    expect(unhandled).toEqual([]);
+  });
+});
+
+describe("reading one budget counter in the declared unit (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, D877)", () => {
+  const key: BudgetCounterKey = SHARED;
+  const usd2 = { currency: "USD", exponent: 2 };
+  const port = (totals: unknown) => ({ read: () => totals as never });
+  const amounts = (committed: string, reserved: string, held: string, currency = "USD") => ({
+    committed: { amount: committed, currency },
+    reserved: { amount: reserved, currency },
+    held: { amount: held, currency },
+  });
+
+  it("reads a counter never charged as zero written at the declared exponent, not at a fixed two digits (#813, D877)", () => {
+    for (const [exponent, zero] of [
+      [0, "0"],
+      [2, "0.00"],
+      [3, "0.000"],
+    ] as const) {
+      const read = readCounterExposure(port(undefined), key, { currency: "JPY", exponent });
+      expect(read.committed).toEqual({ amount: zero, currency: "JPY" });
+      expect(read.reserved).toEqual({ amount: zero, currency: "JPY" });
+      expect(read.held).toEqual({ amount: zero, currency: "JPY" });
+    }
+  });
+
+  it("reads a counter's committed, reserved and held totals as the port reports them in the declared unit (#813, D877)", () => {
+    expect(readCounterExposure(port(amounts("125.00", "30.00", "20.00")), key, usd2)).toEqual({
+      counter_scope: "standing_consent",
+      ...amounts("125.00", "30.00", "20.00"),
+    });
+  });
+
+  it("refuses a counter reading with a total in another currency than the declared unit's, for each of committed, reserved and held (#813, D830 ruling 7)", () => {
+    for (const member of ["committed", "reserved", "held"] as const) {
+      const totals = { ...amounts("125.00", "30.00", "20.00"), [member]: { amount: "1.00", currency: "EUR" } };
+      expect(() => readCounterExposure(port(totals), key, usd2)).toThrow(BudgetExposureUnavailableError);
+      expect(() => readCounterExposure(port(totals), key, usd2)).toThrow(`${member} total`);
+    }
+  });
+
+  it("refuses a counter reading with a total that is not a decimal amount at the declared exponent, for each of committed, reserved and held (#813, D830 ruling 7)", () => {
+    for (const member of ["committed", "reserved", "held"] as const) {
+      for (const amount of ["125", "125.0", "125.000", "-1.00", "1e2", "", "NaN"]) {
+        const totals = { ...amounts("125.00", "30.00", "20.00"), [member]: { amount, currency: "USD" } };
+        expect(() => readCounterExposure(port(totals), key, usd2), `${member} ${amount}`).toThrow(
+          BudgetExposureUnavailableError,
+        );
+      }
+      const missing: Record<string, unknown> = amounts("125.00", "30.00", "20.00");
+      delete missing[member];
+      expect(() => readCounterExposure(port(missing), key, usd2)).toThrow(BudgetExposureUnavailableError);
+      const numeric = { ...amounts("125.00", "30.00", "20.00"), [member]: { amount: 125, currency: "USD" } };
+      expect(() => readCounterExposure(port(numeric), key, usd2)).toThrow(BudgetExposureUnavailableError);
+    }
+    expect(() => readCounterExposure(port(null), key, usd2)).toThrow(BudgetExposureUnavailableError);
+  });
+
+  it("refuses a counter reading when no unit is declared, as when the Enforcement Scope Statement declares none (#813, D877)", () => {
+    expect(() => readCounterExposure(port(undefined), key, undefined)).toThrow(BudgetExposureUnavailableError);
+  });
+
+  it("takes the counters' unit from the Enforcement Scope Statement's budget_metering declaration only when it is a currency code and a whole exponent from 0 to 9 (#813, D877)", () => {
+    const statement = (unit: unknown) => ({ extensions: { budget_metering: { unit } } });
+    expect(meteringUnitOf(statement({ currency: "USD", exponent: 2 }))).toEqual({ currency: "USD", exponent: 2 });
+    expect(meteringUnitOf(statement({ currency: "JPY", exponent: 0 }))).toEqual({ currency: "JPY", exponent: 0 });
+    expect(meteringUnitOf(statement({ currency: "XAU", exponent: 9 }))).toEqual({ currency: "XAU", exponent: 9 });
+    for (const unit of [
+      { currency: "USD", exponent: 10 },
+      { currency: "USD", exponent: -1 },
+      { currency: "USD", exponent: 1.5 },
+      { currency: "USD", exponent: "2" },
+      { currency: "USD" },
+      { currency: "usd", exponent: 2 },
+      { exponent: 2 },
+      null,
+    ]) {
+      expect(meteringUnitOf(statement(unit)), JSON.stringify(unit)).toBeUndefined();
+    }
+    expect(meteringUnitOf(undefined)).toBeUndefined();
+    expect(meteringUnitOf({ extensions: {} })).toBeUndefined();
+  });
+});
+
+describe("a second-generation standing-payment successor's approval (@spec template#instance-composition, metering#capacity-across-missions, #813, D877)", () => {
+  it("keys a second-generation successor's approval page by the dispatched instance's counter, not by its predecessor's (#813, D877)", async () => {
+    const { code, instance } = await standingPaymentSuccessorDeferral();
+    const bob = login(code, "bob");
+    const first = await deferralPage(code, bob);
+    expect((await decideDeferral(code, bob, first.revision)).status).toBe(200);
+    const polled = await token({ grant_type: DEFERRED_GRANT, deferral_code: code });
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    const successorToken = polled.body.access_token as string;
+    const successorId = (decodeJwt(successorToken) as { mission: { id: string } }).mission.id;
+    expect(successorId).not.toBe(instance);
+    const { status, body } = await token({
+      grant_type: TOKEN_EXCHANGE,
+      subject_token: successorToken,
+      subject_token_type: ACCESS_TOKEN,
+      requested_token_type: ACCESS_TOKEN,
+      mission_intent: JSON.stringify({
+        intent: {
+          goal: "pay, read and list Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: FAR_FUTURE,
+          max_budget: maxBudget,
+        },
+      }),
+      authorization_details: JSON.stringify([
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+        { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.list"] },
+      ]),
+      creation_request_id: crypto.randomUUID(),
+      completion_mode: "deferred",
+    });
+    expect(typeof body.deferral_code, `${status} ${JSON.stringify(body)}`).toBe("string");
+    const second = body.deferral_code as string;
+    expect(as.expansionDeferrals.pendingRequest(second)?.predecessor.id).toBe(successorId);
+    counters.set({ counter_scope: "mission", issuer: ISSUER, mission_id: instance }, { committed: "77.00", reserved: "1.00", held: "2.00" });
+    counters.set({ counter_scope: "mission", issuer: ISSUER, mission_id: successorId }, { committed: "88.00", reserved: "3.00", held: "4.00" });
+    counters.set(SHARED, { committed: "410.00", reserved: "6.00", held: "7.00" });
+    const page = await deferralPage(second, login(second, "bob"));
+    expect(page.status, page.html).toBe(200);
+    expect(page.html).toContain(`continues the counter of the dispatched instance ${instance}`);
+    expect(page.html).toContain(exposureLine(`Instance ${instance}`, "77.00", "1.00", "2.00"));
+    expect(page.html).toContain(exposureLine(`Budget ${OWNER}/${BUDGET_ID}`, "410.00", "6.00", "7.00"));
+    expect(page.html).not.toContain("88.00");
+  });
+});
+
+describe("an ordinary deferral's approval is unchanged by the budget exposure (@spec mission#approval-context-changes, expansion#completion-modes, #1558, #813, D877)", () => {
+  const issuer = "https://as.example";
+  const review = {
+    deferralCode: "dfr_ordinary",
+    clientId: "client-ordinary",
+    predecessor: { id: "msn_ordinary", issuer, subject: { iss: issuer, sub: "alice" } },
+    intent: { goal: "read invoices", target_resources: [RESOURCE], expires_at: FAR_FUTURE },
+    successor: [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }],
+    disclosure: { predecessor: "msn_ordinary", restrictions: { contained: [], discharged: [] } },
+  } as unknown as DeferralReview;
+  const exposure: DeferralBudgetExposure = {
+    instance: "msn_instance",
+    budget: { owner: OWNER, id: BUDGET_ID },
+    counters: [
+      { counter_scope: "mission", ...{ committed: { amount: "1.00", currency: "USD" }, reserved: { amount: "2.00", currency: "USD" }, held: { amount: "3.00", currency: "USD" } } },
+      { counter_scope: "standing_consent", ...{ committed: { amount: "4.00", currency: "USD" }, reserved: { amount: "5.00", currency: "USD" }, held: { amount: "6.00", currency: "USD" } } },
+    ],
+  };
+
+  it("commits an ordinary deferral's rendering with no budget_exposure member, as before the budget exposure, and renders its page with no line for it (#813, D877)", () => {
+    const { context, commitment } = deferralContext(review, FAR_FUTURE);
+    expect(Object.hasOwn(context, "budget_exposure")).toBe(false);
+    expect(commitment).toBe(
+      contentDigest({
+        predecessor: "msn_ordinary",
+        client_id: "client-ordinary",
+        subject: { iss: issuer, sub: "alice" },
+        intent_hash: intentHash(issuer, review.intent as never),
+        proposal_hash: null,
+        successor_hash: authorityHash(issuer, review.successor as never),
+        expires_at: FAR_FUTURE,
+        fallback: null,
+        encounter: null,
+        restrictions: contentDigest({ contained: [], discharged: [] }),
+        reconsent_offer: null,
+        review: null,
+        carryover: null,
+      }),
+    );
+    const ordinary = renderDeferralPage(review, context, {});
+    expect(ordinary).not.toContain("budget-exposure");
+    // The exposure section is the only difference a standing-payment
+    // successor's page makes: removing it leaves the ordinary page exactly.
+    const metered = renderDeferralPage(review, deferralContext(review, FAR_FUTURE, exposure).context, {});
+    const section = metered.match(/<section class="budget-exposure">[\s\S]*?<\/section>\n/)?.[0];
+    expect(section).toBeDefined();
+    expect(metered.replace(section as string, "")).toBe(ordinary);
   });
 });
