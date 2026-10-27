@@ -57766,7 +57766,7 @@
     "local": "the reference keeps its claims in a durable store when one is configured, refuses to start on a missing store or one its init command did not create, and keeps each claim until the grant's exp plus a 300 s margin for clock adjustment"
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-saas/test/cross-domain.test.ts",
@@ -57827,9 +57827,21 @@
      "name": "RAS redemption claims (@spec cross-domain#validation-at-resource-as, #1767, D887) > keeps a claim through its grant's exp and the margin past it, and prunes it only after",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > keeps the RAS's single-use claims in the file MISSION_RAS_REDEMPTIONS names, with a key ring: an ID-JAG redeemed before a restart is refused after it (#1767)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/demo/test/as-native-stack.test.ts",
+     "name": "the as-native launcher in process, OpenFGA client stubbed (D332) > requires MISSION_RAS_REDEMPTIONS with a key ring, and refuses a missing or uninitialized store before anything listens, creating none (#1767)",
+     "level": "cross-component",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. Partial: the durable store is opt-in (`RasConfig.redemptions`), and the composed stack and its launchers do not yet give it to the RAS, so the composed RAS tracks `jti` only for its process's lifetime (the launcher follow-up on #1767); and until the owner reviews the witnesses (D842)."
+   "notes": "#1767 (D887). The reference Resource AS claims each grant's (issuer, `jti`) atomically before it mints the local token, and keeps the claim through the grant's `exp` plus a 300 s margin. Witnessed: a second presentation in one process; a base and a continuation ID-JAG replayed after a restart on the durable store, also with the issuer's clock ahead of the Resource AS's; concurrent presentations releasing one token; a grant never redeemed before a restart redeeming once after it; a missing or uninitialized store refused at boot; and each claim's retention and issuer scope. Mutation-proved: claims held only in memory fail the three restart witnesses and the store refusals; a check-then-claim split by an await fails the concurrency witness; a boot floor fails the never-redeemed witness, and a boot floor in place of the store also fails the clock-skew witness; accepting an uninitialized file, or creating a missing one, fails its refusal witness; keying on `jti` alone fails the scope witness; dropping the margin or the pruning fails the retention witness; a claim that always succeeds fails the in-process witness. D901: the owner reviewed these witnesses with #1776, and the composed stack carries the store: `pnpm as-native` requires `MISSION_RAS_REDEMPTIONS` whenever `MISSION_KEY_RING` is set and refuses a missing or uninitialized store before anything connects, creating none. Its composed witness redeems an ID-JAG under the ring's durable `as-continuation` key, restarts the target on the same files, and is refused the replay, while one never redeemed redeems once. Mutation-proved: the stack not giving the RAS its store fails the composed witness at the replay; a key ring not requiring the store, or the launcher not checking it early, fails the gate; shutdown not closing the store fails the second boot. A restored older copy of the store is not detected, a documented limitation (D901)."
   },
   {
    "id": "cross-domain.resource-as.authenticates-redeeming-client",
