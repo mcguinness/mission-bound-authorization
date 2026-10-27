@@ -12,14 +12,13 @@
  *   ({@link excludingCompromised}), and refuses a key the held set lists even
  *   while a cached `jwks_uri` still carries it. A listed key verifies only an
  *   archived response, for audit ({@link auditKeys}).
- * - **When the set cannot be fetched or verified, the consumer keeps the last
- *   set it verified.** Unlike the `jwks_uri`, an allow-list whose stale copy
- *   would admit a withdrawn key, the set only refuses, and a compromised key
- *   is never taken back, so a stale set can only refuse too much. A
- *   consumer that has never verified one continues on the `jwks_uri` rule
- *   alone: the AS's withdrawal, bounded by that set's declared freshness,
- *   stays the primary enforcement. Refusing all Status reliance instead is
- *   the alternative.
+ * - **What the consumer learns as compromised, it keeps.** Unlike the
+ *   `jwks_uri`, an allow-list whose stale copy would admit a withdrawn key,
+ *   the set only refuses, and a compromised key is never taken back: no
+ *   later set removes a learned revocation, and an outage keeps it. A
+ *   learned-compromised key signs no set. A consumer that has never verified
+ *   one continues on the `jwks_uri` rule alone: the AS's withdrawal, bounded
+ *   by that set's declared freshness, stays the primary enforcement.
  */
 
 import { freshUntil, type IssuerKeysFetch } from "@mission/core";
@@ -75,13 +74,29 @@ export async function verifyHistoricalKeySet(
 }
 
 /**
- * A refreshing hold on the set at `uri`: refetched within the freshness its
- * response declares, as the consumer's `jwks_uri` is. A fetch that fails, or
- * a set that does not verify, keeps the last set verified; with none ever
- * verified, nothing is held.
+ * A refreshing hold on the set at `uri`, refetched within the freshness its
+ * response declares, as the consumer's `jwks_uri` is.
+ *
+ * - **What it learns, it keeps.** Every key a verified set lists joins what
+ *   the holder has learned and never leaves it: a later set, replayed or
+ *   replacing, whether empty or older, adds revocations but never removes
+ *   one. A compromised key is never taken back, so this can only refuse too
+ *   much. A failed refetch keeps it too; it does not extend the `jwks_uri`'s
+ *   freshness.
+ * - **A learned-compromised key signs nothing.** A set whose signer the
+ *   holder has learned is compromised is refused whole, so it can neither
+ *   remove a revocation nor list the current key.
+ * - **Bounded and shared.** One deadline covers the fetch and the body read;
+ *   concurrent uses share one refresh; after a failure the holder waits
+ *   `retryDelayMs` before fetching again, answering from what it holds.
  */
 export class HistoricalKeySetHolder {
-  #held: { keys: HistoricalKey[]; freshUntil: number } | undefined;
+  /** Every listed key verified so far, by `kid`. */
+  readonly #learned = new Map<string, HistoricalKey>();
+  #verified = false;
+  #freshUntil = Number.NEGATIVE_INFINITY;
+  #retryAfter = Number.NEGATIVE_INFINITY;
+  #inflight: Promise<void> | undefined;
   readonly #opts: {
     uri: string;
     issuer: string;
@@ -89,6 +104,8 @@ export class HistoricalKeySetHolder {
     algs: readonly string[];
     fetch: IssuerKeysFetch;
     now: () => number;
+    timeoutMs: number;
+    retryDelayMs: number;
   };
 
   constructor(opts: {
@@ -98,37 +115,69 @@ export class HistoricalKeySetHolder {
     algs: readonly string[];
     fetch?: IssuerKeysFetch;
     now?: () => number;
+    /** The deadline for one fetch and its body. Default 5 s. */
+    timeoutMs?: number;
+    /** How long a failed refresh suppresses another. Default 30 s. */
+    retryDelayMs?: number;
   }) {
     this.#opts = {
       ...opts,
       fetch: opts.fetch ?? ((url, init) => fetch(url, init)),
       now: opts.now ?? (() => Date.now()),
+      timeoutMs: opts.timeoutMs ?? 5000,
+      retryDelayMs: opts.retryDelayMs ?? 30_000,
     };
   }
 
-  /** The listed keys: fresh, or the last verified set while a refetch fails; `undefined` when none was ever verified. */
+  /** Every key learned as compromised; `undefined` until a set has verified. */
   async keys(): Promise<readonly HistoricalKey[] | undefined> {
-    if (this.#held && this.#opts.now() < this.#held.freshUntil) return this.#held.keys;
+    const now = this.#opts.now();
+    if (now >= this.#freshUntil && now >= this.#retryAfter) {
+      this.#inflight ??= this.#refresh().finally(() => {
+        this.#inflight = undefined;
+      });
+      await this.#inflight;
+    }
+    return this.#verified ? [...this.#learned.values()] : undefined;
+  }
+
+  /** The configured Status keys, refusing a signer the holder has learned is compromised. */
+  readonly #signers: JWTVerifyGetKey = async (header, token) => {
+    if (typeof header.kid === "string" && this.#learned.has(header.kid)) {
+      throw new Error(`the historical key set's signer ${header.kid} is withdrawn as compromised`);
+    }
+    return this.#opts.statusKeys(header, token);
+  };
+
+  async #refresh(): Promise<void> {
     const requestTime = this.#opts.now();
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new Error(`no historical key set from ${this.#opts.uri} within ${this.#opts.timeoutMs} ms`));
+      }, this.#opts.timeoutMs);
+    });
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      let res: Response;
-      try {
-        res = await this.#opts.fetch(this.#opts.uri, { headers: {}, signal: controller.signal });
-      } finally {
-        clearTimeout(timer);
-      }
+      const res = await Promise.race([this.#opts.fetch(this.#opts.uri, { headers: {}, signal: controller.signal }), deadline]);
+      if (res.status !== 200) throw new Error(`${this.#opts.uri} answered HTTP ${res.status}`);
+      const body = await Promise.race([res.text(), deadline]);
       const responseTime = this.#opts.now();
-      if (res.status !== 200) return this.#held?.keys;
-      const keys = await verifyHistoricalKeySet(await res.text(), this.#opts);
-      this.#held = { keys, freshUntil: freshUntil(res.headers, requestTime, responseTime) };
-      return keys;
+      const keys = await verifyHistoricalKeySet(body, {
+        issuer: this.#opts.issuer,
+        statusKeys: this.#signers,
+        algs: this.#opts.algs,
+      });
+      for (const key of keys) if (!this.#learned.has(key.kid)) this.#learned.set(key.kid, key);
+      this.#verified = true;
+      this.#freshUntil = freshUntil(res.headers, requestTime, responseTime);
+      this.#retryAfter = Number.NEGATIVE_INFINITY;
     } catch {
-      // A compromised key is never taken back, so the last verified set,
-      // stale or not, can only refuse too much, never admit a listed key:
-      // keep it, and try again at the next use.
-      return this.#held?.keys;
+      // What was learned stays; the next attempt waits out the retry delay.
+      this.#retryAfter = this.#opts.now() + this.#opts.retryDelayMs;
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

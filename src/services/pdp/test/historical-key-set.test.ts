@@ -9,7 +9,7 @@
 
 import { exportJWK, generateKeyPair, jwtVerify, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
-import { auditKeys, refreshingStatusKeys, verifyHistoricalKeySet } from "../src/index.js";
+import { auditKeys, HistoricalKeySetHolder, refreshingStatusKeys, verifyHistoricalKeySet } from "../src/index.js";
 
 const ISSUER = "https://as.test";
 const JWKS = `${ISSUER}/jwks`;
@@ -157,5 +157,85 @@ describe("a listed key and a current reliance decision (@spec status#signing-key
     await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
     // The current Status key verifies throughout.
     await jwtVerify(await status.sign(), held.keys);
+  });
+});
+
+describe("what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887)", () => {
+  async function learned() {
+    const status = await key("as-status-2");
+    const compromised = await key("as-status");
+    let t = 0;
+    const state: { published: Record<string, unknown>[]; historical: string | Error | undefined } = {
+      // The cached jwks_uri still carries the compromised key throughout.
+      published: [status.jwk, compromised.jwk],
+      historical: await status.signSet([revoked(compromised.jwk)]),
+    };
+    const { fetch } = issuer(state);
+    const held = refreshingStatusKeys(JWKS, ["as-status", "as-status-2"], {
+      algs: ["ES256"],
+      fetch,
+      now: () => t,
+      historical: { uri: HISTORICAL, issuer: ISSUER },
+    });
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    return { status, compromised, state, held, later: () => (t += 300_000) };
+  }
+
+  it("refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key", async () => {
+    const { status, compromised, state, held, later } = await learned();
+    // The compromised key signs an empty replacement.
+    state.historical = await compromised.signSet([]);
+    later();
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    // It signs a set listing the current key: refused whole, so the current key still verifies.
+    state.historical = await compromised.signSet([revoked(compromised.jwk), revoked(status.jwk)]);
+    later();
+    await jwtVerify(await status.sign(), held.keys);
+    expect((await held.historical?.keys())?.map((k) => k.kid)).toEqual(["as-status"]);
+  });
+
+  it("keeps a learned revocation through a replayed older or empty set the current key signed", async () => {
+    const { status, compromised, state, held, later } = await learned();
+    // A valid set, signed by the current Status key, from before the compromise: empty.
+    state.historical = await status.signSet([]);
+    later();
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    await jwtVerify(await status.sign(), held.keys);
+    expect((await held.historical?.keys())?.map((k) => k.kid)).toEqual(["as-status"]);
+  });
+});
+
+describe("the historical key set's refresh, bounded and shared (@spec status#historical-key-set, #831 B3, D887)", () => {
+  it("bounds the fetch and its body together, shares one refresh among concurrent uses, and waits out a retry delay after a failure", async () => {
+    let t = 0;
+    let fetched = 0;
+    // Headers arrive; the body never does.
+    const fetch = async () => {
+      fetched++;
+      return new Response(new ReadableStream({ start() {} }), { headers: { "content-type": "application/jwk-set+jwt" } });
+    };
+    const holder = new HistoricalKeySetHolder({
+      uri: HISTORICAL,
+      issuer: ISSUER,
+      statusKeys: async () => {
+        throw new Error("unused");
+      },
+      algs: ["ES256"],
+      fetch,
+      now: () => t,
+      timeoutMs: 50,
+      retryDelayMs: 60_000,
+    });
+    const started = Date.now();
+    expect(await Promise.all([holder.keys(), holder.keys(), holder.keys()])).toEqual([undefined, undefined, undefined]);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(fetched).toBe(1);
+    // Within the retry delay: answered from what is held, with no fetch.
+    expect(await holder.keys()).toBeUndefined();
+    expect(fetched).toBe(1);
+    // After it: one more attempt.
+    t += 60_000;
+    await holder.keys();
+    expect(fetched).toBe(2);
   });
 });

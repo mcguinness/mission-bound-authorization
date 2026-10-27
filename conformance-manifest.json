@@ -22817,7 +22817,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps the last set it verified while a refetch fails; with none ever verified, the jwks_uri rule alone decides."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides."
    },
    "level": "unit",
    "coverage": "partial",
@@ -22827,9 +22827,21 @@
      "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > never verifies a current response under a key the set lists, though a cached jwks_uri still carries it",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder now keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -23092,9 +23104,15 @@
      "name": "a historical key set's signer, from the consumer's configuration (@spec status#historical-key-set, #831 B3) > accepts a set signed under the configured Status key, and refuses one signed under another role's published key or an unconfigured replacement until the configuration names it",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
   },
   {
    "id": "status.historical-key-set.revoked-member",
