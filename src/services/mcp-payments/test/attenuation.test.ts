@@ -16,9 +16,9 @@
  * is fail-closed on an unknown tool-argument name.
  */
 
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { aatToolId, type AATTools, credentialEntriesFromAatTools } from "@mission/core";
-import { calculateJwkThumbprint, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { calculateJwkThumbprint, decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   deriveAttenuationRoot,
@@ -393,6 +393,88 @@ describe("attenuation chain: the root's mission claim is accepted only from the 
     await expect(present(estate, chain, delegateKeys)).rejects.toThrow(/not a Mission Issuer/);
     // The same chain verifies on the Mission Issuer's route.
     await expect(present(server, chain, delegateKeys)).resolves.toMatchObject({ cnfJkt: delegateJkt });
+  });
+});
+
+describe("attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758)", () => {
+  const OTHER_RS = "https://other-rs.example";
+
+  /** The kernel-minted root's claims with `edit` applied, re-signed under the root key. */
+  async function rootWith(edit: (claims: Record<string, unknown>) => Record<string, unknown>): Promise<string> {
+    return new SignJWT(edit(decodeJwt(root) as Record<string, unknown>))
+      .setProtectedHeader(decodeProtectedHeader(root) as never)
+      .sign(asKeys.privateKey);
+  }
+  /** `child` re-signed by the holder with `sub` set: a holder controls its own key, so it can always do this. */
+  async function withSub(child: string, sub: string): Promise<string> {
+    return new SignJWT({ ...decodeJwt(child), sub })
+      .setProtectedHeader(decodeProtectedHeader(child) as never)
+      .sign(holderKeys.privateKey);
+  }
+  const rootTools = (): AATTools => (decodeJwt(root).authorization_details as { tools: AATTools }[])[0]?.tools as AATTools;
+  const present = async (s: McpPaymentsServer, links: string[]) =>
+    s.validateAttenuationChain(links, await dpopProof(CANONICAL_RESOURCE, links[links.length - 1] as string), CANONICAL_RESOURCE, "POST");
+
+  it("refuses at the consumer a child narrowed to another resource server, and accepts the same chain narrowed to this one", async () => {
+    const twoAudiences = await rootWith((c) => ({ ...c, aud: [CANONICAL_RESOURCE, OTHER_RS] }));
+    // The child's `aud` nests within its parent's, so only the per-token check refuses it.
+    const elsewhere = await mintChildOffline(twoAudiences, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt, aud: OTHER_RS });
+    await expect(present(server, [twoAudiences, elsewhere])).rejects.toThrow(/audience refused: audience_mismatch/);
+    const here = await mintChildOffline(twoAudiences, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt, aud: CANONICAL_RESOURCE });
+    await expect(present(server, [twoAudiences, here])).resolves.toMatchObject({ cnfJkt: delegateJkt });
+  });
+
+  it("mints a child with no sub or client_id", async () => {
+    const child = decodeJwt(await mintChildOffline(root, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt }));
+    expect(child.sub).toBeUndefined();
+    expect(child.client_id).toBeUndefined();
+  });
+
+  it("takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence", async () => {
+    const rootSub = decodeJwt(root).sub;
+    expect(typeof rootSub === "string" && rootSub !== "mallory").toBe(true);
+    const forged = await withSub(await mintChildOffline(root, holderKeys.privateKey, rootTools(), { cnfJkt: delegateJkt }), "mallory");
+
+    const payments = seededPayments();
+    const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);
+    const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" });
+    const decidedSubjects: string[] = [];
+    const writer = new McpPaymentsServer({
+      writeReservations,
+      pep: new Pep({
+        decide: (req, opts) => {
+          decidedSubjects.push(req.subject.id);
+          return EVIDENCE_KEYS.decide(req, opts);
+        },
+        payments,
+        evidence,
+        fga: { checkWithContext: async () => true } as unknown as Fga,
+        modelId: "m",
+        loadView,
+        instanceEpoch: "epoch-1758",
+      }),
+      payments,
+      loadView,
+      jwks: { keys: [asPub] },
+      keyRoles: { accessToken: [], attenuationRoot: ["as-attenuation"], transactionToken: [] },
+      issuer: AS_ISS,
+    });
+
+    const forgedFacts = await present(writer, [root, forged]);
+    expect(forgedFacts.sub).toBe(rootSub);
+    const scheduled = await writer.callWriteTool("schedule_payment", { invoice_id: "inv-1", idempotency_key: randomUUID() }, forgedFacts);
+    expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
+    expect(decidedSubjects.length).toBeGreaterThan(0);
+    expect(new Set(decidedSubjects)).toEqual(new Set([rootSub]));
+    expect(writeReservations.schedules().map((s) => s.subject)).toEqual([rootSub]);
+    expect(evidence.all().length).toBeGreaterThan(0);
+    expect(JSON.stringify(evidence.all())).not.toContain("mallory");
+  });
+
+  it("refuses a root without its subject rather than falling back to a child's sub", async () => {
+    const subless = await rootWith(({ sub: _sub, ...c }) => c);
+    const child = await withSub(await mintChildOffline(subless, holderKeys.privateKey, leafTools, { cnfJkt: delegateJkt }), "alice");
+    await expect(present(server, [subless, child])).rejects.toThrow(/sub must be a non-empty string/);
   });
 });
 
