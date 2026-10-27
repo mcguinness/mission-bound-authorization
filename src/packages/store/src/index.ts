@@ -283,3 +283,5 @@ function isUniqueViolation(e: unknown): boolean {
       (e as { code: string }).code === "SQLITE_CONSTRAINT_PRIMARYKEY")
   );
 }
+
+export { witnessSharesStoreTree, writeDurableFile } from "./durable-file.js";

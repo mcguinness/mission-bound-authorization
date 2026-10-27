@@ -17,7 +17,9 @@
  * fallback; automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
  * the refetch itself is the consumer's job); and the `tenant` member (no
- * model exists in the kernel). The builder relays a suspension schedule's
+ * model exists in the kernel). With a recovery witness, a restore of the
+ * receiver's store is detected and every Mission held until the consumer
+ * resynchronizes it from Mission Status (#1749). The builder relays a suspension schedule's
  * `suspend_until` and `on_expiry` from the commit that armed or replaced
  * it (#1002). The `mission_capabilities_supported` delivery gate
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
@@ -31,6 +33,7 @@
  */
 
 import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import {
   type MissionStatusLease,
@@ -39,7 +42,15 @@ import {
   readMissionTermination,
   type StateSource,
 } from "@mission/core";
-import { type Database, openStore, type StoreOptions, withTransaction } from "@mission/store";
+import { MISSION_STATUS_SKEW_SECONDS, verifyMissionStatusResponse } from "@mission/pdp";
+import {
+  type Database,
+  openStore,
+  type StoreOptions,
+  withTransaction,
+  witnessSharesStoreTree,
+  writeDurableFile,
+} from "@mission/store";
 import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
 
 /**
@@ -258,7 +269,37 @@ export type ApplyResult =
       version: number;
       rematerialize: boolean;
     }
-  | { status: "refused"; reason: "signature" | "issuer" | "audience" | "malformed" };
+  | { status: "refused"; reason: "signature" | "issuer" | "audience" | "malformed" }
+  /**
+   * @spec control-plane#rollback (#1749): the receiver's store was restored
+   * from an older backup and this Mission has not been resynchronized from
+   * Mission Status. Nothing was applied or recorded, so the SET is not
+   * acknowledged and its redelivery after resynchronization is processed
+   * afresh.
+   */
+  | { status: "held"; reason: "recovery" };
+
+/** The outcome of {@link MissionSignalReceiver.resynchronize}. */
+export type ResynchronizeResult =
+  | { status: "resynchronized"; state: string; termination?: MissionTermination; version: number }
+  | {
+      status: "refused";
+      /**
+       * - `not_recovering`: the Mission is not held.
+       * - `unverified`: the response failed a Mission Status consumer check.
+       * - `nonce`: it does not echo a nonce this receiver issued for the Mission.
+       * - `generation`: its nonce was issued before a later restore.
+       * - `behind`: it reports a version below the one the store holds.
+       */
+      reason: "not_recovering" | "unverified" | "nonce" | "generation" | "behind";
+    };
+
+/**
+ * A recovery witness that cannot be trusted: missing over a witnessed store,
+ * unreadable, another receiver's or another store's, or behind its store. The
+ * receiver does not open; the witness is never re-created over such a store.
+ */
+export class SignalReceiverRecoveryError extends Error {}
 
 export interface ReceiverOptions {
   /** The Mission Issuer's published verification keys (its `jwks_uri`). */
@@ -285,6 +326,25 @@ export interface ReceiverOptions {
    * `stale` instead of `duplicate`.
    */
   seenCapacity?: number;
+  /**
+   * @spec control-plane#rollback (#1749): the receiver's recovery witness, a
+   * file outside the store's directory tree that records this receiver's
+   * write sequence, advanced before every commit. With it, a store restored
+   * from an older backup, or replaced by an empty one, is detected when the
+   * receiver opens, and every Mission, retained or not, is held until a fresh
+   * Mission Status read resynchronizes it ({@link
+   * MissionSignalReceiver.resynchronize}). Needs a file store and `status`.
+   * Without it, a restore is not detected.
+   */
+  witness?: { file: string };
+  /**
+   * How a Mission Status response read to resynchronize a held Mission is
+   * checked (@spec status#mission-status-response): `clientId` is the
+   * requesting client (`sub`); `audience` is the response `aud`, by default
+   * the client, as for a state-only read; `jwks` are the keys that sign the
+   * issuer's Status responses, by default `jwks`.
+   */
+  status?: { clientId: string; audience?: string; jwks?: { keys: JWK[] } };
 }
 
 /** The default {@link ReceiverOptions.seenCapacity}. */
@@ -321,7 +381,81 @@ CREATE TABLE IF NOT EXISTS signal_receiver_seen (
   jti TEXT NOT NULL,
   UNIQUE (issuer, audience, jti)
 ) STRICT;
+CREATE TABLE IF NOT EXISTS signal_receiver_sequence (
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  store_id TEXT NOT NULL,
+  sequence INTEGER NOT NULL,
+  PRIMARY KEY (issuer, audience)
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_receiver_recovery (
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  generation INTEGER NOT NULL,
+  detected_at TEXT NOT NULL,
+  PRIMARY KEY (issuer, audience)
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_receiver_released (
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  generation INTEGER NOT NULL,
+  PRIMARY KEY (issuer, audience, mission_id)
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_receiver_resync_nonces (
+  issuer TEXT NOT NULL,
+  audience TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  mission_id TEXT NOT NULL,
+  generation INTEGER NOT NULL,
+  PRIMARY KEY (issuer, audience, nonce)
+) STRICT;
 `;
+
+/**
+ * @spec control-plane#rollback (#1749): the receiver's recovery witness, the
+ * store it witnesses, the receiver it belongs to, the last write sequence
+ * (written before that write commits, so the witness is never behind a
+ * committed write) and the latest recovery generation, which only grows.
+ */
+export interface ReceiverWitness {
+  store_id: string;
+  issuer: string;
+  audience: string;
+  sequence: number;
+  generation: number;
+}
+
+/** The witness at `file`, undefined when the file is absent; one that cannot be read refuses. */
+function readReceiverWitness(file: string): ReceiverWitness | undefined {
+  if (!existsSync(file)) return undefined;
+  let w: Partial<ReceiverWitness> | undefined;
+  try {
+    w = JSON.parse(readFileSync(file, "utf8")) as Partial<ReceiverWitness>;
+  } catch (e) {
+    throw new SignalReceiverRecoveryError(`${file}: ${(e as Error).message}`);
+  }
+  const count = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
+  if (
+    !w ||
+    typeof w !== "object" ||
+    typeof w.store_id !== "string" ||
+    !w.store_id ||
+    typeof w.issuer !== "string" ||
+    typeof w.audience !== "string" ||
+    !count(w.sequence) ||
+    !count(w.generation)
+  ) {
+    throw new SignalReceiverRecoveryError(`${file} is not a Signals receiver recovery witness`);
+  }
+  return {
+    store_id: w.store_id,
+    issuer: w.issuer,
+    audience: w.audience,
+    sequence: w.sequence,
+    generation: w.generation,
+  };
+}
 
 interface ReceiverMissionRow {
   state: string;
@@ -388,17 +522,182 @@ export class MissionSignalReceiver {
   private readonly db: Database;
   private readonly seenCapacity: number;
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
+  private readonly statusKeys: ReturnType<typeof createLocalJWKSet>;
+  /** @spec control-plane#rollback (#1749): the witness as this receiver last wrote it. */
+  private witness: ReceiverWitness | undefined;
   /** This receiver's registered audience (the emitter delivers by audience). */
   readonly audience: string;
 
   constructor(private readonly opts: ReceiverOptions) {
     this.jwkSet = createLocalJWKSet({ keys: opts.jwks.keys } as never);
+    this.statusKeys = createLocalJWKSet({ keys: (opts.status?.jwks ?? opts.jwks).keys } as never);
     this.audience = opts.audience;
     this.seenCapacity = opts.seenCapacity ?? DEFAULT_SEEN_CAPACITY;
     if (!Number.isSafeInteger(this.seenCapacity) || this.seenCapacity < 1) {
       throw new Error("seenCapacity must be a positive integer");
     }
+    const witnessFile = opts.witness?.file;
+    if (witnessFile !== undefined) {
+      const storeFile = opts.store?.file;
+      if (!storeFile || storeFile === ":memory:") {
+        throw new SignalReceiverRecoveryError("a recovery witness needs a file-backed store");
+      }
+      if (!opts.status) {
+        throw new SignalReceiverRecoveryError(
+          "a recovery witness needs the Status settings that resynchronize a held Mission",
+        );
+      }
+      if (witnessSharesStoreTree(storeFile, witnessFile)) {
+        throw new SignalReceiverRecoveryError(
+          "the recovery witness must be outside the store's directory, and the store outside the witness's",
+        );
+      }
+    }
     this.db = openStore(RECEIVER_SCHEMA, opts.store);
+    if (witnessFile !== undefined) {
+      try {
+        this.admit(witnessFile);
+      } catch (e) {
+        this.db.close();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * @spec control-plane#rollback (#1749): compare the store with its witness
+   * when the receiver opens.
+   *
+   * - Neither has a record: a new store. The witness is written first, so a
+   *   crash before the store records it reads as a replaced store below and
+   *   holds every Mission rather than trusting an unwitnessed store.
+   * - The store has a record and the witness is missing, unreadable, another
+   *   receiver's or another store's, or behind the store: refused. A witness
+   *   is never re-created over a witnessed store.
+   * - The witness is ahead of the store, or the store has no record (it was
+   *   replaced by an empty or older store): a restore. A new recovery
+   *   generation is committed in the store, and every Mission is held until
+   *   it is resynchronized.
+   */
+  private admit(file: string): void {
+    const witness = readReceiverWitness(file);
+    const stored = this.sequenceRow();
+    if (witness === undefined) {
+      if (stored !== undefined) {
+        throw new SignalReceiverRecoveryError(
+          `the store has a recovery sequence but its witness ${file} is missing`,
+        );
+      }
+      const record: ReceiverWitness = {
+        store_id: `srs_${randomBytes(12).toString("base64url")}`,
+        issuer: this.opts.issuer,
+        audience: this.audience,
+        sequence: 0,
+        generation: 0,
+      };
+      writeDurableFile(file, JSON.stringify(record));
+      this.db
+        .prepare(
+          "INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence) VALUES (?, ?, ?, 0)",
+        )
+        .run(this.opts.issuer, this.audience, record.store_id);
+      this.witness = record;
+      return;
+    }
+    if (witness.issuer !== this.opts.issuer || witness.audience !== this.audience) {
+      throw new SignalReceiverRecoveryError(`the witness ${file} belongs to another receiver`);
+    }
+    if (stored !== undefined && stored.store_id !== witness.store_id) {
+      throw new SignalReceiverRecoveryError(`the witness ${file} belongs to another store`);
+    }
+    if (stored !== undefined && stored.sequence > witness.sequence) {
+      throw new SignalReceiverRecoveryError(
+        `the store is ahead of its witness ${file}: the witness was restored or replaced`,
+      );
+    }
+    if (stored !== undefined && stored.sequence === witness.sequence) {
+      this.witness = witness;
+      return;
+    }
+    const generation = Math.max(this.recoveryGeneration(), witness.generation) + 1;
+    withTransaction(this.db, () => {
+      this.db
+        .prepare(
+          `INSERT INTO signal_receiver_sequence (issuer, audience, store_id, sequence) VALUES (?, ?, ?, ?)
+           ON CONFLICT (issuer, audience) DO UPDATE SET store_id = excluded.store_id, sequence = excluded.sequence`,
+        )
+        .run(this.opts.issuer, this.audience, witness.store_id, witness.sequence);
+      this.db
+        .prepare(
+          `INSERT INTO signal_receiver_recovery (issuer, audience, generation, detected_at) VALUES (?, ?, ?, ?)
+           ON CONFLICT (issuer, audience) DO UPDATE SET generation = excluded.generation, detected_at = excluded.detected_at`,
+        )
+        .run(this.opts.issuer, this.audience, generation, new Date().toISOString());
+    });
+    const next = { ...witness, generation };
+    writeDurableFile(file, JSON.stringify(next));
+    this.witness = next;
+  }
+
+  private sequenceRow(): { store_id: string; sequence: number } | undefined {
+    return this.db
+      .prepare(
+        "SELECT store_id, sequence FROM signal_receiver_sequence WHERE issuer = ? AND audience = ?",
+      )
+      .get(this.opts.issuer, this.audience) as { store_id: string; sequence: number } | undefined;
+  }
+
+  /**
+   * @spec control-plane#rollback (#1749): inside a write transaction, before
+   * it commits: advance the store's sequence and write the witness ahead of
+   * it. A crash can leave the witness ahead of the store, which holds every
+   * Mission on the next open, never a committed write the witness does not
+   * cover. A witness write that fails throws, and nothing commits.
+   */
+  private witnessWrite(): void {
+    const file = this.opts.witness?.file;
+    if (file === undefined || this.witness === undefined) return;
+    const record = { ...this.witness, sequence: this.witness.sequence + 1 };
+    this.db
+      .prepare("UPDATE signal_receiver_sequence SET sequence = ? WHERE issuer = ? AND audience = ?")
+      .run(record.sequence, this.opts.issuer, this.audience);
+    this.persistWitness(file, record);
+    this.witness = record;
+  }
+
+  /** Write the witness ({@link writeDurableFile}); a seam for failure tests. */
+  protected persistWitness(file: string, record: ReceiverWitness): void {
+    writeDurableFile(file, JSON.stringify(record));
+  }
+
+  /** The latest recovery generation committed in the store, 0 when no restore was ever detected. */
+  private recoveryGeneration(): number {
+    const r = this.db
+      .prepare("SELECT generation FROM signal_receiver_recovery WHERE issuer = ? AND audience = ?")
+      .get(this.opts.issuer, this.audience) as { generation: number } | undefined;
+    return r?.generation ?? 0;
+  }
+
+  private releasedGeneration(missionId: string): number {
+    const r = this.db
+      .prepare(
+        "SELECT generation FROM signal_receiver_released WHERE issuer = ? AND audience = ? AND mission_id = ?",
+      )
+      .get(this.opts.issuer, this.audience, missionId) as { generation: number } | undefined;
+    return r?.generation ?? 0;
+  }
+
+  /**
+   * @spec control-plane#rollback (#1749): whether a Mission is held, that is, a
+   * restore was detected and the Mission has not been resynchronized from
+   * Mission Status since. It covers a Mission the restored store has no row
+   * for, since the store cannot tell a Mission it lost from one it never saw.
+   * While held, no event is applied, and {@link lease} and {@link viewState}
+   * report nothing to rely on.
+   */
+  recovering(missionId: string): boolean {
+    const generation = this.recoveryGeneration();
+    return generation > 0 && this.releasedGeneration(missionId) < generation;
   }
 
   /** Close the receiver's store. The receiver owns it. */
@@ -461,6 +760,10 @@ export class MissionSignalReceiver {
     const parsed = parseEvent(payload);
     if (!parsed) return { status: "refused", reason: "malformed" };
     if (parsed.missionIssuer !== this.opts.issuer) return { status: "refused", reason: "issuer" };
+    // @spec control-plane#rollback (#1749): a held Mission applies nothing
+    // and records nothing, not even the `jti`, so the SET's redelivery after
+    // resynchronization is processed afresh rather than taken as a duplicate.
+    if (this.recovering(parsed.missionId)) return { status: "held", reason: "recovery" };
     try {
       return withTransaction(this.db, () => this.applyInTx(jti, parsed, setJwt));
     } catch (e) {
@@ -476,6 +779,7 @@ export class MissionSignalReceiver {
    * and its redelivery is processed afresh.
    */
   private applyInTx(jti: string, parsed: ParsedEvent, setJwt: string): ApplyResult {
+    this.witnessWrite();
     this.db
       .prepare("INSERT INTO signal_receiver_seen (issuer, audience, jti) VALUES (?, ?, ?)")
       .run(this.opts.issuer, this.audience, jti);
@@ -604,8 +908,12 @@ export class MissionSignalReceiver {
     return { status: "applied", state, ...terminationMember, version, rematerialize };
   }
 
-  /** The last state established for a Mission, for a consumer's `loadView`. */
+  /**
+   * The last state established for a Mission, for a consumer's `loadView`;
+   * nothing while the Mission is held after a restore (#1749).
+   */
   viewState(missionId: string): CachedState | undefined {
+    if (this.recovering(missionId)) return undefined;
     const r = this.row(missionId);
     if (!r) return undefined;
     return {
@@ -624,7 +932,9 @@ export class MissionSignalReceiver {
    * payload established {@link viewState} for a Mission, exactly as received:
    * it verifies against the issuer's keys unchanged and still carries what the
    * issuer signed (a legacy terminal `state` included), while `viewState`
-   * holds this receiver's normalized reading of it.
+   * holds this receiver's normalized reading of it. After a restore (#1749),
+   * until a later event replaces it, it is the Mission Status response that
+   * resynchronized the Mission, as received.
    */
   retainedSet(missionId: string): string | undefined {
     return this.row(missionId)?.retained_set;
@@ -635,8 +945,11 @@ export class MissionSignalReceiver {
    * shared `MissionStatusLease` shape (`@mission/core`) the harness consumes,
    * tagged `state_source: "signal"`. Absent until a signal has established state
    * for the Mission. `status_checked_at` is the instant the consumer read it.
+   * Absent while the Mission is held after a restore (#1749): no lease
+   * permits reliance before Mission Status re-establishes the Mission.
    */
   lease(missionId: string, checkedAt: string): MissionStatusLease | undefined {
+    if (this.recovering(missionId)) return undefined;
     const s = this.viewState(missionId);
     if (!s) return undefined;
     return {
@@ -663,6 +976,8 @@ export class MissionSignalReceiver {
    * `hasGap`); clears only via {@link markRematerialized}.
    */
   needsRematerialization(missionId: string): boolean {
+    // A Mission held after a restore (#1749) needs Mission Status first.
+    if (this.recovering(missionId)) return true;
     return this.row(missionId)?.remat_needed === 1;
   }
 
@@ -706,6 +1021,156 @@ export class MissionSignalReceiver {
       return true;
     }
     return false;
+  }
+
+  /**
+   * @spec control-plane#rollback (#1749), status#mission-status-request: the
+   * `nonce` for the Mission Status request that resynchronizes a held
+   * Mission, or undefined when the Mission is not held. Each call issues a
+   * fresh nonce, recorded with the current recovery generation, so a response
+   * to a request made before a later restore cannot release the Mission.
+   */
+  recoveryNonce(missionId: string): string | undefined {
+    if (!this.recovering(missionId)) return undefined;
+    const nonce = `rsn_${randomBytes(18).toString("base64url")}`;
+    withTransaction(this.db, () => {
+      this.witnessWrite();
+      this.db
+        .prepare(
+          `INSERT INTO signal_receiver_resync_nonces (issuer, audience, nonce, mission_id, generation)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(this.opts.issuer, this.audience, nonce, missionId, this.recoveryGeneration());
+    });
+    return nonce;
+  }
+
+  /**
+   * @spec control-plane#rollback (#1749), status#mission-status-response:
+   * resynchronize a held Mission from a fresh, authenticated Mission Status
+   * response to a request carrying a {@link recoveryNonce}.
+   *
+   * The response must pass the Mission Status consumer checks (the shared
+   * verifier for the signature, `iss`, `aud`, `mission.id` and
+   * `mission.issuer`, `iat` and `exp`, and `fresh_until`; here, `sub` is the
+   * configured client and `nonce` one this receiver issued for this Mission
+   * under the current recovery generation). Then, in one transaction, the
+   * receiver records the observed state as the Mission's row and high-water
+   * mark and releases the Mission from the generation. A response from before
+   * a later restore, or one reporting a version below the store's, releases
+   * nothing. A Status read the consumer cannot make or verify leaves the
+   * Mission held.
+   */
+  async resynchronize(
+    missionId: string,
+    statusResponse: string,
+    now: Date = new Date(),
+  ): Promise<ResynchronizeResult> {
+    const status = this.opts.status;
+    if (status === undefined || !this.recovering(missionId))
+      return { status: "refused", reason: "not_recovering" };
+    const verified = await verifyMissionStatusResponse(
+      statusResponse,
+      { missionId, issuer: this.opts.issuer, audience: status.audience ?? status.clientId },
+      this.statusKeys,
+      now,
+      MISSION_STATUS_SKEW_SECONDS,
+    );
+    if (verified === undefined || verified.payload.sub !== status.clientId) {
+      return { status: "refused", reason: "unverified" };
+    }
+    const nonce = verified.payload.nonce;
+    const m = verified.mission;
+    const version = m.version;
+    if (
+      typeof m.state !== "string" ||
+      typeof m.expires_at !== "string" ||
+      !Number.isSafeInteger(version) ||
+      (version as number) < 1
+    ) {
+      return { status: "refused", reason: "unverified" };
+    }
+    if (typeof nonce !== "string") return { status: "refused", reason: "nonce" };
+    const state = m.state;
+    const termination = state === "terminated" ? readMissionTermination(m.termination) : undefined;
+    const containment =
+      typeof m.containment_version === "number" ? m.containment_version : undefined;
+    try {
+      return withTransaction(this.db, (): ResynchronizeResult => {
+        const issued = this.db
+          .prepare(
+            "SELECT mission_id, generation FROM signal_receiver_resync_nonces WHERE issuer = ? AND audience = ? AND nonce = ?",
+          )
+          .get(this.opts.issuer, this.audience, nonce) as
+          | { mission_id: string; generation: number }
+          | undefined;
+        if (issued === undefined || issued.mission_id !== missionId)
+          return { status: "refused", reason: "nonce" };
+        const generation = this.recoveryGeneration();
+        if (issued.generation !== generation) return { status: "refused", reason: "generation" };
+        if (this.releasedGeneration(missionId) >= generation)
+          return { status: "refused", reason: "not_recovering" };
+        const stored = this.row(missionId);
+        if (stored !== undefined && (version as number) < stored.version)
+          return { status: "refused", reason: "behind" };
+        // The Status read rematerializes the authority view at its own
+        // version: an outstanding latch it covers clears, as through
+        // markRematerialized.
+        const covers =
+          stored?.remat_needed !== 1 ||
+          ((version as number) >= (stored.remat_version as number) &&
+            (stored.remat_containment_version === null ||
+              (containment !== undefined && containment >= stored.remat_containment_version)));
+        this.witnessWrite();
+        this.db
+          .prepare(
+            `INSERT INTO signal_receiver_missions
+               (issuer, audience, mission_id, state, termination_json, version, expires_at, containment_version,
+                gapped, remat_needed, remat_version, remat_containment_version, retained_set)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+             ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET
+               state = excluded.state, termination_json = excluded.termination_json, version = excluded.version,
+               expires_at = excluded.expires_at, containment_version = excluded.containment_version,
+               gapped = 0, remat_needed = excluded.remat_needed, remat_version = excluded.remat_version,
+               remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set`,
+          )
+          .run(
+            this.opts.issuer,
+            this.audience,
+            missionId,
+            state,
+            termination !== undefined ? JSON.stringify(termination) : null,
+            version,
+            m.expires_at,
+            containment ?? null,
+            covers ? 0 : 1,
+            covers ? null : (stored?.remat_version ?? null),
+            covers ? null : (stored?.remat_containment_version ?? null),
+            statusResponse,
+          );
+        this.db
+          .prepare(
+            `INSERT INTO signal_receiver_released (issuer, audience, mission_id, generation) VALUES (?, ?, ?, ?)
+             ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET generation = excluded.generation`,
+          )
+          .run(this.opts.issuer, this.audience, missionId, generation);
+        this.db
+          .prepare(
+            "DELETE FROM signal_receiver_resync_nonces WHERE issuer = ? AND audience = ? AND mission_id = ?",
+          )
+          .run(this.opts.issuer, this.audience, missionId);
+        return {
+          status: "resynchronized",
+          state,
+          ...(termination !== undefined ? { termination } : {}),
+          version: version as number,
+        };
+      });
+    } catch (e) {
+      throw new SignalReceiverStorageError(
+        `the receiver could not record the resynchronization: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 }
 

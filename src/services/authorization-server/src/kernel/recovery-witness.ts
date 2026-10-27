@@ -40,15 +40,20 @@
  */
 
 import { randomBytes } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, openSync, readFileSync, realpathSync, renameSync, writeSync } from "node:fs";
-import { basename, dirname, join, resolve, sep } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
 import {
   type CommitGuard,
   type Database,
   openStore,
   setCommitGuard,
   withTransaction,
+  witnessSharesStoreTree,
+  writeDurableFile,
 } from "@mission/store";
+
+// The canonical-path containment check lives in `@mission/store` beside the
+// durable file writer, shared with the Signals receiver's witness (#1749).
+export { witnessSharesStoreTree };
 
 /** Why the kernel's durable state is uncertain. */
 export type RecoveryUncertainReason =
@@ -118,32 +123,6 @@ function readMarker(db: Database): Marker | undefined {
   return db.prepare("SELECT store_id, generation, sequence FROM recovery_marker WHERE k = 1").get() as Marker | undefined;
 }
 
-/** `p`, absolute, through any symbolic links of its nearest existing ancestor. */
-function canonicalPath(p: string): string {
-  let existing = resolve(p);
-  const rest: string[] = [];
-  while (!existsSync(existing)) {
-    const parent = dirname(existing);
-    if (parent === existing) break;
-    rest.unshift(basename(existing));
-    existing = parent;
-  }
-  return join(realpathSync(existing), ...rest);
-}
-
-/**
- * True when the witness's directory is the store's directory or inside it, or
- * the store's is inside the witness's: a restore of either directory tree would
- * then roll both back together. Paths are compared canonically.
- */
-export function witnessSharesStoreTree(storeFile: string, witnessFile: string): boolean {
-  const storeDir = canonicalPath(dirname(resolve(storeFile)));
-  const witnessDir = canonicalPath(dirname(resolve(witnessFile)));
-  const within = (inner: string, outer: string) =>
-    inner === outer || inner.startsWith(outer.endsWith(sep) ? outer : outer + sep);
-  return within(witnessDir, storeDir) || within(storeDir, witnessDir);
-}
-
 /** The witness at `file`, undefined when the file is absent; a file that cannot be read as a witness is uncertain. */
 export function readRecoveryWitness(file: string): RecoveryWitnessRecord | undefined {
   if (!existsSync(file)) return undefined;
@@ -184,21 +163,7 @@ export function readRecoveryWitness(file: string): RecoveryWitnessRecord | undef
  * old record or the new one, never a torn file.
  */
 export function writeRecoveryWitness(file: string, record: RecoveryWitnessRecord): void {
-  const tmp = join(dirname(file), `.${randomBytes(6).toString("hex")}.witness.tmp`);
-  const fd = openSync(tmp, "w", 0o600);
-  try {
-    writeSync(fd, JSON.stringify(record));
-    fsyncSync(fd);
-  } finally {
-    closeSync(fd);
-  }
-  renameSync(tmp, file);
-  const dir = openSync(dirname(file), "r");
-  try {
-    fsyncSync(dir);
-  } finally {
-    closeSync(dir);
-  }
+  writeDurableFile(file, JSON.stringify(record));
 }
 
 /**
