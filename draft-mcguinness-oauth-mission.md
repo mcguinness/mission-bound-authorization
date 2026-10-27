@@ -1169,16 +1169,17 @@ carrying an entry that fails it with the
 `invalid_authorization_details` error code.
 
 Policy narrowing is distinct. During Authority Set derivation the AS
-MAY narrow or omit a syntactically valid entry that policy cannot
-accept ({{authorization-derivation}}). The granted
+MAY omit a syntactically valid entry that policy cannot accept, or
+narrow it where the AS has declared `narrowing` for its type
+({{authorization-derivation}}, {{transformation-capabilities}}). The granted
 `authorization_details` in the token response reflects every
 narrowing and omission ({{token-response}}).
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
-type*: narrowed under that type's own subset rule where it defines
-one, or carried through unchanged where it defines none
-({{other-types}}).
+type*: narrowed under that type's own subset rule where the AS has
+declared `narrowing` for the type, or carried through unchanged
+otherwise ({{transformation-capabilities}}).
 
 `goal` and `task_bounds` then serve as rendering and bounding context
 over the proposed authority. Each proposed entry that carries a
@@ -1251,8 +1252,9 @@ the request: Issuance Gating ({{issuance-gating}}), the subset rule
 Mission, client and sender.
 
 The following is an example of an authority proposal submitted alongside
-the example Intent of {{mission-intent}}. Authority Set derivation
-narrows `invoices.*` to `invoices.read`, keeps the proposed Q3
+the example Intent of {{mission-intent}}. Authority Set derivation,
+under a declared `narrowing` capability, narrows `invoices.*` to
+`invoices.read`, keeps the proposed Q3
 issuance window and write ceiling, which the Intent's task bounds
 support, and carries the proposed `delegation` policy through
 unchanged (the example Authority Set of {{authorization-derivation}}):
@@ -1427,6 +1429,10 @@ entries depend on whether an authority proposal was submitted:
   Mission Template profile
   ({{I-D.draft-mcguinness-oauth-mission-template}}), not this mode.
 
+In either mode, narrowing a candidate entry needs a declared
+`narrowing` capability for its type; without one, the entry is
+retained unchanged or omitted ({{transformation-capabilities}}).
+
 Authority Set derivation can run provisionally during submission
 processing, where the inputs it needs are available
 ({{submission-processing}}). The
@@ -1597,7 +1603,11 @@ provide.
 
 Where the comparison relation cannot decide (an unrecognized member, an
 incomparable value), the posture is conservative refusal, as each
-consuming rule of this document states.
+consuming rule of this document states. At the token endpoint, where
+the comparison cannot establish that a requested `authorization_details`
+entry is a subset, the AS MUST refuse the request with the
+`invalid_authorization_details` error code, as for an entry that
+exceeds the grant ({{error-mapping}}).
 
 An entry equal to its reference entry, byte-identical under the
 canonical form of {{canonicalization}}, is a subset of it for every
@@ -1641,6 +1651,15 @@ establishes none of the others:
 The AS MUST NOT narrow, delegate, or project to `scope` an entry of a
 type for which it has not declared the corresponding capability; on an
 undeclared capability the entry is carried as approved.
+
+The `narrowing` capability also governs Authority Set derivation, and
+approval does not waive the subset proof. Without `narrowing` for its
+type, the AS retains a valid candidate entry, whether proposed
+({{authority-proposal}}) or yielded by a configured mapping
+({{derivation-modes}}), unchanged, or omits it where this document
+permits omission; it never modifies the entry under a claimed subset
+relation. A malformed entry is refused as {{authority-proposal}}
+states.
 
 The AS relates each entry to the audiences that consume it through a
 trusted entry-to-audience mapping, such as authenticated configuration
@@ -1701,12 +1720,16 @@ preference:
    ({{discovery}}).
 
 Deployment documentation is always a sufficient carrier; a
-machine-readable carrier is additive. A
-`mission_transformation_capabilities` value is a JSON object with
-three OPTIONAL boolean members, `narrowing`, `delegation`, and
-`projection`; an absent member leaves that capability undeclared by
-this carrier, falling through to the next carrier in the order
-above.
+machine-readable carrier is optional, and the first declaring carrier
+governs. A `mission_transformation_capabilities` value is a JSON
+object with three OPTIONAL boolean members, `narrowing`, `delegation`,
+and `projection`; an absent member leaves that capability undeclared
+by this carrier, falling through to the next carrier in the order
+above. For each capability, the first carrier in that order that
+declares the member governs, whether it declares `true` or `false`; a
+later carrier does not override it. A declared capability permits a
+transformation without requiring it, and waives no check this document
+requires and no local policy under which the AS refuses one.
 
 ### Policy-Language Types {#policy-language-types}
 
@@ -2593,7 +2616,14 @@ authenticated client presenting the Mission's grant.
 
 Derived tokens SHOULD be short-lived so that a transition to
 `terminated` takes effect promptly without per-request
-revocation checks.
+revocation checks. A resource server that does not check Mission state
+per request can accept a derived token until its `exp`, so the token's
+lifetime is the termination latency there ({{runtime-boundary}}).
+Short-lived means within the termination latency the deployment
+accepts. This document sets no numerical bound; a deployment profile
+can. The cap at the Mission's `expires_at`
+({{token-authentication-lifetime}}) does not by itself make a token
+short-lived.
 
 ## Token Claims {#token-claims}
 
@@ -2635,10 +2665,13 @@ A delegated token is sender-constrained to the delegate's own key
 sender-constraint for credentials that cross a trust domain
 ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}).
 
-An AS MUST publish its token verification keys (for example, at its
-{{RFC8414}} `jwks_uri`, as {{Section 4 of RFC9068}} recommends);
+An AS that issues Mission-bound JWT access tokens for resource servers
+to consume MUST publish its token verification keys (for example, at
+its {{RFC8414}} `jwks_uri`, as {{Section 4 of RFC9068}} recommends);
 rotation retires a key from signing, never from resolvability while
-tokens signed under it remain valid.
+tokens signed under it remain valid. A token the AS issues only for
+presentation back to itself, such as a designation ({{designation}}),
+creates no publication duty by itself.
 
 Every emitted `authorization_details` entry is a subset of a Mission
 Authority Set entry ({{subset}}).
@@ -3378,6 +3411,7 @@ exchange rows of the third table.
 | Profile-defined operation that lets a client present a Mission Identifier alongside a credential ({{grant-binding-resolution}}): the identifier does not match the Mission the credential resolves to | `invalid_grant` ({{Section 5.2 of RFC6749}}). Detail: safe `error_description` |
 | Token endpoint: the Mission is `terminated` (revoked, expired, superseded, or another termination reason) | `invalid_request` on a Token Exchange ({{Section 2.2.2 of RFC8693}}), `invalid_grant` ({{Section 5.2 of RFC6749}}) on any other grant, or the code a Token Exchange profile assigns ({{issuance-gating}}). Detail: `mission_error` ({{iana}}) |
 | Token endpoint ({{subset}}, {{refresh-tokens}}): the requested RAR subset exceeds the Mission's granted authority, or, on refresh, the presented refresh grant | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
+| Token endpoint ({{subset}}): the comparison cannot establish that a requested RAR entry is a subset (an unrecognized member, an incomparable value) | `invalid_authorization_details` ({{Section 6 of RFC9396}}). Detail: safe `error_description` |
 {: title="Failures not confined to one surface"}
 
 | Surface / failing input | Base OAuth error and optional detail |
@@ -6246,8 +6280,10 @@ Host: as.example.com
 ~~~
 
 The AS (`as.example.com`) validates both, derives this Authority Set
-(each entry a same-type subset of a proposed entry,
-{{authority-proposal}}), and renders it for `alice`'s consent:
+under a declared `narrowing` capability (each entry a same-type subset
+of a proposed entry, {{authority-proposal}},
+{{transformation-capabilities}}), and renders it for `alice`'s
+consent:
 
 ~~~ json
 [
@@ -6911,9 +6947,10 @@ The five properties below restate, for a policy author, what
   are refused ({{authority-proposal}}, {{subset}}, {{error-mapping}}).
   Authority Set derivation does not repair them by omitting the entry
   or dropping the constraint. An entry the
-  engine compares but policy cannot accept differs: it is narrowed or
-  omitted, and the granted echo reflects that
-  ({{authority-proposal}}).
+  engine compares but policy cannot accept differs: it is narrowed,
+  under a declared `narrowing` capability
+  ({{transformation-capabilities}}), or omitted, and the granted echo
+  reflects that ({{authority-proposal}}).
 - **Issuer-established members are not client-supplied.** The issuer
   establishes `policy_version` ({{authorization-derivation}}), and
   `authority_source` and `approval_basis` ({{authority-sources}},
@@ -6964,12 +7001,13 @@ write:
 ]
 ~~~
 
-The resulting Authority Set contains the proposed `invoices.read`
-entry unchanged, and the proposed `journal-entries.write` entry with
-`max_amount` narrowed to `500.00 USD`. The ceiling's unrequested
-`journal-entries.read` does not appear. Each proposed entry
-intersects the same-resource ceiling entries; an empty action
-intersection contributes no authority.
+Under a declared `narrowing` capability
+({{transformation-capabilities}}), the resulting Authority Set
+contains the proposed `invoices.read` entry unchanged, and the
+proposed `journal-entries.write` entry with `max_amount` narrowed to
+`500.00 USD`. The ceiling's unrequested `journal-entries.read` does
+not appear. Each proposed entry intersects the same-resource ceiling
+entries; an empty action intersection contributes no authority.
 
 Negative fixtures accompany this positive result; none is a special
 case that relaxes the type's relation:
@@ -7518,6 +7556,18 @@ Cross-Domain:
   Designation, Self-Exchange Down-Scoping, Establishing and Resolving
   a Binding, Error and Challenge Mapping, Token Theft, OAuth Binding
   Mapping Assessment; #1718, D845, D859).
+- The key-publication requirement applies to an AS that issues
+  Mission-bound JWT access tokens for resource servers to consume, not
+  to one issuing only designations; the first capability carrier that
+  declares a member governs, `true` or `false`, and a declaration
+  waives no check; the declared `narrowing` capability also governs
+  Authority Set derivation, where without it a candidate entry is
+  retained unchanged or omitted; an undecidable token-endpoint subset
+  comparison is refused with `invalid_authorization_details`; and
+  short-lived is related to the termination latency a deployment
+  accepts, with numerical bounds left to deployment profiles (Token
+  Claims, Declared Transformation Capabilities, Authority Proposal,
+  Derivation Modes, Subset Rule, Issuance Gating; #1720, D845).
 - The AS refuses, with `invalid_target`, a delegated Mission-bound
   token for an audience it has not established as a Mission-aware
   Resource Server that processes the `act` chain; routing and logging

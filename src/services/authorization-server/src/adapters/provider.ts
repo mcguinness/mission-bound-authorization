@@ -3474,9 +3474,17 @@ async function handleDeferredGrant(
         },
       });
     } catch (e) {
-      // Requested authority exceeds the active Mission (or it is not active):
-      // AROP never widens -> not a deferrable request.
-      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      // @spec mission#subset, mission#error-mapping (#1720 item 3, D859): AROP
+      // never widens, so requested authority the comparison cannot establish
+      // as a subset of the active Mission, whether it exceeds it or the
+      // comparison cannot decide, is refused invalid_authorization_details,
+      // as the originating grant's own validation would refuse it (DTR -00
+      // Section 5.3.1). A Mission that is not active keeps invalid_request, as
+      // do the ownership and authentication refusals above.
+      if (e instanceof DeferralError) {
+        if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
+        throw new errors.InvalidRequest(e.message);
+      }
       throw e;
     }
     // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
