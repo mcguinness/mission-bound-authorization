@@ -1338,9 +1338,15 @@ Decoded JWS payload:
 }
 ~~~
 
+The Mission's Status version is 4: a suspension and a resumption
+between the Mission Status example ({{mission-status-response}}) and
+this revocation each advanced it.
+
 The next two examples use another Mission.
 
-Suspend request with a deadline, here also carrying the OPTIONAL
+Suspend request with a deadline from `admin-console`, an
+administrator client the deployment authorizes for `suspend`
+({{lifecycle-authorization}}), here also carrying the OPTIONAL
 `expected_version` guard against deciding over stale state
 ({{idempotency}}):
 
@@ -1367,8 +1373,8 @@ in `mission`. Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "s6BhdRkqt3",
-  "sub": "s6BhdRkqt3",
+  "aud": "admin-console",
+  "sub": "admin-console",
   "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
   "iat": 1793607600,
   "exp": 1793607660,
