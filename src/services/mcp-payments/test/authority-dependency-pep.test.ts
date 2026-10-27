@@ -41,9 +41,10 @@ import {
   stalenessBound,
 } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CANONICAL_RESOURCE,
+  CollectingAlertSink,
   Connectors,
   createEphemeralEvidenceKeys,
   EvidenceStore,
@@ -186,7 +187,9 @@ async function build(route: "pep" | "pdp" | "lifecycle" = "pep") {
     authorityDependency: dependency,
   });
   const connectors = new Connectors(() => new Date(nowMs));
+  const alerts = new CollectingAlertSink();
   const server = new McpPaymentsServer({
+    alerts,
     pep,
     payments,
     loadView,
@@ -202,6 +205,18 @@ async function build(route: "pep" | "pdp" | "lifecycle" = "pep") {
     resolver,
     evidence,
     decisions,
+    alerts,
+    /** Fail every `suppressed` Execution Evidence write until restored; `tries` counts them. */
+    failSuppressed: () => {
+      const original = records.recordExecution.bind(records);
+      let tries = 0;
+      const spy = vi.spyOn(records, "recordExecution").mockImplementation(async (emitterId, role, input) => {
+        if (input.outcome !== "suppressed") return original(emitterId, role, input);
+        tries += 1;
+        throw new Error("evidence store unavailable");
+      });
+      return { tries: () => tries, restore: () => spy.mockRestore() };
+    },
     read: (hook?: () => void) => server.callReadTool("get_invoice", { invoice_id: "inv-1" }, TOKEN, hook),
     /** Every dispatch path, each called with a hook that runs between admission and release. */
     paths: {
@@ -483,6 +498,45 @@ describe("lifecycle-only enforcement keeps an established invalidation at releas
         expect(x.evidence.entries().at(-1), path).toMatchObject({ enforcer: "pep", failure: "invalidated" });
       }
       expect(x.ledger()).toHaveLength(0);
+    } finally {
+      await x.close();
+    }
+  });
+});
+
+describe("a composed-step refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715)", () => {
+  it("on a read, an unkeyed write, a keyed write and the transaction tier, a resource_policy refusal whose suppressed record cannot be written still refuses with gap emission_failed and one operator alert, and releases nothing; written, it carries neither", async () => {
+    const x = await build();
+    try {
+      x.set([{ sub: "alice", withdrawn_delegations: ["ap-agent"] }]);
+      await x.resolver.refresh();
+      let alerts = 0;
+      for (const [path, call] of Object.entries(x.paths)) {
+        const failing = x.failSuppressed();
+        let refused: Awaited<ReturnType<typeof call>>;
+        try {
+          refused = await call();
+          expect(failing.tries(), `${path}: ${JSON.stringify(refused)}`).toBe(2);
+        } finally {
+          failing.restore();
+        }
+        alerts += 1;
+        expect(refused, path).toMatchObject({ ok: false, denial_reason: "resource_policy", gap: "emission_failed" });
+        expect(refused.result, path).toBeUndefined();
+        expect(x.alerts.alerts, path).toHaveLength(alerts);
+        expect(x.alerts.alerts.at(-1), path).toEqual({
+          kind: "evidence_emission_failed",
+          evaluation_id: (x.decisions.at(-1) as { context: { decision_id: string } }).context.decision_id,
+          mission_id: view.id,
+          cause: "suppressed_disposition_unrecorded",
+          at: expect.any(String),
+        });
+        const written = await call();
+        expectComposedRefusal(x, written, path);
+        expect(written, path).not.toHaveProperty("gap");
+        expect(x.alerts.alerts, path).toHaveLength(alerts);
+      }
+      expect(x.ledger()).toEqual([]);
     } finally {
       await x.close();
     }

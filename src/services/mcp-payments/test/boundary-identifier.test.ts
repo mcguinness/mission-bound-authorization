@@ -421,10 +421,12 @@ describe("each PEP establishes its boundary from configuration, and every consum
       expect((await call(payments, "get_invoice", { invoice_id: "inv-1" }, await mint(aud))).ok).toBe(true);
       // The ledger boundary authorizes only the PDP's key, so this PEP cannot
       // sign the read's completed disposition there: the read is permitted at
-      // the ledger and its result withheld (#1640, D770 ruling 4).
+      // the ledger and its result withheld (#1640, D770 ruling 4). Its
+      // suppressed record cannot be signed either, and that is surfaced (#1715).
       expect(await call(ledger, "get_invoice", { invoice_id: "inv-1" }, await mint(aud))).toEqual({
         ok: false,
         refusal_reason: "evidence_unavailable",
+        gap: "emission_failed",
       });
     }
     expect(payments.decided.map((r) => r.resource.properties.audience)).toEqual([CANONICAL_RESOURCE, CANONICAL_RESOURCE]);

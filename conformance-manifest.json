@@ -33056,10 +33056,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "when the PEP cannot sign or emit a required refusal record for a consequential action (a Refusal Record, or Execution Evidence for a suppressed action), it fails closed, or durably commits the record for signing and publication under the declared recovery bound; the record is never silently dropped",
-    "local": "on the transaction tier, a refusal whose suppressed record cannot be written still refuses and reports gap: emission_failed with one evidence_emission_failed operator alert; a Refusal Record that cannot be emitted rejects the call with nothing executed"
+    "local": "on the read, reversible-write and transaction paths, a refusal after the permit whose suppressed record cannot be written still refuses with its own reason and reports gap: emission_failed with one evidence_emission_failed operator alert, and nothing executes; a retained result is not disclosed without its retrieval's record; a Refusal Record that cannot be emitted rejects the call with nothing executed"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/mcp-payments/test/pre-effect-attempt.test.ts",
@@ -33078,9 +33078,69 @@
      "name": "evidence emission failures: a refusal before any effect, or a reported gap after one (#1104) > a Refusal Record emission throws: the call rejects, nothing is recorded, and nothing executes",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > read reverification: a refusal at admission, at the capability snapshot, at the bound list's parameters, or at release still refuses with its own reason, carries gap emission_failed and one alert each, and discloses nothing; written, the same refusals carry neither",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > write reverification: an unkeyed hold and a keyed schedule refused at admission, at the capability snapshot, at parameter reverification after the invoice moved, or at release keep their refusals with gap emission_failed and one alert each; nothing is held or scheduled; written, none carries a gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > single use: a re-presented hold Decision refused permit_consumed, and a keyed write whose use_limit this PEP cannot meter refused unrecognized_condition, carry gap emission_failed and one alert each; nothing further is held or consumed; written, neither carries a gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > reservation unavailable: a keyed write whose reservation store cannot be reached is refused consumption_unavailable with gap emission_failed and one alert, and schedules nothing; written, the refusal carries no gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > actor unkeyable: a keyed write from an instance-profiled leaf with no client is refused actor_unkeyable with gap emission_failed and one alert, and leaves no reservation; written, the refusal carries no gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > retained release: a retrieval refused at its permit's use, at release, as a conflict or over a reserved record keeps its refusal with gap emission_failed and one alert each; a completed record is not disclosed without the retrieval's own record, and a later retrieval under its own permit discloses it; nothing executes again",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > keyed effect refusal: a cancel with no schedule to cancel is refused schedule_not_found with gap emission_failed and one alert, and changes nothing; written, the refusal carries no gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > unevidenced withhold: a read and an unkeyed hold whose completed record and then suppressed record cannot be written are refused evidence_unavailable with gap emission_failed and one alert each, and disclose nothing; with the suppression written, neither carries a gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/suppression-gap.test.ts",
+     "name": "a read or reversible-write refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > enforcement's own refusals after the permit: an unrecognized condition on a read and a keyed write, and an unfulfillable obligation on a read, keep their refusals with gap emission_failed and one alert each; nothing is disclosed or scheduled; written, none carries a gap",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/authority-dependency-pep.test.ts",
+     "name": "a composed-step refusal whose suppressed record cannot be written is surfaced, never dropped (@spec runtime-evidence#execution-evidence-object, #1715) > on a read, an unkeyed write, a keyed write and the transaction tier, a resource_policy refusal whose suppressed record cannot be written still refuses with gap emission_failed and one operator alert, and releases nothing; written, it carries neither",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial: the read and reversible-write paths still discard a failed suppression's result (server.ts withholdUnevidenced, refuseSingleUse, reservationUnavailable, actorUnkeyable, releaseRetained, and the read path's reverification outcomes); their refusal stands, so nothing proceeds, but the missing record is not surfaced. Follow-up: #1715. The transaction tier's exits are witnessed (#821 PR B item 5). Proved by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6, M5-6r)."
+   "notes": "Fail closed and surfaced; nothing is committed for later signing. Every post-permit refusal on the PEP's read, reversible-write and transaction paths, and enforcement's own post-permit refusals on all three, reads its suppressed disposition's result (#821, #1715): the refusal stands, nothing executes, and a record that cannot be written adds the gap and one operator alert. A retained result whose retrieval record cannot be written is withheld (evidence_unavailable, next_action retry). The transaction tier's exits are witnessed in pre-effect-attempt (#821 PR B item 5); the other paths per exit family in suppression-gap, and the composed resource_policy step on all four paths in authority-dependency-pep. Proved on the transaction tier by dropping the gap (M5-1), the alert (M5-2), and the result at the connector-refusal, reverification and attempt-write exits (M5-3, M5-5, M5-6, M5-6r). Proved on the other paths by discarding the result at the read's admission, missing-digest, list, release and capability checks (M5-7 to M5-10, M5-32); at the unkeyed and keyed writes' admission, parameter, release and capability checks (M5-11 to M5-16, M5-33, M5-34); at single use (M5-17), reservation unavailable (M5-18) and actor unkeyable (M5-19); at the retrieval's permit-use, release-time, conflict and reserved-record refusals (M5-20 to M5-23); by disclosing a retained result without its record (M5-24); at the keyed effect's own refusal (M5-25) and the unevidenced withhold (M5-26); and, for enforcement's own refusals, by ignoring them in the server (M5-27, per path M5-35 to M5-37) or returning no disposition from the PEP (M5-28 to M5-30). Each fails its family's witness. A replayed attempt whose one disposition is already retained records nothing further and reports no gap; reporting it as missing (M5-31) fails the two write-reservation replay tests."
   },
   {
    "id": "runtime.evidence.decision-and-refusal-must-produce-record",
