@@ -63,6 +63,7 @@ export {
 export { createPdpRefusalRecorder, type PdpRefusalRecord, type PdpRefusalRecorderConfig } from "./refusal-record.js";
 export {
   type MissionStateObservation,
+  type MissionStatusVerifyOptions,
   parseStateObservation,
   type ParsedStateObservation,
   STATE_OBSERVATION_MODES,

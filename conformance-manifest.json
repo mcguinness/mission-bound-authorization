@@ -22739,12 +22739,50 @@
    "surface": "lifecycle-endpoint",
    "assertion": "replay",
    "observation": {
-    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established"
+    "normative": "a client accepting an expired replay correlates it to its retained request and passes every other check, uses no compromised key, and treats it as confirmation of that outcome only: no cache refresh, no action authorized, no current state established",
+    "local": "the reference Lifecycle client (demo lifecycle-client.ts, verifyLifecycleResponse) verifies through the shared verifier's report-expiry mode, with keys read afresh from the validated metadata's jwks_uri at each verification and limited to its trusted Status kids; an expired replay that correlates and passes every other check returns a confirmation carrying no Mission object"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1724 C1 (D847), normative client rule; no reference Lifecycle client is witnessed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > accepts the AS's replay of its retained request, verified after its exp, only as confirmation of that request's outcome, which carries no Mission state",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that does not correlate to the retained request: another request's nonce, or another Mission",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses an expired replay that fails any other check: an audience or a sub naming another client, or a kid its configuration does not trust",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/demo/test/lifecycle-client.test.ts",
+     "name": "the reference Lifecycle client's verification of an expired replay (@spec status#idempotency, status#mission-status-response) > refuses the AS's replay of its retained request once the Status key that signed it is compromised, before and after its exp",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > refuses a response whose exp has passed by default, and on request returns it marked expired once every other check passes",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/state-observation-expiry.test.ts",
+     "name": "the shared Mission Status verifier, reporting expiry on request (@spec status#mission-status-response, status#idempotency) > still refuses an expired response that fails any other check: another audience, another issuer, another Mission, a fresh_until after exp, or a key it does not hold",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1724 C1 (D847), normative client rule. Every observation clause witnessed: correlation (the non-correlating replays are refused), every other check (audience, sub, an untrusted kid; and in the shared verifier, issuer, Mission, fresh_until and key), no compromised key (the AS's replay of the original bytes under the Status key compromised after a restart on the same kernel store is refused), and confirmation only (no Mission object). Proved by eight defects: correlation skipped when expired; the expected Mission taken from the response; report mode accepting any claim failure; the client sub check dropped; published keys cached across verifications; every published key accepted; expiry reported by default; an expired replay returned as an observation."
   },
   {
    "id": "status.signing-keys.compromise-published",

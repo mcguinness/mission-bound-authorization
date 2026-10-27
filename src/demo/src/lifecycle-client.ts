@@ -8,7 +8,17 @@
  */
 
 import type { LifecycleClientRegistration } from "@mission/authorization-server";
-import { exportJWK, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
+import { declaredStatusKeys, MISSION_STATUS_SKEW_SECONDS, verifyMissionStatusResponse } from "@mission/pdp";
+import {
+  decodeProtectedHeader,
+  exportJWK,
+  generateKeyPair,
+  importJWK,
+  type JSONWebKeySet,
+  type JWK,
+  type JWTPayload,
+  SignJWT,
+} from "jose";
 
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
@@ -64,12 +74,41 @@ export async function lifecycleClientAssertion(
     .sign(key);
 }
 
-/** The endpoint the AS advertises as `mission_lifecycle_endpoint`. */
-export async function discoverLifecycleEndpoint(issuer: string): Promise<string> {
+/** What the client reads from the AS's validated metadata. */
+export interface LifecycleIssuerMetadata {
+  issuer: string;
+  /** `mission_lifecycle_endpoint`. */
+  endpoint: string;
+  /** `jwks_uri`, the source of the keys it verifies responses with. */
+  jwksUri: string;
+  /** `mission_status_signing_alg_values_supported`. */
+  signingAlgs: readonly string[];
+}
+
+/**
+ * @spec status#mission-status (RFC 8414 Section 3.3): the metadata of
+ * the issuer the client is configured with, retrieved from that identifier
+ * and refused unless its `issuer` equals it, so neither the endpoint nor the
+ * `jwks_uri` comes from another issuer.
+ */
+export async function discoverLifecycleIssuer(issuer: string): Promise<LifecycleIssuerMetadata> {
   const meta = (await (await fetch(`${issuer}/.well-known/openid-configuration`)).json()) as Record<string, unknown>;
+  if (meta.issuer !== issuer) throw new Error(`${issuer} serves metadata for issuer ${String(meta.issuer)}`);
   const endpoint = meta.mission_lifecycle_endpoint;
   if (typeof endpoint !== "string") throw new Error(`${issuer} advertises no mission_lifecycle_endpoint`);
-  return endpoint;
+  if (typeof meta.jwks_uri !== "string") throw new Error(`${issuer} advertises no jwks_uri`);
+  const algs = meta.mission_status_signing_alg_values_supported;
+  return {
+    issuer,
+    endpoint,
+    jwksUri: meta.jwks_uri,
+    signingAlgs: Array.isArray(algs) ? algs.filter((a): a is string => typeof a === "string") : [],
+  };
+}
+
+/** The endpoint the AS advertises as `mission_lifecycle_endpoint`. */
+export async function discoverLifecycleEndpoint(issuer: string): Promise<string> {
+  return (await discoverLifecycleIssuer(issuer)).endpoint;
 }
 
 /**
@@ -132,4 +171,81 @@ export function transmitLifecycle(
   request: LifecycleRequestRecord,
 ): Promise<{ status: number; contentType: string; text: string }> {
   return requestLifecycle(issuer, client, { ...request.members, mission_id: request.missionId, nonce: request.nonce });
+}
+
+/** What a verified Lifecycle response establishes. */
+export type LifecycleVerdict =
+  /** A current response: its observation may be relied on within its signed bounds. */
+  | { kind: "observation"; payload: JWTPayload; mission: Record<string, unknown> }
+  /**
+   * @spec status#idempotency: an expired replay of the retained request. It
+   * confirms that request's outcome and nothing else, so it carries no
+   * Mission object to cache or rely on: it refreshes no cached state,
+   * authorizes no action, and is not the Mission's current state, for which
+   * the client obtains a fresh Mission Status Response.
+   */
+  | { kind: "confirmation"; missionId: string; nonce: string; outcome: { state: unknown; version: unknown } }
+  | { kind: "refused"; reason: string };
+
+/**
+ * @spec status#mission-status-response, status#idempotency: verify the
+ * response to a retained request by the consumer checks, through the shared
+ * verifier (`@mission/pdp`): `alg` among those the AS advertises (check 2);
+ * the signature under a key the client's configuration trusts for Status
+ * responses (`trustedKids`) among those the AS's `jwks_uri` publishes NOW, read
+ * afresh for every verification, so a key the AS has withdrawn as compromised
+ * is never used (check 3); `iss` and `mission.issuer` the configured issuer
+ * (4); `aud` and `sub` the client (5, 6); `nonce` and `mission.id` the retained
+ * request's (7, 8); `iat` not in the future and `exp` not past, with the
+ * profile's skew (9); `fresh_until` within `exp` (10).
+ *
+ * A replay whose `exp` has passed fails check 9 unless it correlates to the
+ * retained request (checks 7 and 8) and passes every other check: then it is
+ * accepted as a confirmation only.
+ */
+export async function verifyLifecycleResponse(
+  jws: string,
+  context: {
+    issuer: string;
+    client: Pick<LifecycleConsoleCredentials, "clientId">;
+    request: LifecycleRequestRecord;
+    trustedKids: readonly string[];
+    now?: () => Date;
+  },
+): Promise<LifecycleVerdict> {
+  const { issuer, client, request } = context;
+  const now = context.now?.() ?? new Date();
+  const meta = await discoverLifecycleIssuer(issuer);
+  let alg: unknown;
+  try {
+    alg = decodeProtectedHeader(jws).alg;
+  } catch {
+    return { kind: "refused", reason: "not a JWS" };
+  }
+  if (typeof alg !== "string" || alg === "none" || !meta.signingAlgs.includes(alg)) return { kind: "refused", reason: "alg" };
+  const published = (await (await fetch(meta.jwksUri)).json()) as JSONWebKeySet;
+  const verified = await verifyMissionStatusResponse(
+    jws,
+    { missionId: request.missionId, issuer, audience: client.clientId },
+    declaredStatusKeys(published, context.trustedKids),
+    now,
+    MISSION_STATUS_SKEW_SECONDS,
+    { expired: "report" },
+  );
+  if (verified === undefined) return { kind: "refused", reason: "signature or claims" };
+  const { payload, mission } = verified;
+  if (payload.sub !== client.clientId) return { kind: "refused", reason: "sub" };
+  if (payload.nonce !== request.nonce) return { kind: "refused", reason: "nonce" };
+  if ((payload.iat as number) * 1000 - now.getTime() > MISSION_STATUS_SKEW_SECONDS * 1000) {
+    return { kind: "refused", reason: "iat" };
+  }
+  if (verified.expired) {
+    return {
+      kind: "confirmation",
+      missionId: request.missionId,
+      nonce: request.nonce,
+      outcome: { state: mission.state, version: mission.version },
+    };
+  }
+  return { kind: "observation", payload, mission };
 }
