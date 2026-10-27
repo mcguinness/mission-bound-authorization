@@ -766,6 +766,7 @@ export {
   CLASS_PREDICATES,
   CONSUMPTION_BOUND_CLASS,
   DispatchProhibitedCoverageError,
+  deploymentCrossDomain,
   dispatchProhibitedCoverageGaps,
   type ProhibitedPredicate,
   type ProhibitedPredicateMapping,
