@@ -982,7 +982,11 @@ Table of Contents
    under the AS's active Mission Status signing key, the key it
    currently signs Mission Status responses under
    ([I-D.draft-mcguinness-oauth-mission-status], Section "Response"),
-   published in its jwks_uri.  Its JWS header carries typ of mission-
+   published in its jwks_uri.  The Status profile's signing-key
+   retention ([I-D.draft-mcguinness-oauth-mission-status], Section 
+   "Signing-Key Retention for Audit") keeps that key resolvable for at
+   least the Mission's audit horizon, so an archived receipt stays
+   verifiable for audit.  Its JWS header carries typ of mission-
    discharge-receipt+jwt and a kid identifying the signing key, and the
    HTTP Content-Type is application/mission-discharge-receipt+jwt
    (Section 7.2).  A consumer MUST validate typ exactly and MUST NOT
@@ -1371,6 +1375,10 @@ Table of Contents
       consumer verifies a receipt only under a key its trusted
       configuration authorizes for that AS's Mission Status responses,
       never merely because the key appears in jwks_uri (#831, D857).
+
+   *  The receipt's signing key is retained under the Status profile's
+      Signing-Key Retention for Audit, since it is the Mission Status
+      signing key; no requirement changed (#831, D864).
 
 Acknowledgments
 

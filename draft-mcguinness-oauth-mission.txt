@@ -7018,9 +7018,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              niyikiza-oauth-attenuating-agent-tokens-01>.
+              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
+              October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,

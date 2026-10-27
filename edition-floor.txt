@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-27T01:16:05Z
-Source repository commit: e436bca998eefa5bc564f7dc141d797280d4764b
+Generated: 2026-10-27T04:56:22Z
+Source repository commit: 7c4173d1dc6de901fa626ad2247ff9d937b92f9d
 Member count: 7
 
 Reading order:
@@ -14617,9 +14617,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              niyikiza-oauth-attenuating-agent-tokens-01>.
+              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
+              October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -23761,9 +23761,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Aimable, N., "Attenuating Authorization Tokens for Agentic
               Delegation Chains", Work in Progress, Internet-Draft,
-              draft-niyikiza-oauth-attenuating-agent-tokens-01, 15 June
-              2026, <https://datatracker.ietf.org/doc/html/draft-
-              niyikiza-oauth-attenuating-agent-tokens-01>.
+              draft-niyikiza-oauth-attenuating-agent-tokens-02, 26
+              October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [I-D.draft-rosomakho-oauth-txn-challenge]
               Rosomakho, Y., Campbell, B., McGuinness, K., and P.
