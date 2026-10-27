@@ -37,9 +37,9 @@ normative:
       -
         ins: N. A. Niyikiza
         name: Niki Aimable Niyikiza
-    date: 2026-10-26
+    date: 2026-06-15
     seriesinfo:
-      Internet-Draft: draft-niyikiza-oauth-attenuating-agent-tokens-02
+      Internet-Draft: draft-niyikiza-oauth-attenuating-agent-tokens-01
   I-D.draft-mcguinness-oauth-actor-profile:
   I-D.draft-mcguinness-oauth-mission:
     title: "Mission-Bound Authorization for OAuth 2.0"
