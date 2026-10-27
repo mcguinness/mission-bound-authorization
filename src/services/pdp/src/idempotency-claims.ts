@@ -1556,12 +1556,13 @@ export class IdempotencyClaimDomain {
       // @spec metering#settlement-contract "Conflicting redelivery",
       // metering#settlement-states "Conflicting settlement" (#816, D877): a
       // second `execution_id`, or the same one with another outcome or
-      // another error (#1771 review), fails closed. The applied settlement is unchanged, the record is retained
-      // and the conflict alarmed; it is never acknowledged as a duplicate. A
-      // conflicting `completed` proves the money moved, so the claim's
-      // reservations commit (a released one included, with the overspend
-      // alert), through the same transition and under the same guards as a
-      // correction; a refused commit is logged with its reason.
+      // another error (#1771 review), fails closed. The applied settlement
+      // is unchanged, the record is retained and the conflict alarmed; it is
+      // never acknowledged as a duplicate. A conflicting `completed` proves
+      // the money moved, so the claim's reservations commit (a released one
+      // included, with the overspend alert), through the same transition and
+      // under the same guards as a correction; a refused commit is logged
+      // with its reason.
       this.retainConflict(row, executionId, outcome, record, nowMs);
       if (next === "completed") {
         const reservations = this.db.prepare("SELECT * FROM budget_reservations WHERE evaluation_id = ?").all(evaluationId) as ReservationRow[];
