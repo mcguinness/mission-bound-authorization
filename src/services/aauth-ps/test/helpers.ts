@@ -1,0 +1,376 @@
+/**
+ * Test topology for the PS: real HTTP on loopback, ephemeral ports.
+ *
+ * Every party keeps an AAuth server identifier (`https://ps.test`,
+ * `https://ap.test`, `https://rs.test`, ...), since `iss`, `aud` and `ps`
+ * must be identifiers (no port). Key discovery goes through the library's
+ * resolver under the library's egress admission, which admits exactly the
+ * mapped test hosts through `admitPrivateDestination` and nothing else,
+ * and through the library's pinned `createFetchJson`, which checks and
+ * connects to the loopback literal itself. The one bridge is that an
+ * `https://<host>` document URL is fetched from that host's loopback
+ * `http://127.0.0.1:<port>` origin: the loopback topology carries no TLS.
+ *
+ * Signed requests go to the PS's real loopback origin, so `@authority` is
+ * the real `127.0.0.1:<port>`.
+ */
+import { randomUUID } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  type AAuthTokenType,
+  createEgressAdmission,
+  createFetchJson,
+  type FetchJson,
+  generateSigningKey,
+  JwksResolver,
+  jwkThumbprint,
+  mintToken,
+  type SigningKey,
+  signRequest,
+} from "@mission/aauth-wire";
+import {
+  createPersonServer,
+  listen,
+  type PersonServer,
+  type PsStore,
+  parsePsConfig,
+  type RunningServer,
+  SqlitePsStore,
+} from "../src/index.js";
+
+/** 2025-10-09T08:53:20Z. */
+export const T0 = 1_760_000_000_000;
+
+export const PS = "https://ps.test";
+export const PS2 = "https://ps2.test";
+export const AP = "https://ap.test";
+export const RS = "https://rs.test";
+export const RS2 = "https://rs2.test";
+export const ASSISTANT = "aauth:assistant@ap.test";
+export const PLANNER = "aauth:planner@ap.test";
+export const HELPER = "aauth:helper@ap.test";
+export const STRANGER = "aauth:stranger@ap.test";
+
+/** A mutable clock shared by every party, in milliseconds. */
+export class Clock {
+  ms = T0;
+  readonly now = () => this.ms;
+  get s(): number {
+    return Math.floor(this.ms / 1000);
+  }
+  advance(seconds: number): void {
+    this.ms += seconds * 1000;
+  }
+}
+
+export class LoopbackNet {
+  private readonly origins = new Map<string, string>();
+  private readonly pinned: FetchJson = createFetchJson({
+    admitPrivateDestination: (url) => [...this.origins.values()].includes(url.origin),
+  });
+
+  /** Serve `identifier`'s documents from `origin` (`http://127.0.0.1:<port>`). */
+  register(identifier: string, origin: string): void {
+    this.origins.set(new URL(identifier).hostname, origin);
+  }
+
+  readonly fetchJson: FetchJson = (url) => {
+    const target = new URL(url);
+    const origin = target.protocol === "https:" ? this.origins.get(target.hostname) : undefined;
+    if (!origin) return Promise.reject(new Error(`${target.origin} is not on the loopback net`));
+    return this.pinned(`${origin}${target.pathname}${target.search}`);
+  };
+
+  resolver(clock: Clock): JwksResolver {
+    return new JwksResolver({
+      fetchJson: this.fetchJson,
+      now: clock.now,
+      admitEgress: createEgressAdmission({
+        admitPrivateDestination: (url) => this.origins.has(url.hostname),
+        lookup: async () => {
+          throw new Error("the loopback net has no DNS");
+        },
+      }),
+    });
+  }
+}
+
+/** An issuer stub: its metadata document and JWKS, served on loopback. */
+export interface IssuerStub {
+  id: string;
+  key: SigningKey;
+  kid: string;
+  running: RunningServer;
+  mint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
+}
+
+export async function startIssuer(net: LoopbackNet, id: string, dwk: string): Promise<IssuerStub> {
+  const kid = `${new URL(id).hostname}-key-1`;
+  const key = generateSigningKey("Ed25519", kid);
+  const metadata = { issuer: id, jwks_uri: `${id}/.well-known/jwks.json` };
+  const running = await listen(async (req, res) => {
+    const body =
+      req.url === `/.well-known/${dwk}`
+        ? metadata
+        : req.url === "/.well-known/jwks.json"
+          ? { keys: [key.publicJwk] }
+          : undefined;
+    res.writeHead(body ? 200 : 404, { "content-type": "application/json" });
+    res.end(JSON.stringify(body ?? {}));
+  });
+  net.register(id, running.origin);
+  return {
+    id,
+    key,
+    kid,
+    running,
+    mint: (typ, claims) =>
+      mintToken(typ, claims, { alg: key.alg, privateKey: key.privateKey, kid }),
+  };
+}
+
+export interface Agent {
+  id: string;
+  key: SigningKey;
+  token: string;
+  jkt: string;
+}
+
+/** An agent with a fresh key and an agent token from `ap`. */
+export async function makeAgent(
+  ap: IssuerStub,
+  clock: Clock,
+  id = ASSISTANT,
+  overrides: Record<string, unknown> = {},
+): Promise<Agent> {
+  const key = generateSigningKey("Ed25519");
+  const token = await ap.mint("aa-agent+jwt", {
+    iss: ap.id,
+    dwk: "aauth-agent.json",
+    sub: id,
+    jti: randomUUID(),
+    iat: clock.s,
+    exp: clock.s + 86400,
+    cnf: { jwk: key.publicJwk },
+    ...overrides,
+  });
+  return { id, key, token, jkt: await jwkThumbprint(key.publicJwk) };
+}
+
+/** The decoded payload of a compact JWT. */
+export function claims(jwt: string): Record<string, unknown> {
+  return JSON.parse(Buffer.from(jwt.split(".")[1] ?? "", "base64url").toString("utf8"));
+}
+
+export interface Reply {
+  status: number;
+  headers: Headers;
+  body: Record<string, unknown>;
+}
+
+async function reply(res: Response): Promise<Reply> {
+  const text = await res.text();
+  return { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : {} };
+}
+
+export interface SignOptions {
+  /** Sign for this URL instead of the one the request is sent to. */
+  signedUrl?: string;
+  /** Extra request headers, sent and offered to the signer. */
+  headers?: Record<string, string>;
+  /** Covered components instead of the library default. */
+  components?: string[];
+  /** Advance the shared clock before signing (default 1 second), so `created` is fresh. */
+  tick?: number;
+}
+
+/** A signed request from `agent`, with its agent token under the `jwt` scheme. */
+export async function signed(
+  clock: Clock,
+  method: "GET" | "POST",
+  url: string,
+  agent: Agent,
+  body?: unknown,
+  options: SignOptions = {},
+): Promise<Reply> {
+  clock.advance(options.tick ?? 1);
+  const text = body === undefined ? undefined : JSON.stringify(body);
+  const headers: Record<string, string> = { ...(options.headers ?? {}) };
+  if (text !== undefined) headers["content-type"] = "application/json";
+  const added = signRequest(
+    { method, url: options.signedUrl ?? url, headers, body: text },
+    {
+      alg: agent.key.alg,
+      privateKey: agent.key.privateKey,
+      signatureKey: { scheme: "jwt", jwt: agent.token },
+      created: clock.s,
+      ...(options.components ? { components: options.components } : {}),
+    },
+  );
+  const init: RequestInit = { method, headers: { ...headers, ...added } };
+  if (text !== undefined) init.body = text;
+  return reply(await fetch(url, init));
+}
+
+const CONFIG_FILE = new URL("../../../config/aauth-ps.json", import.meta.url);
+
+/** The shipped configuration document, parsed as JSON for a test to adjust. */
+export function shippedConfig(): Record<string, unknown> {
+  return JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
+}
+
+export interface WorldOptions {
+  /** Adjust the configuration document before it is validated. */
+  config?: (doc: Record<string, unknown>) => void;
+  /** Wrap the durable store (to make a read or a write fail). */
+  store?: (store: SqlitePsStore) => PsStore;
+}
+
+export interface World {
+  clock: Clock;
+  net: LoopbackNet;
+  ap: IssuerStub;
+  rs: IssuerStub;
+  rs2: IssuerStub;
+  /** Another person server, publishing its own keys. */
+  ps2: IssuerStub;
+  ps: PersonServer;
+  origin: string;
+  /** A token signed with the PS's own key, as the PS would never mint it. */
+  psMint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
+  close(): Promise<void>;
+}
+
+/** A PS on loopback with an agent provider, two resources and a second PS. */
+export async function world(options: WorldOptions = {}): Promise<World> {
+  const clock = new Clock();
+  const net = new LoopbackNet();
+  const ap = await startIssuer(net, AP, "aauth-agent.json");
+  const rs = await startIssuer(net, RS, "aauth-resource.json");
+  const rs2 = await startIssuer(net, RS2, "aauth-resource.json");
+  const ps2 = await startIssuer(net, PS2, "aauth-person.json");
+  const doc = shippedConfig();
+  options.config?.(doc);
+  const dir = mkdtempSync(join(tmpdir(), "aauth-ps-"));
+  const durable = new SqlitePsStore(join(dir, "ps.db"));
+  const store = options.store ? options.store(durable) : durable;
+  const ps = createPersonServer({
+    config: parsePsConfig(doc),
+    store,
+    resolver: net.resolver(clock),
+    now: clock.now,
+  });
+  const running = await ps.listen();
+  net.register(PS, running.origin);
+  const kid = ps.signingKey.publicJwk.kid as string;
+  return {
+    clock,
+    net,
+    ap,
+    rs,
+    rs2,
+    ps2,
+    ps,
+    origin: running.origin,
+    psMint: (typ, c) =>
+      mintToken(typ, c, { alg: ps.signingKey.alg, privateKey: ps.signingKey.privateKey, kid }),
+    close: async () => {
+      await running.close();
+      for (const stub of [ap, rs, rs2, ps2]) await stub.running.close();
+      durable.close();
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
+}
+
+/** POST {mission_endpoint}. */
+export function propose(w: World, agent: Agent, proposal: Record<string, unknown>): Promise<Reply> {
+  return signed(w.clock, "POST", `${w.origin}/mission`, agent, proposal);
+}
+
+/** Propose and return the approval; fails the test if it is not approved. */
+export async function approve(
+  w: World,
+  agent: Agent,
+  proposal: Record<string, unknown> = { description: "Summarize the quarterly report" },
+): Promise<{ s256: string; mission: string; person_tokens?: Record<string, string> }> {
+  const r = await propose(w, agent, proposal);
+  if (r.status !== 200) throw new Error(`approval failed: ${r.status} ${JSON.stringify(r.body)}`);
+  return r.body as { s256: string; mission: string };
+}
+
+/** POST {person_token_endpoint}. */
+export function requestPersonToken(
+  w: World,
+  agent: Agent,
+  params: Record<string, unknown>,
+): Promise<Reply> {
+  return signed(w.clock, "POST", `${w.origin}/person`, agent, params);
+}
+
+/** A person token for `resource`, under `s256` when given. */
+export async function personToken(
+  w: World,
+  agent: Agent,
+  resource: string,
+  s256?: string,
+): Promise<string> {
+  const params: Record<string, unknown> = { resource };
+  if (s256 !== undefined) params.mission_s256 = s256;
+  const r = await requestPersonToken(w, agent, params);
+  if (r.status !== 200)
+    throw new Error(`person token refused: ${r.status} ${JSON.stringify(r.body)}`);
+  return r.body.person_token as string;
+}
+
+/** POST {auth_token_endpoint}. */
+export function requestAuthToken(
+  w: World,
+  agent: Agent,
+  params: Record<string, unknown>,
+): Promise<Reply> {
+  return signed(w.clock, "POST", `${w.origin}/token`, agent, params);
+}
+
+/**
+ * A resource token from `resource` (default `rs`) for the token the agent
+ * presented: `ps`, `sub`, `presented_jti`, `mission_s256` and `tenant`
+ * copied from it as AAuth -11 Section 6.7.1 requires, then `overrides`
+ * (a value of `undefined` removes the claim).
+ */
+export async function resourceTokenFor(
+  w: World,
+  agent: Agent,
+  presented: string,
+  overrides: Record<string, unknown> = {},
+  resource: IssuerStub = w.rs,
+): Promise<string> {
+  const p = claims(presented);
+  const c: Record<string, unknown> = {
+    iss: resource.id,
+    dwk: "aauth-resource.json",
+    aud: PS,
+    ps: p.dwk === "aauth-person.json" && p.ps === undefined ? p.iss : p.ps,
+    sub: p.sub,
+    presented_jti: p.jti,
+    agent_jkt: agent.jkt,
+    jti: randomUUID(),
+    iat: w.clock.s,
+    exp: w.clock.s + 300,
+    scope: "data.read",
+  };
+  if (p.mission_s256 !== undefined) c.mission_s256 = p.mission_s256;
+  if (p.tenant !== undefined) c.tenant = p.tenant;
+  for (const [name, value] of Object.entries(overrides)) {
+    if (value === undefined) delete c[name];
+    else c[name] = value;
+  }
+  return resource.mint("aa-resource+jwt", c);
+}
+
+/** The number of issued-token records, for refusal tests. */
+export function issuedCount(w: World): number {
+  return w.ps.store.issuedTokens().length;
+}

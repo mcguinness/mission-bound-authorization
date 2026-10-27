@@ -233,6 +233,15 @@ importers:
         specifier: ^10.3.1
         version: 10.3.1
 
+  services/aauth-ps:
+    dependencies:
+      '@mission/aauth-wire':
+        specifier: workspace:*
+        version: link:../../packages/aauth-wire
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+
   services/access-request:
     dependencies:
       '@mission/core':
