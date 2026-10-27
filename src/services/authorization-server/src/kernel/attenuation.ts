@@ -101,7 +101,7 @@ function carriedToolId(entry: AuthorityEntry, action: string): string | undefine
 }
 
 /**
- * @spec attenuation#root-mapping — a tool's argument constraint map: every
+ * @spec attenuation#root-mapping: a tool's argument constraint map: every
  * argument the operations declare, each admitted explicitly by a wildcard,
  * and no `"*"` entry. An argument is required only when every operation
  * declares it required; otherwise it is `optional`, which leaves its
@@ -161,7 +161,7 @@ function ceilingTools(
 }
 
 /**
- * @spec attenuation#root-mapping (#1756, D902, D904) — the mapped ceiling: the
+ * @spec attenuation#root-mapping (#1756, D902, D904): the mapped ceiling: the
  * most a root derived from `entries` can carry. Each tool's argument
  * constraints name every argument its operations declare, each an explicit
  * wildcard; its `mission_constraints` value is the mapping entry's
@@ -265,7 +265,7 @@ function assertCarriable(authority: AttenuatedAuthority): void {
 }
 
 /**
- * @spec attenuation#root-mapping — forward map on the cross-organization
+ * @spec attenuation#root-mapping: forward map on the cross-organization
  * wire (#1759 moves it to -02): Authority Set -> AAT `tools`. Each (resource,
  * action) becomes one tool; the entry's Common Constraints become the tool's
  * argument constraints (`max_amount` -> `amount_<ccy>` as a range, `vendors`
@@ -355,7 +355,7 @@ function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToo
 }
 
 /**
- * @spec attenuation#root-mapping — reverse map on the cross-organization
+ * @spec attenuation#root-mapping: reverse map on the cross-organization
  * wire: AAT `tools` -> Authority Set, one single-action entry per tool. The
  * currency is synthesized from the argument name (`amount_usd` -> `USD`) so
  * that {@link isSubsetEntry}'s currency hard-fail is meaningful when the
@@ -400,7 +400,7 @@ function constraintsFromArgs(args: AATToolArgs): AuthorityEntry["constraints"] |
 }
 
 /**
- * @spec attenuation#request-discovery — a client-requested root authority:
+ * @spec attenuation#request-discovery: a client-requested root authority:
  * the `tools` and `mission_constraints` of the request's
  * `attenuating_agent_token` detail. A tool with no `mission_constraints`
  * value asks for the ceiling's.

@@ -76,7 +76,7 @@ function constraintSubset(child: AATConstraint, parent: AATConstraint): boolean 
 }
 
 /**
- * @spec cross-org-delegation#derivation — capability monotonicity as the
+ * @spec cross-org-delegation#derivation: capability monotonicity as the
  * cross-organization chain checks it today (#1759 moves it to -02): `child`
  * is a subset of `parent` when every child tool exists in the parent, every
  * constraint the parent placed on that tool is present on the child and at

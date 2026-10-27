@@ -398,12 +398,12 @@ async function readValidatedBody(
 
 /** The request signals carried to the PEP beside any validated credential. */
 function requestSignals(req: IncomingMessage): Pick<RequestSignals, "acceptTxnChallenge" | "missionReference"> {
-  // @spec txn-authorization#resource-challenge — the client's
+  // @spec txn-authorization#resource-challenge: the client's
   // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
   // request header (an RFC 8941 Boolean, so `?1` and nothing else is
   // acceptance) and is carried to the PEP alongside the validated facts.
   const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
-  // @spec authority-server#mission-reference-field — the propagated Mission
+  // @spec authority-server#mission-reference-field: the propagated Mission
   // Reference is a Structured Fields Dictionary on exactly one field line;
   // the raw header view supplies the line count (node joins repeats), and a
   // malformed parse is CARRIED to the PEP, which refuses governed work on

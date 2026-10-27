@@ -158,12 +158,12 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     if (presented === undefined) {
       try {
         if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
-        // @spec txn-authorization#transaction-token — ONE credential crosses the
+        // @spec txn-authorization#transaction-token: ONE credential crosses the
         // boundary: the ordinary Mission-bound token, or the transaction token
         // that authorizes the retry of a challenged operation. There is no
         // separate txn carrier on this channel either.
         //
-        // @spec txn-authorization#offline-verification step 2 — but a transaction
+        // @spec txn-authorization#offline-verification step 2: but a transaction
         // credential requires proof of possession on the request that presents
         // it, and this channel has no HTTP request to bind a proof to (the
         // documented simplification the ordinary class runs under). The

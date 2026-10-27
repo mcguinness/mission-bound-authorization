@@ -33,7 +33,7 @@ import {
   parseCredentialAuthority,
 } from "./credential-authority.js";
 
-/** @spec attenuation#mission-constraints — the profile-defined member of the `attenuating_agent_token` entry. */
+/** @spec attenuation#mission-constraints: the profile-defined member of the `attenuating_agent_token` entry. */
 export const MISSION_CONSTRAINTS_MEMBER = "mission_constraints";
 
 /** One tool's value in `mission_constraints`: the mapped entry's restrictions, unchanged or narrowed. */
@@ -81,7 +81,7 @@ export function aatEntryOf(claims: Record<string, unknown>): Record<string, unkn
 }
 
 /**
- * @spec attenuation#mission-constraints — the entry's `mission_constraints`,
+ * @spec attenuation#mission-constraints: the entry's `mission_constraints`,
  * shape-checked against its `tools`: exactly one value per tool and no other
  * member, each value an object with a REQUIRED `constraints` object and an
  * optional `resource_contract` object, and nothing else.
@@ -157,7 +157,7 @@ export function missionToolEntry(toolId: string, value: MissionToolConstraints):
 }
 
 /**
- * @spec attenuation#mission-binding-check — the authority a token's tools and
+ * @spec attenuation#mission-binding-check: the authority a token's tools and
  * `mission_constraints` grant, as credential entries the PEP enforces against
  * the facts it establishes. A constraint key this enforcement point does not
  * understand or cannot enforce, or a malformed value, throws: it is never
@@ -183,7 +183,7 @@ export function credentialEntriesFromMissionAat(
 }
 
 /**
- * @spec attenuation#mission-constraints — why `child` does not narrow
+ * @spec attenuation#mission-constraints: why `child` does not narrow
  * `parent`, or undefined. For every tool the child keeps, its one-action
  * entry is a subset of the parent's under the Resource Access subset rule:
  * every parent constraint kept and no broader (step 3), the contract
