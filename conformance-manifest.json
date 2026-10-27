@@ -22665,9 +22665,15 @@
      "name": "revoke-only Lifecycle deployment: the advertised endpoint (@spec status#conformance, status#as-metadata, status#mission-status-response, #1191) > answers revoke with the signed state-only Mission Status Response: aud the client's client_id, the request's nonce, and every required member",
      "level": "endpoint",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint signed state-only response (@spec status#mission-status-response, status#mission-lifecycle-endpoint, #1191) > answers suspend, resume and complete with the same signed shape, and an idempotent success with the current state",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "D921 item 1: the Lifecycle success response is stated in Operations. partial: the cited witnesses answer `revoke`; the `suspend`, `resume` and `complete` responses are not separately witnessed."
+   "notes": "D921 item 1: the Lifecycle success response is stated in Operations. partial: the `revoke` witnesses check the signed response, `aud` and `sub` as the client, the request's `nonce`, and no `authorization_details`; the `suspend`, `resume` and `complete` witness checks the signed media type, `aud`, `sub` and `nonce`, but not the absence of `authorization_details` for those operations."
   },
   {
    "id": "status.lifecycle.schedule-applied-at-deadline",
