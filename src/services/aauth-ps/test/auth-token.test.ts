@@ -562,6 +562,20 @@ describe("6.7.2 step 4 and governance", () => {
     );
   });
 
+  it("refuses a mission_s256 that is not a string, matched on both tokens: invalid_resource_token", async () => {
+    const pt = await w.psMint("aa-person+jwt", personClaims(w, assistant, { mission_s256: true }));
+    const rt = await resourceTokenFor(w, assistant, pt);
+    expect(claims(rt).mission_s256).toBe(true);
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(
+      r,
+      400,
+      "invalid_resource_token",
+      0,
+      "mission_s256 does not name a mission of this agent",
+    );
+  });
+
   it("V12: refuses when the mission's state cannot be established: server_error", async () => {
     const { pt } = await grant();
     const before = issuedCount(w);
