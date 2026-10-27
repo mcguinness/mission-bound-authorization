@@ -1391,14 +1391,9 @@ AS that supports none still applies them and refuses every presented
 entry ({{conformance-roles}}).
 
 Mission Intent Submission Evidence for OAuth 2.0
-({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies:
-
-- the entry convention;
-- required-evidence resolution;
-- the binding of evidence to one Intent and to the presenter;
-- the verification-cost bound;
-- where the error is returned; and
-- evidence on idempotent creation surfaces.
+({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies
+the evidence framework, including required-evidence resolution and the
+binding of evidence to one Intent and its presenter.
 
 ## Submission Processing Order {#submission-processing}
 
