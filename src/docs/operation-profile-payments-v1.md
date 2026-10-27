@@ -1,12 +1,22 @@
-# payments-runtime-profile-v14
+# payments-runtime-profile-v15
 
 The Operation Profile (runtime § operation-profile; decision D34) for the
 internal payments estate. Every component that produces or verifies bytes
 (AS derivation, PDP, PEP, evidence verifier, evals) implements this
-document. Version: `payments-runtime-profile-v14`; changes bump the suffix.
+document. Version: `payments-runtime-profile-v15`; changes bump the suffix.
 The file name is the document's stable name and does not carry the version.
 
 ## Version history
+
+- **v15** (#1693, D873, D879): changes only `reverse_wire_transfer`. Its
+  `tenant` fact is the current tenant of the vendor the committed wire
+  paid, never the vendor the invoice names now, in the decision request
+  and in its Evaluation-Context Binding descriptor (`payment-reverse`
+  version `2026-10-26`), and the crossing does not read the invoice's
+  current vendor at all. The payments resource contract gains version
+  `2026-10-26`, which names this profile; `2026-10-24` (v14) is
+  superseded, and a reversal pinned to it is refused (Resource contract,
+  below). Every other operation keeps its decision bytes.
 
 - **v14** (#252): adds `reverse_wire_transfer`, the compensate phase of the
   wire (`payments:payment.reverse`). It offsets a committed wire through the
@@ -207,11 +217,29 @@ Resource Access, Resource Contracts). Its declaration is the Enforcement Scope
 Statement's `extensions.resource_contracts`: one contract, `id`
 `https://payments.example/contracts/payments`, served for the canonical
 resource URI under `resource_match: prefix` (so a finer target beneath the
-service, such as an argument-derived invoice target, is covered), with two
-versions: `2026-10-24` in state `current`, naming
-`payments-runtime-profile-v14`, and `2026-10-20` in state `superseded`,
-naming v13, retained until `2027-10-24T00:00:00Z`. Both are frozen in
-`vectors/mission-resource-access-subset/`.
+service, such as an argument-derived invoice target, is covered), with three
+versions, each frozen in `vectors/mission-resource-access-subset/`:
+
+| Version | State | Operation Profile | Retained until |
+|---|---|---|---|
+| `2026-10-26` | `current` | `payments-runtime-profile-v15` | |
+| `2026-10-24` | `superseded` | `payments-runtime-profile-v14` | `2027-10-26T00:00:00Z` |
+| `2026-10-20` | `superseded` | `payments-runtime-profile-v13` | `2027-10-24T00:00:00Z` |
+
+- **Authority pinned to a superseded version.** An entry carrying a
+  superseded reference is performed, within its retention, under the
+  profile that version names, never under the live one
+  (`RETAINED_OPERATION_PROFILES`). v13 has no `reverse_wire_transfer`. v14
+  named it, but v15 changed what it reads (the paid vendor's current
+  tenant, not the invoice's current vendor's), and this resource no
+  longer performs the v14 reversal, so the retained v14 profile omits it.
+  A reversal under an entry pinned to `2026-10-24` is refused
+  `resource_contract_unresolvable` before any decision request, with a
+  Refusal Record and no effect, unless another applicable entry covers it;
+  it never gets v15's semantics silently. Every other crossing pinned to
+  `2026-10-24` performs exactly as under v14, since v15 changes no other
+  crossing. An unpinned entry, and one pinned to `2026-10-26`, reverses
+  under v15.
 
 - **Contract material.** The version's document assembles, for each tool:
   its action identifier and phase, its minimum action class, its
@@ -220,7 +248,9 @@ naming v13, retained until `2027-10-24T00:00:00Z`. Both are frozen in
   takes an idempotency key, and its catalog capability (`tool_id` and the
   extracted-definition `source_digest`). It names, per constraint key, the
   fact the resource reads, and the Operation Profile version it assembles
-  (`operation_profile`: `payments-runtime-profile-v14` for `2026-10-24`).
+  (`operation_profile`: `payments-runtime-profile-v15` for `2026-10-26`).
+  `2026-10-26` differs from `2026-10-24` only in its version, its profile
+  and the `tenant` fact it names for `reverse_wire_transfer`.
   It overrides none of
   those definitions. Resource policy, Mission state, entitlements,
   revocation and resolved resource facts are not contract material.
