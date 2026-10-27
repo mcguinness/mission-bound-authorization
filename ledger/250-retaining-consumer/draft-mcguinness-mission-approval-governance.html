@@ -1064,7 +1064,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 29 April 2027</td>
+<td class="center">Expires 30 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1077,12 +1077,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-approval-governance-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-26" class="published">26 October 2026</time>
+<time datetime="2026-10-27" class="published">27 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-30">30 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ be matched to one approval.<a href="#section-abstract-2" class="pilcrow">¶</a><
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 30 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2724,20 +2724,22 @@ separate mechanism.<a href="#section-11-11.6.1" class="pilcrow">¶</a></p>
 <a href="#section-11.1" class="section-number selfRef">11.1. </a><a href="#name-example-2" class="section-name selfRef">Example</a>
         </h3>
 <p id="section-11.1-1">A company approves a Mission to purchase office supplies within set
-limits. Approval event <code>E42</code> creates Mission <code>M17</code>. The Mission Issuer
-signs record <code>G42</code>, recording the governance assertions and the
-approval outcome, and later mints Mandate <code>D17</code>, which carries <code>M17</code>,
-<code>E42</code>, and the same <code>intent_hash</code> and <code>authority_hash</code>.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
-<p id="section-11.1-2">The purchasing agent then submits purchase order <code>PO-9001</code>, and the
-company's ERP records its own business decision for that order as
-<code>BD-9001</code>, naming the order, the policy version it applied, the
-decision, and its time. <code>BD-9001</code> is an illustrative deployment
-record; this document defines no format for it.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
-<p id="section-11.1-3">An auditor receives <code>G42</code> and <code>D17</code> through an authorized evidence
-export (<a href="#privacy-considerations" class="auto internal xref">Section 18</a>), without the Mission Record or the
-evaluation's inputs. The check connects <code>G42</code> to the approval event
-<code>D17</code> identifies. It does not show that <code>PO-9001</code> was individually
-approved, within authority, or executed: relating <code>BD-9001</code> to the
+limits. The approval event creates the Mission. The Mission Issuer
+signs an Approval Governance Record for that event, recording the
+governance assertions and the approval outcome, and later mints a
+Mandate that identifies the Mission and approval event and carries
+the same <code>intent_hash</code> and <code>authority_hash</code>.<a href="#section-11.1-1" class="pilcrow">¶</a></p>
+<p id="section-11.1-2">The purchasing agent then submits a purchase order, and the company's
+ERP records its own business decision for that order, naming the
+order, the policy version it applied, the decision, and its time. The
+ERP's decision record is illustrative; this document defines no
+format for it.<a href="#section-11.1-2" class="pilcrow">¶</a></p>
+<p id="section-11.1-3">An auditor receives the governance record and the Mandate through an
+authorized evidence export (<a href="#privacy-considerations" class="auto internal xref">Section 18</a>), without the
+Mission Record or the evaluation's inputs. The check connects the
+governance record to the approval event the Mandate identifies. It
+does not show that the purchase order was individually approved,
+within authority, or executed: relating the ERP's decision to the
 order takes separate action evidence. A Mission scoped to approving
 one particular order could itself carry that business decision, but
 the auditor has to establish that scope, for example from the
@@ -2749,31 +2751,34 @@ Authority Set; an approval-event match never implies it.<a href="#section-11.1-3
         <h3 id="name-example-an-approvers-transf">
 <a href="#section-11.2" class="section-number selfRef">11.2. </a><a href="#name-example-an-approvers-transf" class="section-name selfRef">Example: An Approver's Transfer</a>
         </h3>
-<p id="section-11.2-1">Continuing the example above, the purchasing officer who approved
-<code>E42</code> transfers to another role before <code>PO-9001</code> is placed. <code>G42</code>
-records her approval in every deployment below; what her transfer
-changes depends on each deployment's policy:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
+<p id="section-11.2-1">Continuing the example above, the purchasing officer who approved the
+Mission transfers to another role before the purchase order is
+placed. The governance record records her approval in every
+deployment below; what her transfer changes depends on each
+deployment's policy:<a href="#section-11.2-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-11.2-2.1">
-            <p id="section-11.2-2.1.1"><strong>An organizational decision.</strong> <code>M17</code> commits the company to the
-approved purchasing. It stays effective until fulfillment, expiry,
-or withdrawal, and her transfer changes nothing the agent relies on.<a href="#section-11.2-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-11.2-2.1.1"><strong>An organizational decision.</strong> The Mission commits the company to
+the approved purchasing. It stays effective until fulfillment,
+expiry, or withdrawal, and her transfer changes nothing the agent
+relies on.<a href="#section-11.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-2.2">
-            <p id="section-11.2-2.2.1"><strong>A personal delegation.</strong> <code>M17</code> delegates the officer's own
+            <p id="section-11.2-2.2.1"><strong>A personal delegation.</strong> The Mission delegates the officer's own
 purchasing authority, and the deployment declares a dependency on
 her holding it. When the authoritative directory records her
 transfer, the dependency is withdrawn at its source; within the
-deployment's declared bound, further orders under <code>M17</code> are
+deployment's declared bound, further orders under the Mission are
 refused.<a href="#section-11.2-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.2-2.3">
             <p id="section-11.2-2.3.1"><strong>A required accountable owner.</strong> The deployment requires an
-eligible owner for the work. Her transfer suspends <code>M17</code> until a
-successor accepts responsibility through an authorized process,
-recorded separately from <code>G42</code>. That acceptance permits an
-authorized resumption, subject to the remaining checks; the
-successor does not become the approver of <code>E42</code>.<a href="#section-11.2-2.3.1" class="pilcrow">¶</a></p>
+eligible owner for the work. Her transfer suspends the Mission until
+a successor accepts responsibility through an authorized process,
+recorded separately from the governance record. That acceptance
+permits an authorized resumption, subject to the remaining checks;
+the successor does not become the approver of the original approval
+event.<a href="#section-11.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -4427,7 +4432,14 @@ accountable owner when the approver transfers. No requirement
 changed (#830).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">A separately named portable approval-binding check lets a Relying
+          <p id="appendix-C-2.2.1">The portable-binding example and the approver-transfer example name
+each record by its role (the approval event, the Mission, the
+governance record, the Mandate, the purchase order, the ERP's
+decision) in place of identifiers such as <code>E42</code> and <code>M17</code>. No
+requirement changed.<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">A separately named portable approval-binding check lets a Relying
 Auditor without the Mission Record establish that an authenticated
 record and an authenticated Mission reference agree on the approval
 event and the Mission anchors, with explicit commitment handling,
@@ -4435,26 +4447,26 @@ distinct failure and insufficient-evidence outcomes, stated limits,
 a procurement example and vectors. Privacy Considerations relate the
 record's retention to an authorized evidence export or evidence
 bundle. The existing verification and re-check procedures are
-unchanged (#1572).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+unchanged (#1572).<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">Immutability Witness: a mismatch between a recomputed Approval
+        <li class="normal" id="appendix-C-2.4">
+          <p id="appendix-C-2.4.1">Immutability Witness: a mismatch between a recomputed Approval
 Context Commitment and the value an artifact disclosed shows that
 the two disagree. It is evidence that the Mission Record was altered
 only where an audit receipt independently shows the artifact
 predates the change and the disclosed value matches the registered
 approval event; a signature alone does not establish when an
-artifact was made. No requirement changed.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+artifact was made. No requirement changed.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.4">
-          <p id="appendix-C-2.4.1">An assertion that can narrow the authority, such as a model output, is
+        <li class="normal" id="appendix-C-2.5">
+          <p id="appendix-C-2.5.1">An assertion that can narrow the authority, such as a model output, is
 bound to the <code>authority_hash</code> of the set it evaluated, which the
 issuer records with the activation's inputs, rather than to the
 narrowed result; Activation step 8 and the re-check follow (#1436 item
-16).<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+16).<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.5">
-          <p id="appendix-C-2.5.1">Resolutions of the remaining #1436 questions. An assertion binds to
+        <li class="normal" id="appendix-C-2.6">
+          <p id="appendix-C-2.6.1">Resolutions of the remaining #1436 questions. An assertion binds to
 the approval event's <code>intent_hash</code> as well. Policy-authorization says
 what it checks for a <code>policy</code> assertion. <code>contributing</code> lists what the
 satisfied rule counted, so a <code>deny</code> assertion never appears in it. An
@@ -4464,10 +4476,10 @@ one <code>approved_at</code> verification rule. Conventions names both digest
 sources. Re-checking an Evaluation defines the Relying Auditor's
 re-check. Privacy Considerations name two correlators. A policy
 version that several humans approved names its one accountable human
-as the principal.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
+as the principal.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.6">
-          <p id="appendix-C-2.6.1">Four rulings on the #1436 questions (D568), each a change in
+        <li class="normal" id="appendix-C-2.7">
+          <p id="appendix-C-2.7.1">Four rulings on the #1436 questions (D568), each a change in
 requirements. The recording triggers bind only under a profile that
 adopts them, and a record kept voluntarily meets every requirement on
 a record. The accountable-approver rule is stated per approval basis:
@@ -4480,10 +4492,10 @@ assertions in the consent principal's name contribute. Assertion
 Authority types <code>authority</code> for each assertion kind, and a <code>policy</code>
 assertion's principal is the human who approved the policy version.
 The JWS <code>typ</code> and <code>cty</code> are emitted with <code>application/</code> omitted and
-compared as media types.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
+compared as media types.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.7">
-          <p id="appendix-C-2.7.1">Editorial restructure, with no change to any requirement: Recording
+        <li class="normal" id="appendix-C-2.8">
+          <p id="appendix-C-2.8.1">Editorial restructure, with no change to any requirement: Recording
 Triggers precedes the record; the record, Assertion Requirements and
 Policy-Approval Recency are split into subsections; Boundaries is
 folded into the sections it qualified; Conformance precedes Security
@@ -4493,16 +4505,16 @@ to the issuance profile's. Conventions defines the accountable
 assertion, the record digest, the Recording Issuer and the Relying
 Auditor. New examples show one approval per recording trigger, the
 decoded JWS protected header, a <code>governed_policy</code> activation with its
-recency computation, and the matching Consent Evidence members.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.8">
-          <p id="appendix-C-2.8.1">Recording Triggers states that a Mission whose Approver differs
-from its Subject holds the first trigger, so the Enterprise Mission
-Authority Profile always records the record for it; the triggers
-are unchanged (#1196).<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
+recency computation, and the matching Consent Evidence members.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.9">
-          <p id="appendix-C-2.9.1">Governed Policy Approval defines the <code>governed_policy</code>
+          <p id="appendix-C-2.9.1">Recording Triggers states that a Mission whose Approver differs
+from its Subject holds the first trigger, so the Enterprise Mission
+Authority Profile always records the record for it; the triggers
+are unchanged (#1196).<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.10">
+          <p id="appendix-C-2.10.1">Governed Policy Approval defines the <code>governed_policy</code>
 standing-consent basis: a human-approved <code>approval_policy</code> snapshot
 is the consented root, a <code>policy</code> assertion in that human's name is
 the accountable assertion, and each activation passes nine checks
@@ -4512,40 +4524,40 @@ accountable assertion each basis requires: <code>human</code> for <code>direct</
 the other standing-consent bases. Where the governed Mission
 populates <code>adjudication</code>, the accountable assertion's <code>kind</code> equals
 <code>adjudication.kind</code>; this document, not the OAuth binding, holds
-both rules (#1185).<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
+both rules (#1185).<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.10">
-          <p id="appendix-C-2.10.1">The accountable principal is the Mission Record's
+        <li class="normal" id="appendix-C-2.11">
+          <p id="appendix-C-2.11.1">The accountable principal is the Mission Record's
 <code>approval_basis.consent_principal</code>. The Approval Context Manifest
 keeps its <code>approver</code> member, sourced from that value, so
 <code>mission-approval-context-v1</code> and vectors 1 to 6 are unchanged; the
 manifest excludes both mutable record members, <code>state</code> and
-<code>termination</code> (#705).<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.11">
-          <p id="appendix-C-2.11.1">Assertion Requirements and the <code>authority</code> member name a <code>policy</code>
-assertion's policy as the decision mechanism; the principal it
-matches stays the accountable approver. The policy assertion path,
-provenance and recency checks are unchanged (#1084).<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
+<code>termination</code> (#705).<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.12">
-          <p id="appendix-C-2.12.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
+          <p id="appendix-C-2.12.1">Assertion Requirements and the <code>authority</code> member name a <code>policy</code>
+assertion's policy as the decision mechanism; the principal it
+matches stays the accountable approver. The policy assertion path,
+provenance and recency checks are unchanged (#1084).<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.13">
+          <p id="appendix-C-2.13.1">The accountable approver's assertion is <code>human</code> or <code>policy</code>, never
 <code>service</code>, and <code>authority</code> is defined for a <code>service</code> assertion,
 naming the model's identifier and version where a model produced
 the decision. A model-backed judge contributes as a governance input
-and never becomes the accountable approver. This adds a requirement.<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
+and never becomes the accountable approver. This adds a requirement.<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.13">
-          <p id="appendix-C-2.13.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
+        <li class="normal" id="appendix-C-2.14">
+          <p id="appendix-C-2.14.1">The Approval Context Manifest copies a recorded <code>ceiling_hash</code>
 verbatim, so the Progressive profile is an informative reference,
 meeting the maturity bound of the reference classification
 convention (a Standards-Track draft never lists an Experimental
 draft as normative). The manifest's members and both <code>ceiling_hash</code>
-presence requirements are unchanged.<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
+presence requirements are unchanged.<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.14">
-          <p id="appendix-C-2.14.1">Clarified that the direct-human degenerate case presumes resolution by
-that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
+        <li class="normal" id="appendix-C-2.15">
+          <p id="appendix-C-2.15.1">Clarified that the direct-human degenerate case presumes resolution by
+that human, not agent-invokable approval on the human's behalf (#759).<a href="#appendix-C-2.15.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

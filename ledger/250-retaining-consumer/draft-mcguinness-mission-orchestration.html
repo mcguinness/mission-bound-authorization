@@ -1059,7 +1059,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 29 April 2027</td>
+<td class="center">Expires 30 April 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1072,12 +1072,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-orchestration-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-26" class="published">26 October 2026</time>
+<time datetime="2026-10-27" class="published">27 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Experimental</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-04-29">29 April 2027</time></dd>
+<dd class="expires"><time datetime="2027-04-30">30 April 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1132,7 +1132,7 @@ active Mission, never the terminated Mission.<a href="#section-abstract-1" class
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 29 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 30 April 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -2549,7 +2549,7 @@ reference:<a href="#section-11.1-1" class="pilcrow">¶</a></p>
             <p id="section-11.1-2.1.1">append-only integrity protection under a named mechanism;<a href="#section-11.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-2.2">
-            <p id="section-11.1-2.2.1">a per-Mission sequence indicator;<a href="#section-11.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-11.1-2.2.1">a per-emitter sequence indicator for each Mission;<a href="#section-11.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-11.1-2.3">
             <p id="section-11.1-2.3.1">no raw parameters in the record; and<a href="#section-11.1-2.3.1" class="pilcrow">¶</a></p>
@@ -2825,22 +2825,27 @@ and avoid recording raw user content when identifiers are sufficient.<a href="#s
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">In-Flight Requests (<a href="#in-flight" class="auto internal xref">Section 8</a>): <code>committed</code> requires evidence
+          <p id="appendix-A-2.1.1">Record Integrity and Retention (<a href="#evidence-integrity" class="auto internal xref">Section 11.1</a>): the
+imported sequence indicator is per emitter for each Mission, as the
+runtime profile scopes it. No requirement changed (#821).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">In-Flight Requests (<a href="#in-flight" class="auto internal xref">Section 8</a>): <code>committed</code> requires evidence
 that the effect occurred, and an outcome the deployment cannot
 establish is <code>unknown</code>, the runtime profile's undetermined outcome.
 Post-completion behavior, including <code>compensate</code>, applies to
 <code>committed</code> outcomes only; an <code>unknown</code> outcome goes to human review
-(#1269).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+(#1269).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">The non-active states are <code>terminated</code>, with its termination
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">The non-active states are <code>terminated</code>, with its termination
 reason, and <code>suspended</code>. Orchestration Evidence carries
 <code>mission_termination</code> beside a <code>terminated</code> <code>mission_state</code>, and
 continued work after reason <code>superseded</code> proceeds under the
-<code>termination.successor</code> (#705).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>termination.successor</code> (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Authority-Narrowing Behavior (<a href="#authority-narrowing" class="auto internal xref">Section 7.1</a>): a third
 State-Change Behavior trigger, independent of the non-active and
 staleness sequences, for a <code>mission.lifecycle-change</code> event's
 generic <code>authority_changed</code> true at unchanged <code>state</code>. The
@@ -2852,7 +2857,7 @@ is suppressed or paused, a denied <code>dispatched_not_committed</code> step
 follows its existing <code>in_flight_behavior</code>, and a <code>committed</code> step is
 never compensated on narrowing alone. <code>step_id</code> is <span class="bcp14">REQUIRED</span> on
 Orchestration Evidence reporting this trigger. Signals promoted from
-an informative to a normative reference (#670).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+an informative to a normative reference (#670).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
