@@ -89862,10 +89862,10 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an applicable constraint or consumption bound the PDP does not recognize or does not meter is an evaluated PDP denial carrying constraint_unsupported in the decision context and as denial_reason in Decision Evidence, never a permit, a parameter_violation, or a Refusal Record",
-    "local": "the reference's unmetered case is a max_budget binding its budget_metering declaration cannot meter, or an amount-bearing spend the declaration does not meter, under a budget-bound Mission"
+    "local": "the reference's unmetered case is a max_budget binding its budget_metering declaration cannot meter, or an amount-bearing spend the declaration does not meter, under a budget-bound Mission; its unrecognized case is a Mission entry constraints key outside the set the PDP evaluates, while the credential bound denies an unrecognized constraint credential_invalid under authzen#context-credential, not constraint_unsupported"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -89908,9 +89908,33 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement) > refuses an entry carrying an unrecognized constraints key rather than ignoring it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > an entry carrying an unrecognized key is denied constraint_unsupported whatever the facts, and a supported key the facts violate is denied parameter_violation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > an entry carrying an unrecognized key does not stop another complete, supported entry from authorizing, in either order, and the permit relies on the supported entry",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > an unrecognized constraint key and a budget the PDP cannot meter each sign denial_reason constraint_unsupported with no authority_bound (@spec authzen#failure-condition-coverage, #1772)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a binding the decision point's source answers underivable, throws on, or returns malformed is an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim, a read included; through the composed stack such an instance's payment is refused constraint_unsupported. F1, F2, F3 and Z2 fail the decision-point witness; F1, F3, F4, F5 and F5b fail the end-to-end one. Partial: an unrecognized constraint other than a budget binding is not witnessed, and no witness reads denial_reason in the Decision Evidence of a constraint_unsupported denial. The unclaimed and shipped-statement witnesses show the duty also holds without the capability, so applicability may be unconditional. Merged with #956: an unclassified request is refused before evaluation as action_class_missing, earlier than decision h, so its unclassified case is no longer cited here (the separate pre-evaluation witness shows nothing reserved or claimed)."
+   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a binding the decision point's source answers underivable, throws on, or returns malformed is an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim, a read included; through the composed stack such an instance's payment is refused constraint_unsupported. F1, F2, F3 and Z2 fail the decision-point witness; F1, F3, F4, F5 and F5b fail the end-to-end one. Partial: an unrecognized constraint other than a budget binding is not witnessed, and no witness reads denial_reason in the Decision Evidence of a constraint_unsupported denial. The unclaimed and shipped-statement witnesses show the duty also holds without the capability, so applicability may be unconditional. Merged with #956: an unclassified request is refused before evaluation as action_class_missing, earlier than decision h, so its unclassified case is no longer cited here (the separate pre-evaluation witness shows nothing reserved or claimed). #1772 (D907, fix/1772-constraint-unsupported at 8dcec123) resolves the partial reasons above: a Mission entry carrying a constraints key outside the set the PDP evaluates provides no authority and, with no other applicable entry, is an evaluated denial carrying constraint_unsupported with no authority_bound, never parameter_violation (kept for an evaluated violation), and the Decision Evidence witness reads denial_reason constraint_unsupported for an unrecognized key and for an unmeterable budget; mutants a (the key back to parameter_violation), b (an unsupported entry denies the whole request), c (the key treated as satisfied), d (an evaluated violation reclassified), e and i (the signed reason rewritten for each case), f (the unmetered gate rewritten) and j (refused before evaluation) each fail a cited witness, while an unrecognized constraint on a credential entry stays credential_invalid under the table's credential-authority row (authzen#context-credential)."
   },
   {
    "id": "evidence.refusal.work-item-invalid",
