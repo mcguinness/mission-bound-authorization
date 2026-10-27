@@ -32,7 +32,10 @@ import {
 } from "@mission/aauth-wire";
 import {
   createPersonServer,
+  type IssuedTokenRecord,
   listen,
+  type MissionLogEntry,
+  type MissionRecord,
   type PersonServer,
   type PsStore,
   parsePsConfig,
@@ -186,15 +189,15 @@ export interface SignOptions {
   tick?: number;
 }
 
-/** A signed request from `agent`, with its agent token under the `jwt` scheme. */
-export async function signed(
+/** The headers and body of a request signed by `agent` under the `jwt` scheme. */
+export function prepare(
   clock: Clock,
   method: "GET" | "POST",
   url: string,
   agent: Agent,
   body?: unknown,
   options: SignOptions = {},
-): Promise<Reply> {
+): { headers: Record<string, string>; body?: string } {
   clock.advance(options.tick ?? 1);
   const text = body === undefined ? undefined : JSON.stringify(body);
   const headers: Record<string, string> = { ...(options.headers ?? {}) };
@@ -209,9 +212,85 @@ export async function signed(
       ...(options.components ? { components: options.components } : {}),
     },
   );
-  const init: RequestInit = { method, headers: { ...headers, ...added } };
-  if (text !== undefined) init.body = text;
+  return text === undefined
+    ? { headers: { ...headers, ...added } }
+    : { headers: { ...headers, ...added }, body: text };
+}
+
+/** Send a prepared request. */
+export async function send(
+  method: "GET" | "POST",
+  url: string,
+  prepared: { headers: Record<string, string>; body?: string },
+): Promise<Reply> {
+  const init: RequestInit = { method, headers: prepared.headers };
+  if (prepared.body !== undefined) init.body = prepared.body;
   return reply(await fetch(url, init));
+}
+
+/** A signed request from `agent`, with its agent token under the `jwt` scheme. */
+export function signed(
+  clock: Clock,
+  method: "GET" | "POST",
+  url: string,
+  agent: Agent,
+  body?: unknown,
+  options: SignOptions = {},
+): Promise<Reply> {
+  return send(method, url, prepare(clock, method, url, agent, body, options));
+}
+
+/** Same status, error body and header names: what an observer can compare. */
+export function shape(r: Reply): { status: number; body: unknown; headers: string[] } {
+  const headers: string[] = [];
+  r.headers.forEach((_value, name) => {
+    headers.push(name);
+  });
+  return { status: r.status, body: r.body, headers: headers.sort() };
+}
+
+/**
+ * The durable store behind switches a test flips: a mission read that
+ * cannot establish state, a record write that fails, or a persisted blob
+ * altered after approval.
+ */
+export class FaultyStore implements PsStore {
+  failMissionReads = false;
+  failRecords = false;
+  tamperBlobs = false;
+
+  constructor(readonly inner: SqlitePsStore) {}
+
+  findOwnedMission(agent: string, s256: string): MissionRecord | undefined {
+    if (this.failMissionReads) throw new Error("mission state is unavailable");
+    const found = this.inner.findOwnedMission(agent, s256);
+    if (found && this.tamperBlobs)
+      return { ...found, blob: Buffer.concat([found.blob, Buffer.from(" ")]) };
+    return found;
+  }
+  approve(...args: Parameters<PsStore["approve"]>): void {
+    if (this.failRecords) throw new Error("the store refused the write");
+    this.inner.approve(...args);
+  }
+  recordIssued(...args: Parameters<PsStore["recordIssued"]>): void {
+    if (this.failRecords) throw new Error("the store refused the write");
+    this.inner.recordIssued(...args);
+  }
+  terminate(...args: Parameters<PsStore["terminate"]>): boolean {
+    return this.inner.terminate(...args);
+  }
+  issuedTokens(): IssuedTokenRecord[] {
+    return this.inner.issuedTokens();
+  }
+  missionLog(s256: string): MissionLogEntry[] {
+    return this.inner.missionLog(s256);
+  }
+  pairwiseKey(): Buffer {
+    return this.inner.pairwiseKey();
+  }
+  close(): void {
+    this.inner.close();
+  }
 }
 
 const CONFIG_FILE = new URL("../../../config/aauth-ps.json", import.meta.url);
@@ -224,8 +303,6 @@ export function shippedConfig(): Record<string, unknown> {
 export interface WorldOptions {
   /** Adjust the configuration document before it is validated. */
   config?: (doc: Record<string, unknown>) => void;
-  /** Wrap the durable store (to make a read or a write fail). */
-  store?: (store: SqlitePsStore) => PsStore;
 }
 
 export interface World {
@@ -237,6 +314,7 @@ export interface World {
   /** Another person server, publishing its own keys. */
   ps2: IssuerStub;
   ps: PersonServer;
+  faults: FaultyStore;
   origin: string;
   /** A token signed with the PS's own key, as the PS would never mint it. */
   psMint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
@@ -255,10 +333,10 @@ export async function world(options: WorldOptions = {}): Promise<World> {
   options.config?.(doc);
   const dir = mkdtempSync(join(tmpdir(), "aauth-ps-"));
   const durable = new SqlitePsStore(join(dir, "ps.db"));
-  const store = options.store ? options.store(durable) : durable;
+  const faults = new FaultyStore(durable);
   const ps = createPersonServer({
     config: parsePsConfig(doc),
-    store,
+    store: faults,
     resolver: net.resolver(clock),
     now: clock.now,
   });
@@ -273,6 +351,7 @@ export async function world(options: WorldOptions = {}): Promise<World> {
     rs2,
     ps2,
     ps,
+    faults,
     origin: running.origin,
     psMint: (typ, c) =>
       mintToken(typ, c, { alg: ps.signingKey.alg, privateKey: ps.signingKey.privateKey, kid }),
@@ -347,6 +426,17 @@ export async function resourceTokenFor(
   overrides: Record<string, unknown> = {},
   resource: IssuerStub = w.rs,
 ): Promise<string> {
+  return resource.mint("aa-resource+jwt", resourceClaims(w, agent, presented, overrides, resource));
+}
+
+/** The claims {@link resourceTokenFor} signs. */
+export function resourceClaims(
+  w: World,
+  agent: Agent,
+  presented: string,
+  overrides: Record<string, unknown> = {},
+  resource: IssuerStub = w.rs,
+): Record<string, unknown> {
   const p = claims(presented);
   const c: Record<string, unknown> = {
     iss: resource.id,
@@ -367,7 +457,35 @@ export async function resourceTokenFor(
     if (value === undefined) delete c[name];
     else c[name] = value;
   }
-  return resource.mint("aa-resource+jwt", c);
+  return c;
+}
+
+/**
+ * Person-token claims as this PS would issue them to `agent` for
+ * `resource` under `s256`, for a test to adjust and sign with the PS key
+ * (or another key) into a token the PS itself would never mint.
+ */
+export function personClaims(
+  w: World,
+  agent: Agent,
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  const c: Record<string, unknown> = {
+    iss: PS,
+    dwk: "aauth-person.json",
+    aud: RS,
+    sub: "pairwise-subject",
+    jti: randomUUID(),
+    iat: w.clock.s,
+    exp: w.clock.s + 600,
+    cnf: { jwk: agent.key.publicJwk },
+    tenant: "acme",
+  };
+  for (const [name, value] of Object.entries(overrides)) {
+    if (value === undefined) delete c[name];
+    else c[name] = value;
+  }
+  return c;
 }
 
 /** The number of issued-token records, for refusal tests. */

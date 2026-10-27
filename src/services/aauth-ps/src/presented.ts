@@ -93,23 +93,20 @@ export async function verifyPresentedToken(
     return await verifyAsPresented(jwt, resourceToken, resolver, nowMs);
   } catch (err) {
     if (!(err instanceof SignatureError)) throw err;
-    if (err.code === "expired_jwt") {
-      const exp = payloadExp(jwt);
-      if (exp !== undefined) {
-        const onlyExp = await verifyAsPresented(
-          jwt,
-          resourceToken,
-          resolver,
-          (exp - 1) * 1000,
-        ).then(
-          () => true,
-          () => false,
-        );
-        if (onlyExp)
-          throw new PsError(400, "expired_presented_token", "the presented token has expired");
+    let failure: SignatureError = err;
+    const exp = err.code === "expired_jwt" ? payloadExp(jwt) : undefined;
+    if (exp !== undefined) {
+      const atExp = await verifyAsPresented(jwt, resourceToken, resolver, (exp - 1) * 1000).then(
+        () => undefined,
+        (again: unknown) => again,
+      );
+      if (atExp === undefined) {
+        throw new PsError(400, "expired_presented_token", "the presented token has expired");
       }
+      if (!(atExp instanceof SignatureError)) throw atExp;
+      failure = atExp;
     }
-    throw invalidPresented(err.detail);
+    throw invalidPresented(failure.detail);
   }
 }
 
