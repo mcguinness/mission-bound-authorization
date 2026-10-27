@@ -186,6 +186,8 @@ describe("RAS redemption store: missing or lost history refuses (@spec cross-dom
     const file = join(dir, "redemptions.sqlite");
     await expect(rasOn(file)).rejects.toThrow(RasRedemptionStoreError);
     await expect(rasOn(file)).rejects.toThrow(/pnpm ras-redemptions init --file/);
+    // A deleted store reaches this refusal too: it names restoring the history, not just creating a store.
+    await expect(rasOn(file)).rejects.toThrow(/restore its complete history: a replacement is safe only once every grant it could have recorded has expired or been invalidated/);
     expect(existsSync(file)).toBe(false);
   });
 
@@ -194,6 +196,8 @@ describe("RAS redemption store: missing or lost history refuses (@spec cross-dom
     const file = join(dir, "redemptions.sqlite");
     writeFileSync(file, "");
     await expect(rasOn(file)).rejects.toThrow(/is not a redemption store .* created: its history is lost/);
+    // The recovery it names restores the history; it never invites an empty replacement while a grant it recorded is acceptable.
+    await expect(rasOn(file)).rejects.toThrow(/restore its complete history: a replacement is safe only once every grant it could have recorded has expired or been invalidated/);
     // Refused again at the next boot: the failed open left no mark that passes.
     await expect(rasOn(file)).rejects.toThrow(RasRedemptionStoreError);
   });

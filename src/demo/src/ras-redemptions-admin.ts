@@ -8,8 +8,12 @@
  *
  * `init` refuses an existing file, and the RAS refuses to open a file `init`
  * did not create, so a lost store is never replaced by an empty one without
- * an operator deleting it. A relative path resolves against the directory
- * `pnpm` was started in (`INIT_CWD`); the result names the absolute path.
+ * an operator deleting it. A lost store is restored with its complete
+ * history; `init` creates a replacement safely only once every grant the lost
+ * store could have recorded has expired or been invalidated, since an empty
+ * store redeems each of them again (D901). A relative path resolves against
+ * the directory `pnpm` was started in (`INIT_CWD`); the result names the
+ * absolute path.
  */
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";

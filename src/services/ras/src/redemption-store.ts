@@ -20,9 +20,16 @@
  *   until the grant's `exp` plus a margin for clock adjustment, and only then
  *   pruned.
  *
- * A restored older copy of the store would lose claims as surely as a
- * missing one; detecting it needs a witness outside the store, as #250 step 3
- * gave the kernel.
+ * Recovery restores the store's complete history. A replacement is safe only
+ * once every grant the lost history could have recorded has expired or been
+ * invalidated (for example, by no longer trusting the keys that signed it):
+ * an empty store would redeem each of those grants again (D901).
+ *
+ * A known limitation (D901): a restored older copy of the store loses the
+ * claims made after it was taken, and nothing detects it. It applies wherever
+ * issuer keys survive a restart, the composed stack included, not only a RAS
+ * deployed on its own; detecting it needs a witness outside the store, as
+ * #250 step 3 gave the kernel.
  */
 
 import { existsSync } from "node:fs";
@@ -45,6 +52,9 @@ CREATE TABLE IF NOT EXISTS redemption_store_meta (k TEXT PRIMARY KEY, v TEXT NOT
 
 export class RasRedemptionStoreError extends Error {}
 
+const LOST =
+  "if a store existed, restore its complete history: a replacement is safe only once every grant it could have recorded has expired or been invalidated, since an empty store redeems each of them again";
+
 /** Create the durable store at `file`, once; an existing file is refused. */
 export function initRasRedemptionStore(file: string, now: Date = new Date()): void {
   if (existsSync(file)) throw new RasRedemptionStoreError(`${file} already exists; a redemption store is created once`);
@@ -59,20 +69,20 @@ export function initRasRedemptionStore(file: string, now: Date = new Date()): vo
 /**
  * Open the durable store at `file`. A missing file is refused, never created,
  * and so is a file `initRasRedemptionStore` did not create: an empty or
- * truncated store is lost history, which is restored or, deliberately,
- * deleted and created again.
+ * truncated store is lost history, which is restored, never replaced while a
+ * grant it could have recorded is still acceptable.
  */
 export function openRasRedemptionStore(file: string): Database {
   if (!existsSync(file)) {
     throw new RasRedemptionStoreError(
-      `no redemption store at ${file}; create it once with \`pnpm ras-redemptions init --file ${file}\``,
+      `no redemption store at ${file}. A new deployment creates it once with \`pnpm ras-redemptions init --file ${file}\`; ${LOST}`,
     );
   }
   const db = openDurableStore({ file, migrations: [SCHEMA], owner: RAS_REDEMPTION_STORE_OWNER });
   if (!db.prepare("SELECT v FROM redemption_store_meta WHERE k = 'created_at'").get()) {
     db.close();
     throw new RasRedemptionStoreError(
-      `${file} is not a redemption store \`pnpm ras-redemptions init\` created: its history is lost; restore it, or delete it and create it again`,
+      `${file} is not a redemption store \`pnpm ras-redemptions init\` created: its history is lost. ${LOST}`,
     );
   }
   return db;
