@@ -317,11 +317,24 @@ authority from `mission_resource_access` entries
   at every audience MUST NOT map the entry to that tool, and never
   maps it with the restriction removed; a requested root that needs
   such a tool is rejected ({{request-discovery}});
-- a tool's argument constraints map to the entry's `constraints`,
-  compared under the specification-defined Common Constraint value-space rules
-  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}) for specification-defined constraint
-  names and under the deployment's rules otherwise; a root argument
-  constraint MUST be no broader than the mapped entry `constraints`; and
+- the entry's `constraints`, and its `resource_contract` when it
+  carries one, become the tool's `mission_constraints` value unchanged
+  ({{mission-constraints}}). A tool takes its restrictions from exactly
+  one entry: where more than one entry maps to a tool identifier, the
+  issuer carries one entry's restrictions for that tool or mints
+  separate roots, and never merges them. The issuer MUST NOT map an
+  entry to a tool unless the resource server establishes, for every
+  operation the tool identifier names, each fact the entry's
+  `constraints` restrict;
+- a tool's argument constraints name every argument that the resource
+  server's definitions of the operations the tool identifier names
+  declare, each admitted explicitly, and carry no `"*"` entry
+  ({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+  An argument that only some of those operations take is `optional` in
+  the map, which leaves its requiredness to each operation's own
+  definition. Argument constraints narrower than a wildcard come only
+  from the target restriction above, never from the entry's
+  `constraints`; and
 - the root MUST derive only from entries whose `delegation` permits the
   intended holder ({{I-D.draft-mcguinness-oauth-mission}}).
 
@@ -343,8 +356,51 @@ chain, so per-entry delegation policy is enforced by shaping the root:
 The root's authority MUST be within the Mission's approved authority
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
-mapping in reverse: each root tool and argument constraint traces to a
-permitted entry action, target restriction and constraint.
+mapping in reverse: each root tool, argument constraint, and
+`mission_constraints` value traces to a permitted entry action, target
+restriction, and `constraints`.
+
+## Mission Constraints Member {#mission-constraints}
+
+The attenuation substrate carries authority as tools and their
+argument constraints, which constrain the arguments of an invocation
+({{Section 3.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+A Mission entry's `constraints` are not arguments: a resource server
+evaluates them against the facts it establishes for the operation it
+executes, such as a record's amount, currency, or vendor
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Resource Server Enforcement"). This profile carries them in a member
+of the `attenuating_agent_token` entry that the substrate gives no
+authority and this profile defines
+({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+
+`mission_constraints`:
+: REQUIRED in the `attenuating_agent_token` entry of every token in a
+  Mission-bound attenuation chain. A JSON object with exactly one member
+  for each tool identifier in the entry's `tools`, and no other member.
+  Each member's value is an object with:
+
+  - `constraints`: REQUIRED. The `constraints` of the
+    `mission_resource_access` entry the tool maps from
+    ({{root-mapping}}), as a JSON object; an empty object means that
+    entry carries none.
+  - `resource_contract`: present exactly when that entry carries one,
+    and then equal to it
+    ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+Each hop narrows the member as the Resource Access profile's subset
+rule narrows an entry
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Subset Rule"): for every tool a child keeps, the child's
+`constraints` is a subset of the parent's under step 3 of that rule,
+and its `resource_contract` is preserved under step 4. A child that
+drops a tool drops that tool's member. Removing a restriction never
+yields unrestricted authority: a missing `mission_constraints`, a
+missing or extra member, a missing `constraints`, `constraints` that
+are not a subset of the parent's under step 3, or a changed
+`resource_contract` refuses the whole chain. A key the consumer does
+not understand or cannot enforce also refuses the chain; it is never
+ignored.
 
 # Requesting a Root and Discovery {#request-discovery}
 
@@ -367,7 +423,7 @@ endpoint with the substrate's root request
 on any grant the issuance profile uses to issue a Mission-bound token
 (for example, the Mission's `refresh_token` grant). The request
 carries an `attenuating_agent_token` authorization detail {{RFC9396}}
-whose tools and argument constraints are the requested root
+whose `tools` and `mission_constraints` are the requested root
 authority; that detail on a Mission-bound token request selects root
 issuance ({{root}}) rather than an ordinary `mission_resource_access`
 token.
@@ -382,8 +438,9 @@ corresponding private key and binds that key as the root's `cnf.jwk`
 
 The Mission Issuer MUST validate the detail against the root mapping
 ({{root-mapping}}). It MUST refuse the request with
-`invalid_authorization_details` when any tool or argument constraint
-is not within the mapped Authority Set, rather than issue a root for
+`invalid_authorization_details` when any tool, argument constraint, or
+`mission_constraints` value is not within the mapped Authority Set,
+rather than issue a root for
 the rest, as the issuance profile refuses a requested subset beyond
 the Mission's authority ({{I-D.draft-mcguinness-oauth-mission}}). A
 client-requested root is therefore always at most the mapped Authority
@@ -397,6 +454,8 @@ offline, by the attenuation substrate's derivation
 The holder:
 
 - selects a narrower tool and constraint set;
+- narrows `mission_constraints` with the tools it keeps
+  ({{mission-constraints}});
 - increments `del_depth`;
 - signs with the key the parent's `cnf` binds; and
 - sets `par_hash` to the parent's commitment.
@@ -428,10 +487,11 @@ none outlives the Mission.
 
 The `mission` claim rides the chain unchanged: every token in the chain
 carries the same `id`, `issuer`, and `authority_hash` as the root. The
-child's narrowing is governed entirely by the attenuation substrate's
+child's narrowing is governed by the attenuation substrate's
 capability monotonicity
-({{Section 4.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
-which is the subset relation a consumer checks;
+({{Section 4.5 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}})
+and by the narrowing of `mission_constraints`
+({{mission-constraints}}), the two subset relations a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
 without holding the Mission's full Authority Set.
@@ -456,7 +516,8 @@ because it has no concept of the Mission binding. The substrate gives a
 claim it does not define no authority in a derived token unless a
 profile defines how it carries across derivation
 ({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
-this profile defines that for `mission`: it is carried unchanged. In
+this profile defines that for `mission`, which is carried unchanged,
+and for `mission_constraints` ({{mission-constraints}}). In
 addition to the substrate's chain verification, a consumer MUST:
 
 - reject the chain unless every token in it carries a `mission` claim
@@ -480,11 +541,26 @@ addition to the substrate's chain verification, a consumer MUST:
 - reject the chain if any child's `aud` is not equal to, or a subset of,
   its parent's `aud` ({{attenuation}}); and
 - reject the chain if any child's `exp` exceeds its parent's `exp`
-  ({{attenuation}}).
+  ({{attenuation}}); and
+- reject the chain unless every token carries `mission_constraints`
+  as {{mission-constraints}} defines it, each child's narrowing its
+  parent's.
 
 These checks fail safe: a chain that does not present a single, unchanged
-Mission binding, an audience within its parent's, and an expiry within
-its parent's is refused, not evaluated against a guessed Mission.
+Mission binding, an audience within its parent's, an expiry within
+its parent's, and Mission constraints within its parent's is refused,
+not evaluated against a guessed Mission.
+
+A substrate verification that permits a presentation does not by
+itself authorize the invocation. The consumer MUST also enforce the
+leaf's `mission_constraints` value for the invoked tool against the
+facts of the operation it executes, and refuse the invocation where
+they do not hold. It establishes those facts as it does when it
+enforces an entry's `constraints`
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section
+"Resource Server Enforcement"): from its own records where the
+operation acts on one, never from an argument's claim about such a
+record.
 
 Verification cost scales with the chain: a consumer performs one
 signature verification per link, the proof-of-possession check, and
@@ -508,7 +584,7 @@ facts of the presented chain ({{mission-binding-check}}), checkable
 locally at memory speed:
 
 - the signature chain to the root;
-- capability monotonicity;
+- capability monotonicity and the narrowing of `mission_constraints`;
 - audience and expiry nesting; and
 - the holder's proof of possession.
 
@@ -592,8 +668,9 @@ Mission's issuer, here the holder that derives a child
    parent's `cnf` binds ({{attenuation}}).
 2. **Authority bound.** The root is bounded by the Mission's Authority
    Set ({{root-mapping}}); each child is no broader than its parent
-   under the attenuation substrate's capability monotonicity, with its
-   `aud` and `exp` within its parent's ({{attenuation}}).
+   under the attenuation substrate's capability monotonicity and the
+   narrowing of `mission_constraints` ({{mission-constraints}}), with
+   its `aud` and `exp` within its parent's ({{attenuation}}).
 3. **Mission state.** The Mission Issuer gates the root on Mission
    state as it gates any Mission-bound token ({{root}}). A holder
    mints a child with no state check; the consumer establishes that
@@ -797,12 +874,14 @@ narrower grant.
 
 A Mission Issuer conforming to this profile MUST bound a Mission-bound
 attenuation root by the Mission's Authority Set ({{root-mapping}}) and
-carry the `mission` claim, the confirmation key, and `aud` on it.
+carry the `mission` claim, the confirmation key, `aud`, and
+`mission_constraints` ({{mission-constraints}}) on it.
 
 An Attenuating Holder conforming to this profile:
 
 - MUST carry the `mission` claim unchanged into every child it mints;
-- MUST only narrow authority and never broaden it;
+- MUST only narrow authority and never broaden it, including
+  `mission_constraints` ({{mission-constraints}});
 - MUST keep each child's `aud` within its parent's and its `exp`
   within its parent's; and
 - MUST increment the depth member the attenuation substrate defines
@@ -814,9 +893,12 @@ A consumer conforming to this profile:
 - MUST verify the attenuation chain and proof-of-possession per the
   attenuation substrate
   ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
-- MUST verify that the `mission` claim is unchanged across the chain
-  and that each child's `aud` and `exp` are within its parent's
-  ({{mission-binding-check}}); and
+- MUST verify that the `mission` claim is unchanged across the chain,
+  that each child's `aud` and `exp` are within its parent's, and that
+  each child's `mission_constraints` narrows its parent's
+  ({{mission-binding-check}});
+- MUST enforce the leaf's `mission_constraints` against the facts of
+  the operation it executes ({{mission-binding-check}}); and
 - MUST enforce current Mission state per {{kill-switch}}.
 
 A deployment MUST NOT claim this profile on a path that does not
@@ -879,6 +961,12 @@ profile, and the attenuation substrate apply. This profile adds:
   root lifetimes short and `del_max_depth` conservative for this
   reason, and MAY apply the per-branch denylist mitigation above to a
   specific root or subtree it learns is contained.
+- Generic substrate consumers. A consumer that verifies only the
+  attenuation substrate gives `mission_constraints` no authority and
+  so enforces none of the Mission's constraints. A Mission-bound chain
+  is accepted only by a consumer conforming to this profile
+  ({{conformance}}), which enforces both the argument constraints and
+  `mission_constraints`.
 - Audit. Because the issuer does not observe offline derivations, the
   consuming enforcement points are the only place a derivation is seen;
   runtime enforcement evidence
@@ -924,7 +1012,10 @@ issuance profile registers as an open object, and the
 `attenuating_agent_token` authorization detail, which the attenuation
 substrate defines ({{RFC9396}} establishes no registry of types); this
 profile combines them by reference and defines no new claim or
-registry. It registers one metadata member.
+registry. Its one addition to that detail, the `mission_constraints`
+member ({{mission-constraints}}), needs no registration, since
+{{RFC9396}} keeps no registry of detail members. It registers one
+metadata member.
 
 This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry {{RFC8414}}: Change Controller IETF; Reference
@@ -937,6 +1028,14 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Constraints Member: a Mission entry's `constraints` and
+  `resource_contract` ride the profile-defined `mission_constraints`
+  member of the `attenuating_agent_token` entry, required in every
+  token and narrowed per hop under the Resource Access subset rule,
+  instead of argument constraints; argument constraints admit each
+  declared argument explicitly; a consumer enforces both layers
+  (#1756).
 
 - Worked Example: the tokens carry `typ` `aat+jwt` and `cnf.jwk`, the
   child binds the extractor's own key, and the extractor presents a
