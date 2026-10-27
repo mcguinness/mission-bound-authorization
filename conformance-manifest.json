@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "643960d487bf4b3ace72833ced1bc4ad29bff258",
-    "content_sha256": "156d7e30d48fb5298457d489af00e9197222ba4a61c16058aa48b0855fb4f6f9"
+    "revision": "65aca267b53baaaf312334515596ead8bd4cd808",
+    "content_sha256": "a1efcd28a1983362f4a5d735728d54a887d1facab8944c52465906eb8fc277c0"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -13177,7 +13177,7 @@
    "id": "core.grant-binding.runtime-join-not-persistent-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "grant-binding",
-   "text": "Such a join is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
+   "text": "is not a Mission grant binding: it does not make the joined OAuth grant Mission-bound",
    "role": "PDP",
    "strength": "stated",
    "applicability": {
