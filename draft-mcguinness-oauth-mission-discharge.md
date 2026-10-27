@@ -1000,7 +1000,10 @@ instead.
 ### Discharge Receipt {#discharge-receipt}
 
 A Discharge Receipt is a JWS Compact Serialization {{RFC7515}} signed
-with a key published in the AS's `jwks_uri`. Its JWS header carries
+under the AS's active Mission Status signing key, the key it currently
+signs Mission Status responses under
+({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Response"),
+published in its `jwks_uri`. Its JWS header carries
 `typ` of `mission-discharge-receipt+jwt` and a `kid` identifying the
 signing key, and the HTTP `Content-Type` is
 `application/mission-discharge-receipt+jwt` ({{iana-receipt}}). A
@@ -1036,7 +1039,10 @@ example before it stops retrying:
    ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
    "Authorization Server Metadata"), rejecting `none` and any
    algorithm not listed;
-3. the JWS signature against a current `jwks_uri` entry for the AS;
+3. the JWS signature against a current `jwks_uri` entry for the AS
+   that the consumer's trusted configuration authorizes for that AS's
+   Mission Status responses; a key's presence in the `jwks_uri` does
+   not authorize it;
 4. `iss` equals the expected AS issuer URL;
 5. `aud` equals the consumer's own identifier, as the AS
    authenticated it;
@@ -1343,6 +1349,12 @@ entry carrying a `terminal_when` constraint it does not understand
 - Relationship to Runtime Enforcement ({{runtime}}): issuance-only
   discharge stays conforming; where the runtime profile runs, its PDP
   refuses a discharged entry.
+
+- A Discharge Receipt is signed under the AS's active Mission Status
+  signing key, and the consumer's signature check is strengthened: a
+  consumer verifies a receipt only under a key its trusted
+  configuration authorizes for that AS's Mission Status responses,
+  never merely because the key appears in `jwks_uri` (#831, D857).
 
 # Acknowledgments
 {:numbered="false"}

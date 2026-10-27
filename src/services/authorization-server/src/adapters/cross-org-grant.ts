@@ -113,6 +113,12 @@ interface HandlerOpts {
   now: () => Date;
   /** @spec mission#scope-projection — the AS's mapping; absent, every audience is unknown. */
   scopeProjection?: ScopeProjectionMapping;
+  /**
+   * @spec mission-template#prohibited-classes (#813, D830 ruling 3): whether
+   * the chain's root Mission, at its issuer, is in a standing-payment lineage
+   * this AS admitted; such a lineage is not delegated across organizations.
+   */
+  standingPaymentLineage?: (missionId: string, issuer: string) => boolean;
 }
 
 function fail(ctx: KoaContextWithOIDC, code: string, description: string): void {
@@ -199,6 +205,16 @@ export async function handleCrossOrgChainExchange(
 
   if (dpopJkt !== (await calculateJwkThumbprint(verified.leaf.cnfJwk))) {
     fail(ctx, "invalid_grant", "chain verification failed");
+    return;
+  }
+  // @spec mission-template#prohibited-classes (#813, D830 ruling 3): a
+  // standing-payment lineage is not delegated across organizations until its
+  // budget accounting extends there. Defense in depth: this issuer's only
+  // chain-root issuance, deriveCrossOrgRoot, already refuses such a lineage,
+  // so a chain rooted at one of its own standing-payment Missions cannot
+  // arrive here signed by its key.
+  if (opts.standingPaymentLineage?.(verified.missionId, verified.missionIssuer) === true) {
+    fail(ctx, "invalid_grant", "a standing-payment lineage is not delegated across organizations (#813)");
     return;
   }
   if (!verified.leaf.aud.includes(requestedAud)) {

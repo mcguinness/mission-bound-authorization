@@ -593,7 +593,8 @@ export type PdpRefusalReason =
   | "evaluation_context_invalid"
   // @spec authzen#context-work-item (#815): a present `context.work_item`
   // that is not exactly `{issuer, id}`, an unusable input like the phase.
-  | "work_item_invalid";
+  | "work_item_invalid"
+  | "action_class_missing";
 
 /**
  * Thrown by {@link evaluate} for a decision request the PDP refuses before
@@ -1189,6 +1190,20 @@ export async function evaluate(req: EvaluationRequest, opts: EvaluateOptions): P
   if (presentedWorkItem !== undefined && parseWorkItem(presentedWorkItem) === undefined) {
     await recordPdpRefusal(opts.refusals, "work_item_invalid", req);
     throw new DecisionRequestRefused("work_item_invalid");
+  }
+  // @spec runtime#classification, authzen#pdp-consistency-checks,
+  // runtime-evidence#pre-decision-refusal (#956, D814): every Enforcement Scope
+  // Statement declares action classes (the loader requires a non-empty
+  // `mediated_scope.action_classes`), so a mediated request that reaches the
+  // PDP with no action class established is a request fault, refused before
+  // evaluation as a Refusal Record `action_class_missing`: no decision, no
+  // evaluation_id and no Decision Evidence. It is never evaluated under a
+  // default class such as `consequential_read`, and no class is recorded.
+  // Checked after the evaluation context and the work item, so an earlier
+  // fault keeps its code.
+  if ((req as { context?: { action_class?: unknown } } | undefined)?.context?.action_class === undefined) {
+    await recordPdpRefusal(opts.refusals, "action_class_missing", req);
+    throw new DecisionRequestRefused("action_class_missing");
   }
   // @spec authzen#evaluation-request-digest-input: digest the request as
   // submitted, on receipt, before evaluation applies any default or enrichment.

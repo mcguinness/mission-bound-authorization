@@ -16,6 +16,7 @@ import {
   type AuthorityDependencyDeclaration,
   type AuthorityEntry,
   actionOutsideGrammar,
+  carriesHttpUserinfo,
   computeAnchor,
   containmentSelectorViolation,
   DuplicateMemberError,
@@ -1262,6 +1263,13 @@ function wellFormedResource(file: string, e: Record<string, unknown>, ctx: strin
       `${ctx} has resource ${JSON.stringify(resource)}, which is not an RFC 3986 absolute URI`,
     );
   }
+  // @spec resource-access#entry-validation (#1376): nor an http(s) URI carrying userinfo.
+  if (carriesHttpUserinfo(resource)) {
+    throw new ConfigError(
+      file,
+      `${ctx} has resource ${JSON.stringify(resource)}, which carries a userinfo subcomponent`,
+    );
+  }
   return resource;
 }
 
@@ -1588,6 +1596,23 @@ export const GOVERNED_RESOURCES: GovernedResourcePolicy = parseGovernedResources
  * dispatch kernel pass this into `dispatchFromTemplate`.
  */
 export const DISPATCH_PROHIBITED_ACTIONS: string[] = POLICY.dispatch_prohibited_actions;
+
+/**
+ * @spec runtime#action-approval, mission-template#prohibited-classes (#813):
+ * the deployment's action-approval predicate, one declaration both the
+ * runtime decision policy and a standing-payment consent disclosure read:
+ * the actions whose every execution requires an action-bound approval, and
+ * who gives that approval.
+ */
+export interface ActionApprovalPolicy {
+  readonly actions: readonly string[];
+  readonly approver: string;
+}
+
+export const ACTION_APPROVAL_POLICY: ActionApprovalPolicy = Object.freeze({
+  actions: Object.freeze(["payments:remittance.send"]),
+  approver: "an Approver on the Access Request Service's approval surface",
+});
 
 /**
  * Derivation policy ceiling (@spec mission#authorization-derivation): the

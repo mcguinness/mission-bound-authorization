@@ -32,7 +32,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
   type AuthorityEntry as PdpAuthorityEntry,
@@ -349,6 +349,25 @@ function withJoinAudienceAlias(statement: RuntimePosture, join: { issuer: string
           b.boundary === CANONICAL_RESOURCE ? { ...b, audience_aliases: [...(b.audience_aliases ?? []), alias] } : b,
         ),
       })),
+    },
+  };
+}
+
+/**
+ * @spec runtime#mission-binding (#956, D814): `statement` declaring exactly the
+ * Mission-establishment modes this stack serves for the payments scope. The
+ * credential-carried mode is always served; the externally established mode
+ * only where the MAS-governed channel's baseline Join governs the payments
+ * resource. Declaring both creates no fallback: the MAS profile's precedence
+ * still lets a credential-carried reference govern. The AS-native target,
+ * which excludes the MAS, therefore declares `credential_carried` only.
+ */
+export function withServedEstablishmentModes(statement: RuntimePosture, servesExternal: boolean): RuntimePosture {
+  return {
+    ...statement,
+    mediated_scope: {
+      ...statement.mediated_scope,
+      mission_establishment_mode: servesExternal ? ["credential_carried", "externally_established"] : "credential_carried",
     },
   };
 }
@@ -961,9 +980,12 @@ export async function composeStack(opts: {
   // identifier as an audience alias scoped to this issuer and the `at+jwt`
   // token profile (runtime-oauth#boundary-audience), declared in the
   // statement every consumer here reads and the resource publishes.
-  const statement = withJoinAudienceAlias(
-    opts.statement ?? RUNTIME_POSTURE,
-    masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+  const statement = withServedEstablishmentModes(
+    withJoinAudienceAlias(
+      opts.statement ?? RUNTIME_POSTURE,
+      masGovernedResources.includes(CANONICAL_RESOURCE) ? { issuer, alias: masJoin.join_resource } : undefined,
+    ),
+    masGovernedResources.includes(CANONICAL_RESOURCE),
   );
   const boundary = paymentsBoundaryContext(statement);
   const pdpBoundary = (): string | undefined => {
@@ -1241,7 +1263,9 @@ export async function composeStack(opts: {
   };
 
   const runtimeDecisionPolicy = {
-    requiresActionApproval: (action: string) => action === "payments:remittance.send",
+    // @spec runtime#action-approval (#813): the one declaration the AS's
+    // standing-payment consent disclosure also reads.
+    requiresActionApproval: (action: string) => ACTION_APPROVAL_POLICY.actions.includes(action),
     maxApprovalAgeSeconds: TOPOLOGY.ttls.maxApprovalAgeSeconds,
     stateSourcePlacement: stateSourcePlacement(statement),
     delegatePolicy: {

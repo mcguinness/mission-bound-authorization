@@ -222,6 +222,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: "payments:invoice.read" },
+      action_class: "consequential_read",
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_impostor",
       evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
@@ -251,6 +252,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: "payments:invoice.read" },
+      action_class: "consequential_read",
       audience: "https://other-scope.example.com",
       evaluation_id: "dec_scope",
       evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
@@ -273,6 +275,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: "payments:invoice.read" },
+      action_class: "consequential_read",
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_nokeys",
       evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
@@ -295,6 +298,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: "payments:invoice.read" },
+      action_class: "consequential_read",
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_verbatim",
       evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
@@ -331,6 +335,7 @@ describe("retainDecision verifies before it retains (@spec runtime-evidence#deci
       subject: { id: "alice" },
       resource: { type: "invoice", id: "inv-1" },
       action: { name: "payments:invoice.read" },
+      action_class: "consequential_read",
       audience: CANONICAL_RESOURCE,
       evaluation_id: "dec_retransmitted",
       evaluation_request_digest: FIXTURE_REQUEST_DIGEST,
@@ -451,6 +456,8 @@ describe("the record survives the remote decision channel byte-identically (@spe
       action: { name: "payments:invoice.read" },
       context: {
         mission: { id: "msn_ret", issuer: ISSUER },
+        // @spec runtime#classification (#956, D814): the class the PEP assigns.
+        action_class: "consequential_read",
         // The credential's own authority rides every decision (#825 PR 2b).
         credential: {
           authority: [
@@ -530,6 +537,7 @@ const decisionInput = (evaluation_id: string) => ({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1" },
   action: { name: "payments:invoice.read" },
+  action_class: "consequential_read" as const,
   audience: CANONICAL_RESOURCE,
   evaluation_id,
   evaluation_request_digest: FIXTURE_REQUEST_DIGEST,

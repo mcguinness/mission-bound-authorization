@@ -46,6 +46,7 @@ import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
 import {
   type Decision,
   type DecisionOptions,
+  DecisionRequestRefused,
   evaluate as evaluateRequest,
   type EvaluateOptions,
   type EvaluationRequest,
@@ -1056,7 +1057,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(countsOf(file)).toEqual({ claims: 3, reservations: 2, counters: 2 });
     });
 
-    it("an amount-bearing action other than the metered action under a budget-bound Mission, whether consequential_write, irreversible_action, external_commitment or unclassified, is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
+    it("an amount-bearing action other than the metered action under a budget-bound Mission, whether consequential_write, irreversible_action or external_commitment, is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
       const claims = open();
@@ -1064,7 +1065,6 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         [SCHEDULE, "consequential_write"],
         [REVERSE, "irreversible_action"],
         [REMIT, "external_commitment"],
-        [SCHEDULE, null],
       ];
       for (const [action, actionClass] of others) {
         const label = `${action} (${actionClass ?? "unclassified"})`;
@@ -1080,6 +1080,18 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         expectPermit(await evaluate(request(c, { action, actionClass, phase: null, missionId: "msn_plain" }), options(unbound, c, view("msn_plain"))));
       }
       unbound.close();
+    });
+
+    it("an unclassified amount-bearing action under a budget-bound Mission is refused before evaluation as action_class_missing and reserves and claims nothing (@spec runtime#classification, metering#metering, #956, #816)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const req = request(c, { action: SCHEDULE, actionClass: null, phase: null });
+      // An explicit absent class: the shared fixture adds a default class only when the key is missing.
+      const unclassified: EvaluationRequest = { ...req, context: { ...req.context, action_class: undefined } };
+      await expect(evaluate(unclassified, options(claims, c, view("msn_a", binding("msn_a"))))).rejects.toBeInstanceOf(DecisionRequestRefused);
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
     });
 
     it("a compensate phase of the metered action carrying an amount is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816, decision h)", async () => {

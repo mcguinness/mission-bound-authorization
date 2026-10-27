@@ -210,8 +210,12 @@ import {
   parseDrawdownRecordingRule,
   type RegisteredDrawdownRecordingRule,
 } from "./drawdown-approval-record.js";
+import { StandingPaymentStore } from "./standing-payment.js";
+import { TemplateApprovalRecordStore } from "./template-approval-record.js";
 import {
+  ExpiryPassedError,
   IntentError,
+  type IntentIntakeOptions,
   type IntentSubmissionPresenter,
   provisionalIntentHash,
   type SubmissionEvidenceBounds,
@@ -416,6 +420,10 @@ export class MissionNotFoundError extends Error {}
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
+/** An `expected_version` for a stale-version message: a canonical numeral beyond any state version is carried as Infinity (#1724 C6). */
+function staleVersionLabel(expected: number): string {
+  return Number.isFinite(expected) ? String(expected) : "beyond any state version";
+}
 /**
  * @spec status#mission-lifecycle-endpoint ("Operations") (#1659, D771): a due
  * schedule's transition could not be persisted, and a re-read shows no other
@@ -1020,6 +1028,22 @@ export class MissionKernel {
    * Always present, so records stay re-checkable after recording is turned off.
    */
   readonly drawdownApprovalRecords: DrawdownApprovalRecordStore;
+  /**
+   * @spec approval-governance#approval-policy, mission-template#prohibited-classes
+   * (#813): the retained standing-payment recording rules and each recorded
+   * instance's inputs. Always present, so records stay re-checkable after the
+   * capability is turned off.
+   */
+  readonly templateApprovalRecords: TemplateApprovalRecordStore;
+  /**
+   * @spec mission-template#prohibited-classes (#813, D830 rulings 1 and 3):
+   * the standing-payment workflow's kernel-database state: each Dispatch
+   * Policy's pinned budget identity, each admitted instance, and the dispatch
+   * accounting committed in each instance's creation transaction. Always
+   * present, so a lineage admitted once stays restricted after the capability
+   * is turned off.
+   */
+  readonly standingPayments: StandingPaymentStore;
   /** The configured ceiling-drawdown recording rule, parsed, with its `approval_policy` reference. */
   private readonly drawdownRule?: {
     registered: RegisteredDrawdownRecordingRule;
@@ -1186,6 +1210,8 @@ export class MissionKernel {
     this.governedPolicyConsents = new GovernedPolicyConsentStore(this.db);
     this.directApprovalRecords = new DirectApprovalRecordStore(this.db);
     this.drawdownApprovalRecords = new DrawdownApprovalRecordStore(this.db);
+    this.templateApprovalRecords = new TemplateApprovalRecordStore(this.db);
+    this.standingPayments = new StandingPaymentStore(this.db);
     if (opts.ceilingDrawdownRecording) {
       const registered = opts.ceilingDrawdownRecording.rule;
       this.drawdownRule = {
@@ -1205,8 +1231,8 @@ export class MissionKernel {
     }
   }
 
-  validateIntent(raw: string): MissionIntent {
-    return validateMissionIntent(raw, { now: this.now() });
+  validateIntent(raw: string, opts: Pick<IntentIntakeOptions, "admitMaxBudget"> = {}): MissionIntent {
+    return validateMissionIntent(raw, { ...opts, now: this.now() });
   }
 
   /**
@@ -1221,7 +1247,7 @@ export class MissionKernel {
   validateSubmission(
     raw: string,
     bounds?: SubmissionEvidenceBounds,
-    opts: Pick<SubmissionIntakeOptions, "deferEvidenceDispatch"> = {},
+    opts: Pick<SubmissionIntakeOptions, "deferEvidenceDispatch" | "admitMaxBudget"> = {},
   ): MissionIntentSubmission {
     return validateMissionIntentSubmission(raw, bounds, { ...opts, now: this.now() });
   }
@@ -2187,9 +2213,10 @@ export class MissionKernel {
           `mission ${record.id} would commit expires_at ${record.expires_at} later than the requested ceiling ${record.intent.expires_at}`,
         );
       }
+      // Typed (#1721, D845) so a direct approval decision completes this
+      // refusal `access_denied`; every other creator keeps its own mapping.
       if (!(createdMs < expiresMs)) {
-        throw new IntentError(
-          "invalid_request",
+        throw new ExpiryPassedError(
           `effective expires_at ${record.expires_at} is not later than the creation instant ${record.created_at}`,
         );
       }
@@ -2941,7 +2968,7 @@ export class MissionKernel {
     const record = this.applyExpiry(this.mustGet(id));
     if (opts.expectedVersion !== undefined && opts.expectedVersion !== record.version) {
       throw new StaleVersionError(
-        `expected_version ${opts.expectedVersion} differs from the current state version`,
+        `expected_version ${staleVersionLabel(opts.expectedVersion)} differs from the current state version`,
       );
     }
     const rule = LEGAL_TRANSITIONS[op];
@@ -3119,7 +3146,7 @@ export class MissionKernel {
     const record = this.applyExpiry(this.mustGet(id));
     if (input.expectedVersion !== undefined && input.expectedVersion !== record.version) {
       throw new StaleVersionError(
-        `expected_version ${input.expectedVersion} differs from the current state version`,
+        `expected_version ${staleVersionLabel(input.expectedVersion)} differs from the current state version`,
       );
     }
     if (TERMINAL_STATES.has(record.state)) {
