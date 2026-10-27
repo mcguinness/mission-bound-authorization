@@ -28,17 +28,24 @@ export const LIFECYCLE_ENDPOINT_PATH = "/mission/lifecycle";
 export const STATUS_ENDPOINT_PATH = "/mission/status";
 
 /**
- * @spec status#as-metadata (#1407): the methods the Mission Status endpoint
- * accepts (`mission_status_endpoint_auth_methods_supported`): private-key JWT
- * only, as at the Lifecycle endpoint.
+ * @spec status#as-metadata, status#mission-status-authentication (#1407): the
+ * client authentication methods the Mission Status endpoint accepts
+ * (`mission_status_endpoint_auth_methods_supported`), values of the OAuth
+ * Token Endpoint Authentication Methods registry: `private_key_jwt` only, as
+ * at the Lifecycle endpoint. Never a method that authenticates with a shared
+ * client secret, nor `none`; the sender-constrained access-token path is not
+ * a client authentication method and is not listed here.
  */
 export const STATUS_ENDPOINT_AUTH_METHODS: readonly string[] = ["private_key_jwt"];
 
 /**
- * @spec status#as-metadata: the methods this endpoint accepts
- * (`mission_lifecycle_endpoint_auth_methods_supported`). Private-key JWT only:
- * the profile requires at least one of its three mechanisms, and this
- * deployment accepts no access-token scheme here.
+ * @spec status#as-metadata, status#mission-status-authentication: the client
+ * authentication methods this endpoint accepts
+ * (`mission_lifecycle_endpoint_auth_methods_supported`), registry values with
+ * the Status member's constraints. Private-key JWT only: the profile requires
+ * at least one of its two paths (client authentication, or a
+ * sender-constrained access token), and this deployment accepts no
+ * access-token scheme here.
  */
 export const LIFECYCLE_ENDPOINT_AUTH_METHODS: readonly string[] = ["private_key_jwt"];
 
@@ -202,10 +209,11 @@ export interface LifecycleClientAuthenticationDeps {
  * kind of JWT is refused, since accepting it would let a token minted for one
  * purpose authenticate here.
  *
- * Plain Basic or POST client authentication, and any `Authorization` header
- * (this endpoint accepts no access-token scheme), are refused. Every failure
- * is the HTTP-layer `invalid_client` the caller maps to a 400; only a jti the
- * full replay cache could not record is retryable.
+ * A shared-secret method (`client_secret_basic`, `client_secret_post`,
+ * `client_secret_jwt`), `none`, and any `Authorization` header (this endpoint
+ * accepts no access-token scheme) are answered as a request that presented no
+ * credential. Every failure is the HTTP-layer `invalid_client` the caller maps
+ * to a 400; only a jti the full replay cache could not record is retryable.
  */
 export async function authenticateLifecycleClient(
   deps: LifecycleClientAuthenticationDeps,
