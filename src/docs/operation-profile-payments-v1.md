@@ -473,7 +473,8 @@ value, or null when the record names none). The wire fixes which vendor
 the reversal concerns, and that vendor's record supplies its tenant now:
 the tenant is not frozen at payment time, and an invoice reassigned to
 another vendor after its wire committed neither blocks nor widens the
-reversal. A paid vendor the store no longer holds is refused
+reversal, even when the vendor it names now has no record (D879). A paid
+vendor the store no longer holds is refused
 `unknown_vendor` before the decision request. Each resolver names the
 crossings it serves, so the compensate crossing reads no effect fact from
 the store, and `payments-store:vendor.tenant` (the tenant of the vendor an
@@ -716,6 +717,10 @@ carrying it is issued outside the shipped approval paths.
   form: the invoice and vendor the wire paid, its amount and currency, its
   payee, the operation target, and the wire's operation key (`reverses`).
   The invoice as it reads now never supplies them, and no argument does.
+  The crossing never reads the vendor the invoice names now (D879): the
+  named invoice must exist, and the link must be its wire, but its current
+  vendor need not resolve, while every other invoice-scoped operation
+  refuses a vendor the store does not hold `unknown_vendor`.
   `parameter_digest` over that form is what the decision evaluates (a
   reversal ceiling is compared with the committed amount), and what the
   operation key, the PDP's claim on the idempotency key, any approval bound
