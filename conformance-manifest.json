@@ -30092,7 +30092,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten, and the supported-subset fixture test checks that both superseded versions stay declared as frozen."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -30131,9 +30131,15 @@
      "name": "declared contract versions (@spec runtime#resource-contract, #249) > states each version's state: a superseded version declares its retention, and one version at most is current",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879): the shipped statement declares three versions: 2026-10-26 current (payments-runtime-profile-v15), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -30342,9 +30348,21 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-26 performs the reversal under the paid vendor's current tenant",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > performs the superseded 2026-10-26 version under the retained v15 profile: every crossing the live v16 profile names, each exactly as the live profile does, the reversal included (#813, #816, D877)",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the shipped superseded 2026-10-26 version is still performed within its retention (@spec runtime#resource-contract, #813, #816, D877) > a read and a write decided under the 2026-10-26 reference are performed under the retained v15 profile within its retention, and refused before any decision past it (#813, #816, D877)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): the shipped contract is 2026-10-26 (payments-runtime-profile-v15, current), with 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under v15; an entry pinned to 2026-10-26 performs the reversal under v15. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under a later profile. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses. #813, #816 (D877): the shipped contract is 2026-10-27 (payments-runtime-profile-v16, current), with 2026-10-26 (v15), 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v16 changes no crossing, so the shipped retained v15 profile is every crossing of the live table: the superseded 2026-10-26 version is performed under it, a read and a write decided under the 2026-10-26 reference execute within its retention in both PEP modes and are refused before any decision past it, and an entry pinned to 2026-10-26 performs the reversal under the retained v15. Mutations: R1 (no retained v15) fails the retained-table, within-retention and 2026-10-26 reversal witnesses; R2 (retained v15 without schedule_payment) fails the retained-table and within-retention witnesses; R2b (retained v15 without the reversal) fails the retained-table and 2026-10-26 reversal witnesses; R3 (2026-10-26 retained only until 2026-10-27) fails the within-retention witness."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -41094,12 +41112,13 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Execution Evidence of a completed metered payment carries a metering entry whose consumed member is the executed amount as {amount, currency}"
+    "normative": "where the Operation Profile conveys a metered payment's committed quantity by consumed, the Execution Evidence of a completed metered payment carries a metering entry whose consumed member is the executed amount as {amount, currency}; where it defines no actual measure, none is conveyed",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so its committed quantity is not conveyed by consumed: the PEP's Execution Evidence carries no metering member, and the clause's condition does not hold in the reference."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the PEP's Execution Evidence carries no metering consumed entry; the PDP commits the reserved amount. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed. The clause binds where the committed quantity is conveyed by consumed; under profile v16 (D877) the payment class defines no actual measure, so it is not (observation.local). The normative observation states the consumed case without its condition and should be re-scoped to it. Todo: no test asserts that a completed metered wire's Execution Evidence carries no metering member; that assertion, added to the end-to-end exhaustion witness and killed by a PEP that emits a consumed entry, would witness the condition's absence."
   },
   {
    "id": "metering.metering-evidence.counter-scope-values",
@@ -41614,12 +41633,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Operation Profile of the metered payment action either defines the actual measure conveyed in consumed or states that the reserved amount commits"
+    "normative": "the Operation Profile of the metered payment action either defines the actual measure conveyed in consumed or states that the reserved amount commits",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) states it for payments:payment.execute at its commit crossing, execute_wire_transfer: the payment class defines no actual measure, what a wire consumes is the amount the decision charged (the invoice's {amount, currency}), Execution Evidence conveys no consumed, and a completed settlement commits the reserved amount. The PEP's Execution Evidence carries no metering member, and the PDP's claim domain commits the reserved amount on a completed settlement (services/pdp/src/idempotency-claims.ts)."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state that the reserved amount commits; the capability stays disabled and unclaimed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local). The behavior it states is witnessed under metering.settlement-states.completed-commits (PDP role). Todo: the statement is prose, and no test reads the profile or a machine-readable copy of it, so nothing at this row's unit, deployment-documentation level observes it, and no PEP-role witness ties the rule to the profile; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-states.failed-rule-defined). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.suppressed-releases",
@@ -41678,10 +41705,11 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a completed outcome commits the conveyed consumed amount, or the reserved amount where the class defines no actual measure, on every counter the decision reserved, and releases any reserved excess"
+    "normative": "a completed outcome commits the conveyed consumed amount, or the reserved amount where the class defines no actual measure, on every counter the decision reserved, and releases any reserved excess",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment: the PEP conveys no consumed, the reserved amount commits, and no reserved excess arises, so the conveyed-quantity and excess-release clauses have no case in the reference."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41714,7 +41742,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Tested under observation.local (D877): profile v16 states that the payment class defines no actual measure, so no consumed is conveyed and no reserved excess arises; the earlier partial reason (committing a conveyed amount and releasing an excess are not exercised) describes cases the profile rules out."
   },
   {
    "id": "metering.settlement-states.failed-rule-defined",
@@ -41731,12 +41759,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Operation Profile states the commit-or-refund rule for a failed metered payment"
+    "normative": "the Operation Profile states the commit-or-refund rule for a failed metered payment",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines the rule for payments:payment.execute at execute_wire_transfer: a failed settlement leaves the reservation held pending reconciliation (D830 ruling 10); a timeout, a restart or an elapsed lease never releases it, and release is only on affirmative non-execution (the redeeming attempt's own suppressed settlement, or an operator's not_executed once the permit and its lease have elapsed). A permit the PEP suppresses before redeeming it stays charged the same way."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state the commit-or-refund rule for a failed metered payment; the capability stays disabled and unclaimed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local); the PDP behavior it states is witnessed by template.standing-payment.failed-remains-charged and metering.settlement-states.failed-stays-charged (PDP role). Todo: the statement is prose, and no test reads it, so nothing at this row's unit, deployment-documentation level observes it; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-contract.reserved-commits-stated). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.failed-stays-charged",
