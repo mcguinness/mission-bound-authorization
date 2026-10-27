@@ -198,5 +198,6 @@ describe("misbehavior reaching the PS (V4, V7, V8, V9)", () => {
     w.ps.tokenPolicy.refuse = "invalid_resource_token";
     await refusal(w.agent.call(RESOURCE, "/api/documents"));
     expect(w.ps.requests[0]?.body.mission_s256).toBe(sent);
+    expect(w.resource.effects).toEqual([]);
   });
 });

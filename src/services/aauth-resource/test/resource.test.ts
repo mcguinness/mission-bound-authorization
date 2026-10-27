@@ -390,6 +390,7 @@ describe("authorization endpoint (@spec aauth#section-6.6)", () => {
     expect(res.status).toBe(400);
     expect(res.json()).toMatchObject({ error: "invalid_request" });
     expect(w.resource.issuedResourceTokens).toEqual([]);
+    nothingRan();
   });
 
   it("answers a person token and a defined scope with a resource token", async () => {
@@ -429,6 +430,7 @@ describe("authorization endpoint (@spec aauth#section-6.6)", () => {
       [401, "requirement=person-token"],
     ]);
     expect(w.resource.issuedResourceTokens).toEqual([]);
+    nothingRan();
   });
 
   it.each([
@@ -445,6 +447,7 @@ describe("authorization endpoint (@spec aauth#section-6.6)", () => {
     expect(res.headers["content-type"]).toBe("application/problem+json");
     expect(res.json()).toMatchObject({ error });
     expect(w.resource.issuedResourceTokens).toEqual([]);
+    nothingRan();
   });
 });
 
