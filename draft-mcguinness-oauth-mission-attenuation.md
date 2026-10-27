@@ -466,8 +466,10 @@ addition to the substrate's chain verification, a consumer MUST:
   root's, or that omits it, MUST cause the whole chain to be refused,
   not treated as a narrower grant; and
 - reject the chain unless the root's `iss` equals its `mission.issuer`,
-  and verify the root's signature under the Mission Issuer's published
-  keys (those of that `iss`). A root whose `iss` is not its
+  and verify the root's signature under the Mission Issuer's keys, the
+  consumer's trust anchor for that `iss`
+  ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+  step 3). A root whose `iss` is not its
   `mission.issuer`, or whose signature does not verify under the Mission
   Issuer's keys, MUST cause the whole chain to be refused: only the
   Mission Issuer mints a Mission-bound root; and
