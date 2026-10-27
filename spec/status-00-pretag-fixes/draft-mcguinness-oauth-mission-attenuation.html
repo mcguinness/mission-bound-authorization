@@ -1187,6 +1187,9 @@ alongside, not instead of, Authorization-Server-mediated delegation.<a href="#se
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.1">
                 <p id="section-toc.1-1.4.2.1.1"><a href="#section-4.1" class="auto internal xref">4.1</a>.  <a href="#name-deriving-the-root-from-the-" class="internal xref">Deriving the Root from the Authority Set</a></p>
 </li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.2">
+                <p id="section-toc.1-1.4.2.2.1"><a href="#section-4.2" class="auto internal xref">4.2</a>.  <a href="#name-mission-constraints-member" class="internal xref">Mission Constraints Member</a></p>
+</li>
             </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
@@ -1439,8 +1442,9 @@ gated on the same Mission state.<a href="#section-4-4" class="pilcrow">¶</a></p
         <h3 id="name-deriving-the-root-from-the-">
 <a href="#section-4.1" class="section-number selfRef">4.1. </a><a href="#name-deriving-the-root-from-the-" class="section-name selfRef">Deriving the Root from the Authority Set</a>
         </h3>
-<p id="section-4.1-1">The Mission Issuer derives the root's <code>attenuating_agent_token</code>
-authority from <code>mission_resource_access</code> entries
+<p id="section-4.1-1">The Mission Issuer derives the maximum <code>attenuating_agent_token</code>
+authority a root can carry, the mapped ceiling, from
+<code>mission_resource_access</code> entries
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) by this mapping:<a href="#section-4.1-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-4.1-2.1">
@@ -1466,43 +1470,125 @@ maps it with the restriction removed; a requested root that needs
 such a tool is rejected (<a href="#request-discovery" class="auto internal xref">Section 5</a>);<a href="#section-4.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-2.3">
-            <p id="section-4.1-2.3.1">a tool's argument constraints map to the entry's <code>constraints</code>,
-compared under the specification-defined Common Constraint value-space rules
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>) for specification-defined constraint
-names and under the deployment's rules otherwise; a root argument
-constraint <span class="bcp14">MUST</span> be no broader than the mapped entry <code>constraints</code>; and<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
+            <p id="section-4.1-2.3.1">the entry's <code>constraints</code>, and its <code>resource_contract</code> when it
+carries one, are the tool's <code>mission_constraints</code> value in the
+mapped ceiling (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>). A tool takes its
+restrictions from exactly
+one entry: where more than one entry maps to a tool identifier, the
+issuer carries one entry's restrictions for that tool or mints
+separate roots, and never merges them. The issuer <span class="bcp14">MUST NOT</span> map an
+entry to a tool unless the resource server establishes, for every
+operation the tool identifier names, each fact the entry's
+<code>constraints</code> restrict;<a href="#section-4.1-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-4.1-2.4">
-            <p id="section-4.1-2.4.1">the root <span class="bcp14">MUST</span> derive only from entries whose <code>delegation</code> permits the
-intended holder (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-4.1-2.4.1">a tool's argument constraints name every argument that the resource
+server's definitions of the operations the tool identifier names
+declare, each admitted explicitly, and carry no <code>"*"</code> entry
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.3" class="relref">Section 3.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+An argument that only some of those operations take is <code>optional</code> in
+the map, which leaves its requiredness to each operation's own
+definition. In the mapped ceiling, argument constraints narrower than
+a wildcard come only from the target restriction above, never from
+the entry's <code>constraints</code>; and<a href="#section-4.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.1-2.5">
+            <p id="section-4.1-2.5.1">the root <span class="bcp14">MUST</span> derive only from entries whose <code>delegation</code> permits the
+intended holder (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-4.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.1-3">Root issuance is the only moment the Mission Issuer is present in the
-chain, so per-entry delegation policy is enforced by shaping the root:<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-3">The issued root carries the mapped ceiling or narrows it within the
+client's request (<a href="#request-discovery" class="auto internal xref">Section 5</a>): each tool's argument
+constraints no broader than the ceiling's under the substrate's
+capability monotonicity
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.5" class="relref">Section 4.5</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+and each tool's <code>mission_constraints</code> <code>constraints</code> a subset of the
+ceiling's under step 3 of the Resource Access subset rule, with its
+<code>resource_contract</code> unchanged (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>). A root capped
+at USD 100 under an entry permitting USD 500, or admitting only one
+<code>period</code> where the tool admits any, is such a narrowing.<a href="#section-4.1-3" class="pilcrow">¶</a></p>
+<p id="section-4.1-4">Root issuance is the only moment the Mission Issuer is present in the
+chain, so per-entry delegation policy is enforced by shaping the root:<a href="#section-4.1-4" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="section-4.1-4.1">
-            <p id="section-4.1-4.1.1">an entry whose <code>delegation</code> policy does not permit re-delegation,
+<li class="normal" id="section-4.1-5.1">
+            <p id="section-4.1-5.1.1">an entry whose <code>delegation</code> policy does not permit re-delegation,
 including the non-delegable default of an entry carrying no
 <code>delegation</code> member, <span class="bcp14">MUST NOT</span> be carried on a root whose
 <code>del_max_depth</code> exceeds 0; the issuer carries such entries only on
-roots with <code>del_max_depth</code> 0;<a href="#section-4.1-4.1.1" class="pilcrow">¶</a></p>
+roots with <code>del_max_depth</code> 0;<a href="#section-4.1-5.1.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.1-4.2">
-            <p id="section-4.1-4.2.1">a root's <code>del_max_depth</code> <span class="bcp14">MUST NOT</span> exceed the minimum <code>max_depth</code>
-across the <code>delegation</code> members of the entries it maps; and<a href="#section-4.1-4.2.1" class="pilcrow">¶</a></p>
+          <li class="normal" id="section-4.1-5.2">
+            <p id="section-4.1-5.2.1">a root's <code>del_max_depth</code> <span class="bcp14">MUST NOT</span> exceed the minimum <code>max_depth</code>
+across the <code>delegation</code> members of the entries it maps; and<a href="#section-4.1-5.2.1" class="pilcrow">¶</a></p>
 </li>
-          <li class="normal" id="section-4.1-4.3">
-            <p id="section-4.1-4.3.1">the issuer <span class="bcp14">SHOULD</span> mint separate roots per delegation class rather
+          <li class="normal" id="section-4.1-5.3">
+            <p id="section-4.1-5.3.1">the issuer <span class="bcp14">SHOULD</span> mint separate roots per delegation class rather
 than mix entries of differing delegation policy on one root, which
 also serves the per-subtree disclosure minimization of
-<a href="#privacy-considerations" class="auto internal xref">Section 15</a>.<a href="#section-4.1-4.3.1" class="pilcrow">¶</a></p>
+<a href="#privacy-considerations" class="auto internal xref">Section 15</a>.<a href="#section-4.1-5.3.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
-<p id="section-4.1-5">The root's authority <span class="bcp14">MUST</span> be within the Mission's approved authority
+<p id="section-4.1-6">The root's authority <span class="bcp14">MUST</span> be within the Mission's approved authority
 under this mapping and the issuance profile's subset rule. An auditor
 verifies that a root is within the Authority Set by applying this same
-mapping in reverse: each root tool and argument constraint traces to a
-permitted entry action, target restriction and constraint.<a href="#section-4.1-5" class="pilcrow">¶</a></p>
+mapping in reverse: each root tool, argument constraint, and
+<code>mission_constraints</code> value traces to a permitted entry action, target
+restriction, and <code>constraints</code>.<a href="#section-4.1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="mission-constraints">
+<section id="section-4.2">
+        <h3 id="name-mission-constraints-member">
+<a href="#section-4.2" class="section-number selfRef">4.2. </a><a href="#name-mission-constraints-member" class="section-name selfRef">Mission Constraints Member</a>
+        </h3>
+<p id="section-4.2-1">The attenuation substrate carries authority as tools and their
+argument constraints, which constrain the arguments of an invocation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.4" class="relref">Section 3.4</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
+A Mission entry's <code>constraints</code> are not arguments: a resource server
+evaluates them against the facts it establishes for the operation it
+executes, such as a record's amount, currency, or vendor
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Resource Server Enforcement"). This profile carries them in a member
+of the <code>attenuating_agent_token</code> entry that the substrate gives no
+authority and this profile defines
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.3" class="relref">Section 3.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>):<a href="#section-4.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-4.2-2">
+          <dt id="section-4.2-2.1">
+<code>mission_constraints</code>:</dt>
+          <dd style="margin-left: 1.5em" id="section-4.2-2.2">
+            <p id="section-4.2-2.2.1"><span class="bcp14">REQUIRED</span> in the <code>attenuating_agent_token</code> entry of every token in a
+Mission-bound attenuation chain. A JSON object with exactly one member
+for each tool identifier in the entry's <code>tools</code>, and no other member.
+Each member's value is an object with:<a href="#section-4.2-2.2.1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.2-2.2.2.1">
+                <p id="section-4.2-2.2.2.1.1"><code>constraints</code>: <span class="bcp14">REQUIRED</span>. The <code>constraints</code> of the
+<code>mission_resource_access</code> entry the tool maps from
+(<a href="#root-mapping" class="auto internal xref">Section 4.1</a>), as a JSON object; an empty object means that
+entry carries none.<a href="#section-4.2-2.2.2.1.1" class="pilcrow">¶</a></p>
+</li>
+              <li class="normal" id="section-4.2-2.2.2.2">
+                <p id="section-4.2-2.2.2.2.1"><code>resource_contract</code>: present exactly when that entry carries one,
+and then equal to it
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-4.2-2.2.2.2.1" class="pilcrow">¶</a></p>
+</li>
+            </ul>
+</dd>
+        <dd class="break"></dd>
+</dl>
+<p id="section-4.2-3">Each hop narrows the member as the Resource Access profile's subset
+rule narrows an entry
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Subset Rule"): for every tool a child keeps, the child's
+<code>constraints</code> is a subset of the parent's under step 3 of that rule,
+and its <code>resource_contract</code> is preserved under step 4. A child that
+drops a tool drops that tool's member. Removing a restriction never
+yields unrestricted authority: a missing <code>mission_constraints</code>, a
+missing or extra member, a missing <code>constraints</code>, <code>constraints</code> that
+are not a subset of the parent's under step 3, or a changed
+<code>resource_contract</code> refuses the whole chain. A key the consumer does
+not understand or cannot enforce also refuses the chain; it is never
+ignored.<a href="#section-4.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -1534,7 +1620,7 @@ endpoint with the substrate's root request
 on any grant the issuance profile uses to issue a Mission-bound token
 (for example, the Mission's <code>refresh_token</code> grant). The request
 carries an <code>attenuating_agent_token</code> authorization detail <span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span>
-whose tools and argument constraints are the requested root
+whose <code>tools</code> and <code>mission_constraints</code> are the requested root
 authority; that detail on a Mission-bound token request selects root
 issuance (<a href="#root" class="auto internal xref">Section 4</a>) rather than an ordinary <code>mission_resource_access</code>
 token.<a href="#section-5-4" class="pilcrow">¶</a></p>
@@ -1547,12 +1633,24 @@ corresponding private key and binds that key as the root's <code>cnf.jwk</code>
 <a href="#root" class="auto internal xref">Section 4</a>).<a href="#section-5-5" class="pilcrow">¶</a></p>
 <p id="section-5-6">The Mission Issuer <span class="bcp14">MUST</span> validate the detail against the root mapping
 (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>). It <span class="bcp14">MUST</span> refuse the request with
-<code>invalid_authorization_details</code> when any tool or argument constraint
-is not within the mapped Authority Set, rather than issue a root for
+<code>invalid_authorization_details</code> when any tool, argument constraint, or
+<code>mission_constraints</code> value is not within the mapped Authority Set,
+rather than issue a root for
 the rest, as the issuance profile refuses a requested subset beyond
 the Mission's authority (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>). A
 client-requested root is therefore always at most the mapped Authority
 Set, never broader.<a href="#section-5-6" class="pilcrow">¶</a></p>
+<p id="section-5-7">The issued root is also no broader than the request in either layer.
+Its tools and argument constraints attenuate the requested ones, as
+the substrate's root issuance requires
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.1.3" class="relref">Section 6.1.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>,
+step 7). The substrate gives <code>mission_constraints</code> no authority, so
+that check does not cover it: the Mission Issuer <span class="bcp14">MUST</span> issue each
+tool's <code>mission_constraints</code> no broader than the requested value under
+step 3 of the Resource Access subset rule, with <code>resource_contract</code>
+unchanged (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>). A request that carries no
+<code>mission_constraints</code> value for a requested tool asks for the
+ceiling's.<a href="#section-5-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="attenuation">
@@ -1569,13 +1667,17 @@ The holder:<a href="#section-6-1" class="pilcrow">¶</a></p>
           <p id="section-6-2.1.1">selects a narrower tool and constraint set;<a href="#section-6-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.2">
-          <p id="section-6-2.2.1">increments <code>del_depth</code>;<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.2.1">narrows <code>mission_constraints</code> with the tools it keeps
+(<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>);<a href="#section-6-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.3">
-          <p id="section-6-2.3.1">signs with the key the parent's <code>cnf</code> binds; and<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.3.1">increments <code>del_depth</code>;<a href="#section-6-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-6-2.4">
-          <p id="section-6-2.4.1">sets <code>par_hash</code> to the parent's commitment.<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-6-2.4.1">signs with the key the parent's <code>cnf</code> binds; and<a href="#section-6-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-6-2.5">
+          <p id="section-6-2.5.1">sets <code>par_hash</code> to the parent's commitment.<a href="#section-6-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-3">No Mission Issuer contact occurs.<a href="#section-6-3" class="pilcrow">¶</a></p>
@@ -1601,10 +1703,11 @@ the whole chain transitively: no descendant outlives the root, hence
 none outlives the Mission.<a href="#section-6-6" class="pilcrow">¶</a></p>
 <p id="section-6-7">The <code>mission</code> claim rides the chain unchanged: every token in the chain
 carries the same <code>id</code>, <code>issuer</code>, and <code>authority_hash</code> as the root. The
-child's narrowing is governed entirely by the attenuation substrate's
+child's narrowing is governed by the attenuation substrate's
 capability monotonicity
-(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.5" class="relref">Section 4.5</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
-which is the subset relation a consumer checks;
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.5" class="relref">Section 4.5</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>)
+and by the narrowing of <code>mission_constraints</code>
+(<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>), the two subset relations a consumer checks;
 because the child carries the parent chain, a consumer holding only the
 leaf and its chain can verify that the leaf is a subset of the root,
 without holding the Mission's full Authority Set.<a href="#section-6-7" class="pilcrow">¶</a></p>
@@ -1632,7 +1735,8 @@ because it has no concept of the Mission binding. The substrate gives a
 claim it does not define no authority in a derived token unless a
 profile defines how it carries across derivation
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-3.3" class="relref">Section 3.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>);
-this profile defines that for <code>mission</code>: it is carried unchanged. In
+this profile defines that for <code>mission</code>, which is carried unchanged,
+and for <code>mission_constraints</code> (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>). In
 addition to the substrate's chain verification, a consumer <span class="bcp14">MUST</span>:<a href="#section-7-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-7-2.1">
@@ -1665,20 +1769,36 @@ its parent's <code>aud</code> (<a href="#attenuation" class="auto internal xref"
 </li>
         <li class="normal" id="section-7-2.5">
           <p id="section-7-2.5.1">reject the chain if any child's <code>exp</code> exceeds its parent's <code>exp</code>
-(<a href="#attenuation" class="auto internal xref">Section 6</a>).<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+(<a href="#attenuation" class="auto internal xref">Section 6</a>); and<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-7-2.6">
+          <p id="section-7-2.6.1">reject the chain unless every token carries <code>mission_constraints</code>
+as <a href="#mission-constraints" class="auto internal xref">Section 4.2</a> defines it, each child's narrowing its
+parent's.<a href="#section-7-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-7-3">These checks fail safe: a chain that does not present a single, unchanged
-Mission binding, an audience within its parent's, and an expiry within
-its parent's is refused, not evaluated against a guessed Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
-<p id="section-7-4">Verification cost scales with the chain: a consumer performs one
+Mission binding, an audience within its parent's, an expiry within
+its parent's, and Mission constraints within its parent's is refused,
+not evaluated against a guessed Mission.<a href="#section-7-3" class="pilcrow">¶</a></p>
+<p id="section-7-4">A substrate verification that permits a presentation does not by
+itself authorize the invocation. The consumer <span class="bcp14">MUST</span> also enforce the
+leaf's <code>mission_constraints</code> value for the invoked tool against the
+facts of the operation it executes, and refuse the invocation where
+they do not hold. It establishes those facts as it does when it
+enforces an entry's <code>constraints</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>, Section
+"Resource Server Enforcement"): from its own records where the
+operation acts on one, never from an argument's claim about such a
+record.<a href="#section-7-4" class="pilcrow">¶</a></p>
+<p id="section-7-5">Verification cost scales with the chain: a consumer performs one
 signature verification per link, the proof-of-possession check, and
 the Mission-state check (<a href="#kill-switch" class="auto internal xref">Section 8</a>) on every presentation. The
 substrate's implementation depth limit bounds the chain length a
 consumer accepts independently of the <code>del_max_depth</code> the chain
 carries
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-4.3" class="relref">Section 4.3</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
-so an adversarially deep chain is refused rather than verified.<a href="#section-7-4" class="pilcrow">¶</a></p>
+so an adversarially deep chain is refused rather than verified.<a href="#section-7-5" class="pilcrow">¶</a></p>
 <div id="edge-validation">
 <section id="section-7.1">
         <h3 id="name-edge-validation">
@@ -1698,7 +1818,7 @@ locally at memory speed:<a href="#section-7.1-1" class="pilcrow">¶</a></p>
             <p id="section-7.1-2.1.1">the signature chain to the root;<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.2">
-            <p id="section-7.1-2.2.1">capability monotonicity;<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.2.1">capability monotonicity and the narrowing of <code>mission_constraints</code>;<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-7.1-2.3">
             <p id="section-7.1-2.3.1">audience and expiry nesting; and<a href="#section-7.1-2.3.1" class="pilcrow">¶</a></p>
@@ -1800,8 +1920,9 @@ parent's <code>cnf</code> binds (<a href="#attenuation" class="auto internal xre
         <li id="section-9-2.2">
           <p id="section-9-2.2.1"><strong>Authority bound.</strong> The root is bounded by the Mission's Authority
 Set (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>); each child is no broader than its parent
-under the attenuation substrate's capability monotonicity, with its
-<code>aud</code> and <code>exp</code> within its parent's (<a href="#attenuation" class="auto internal xref">Section 6</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
+under the attenuation substrate's capability monotonicity and the
+narrowing of <code>mission_constraints</code> (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>), with
+its <code>aud</code> and <code>exp</code> within its parent's (<a href="#attenuation" class="auto internal xref">Section 6</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-2.3">
           <p id="section-9-2.3.1"><strong>Mission state.</strong> The Mission Issuer gates the root on Mission
@@ -1886,7 +2007,7 @@ closed.<a href="#section-11-3" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-12-1">An orchestrator agent (<code>s6BhdRkqt3</code>), acting for <code>alice</code> under Mission
 <code>msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns</code> to reconcile Q3 invoices, holds a
-Mission-bound attenuation root. Its authority covers reading Q3 invoices
+Mission-bound attenuation root. Its authority covers reading invoices
 and posting journal entries of at most USD 500; <code>del_max_depth</code> allows
 two levels of offline narrowing (illustrative; this Mission's Authority
 Set extends the single-domain walkthrough's, its write entry also
@@ -1921,19 +2042,27 @@ claims:<a href="#section-12-1" class="pilcrow">¶</a></p>
     { "type": "attenuating_agent_token",
       "tools": {
         "erp.invoices.read": {
-          "period":
-            { "constraint_type": "exact", "value": "2026-Q3" } },
+          "period": { "constraint_type": "wildcard" } },
         "erp.journal-entries.write": {
-          "amount_usd":
-            { "constraint_type": "range", "max": 500 } } } }
+          "account": { "constraint_type": "wildcard" },
+          "amount": { "constraint_type": "wildcard" } } },
+      "mission_constraints": {
+        "erp.invoices.read": { "constraints": {} },
+        "erp.journal-entries.write": {
+          "constraints": {
+            "max_amount": { "amount": "500.00", "currency": "USD" }
+          } } } }
   ]
 }
 </pre><a href="#section-12-2" class="pilcrow">¶</a>
 </div>
 <p id="section-12-3">The root's <code>erp.invoices.read</code> and <code>erp.journal-entries.write</code> tools map
 to the <code>invoices.read</code> and <code>journal-entries.write</code> actions on
-<code>https://erp.example.com</code>, and the <code>amount_usd</code> argument maps to the
-Mission Common Constraint <code>max_amount</code> (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>); its <code>aud</code>
+<code>https://erp.example.com</code>. Their argument constraints admit each
+argument the ERP's operation definitions declare, and the write entry's
+<code>max_amount</code> rides <code>mission_constraints</code>, which the ERP enforces
+against the amount of the journal entry it posts
+(<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>). The root's <code>aud</code>
 names that resource server. The ERP's operation contract identifies
 <code>https://erp.example.com</code> as the operation target of both tools
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), so the
@@ -1973,15 +2102,18 @@ display):<a href="#section-12-4" class="pilcrow">¶</a></p>
       "tools": {
         "erp.invoices.read": {
           "period":
-            { "constraint_type": "exact", "value": "2026-Q3" } } } }
+            { "constraint_type": "exact", "value": "2026-Q3" } } },
+      "mission_constraints": {
+        "erp.invoices.read": { "constraints": {} } } }
   ]
 }
 </pre><a href="#section-12-5" class="pilcrow">¶</a>
 </div>
 <p id="section-12-6">The <code>mission</code> claim is unchanged, the child's <code>aud</code> equals the root's,
 its <code>exp</code> (1793609640) ends before the root's (1793609700), within the
-per-hop bound, the write tool is gone, and the read constraint is
-unchanged (a permitted narrowing). The child's <code>cnf.jwk</code> is the
+per-hop bound, the write tool and its <code>mission_constraints</code> member are
+gone, and the read tool's <code>period</code> argument narrows from any value to
+<code>2026-Q3</code> (a permitted narrowing). The child's <code>cnf.jwk</code> is the
 extractor's own public key, not the orchestrator's, as the substrate
 requires for a child handed across a process boundary
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-6.2" class="relref">Section 6.2</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).
@@ -2012,7 +2144,10 @@ or Mission-state evaluation: a child that outlives its parent breaks
 the chain's transitive expiry bound, so the gateway refuses the whole
 chain. A chain whose child carried a <code>mission</code> claim differing from the
 root's is refused the same way, as a re-bound chain, not read as a
-narrower grant.<a href="#section-12-7" class="pilcrow">¶</a></p>
+narrower grant. So is a chain whose child keeps the write tool but
+drops its <code>max_amount</code>, or omits <code>mission_constraints</code>: removing a
+restriction never reads as unrestricted authority
+(<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>).<a href="#section-12-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conformance">
@@ -2022,14 +2157,16 @@ narrower grant.<a href="#section-12-7" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-13-1">A Mission Issuer conforming to this profile <span class="bcp14">MUST</span> bound a Mission-bound
 attenuation root by the Mission's Authority Set (<a href="#root-mapping" class="auto internal xref">Section 4.1</a>) and
-carry the <code>mission</code> claim, the confirmation key, and <code>aud</code> on it.<a href="#section-13-1" class="pilcrow">¶</a></p>
+carry the <code>mission</code> claim, the confirmation key, <code>aud</code>, and
+<code>mission_constraints</code> (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>) on it.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <p id="section-13-2">An Attenuating Holder conforming to this profile:<a href="#section-13-2" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-13-3.1">
           <p id="section-13-3.1.1"><span class="bcp14">MUST</span> carry the <code>mission</code> claim unchanged into every child it mints;<a href="#section-13-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.2">
-          <p id="section-13-3.2.1"><span class="bcp14">MUST</span> only narrow authority and never broaden it;<a href="#section-13-3.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-3.2.1"><span class="bcp14">MUST</span> only narrow authority and never broaden it, including
+<code>mission_constraints</code> (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>);<a href="#section-13-3.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-3.3">
           <p id="section-13-3.3.1"><span class="bcp14">MUST</span> keep each child's <code>aud</code> within its parent's and its <code>exp</code>
@@ -2049,12 +2186,17 @@ attenuation substrate
 (<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>);<a href="#section-13-5.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.2">
-          <p id="section-13-5.2.1"><span class="bcp14">MUST</span> verify that the <code>mission</code> claim is unchanged across the chain
-and that each child's <code>aud</code> and <code>exp</code> are within its parent's
-(<a href="#mission-binding-check" class="auto internal xref">Section 7</a>); and<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.2.1"><span class="bcp14">MUST</span> verify that the <code>mission</code> claim is unchanged across the chain,
+that each child's <code>aud</code> and <code>exp</code> are within its parent's, and that
+each child's <code>mission_constraints</code> narrows its parent's
+(<a href="#mission-binding-check" class="auto internal xref">Section 7</a>);<a href="#section-13-5.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-5.3">
-          <p id="section-13-5.3.1"><span class="bcp14">MUST</span> enforce current Mission state per <a href="#kill-switch" class="auto internal xref">Section 8</a>.<a href="#section-13-5.3.1" class="pilcrow">¶</a></p>
+          <p id="section-13-5.3.1"><span class="bcp14">MUST</span> enforce the leaf's <code>mission_constraints</code> against the facts of
+the operation it executes (<a href="#mission-binding-check" class="auto internal xref">Section 7</a>); and<a href="#section-13-5.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-5.4">
+          <p id="section-13-5.4.1"><span class="bcp14">MUST</span> enforce current Mission state per <a href="#kill-switch" class="auto internal xref">Section 8</a>.<a href="#section-13-5.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-13-6">A deployment <span class="bcp14">MUST NOT</span> claim this profile on a path that does not
@@ -2134,14 +2276,22 @@ reason, and <span class="bcp14">MAY</span> apply the per-branch denylist mitigat
 specific root or subtree it learns is contained.<a href="#section-14-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-14-2.7">
-          <p id="section-14-2.7.1">Audit. Because the issuer does not observe offline derivations, the
+          <p id="section-14-2.7.1">Generic substrate consumers. A consumer that verifies only the
+attenuation substrate gives <code>mission_constraints</code> no authority and
+so enforces none of the Mission's constraints. A Mission-bound chain
+is accepted only by a consumer conforming to this profile
+(<a href="#conformance" class="auto internal xref">Section 13</a>), which enforces both the argument constraints and
+<code>mission_constraints</code>.<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-14-2.8">
+          <p id="section-14-2.8.1">Audit. Because the issuer does not observe offline derivations, the
 consuming enforcement points are the only place a derivation is seen;
 runtime enforcement evidence
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>) is the audit record
 for offline-attenuated actions. PEP evidence for an action under an
 attenuated token <span class="bcp14">SHOULD</span> carry the chain linkage, the leaf's <code>jti</code>,
 its <code>del_depth</code>, and its <code>par_hash</code>, so offline derivations are
-reconstructable in audit.<a href="#section-14-2.7.1" class="pilcrow">¶</a></p>
+reconstructable in audit.<a href="#section-14-2.8.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -2187,7 +2337,10 @@ issuance profile registers as an open object, and the
 <code>attenuating_agent_token</code> authorization detail, which the attenuation
 substrate defines (<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> establishes no registry of types); this
 profile combines them by reference and defines no new claim or
-registry. It registers one metadata member.<a href="#section-16-1" class="pilcrow">¶</a></p>
+registry. Its one addition to that detail, the <code>mission_constraints</code>
+member (<a href="#mission-constraints" class="auto internal xref">Section 4.2</a>), needs no registration, since
+<span>[<a href="#RFC9396" class="cite xref">RFC9396</a>]</span> keeps no registry of detail members. It registers one
+metadata member.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="section-16-2">This document registers one member in the existing "OAuth Authorization
 Server Metadata" registry <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span>: Change Controller IETF; Reference
 this document, <a href="#request-discovery" class="auto internal xref">Section 5</a>.<a href="#section-16-2" class="pilcrow">¶</a></p>
@@ -2299,62 +2452,72 @@ this document, <a href="#request-discovery" class="auto internal xref">Section 5
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Worked Example: the tokens carry <code>typ</code> <code>aat+jwt</code> and <code>cnf.jwk</code>, the
-child binds the extractor's own key, and the extractor presents a
-PoP JWT.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Mission Constraints Member: a Mission entry's <code>constraints</code> and
+<code>resource_contract</code> ride the profile-defined <code>mission_constraints</code>
+member of the <code>attenuating_agent_token</code> entry, required in every
+token and narrowed per hop under the Resource Access subset rule,
+instead of argument constraints; argument constraints admit each
+declared argument explicitly; the mapping yields a ceiling that the
+issued root narrows within the request in both layers; a consumer
+enforces both layers (#1756).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Verifying the Mission Binding: the chain-length bound is the
-substrate's <code>MAX_DELEGATION_DEPTH</code>, a requirement there, in place of
-this profile's own recommendation.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.2.1">Worked Example: the tokens carry <code>typ</code> <code>aat+jwt</code> and <code>cnf.jwk</code>, the
+child binds the extractor's own key, and the extractor presents a
+PoP JWT.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Requesting a Root and Discovery: the substrate's root request, which
-always carries an <code>attenuating_agent_token</code> detail, selects root
-issuance; the <code>mission_attenuation_root</code> parameter and the full
-mapped root for a request without a detail are withdrawn.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.3.1">Verifying the Mission Binding: the chain-length bound is the
+substrate's <code>MAX_DELEGATION_DEPTH</code>, a requirement there, in place of
+this profile's own recommendation.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Requesting a Root and Discovery: the holder key travels in the
+          <p id="appendix-A-2.4.1">Requesting a Root and Discovery: the substrate's root request, which
+always carries an <code>attenuating_agent_token</code> detail, selects root
+issuance; the <code>mission_attenuation_root</code> parameter and the full
+mapped root for a request without a detail are withdrawn.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Requesting a Root and Discovery: the holder key travels in the
 substrate's <code>req_cnf</code>, and the Mission Issuer verifies possession
 before binding it as <code>cnf.jwk</code>; a Mission Issuer that advertises this
 profile also lists <code>attenuating_agent_token</code> in
-<code>authorization_details_types_supported</code>.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Requesting a Root and Discovery: a requested tool or argument
-constraint beyond the mapped Authority Set refuses the request with
-<code>invalid_authorization_details</code> (was <code>invalid_request</code>), as in the
-issuance profile and the substrate.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+<code>authorization_details_types_supported</code>.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Mission-Bound Attenuation Roots: the root carries the substrate's
-<code>typ</code> (<code>aat+jwt</code>, not <code>at+jwt</code>) and a <code>cnf.jwk</code>, and is returned
-with <code>token_type</code> <code>aat</code>.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">Requesting a Root and Discovery: a requested tool or argument
+constraint beyond the mapped Authority Set refuses the request with
+<code>invalid_authorization_details</code> (was <code>invalid_request</code>), as in the
+issuance profile and the substrate.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Profiles revision -02 of Attenuating Agent Tokens and cites it by
-section.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.7.1">Mission-Bound Attenuation Roots: the root carries the substrate's
+<code>typ</code> (<code>aat+jwt</code>, not <code>at+jwt</code>) and a <code>cnf.jwk</code>, and is returned
+with <code>token_type</code> <code>aat</code>.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Mission-Binding Profile states the root, chain, authority bound,
-state check, and consumer checks under which every token in a chain
-carries the <code>mission</code> claim, as the issuance profile's Claim
-Reservation requires. No requirement changed (#1531).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.8.1">Profiles revision -02 of Attenuating Agent Tokens and cites it by
+section.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Deriving the Root from the Authority Set: every operation a mapped
+          <p id="appendix-A-2.9.1">Mission-Binding Profile states the root, chain, authority bound,
+state check, and consumer checks under which every token in a chain
+carries the <code>mission</code> claim, as the issuance profile's Claim
+Reservation requires. No requirement changed (#1531).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Deriving the Root from the Authority Set: every operation a mapped
 tool can perform at each root audience has an operation target
 within the entry's <code>resource</code>; equal <code>resource</code> and <code>aud</code> values do
 not establish this alone, and an entry finer than the reachable
-targets is confined by argument constraints or not mapped (#1276).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+targets is confined by argument constraints or not mapped (#1276).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">Deriving the Root from the Authority Set: the preserved target
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1">Deriving the Root from the Authority Set: the preserved target
 restriction includes the entry's <code>resource_match</code> and holds for every
 tool and every audience; an issuer that cannot establish it for a
 tool does not map the entry to that tool, and the reverse mapping
-traces each tool to the entry's target restriction (#1276).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
+traces each tool to the entry's target restriction (#1276).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

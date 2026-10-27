@@ -161,10 +161,11 @@ Table of Contents
    *  *Revocation propagation* guidance (Section 6): the
       mission_max_stale_seconds ceiling on reliance on an observation of
       Mission state, and how to size token lifetimes to the propagation
-      mechanisms in use.  Each extension is independently optional
-      (Section 9).  The authorization server metadata an AS publishes
-      (Section 8) follows from the extensions and authentication paths
-      it supports.
+      mechanisms in use.
+
+   Each extension is independently optional (Section 9).  The
+   authorization server metadata an AS publishes (Section 8) follows
+   from the extensions and authentication paths it supports.
 
    This document does not restate the issuance profile: the Mission
    Intent, authority derivation, the mission claim, the integrity
@@ -1371,9 +1372,9 @@ Table of Contents
    The next two examples use another Mission.
 
    Suspend request with a deadline from admin-console, an administrator
-   client the deployment authorizes for suspend (Section 5.4), here also
-   carrying the OPTIONAL expected_version guard against deciding over
-   stale state (Section 5.6):
+   client the deployment authorizes for suspend and the scheduled revoke
+   (Section 5.4), here also carrying the OPTIONAL expected_version guard
+   against deciding over stale state (Section 5.6):
 
    POST /as/mission/lifecycle HTTP/1.1
    Host: as.example.com

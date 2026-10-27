@@ -1385,23 +1385,23 @@ further <code>operation</code> value (<a href="#lifecycle-operations" class="aut
           <p id="section-1-3.4.1"><strong>Revocation propagation</strong> guidance
 (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>): the <code>mission_max_stale_seconds</code>
 ceiling on reliance on an observation of Mission state, and how to
-size token lifetimes to the propagation mechanisms in use.
-Each extension is independently optional (<a href="#conformance" class="auto internal xref">Section 9</a>). The
-authorization server metadata an AS publishes (<a href="#as-metadata" class="auto internal xref">Section 8</a>)
-follows from the extensions and authentication paths it supports.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
+size token lifetimes to the propagation mechanisms in use.<a href="#section-1-3.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-1-4">This document does not restate the issuance profile: the Mission
+<p id="section-1-4">Each extension is independently optional (<a href="#conformance" class="auto internal xref">Section 9</a>). The
+authorization server metadata an AS publishes (<a href="#as-metadata" class="auto internal xref">Section 8</a>)
+follows from the extensions and authentication paths it supports.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<p id="section-1-5">This document does not restate the issuance profile: the Mission
 Intent, authority derivation, the <code>mission</code> claim, the integrity
 anchors, Mission-bound token issuance, the subset rule, and lifecycle
-gating are defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-1-4" class="pilcrow">¶</a></p>
-<p id="section-1-5">The OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> and its Continuous
+gating are defined in <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">The OpenID Shared Signals Framework <span>[<a href="#OIDC-SSF" class="cite xref">OIDC-SSF</a>]</span> and its Continuous
 Access Evaluation Profile <span>[<a href="#OIDC-CAEP" class="cite xref">OIDC-CAEP</a>]</span> push events to a receiver,
 and a companion profile can carry Mission transitions that way
 (<a href="#revocation-enforcement-classes" class="auto internal xref">Section 6</a>). An event reports that state
 changed, not how long a consumer may rely on the state, so a push
 speeds learning of transitions without replacing the Status operation
-(<a href="#status-operational" class="auto internal xref">Section 7</a>).<a href="#section-1-5" class="pilcrow">¶</a></p>
+(<a href="#status-operational" class="auto internal xref">Section 7</a>).<a href="#section-1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="conventions-and-definitions">
@@ -2896,8 +2896,9 @@ between the Mission Status example (<a href="#mission-status-response" class="au
 this revocation each advanced it.<a href="#section-5.5-7" class="pilcrow">¶</a></p>
 <p id="section-5.5-8">The next two examples use another Mission.<a href="#section-5.5-8" class="pilcrow">¶</a></p>
 <p id="section-5.5-9">Suspend request with a deadline from <code>admin-console</code>, an
-administrator client the deployment authorizes for <code>suspend</code>
-(<a href="#lifecycle-authorization" class="auto internal xref">Section 5.4</a>), here also carrying the <span class="bcp14">OPTIONAL</span>
+administrator client the deployment authorizes for <code>suspend</code> and
+the scheduled <code>revoke</code> (<a href="#lifecycle-authorization" class="auto internal xref">Section 5.4</a>), here also
+carrying the <span class="bcp14">OPTIONAL</span>
           <code>expected_version</code> guard against deciding over stale state
 (<a href="#idempotency" class="auto internal xref">Section 5.6</a>):<a href="#section-5.5-9" class="pilcrow">¶</a></p>
 <div class="lang-http-message sourcecode" id="section-5.5-10">
