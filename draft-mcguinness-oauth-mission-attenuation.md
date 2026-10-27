@@ -452,8 +452,12 @@ verification algorithm
 ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 This profile
 adds checks on the `mission` claim, which the substrate does not define
-because it has no concept of the Mission binding. In addition to the
-substrate's chain verification, a consumer MUST:
+because it has no concept of the Mission binding. The substrate gives a
+claim it does not define no authority in a derived token unless a
+profile defines how it carries across derivation
+({{Section 3.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}});
+this profile defines that for `mission`: it is carried unchanged. In
+addition to the substrate's chain verification, a consumer MUST:
 
 - reject the chain unless every token in it carries a `mission` claim
   and every claim carries the same `id`, `issuer`, and `authority_hash`
