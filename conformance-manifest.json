@@ -60304,7 +60304,7 @@
    "surface": "par",
    "assertion": "refusal",
    "observation": {
-    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, or a contract not defining an action the entry lists) is refused invalid_authorization_details and no Mission is created"
+    "normative": "a proposed reference that trusted configuration does not name as current for the entry's resource (unknown, superseded, retired, a different digest, a contract not defining an action the entry lists, or the current reference of a contract configuration names current only for another resource) is refused invalid_authorization_details and no Mission is created"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -60318,6 +60318,12 @@
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses an unconfigured or malformed reference with invalid_authorization_details before any interaction, creating no Mission",
+     "level": "endpoint",
+     "surface": "par"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "PAR intake validates a proposed reference against the shipped configuration (@spec resource-access#resource-contract, #249) > refuses the configured current reference on a resource the configuration does not name it current for",
      "level": "endpoint",
      "surface": "par"
     },
@@ -60340,7 +60346,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A superseded or unknown version, the current version under another digest, a contract not defining the entry's action, and any reference where none is configured are refused at PAR intake (kernel.validateProposal) and at approval, creating no Mission; the configured current reference is admitted. Proved by skipping the intake check and the approval check in turn. A reference current at the push that configuration no longer names as current is refused the same way at the approval render and decision (#1610). Resource applicability (#249, D712, D865): the shipped current reference proposed on a resource the configuration names no contract current for is refused at PAR. Proved by mutation: making a declaration apply to every resource fails that witness, and before it only case ev-rc-02. Cases ev-rc-01 to ev-rc-04 run (entry-validation, with the inline configuration the subset fixture's payments-contract-applicability-2026-10-26.json states)."
   },
   {
    "id": "resource-access.resource-contract.no-new-approval-non-current",
