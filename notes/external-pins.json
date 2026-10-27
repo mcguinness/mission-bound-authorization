@@ -168,6 +168,19 @@
       "note": "Pinned for #1166 (D510): Cross-Domain's grant client_id follows Sections 3.1 (client_id is the client at the Resource Authorization Server), 4.4.1 (the Resource AS checks it against the authenticated client, invalid_grant on mismatch) and 5 (the issuer maintains the client-to-Resource-AS mapping). Digest is of the published .txt.",
       "reference_keys": ["I-D.draft-ietf-oauth-identity-assertion-authz-grant"],
       "pin_id": "ID-JAG@a59c1dffc0b5"
+    },
+    {
+      "id": "AAT",
+      "kind": "datatracker",
+      "doc": "draft-niyikiza-oauth-attenuating-agent-tokens",
+      "rev": "02",
+      "url": "https://www.ietf.org/archive/id/draft-niyikiza-oauth-attenuating-agent-tokens-02.txt",
+      "sha256": "a7e23c35362c1fb60018a63343f8b0fdc1ce4a8c01fbf73af4a85e7ecf79f0f2",
+      "ref": "IETF Internet-Draft, rev 02 (2026-10-26)",
+      "status": "established",
+      "note": "Attenuating Agent Tokens, the substrate Mission Offline Attenuation profiles; also cited normatively by Cross-Organizational Delegation. Both drafts pin the reference to -02 in front matter. -02 breaks -01 implementations (its Appendix F); its Appendix E.3 records the reference implementation's cnf.jkt and DPoP divergence. Digest is of the published .txt, fetched from the archive URL on 2026-10-26.",
+      "reference_keys": ["I-D.draft-niyikiza-oauth-attenuating-agent-tokens"],
+      "pin_id": "AAT@a7e23c35362c"
     }
   ],
   "archive": [
