@@ -260,6 +260,9 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
     devDependencies:
+      '@mission/aauth-ps':
+        specifier: workspace:*
+        version: link:../aauth-ps
       '@mission/aauth-testkit':
         specifier: workspace:*
         version: link:../../packages/aauth-testkit

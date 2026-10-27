@@ -6,6 +6,6 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": { "@mission/aauth-wire": "workspace:*", "structured-headers": "^2.1.0" },
-  "devDependencies": { "@mission/aauth-testkit": "workspace:*" },
+  "devDependencies": { "@mission/aauth-ps": "workspace:*", "@mission/aauth-testkit": "workspace:*" },
   "scripts": { "typecheck": "tsc --build" }
 }
