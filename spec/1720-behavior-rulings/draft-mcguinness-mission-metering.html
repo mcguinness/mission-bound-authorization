@@ -1914,7 +1914,11 @@ enforces each counter under one of two named enforcement profiles:<a href="#sect
 balance: a single serializing PDP for the counter, a shared
 linearizable counter, or per-PDP sub-budgets that are structurally
 exact because they sum to the cap. The bound never over-consumes;
-it is a hard cap.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
+it is a hard cap. The Exact guarantee depends on correct
+reconciliation evidence: if corrected evidence establishes execution
+after an incorrect release, accounting records that consumption,
+reports any excess, and refuses further reservations while no
+headroom remains.<a href="#section-7.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-7.1-2.3">Bounded-consistency enforcement profile:</dt>
@@ -2182,7 +2186,11 @@ instance's bound at once, and more over time at the template's
 <code>dispatch_rate</code>. Unless the deployment meters an aggregate bound
 spanning the template's instances (<a href="#aggregate-bounds" class="auto internal xref">Section 10</a>), the
 template's consent rendering <span class="bcp14">MUST</span> present the bound as per instance,
-together with <code>max_active</code> and <code>dispatch_rate</code>.<a href="#section-9-3" class="pilcrow">¶</a></p>
+together with <code>max_active</code> and <code>dispatch_rate</code>. A standing-consent
+budget (<a href="#aggregate-bounds" class="auto internal xref">Section 10</a>) is such an aggregate: the consent renders
+it beside the per-instance bound, and a Mission Issuer <span class="bcp14">MUST</span> refuse to
+create a Child Mission under an instance the budget meters unless the
+child is charged to that budget's counter.<a href="#section-9-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="aggregate-bounds">
@@ -2215,18 +2223,43 @@ a lineage-wide or subtree aggregate bound as in force unless it is
 enforced under <a href="#capacity-across-missions" class="auto internal xref">Section 9</a> or by a lineage-keyed
 budget identifier and shared counter meeting this section's
 requirements.<a href="#section-10-2" class="pilcrow">¶</a></p>
-<p id="section-10-3">An aggregate bound is deployment policy: it is carried on no single
-Mission Intent, is committed by no <code>intent_hash</code>, and is disclosed
-through the deployment's Enforcement Scope Statement rather than the
-approval event. A refusal under an aggregate bound is carried as
+<p id="section-10-3">An aggregate bound other than a standing-consent budget (below) is
+deployment policy: it is carried on no single Mission Intent, is
+committed by no <code>intent_hash</code>, and is disclosed through the
+deployment's Enforcement Scope Statement rather than the approval
+event. A refusal under an aggregate bound is carried as
 <code>quota_exceeded</code>, and its Decision Evidence <code>metering</code> entry records
 the aggregate key class in <code>counter_scope</code> and the counter in
 <code>counter_id</code> (<a href="#metering-evidence" class="auto internal xref">Section 11</a>).<a href="#section-10-3" class="pilcrow">¶</a></p>
-<p id="section-10-4">Aggregate keying crosses the family's per-Mission consistency
-domains: a subject-keyed or lineage-keyed counter is shared by every
-Mission the key spans, so it cannot be sharded by Mission Identifier
-and is provisioned as its own consistency domain
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-4">A standing-consent budget is the one aggregate a human approves rather
+than the deployment: a Mission Template's Dispatch Policy commits the
+budget's owner, an identifier qualified within that owner's accounting
+domain, its currency, and its limit
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-template" class="cite xref">I-D.draft-mcguinness-oauth-mission-template</a>]</span>). Every Mission
+dispatched under any template committing that budget, and every
+successor of one, draws on one shared counter keyed by the owner and
+identifier, recorded with <code>counter_scope</code> <code>standing_consent</code>. A metered
+action is reserved against that counter and the Mission's own
+<code>max_budget</code> counter together: where either would be exceeded, the PDP
+refuses with <code>quota_exceeded</code> and charges neither. The committed
+Dispatch Policy is the limit's authoritative home. The Enforcement
+Scope Statement <span class="bcp14">MUST</span> declare each standing-consent budget the
+deployment meters, with its enforcement profile; where it references
+the Dispatch Policy rather than repeating its numbers, it <span class="bcp14">MUST</span> identify
+the policy by its <code>id</code>, <code>version</code>, and <code>digest</code> and make the budget's
+scope, currency, and limit discoverable, since the identifier alone
+does not disclose the bound. A restart, a successor policy version, or
+a fresh consent continues the counter; only a new budget identifier,
+which a human approves as a new budget, starts another. Fresh consent
+is not evidence of non-execution: it neither releases a reservation
+that remains charged nor resets consumption (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>),
+and a limit it raises is measured against consumption to date and the
+outstanding reservations.<a href="#section-10-4" class="pilcrow">¶</a></p>
+<p id="section-10-5">Aggregate keying crosses the family's per-Mission consistency
+domains: a subject-keyed, lineage-keyed, or standing-consent counter
+is shared by every Mission the key spans, so it cannot be sharded by
+Mission Identifier and is provisioned as its own consistency domain
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-10-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="metering-evidence">
@@ -2244,7 +2277,7 @@ companion's extension conventions
         <dt id="section-11-2.1">
 <code>metering</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-11-2.2">
-          <p id="section-11-2.2.1">An array of one or more entries, one per bound the evaluation
+          <p id="section-11-2.2.1">An array of one or more entries, one per counter the evaluation
 metered. In a deployment claiming this profile, a Decision
 Evidence record emitted for a metered evaluation, permit or
 refusal, <span class="bcp14">MUST</span> carry it, and an Execution Evidence record <span class="bcp14">MUST</span>
@@ -2263,8 +2296,9 @@ per-entry constraint name (<a href="#metering" class="auto internal xref">Sectio
 <code>counter_scope</code>:</dt>
             <dd style="margin-left: 1.5em" id="section-11-2.2.2.4">
               <p id="section-11-2.2.2.4.1"><span class="bcp14">REQUIRED</span>. A string. The counter's key class: <code>mission</code> for the
-Mission-keyed bounds of this document, or <code>subject</code>, <code>client</code>,
-or <code>lineage</code> for an aggregate bound (<a href="#aggregate-bounds" class="auto internal xref">Section 10</a>).<a href="#section-11-2.2.2.4.1" class="pilcrow">¶</a></p>
+Mission-keyed bounds of this document, <code>subject</code>, <code>client</code>, or
+<code>lineage</code> for an aggregate bound, or <code>standing_consent</code> for a
+standing-consent budget (<a href="#aggregate-bounds" class="auto internal xref">Section 10</a>).<a href="#section-11-2.2.2.4.1" class="pilcrow">¶</a></p>
 </dd>
             <dd class="break"></dd>
 <dt id="section-11-2.2.2.5">
@@ -2500,10 +2534,10 @@ through the runtime profile's orphaned-evidence process
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), which queries the
 resource and matches evidence. An unsettled reservation remains
 charged against the bound until it is reconciled, and is released
-only on affirmative evidence of non-execution; timeout alone never
-releases a reservation, in any action class. An idempotent action
-class makes a retry safe, not the first attempt void, and reversing
-a reversible action is a compensation action
+only on affirmative evidence of non-execution; neither a timeout nor
+a restart releases a reservation, in any action class. An idempotent
+action class makes a retry safe, not the first attempt void, and
+reversing a reversible action is a compensation action
 (<span>[<a href="#I-D.draft-mcguinness-mission-orchestration" class="cite xref">I-D.draft-mcguinness-mission-orchestration</a>]</span>), not evidence that
 the original did not execute.<a href="#section-12.1.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
@@ -2921,50 +2955,71 @@ this registry.<a href="#section-16-1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1"><code>max_budget</code>'s <code>currency</code> takes the form Resource Access gives
-<code>max_amount</code>'s <code>currency</code>: exactly three upper-case ASCII letters,
-compared exactly.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.1.1">Changes a requirement (#813, #816, D830): a standing-consent budget
+is an aggregate a human approves in a Mission Template's Dispatch
+Policy, keyed by its owner and identifier, metered on one counter
+shared by every instance of any template committing it and their
+successors, and recorded with <code>counter_scope</code> <code>standing_consent</code>. A
+metered action reserves that counter and the Mission's <code>max_budget</code>
+counter together, charging neither on a refusal. The Enforcement
+Scope Statement declares each such budget and, when referencing the
+Dispatch Policy, identifies it by <code>id</code>, <code>version</code> and <code>digest</code> and
+discloses scope, currency and limit. A restart, a successor policy
+version or a fresh consent continues the counter, and fresh consent
+neither releases a reservation that remains charged nor resets
+consumption. A Child Mission is refused under an instance the budget
+meters unless charged to it. A <code>metering</code> entry is one per counter,
+and a restart never releases a reservation. The Exact guarantee
+depends on correct reconciliation evidence: corrected evidence of
+execution after an incorrect release is recorded, any excess is
+reported, and further reservations are refused while no headroom
+remains.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Duration-Lease Renewal: the PDP refuses a renewal at or after the
+          <p id="appendix-A-2.2.1"><code>max_budget</code>'s <code>currency</code> takes the form Resource Access gives
+<code>max_amount</code>'s <code>currency</code>: exactly three upper-case ASCII letters,
+compared exactly.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Duration-Lease Renewal: the PDP refuses a renewal at or after the
 activity's current lease boundary and denies <code>out_of_authority</code> a
 renewal that continues nothing; a renewal passes every current check,
 and its permit never re-executes the effect or resets consumption. A
 keyed renewal carries a fresh <code>idempotency_key</code>, claimed with the
 renewal's operation identity and <code>prior_evaluation_id</code>; its claim
 settles when the PDP commits the lease extension, and a retransmission
-receives the renewal's permit while it is valid (#1464).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Editorial (#1176): examples of the canonical Mission follow one
-dated history; an example line too long for the page is folded per
-RFC 8792. No requirement changes.<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+receives the renewal's permit while it is valid (#1464).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Duration-Lease Renewal: the renewal example carries
-<code>resource.properties.operation_target</code> (#1276).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.4.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">The <code>exclusive</code> selector matches a consequential action whose
-operation target equals the selector's <code>resource</code> (#1276).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.5.1">Duration-Lease Renewal: the renewal example carries
+<code>resource.properties.operation_target</code> (#1276).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Duration-Lease Renewal: the PDP also verifies that the renewal's
-operation target matches the evaluation it renews (#1276).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.6.1">The <code>exclusive</code> selector matches a consequential action whose
+operation target equals the selector's <code>resource</code> (#1276).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Settlement by Evidence State and Reservation starvation: the
-reservation lease bounds how long an unsettled reservation waits
-before reconciliation begins and never releases it; reconciliation
-returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.7.1">Duration-Lease Renewal: the PDP also verifies that the renewal's
+operation target matches the evaluation it renews (#1276).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Conformance: the consented bounds are rendered at each human
-approval, including a standing consent such as a Mission Template's
-consent (#1078).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.8.1">Settlement by Evidence State and Reservation starvation: the
+reservation lease bounds how long an unsettled reservation waits
+before reconciliation begins and never releases it; reconciliation
+returns the budget only on affirmative non-execution (#1269).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
+          <p id="appendix-A-2.9.1">Conformance: the consented bounds are rendered at each human
+approval, including a standing consent such as a Mission Template's
+consent (#1078).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Exclusivity Across Missions (<a href="#exclusivity-across-missions" class="auto internal xref">Section 8.1</a>): an
 exclusivity group is one shared latch across the delegation (children,
 descendants, successors, carryover replacements), established
 atomically before a derived Mission issues usable authority, retained
@@ -2972,10 +3027,10 @@ while derived authority remains usable, and relaxed only by an
 explicit, scoped, disclosed approval that keeps the historical latch.
 Settlement releases a latch only when every participating action is
 affirmatively not executed. Template instances are scoped per
-instance, with that limit disclosed.<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+instance, with that limit disclosed.<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1">Capacity Across Missions (<a href="#capacity-across-missions" class="auto internal xref">Section 9</a>): a Child
 Mission is charged to every ancestor's bound or holds an escrowed
 allocation whose remainder returns only after the allocation is
 closed, a successor or carryover replacement continues its
@@ -2985,10 +3040,10 @@ per-instance bound with <code>max_active</code> and <code>dispatch_rate</code>. 
 expiry no longer releases an unsettled reservation for an
 idempotent or reversible action class (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>), and a
 metered high-consequence idempotency horizon reaches the Mission's
-<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
+<code>expires_at</code> (<a href="#retry" class="auto internal xref">Section 7.2</a>).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.11">
-          <p id="appendix-A-2.11.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
+        <li class="normal" id="appendix-A-2.12">
+          <p id="appendix-A-2.12.1">Controls taxonomy retirement (#636, #117): <code>max_budget</code>, <code>max_calls</code>,
 <code>max_duration</code>, <code>max_egress_volume</code>, and <code>exclusive</code> move from
 <code>controls.&lt;name&gt;</code> to named top-level Mission Intent members, since
 the issuance profile retires the <code>controls</code> bucket entirely
@@ -3002,16 +3057,16 @@ of <code>exclusive</code> against <a href="#promotion-criteria" class="auto inte
 gate NOT MET (issue #117): it remains EXPERIMENTAL and unpromoted,
 now explicitly marked as such at its own definition (<a href="#bounds" class="auto internal xref">Section 6</a>).
 <code>max_derivations</code> renamed to <code>derivation_limit</code> in cross-references
-to the issuance profile.<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
+to the issuance profile.<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.12">
-          <p id="appendix-A-2.12.1">One informative cross-reference in Settlement by Evidence State
+        <li class="normal" id="appendix-A-2.13">
+          <p id="appendix-A-2.13.1">One informative cross-reference in Settlement by Evidence State
 (<a href="#settlement-states" class="auto internal xref">Section 12.1.2</a>): a containment overlay's contain transition
 is not settlement evidence. An open reservation or duration lease
 still settles unchanged under the existing evidence-state rules, and
 contain narrows only forward draw, a new reservation or a lease
 renewal, through the ordinary permit check against the narrowed
-Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
+Effective Authority Set. No new settlement state (#670).<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
