@@ -2319,6 +2319,14 @@ async function evaluateInner(
   // `parameter_violation`, which stays for a constraint the PDP evaluated and
   // found violated. It names no `authority_bound`: that member is recorded
   // only on an `out_of_authority` or `parameter_violation` deny.
+  // Reference precedence (D929): when every candidate fails, the denial is
+  // the reason of the stage that eliminates the final surviving candidate,
+  // not of the last entry in array order. An unsupported entry beside a
+  // violated one is `parameter_violation` (a later constraint stage removes
+  // the survivor); one entry carrying both is `constraint_unsupported`.
+  // Credential-specific qualification: a credential entry carrying an
+  // unrecognized constraint is denied `credential_invalid` at step 1a
+  // (authzen#context-credential), never `constraint_unsupported`.
   if (!narrow((e) => !e.constraints || Object.keys(e.constraints).every((k) => SUPPORTED_CONSTRAINT_KEYS.includes(k)))) {
     return deny("constraint_unsupported");
   }

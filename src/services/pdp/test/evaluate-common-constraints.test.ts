@@ -492,4 +492,33 @@ describe("PDP denies an unrecognized Mission constraint constraint_unsupported a
     }
     expect(await decide(viewOf(unsupported), facts)).toMatchObject({ permit: false, reason: "constraint_unsupported" });
   });
+
+  // Reference precedence (D929): when every candidate fails, the reason is
+  // that of the stage that eliminates the final surviving candidate, never
+  // of the last entry in array order.
+  it("an unsupported entry beside a violated entry, in either order, is denied parameter_violation: the constraint stage eliminates the final surviving candidate", async () => {
+    const violated = { tenant: "other-tenant" };
+    const vendorsViolated = entry({ vendors: ["globex"] });
+    for (const [label, v] of [
+      ["unsupported then tenant-violated", viewOf(unsupported, supported)],
+      ["tenant-violated then unsupported", viewOf(supported, unsupported)],
+      ["unsupported then vendors-violated", viewOf(unsupported, vendorsViolated)],
+      ["vendors-violated then unsupported", viewOf(vendorsViolated, unsupported)],
+    ] as const) {
+      expect(await decide(v, violated), label).toMatchObject({ permit: false, reason: "parameter_violation" });
+    }
+  });
+
+  it("one entry carrying both an unrecognized key and a violated constraint is denied constraint_unsupported: the unrecognized-key stage eliminates it before its constraints are evaluated", async () => {
+    const both = entry({ x_region: "eu", ...TENANT });
+    expect(await decide(viewOf(both), { tenant: "other-tenant" })).toMatchObject({
+      permit: false,
+      reason: "constraint_unsupported",
+    });
+    // Control: the same tenant bound alone, on the same facts, is the evaluated violation.
+    expect(await decide(viewOf(supported), { tenant: "other-tenant" })).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+  });
 });

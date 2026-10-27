@@ -239,6 +239,19 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       expect(await named(r, v)).toEqual({ reason: "parameter_violation", bound: "credential" });
     });
 
+    // Reference precedence (#1772, D929): the credential bound's constraint
+    // stage runs before the Mission entry's unrecognized-key stage, so it
+    // eliminates the final candidate first.
+    it("a violated credential entry beside an unsupported Mission entry is the credential's parameter_violation, never constraint_unsupported (#1772)", async () => {
+      const v = view();
+      v.authority_set[0]!.constraints = { x_region: "eu" } as never;
+      const r = req();
+      r.context.credential = credentialOf({ vendors: ["globex"] }) as never;
+      expect(await named(r, v)).toEqual({ reason: "parameter_violation", bound: "credential" });
+      // Control: with a satisfied credential, the Mission entry's unrecognized key decides.
+      expect(await named(req(), v)).toEqual({ reason: "constraint_unsupported", bound: undefined });
+    });
+
     it("names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit", async () => {
       // @spec authzen#evidence: absent on "a deny by Resource policy" (#828):
       // the independently administered policy refusing, both authority bounds
