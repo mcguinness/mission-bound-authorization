@@ -14,6 +14,7 @@
     {
       "type": "mission_resource_access",
       "resource": "http://localhost:4403/mcp",
+      "cross_domain": false,
       "actions": {
         "payments:invoice.list": "consequential_read",
         "payments:invoice.read": "consequential_read",
@@ -28,6 +29,7 @@
     {
       "type": "mission_resource_access",
       "resource": "http://localhost:4406/mcp",
+      "cross_domain": true,
       "actions": {
         "ledger:vendor.read": "consequential_read",
         "ledger:journal.write": "consequential_write"
@@ -36,6 +38,7 @@
     {
       "type": "mission_resource_access",
       "resource": "http://localhost:4410/api",
+      "cross_domain": false,
       "actions": {
         "reports:report.read": "consequential_read",
         "reports:report.write": "consequential_write"

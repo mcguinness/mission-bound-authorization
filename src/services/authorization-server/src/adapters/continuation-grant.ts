@@ -98,7 +98,12 @@ import {
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
-import { assertSuccessorMaxBudget, StandingPaymentLineageError, standingPaymentRootOf } from "../kernel/standing-payment.js";
+import {
+  assertSuccessorMaxBudget,
+  deploymentCrossDomain,
+  StandingPaymentLineageError,
+  standingPaymentRootOf,
+} from "../kernel/standing-payment.js";
 import {
   adjudicateDrawdown,
   createCeilingDrawdownInCallerTx,
@@ -3209,9 +3214,12 @@ async function completeCeilingDrawdown(
     await recoverExpansion(opts, provider, ctx, raced, d.fingerprint, d.jkt);
     return true;
   }
-  const resourceToAs = opts.resourceToAs;
-  // Without a resource map no resource is known to be local: fail closed.
-  const isCrossDomain = (resource: string) => !resourceToAs || resourceToAs(resource) !== opts.issuer;
+  // @spec progressive#in-ceiling-expansion, mission-template#prohibited-classes
+  // (#1710): the deployment's one cross-domain decision, the published
+  // classification's statement or the resource-to-AS map (without a map no
+  // resource is known to be local: fail closed), so the drawdown and the
+  // Dispatch prohibited-class mapping never diverge.
+  const isCrossDomain = deploymentCrossDomain(opts.approvalFloor, opts.issuer, opts.resourceToAs);
   const adjudication = adjudicateDrawdown(opts.kernel, progressive, {
     predecessor,
     requested: d.requested,
