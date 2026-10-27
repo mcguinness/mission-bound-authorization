@@ -6,26 +6,30 @@
  */
 
 import {
-
+  AAT_ALGORITHMS,
+  AAT_TYP,
+  aatToolId,
+  aatToPlainJson,
   authorizationDetailsEqual,
   type CredentialAuthorityEntry,
-  credentialEntriesFromAatTools,
   type DpopProofReplay,
+  establishOperationTarget,
   isIdempotencyKey,
   mediaTypeOf,
+  type MissionAatChain,
   MISSION_TXN_TOKEN_TYP,
   missionInvariantsEqual,
   newDpopProofReplay,
   parseCredentialAuthority,
   readTxnMissionClaim,
-  toolsOf,
-  verifyAttenuationChain,
+  verifyAatPresentation,
+  verifyMissionAatChain,
   type IssuerKeysFetch,
 } from "@mission/core";
 import {
-  calculateJwkThumbprint,
+  decodeJwt,
   decodeProtectedHeader,
-  type JWK,
+  exportJWK,
   type JWTPayload,
   jwtVerify,
 } from "jose";
@@ -73,7 +77,9 @@ import {
 } from "./pep.js";
 import { type DpopPresentation, DpopReplayUnavailableError, verifyDpopProof } from "./dpop.js";
 import { type IntrospectionSettings, TokenInactiveError, TokenIntrospector } from "./introspection.js";
-import { readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
+import { aatKeyThumbprint, readAttenuationRootClaims, readMissionAccessClaims } from "./token-verifier.js";
+import { type AatPresentation, AatPresentationRefused } from "./aat-presentation.js";
+import { parseOriginalArguments } from "./invocation-arguments.js";
 import {
   type KeyAlgorithms,
   type KeyResolver,
@@ -1290,100 +1296,128 @@ export class McpPaymentsServer {
   }
 
   /**
-   * @spec draft-mcguinness-oauth-mission-attenuation#mission-binding-check
+   * @spec attenuation#mission-binding-check, AAT -02 Sections 7 and 8 (#1756
+   * slice B3, D882, D902)
    *
-   * Validate a presented Mission-bound Attenuating Agent Token chain (root
-   * first) and derive TokenFacts whose effective authority is the LEAF's
-   * narrowed tools. Keyed verification, layered on the pure keyless verifier
-   * from @mission/core:
-   *  - the root is verified under the AS JWKS, audience-scoped, and its `iss`
-   *    MUST equal its `mission.issuer` (only the Mission Issuer mints a root);
-   *  - each child is verified under the key its parent's `cnf` commits to: the
-   *    child's JWS header `jwk` (rejected if it carries private material) MUST
-   *    thumbprint to the parent's `cnf.jkt`, and the child MUST verify under it;
-   *  - proof-of-possession is verified under the LEAF's `cnf` key.
+   * Validate the attenuation presentation a `tools/call` carries and derive
+   * TokenFacts whose credential authority is the LEAF's tools and
+   * `mission_constraints`. The transport calls this with the invocation's
+   * original arguments text, before the call reaches the intake seam
+   * ({@link Pep.intake}), which checks that the text describes exactly the
+   * arguments dispatched.
+   *
+   * 1. The substrate's verification (`verifyAatPresentation`): the chain,
+   *    the proof of possession under the leaf's `cnf.jwk`, the invoked tool
+   *    identifier (`aat_tool`, the operation's target and action) and its
+   *    arguments as written (`hta`), and the presentation audience. The trust
+   *    anchor is the key that verifies the root among this resource's keys
+   *    pinned to the attenuation-root role, bound to the Authorization
+   *    Server's issuer. The audiences are this enforcement boundary and its
+   *    aliases. A tool with side effects tracks the proof's `jti`, through
+   *    the DPoP replay cache's atomic admit; a full cache refuses retryably.
+   * 2. The Mission layer (`verifyMissionAatChain`): the root's `mission`,
+   *    with `iss` equal to `mission.issuer` and to the anchor's issuer, the
+   *    same `mission` on every token, per-hop `aud` nesting, and
+   *    `mission_constraints` on every token, exactly one value per tool,
+   *    narrowed per hop, no key this resource does not understand.
+   *
+   * A substrate PERMIT alone never authorizes: the leaf's authority becomes
+   * the credential bound the PEP enforces against the facts it establishes,
+   * the leaf's `resource_contract` included, on the existing enforce path.
+   * `sub` and `client_id` are the issuer-signed root's; a derived token's
+   * identity claims carry no authority (AAT -02 Section 3.3, #1758).
    *
    * The kill switch (Mission `active` on every presentation) is NOT checked
    * here: it is the existing PEP->PDP state gate on the per-action enforce()
    * path (the returned TokenFacts drives that path), which fails closed on
    * non-active or unestablished Mission state.
+   *
+   * Throws {@link AatPresentationRefused}, or {@link DpopReplayUnavailableError}
+   * when the replay state is at capacity. A refusal after the substrate
+   * PERMIT is recorded ({@link Pep.refusePresentation}).
    */
-  async validateAttenuationChain(
-    chain: string[],
-    dpopProof: string,
-    htu: string,
-    htm: string,
+  async validateAatPresentation(
+    presentation: AatPresentation,
+    tool: string,
+    argumentsJson: string,
   ): Promise<MissionBoundTokenFacts> {
-    if (chain.length === 0) throw new Error("empty attenuation chain");
     // @spec mission#rs-requirements item 6 (#1503): a root carries a `mission`
     // claim, which an estate route's issuer is not trusted to issue.
-    if (this.deps.ordinaryOnly) throw new Error("this route's issuer is not a Mission Issuer");
+    if (this.deps.ordinaryOnly) throw new AatPresentationRefused("this route's issuer is not a Mission Issuer");
+    const mapping = this.deps.pep?.toolAction(tool) ?? TOOL_ACTIONS[tool];
+    if (mapping === undefined) throw new AatPresentationRefused(`no operation ${JSON.stringify(tool)}`);
+    const original = parseOriginalArguments(argumentsJson);
+    if (original === undefined) throw new AatPresentationRefused("the invocation arguments are not a JSON object");
+    // @spec attenuation#root-mapping: the tool identifier is the operation's
+    // target, as its contract establishes it, and its action.
+    const target = establishOperationTarget(mapping.target, aatToPlainJson(original) as Record<string, unknown>);
+    if (!target.ok) throw new AatPresentationRefused("the operation target cannot be established");
+    const toolId = aatToolId(target.target, mapping.action);
 
-    // Root: under the AS keys pinned to the attenuation-root role, audience-
-    // scoped, the `aat+jwt` profile with its
-    // typed claim set (@spec runtime-oauth#token-validation, #825), and
-    // iss == mission.issuer (@spec mission#rs-requirements item 6, #1503).
-    const { payload: rootPayload, protectedHeader: rootHeader } = await jwtVerify(chain[0] as string, this.resolveRootKey, {
-      issuer: this.deps.issuer,
-      algorithms: ["ES256"],
-    });
-    const validated = this.requireAudience(rootPayload, rootHeader.typ, this.deps.issuer);
-    const root = readAttenuationRootClaims(rootHeader.typ, rootPayload, Math.floor(Date.now() / 1000));
-    const rootMission = root.mission;
-    if (rootPayload.iss !== rootMission.issuer) throw new Error("attenuation root iss != mission.issuer");
-    let parentCnfJkt: string | undefined = root.cnfJkt;
-
-    // Each child: signed by the exact key the parent's cnf commits to.
-    let leafPayload = rootPayload;
-    for (let i = 1; i < chain.length; i++) {
-      const header = decodeProtectedHeader(chain[i] as string);
-      const jwk = header.jwk as (JWK & { d?: string }) | undefined;
-      if (!jwk) throw new Error("attenuation child missing header jwk");
-      if (jwk.d !== undefined) throw new Error("attenuation child header jwk carries private key material");
-      if ((await calculateJwkThumbprint(jwk as never)) !== parentCnfJkt) {
-        throw new Error("attenuation child not signed by the parent cnf key");
-      }
-      const { payload } = await jwtVerify(chain[i] as string, jwk as never, { algorithms: ["ES256"] });
-      // @spec attenuation#mission-binding-check, AAT -02 Section 8 step 6c
-      // (#1758): every token in the chain names this resource, not only the
-      // root. A child narrowed to another resource server is refused here even
-      // though its `aud` nests within its parent's.
-      this.requireAudience(payload, header.typ, this.deps.issuer);
-      parentCnfJkt = (payload.cnf as { jkt?: string } | undefined)?.jkt;
-      if (!parentCnfJkt) throw new Error("attenuation child missing cnf.jkt");
-      leafPayload = payload;
+    // The trust anchor: the attenuation-root-role key that verifies the root,
+    // through the same pinned resolver (role, `kid` and algorithm policy) the
+    // other credential classes use.
+    let anchorJwk: Record<string, unknown>;
+    try {
+      const { key } = await jwtVerify(presentation.aat_chain[0] as string, this.resolveRootKey, {
+        issuer: this.deps.issuer,
+        typ: AAT_TYP,
+        algorithms: [...AAT_ALGORITHMS],
+      });
+      anchorJwk = (await exportJWK(key)) as Record<string, unknown>;
+    } catch {
+      throw new AatPresentationRefused("the root does not verify under this resource's attenuation-root keys");
     }
 
-    // Keyless structural checks: monotonicity, mission invariance, aud/exp
-    // nesting, depth cap, and par_hash linkage over the exact wire bytes.
-    const verified = verifyAttenuationChain(chain);
-    if (!verified.ok) throw new Error(`attenuation chain invalid: ${verified.reason}`);
+    const nowS = Math.floor(Date.now() / 1000);
+    const sideEffecting = mapping.actionClass !== "consequential_read";
+    const permit = verifyAatPresentation({
+      chain: presentation.aat_chain,
+      pop: presentation.aat_pop,
+      tool: toolId,
+      argsJson: argumentsJson,
+      trustAnchors: [{ issuer: this.deps.issuer, jwk: anchorJwk }],
+      now: nowS,
+      policy: {
+        audiences: this.presentedAudiences(presentation),
+        requireChainAud: true,
+        replay: { trackJti: sideEffecting, admit: (jti) => this.admitPopJti(jti) },
+      },
+    });
+    if (permit.verdict === "DENY") throw new AatPresentationRefused(`AAT -02 step ${permit.step}: ${permit.reason}`);
 
-    // Proof-of-possession under the LEAF's cnf key, through the one proof
-    // check every credential class runs (@spec RFC 9449 Section 4.3, #825):
-    // the request binding, the key, a fresh `iat`, a `jti` this replica has
-    // not seen, and `ath` over the leaf token. The leaf is the credential the
-    // proof's key is bound to, and each child's `par_hash` already commits
-    // to its parent, so binding the proof to the leaf binds the whole chain.
-    const leafCnf = (leafPayload.cnf as { jkt?: string } | undefined)?.jkt;
-    if (!leafCnf) throw new Error("attenuation leaf missing cnf.jkt");
-    await this.verifyPresentation(chain[chain.length - 1] as string, leafCnf, { proof: dpopProof, htu, htm });
-
-    // @spec runtime#input-authority (#825) — the credential bound is the
-    // leaf's tools with every restriction they carry (resource, action, vendor
-    // and amount bounds). The keyless verifier above already holds each child
-    // to a subset of its parent, so the leaf is the narrowest authority.
-    let credentialAuthority: readonly CredentialAuthorityEntry[];
+    // The Mission layer, over the chain the substrate verified.
+    const rootClaims = permit.root.claims;
+    const claimed = {
+      ...(typeof rootClaims.sub === "string" ? { sub: rootClaims.sub, iss: this.deps.issuer } : {}),
+      ...(typeof (rootClaims.mission as { id?: unknown } | undefined)?.id === "string"
+        ? { missionId: (rootClaims.mission as { id: string }).id }
+        : {}),
+    };
+    const refuse = async (reason: "invalid_credential" | "mission_claim_missing", why: string): Promise<never> => {
+      await this.deps.pep?.refusePresentation(tool, reason, claimed);
+      throw new AatPresentationRefused(why);
+    };
+    if (!Object.hasOwn(rootClaims, "mission")) {
+      return refuse("mission_claim_missing", "the root carries no mission claim");
+    }
+    let root: ReturnType<typeof readAttenuationRootClaims>;
+    let missionLayer: MissionAatChain;
+    let validated: ValidatedBoundary;
     try {
-      credentialAuthority = credentialEntriesFromAatTools(toolsOf(verified.leaf));
+      root = readAttenuationRootClaims(permit.root.header.typ, rootClaims as JWTPayload, nowS);
+      missionLayer = verifyMissionAatChain(permit.chain, permit.anchorIssuer);
+      // @spec runtime-oauth#token-validation (#853, D487): the boundary the
+      // root was validated against, which the PEP decides at.
+      validated = this.requireAudience(rootClaims as JWTPayload, permit.root.header.typ, this.deps.issuer);
     } catch (e) {
-      throw new Error(`attenuation leaf authority: ${(e as Error).message}`);
+      return refuse("invalid_credential", (e as Error).message);
     }
 
     // @spec cross-domain#mission-subject — the root's origin principal,
     // where the profile applies, carried unchanged into TokenFacts the same
     // way as the other credential classes.
-    const missionClaim = readTxnMissionClaim(rootPayload.mission);
+    const missionClaim = readTxnMissionClaim(rootClaims.mission);
     return {
       // @spec attenuation#mission-binding-check, AAT -02 Section 3.3 (#1758):
       // the subject is the issuer-signed root's, which the root profile
@@ -1393,18 +1427,56 @@ export class McpPaymentsServer {
       sub: root.sub,
       clientId: root.clientId,
       iss: this.deps.issuer,
-      credential: verifiedCredentialRef(leafPayload),
+      credential: verifiedCredentialRef(permit.leaf.claims as JWTPayload),
       mission: {
-        id: rootMission.id,
-        issuer: rootMission.issuer,
-        authority_hash: rootMission.authority_hash,
+        ...missionLayer.mission,
         ...(missionClaim?.subject ? { subject: missionClaim.subject } : {}),
       },
       ...(missionClaim ? { missionClaim } : {}),
-      cnfJkt: leafCnf,
-      credentialAuthority,
+      // The sender constraint is the leaf's key: its RFC 7638 thumbprint.
+      cnfJkt: aatKeyThumbprint((permit.leaf.claims.cnf as { jwk: Record<string, unknown> }).jwk),
+      credentialAuthority: missionLayer.credentialAuthority,
       validatedBoundary: validated,
     };
+  }
+
+  /**
+   * @spec AAT -02 Section 8 steps 6c and 7d, runtime-oauth#token-validation
+   * (#853, D487): the audience identifiers this enforcement point accepts
+   * from a presentation, as exact strings: each value the presentation's
+   * tokens and proof name that this boundary's audience rule accepts for the
+   * Authorization Server's `aat+jwt` tokens (the boundary or a declared
+   * alias). A value it does not accept is left out, so a token naming only
+   * another resource is refused by the substrate.
+   */
+  private presentedAudiences(presentation: AatPresentation): string[] {
+    const named = new Set<string>();
+    for (const token of [...presentation.aat_chain, presentation.aat_pop]) {
+      let claims: JWTPayload;
+      try {
+        claims = decodeJwt(token);
+      } catch {
+        continue;
+      }
+      const values = [claims.aud, (claims as { aat_aud?: unknown }).aat_aud].flat();
+      for (const v of values) if (typeof v === "string") named.add(v);
+    }
+    return [...named].filter(
+      (v) => this.validateAudience(v, { issuer: this.deps.issuer, tokenProfile: AAT_TYP }).ok,
+    );
+  }
+
+  /**
+   * @spec AAT -02 Section 7.3 and step 7i: the proof `jti` check-and-record,
+   * on this replica's DPoP replay cache (its own namespace there, so a PoP
+   * and a DPoP proof never collide). A cache at its bound refuses retryably,
+   * as a DPoP proof's does.
+   */
+  private admitPopJti(jti: string): boolean {
+    const admission = this.dpopReplay.admit(`aat-pop:${jti}`);
+    if (admission.admitted) return true;
+    if (admission.reason === "full") throw new DpopReplayUnavailableError(admission.retryAfterS);
+    return false;
   }
 
   /** Whether the transaction-assurance tier (M5) is configured on this server. */

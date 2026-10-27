@@ -46,6 +46,7 @@ import {
   parseAatJson,
 } from "@mission/core";
 import { exportJWK, SignJWT } from "jose";
+import { AAT_PRESENTATION_META_KEY, readAatPresentation } from "./aat-presentation.js";
 import { accessTokenHash, DpopReplayUnavailableError } from "./dpop.js";
 import { IntrospectionUnavailableError } from "./introspection.js";
 import { originalArgumentsFrom, snapshotArguments } from "./invocation-arguments.js";
@@ -222,6 +223,12 @@ function createHttpMcpServer(paymentsServer: McpPaymentsServer): Server {
     const authSignals = extra.authInfo?.extra?.signals as RequestSignals | undefined;
     const args = (request.params.arguments ?? {}) as Record<string, unknown>;
     if (!token) return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+    // @spec attenuation#mission-binding-check (#1756 slice B3): a presentation
+    // is its request's one credential. A call carrying one on a request the
+    // middleware authenticated by its Authorization header has two.
+    if (request.params._meta?.[AAT_PRESENTATION_META_KEY] !== undefined && extra.authInfo?.extra?.aatPresented !== true) {
+      return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+    }
     // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the call's
     // original arguments, from the body the middleware read once and parsed
     // losslessly, the same parse this request was dispatched from. A call
@@ -389,6 +396,109 @@ async function readValidatedBody(
   return body;
 }
 
+/** The request signals carried to the PEP beside any validated credential. */
+function requestSignals(req: IncomingMessage): Pick<RequestSignals, "acceptTxnChallenge" | "missionReference"> {
+  // @spec txn-authorization#resource-challenge — the client's
+  // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
+  // request header (an RFC 8941 Boolean, so `?1` and nothing else is
+  // acceptance) and is carried to the PEP alongside the validated facts.
+  const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
+  // @spec authority-server#mission-reference-field — the propagated Mission
+  // Reference is a Structured Fields Dictionary on exactly one field line;
+  // the raw header view supplies the line count (node joins repeats), and a
+  // malformed parse is CARRIED to the PEP, which refuses governed work on
+  // it, rather than dropped here.
+  let referenceLines = 0;
+  for (let i = 0; i < req.rawHeaders.length; i += 2) {
+    if ((req.rawHeaders[i] ?? "").toLowerCase() === MISSION_REFERENCE_HEADER) referenceLines++;
+  }
+  const missionReference = parseMissionReferenceField(
+    req.headers[MISSION_REFERENCE_HEADER] as string | string[] | undefined,
+    referenceLines || 1,
+  );
+  return { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}) };
+}
+
+/**
+ * @spec attenuation#mission-binding-check (#1756 slice B3): the one
+ * `tools/call` a body presents an attenuation chain for, `"refused"` for a
+ * presentation this channel does not take (inside a batch), or undefined
+ * when the body presents none. A presentation authorizes exactly one
+ * invocation, so it is taken only on a body that is that one call.
+ */
+function presentedCall(parsedBody: unknown): Record<string, unknown> | "refused" | undefined {
+  const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+  const presents = (m: unknown): boolean =>
+    isObj(m) && isObj(m.params) && isObj(m.params._meta) && Object.hasOwn(m.params._meta, AAT_PRESENTATION_META_KEY);
+  if (Array.isArray(parsedBody)) return parsedBody.some(presents) ? "refused" : undefined;
+  return presents(parsedBody) && isObj(parsedBody) && parsedBody.method === "tools/call" ? parsedBody : undefined;
+}
+
+/** A body the presentation path does not take, answered in the SDK transport's JSON-RPC error shape. */
+function invalidPresentationRequest(res: ServerResponse, message: string): void {
+  res.writeHead(400, { "content-type": "application/json" });
+  res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32600, message: `Invalid Request: ${message}` }, id: null }));
+}
+
+/**
+ * @spec attenuation#mission-binding-check, AAT -02 Sections 7 and 8 (#1756
+ * slice B3): authenticate a request whose one `tools/call` carries an
+ * attenuation presentation. The presentation is the request's one
+ * credential: an `Authorization` header beside it is refused, and so is a
+ * session, since the proof authorizes this one invocation and opens
+ * nothing. The proof is verified against the call's original arguments,
+ * from the body this request is dispatched from. A refused presentation is
+ * answered 401, a replay state at capacity 503, and the request is never
+ * dispatched. Returns the validated facts, or undefined once it has
+ * answered the request.
+ */
+async function authenticatePresentation(
+  req: AuthedRequest,
+  res: ServerResponse,
+  paymentsServer: McpPaymentsServer,
+  call: Record<string, unknown>,
+  invocations: ReadonlyMap<string, string>,
+): Promise<TokenFacts | undefined> {
+  if (req.headers.authorization !== undefined) {
+    unauthorized(res, "an attenuation presentation is the request's one credential");
+    return undefined;
+  }
+  if (req.headers["mcp-session-id"] !== undefined) {
+    invalidPresentationRequest(res, "an attenuation presentation is not made on a session");
+    return undefined;
+  }
+  const params = call.params as Record<string, unknown>;
+  const key = invocationKey(call.id);
+  const argumentsJson = key === undefined ? undefined : invocations.get(key);
+  if (typeof params.name !== "string" || argumentsJson === undefined) {
+    invalidPresentationRequest(res, "a presented tools/call names no tool or carries no request id");
+    return undefined;
+  }
+  const presentation = readAatPresentation((params._meta as Record<string, unknown>)[AAT_PRESENTATION_META_KEY]);
+  if (presentation === undefined) {
+    unauthorized(res, "malformed attenuation presentation");
+    return undefined;
+  }
+  let facts: TokenFacts;
+  try {
+    facts = await paymentsServer.validateAatPresentation(presentation, params.name, argumentsJson);
+  } catch (e) {
+    if (e instanceof DpopReplayUnavailableError) {
+      replayStateUnavailable(res, e.retryAfterS);
+      return undefined;
+    }
+    unauthorized(res, "attenuation presentation refused");
+    return undefined;
+  }
+  req.auth = {
+    token: "",
+    clientId: facts.clientId,
+    scopes: [],
+    extra: { tokenFacts: facts, signals: requestSignals(req), invocations, aatPresented: true },
+  };
+  return facts;
+}
+
 /**
  * The DPoP-auth middleware, run for EVERY HTTP request before dispatch to MCP,
  * including every request on an established session. Missing/malformed
@@ -451,24 +561,7 @@ async function authenticate(
     return undefined;
   }
 
-  // @spec txn-authorization#resource-challenge — the client's
-  // Accept-Txn-Challenge signal gates the challenge; it travels as an ordinary
-  // request header (an RFC 8941 Boolean, so `?1` and nothing else is
-  // acceptance) and is carried to the PEP alongside the validated facts.
-  const acceptTxnChallenge = acceptsTxnChallenge(req.headers[ACCEPT_TXN_CHALLENGE_HEADER]);
-  // @spec authority-server#mission-reference-field — the propagated Mission
-  // Reference is a Structured Fields Dictionary on exactly one field line;
-  // the raw header view supplies the line count (node joins repeats), and a
-  // malformed parse is CARRIED to the PEP, which refuses governed work on
-  // it, rather than dropped here.
-  let referenceLines = 0;
-  for (let i = 0; i < req.rawHeaders.length; i += 2) {
-    if ((req.rawHeaders[i] ?? "").toLowerCase() === MISSION_REFERENCE_HEADER) referenceLines++;
-  }
-  const missionReference = parseMissionReferenceField(
-    req.headers[MISSION_REFERENCE_HEADER] as string | string[] | undefined,
-    referenceLines || 1,
-  );
+  const { acceptTxnChallenge, missionReference } = requestSignals(req);
   // The SDK's AuthInfo shape; the MCP handlers read facts from extra.tokenFacts.
   req.auth = {
     token: accessToken,
@@ -479,7 +572,11 @@ async function authenticate(
       // @spec authority-server#join-assertion-request (#1454): a MAS-governed
       // route hands the PEP the credential it authenticated, for its Join
       // Assertion request.
-      signals: { acceptTxnChallenge, ...(missionReference ? { missionReference } : {}), ...(masGoverned ? { accessToken } : {}) },
+      signals: {
+        ...(acceptTxnChallenge !== undefined ? { acceptTxnChallenge } : {}),
+        ...(missionReference ? { missionReference } : {}),
+        ...(masGoverned ? { accessToken } : {}),
+      },
       // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): each tools/call's
       // original arguments, from the body this request is dispatched from.
       ...(invocations ? { invocations } : {}),
@@ -580,6 +677,23 @@ export async function createHttpMcpChannel(
     if (transport.sessionId === undefined) await server.close().catch(() => {});
   };
 
+  /**
+   * @spec attenuation#mission-binding-check (#1756 slice B3): hand a request
+   * its presentation authenticated to a stateless transport and MCP
+   * `Server`, discarded once it is answered. It opens no session.
+   */
+  const dispatchPresented = async (req: AuthedRequest, res: ServerResponse, parsedBody: unknown): Promise<void> => {
+    const server = createHttpMcpServer(paymentsServer);
+    // No `sessionIdGenerator`: a stateless transport, which answers without `initialize`.
+    const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
+    await server.connect(transport as unknown as Transport);
+    try {
+      await transport.handleRequest(req, res, parsedBody);
+    } finally {
+      await server.close().catch(() => {});
+    }
+  };
+
   const httpServer: HttpServer = createServer((req, res) => {
     // @spec txn-authorization#two-phase-expiry — the unauthenticated discovery
     // routes (RFC 9728 metadata + txn_challenge_jwks_uri) are served in front of
@@ -592,6 +706,13 @@ export async function createHttpMcpChannel(
     readValidatedBody(req, res)
       .then(async (body) => {
         if (body === undefined) return;
+        const presented = presentedCall(body.parsedBody);
+        if (presented === "refused") return invalidPresentationRequest(res, "an attenuation presentation is not taken in a batch");
+        if (presented !== undefined) {
+          const facts = await authenticatePresentation(authed, res, paymentsServer, presented, body.invocations ?? new Map());
+          if (facts) await dispatchPresented(authed, res, body.parsedBody);
+          return;
+        }
         const facts = await authenticate(authed, res, paymentsServer, masGoverned, body.invocations);
         if (facts) await dispatch(authed, res, holderOf(facts), body.parsedBody);
       })
@@ -653,6 +774,58 @@ export function dpopFetch(
     headers.set("authorization", `DPoP ${credential}`);
     headers.set("dpop", proof);
     return fetch(input, { ...init, headers });
+  };
+}
+
+/** The answer to one presented tools/call: the HTTP status, and the PEP verdict when the call was dispatched. */
+export interface PresentedCallResult {
+  status: number;
+  verdict?: MediatedToolResult;
+  body: unknown;
+}
+
+/**
+ * @spec attenuation#mission-binding-check, AAT -02 Sections 7 and 8 (#1756
+ * slice B3): one `tools/call` whose one credential is an attenuation
+ * presentation, POSTed on no session and with no `Authorization` header.
+ * The arguments are serialized once, and `present` builds the presentation
+ * from that JSON text, so the proof's `hta` covers exactly the arguments the
+ * body carries. Its result is typed `unknown` so a caller (and a test) can
+ * present a malformed shape. `argumentsText`, when given, is the body's
+ * `arguments` text verbatim in place of the snapshot.
+ */
+export async function callToolWithPresentation(
+  url: string,
+  name: string,
+  args: Record<string, unknown>,
+  present: (call: { name: string; argumentsJson: string }) => Promise<unknown>,
+  opts: { missionReference?: unknown; headers?: Record<string, string>; argumentsText?: string } = {},
+): Promise<PresentedCallResult> {
+  const snapshot = snapshotArguments(args);
+  const argumentsText = opts.argumentsText ?? snapshot.argumentsJson;
+  const presentation = await present({ name, argumentsJson: argumentsText });
+  const meta = JSON.stringify({
+    [AAT_PRESENTATION_META_KEY]: presentation,
+    ...(opts.missionReference !== undefined ? { [MCP_REFERENCE_META_KEY]: opts.missionReference } : {}),
+  });
+  const body = `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":${JSON.stringify(name)},"arguments":${argumentsText},"_meta":${meta}}}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...(opts.headers ?? {}) },
+    body,
+  });
+  const text = await res.text();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    parsed = text;
+  }
+  const result = (parsed as { result?: { structuredContent?: unknown } } | undefined)?.result;
+  return {
+    status: res.status,
+    ...(result?.structuredContent !== undefined ? { verdict: result.structuredContent as MediatedToolResult } : {}),
+    body: parsed,
   };
 }
 

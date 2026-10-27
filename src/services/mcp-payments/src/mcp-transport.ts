@@ -47,6 +47,8 @@ import {
   type TokenFacts,
 } from "./pep.js";
 import { type DispositionGap, dispatchPathFor, type McpPaymentsServer, type TransactionToolResult } from "./server.js";
+import { AAT_PRESENTATION_META_KEY, AatPresentationRefused, readAatPresentation } from "./aat-presentation.js";
+import { DpopReplayUnavailableError } from "./dpop.js";
 
 /**
  * The namespaced `_meta` key that carries the mission access token (JWT) across
@@ -144,29 +146,38 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const cred = request.params._meta?.[MISSION_TOKEN_META_KEY];
+    const presented = request.params._meta?.[AAT_PRESENTATION_META_KEY];
     const received = (request.params.arguments ?? {}) as Record<string, unknown>;
-    let token: TokenFacts;
-    try {
-      if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
-      // @spec txn-authorization#transaction-token — ONE credential crosses the
-      // boundary: the ordinary Mission-bound token, or the transaction token
-      // that authorizes the retry of a challenged operation. There is no
-      // separate txn carrier on this channel either.
-      //
-      // @spec txn-authorization#offline-verification step 2 — but a transaction
-      // credential requires proof of possession on the request that presents
-      // it, and this channel has no HTTP request to bind a proof to (the
-      // documented simplification the ordinary class runs under). The
-      // transaction-token path is therefore NOT available here: it is refused
-      // outright, with its own reason, rather than admitted unproven. The
-      // challenged retry goes over the HTTP transport.
-      token = await paymentsServer.validateCredential(cred);
-    } catch (e) {
-      // No valid credential -> structured denial, not a thrown transport error.
-      if (String((e as Error)?.message ?? "").includes("txn_pop_required")) {
-        return toCallToolResult({ ok: false, refusal_reason: "txn_pop_required" });
-      }
+    // @spec attenuation#mission-binding-check (#1756 slice B3): an attenuation
+    // presentation is the call's one credential, verified below from the
+    // call's original arguments; beside a token it is neither.
+    if (presented !== undefined && cred !== undefined) {
       return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+    }
+    let token: TokenFacts | undefined;
+    if (presented === undefined) {
+      try {
+        if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
+        // @spec txn-authorization#transaction-token — ONE credential crosses the
+        // boundary: the ordinary Mission-bound token, or the transaction token
+        // that authorizes the retry of a challenged operation. There is no
+        // separate txn carrier on this channel either.
+        //
+        // @spec txn-authorization#offline-verification step 2 — but a transaction
+        // credential requires proof of possession on the request that presents
+        // it, and this channel has no HTTP request to bind a proof to (the
+        // documented simplification the ordinary class runs under). The
+        // transaction-token path is therefore NOT available here: it is refused
+        // outright, with its own reason, rather than admitted unproven. The
+        // challenged retry goes over the HTTP transport.
+        token = await paymentsServer.validateCredential(cred);
+      } catch (e) {
+        // No valid credential -> structured denial, not a thrown transport error.
+        if (String((e as Error)?.message ?? "").includes("txn_pop_required")) {
+          return toCallToolResult({ ok: false, refusal_reason: "txn_pop_required" });
+        }
+        return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+      }
     }
     // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the object API's
     // serialization boundary. The client sends the one JSON snapshot it
@@ -192,6 +203,18 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
       }
       argumentsJson = sent as string;
       args = snapshot;
+    }
+    if (token === undefined) {
+      // @spec AAT -02 Sections 7 and 8 (#1756 slice B3): the presentation's
+      // proof is verified against the snapshot this call is dispatched from.
+      const presentation = readAatPresentation(presented);
+      try {
+        if (presentation === undefined) throw new AatPresentationRefused("the presentation is malformed");
+        token = await paymentsServer.validateAatPresentation(presentation, request.params.name, argumentsJson);
+      } catch (e) {
+        if (e instanceof DpopReplayUnavailableError) return toCallToolResult({ ok: false, refusal_reason: "state_unavailable" });
+        return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
+      }
     }
     // @spec authority-server#mcp-reference — the propagated reference rides
     // params._meta on each tools/call under the namespaced key; a server
@@ -274,6 +297,34 @@ export class MediatedClient {
         ...(missionReference !== undefined
           ? { [MCP_REFERENCE_META_KEY]: missionReference }
           : {}),
+      },
+    });
+    return (res.structuredContent ?? { ok: false, refusal_reason: "no_result" }) as unknown as MediatedToolResult;
+  }
+
+  /**
+   * tools/call over MCP whose one credential is an attenuation presentation
+   * (@spec attenuation#mission-binding-check, #1756 slice B3), in `_meta`
+   * beside the argument snapshot. `present` builds the presentation from
+   * that snapshot's JSON text, so the proof's `hta` is computed over exactly
+   * the arguments the call carries. Its result is typed `unknown` so a caller
+   * (and a test) can present a malformed shape: the server decides.
+   */
+  async callToolWithPresentation(
+    name: string,
+    args: Record<string, unknown>,
+    present: (call: { name: string; argumentsJson: string }) => Promise<unknown>,
+    missionReference?: unknown,
+  ): Promise<MediatedToolResult> {
+    const snapshot = snapshotArguments(args);
+    const presentation = await present({ name, argumentsJson: snapshot.argumentsJson });
+    const res = await this.client.callTool({
+      name,
+      arguments: snapshot.args,
+      _meta: {
+        [AAT_PRESENTATION_META_KEY]: presentation,
+        [INVOCATION_ARGUMENTS_META_KEY]: snapshot.argumentsJson,
+        ...(missionReference !== undefined ? { [MCP_REFERENCE_META_KEY]: missionReference } : {}),
       },
     });
     return (res.structuredContent ?? { ok: false, refusal_reason: "no_result" }) as unknown as MediatedToolResult;

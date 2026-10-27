@@ -15,6 +15,8 @@
 
 import {
   AAT_TYP,
+  aatJwkThumbprintUri,
+  aatPublicJwkProblem,
   type AuthorityEntry,
   type CredentialAuthorityEntry,
   type Confirmation,
@@ -63,9 +65,20 @@ export interface VerifiedMissionAccessClaims extends VerifiedCredentialClaims {
   credentialAuthority: readonly CredentialAuthorityEntry[];
 }
 
-/** An attenuation root's claims (`aat+jwt`); its authority is the chain's `tools`. */
+/**
+ * An attenuation root's claims (`aat+jwt`); its authority is the chain's
+ * `tools` and `mission_constraints`. `cnfJkt` is the RFC 7638 thumbprint of
+ * the root's `cnf.jwk`.
+ */
 export interface VerifiedAttenuationRootClaims extends VerifiedCredentialClaims {
   mission: { id: string; issuer: string; authority_hash: string };
+}
+
+const JWK_THUMBPRINT_URI_PREFIX = "urn:ietf:params:oauth:jwk-thumbprint:sha-256:";
+
+/** The RFC 7638 SHA-256 thumbprint of a public key this family's AAT profile accepts. */
+export function aatKeyThumbprint(jwk: Record<string, unknown>): string {
+  return aatJwkThumbprintUri(jwk).slice(JWK_THUMBPRINT_URI_PREFIX.length);
 }
 
 const nonEmptyString = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -86,17 +99,13 @@ function asTokenProfile<T>(read: () => T): T {
 
 /**
  * @spec runtime-oauth#token-validation (#825, D402): the binding's structure is
- * read as introspection reads it; this resource proves possession by DPoP
- * only, so its profile requires `cnf.jkt`.
+ * read as introspection reads it; this resource proves an access token's
+ * possession by DPoP only, so its profile requires `cnf.jkt` (an attenuation
+ * chain proves possession of its leaf's `cnf.jwk` with its own PoP JWT).
  */
 function requireDpopKey(confirmation: Confirmation | undefined): string {
   if (confirmation?.jkt === undefined) throw new TokenProfileError("token cnf.jkt must be a non-empty string");
   return confirmation.jkt;
-}
-
-function requireCredentialClaims(payload: JWTPayload, nowS: number): VerifiedCredentialClaims {
-  const { confirmation, ...claims } = asTokenProfile(() => readCredentialProfileClaims(payload, nowS));
-  return { ...claims, cnfJkt: requireDpopKey(confirmation) };
 }
 
 /**
@@ -114,14 +123,30 @@ export function readMissionAccessClaims(typ: unknown, payload: JWTPayload, nowS:
 /**
  * The attenuation-root profile: `typ` `aat+jwt`, the same claim primitives,
  * and a `mission` claim that carries `authority_hash` (the chain's lineage
- * anchor). The root's `tools` are read by the chain verifier, not here.
+ * anchor). @spec attenuation#root, AAT -02 Section 3.2 (#1756): the holder
+ * key is the public `cnf.jwk`, not a `cnf.jkt`; `sub` and `client_id` are
+ * REQUIRED here, the only token in the chain they are read from. The root's
+ * `tools` and `mission_constraints` are read by the chain verifier, not here.
  */
 export function readAttenuationRootClaims(typ: unknown, payload: JWTPayload, nowS: number): VerifiedAttenuationRootClaims {
   requireType(typ, AAT_TYP);
-  const base = requireCredentialClaims(payload, nowS);
+  const { cnf, ...claims } = payload;
+  const base = asTokenProfile(() => readCredentialProfileClaims(claims, nowS));
+  const jwk = (cnf as { jwk?: unknown } | undefined)?.jwk;
+  const keyProblem = aatPublicJwkProblem(jwk);
+  if (keyProblem) throw new TokenProfileError(`attenuation root cnf.jwk: ${keyProblem}`);
   const m = payload.mission as { id?: unknown; issuer?: unknown; authority_hash?: unknown } | undefined;
   if (typeof m !== "object" || m === null || !nonEmptyString(m.id) || !nonEmptyString(m.issuer) || !nonEmptyString(m.authority_hash)) {
     throw new TokenProfileError("attenuation root mission claim is missing or malformed");
   }
-  return { ...base, mission: { id: m.id, issuer: m.issuer, authority_hash: m.authority_hash } };
+  const { sub, clientId, jti, iat, exp } = base;
+  return {
+    sub,
+    clientId,
+    jti,
+    iat,
+    exp,
+    cnfJkt: aatKeyThumbprint(jwk as Record<string, unknown>),
+    mission: { id: m.id, issuer: m.issuer, authority_hash: m.authority_hash },
+  };
 }
