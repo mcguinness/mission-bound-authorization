@@ -670,7 +670,9 @@ Set extends the single-domain walkthrough's, its write entry also
 carrying a `delegation` member with `max_depth` 2, so both mapped
 entries are delegable to depth 2 under the root-shaping rules of
 {{root-mapping}} and its `authority_hash` differs from that example's).
-Decoded root token:
+The Mission Issuer signs the root with protected header
+`{"alg":"ES256","kid":"as-2026-10","typ":"aat+jwt"}`. Decoded root
+claims:
 
 ~~~ json
 {
@@ -680,8 +682,10 @@ Decoded root token:
   "aud": "https://erp.example.com",
   "iat": 1793609400,
   "exp": 1793609700,
-  "jti": "aat_root_7M2R4kP9sT1x",
-  "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
+  "jti": "01a19b73-7ec0-7404-b47d-da1f4f13688c",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "13PnaI27qUjjjxZ7rW0Ls-iTo5F_c_hMNN3K4aLGv2g" } },
   "del_depth": 0,
   "del_max_depth": 2,
   "mission": {
@@ -715,21 +719,24 @@ names that resource server. The ERP's operation contract identifies
 The orchestrator spawns a read-only extraction sub-agent and, with no
 authorization server contact, mints a child that drops the write tool
 and keeps only the Q3 invoice read. It signs the child with the key the
-root's `cnf` binds, sets `iss` to that key's thumbprint, increments
-`del_depth`, and commits the parent by `par_hash` (the `iss` value
-is one line, wrapped here for display):
+root's `cnf.jwk` carries (protected header
+`{"alg":"Ed25519","typ":"aat+jwt"}`), sets `iss` to the JWK Thumbprint
+({{RFC7638}}) URI of that key, increments `del_depth`, and commits the
+parent by `par_hash` (the `iss` value is one line, wrapped here for
+display):
 
 ~~~
 {
   "iss":
-    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:0ZcOCORZNYy-
-     DWpqq30jZyJGHTN0d2HglBV3uiguA4I",
-  "sub": "user_3p2q8mN1a0kV7tR",
+    "urn:ietf:params:oauth:jwk-thumbprint:sha-256:gmukbzuLQoEbUSbOF
+     xbiOyvNwWCaCXdeii24v-xRahg",
   "aud": "https://erp.example.com",
   "iat": 1793609430,
   "exp": 1793609640,
-  "jti": "aat_child_2Yt7Qv9Lq",
-  "cnf": { "jkt": "kP3xR9sQ7nM2vL4tY6bD1eF8jC5wH0pV2nR3kQ4mZ7s" },
+  "jti": "01a19b73-f3f0-76a5-bdf3-fe39a8c43247",
+  "cnf": { "jwk": {
+    "kty": "OKP", "crv": "Ed25519",
+    "x": "l3TlQp7m4AFPndPII7gkG2jxttodVKaGrm58SEi2AF4" } },
   "par_hash": "9XbVt2nD9bM7sX1cF8gH2vJ4kE5pNQl3KvZ4mP5x0wQ",
   "del_depth": 1,
   "del_max_depth": 2,
@@ -752,18 +759,22 @@ is one line, wrapped here for display):
 The `mission` claim is unchanged, the child's `aud` equals the root's,
 its `exp` (1793609640) ends before the root's (1793609700), within the
 per-hop bound, the write tool is gone, and the read constraint is
-unchanged (a permitted narrowing). The child's `cnf.jkt` is the JWK
-thumbprint {{RFC7638}} of the delegate extractor's own key, which its
-per-invocation proof-of-possession must match. The child's `par_hash`
+unchanged (a permitted narrowing). The child's `cnf.jwk` is the
+extractor's own public key, not the orchestrator's, as the substrate
+requires for a child handed across a process boundary
+({{Section 6.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The child's `par_hash`
 derives as {{attenuation}} states, the base64url SHA-256 digest, without
 padding, of the root token's JWS Signing Input; the value shown is
 illustrative, since the example gives the root's decoded claims rather
 than its serialized bytes. To read an invoice
-the extractor presents the chain `[root, child]` and a per-invocation
-proof-of-possession to the gateway. The gateway verifies the chain (the
-child's signature under the root's `cnf` key, `par_hash`, the depth,
-capability monotonicity, and the `aud` and `exp` bounds), verifies the
-proof-of-possession under the child's `cnf` key, and, because this is
+the extractor sends the gateway a presentation, the chain
+`[root, child]` and a PoP JWT for that invocation
+({{Section 7.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The gateway verifies the chain (the child's signature under the root's
+`cnf.jwk`, `par_hash`, the depth, capability monotonicity, and the
+`aud` and `exp` bounds), verifies the PoP JWT under the child's
+`cnf.jwk`, and, because this is
 Mission-bound, checks on this presentation that
 `msn_wJDMty6vSvxrbyZ2F5B_qqWbtovA6Sns` is `active` within the
 deployment's declared freshness bound ({{kill-switch}}). A write attempt
@@ -926,6 +937,10 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Worked Example: the tokens carry `typ` `aat+jwt` and `cnf.jwk`, the
+  child binds the extractor's own key, and the extractor presents a
+  PoP JWT.
 
 - Verifying the Mission Binding: the chain-length bound is the
   substrate's `MAX_DELEGATION_DEPTH`, a requirement there, in place of
