@@ -6,8 +6,38 @@
  * removed was still permitted).
  */
 
-import type { MissionKernel } from "@mission/authorization-server";
-import { deriveJoinDelegation, type MissionView } from "@mission/pdp";
+import { type MissionKernel, standingPaymentBudgetBindingOf } from "@mission/authorization-server";
+import {
+  deriveJoinDelegation,
+  type MissionBudgetBinding,
+  type MissionView,
+  UNDERIVABLE_BUDGET,
+  type UnderivableBudget,
+} from "@mission/pdp";
+
+/**
+ * @spec metering#metering, mission-template#standing-payment-exception (#813,
+ * #816, decision d): the budget binding of the Mission `mission` names, as
+ * the kernel derives it from its committed state
+ * (`standingPaymentBudgetBindingOf`): the dispatched instance's retained
+ * Dispatch Policy snapshot, its admission and the Mission's Intent. The
+ * co-resident decision point's PDP-side source, and the `budget` of the view
+ * below. `undefined` for a Mission outside every standing-payment lineage.
+ * The underivable marker, which the PDP refuses, for a standing payment whose
+ * binding cannot be derived, and for a Mission this kernel cannot vouch for:
+ * an uncertain kernel, an unknown Mission, or another issuer's.
+ */
+export function kernelBudgetBinding(
+  kernel: MissionKernel,
+  mission: { id: string; issuer: string },
+): MissionBudgetBinding | UnderivableBudget | undefined {
+  if (kernel.recoveryUncertainty()) return UNDERIVABLE_BUDGET;
+  const record = kernel.get(mission.id);
+  if (!record || record.issuer !== mission.issuer) return UNDERIVABLE_BUDGET;
+  const derived = standingPaymentBudgetBindingOf(kernel, record);
+  if (derived.kind === "unbound") return undefined;
+  return derived.kind === "bound" ? derived.binding : UNDERIVABLE_BUDGET;
+}
 
 /**
  * The committed view of `missionId`, with expiry applied, or `undefined` when
@@ -61,5 +91,10 @@ export function kernelMissionView(kernel: MissionKernel, missionId: string): Mis
         }
       : {}),
     ...(dischargedDigests.length > 0 ? { discharged: { entry_digests: dischargedDigests } } : {}),
+    // @spec metering#metering (#813, #816): the budget binding, where the
+    // Mission is in a standing-payment lineage. The decision point derives it
+    // again from its own source; the PEP reads it only to disclose the
+    // parameters the PDP compares with the committed destinations.
+    ...((budget) => (budget !== undefined ? { budget } : {}))(kernelBudgetBinding(kernel, { id: fresh.id, issuer: fresh.issuer })),
   };
 }

@@ -602,6 +602,7 @@ import {
 } from "./template-consent.js";
 import {
   assertStandingPaymentCoverage,
+  assertStandingPaymentExactProfile,
   type ProhibitedPredicateMapping,
   type TemplateConsentProvenance,
 } from "../kernel/standing-payment.js";
@@ -1052,6 +1053,15 @@ export interface AdapterOptions {
    */
   actionApprovalPolicy?: ActionApprovalPolicy;
   /**
+   * @spec mission-template#standing-payment-exception (#813, #816): the
+   * deployment's Enforcement Scope Statement, as its runtime enforces it.
+   * Read only under the `standing-payment-dispatch` capability, for its
+   * `budget_metering` declaration: construction refuses a designating
+   * Dispatch Policy whose budget it does not declare under the Exact profile
+   * (`assertStandingPaymentExactProfile`). Absent, every such policy refuses.
+   */
+  enforcementScopeStatement?: unknown;
+  /**
    * @spec containment#protected-events — the trusted protected-event source
    * registry, keyed by source IDENTITY (NOT the transport origin). An incoming
    * report's JWS is verified against the resolved source's key, and the source
@@ -1290,6 +1300,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
   if (standingPaymentOn && opts.dispatchPolicies) {
     assertStandingPaymentCoverage(opts.dispatchPolicies, prohibitedPredicateMappingOf(opts));
+    // @spec mission-template#standing-payment-exception (#813, #816): and
+    // every such policy's budget is metered under the Exact profile, as the
+    // deployment's Enforcement Scope Statement declares.
+    assertStandingPaymentExactProfile(opts.issuer, opts.dispatchPolicies, opts.enforcementScopeStatement);
   }
   const grantEnabled = new Map<string, boolean>([
     // The deferred grant polls an AROP deferral, a Mission approval deferral

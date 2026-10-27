@@ -11,6 +11,7 @@
  * assembly with the capability off that refuses the payment as today.
  */
 import type { Server } from "node:http";
+import { activationPolicyDigest } from "@mission/core";
 import {
   CANONICAL_RESOURCE,
   DEV_SERVICE_TOKEN,
@@ -81,6 +82,52 @@ const spPolicy = (id: string, terms: unknown = TERMS) => ({
 });
 const POLICIES = { "sp-endpoint": spPolicy("sp-endpoint") };
 
+/**
+ * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+ * (#813, #816): the deployment's Enforcement Scope Statement as `issuer`'s
+ * PDP meters under it: `budget_metering` claimed and declared under the Exact
+ * profile, listing the policy's budget with its currency, limit and committed
+ * `{id, version, digest}`. `over` replaces one part.
+ */
+const meteringStatement = (
+  issuer: string,
+  over: {
+    claims?: string[];
+    profile?: string;
+    unit?: unknown;
+    metered?: unknown[];
+    budget?: Record<string, unknown>;
+    policies?: unknown[];
+  } = {},
+) => {
+  const held = POLICIES["sp-endpoint"];
+  const ref = { id: "sp-endpoint", version: held.version, digest: activationPolicyDigest(issuer, held) };
+  return {
+    claims: over.claims ?? ["budget_metering"],
+    extensions: {
+      budget_metering: {
+        unit: over.unit ?? { currency: "USD", exponent: 2 },
+        enforcement_profile: over.profile ?? "exact",
+        topology: "local-single-writer",
+        reserve_posture: "reserve_then_commit",
+        settlement_intake: "pdp-claim-settlement:execution-evidence",
+        metered_actions: over.metered ?? [{ action: STANDING_PAYMENT_OPERATION, phase: "commit" }],
+        budgets: [
+          {
+            owner: TERMS.budget.owner,
+            budget_id: TERMS.budget.id,
+            counter_scope: "standing_consent",
+            currency: "USD",
+            limit: TERMS.budget.limit,
+            policies: over.policies ?? [ref],
+            ...over.budget,
+          },
+        ],
+      },
+    },
+  };
+};
+
 let as: BuiltAs;
 let off: BuiltAs;
 let alt: BuiltAs;
@@ -104,6 +151,7 @@ beforeAll(async () => {
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     dispatchPolicies: POLICIES,
+    enforcementScopeStatement: meteringStatement(ISSUER),
   });
   server = as.provider.listen(PORT);
   off = await buildAuthorizationServer({ issuer: OFF_ISSUER, dispatchPolicies: POLICIES });
@@ -116,6 +164,7 @@ beforeAll(async () => {
     capabilities: ON,
     approvalSessions: SESSIONS,
     dispatchPolicies: POLICIES,
+    enforcementScopeStatement: meteringStatement(ALT_ISSUER),
     actionApprovalPolicy: ALT_ACTION_APPROVAL,
     resourceToAs: (resource) =>
       resource === RESOURCE ? "https://payments-as.other.test" : ALT_ISSUER,
@@ -370,6 +419,90 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
     ).rejects.toThrow(
       "Dispatch Policy sp-reverse designates payments:payment.reverse; only payments:payment.execute is a standing payment",
     );
+  });
+
+  it("refuses startup when the Enforcement Scope Statement does not declare a designating Dispatch Policy's budget under budget_metering with the exact profile, in the policy's unit, metering the payment at commit, with the policy's currency and limit, and a policies entry equal to its committed id, version and digest (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, #816)", async () => {
+    const issuer = "http://localhost:15002";
+    const held = POLICIES["sp-endpoint"];
+    const digest = activationPolicyDigest(issuer, held);
+    const budget = "payments-operator/ap-standing-endpoint";
+    const cases: Array<[string, unknown, string]> = [
+      ["no statement", undefined, "the Enforcement Scope Statement does not claim budget_metering"],
+      ["budget_metering unclaimed", meteringStatement(issuer, { claims: [] }), "the Enforcement Scope Statement does not claim budget_metering"],
+      [
+        "another enforcement profile",
+        meteringStatement(issuer, { profile: "bounded_overrun" }),
+        "the Enforcement Scope Statement does not declare budget_metering under the exact enforcement profile",
+      ],
+      [
+        "another unit currency",
+        meteringStatement(issuer, { unit: { currency: "EUR", exponent: 2 } }),
+        "the Enforcement Scope Statement's budget_metering counts in another unit than the policy's USD",
+      ],
+      [
+        "the payment metered at another phase",
+        meteringStatement(issuer, { metered: [{ action: STANDING_PAYMENT_OPERATION, phase: "prepare" }] }),
+        "the Enforcement Scope Statement's budget_metering does not meter payments:payment.execute at commit",
+      ],
+      [
+        "another action metered",
+        meteringStatement(issuer, { metered: [{ action: "payments:payment.schedule", phase: "commit" }] }),
+        "the Enforcement Scope Statement's budget_metering does not meter payments:payment.execute at commit",
+      ],
+      [
+        "another budget id",
+        meteringStatement(issuer, { budget: { budget_id: "ap-standing-other" } }),
+        `the Enforcement Scope Statement's budget_metering declares no budget ${budget}`,
+      ],
+      [
+        "another owner",
+        meteringStatement(issuer, { budget: { owner: "another-operator" } }),
+        `the Enforcement Scope Statement's budget_metering declares no budget ${budget}`,
+      ],
+      [
+        "another limit",
+        meteringStatement(issuer, { budget: { limit: "9000.00" } }),
+        `the Enforcement Scope Statement declares budget ${budget} with another currency or limit than the policy's 5000.00 USD`,
+      ],
+      [
+        "another currency",
+        meteringStatement(issuer, { budget: { currency: "EUR" } }),
+        `the Enforcement Scope Statement declares budget ${budget} with another currency or limit than the policy's 5000.00 USD`,
+      ],
+      [
+        "the policy's id and version with another digest",
+        meteringStatement(issuer, { policies: [{ id: "sp-endpoint", version: "1", digest: activationPolicyDigest("http://other.test", held) }] }),
+        `the Enforcement Scope Statement's budget ${budget} does not list Dispatch Policy sp-endpoint version 1 with digest ${digest}`,
+      ],
+      [
+        "the policy's id and digest with another version",
+        meteringStatement(issuer, { policies: [{ id: "sp-endpoint", version: "2", digest }] }),
+        `the Enforcement Scope Statement's budget ${budget} does not list Dispatch Policy sp-endpoint version 1 with digest ${digest}`,
+      ],
+      [
+        "another policy's id",
+        meteringStatement(issuer, { policies: [{ id: "sp-other", version: "1", digest }] }),
+        `the Enforcement Scope Statement's budget ${budget} does not list Dispatch Policy sp-endpoint version 1 with digest ${digest}`,
+      ],
+    ];
+    for (const [label, statement, gap] of cases) {
+      const built = buildAuthorizationServer({
+        issuer,
+        capabilities: ON,
+        dispatchPolicies: POLICIES,
+        ...(statement !== undefined ? { enforcementScopeStatement: statement } : {}),
+      });
+      await expect(built, label).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built, label).rejects.toThrow(
+        `Dispatch Policy sp-endpoint designates a standing payment, but ${gap}: its budget is not metered under the Exact profile`,
+      );
+    }
+    // Control: the statement declaring all of it starts, and so does an
+    // assembly with the capability off and no statement at all.
+    await expect(
+      buildAuthorizationServer({ issuer, capabilities: ON, dispatchPolicies: POLICIES, enforcementScopeStatement: meteringStatement(issuer) }),
+    ).resolves.toBeDefined();
+    await expect(buildAuthorizationServer({ issuer, dispatchPolicies: POLICIES })).resolves.toBeDefined();
   });
 
   it("refuses startup when the standing-payment capability is on without templates (#813)", async () => {

@@ -133,6 +133,7 @@ export {
   type HeldReservation,
   type HeldReservationResolution,
   type HeldReservationResult,
+  type ReleasedReservation,
   type ReservationRecord,
   type ReservationState,
 } from "./idempotency-claims.js";
@@ -148,9 +149,14 @@ export {
   budgetMeteringFindings,
   type DispatchPolicyRef,
   isDispatchPolicyRef,
+  BudgetMeteringConfigError,
+  committedDestinationHolds,
   isMissionBudgetBinding,
   type MeteredAction,
   type MissionBudgetBinding,
+  type MissionBudgetSource,
+  UNDERIVABLE_BUDGET,
+  type UnderivableBudget,
 } from "./budget-metering.js";
 export { authorizationBinding, decisionCacheKey, idempotencyScopeOf, operationIdentity } from "./projections.js";
 export {

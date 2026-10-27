@@ -31,12 +31,15 @@
 import {
   type ActivationPolicyRef,
   type ActivationPolicySnapshot,
+  activationPolicyDigest,
   compareAmounts,
   isCurrencyCode,
   isRfc3339Instant,
   isValidAmount,
 } from "@mission/core";
 import { type Database, withTransaction } from "@mission/store";
+import type { RegisteredActivationPolicy } from "./activation-policy.js";
+import type { ActivationPolicySnapshotStore } from "./activation-policy-snapshots.js";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry, MissionIntent, MissionRecord } from "./types.js";
 
@@ -541,6 +544,96 @@ export function assertStandingPaymentCoverage(
 }
 
 /**
+ * @spec mission-template#standing-payment-exception, metering#aggregate-bounds,
+ * metering#topology (#813, #816, D830 rulings 1, 2 and 5): what the
+ * deployment's Enforcement Scope Statement fails to declare for one
+ * designating Dispatch Policy, or `undefined` when it declares all of it. The
+ * statement must claim `budget_metering`, declare it under the Exact
+ * enforcement profile in the policy's currency, meter the designated
+ * operation at `commit`, and list the policy's budget (its owner and id) with
+ * the policy's currency and limit and a `policies` entry equal, member for
+ * member, to the policy's committed `{id, version, digest}` (the digest the
+ * Mission Issuer computes over the snapshot it holds). Read structurally:
+ * the PDP's loader refuses a malformed declaration on its own side.
+ */
+export function standingPaymentExactProfileGap(
+  issuer: string,
+  id: string,
+  held: RegisteredActivationPolicy,
+  terms: StandingPaymentTerms,
+  statement: unknown,
+): string | undefined {
+  const ref = { id, version: held.version, digest: activationPolicyDigest(issuer, held) };
+  const budget = `${terms.budget.owner}/${terms.budget.id}`;
+  if (!isObject(statement) || !Array.isArray(statement.claims) || !statement.claims.includes("budget_metering")) {
+    return "the Enforcement Scope Statement does not claim budget_metering";
+  }
+  const declared = isObject(statement.extensions) ? statement.extensions.budget_metering : undefined;
+  if (!isObject(declared) || declared.enforcement_profile !== "exact") {
+    return "the Enforcement Scope Statement does not declare budget_metering under the exact enforcement profile";
+  }
+  if (!isObject(declared.unit) || declared.unit.currency !== terms.budget.currency) {
+    return `the Enforcement Scope Statement's budget_metering counts in another unit than the policy's ${terms.budget.currency}`;
+  }
+  const meteredAtCommit =
+    Array.isArray(declared.metered_actions) &&
+    declared.metered_actions.some((m) => isObject(m) && m.action === terms.operation && m.phase === "commit");
+  if (!meteredAtCommit) {
+    return `the Enforcement Scope Statement's budget_metering does not meter ${terms.operation} at commit`;
+  }
+  const entry = (Array.isArray(declared.budgets) ? declared.budgets : []).find(
+    (b): b is Record<string, unknown> => isObject(b) && b.owner === terms.budget.owner && b.budget_id === terms.budget.id,
+  );
+  if (!entry) return `the Enforcement Scope Statement's budget_metering declares no budget ${budget}`;
+  if (
+    entry.currency !== terms.budget.currency ||
+    typeof entry.limit !== "string" ||
+    !isValidAmount(entry.limit) ||
+    compareAmounts(entry.limit, terms.budget.limit) !== 0
+  ) {
+    return `the Enforcement Scope Statement declares budget ${budget} with another currency or limit than the policy's ${terms.budget.limit} ${terms.budget.currency}`;
+  }
+  const listed =
+    Array.isArray(entry.policies) &&
+    entry.policies.some((p) => isObject(p) && p.id === ref.id && p.version === ref.version && p.digest === ref.digest);
+  if (!listed) {
+    return `the Enforcement Scope Statement's budget ${budget} does not list Dispatch Policy ${ref.id} version ${ref.version} with digest ${ref.digest}`;
+  }
+  return undefined;
+}
+
+/**
+ * @spec mission-template#standing-payment-exception (#813, #816): the startup
+ * exact-profile check, beside {@link assertStandingPaymentCoverage}. Under the
+ * capability, every Dispatch Policy designating the workflow has its budget
+ * metered exactly by the deployment's PDP, as the Enforcement Scope Statement
+ * declares ({@link standingPaymentExactProfileGap}); otherwise construction is
+ * refused, so no standing-payment Dispatch is ever admitted against a budget
+ * no runtime meters. A deployment that states no statement refuses too.
+ */
+export function assertStandingPaymentExactProfile(
+  issuer: string,
+  policies: Readonly<Record<string, RegisteredActivationPolicy>>,
+  statement: unknown,
+): void {
+  for (const [id, held] of Object.entries(policies)) {
+    let terms: StandingPaymentTerms | undefined;
+    try {
+      terms = standingPaymentTermsOf(held);
+    } catch (e) {
+      throw new StandingPaymentConfigError(`Dispatch Policy ${id}: ${(e as Error).message}`);
+    }
+    if (!terms) continue;
+    const gap = standingPaymentExactProfileGap(issuer, id, held, terms, statement);
+    if (gap !== undefined) {
+      throw new StandingPaymentConfigError(
+        `Dispatch Policy ${id} designates a standing payment, but ${gap}: its budget is not metered under the Exact profile`,
+      );
+    }
+  }
+}
+
+/**
  * @spec mission#approval-authentication, mission-template#template-consent
  * (#813): the provenance of a human consent at the approval floor, retained
  * with the template outside `template_hash`. Only the approval surface's
@@ -790,6 +883,132 @@ export function standingPaymentRootOf(
     if (admission) return admission;
   }
   return undefined;
+}
+
+/**
+ * @spec metering#metering, metering#capacity-across-missions,
+ * mission-template#standing-payment-exception (#813, #816, D830 rulings 1, 2,
+ * 4, 5): the budget binding a Mission in a standing-payment lineage is
+ * metered under, as the PDP's view carries it (`MissionView.budget`). The
+ * shape is the PDP's `MissionBudgetBinding`, member for member.
+ */
+export interface StandingPaymentBudgetBinding {
+  owner: string;
+  budget_id: string;
+  currency: string;
+  /** The approved policy's shared limit. */
+  limit: string;
+  /** The dispatched instance's committed Dispatch Policy. */
+  policy: ActivationPolicyRef;
+  /** The committed destinations, `{vendor_id: payee_account}`. */
+  destinations: Record<string, string>;
+  instance: { max_budget: UsdAmount; root_mission_id: string };
+}
+
+/**
+ * What the kernel derives for one Mission: `unbound` outside every
+ * standing-payment lineage; `bound` with its binding; `underivable` for a
+ * Mission it records as a standing payment whose binding it cannot derive,
+ * which the PDP must refuse rather than evaluate as unmetered.
+ */
+export type StandingPaymentBudgetBindingResult =
+  | { kind: "unbound" }
+  | { kind: "bound"; binding: StandingPaymentBudgetBinding }
+  | { kind: "underivable"; reason: string };
+
+/**
+ * @spec metering#metering, mission-template#standing-payment-exception (#813,
+ * #816, decision d): derive a Mission's budget binding from the kernel's own
+ * committed state, never from a template store or a request. The successor
+ * chain is walked to the dispatched instance ({@link standingPaymentRootOf}),
+ * whose admission names the committed Dispatch Policy, the budget identity
+ * pinned at consent and the instance's `max_budget`. The policy's terms are
+ * read from the snapshot the instance's activation retained, verified against
+ * its committed digest. The binding carries the budget's owner, id, currency
+ * and limit and the committed destinations from those terms, and the
+ * instance bound keyed by the dispatched instance, so a successor continues
+ * both of its predecessor's counters.
+ *
+ * Underivable, and refused by the PDP: the instance record or its committed
+ * reference is missing or disagrees with the admission; the snapshot is not
+ * retained (pruned past its horizon) or no longer reproduces its digest; its
+ * terms do not parse; they name another budget than the pinned one; or the
+ * Mission's Intent does not carry the instance's `max_budget`.
+ */
+export function standingPaymentBudgetBindingOf(
+  kernel: {
+    get(id: string): MissionRecord | undefined;
+    standingPayments: StandingPaymentStore;
+    activationPolicySnapshots: Pick<ActivationPolicySnapshotStore, "verify">;
+  },
+  record: MissionRecord,
+): StandingPaymentBudgetBindingResult {
+  const underivable = (reason: string): StandingPaymentBudgetBindingResult => ({ kind: "underivable", reason });
+  // The lineage: the successor chain, as standingPaymentRootOf walks it,
+  // and past it the parent chain of a Child Mission, so every descendant of
+  // a standing-payment instance is found. A predecessor or parent the kernel
+  // holds no record of ends the walk underivable rather than reading the
+  // lineage as an ordinary one.
+  let root: StandingPaymentAdmission | undefined;
+  let viaParent = false;
+  const seen = new Set<string>();
+  for (let m: MissionRecord | undefined = record; m && !seen.has(m.id); ) {
+    seen.add(m.id);
+    root = kernel.standingPayments.admission(m.id);
+    const next = m.predecessor ?? m.parent?.id;
+    if (root || next === undefined) break;
+    const edge = m.predecessor !== undefined ? "predecessor" : "parent";
+    if (edge === "parent") viaParent = true;
+    m = kernel.get(next);
+    if (!m) return underivable(`mission ${record.id} names ${edge} ${next}, which this kernel holds no record of`);
+  }
+  if (!root) return { kind: "unbound" };
+  // Ruling 3: a child's spend is not charged to the budget's counters, so a
+  // Mission derived as a child from a standing-payment lineage (which the
+  // issuance profile refuses to create) is never metered as unbound.
+  if (viaParent) {
+    return underivable(`mission ${record.id} descends as a Child Mission from standing-payment instance ${root.mission_id}, whose budget accounting covers no child`);
+  }
+  const instance = kernel.get(root.mission_id);
+  const ref = root.dispatch_policy;
+  const committed = instance?.template?.dispatch_policy;
+  if (!instance || !committed) return underivable(`standing-payment instance ${root.mission_id} commits no Dispatch Policy`);
+  if (committed.id !== ref.id || committed.version !== ref.version || committed.digest !== ref.digest) {
+    return underivable(`standing-payment instance ${root.mission_id} commits another Dispatch Policy than its admission`);
+  }
+  const check = kernel.activationPolicySnapshots.verify(instance.issuer, ref);
+  if (check.status !== "verified") {
+    return underivable(`Dispatch Policy ${ref.id} version ${ref.version}: retained snapshot ${check.status}`);
+  }
+  let terms: StandingPaymentTerms | undefined;
+  try {
+    terms = standingPaymentTermsOf({ content_type: check.snapshot.content_type, content: check.snapshot.content });
+  } catch (e) {
+    return underivable(e instanceof Error ? e.message : "malformed standing-payment terms");
+  }
+  if (!terms) return underivable(`Dispatch Policy ${ref.id} version ${ref.version} states no standing payment`);
+  if (terms.budget.owner !== root.budget.owner || terms.budget.id !== root.budget.id) {
+    return underivable(`Dispatch Policy ${ref.id} names another budget than the one pinned at consent`);
+  }
+  const cap = record.intent.max_budget;
+  if (!cap || cap.currency !== root.max_budget.currency || !isValidAmount(cap.amount) || compareAmounts(cap.amount, root.max_budget.amount) !== 0) {
+    return underivable(`mission ${record.id} does not carry the max_budget of standing-payment instance ${root.mission_id}`);
+  }
+  return {
+    kind: "bound",
+    binding: {
+      owner: terms.budget.owner,
+      budget_id: terms.budget.id,
+      currency: terms.budget.currency,
+      limit: terms.budget.limit,
+      policy: { id: ref.id, version: ref.version, digest: ref.digest },
+      destinations: { ...terms.destinations },
+      instance: {
+        max_budget: { amount: root.max_budget.amount, currency: root.max_budget.currency },
+        root_mission_id: root.mission_id,
+      },
+    },
+  };
 }
 
 /**

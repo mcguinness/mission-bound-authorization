@@ -28,11 +28,14 @@ import { type Database, openDurableStore, setCommitGuard } from "@mission/store"
 import { describe, expect, it } from "vitest";
 import { canonicalDigest } from "@mission/core";
 import {
+  BudgetMeteringConfigError,
   type BudgetMeteringDeclaration,
   budgetCounterId,
   CLAIM_SETTLEMENT_INTAKE,
   type DispatchPolicyRef,
   type MissionBudgetBinding,
+  type MissionBudgetSource,
+  UNDERIVABLE_BUDGET,
 } from "../src/budget-metering.js";
 import { createDecisionChannel } from "../src/decision-channel.js";
 import {
@@ -59,6 +62,7 @@ import {
   type BudgetOverspend,
   type HeldReservation,
   type IdempotencyClaimDomain,
+  type ReleasedReservation,
   openIdempotencyClaimDomain,
 } from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
@@ -93,6 +97,8 @@ const HORIZON_MS = 604_800_000;
 
 const OWNER = "acme-treasury";
 const BUDGET_ID = "vendor-payments-2026";
+/** The payee account the committed Dispatch Policy names for `acme` (#813, D830 ruling 4). */
+const PAYEE = "acct-acme-001";
 /** The committed Dispatch Policy the budget was approved under, and its re-consented successor. */
 const POLICY_V1: DispatchPolicyRef = { id: "dp_vendor_payments", version: "1", digest: canonicalDigest({ dispatch_policy: "v1" }) };
 const POLICY_V2: DispatchPolicyRef = { id: "dp_vendor_payments", version: "2", digest: canonicalDigest({ dispatch_policy: "v2" }) };
@@ -182,7 +188,10 @@ function budgetStatement(decl: unknown = declaration(), claimed = true): Enforce
 }
 
 /** A claim domain on its own file; `open` again is a PDP restart against the same file. */
-function domainOnFile(c: Clock, hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[] } = {}) {
+function domainOnFile(
+  c: Clock,
+  hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[]; released?: ReleasedReservation[] } = {},
+) {
   const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
   const open = (statement: EnforcementScopeStatement = budgetStatement()) =>
     openIdempotencyClaimDomain({
@@ -193,6 +202,7 @@ function domainOnFile(c: Clock, hooks: { held?: HeldReservation[]; overspent?: B
       settlementKeys,
       ...(hooks.held ? { onReservationHeld: (r: HeldReservation) => hooks.held?.push(r) } : {}),
       ...(hooks.overspent ? { onBudgetOverspend: (o: BudgetOverspend) => hooks.overspent?.push(o) } : {}),
+      ...(hooks.released ? { onReservationReleased: (r: ReleasedReservation) => hooks.released?.push(r) } : {}),
     });
   return { file, open };
 }
@@ -217,6 +227,7 @@ function binding(root: string, o: Partial<MissionBudgetBinding> & { maxBudget?: 
     currency: "USD",
     limit: "1000.00",
     policy: POLICY_V1,
+    destinations: { acme: PAYEE },
     instance: { max_budget: { amount: maxBudget ?? "1000.00", currency: "USD" }, root_mission_id: root },
     ...over,
   };
@@ -248,19 +259,42 @@ interface RequestOptions {
   /** `context.compensates_evaluation_id`, for a compensate-phase request. */
   compensates?: string;
   digest?: string;
+  /** The request's vendor (`resource.properties.vendor_id`). */
+  vendor?: string;
+  /**
+   * The normalized parameter object the PEP supplies (#813), whose digest is
+   * the request's `parameter_digest` unless `digest` is given; members here
+   * replace the PEP-established defaults, and `null` sends none.
+   */
+  parameters?: Record<string, unknown> | null;
 }
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const amount = o.amount ?? "100.00";
+  const vendor = o.vendor ?? "acme";
+  // @spec authzen#parameter-digest (#813): the effective parameters the PEP
+  // established from the payments store, the payee among them.
+  const parameters = {
+    action: o.action ?? EXECUTE,
+    invoice_id: "inv-1",
+    vendor_id: vendor,
+    amount: { amount, currency: o.currency ?? "USD" },
+    payee_account: PAYEE,
+    resource: RESOURCE,
+    ...(o.parameters ?? {}),
+  };
   return {
     subject: { id: "alice", properties: { iss: ISSUER } },
-    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: "acme", audience: RESOURCE, operation_target: RESOURCE } },
-    action: { name: o.action ?? EXECUTE, properties: { idempotency_key: o.key ?? freshKey() } },
+    resource: { type: "invoice", id: "inv-1", properties: { vendor_id: vendor, audience: RESOURCE, operation_target: RESOURCE } },
+    action: {
+      name: o.action ?? EXECUTE,
+      properties: { idempotency_key: o.key ?? freshKey(), ...(o.parameters === null ? {} : { parameters }) },
+    },
     context: {
       mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
       actor: { client_id: "ap-agent" },
       ...(o.actionClass === null ? {} : { action_class: o.actionClass ?? "irreversible_action" }),
-      parameter_digest: o.digest ?? `sha-256:pay-${amount}`,
+      parameter_digest: o.digest ?? canonicalDigest(parameters),
       amount: { amount, currency: o.currency ?? "USD" },
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
@@ -971,7 +1005,10 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
       expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
       expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "100.00" }, held: { amount: "0.00" }, committed: { amount: "200.00" } });
-      expect(claims.reconcileHeldReservation(a, { kind: "not_executed", reference: "again" })).toEqual({ accepted: false, reason: "not_held_released" });
+      // A repeated not_executed on the released reservation is an idempotent no-op; an executed
+      // correction after an incorrect release is the correction path's (witnessed separately).
+      expect(claims.reconcileHeldReservation(a, { kind: "not_executed", reference: "again" })).toEqual({ accepted: true, state: "released" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
       claims.close();
     });
 
@@ -1089,7 +1126,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       const req = request(c, { action: SCHEDULE, actionClass: null, phase: null });
       // An explicit absent class: the shared fixture adds a default class only when the key is missing.
       const unclassified: EvaluationRequest = { ...req, context: { ...req.context, action_class: undefined } };
-      await expect(evaluate(unclassified, options(claims, c, view("msn_a", binding("msn_a"))))).rejects.toBeInstanceOf(DecisionRequestRefused);
+      const refused = evaluate(unclassified, options(claims, c, view("msn_a", binding("msn_a"))));
+      await expect(refused).rejects.toBeInstanceOf(DecisionRequestRefused);
+      await expect(refused).rejects.toMatchObject({ denial_reason: "action_class_missing" });
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
     });
@@ -1139,10 +1178,14 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         relationForAction,
         stateSourcePlacement: "pep",
       };
+      // The co-resident point takes the binding from its own source (decision
+      // d); the ephemeral point has none, so the caller's binding is one it
+      // cannot derive.
       const point = createDecisionPoint({
         claims,
         resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
         evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+        budgetBindings: (m) => (m.id === "msn_a" ? binding("msn_a") : undefined),
       });
       const remote = await createDecisionChannel(point, {
         mode: "remote",
@@ -1322,5 +1365,246 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
       }
     });
+  });
+});
+
+describe("the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816)", () => {
+  /** Decision options a caller (the PEP) supplies to a decision point, over `v`. */
+  const callerOptions = (c: Clock, v: MissionView): DecisionOptions => ({
+    view: v,
+    fga: alwaysAllowFga,
+    modelId: "model-816",
+    now: c.now,
+    stalenessBound,
+    relationForAction,
+    stateSourcePlacement: "pep",
+  });
+  const pointOver = (claims: IdempotencyClaimDomain, budgetBindings?: MissionBudgetSource) =>
+    createDecisionPoint({
+      claims,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      ...(budgetBindings ? { budgetBindings } : {}),
+    });
+
+  it("a co-resident decision point meters the binding its own source derives, whether the caller's view omits the binding or carries another budget's, and a Mission its source does not bind stays unmetered whatever the caller's view carries (@spec metering#metering, #816, #813, decision d)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    const point = pointOver(claims, (m) => (m.id === "msn_a" && m.issuer === ISSUER ? binding("msn_a") : undefined));
+    // The caller's view omits the binding: the source's is metered.
+    expectPermit(await point.decide(withCredential(request(c)), callerOptions(c, view("msn_a"))));
+    expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("100.00");
+    expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("100.00");
+    // The caller's view carries a budget this PDP does not declare: the
+    // source's binding is metered in its place, never refused for the caller's.
+    const another = binding("msn_a", { budget_id: "undeclared-budget", limit: "999999.00" });
+    expectPermit(await point.decide(withCredential(request(c)), callerOptions(c, view("msn_a", another))));
+    expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("200.00");
+    expect(claims.budgetCounter(budgetCounterId("standing_consent", { owner: OWNER, budget_id: "undeclared-budget" }))).toBeUndefined();
+    // The source binds no budget to msn_b: the caller's binding meters nothing.
+    expectPermit(
+      await point.decide(withCredential(request(c, { missionId: "msn_b" })), callerOptions(c, view("msn_b", binding("msn_b")))),
+    );
+    expect(claims.budgetCounter(instanceCounter("msn_b"))).toBeUndefined();
+    expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("200.00");
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 3, reservations: 4, counters: 2 });
+  });
+
+  it("createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding and reserves and claims nothing (@spec metering#metering, #816, #813, decision d)", async () => {
+    const c = clock();
+    const metering = domainOnFile(c);
+    const claims = metering.open();
+    expect(() => pointOver(claims)).toThrow(BudgetMeteringConfigError);
+    expect(() => pointOver(claims)).toThrow(
+      "createDecisionPoint over a claim domain that meters budgets requires a budget binding source (budgetBindings)",
+    );
+    claims.close();
+    // A domain whose statement meters no budget needs no source, and never meters a caller's binding.
+    const { file, open } = domainOnFile(c);
+    const plain = open(budgetStatement(declaration(), false));
+    const point = pointOver(plain);
+    expectDenied(await point.decide(withCredential(request(c)), callerOptions(c, view("msn_a", binding("msn_a")))), "constraint_unsupported");
+    plain.close();
+    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+  });
+
+  it("a Mission whose source answers the underivable marker, throws, or answers a malformed binding is denied constraint_unsupported for every action that would otherwise permit, a read included, and reserves and claims nothing (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    const point = pointOver(claims, (m) => {
+      if (m.id === "msn_a") return binding("msn_a");
+      if (m.id === "msn_u") return UNDERIVABLE_BUDGET;
+      if (m.id === "msn_m") return { ...binding("msn_m"), destinations: {} };
+      throw new Error("the committed policy snapshot is unavailable");
+    });
+    const read = (missionId: string) => request(c, { missionId, action: READ, actionClass: "consequential_read", phase: null });
+    for (const missionId of ["msn_u", "msn_m", "msn_t"]) {
+      expectDenied(
+        await point.decide(withCredential(request(c, { missionId })), callerOptions(c, view(missionId, binding(missionId)))),
+        "constraint_unsupported",
+      );
+      // The caller's view omitting the binding changes nothing.
+      expectDenied(await point.decide(withCredential(request(c, { missionId })), callerOptions(c, view(missionId))), "constraint_unsupported");
+      expectDenied(await point.decide(withCredential(read(missionId)), callerOptions(c, view(missionId))), "constraint_unsupported");
+    }
+    // Control: the same read under a Mission whose binding derives is permitted and charges nothing.
+    expectPermit(await point.decide(withCredential(read("msn_a")), callerOptions(c, view("msn_a"))));
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+  });
+
+  it("a metered payment whose PEP-established payee is not the destination the policy commits for its vendor, whose vendor has no committed destination, or that carries no parameters is denied parameter_violation and reserves and claims nothing (@spec mission-template#standing-payment-exception, #813, D830 ruling 4)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    const v = view("msn_a", binding("msn_a"));
+    const cases: Array<[string, RequestOptions]> = [
+      ["a changed bank account for the approved vendor", { parameters: { payee_account: "acct-acme-002" } }],
+      ["a vendor without a committed destination", { vendor: "initech" }],
+      ["no parameters", { parameters: null }],
+    ];
+    for (const [label, o] of cases) {
+      const d = await evaluate(request(c, o), options(claims, c, v));
+      expect(d.context.denial_reason, label).toBe("parameter_violation");
+      expectDenied(d, "parameter_violation");
+    }
+    expect(claims.budgetCounter(SHARED)).toBeUndefined();
+    expect(claims.budgetCounter(instanceCounter("msn_a"))).toBeUndefined();
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    // Control: the committed destination is permitted and charged.
+    const control = open();
+    await permitted(control, c, v);
+    expect(control.budgetCounter(SHARED)?.reserved.amount).toBe("100.00");
+    control.close();
+  });
+
+  it("a metered payment whose parameters do not recompute to its parameter_digest, or name another vendor, amount or currency than the request, is denied parameter_violation and reserves and claims nothing, so the payee compared is the one the permit binds (@spec authzen#parameter-digest, mission-template#standing-payment-exception, #813)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    // Both vendors have committed destinations, so only the consistency of
+    // the parameters with the request and its digest can refuse.
+    const v = view("msn_a", binding("msn_a", { destinations: { acme: PAYEE, globex: "acct-globex-001" } }));
+    const boundElsewhere = canonicalDigest({
+      action: EXECUTE,
+      invoice_id: "inv-1",
+      vendor_id: "acme",
+      amount: { amount: "100.00", currency: "USD" },
+      payee_account: "acct-acme-002",
+      resource: RESOURCE,
+    });
+    const cases: Array<[string, RequestOptions]> = [
+      ["a parameter_digest computed over another payee", { digest: boundElsewhere }],
+      ["parameters naming another vendor than the request", { parameters: { vendor_id: "globex", payee_account: "acct-globex-001" } }],
+      ["parameters naming another amount than the request", { parameters: { amount: { amount: "50.00", currency: "USD" } } }],
+      ["parameters naming another currency than the request", { parameters: { amount: { amount: "100.00", currency: "EUR" } } }],
+    ];
+    for (const [label, o] of cases) {
+      const d = await evaluate(request(c, o), options(claims, c, v));
+      expect(d.context.denial_reason, label).toBe("parameter_violation");
+      expectDenied(d, "parameter_violation");
+    }
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+  });
+
+  it("under a standing-payment instance the PDP itself refuses parameter_violation a payment over the entry's per-payment max_amount, decided on the Mission bound with an unconstrained credential, reserving and claiming nothing, and permits and charges exactly the bound (@spec mission-template#standing-payment-exception, mission#max-amount, #813)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    const capped: MissionView = {
+      ...view("msn_a", binding("msn_a")),
+      authority_set: [
+        {
+          type: MISSION_RESOURCE_ACCESS_TYPE,
+          resource: RESOURCE,
+          actions: [EXECUTE],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    };
+    // withCredential gives the request a credential with no constraints, so
+    // only the Mission's own entry bounds the amount.
+    const over = await evaluate(request(c, { amount: "500.01" }), options(claims, c, capped));
+    expectDenied(over, "parameter_violation");
+    expect((over.context.decision_evidence as DecisionEvidenceObject).authority_bound).toBe("mission");
+    expect(claims.budgetCounter(SHARED)).toBeUndefined();
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    const reopened = open();
+    expectPermit(await evaluate(request(c, { amount: "500.00" }), options(reopened, c, capped)));
+    expect(reopened.budgetCounter(SHARED)?.reserved.amount).toBe("500.00");
+    reopened.close();
+  });
+
+  it("the preflight and prepare phases of the metered action are held to the committed destination too: another payee is denied parameter_violation, the committed one permitted (@spec mission-template#standing-payment-exception, metering#metering, #813)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const v = view("msn_a", binding("msn_a"));
+    for (const [phase, actionClass] of [
+      ["preflight", "consequential_read"],
+      ["prepare", "consequential_write"],
+    ] as const) {
+      expectDenied(
+        await evaluate(request(c, { phase, actionClass, parameters: { payee_account: "acct-acme-002" } }), options(claims, c, v)),
+        "parameter_violation",
+      );
+      expectPermit(await evaluate(request(c, { phase, actionClass }), options(claims, c, v)));
+    }
+    claims.close();
+  });
+});
+
+describe("a budget-bound permit suppressed before redemption stays charged (@spec metering#settlement-states, #813, #816, owner ruling)", () => {
+  const states = (claims: IdempotencyClaimDomain, evaluationId: string) => claims.reservationsFor(evaluationId).map((r) => r.state);
+
+  it("the owner's sequence: a permit of 300 suppressed before redemption stays charged, its PEP-signed suppressed record is no settlement without the redeeming attempt, the next 1,000 against a 1,000 budget is quota_exceeded naming the standing_consent counter, and the permit's later completed commits its own 300 alone (@spec metering#settlement-states, metering#aggregate-bounds, #813, #816, owner ruling)", async () => {
+    const c = clock();
+    const { open } = domainOnFile(c);
+    const claims = open();
+    const first = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    // The PEP refused the permit before redeeming it. Its signed record names
+    // no redeeming attempt, so it settles nothing and releases nothing.
+    expect(await claims.settle(REQUESTER, await executionRecord(first, "suppressed"), () => undefined)).toEqual({
+      accepted: false,
+      reason: "redeeming_attempt_unknown",
+    });
+    expect(states(claims, first)).toEqual(["reserved", "reserved"]);
+    const second = await evaluate(request(c, { missionId: "msn_b", amount: "1000.00" }), options(claims, c, view("msn_b", binding("msn_b"))));
+    expectDenied(second, "quota_exceeded");
+    expect(entry(second, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "700.00", currency: "USD" } });
+    // Should the permit complete after all, only its own 300 commits.
+    expect((await claims.settle(REQUESTER, await executionRecord(first, "completed"))).accepted).toBe(true);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+    claims.close();
+  });
+
+  it("an operator's not_executed on a held reservation releases it with one resolution notice, and a repeated not_executed on the released reservation is an idempotent no-op raising none (@spec metering#settlement-states, #813, #816)", async () => {
+    const c = clock();
+    const held: HeldReservation[] = [];
+    const released: ReleasedReservation[] = [];
+    const { open } = domainOnFile(c, { held, released });
+    const claims = open();
+    const evaluationId = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    c.set(T0 + PAST_LEASE_MS + 1);
+    claims.sweep();
+    expect(held.map((h) => [h.evaluation_id, h.cause])).toEqual([[evaluationId, "lease_elapsed"]]);
+    expect(claims.reconcileHeldReservation(evaluationId, { kind: "not_executed", reference: "ticket-1" })).toEqual({ accepted: true, state: "released" });
+    expect(released.map((r) => [r.evaluation_id, r.cause])).toEqual([[evaluationId, "operator_reconciled:not_executed:ticket-1"]]);
+    expect(claims.reconcileHeldReservation(evaluationId, { kind: "not_executed", reference: "ticket-1-again" })).toEqual({
+      accepted: true,
+      state: "released",
+    });
+    expect(claims.reservationsFor(evaluationId).map((r) => [r.state, r.cause])).toEqual([
+      ["released", "operator_reconciled:not_executed:ticket-1"],
+      ["released", "operator_reconciled:not_executed:ticket-1"],
+    ]);
+    expect(released).toHaveLength(1);
+    claims.close();
   });
 });
