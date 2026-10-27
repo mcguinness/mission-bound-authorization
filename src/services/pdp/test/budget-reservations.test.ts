@@ -1847,30 +1847,41 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: executionId, outcome: "suppressed", error: "kill_switch" });
     });
 
-    it("a record from the applied failed attempt with the same outcome and an error the applied record did not carry is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement and the held reservation are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+    it("a record from the applied failed attempt with the same outcome and a changed error, one added where the applied record carried none or one replacing the error it carried, is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement and the held reservations are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
       const c = clock();
       const conflicts: SettlementConflict[] = [];
       const { file, open } = domainOnFile(c, { conflicts });
       const claims = open();
-      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
-      const executionId = `exe_${randomUUID()}`;
-      const failed = await executionRecord(a, "failed", executionId);
-      const changed = await executionRecord(a, "failed", executionId, { error: "connector_timeout" });
-      expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
-      for (const record of [changed, changed]) {
-        expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      const cases = [
+        { amount: "300.00", applied: undefined, changed: "connector_timeout" },
+        { amount: "200.00", applied: "connector_timeout", changed: "connector_refused" },
+      ];
+      const settled: Array<{ id: string; executionId: string; applied: string | undefined }> = [];
+      for (const k of cases) {
+        const id = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: k.amount });
+        const executionId = `exe_${randomUUID()}`;
+        const failed = await executionRecord(id, "failed", executionId, k.applied === undefined ? {} : { error: k.applied });
+        const changed = await executionRecord(id, "failed", executionId, { error: k.changed });
+        expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+        for (const record of [changed, changed]) {
+          expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+        }
+        expect(claims.settlementConflicts(id)).toEqual([
+          { execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed", record: changed },
+        ]);
+        expect(conflicts.filter((r) => r.evaluation_id === id)).toEqual([
+          expect.objectContaining({ evaluation_id: id, execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed" }),
+        ]);
+        expect(claims.reservationsFor(id).map((r) => r.state)).toEqual(["held", "held"]);
+        settled.push({ id, executionId, applied: k.applied });
       }
-      expect(claims.settlementConflicts(a)).toEqual([
-        { execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed", record: changed },
-      ]);
-      expect(conflicts).toEqual([
-        expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed" }),
-      ]);
-      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
-      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "0.00" } });
-      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(conflicts).toHaveLength(2);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "500.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "500.00" }, committed: { amount: "0.00" } });
       claims.close();
-      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: executionId, outcome: "failed", error: null });
+      for (const s of settled) {
+        expect(claimRowOf(file, s.id)).toMatchObject({ state: "failed", execution_id: s.executionId, outcome: "failed", error: s.applied ?? null });
+      }
     });
 
     it("a redelivery identical to the applied record, its attempt, outcome and non-empty error alike, is acknowledged as the duplicate and retains and alarms nothing, for an applied suppressed record and an applied failed one (@spec metering#settlement-contract, #816, D877)", async () => {
