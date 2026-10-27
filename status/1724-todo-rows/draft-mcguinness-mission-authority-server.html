@@ -1674,9 +1674,11 @@ MAS's mission submission endpoint, published as
 <code>mission_submission_endpoint</code> (<a href="#discovery" class="auto internal xref">Section 10</a>). The endpoint <span class="bcp14">MUST</span> be
 served over TLS 1.2 or later (TLS 1.3 <span class="bcp14">RECOMMENDED</span>), following the
 recommendations of <span>[<a href="#RFC9325" class="cite xref">RFC9325</a>]</span>. The endpoint <span class="bcp14">MUST</span> authenticate the
-client using the authentication mechanisms of the Mission Status
-endpoint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>): mTLS client
-authentication, a DPoP- or mTLS-bound access token, or private-key JWT.
+client on one of the two paths of the Mission Status endpoint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication"): client authentication with a method the MAS
+advertises that uses no shared client secret, or a DPoP- or
+mTLS-bound access token.
 An access token's audience names this endpoint, and a client
 assertion's <code>aud</code> is the MAS's issuer identifier as its sole value,
 the client-authentication audience Mission Status requires. The MAS
@@ -1685,14 +1687,15 @@ advertises the accepted methods in the
 (<a href="#discovery" class="auto internal xref">Section 10</a>).<a href="#section-3-1" class="pilcrow">¶</a></p>
 <p id="section-3-2">Client registration with a MAS is deployment-defined. The MAS records
 the client identifier it authenticates as the Mission's <code>client_id</code>.<a href="#section-3-2" class="pilcrow">¶</a></p>
-<p id="section-3-3">A request whose body is <code>application/json</code> carries the client
-authentication parameters of the mechanism it uses as top-level JSON
-string members, with the values Mission Status defines for them as
-form parameters (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>,
-Section "Authentication"): <code>client_id</code> with mTLS client
-authentication, and <code>client_assertion_type</code> and <code>client_assertion</code>
-with private-key-JWT client authentication
-(<span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>). These are request-level members, not
+<p id="section-3-3">A request whose body is <code>application/json</code> carries, as top-level
+JSON string members, the client authentication parameters that its
+method defines as form parameters, with the values Mission Status
+gives them (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>, Section
+"Authentication"): <code>client_id</code> with mTLS client authentication, and
+<code>client_assertion_type</code> and <code>client_assertion</code> with private-key-JWT
+client authentication (<span><a href="https://rfc-editor.org/rfc/rfc7523#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>). A method that
+carries its credentials in HTTP header fields keeps them there. These
+JSON members are request-level members, not
 members of the Mission Intent Submission envelope or the Intent. The
 MAS <span class="bcp14">MUST</span> remove them, and authenticate the request with them, before
 it validates the rest of the body, so a partial or unverifiable pair
@@ -2081,9 +2084,10 @@ for its endpoints (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" c
 Section "Authentication Failures"). A 401 <code>unauthorized</code> response
 carries the <code>WWW-Authenticate</code> challenges that Mission Status defines
 for its endpoints, naming the Protected Resource Metadata of the
-endpoint called. A failed mTLS or private-key-JWT client
-authentication receives 400 <code>invalid_client</code>, not a token challenge,
-and an authenticated caller to whom a submission or Mission is not
+endpoint called. A failed client authentication receives the
+response Mission Status assigns to it, the method's own error response
+or by default 400 <code>invalid_client</code>, not a token challenge, and an
+authenticated caller to whom a submission or Mission is not
 visible still receives <code>not_found</code>.<a href="#section-3.4-4" class="pilcrow">¶</a></p>
 <span id="name-mas-error-codes"></span><table class="center" id="table-2">
           <caption>
@@ -2137,7 +2141,7 @@ visible still receives <code>not_found</code>.<a href="#section-3.4-4" class="pi
 </td>
               <td class="text-left" rowspan="1" colspan="1">400</td>
               <td class="text-left" rowspan="1" colspan="1">submission, join assertion</td>
-              <td class="text-left" rowspan="1" colspan="1">Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted, as Mission Status defines.</td>
+              <td class="text-left" rowspan="1" colspan="1">Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted, as Mission Status defines.</td>
             </tr>
             <tr>
               <td class="text-left" rowspan="1" colspan="1">
@@ -3852,13 +3856,14 @@ yields the URL the metadata was resolved from.<a href="#section-10-4.2.1" class=
 <dt id="section-10-4.5">
 <code>mission_submission_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-4.6">
-          <p id="section-10-4.6.1"><span class="bcp14">REQUIRED</span>. A JSON array of strings naming the authentication methods
-the mission submission endpoint accepts, from the value space of
-<code>mission_status_endpoint_auth_methods_supported</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Here <code>access_token</code>
-names a sender-constrained access token whose audience, required
-scope, and sender constraint the MAS publishes in this endpoint's
-Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-10-4.6.1" class="pilcrow">¶</a></p>
+          <p id="section-10-4.6.1"><span class="bcp14">REQUIRED</span> when the mission submission endpoint accepts client
+authentication. A JSON array of strings naming the client
+authentication methods that endpoint accepts, with the value space
+and constraints of <code>mission_status_endpoint_auth_methods_supported</code>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>). Where the endpoint
+accepts a sender-constrained access token, the MAS publishes the
+token's audience, required scope, and sender constraint in this
+endpoint's Protected Resource Metadata <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>.<a href="#section-10-4.6.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-4.7">
@@ -3881,7 +3886,7 @@ algorithms this endpoint accepts, with the semantics of
 <dt id="section-10-4.11">
 <code>mission_status_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-4.12">
-          <p id="section-10-4.12.1"><span class="bcp14">REQUIRED</span>. Semantics per
+          <p id="section-10-4.12.1">Presence and semantics per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-10-4.12.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -3913,7 +3918,7 @@ reject an assertion whose <code>alg</code> is <code>none</code> or is not listed
 <dt id="section-10-4.19">
 <code>mission_lifecycle_endpoint_auth_methods_supported</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-4.20">
-          <p id="section-10-4.20.1"><span class="bcp14">REQUIRED</span>. Semantics per
+          <p id="section-10-4.20.1">Presence and semantics per
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>.<a href="#section-10-4.20.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
@@ -3971,20 +3976,20 @@ issuer-signed artifacts, with the signing-key retention rules of
   "mission_submission_endpoint":
     "https://mas.example.com/mas/mission/submit",
   "mission_submission_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_submission_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_endpoint":
     "https://mas.example.com/mas/mission/status",
   "mission_status_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_status_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_status_signing_alg_values_supported": ["ES256"],
   "mission_lifecycle_endpoint":
     "https://mas.example.com/mas/mission/lifecycle",
   "mission_lifecycle_endpoint_auth_methods_supported":
-    ["access_token", "private_key_jwt"],
+    ["private_key_jwt"],
   "mission_lifecycle_endpoint_auth_signing_alg_values_supported":
     ["ES256"],
   "mission_join_assertion_endpoint":
@@ -5956,12 +5961,23 @@ shows the denial:<a href="#appendix-B.5-1" class="pilcrow">¶</a></p>
 <p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-C-2.1">
-          <p id="appendix-C-2.1.1">A client join counts as <code>delegate_depth</code> 0 in the assertion
-comparison: a reported 0 agrees and any other value is denied, and
-the <code>join</code> claim still carries no <code>depth</code> for a client (#1592, D681).<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.1.1">The mission submission endpoint, and the join-assertion and
+issuance-grant endpoints that inherit its rules, authenticate on
+Mission Status's two paths: client authentication with an advertised
+method from the OAuth Token Endpoint Authentication Methods registry
+that uses no shared client secret, or a sender-constrained access
+token, which Protected Resource Metadata describes rather than an
+<code>access_token</code> method value. A JSON body carries as members only the
+parameters a method defines as form parameters; header-carried
+credentials stay in their header fields.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.2">
-          <p id="appendix-C-2.2.1">Join Assertion roles (#1591, D708). The PEP requests a Join
+          <p id="appendix-C-2.2.1">A client join counts as <code>delegate_depth</code> 0 in the assertion
+comparison: a reported 0 agrees and any other value is denied, and
+the <code>join</code> claim still carries no <code>depth</code> for a client (#1592, D681).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">Join Assertion roles (#1591, D708). The PEP requests a Join
 Assertion; a client or delegate calls the endpoint only as the PEP it
 hosts, and no carriage of an assertion from a client to a separate
 PEP is defined. The enrollment configuration records each enrollee's
@@ -5969,80 +5985,80 @@ role as PEP, PDP, or both: Join Disclosure and a Join Assertion's
 <code>audience</code> take an enrollee holding the PDP role, and join-assertion
 visibility takes either role. A Mission-joining PEP that uses Join
 Assertions obtains one for the credential it authenticated and
-carries it in <code>context.mission_join</code>.<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
+carries it in <code>context.mission_join</code>.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.3">
-          <p id="appendix-C-2.3.1">After request media-type dispatch, an intent-submission or
+        <li class="normal" id="appendix-C-2.4">
+          <p id="appendix-C-2.4.1">After request media-type dispatch, an intent-submission or
 join-assertion request whose JSON body cannot be parsed as an
 object gets that operation's syntax error code before
 authentication; once an object is parsed, authentication precedes
-validation of its remaining members (#1581, following D704).<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
+validation of its remaining members (#1581, following D704).<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.4">
-          <p id="appendix-C-2.4.1">A JSON request body carries the client authentication parameters
+        <li class="normal" id="appendix-C-2.5">
+          <p id="appendix-C-2.5.1">A JSON request body carries the client authentication parameters
 of Mission Status's mechanisms as request-level members. The MAS
 removes them and authenticates with them before it validates the
 rest of the body, so they never enter the Intent or its
 commitments, while the authenticated client is still recorded as
 the Mission's <code>client_id</code>. The join-assertion endpoint inherits the
-rule (#1581, D702).<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
+rule (#1581, D702).<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.5">
-          <p id="appendix-C-2.5.1">A client assertion's <code>aud</code> at the mission submission and
+        <li class="normal" id="appendix-C-2.6">
+          <p id="appendix-C-2.6.1">A client assertion's <code>aud</code> at the mission submission and
 join-assertion endpoints is the MAS's issuer identifier as its sole
 value, the client-authentication audience Mission Status requires.
 Error Responses' code table and its restriction on companion codes
 apply to the endpoints this document defines; an endpoint a
 companion defines, such as the Mission Issuance Grant endpoint,
-uses the same error object with its own codes (D685).<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.6">
-          <p id="appendix-C-2.6.1">Editorial: Mission Join states that, because the Mission is named
-per request, one credential can be joined to different Missions
-across requests; the sentence moved here from the OAuth binding's
-Grant Bindings and Related Mechanisms. No requirement changes.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
+uses the same error object with its own codes (D685).<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.7">
-          <p id="appendix-C-2.7.1">Editorial (#1382): the Mission Substrate Statement's capability
-table is a capability list, one entry per capability, which fits
-the text rendering. No requirement changes.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.7.1">Editorial: Mission Join states that, because the Mission is named
+per request, one credential can be joined to different Missions
+across requests; the sentence moved here from the OAuth binding's
+Grant Bindings and Related Mechanisms. No requirement changes.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.8">
-          <p id="appendix-C-2.8.1">Editorial (#1176): examples of the canonical Mission follow one
-dated history; an example line too long for the page is folded per
-RFC 8792. No requirement changes.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
+          <p id="appendix-C-2.8.1">Editorial (#1382): the Mission Substrate Statement's capability
+table is a capability list, one entry per capability, which fits
+the text rendering. No requirement changes.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.9">
-          <p id="appendix-C-2.9.1">Progressive Adoption compares the four mechanisms of phases 3
+          <p id="appendix-C-2.9.1">Editorial (#1176): examples of the canonical Mission follow one
+dated history; an example line too long for the page is folded per
+RFC 8792. No requirement changes.<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.10">
+          <p id="appendix-C-2.10.1">Progressive Adoption compares the four mechanisms of phases 3
 through 6 (mapping join, Join Assertion, MAS plus Issuance Grant,
 and native Mission-aware issuance) in two informative tables: the
 components each changes, and the binding property, gates, identity
 mapping, and uncovered-path residual each has. A paragraph orders
-them as an upgrade path. No requirement changed (#818, D508).<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.10">
-          <p id="appendix-C-2.10.1">Native-operation error mapping: a refusal of a predecessor or parent
-that is not <code>active</code> maps to <code>conflict</code> whatever OAuth code its
-profile uses, since that refusal is <code>invalid_request</code> on a Token
-Exchange (#1154).<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
+them as an upgrade path. No requirement changed (#818, D508).<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.11">
-          <p id="appendix-C-2.11.1">Mission lifecycle (#705). A superseded predecessor is <code>terminated</code>
+          <p id="appendix-C-2.11.1">Native-operation error mapping: a refusal of a predecessor or parent
+that is not <code>active</code> maps to <code>conflict</code> whatever OAuth code its
+profile uses, since that refusal is <code>invalid_request</code> on a Token
+Exchange (#1154).<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.12">
+          <p id="appendix-C-2.12.1">Mission lifecycle (#705). A superseded predecessor is <code>terminated</code>
 with reason <code>superseded</code> and names its successor in
 <code>termination.successor</code>, and a cascade-terminated child reports
 reason <code>parent_terminated</code>; both surface in the Mission Status
 response's <code>mission.termination</code>. The record's accountable
-principal is <code>approval_basis.consent_principal</code>.<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
+principal is <code>approval_basis.consent_principal</code>.<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.12">
-          <p id="appendix-C-2.12.1">Mission Approval and the Substrate Statement name the OAuth
+        <li class="normal" id="appendix-C-2.13">
+          <p id="appendix-C-2.13.1">Mission Approval and the Substrate Statement name the OAuth
 binding's approval steps by content instead of by number, adding
 the authority-source and effective-expiry steps and the
 creation-commit expiry recheck, which resolves a failed commit to
-<code>denied</code> (#1116).<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
+<code>denied</code> (#1116).<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.13">
-          <p id="appendix-C-2.13.1">Join evidence and the join-failure value (#972 items 27a, 27b,
+        <li class="normal" id="appendix-C-2.14">
+          <p id="appendix-C-2.14.1">Join evidence and the join-failure value (#972 items 27a, 27b,
 D289). The PDP records <code>join_view_id</code> as a top-level member of the
 signed Decision Evidence of every decision reached over a successful
 join, a later policy denial included, and the AuthZEN response
@@ -6050,16 +6066,16 @@ carries no view identifier. A failed join denies with the AuthZEN
 profile's <code>mission_binding_failed</code> in place of <code>mission_mismatch</code>,
 which this document no longer adds to that profile's denial-reason
 set; signed records made before the change are left as they are.
-The AuthZEN examples use the profile's request and response shapes.<a href="#appendix-C-2.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.14">
-          <p id="appendix-C-2.14.1">Authentication failures (#972 item 18, D289). A 401 from the
-submission or join-assertion endpoint carries the challenges Mission
-Status defines, and a failed direct client authentication receives
-400 <code>invalid_client</code>.<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
+The AuthZEN examples use the profile's request and response shapes.<a href="#appendix-C-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.15">
-          <p id="appendix-C-2.15.1">Assertion audience and submission outcomes (#972, D289). A Join
+          <p id="appendix-C-2.15.1">Authentication failures (#972 item 18, D289). A 401 from the
+submission or join-assertion endpoint carries the challenges Mission
+Status defines, and a failed direct client authentication receives
+400 <code>invalid_client</code>.<a href="#appendix-C-2.15.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.16">
+          <p id="appendix-C-2.16.1">Assertion audience and submission outcomes (#972, D289). A Join
 Assertion request names its consuming PDP in a required <code>audience</code>,
 limited to enrolled PDPs, and the assertion's <code>aud</code> is required and
 checked by that PDP. The assertion cache is keyed by Mission, token
@@ -6070,10 +6086,10 @@ type with 415 <code>unsupported_media_type</code> and a refused
 expansion Subject mismatch denies with <code>subject_mismatch</code>, registered
 in the Mission Denial Reasons registry. A missing required reference
 is refused with <code>mission_reference_conflict</code>, and every
-submission-status body carries <code>submission_id</code> and <code>status</code>.<a href="#appendix-C-2.15.1" class="pilcrow">¶</a></p>
+submission-status body carries <code>submission_id</code> and <code>status</code>.<a href="#appendix-C-2.16.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.16">
-          <p id="appendix-C-2.16.1">Reference and claim consistency (#972, D289). The reference tuple
+        <li class="normal" id="appendix-C-2.17">
+          <p id="appendix-C-2.17.1">Reference and claim consistency (#972, D289). The reference tuple
 and both carriages share one extension rule. Every deployment
 documents its mapping contract and an Enterprise MAS publishes it.
 High-Consequence Binding defines the Mission-bound credential
@@ -6082,10 +6098,10 @@ distinct; Acting Credentials points at the runtime profile's Custody
 rule. Join rule 1 names a trusted propagated reference, step 4
 compares identity only, Limitations points at the Statement, the
 credential-holding component validates Instance Context, and
-approval-surface authentication uses the published floor.<a href="#appendix-C-2.16.1" class="pilcrow">¶</a></p>
+approval-surface authentication uses the published floor.<a href="#appendix-C-2.17.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.17">
-          <p id="appendix-C-2.17.1">Submission polling and Join Assertion outcomes (#972). The 202 and
+        <li class="normal" id="appendix-C-2.18">
+          <p id="appendix-C-2.18.1">Submission polling and Join Assertion outcomes (#972). The 202 and
 <code>pending</code> status responses carry an <code>interval</code>; the client waits at
 least the interval in force (5 seconds by default) between status
 requests; the status request parameter is <code>submission_id</code>. The
@@ -6095,10 +6111,10 @@ body, <code>not_found</code> (404) for an unknown or invisible Mission, and
 <code>join_failed</code> (403) for a non-active Mission, an inactive or unbound
 token, or a failed join. Join Assertions are signed with an algorithm
 listed in <code>mission_status_signing_alg_values_supported</code>, and a PDP
-rejects <code>none</code> or an unlisted algorithm.<a href="#appendix-C-2.17.1" class="pilcrow">¶</a></p>
+rejects <code>none</code> or an unlisted algorithm.<a href="#appendix-C-2.18.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.18">
-          <p id="appendix-C-2.18.1">Join inputs on the wire (#972). Mission Status discloses the
+        <li class="normal" id="appendix-C-2.19">
+          <p id="appendix-C-2.19.1">Join inputs on the wire (#972). Mission Status discloses the
 Mission's <code>subject</code>, <code>client_id</code>, and entry <code>delegation</code> members to
 PDPs enrolled for its enforcement scope, and enrollment is
 deployment configuration. The <code>context.mission_join</code> decision-request
@@ -6106,10 +6122,10 @@ member carries the join inputs, including a Join Assertion with the
 presented credential's digest and thumbprint. The assertion carries
 the join result (<code>join</code>) the PDP narrows with, and supports
 certificate-bound tokens (<code>x5t#S256</code>). A Join Assertion that fails
-validation is denied, and <code>mission_max_stale_seconds</code> is required.<a href="#appendix-C-2.18.1" class="pilcrow">¶</a></p>
+validation is denied, and <code>mission_max_stale_seconds</code> is required.<a href="#appendix-C-2.19.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.19">
-          <p id="appendix-C-2.19.1">Density and OAuth register, with no change to the party, behavior,
+        <li class="normal" id="appendix-C-2.20">
+          <p id="appendix-C-2.20.1">Density and OAuth register, with no change to the party, behavior,
 or keyword of any requirement; two conditions the preceding sentence
 carried are stated in the requirement itself. The abstract opens
 "This specification defines" in 129 words; the
@@ -6119,10 +6135,10 @@ requirements use the active OAuth form; examples open with "The
 following"; the Statement's capability table is compacted, with its
 qualifications listed under it; Security and Privacy Considerations
 open with pointers to the OAuth binding, Mission Status, and the
-runtime profile; and persuasive and figurative wording is removed.<a href="#appendix-C-2.19.1" class="pilcrow">¶</a></p>
+runtime profile; and persuasive and figurative wording is removed.<a href="#appendix-C-2.20.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.20">
-          <p id="appendix-C-2.20.1">Reading order. A Protocol Overview with the MAS-mode flow figure
+        <li class="normal" id="appendix-C-2.21">
+          <p id="appendix-C-2.21.1">Reading order. A Protocol Overview with the MAS-mode flow figure
 opens the document. The Mission Join, Reference Propagation, and the
 Join Assertion follow Lifecycle and State; Expansion and Child
 Creation follow them; Metadata follows every endpoint it lists; and
@@ -6134,10 +6150,10 @@ table names the endpoints that return each code; Terminology defines
 the join vocabulary; Conformance adds the PEP role, the Join
 Assertion capability, and the Enterprise profile; Deployment is an
 appendix; and the end-to-end walkthrough points to the in-body
-examples and adds revocation.<a href="#appendix-C-2.20.1" class="pilcrow">¶</a></p>
+examples and adds revocation.<a href="#appendix-C-2.21.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.21">
-          <p id="appendix-C-2.21.1">Corrections. Cross-references name the right sections (the
+        <li class="normal" id="appendix-C-2.22">
+          <p id="appendix-C-2.22.1">Corrections. Cross-references name the right sections (the
 propagation tuple's state source, a client-instance section);
 Join Spoofing counts four residuals; IANA names both runtime denial
 reasons; the error table lists <code>join_failed</code> and <code>conflict</code>; RFC 8414
@@ -6147,25 +6163,25 @@ Mission-Reference request and classify reads as
 <code>consequential_read</code>; Estate Prerequisites name local RFC 9068
 validation; Progressive Adoption follows the architecture's
 Assurance Levels; and "the issuance profile" becomes "the OAuth
-binding" throughout.<a href="#appendix-C-2.21.1" class="pilcrow">¶</a></p>
+binding" throughout.<a href="#appendix-C-2.22.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.22">
-          <p id="appendix-C-2.22.1">Authentication discovery mirrors the Status draft: per-endpoint
+        <li class="normal" id="appendix-C-2.23">
+          <p id="appendix-C-2.23.1">Authentication discovery mirrors the Status draft: per-endpoint
 <code>*_auth_methods_supported</code> and <code>*_auth_signing_alg_values_supported</code>
 members for the submission, status, and lifecycle endpoints replace
 <code>mission_auth_methods_supported</code>, and the submission endpoint accepts
 all three Status mechanisms, including mTLS-bound access tokens. The
 join-assertion endpoint shares the submission methods but names its
-own token audience and Protected Resource Metadata.<a href="#appendix-C-2.22.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-C-2.23">
-          <p id="appendix-C-2.23.1">Specify the PEP/PDP responsibilities for required instance-bound joins
-and their refusal behavior. Join Assertions continue to carry no
-instance identifier and do not replace the instance association check;
-MAS evidence distinguishes participation from presenter attribution.<a href="#appendix-C-2.23.1" class="pilcrow">¶</a></p>
+own token audience and Protected Resource Metadata.<a href="#appendix-C-2.23.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-C-2.24">
-          <p id="appendix-C-2.24.1">Client-instance references follow their successors:
+          <p id="appendix-C-2.24.1">Specify the PEP/PDP responsibilities for required instance-bound joins
+and their refusal behavior. Join Assertions continue to carry no
+instance identifier and do not replace the instance association check;
+MAS evidence distinguishes participation from presenter attribution.<a href="#appendix-C-2.24.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.25">
+          <p id="appendix-C-2.25.1">Client-instance references follow their successors:
 draft-mcguinness-oauth-client-instance-assertion is replaced by
 <span>[<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span>, and the
 deprecated draft-mcguinness-oauth-ai-agent-instance is no longer
@@ -6179,12 +6195,12 @@ instance from the Instance Context the PEP validated, and the MAS
 records the token's Instance Context in its join evidence where it
 received it;
 and the Enterprise instance-bound join applies where the acting
-credential carries validated Instance Context.<a href="#appendix-C-2.24.1" class="pilcrow">¶</a></p>
+credential carries validated Instance Context.<a href="#appendix-C-2.25.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-C-2.25">
-          <p id="appendix-C-2.25.1">Pointed MAS Availability at the Runtime and Status Operational
+        <li class="normal" id="appendix-C-2.26">
+          <p id="appendix-C-2.26.1">Pointed MAS Availability at the Runtime and Status Operational
 Considerations sections for the dependency-specific outage, ride-through,
-and recovery semantics (#310). No MAS requirement changed.<a href="#appendix-C-2.25.1" class="pilcrow">¶</a></p>
+and recovery semantics (#310). No MAS requirement changed.<a href="#appendix-C-2.26.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
