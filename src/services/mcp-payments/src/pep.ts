@@ -3806,6 +3806,45 @@ export class Pep {
     };
   }
 
+  /**
+   * @spec txn-authorization#offline-verification, runtime#compound-actions
+   * (#252, #1693, D889): the parameter digest of a challenged compensate
+   * crossing, recomputed for its transaction-token retry exactly as the
+   * enforcement path builds it. The link is established again from this PEP's
+   * own retained, verified evidence for the challenged Mission and the named
+   * invoice, the committed wire's ledger record is read through it, and the
+   * reversal form is built from that record. The invoice's current vendor is
+   * never read, and no digest the token or the pending record carries is
+   * used. A link or record that no longer answers yields none, so the retry
+   * refuses; a record that changed yields a different digest.
+   */
+  async compensationParameterDigest(
+    tool: string,
+    args: Readonly<Record<string, unknown>>,
+    mission: { id: string; issuer: string },
+  ): Promise<string | undefined> {
+    const mapping = this.toolAction(tool);
+    if (!mapping?.compensates) return undefined;
+    const target = this.operationTargetFor(tool, args);
+    if (!target.ok) return undefined;
+    const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+    if (!invoice) return undefined;
+    const established = await this.compensatedEffect(
+      { id: mission.id, issuer: mission.issuer },
+      invoice.id,
+      mapping.compensates,
+    );
+    if (!established) return undefined;
+    return parameterDigest(
+      buildReversalParams({
+        action: mapping.action,
+        wire: established.wire,
+        resource: target.target,
+        reverses: established.link.opKey,
+      }),
+    );
+  }
+
   /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */
   private observeReversalDigest(effective: EffectiveParams, link: CompensatedEffect): string | undefined {
     const wire = this.deps.committedEffects?.committedWire(link.opKey, link.evaluationId);
