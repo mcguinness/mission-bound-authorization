@@ -62752,6 +62752,78 @@
    "notes": "#249 implementation (D553, payments-runtime-profile-v13). The reference is assembled before authority_hash is computed, so the record's anchor is the anchor over the set carrying it and differs from the set without it. Proved by not recording the reference."
   },
   {
+   "id": "resource-access.resource-contract.derivation-preserves",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "Every derivation, narrowing, and delegation preserves it exactly",
+   "observation": {
+    "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
+    "local": "witnessed for child delegation only; token derivation, refresh, token exchange, template dispatch, carryover, expansion and drawdown are not yet witnessed here (the #249 cutover, D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry carrying a reference carries the same reference without restating it, under authority_hash",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a superseded reference within its declared retention survives the derivation",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a conflicting proposed reference is refused by the strict-subset proof, never replaced",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed."
+  },
+  {
+   "id": "resource-access.resource-contract.no-reference-without-approval",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-contract",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "resource-access.resource-contract"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "level": "unit",
+   "coverage": "partial",
+   "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
+   "observation": {
+    "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
+    "local": "witnessed for child delegation only; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+   },
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "a child Mission preserves its parent entry's reference (@spec resource-access#resource-contract, #1751, D875) > a child of a parent entry without a reference carries none",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). Partial until refresh and token exchange are witnessed."
+  },
+  {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "resource-contract",
