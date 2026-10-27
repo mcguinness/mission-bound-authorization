@@ -328,7 +328,8 @@
    "metering.exact-budget",
    "metering.child-accounting",
    "metering.escrow-allocation",
-   "consent-evidence.recording"
+   "consent-evidence.recording",
+   "core.cross-domain"
   ]
  },
  "profiles": [
@@ -6938,6 +6939,94 @@
    "notes": "#1482 (D620). The reference AS ships with an empty evidence registry (the unit test), the configuration this sentence describes, and rar-carriage registers no type, so its wire tests run that configuration. Applicability is that configuration, which the applicability model cannot express; an AS supporting a type follows the same dispatch rules for every type it does not support. Proved by swapping either code (the matching rar-carriage test fails)."
   },
   {
+   "id": "core.cross-domain.reference-and-hash-intact",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "the Mission reference (`mission.id`, `mission.issuer`) and the `authority_hash` the projection carries, intact",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission projection carries `mission.id` and `mission.issuer` equal to the Mission's and `authority_hash` equal to the Mission Record's, and no step across the hop alters them: the values the authorization server in the other trust domain receives and relies on are the Mission's own"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.authority-only-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "authority that only narrows ({{subset}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every entry a projection conveys is a subset, under its type's relation, of a Mission Authority Set entry, and no credential issued from the projection in the other trust domain carries authority broader than the projection conveyed: authority narrows or stays equal at each step across the hop and never widens"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.issuer-authorized-while-active",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projection performed only by, or under the authorization of, the Mission `issuer`, gated on the Mission's `active` state ({{lifecycle}}, {{issuance-gating}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission is projected only by its `issuer`, or by a party acting under that issuer's authorization, and only while the Mission is `active`: a request to project a Mission that is not `active` is refused with no projection issued, and an authorization server that is neither the Mission's `issuer` nor authorized by it issues no projection of that Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.lifetime-capped-by-expiry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projected credential lifetimes capped by the Mission's `expires_at` ({{token-authentication-lifetime}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every credential a projection yields has an `exp` no later than the Mission's `expires_at`, including when the Mission's remaining lifetime is shorter than the credential's default lifetime, and the cap holds for credentials issued from the projection in the other trust domain"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
    "id": "core.derivation.configured-mapping-scope-key",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
@@ -12006,6 +12095,29 @@
     }
    ],
    "notes": "#1721 item 1 (D845). Proved by mutation: making the decision's refusal mapping return the error's own code (invalid_request) fails both browser tests on the error parameter; removing the commit guard (created_at < expires_at) fails the race test, which then completes with a code; throwing an untyped invalid_request from the decision's re-validation fails the late-decision test alone; making the device decision record invalid_request for a refusal fails the device test. The device test passes whatever the browser mapping returns, so it witnesses only the back-channel arm. The approval render of an expired request still answers 400 invalid_request to the Approver's user agent: a render completes nothing."
+  },
+  {
+   "id": "core.approval-event.ordered-procedure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "direct-approval-steps",
+   "text": "At a direct approval event the AS MUST perform steps 1 to 7, in order, as one procedure",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the order is observed at its boundaries, not as the sequence of internal computations: an Approver whose authentication fails (step 1), or who is not authorized to activate the established authority source (step 3), is refused before the derived Authority Set is rendered for consent (step 5), and nothing step 5 renders is disclosed to that party; an effective-expiry failure, where step 4 cannot establish an effective expiry within the bounds `expires_at` requires or the commit's strictly-later recheck fails (step 7), prevents the commit, so no Mission is created; and a commit that fails leaves no active Mission and no usable Mission-bound grant, neither an authorization code nor a profile-defined grant activated for redemption. A back-channel carriage profile can issue a profile-defined grant, such as a device code, while the request is pending, so the invariant is that nothing is activated, and no grant is redeemed with Mission authority, before the commit, not that no earlier artifact exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. No witness yet: failure injection at each boundary with an event trace in the reference AS. The row is partial while only some boundaries are proven."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
