@@ -25,6 +25,7 @@ import { entryDigest } from "./discharge.js";
 import type { ExpansionDeferralStore } from "./deferred.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { assembleResourceContracts } from "./resource-contract.js";
 import { type ReconsentedCeiling, successorCeilingMembers } from "./progressive.js";
 import { assertSuccessorMaxBudget } from "./standing-payment.js";
 import {
@@ -164,9 +165,19 @@ export function successorAuthority(
   predecessor: MissionRecord,
 ): ReturnType<MissionKernel["deriveWithProvenance"]> {
   const derived = kernel.deriveWithProvenance(intent, proposal);
+  // @spec resource-access#resource-contract (#249, D875): an Expansion is a
+  // new approval, so the successor's references are assembled from
+  // configuration in this one construction, as kernel.derive assembles a
+  // fresh approval's: the page shows them, the decision commits them, and a
+  // configuration change before completion changes the successor's hash,
+  // which completion refuses rather than re-pins. Order-preserving, so the
+  // provenance stays index-aligned.
   return {
     ...derived,
-    entries: kernel.resolveFreshCapabilities(inheritCapabilitySources(derived.entries, predecessor.authority_set)),
+    entries: assembleResourceContracts(
+      kernel.resolveFreshCapabilities(inheritCapabilitySources(derived.entries, predecessor.authority_set)),
+      kernel.resourceContracts(),
+    ),
   };
 }
 

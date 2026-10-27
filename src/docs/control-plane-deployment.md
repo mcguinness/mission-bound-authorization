@@ -340,7 +340,7 @@ process on one host.
 | AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | A key ring file (`signingKeys: { ring }`; `MISSION_KEY_RING` in the launchers), or generated at boot (the library default; `MISSION_EPHEMERAL_KEYS=1` in the launchers, which refuse neither or both) | Durable with a key ring: each key keeps its `kid`, so an earlier token or signed record still verifies, through an `overlap` generation after a rotation, until that generation is retired or withdrawn as compromised. A ring change takes effect only through stop, edit, start, `pnpm keys verify` (see `channel-key-matrix.md`). Generated keys are deliberately invalidated: nothing earlier verifies |
 | Access tokens | Self-contained JWTs | Verify only while their signing key survives |
 | Durable grant revocations still pending | Kernel database | Attempted at boot; a revocation whose grant was lost with the provider is acknowledged with nothing left to revoke |
-| Signals receiver state: the version high-water, the cached observation, the gap and rematerialization markers, the retained SET and the seen `jti` values | The receiver's store (`ReceiverOptions.store`): in memory by default, or a file the consumer gives it. No shipped service constructs a receiver | Durable when the consumer gives the receiver a file |
+| Signals receiver state: the version high-water, the cached observation, the gap and rematerialization markers, the retained SET and the seen `jti` values | The receiver's store (`ReceiverOptions.store`): in memory by default, or a file the consumer gives it. No shipped service constructs a receiver | Durable when the consumer gives the receiver a file. With a recovery witness (`ReceiverOptions.witness`, a file outside the store's directory tree), a restore of that file from an older backup, or its replacement by an empty one, is detected when the receiver opens, and every Mission is held until a fresh Mission Status read resynchronizes it (#1749). A witnessed store opens only with its witness, and a witness admits one writer (D910) |
 
 oidc-provider's memory adapter is process-global, so an AS rebuilt in the
 same process still holds the previous provider's grants. A restart test that
@@ -607,10 +607,10 @@ makes no claim:
   is a documented inventory conclusion (D874).
 - `control-plane.consistency.rollback`: one writer on one host only, and no way
   back from an older store but restoring the witnessed one (D820).
-- `control-plane.consistency.rollback-retaining-consumer`: the Signals receiver
-  keeps its high-water mark across a restart, but a restore of its store from an
-  older backup loses the marks taken since; the receiver has no recovery
-  admission (#1749).
+- `control-plane.consistency.rollback-retaining-consumer`: a restore of the
+  Signals receiver's store is detected, and each Mission held until Mission
+  Status resynchronizes it, only for a receiver configured with its recovery
+  witness, which is optional (#1749, D898).
 - `control-plane.consistency.partitions`: the refusal is witnessed in the
   single-writer topology; the multi-node cases cannot be constructed here, an
   accepted declared limitation (D874).

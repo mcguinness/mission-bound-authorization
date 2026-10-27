@@ -1,4 +1,51 @@
 export { aLabelViolation } from "./a-label.js";
+export {
+  AAT_SUPPORTED_CONSTRAINT_TYPES,
+  constraintChecks as aatConstraintChecks,
+  constraintMapAttenuationProblem as aatConstraintMapAttenuationProblem,
+  constraintMapCheckProblem as aatConstraintMapCheckProblem,
+  constraintMapProblem as aatConstraintMapProblem,
+  constraintProblem as aatConstraintProblem,
+  constraintSubsumes as aatConstraintSubsumes,
+  normalizeConstraintMap as aatNormalizeConstraintMap,
+} from "./aat-constraints.js";
+export {
+  AatJcsError,
+  type AatJson,
+  AatJsonError,
+  AatNumber,
+  type AatObject,
+  isAatObject as aatIsObject,
+  isAdmissibleNumber as aatIsAdmissibleNumber,
+  jcs as aatJcs,
+  parseAatJson,
+  serializeAatJson as aatSerializeJson,
+  toPlainJson as aatToPlainJson,
+} from "./aat-json.js";
+export {
+  AAT_ALGORITHMS,
+  AAT_DETAIL_TYPE_NAME,
+  AAT_JWT_TYP,
+  AAT_POP_JWT_TYP,
+  jwkThumbprintUri as aatJwkThumbprintUri,
+  publicJwkProblem as aatPublicJwkProblem,
+  sha256B64url as aatSha256B64url,
+} from "./aat-jws.js";
+export {
+  AAT_DEFAULT_PARAMS,
+  type AatChainInput,
+  type AatChainPermit,
+  type AatDeny,
+  type AatParams,
+  type AatPolicy,
+  type AatPresentationInput,
+  type AatPresentationPermit,
+  type AatReplayState,
+  type AatTrustAnchor,
+  type AatVerifiedToken,
+  verifyAatChain,
+  verifyAatPresentation,
+} from "./aat-verify.js";
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";
 export {
   ACTIVATION_POLICY_TYP,

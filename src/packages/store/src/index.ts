@@ -62,6 +62,31 @@ export function openStoreReadOnly(file: string): Database.Database {
 }
 
 /**
+ * Hold a lock file until the returned handle closes: an exclusive SQLite
+ * handle, which the operating system releases with the process, so a crash
+ * leaves no stale lock. A second holder, in this process or another, is
+ * refused at once. The kernel's recovery witness and the Signals receiver's
+ * (#1749) are each held this way by their one writer.
+ */
+export function holdFileLock(file: string): Database.Database {
+  const lock = openStore("", { file, exclusive: true });
+  try {
+    lock.exec(
+      "CREATE TABLE IF NOT EXISTS witness_lock (k INTEGER PRIMARY KEY CHECK (k = 1), held_at TEXT NOT NULL)",
+    );
+    lock
+      .prepare(
+        "INSERT INTO witness_lock (k, held_at) VALUES (1, ?) ON CONFLICT(k) DO UPDATE SET held_at = excluded.held_at",
+      )
+      .run(new Date().toISOString());
+  } catch (e) {
+    lock.close();
+    throw e;
+  }
+  return lock;
+}
+
+/**
  * A durable store that could not be opened safely. Every refusal of
  * {@link openDurableStore} is this error and is fatal at startup: the caller
  * holds no handle, so nothing can fall back to an in-memory best effort.
@@ -283,3 +308,5 @@ function isUniqueViolation(e: unknown): boolean {
       (e as { code: string }).code === "SQLITE_CONSTRAINT_PRIMARYKEY")
   );
 }
+
+export { canonicalPath, witnessSharesStoreTree, writeDurableFile } from "./durable-file.js";
