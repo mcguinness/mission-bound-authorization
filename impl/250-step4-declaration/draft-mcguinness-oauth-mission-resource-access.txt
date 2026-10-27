@@ -350,6 +350,9 @@ Table of Contents
       naming a non-empty host (Section 4.2.1 of [RFC9110], Section 4.2.2
       of [RFC9110]);
 
+   *  its resource is an http or https URI carrying a userinfo
+      subcomponent (Section 4.2.4 of [RFC9110]);
+
    *  its resource_match is a value the authorization server does not
       recognize (Section 3);
 
@@ -365,6 +368,9 @@ Table of Contents
    *  its resource_contract is not an object with exactly the members
       id, version, and digest, or one of them does not have the form
       Section 3 gives it;
+
+   *  a date-time value in a Common Constraint defined by this
+      specification uses 60 for the seconds field (Section 6.1);
 
    *  its time_window Common Constraint has a not_before later than its
       not_after, a window that admits no instant; or
@@ -848,7 +854,9 @@ Table of Contents
 
 6.1.  Initial Common Constraints
 
-   This document defines the following Common Constraints.
+   This document defines the following Common Constraints.  RFC 3339
+   date-time values in the Common Constraints defined by this
+   specification MUST NOT use 60 for the seconds field.
 
    max_amount:  A per-action ceiling on a monetary amount.
 
@@ -2053,6 +2061,14 @@ Appendix A.  Document History
    *  max_amount's currency is exactly three upper-case ASCII letters,
       compared exactly, with no assignment-list validation; any other
       value is malformed and refused at submission.
+
+   *  An http or https resource carrying a userinfo subcomponent is
+      refused at submission.
+
+   *  Date-time values in the Common Constraints this specification
+      defines do not use 60 for the seconds field, though RFC 3339
+      permits it for an actual leap second; an entry carrying one is
+      refused at submission.
 
    -00
 

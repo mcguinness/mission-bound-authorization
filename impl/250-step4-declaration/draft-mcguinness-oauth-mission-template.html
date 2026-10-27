@@ -19,9 +19,10 @@ fresh human approval, and the instance is handed to its agent, which
 works it with ordinary Mission-bound tokens. Each instance is bounded
 by its own freshly derived Authority Set, is independently gated and
 revocable, and never exceeds the template ceiling. High-consequence
-authority classes are never dispatched by policy: they stay on a
-fresh human decision. Consent is given once, to the ceiling; dispatch
-draws within it deterministically. 
+authority classes stay on a fresh human decision, apart from one
+optional exception for recurring payment of approved invoices to
+committed destinations under an exact budget. Consent is given once,
+to the ceiling; dispatch draws within it deterministically. 
     " name="description">
 <meta content="xml2rfc 3.34.1" name="generator">
 <meta content="oauth" name="keyword">
@@ -1107,9 +1108,10 @@ fresh human approval, and the instance is handed to its agent, which
 works it with ordinary Mission-bound tokens. Each instance is bounded
 by its own freshly derived Authority Set, is independently gated and
 revocable, and never exceeds the template ceiling. High-consequence
-authority classes are never dispatched by policy: they stay on a
-fresh human decision. Consent is given once, to the ceiling; dispatch
-draws within it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+authority classes stay on a fresh human decision, apart from one
+optional exception for recurring payment of approved invoices to
+committed destinations under an exact budget. Consent is given once,
+to the ceiling; dispatch draws within it deterministically.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-about-this-document">
@@ -1246,6 +1248,11 @@ draws within it deterministically.<a href="#section-abstract-1" class="pilcrow">
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-prohibited-classes" class="internal xref">Prohibited Classes</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-standing-payment-exception" class="internal xref">Standing Payment Exception</a></p>
+</li>
+            </ul>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
             <p id="section-toc.1-1.10.1"><a href="#section-10" class="auto internal xref">10</a>. <a href="#name-the-denial-reasons" class="internal xref">The Denial Reasons</a></p>
@@ -1321,7 +1328,10 @@ re-checkable (<span>[<a href="#I-D.draft-mcguinness-mission-architecture" class=
 accountable principal for every dispatched Mission is the human who
 approved the template. The high-consequence classes stay on a fresh
 human decision, exactly as that verb requires
-(<a href="#prohibited-classes" class="auto internal xref">Section 9</a>).<a href="#section-1-3" class="pilcrow">¶</a></p>
+(<a href="#prohibited-classes" class="auto internal xref">Section 9</a>), with one optional exception: recurring
+payment of approved invoices to committed destinations under an exact
+budget (<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>). Other unattended
+high-consequence work needs a directly approved Mission.<a href="#section-1-3" class="pilcrow">¶</a></p>
 <p id="section-1-4">This document is optional and experimental: adopt it for evaluation,
 not as a stable interface. Removing the per-dispatch human from a
 consented template is a high-consequence capability, so this document
@@ -1367,8 +1377,9 @@ authority ceiling on a single evolving Mission; this document removes
 the per-dispatch human from a consented template that mints many
 independent Missions. Both concentrate one considered human consent to
 a ceiling in place of many hurried consents, and both hold the
-high-consequence classes back for a human. Where progressive draws a
-successor within one chain, a template dispatches independent
+high-consequence classes back for a human, this document with one
+bounded exception (<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>). Where progressive
+draws a successor within one chain, a template dispatches independent
 instances.<a href="#section-2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1606,7 +1617,8 @@ exchange instead of a handoff (<a href="#dispatcher-as-agent" class="auto intern
         </ul>
 <p id="section-4.3-4">Either way, the instance's authority is at most the Template Ceiling,
 narrowed by the run's dispatch intent and any proposal, and never
-includes a prohibited class (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>). Authority beyond
+includes a prohibited class (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>) other than a
+payment admitted under <a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>. Authority beyond
 the ceiling takes a fresh human decision: a human-approved expansion
 of the instance, which leaves the template behind, or a new template
 consent (<a href="#instance-composition" class="auto internal xref">Section 11</a>). Each run is a separate instance,
@@ -1933,7 +1945,9 @@ per-instance human approval; and<a href="#section-6-5.2.1" class="pilcrow">¶</a
 </li>
         <li class="normal" id="section-6-5.3">
           <p id="section-6-5.3.1">that the high-consequence classes (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>) are never
-dispatched by policy and still require a fresh human decision.<a href="#section-6-5.3.1" class="pilcrow">¶</a></p>
+dispatched by policy and still require a fresh human decision, other
+than an operation the template admits under
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>, whose disclosure that section adds.<a href="#section-6-5.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-6-6">A consent that does not render these is standing dispatch authority
@@ -2214,8 +2228,9 @@ is a new template consent, not a dispatch.<a href="#section-7.2-2.5.1" class="pi
           <li id="section-7.2-2.6">
             <p id="section-7.2-2.6.1"><strong>Prohibited-class check.</strong> Apply the prohibited-class rule
 (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>) to the surviving post-intersection set. If
-it would grant a high-consequence class, refuse the Dispatch with
-<code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
+it would grant a high-consequence class that
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> does not admit, refuse the Dispatch
+with <code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-7.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.2-2.7">
             <p id="section-7.2-2.7.1"><strong>Enforce the bounds.</strong> Refuse the Dispatch if it would exceed
@@ -2797,8 +2812,9 @@ counted as the issuance profile requires.<a href="#section-8.4-1" class="pilcrow
 <a href="#section-9" class="section-number selfRef">9. </a><a href="#name-prohibited-classes" class="section-name selfRef">Prohibited Classes</a>
       </h2>
 <p id="section-9-1">Some authority classes are too consequential to activate without a
-human at the moment of the decision. A Dispatch <span class="bcp14">MUST NOT</span> instantiate a
-Mission that grants authority in any of these classes, even when the
+human at the moment of the decision. Except as
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> admits, a Dispatch <span class="bcp14">MUST NOT</span> instantiate
+a Mission that grants authority in any of these classes, even when the
 class is within the Template Ceiling:<a href="#section-9-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-9-2.1">
@@ -2816,9 +2832,10 @@ predicate, the exfiltration leg
       </ul>
 <p id="section-9-3">Progressive holds back the same set from its own policy adjudication
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-progressive" class="cite xref">I-D.draft-mcguinness-oauth-mission-progressive</a>]</span>); this document
-applies it to dispatch. To make the rule testable, a deployment <span class="bcp14">MUST</span>
-publish in the Mission Deployment Profile a mapping from its action
-identifiers to the runtime profile's action classes
+applies it to dispatch, with the one exception of
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>. To make the rule testable, a
+deployment <span class="bcp14">MUST</span> publish in the Mission Deployment Profile a mapping
+from its action identifiers to the runtime profile's action classes
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>), or an equivalent declared
 classification.<a href="#section-9-3" class="pilcrow">¶</a></p>
 <p id="section-9-4">The issuance profile's fourth high-risk class, a consumption bound
@@ -2855,13 +2872,98 @@ configured set narrower than the mapping is nonconformant: it lets a
 Dispatch confer a class the deployment's own mapping already
 identifies as prohibited, which is exactly the outcome this section
 forbids.<a href="#section-9-6" class="pilcrow">¶</a></p>
-<p id="section-9-7">A Dispatch that would grant a prohibited class is refused with
+<p id="section-9-7">A Dispatch that would grant a prohibited class that
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> does not admit is refused with
 <code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 10</a>). Unlike the
 progressive profile, which falls back to a fresh human approval in
 band, a Dispatch has no interactive surface to escalate on: the human
 path is an ordinary Mission created through a fresh approval
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), requested out of band. The
-Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class.<a href="#section-9-7" class="pilcrow">¶</a></p>
+Dispatch Policy <span class="bcp14">MUST NOT</span> dispatch a Mission bearing a prohibited class
+that <a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> does not admit.<a href="#section-9-7" class="pilcrow">¶</a></p>
+<div id="standing-payment-exception">
+<section id="section-9.1">
+        <h3 id="name-standing-payment-exception">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-standing-payment-exception" class="section-name selfRef">Standing Payment Exception</a>
+        </h3>
+<p id="section-9.1-1">A Mission Issuer <span class="bcp14">MAY</span> admit one exception to the prohibited-class rule:
+dispatch of one designated payment-execution operation, for recurring
+payment of approved invoices. The exception never admits
+external-commitment, privileged-administration, or cross-domain
+authority, or authority satisfying the external-communication
+predicate, and never waives another prohibited predicate the operation
+satisfies. The operation stays in the configured dispatch-prohibited
+set: the Mission Issuer admits it only where every condition below
+holds, and otherwise refuses the Dispatch with
+<code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 10</a>).<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-9.1-2.1">
+            <p id="section-9.1-2.1.1"><strong>One operation.</strong> The Dispatch Policy names the designated
+operation, and the published mapping classifies it as irreversible
+and as no other prohibited class.<a href="#section-9.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.2">
+            <p id="section-9.1-2.2.1"><strong>Committed destinations.</strong> The Dispatch Policy commits the approved
+vendors, each with the payee account approved for it, and the
+ceiling entry granting the operation carries a per-payment
+<code>max_amount</code>.<a href="#section-9.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.3">
+            <p id="section-9.1-2.3.1"><strong>An exact budget.</strong> The Dispatch Policy commits a budget: its owner,
+an identifier qualified within that owner's accounting domain, its
+limit, and a per-instance maximum. Each instance's Mission Intent
+carries a <code>max_budget</code> no larger than the per-instance maximum. The
+per-payment <code>max_amount</code>, the budget, and every <code>max_budget</code> share
+one currency. Both bounds are enforced under the metering profile's
+Exact profile: the instance's <code>max_budget</code> on its own counter, and
+the budget on one counter keyed by its owner and identifier, shared
+by every instance of any template committing that budget and by
+their successors (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).
+Neither substitutes for the other.<a href="#section-9.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.4">
+            <p id="section-9.1-2.4.1"><strong>Governed approval.</strong> Where the deployment records an Approval
+Governance Record for an instance, its retained <code>approval_policy</code>
+snapshot commits class-named exceptions for the irreversible class
+and the consumption-bound class, each with its recency ceiling
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-9.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-9.1-2.5">
+            <p id="section-9.1-2.5.1"><strong>A human approver.</strong> The consenting principal is a human Approver
+authenticated at the issuance profile's approval-authentication
+floor for the irreversible class
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>), and is neither a
+Dispatcher nor the instance's Agent.<a href="#section-9.1-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-9.1-3">The Mission Issuer conveys the committed destinations and the budget to
+the runtime with each instance's policy view, bound to the template's
+<code>dispatch_policy</code> digest. Admission authorizes no execution. Each
+payment still takes a fresh runtime decision, with parameter binding,
+execution reverification, the transaction-assurance tier, and every
+applicable action-approval requirement
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). The PDP compares the payee
+the enforcing PEP establishes for the effect with the destination
+committed for its vendor, and execution reverification binds that
+payee: a vendor without a committed destination, or a payee account
+other than the committed one, including a changed bank account for an
+approved vendor, inherits no approval. A payment whose outcome is
+<code>failed</code> remains charged until reconciliation. Work outside the
+committed envelope is refused and escalates out of band to an
+ordinary, freshly approved Mission.<a href="#section-9.1-3" class="pilcrow">¶</a></p>
+<p id="section-9.1-4">Changing the destinations, or raising the budget or the per-payment
+bound, is a new <code>template_version</code> and a fresh human approval, whose
+disclosure <span class="bcp14">MUST</span> render the budget's consumption to date and its
+outstanding reservations. The approval neither releases a reservation
+that remains charged nor resets consumption
+(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-9.1-4" class="pilcrow">¶</a></p>
+<p id="section-9.1-5">The consent disclosure of a template admitting the exception <span class="bcp14">MUST</span>
+render, beside the minimum of <a href="#template-consent" class="auto internal xref">Section 6</a>, the designated
+operation, the committed destinations, the per-payment bound, the
+budget with its per-instance maximum, and whether each payment
+requires an action-bound approval, and from whom.<a href="#section-9.1-5" class="pilcrow">¶</a></p>
+</section>
+</div>
 </section>
 </div>
 <div id="denial-reasons">
@@ -2886,8 +2988,9 @@ Raising the ceiling requires a fresh human template consent.<a href="#section-10
 <code>dispatch_prohibited_class</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-10-2.4">
           <p id="section-10-2.4.1">The dispatched instance would grant a high-consequence class
-(<a href="#prohibited-classes" class="auto internal xref">Section 9</a>), which a Dispatch never auto-approves. The
-authority is available only through a fresh human approval.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
+(<a href="#prohibited-classes" class="auto internal xref">Section 9</a>) that <a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> does not
+admit, which a Dispatch never auto-approves. The authority is
+available only through a fresh human approval.<a href="#section-10-2.4.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-10-2.5">
@@ -2964,7 +3067,15 @@ create Child Missions
 consequence of the child-delegation profile's strict-subset rule, a
 Child Mission is a strict subset of the instance's Authority Set,
 which is itself within the Template Ceiling, so the whole delegation
-tree stays within the ceiling without any new rule here.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
+tree stays within the ceiling without any new rule here. An instance
+holding authority admitted under <a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>
+differs: its Mission Issuer <span class="bcp14">MUST</span> refuse to create a Child Mission
+under it unless the child is charged to the budget's counters, and
+<span class="bcp14">MUST</span> refuse any cross-organization or cross-domain derivation from
+it (<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>). An expansion
+successor of such an instance carries the budget forward and
+continues both counters, and its approval renders the budget's
+consumption to date and outstanding reservations.<a href="#section-11-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -3042,7 +3153,9 @@ cannot cite the cycle it renews has not reviewed it.<a href="#section-13-2.1.1" 
 and is not an Approver: it can trigger instantiation only within the
 template a human approved. A compromised Dispatcher cannot exceed the
 Template Ceiling (double intersection, <a href="#dispatch" class="auto internal xref">Section 7</a>), cannot dispatch
-a high-consequence class (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>), and cannot outrun
+a high-consequence class (<a href="#prohibited-classes" class="auto internal xref">Section 9</a>) beyond a payment the
+template admits within its committed destinations, per-payment bound
+and budget (<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>), and cannot outrun
 <code>max_active</code> or <code>dispatch_rate</code>. Its blast radius is therefore bounded
 to no more than the human consented to when approving the template,
 and every instance it dispatched is independently gated, revocable,
@@ -3050,17 +3163,27 @@ and enforced per action by the runtime layer
 (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-13-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.3">
-          <p id="section-13-2.3.1"><strong>The Dispatch Policy is authority-bearing governance.</strong> A
-misconfigured policy can over-instantiate within the ceiling, so it is
-reviewed and versioned like other approval policy, and its <code>id</code> and
-<code>version</code> are part of every dispatch record (<a href="#audit-linkage" class="auto internal xref">Section 12</a>).<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-13-2.3.1"><strong>A standing payment spends only within its envelope.</strong> Under
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a>, a compromised Dispatcher or Agent can
+pay only committed destinations, up to the per-payment bound and the
+budget. The exception does not stop one invoice being paid twice;
+the operation's settlement identity does. A reservation that remains
+charged after an unknown outcome reduces the headroom of every
+instance sharing the budget until it is reconciled, so a lossy
+evidence channel stalls the template rather than overspending.<a href="#section-13-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-13-2.4">
-          <p id="section-13-2.4.1"><strong>The template bounds, and does not eliminate, standing exposure.</strong> A
+          <p id="section-13-2.4.1"><strong>The Dispatch Policy is authority-bearing governance.</strong> A
+misconfigured policy can over-instantiate within the ceiling, so it is
+reviewed and versioned like other approval policy, and its <code>id</code> and
+<code>version</code> are part of every dispatch record (<a href="#audit-linkage" class="auto internal xref">Section 12</a>).<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-13-2.5">
+          <p id="section-13-2.5.1"><strong>The template bounds, and does not eliminate, standing exposure.</strong> A
 deployment <span class="bcp14">SHOULD</span> pair a Mission Template with short
 <code>instance_lifetime</code> values, constraint-bounded ceilings, and runtime
 enforcement, so the authority any single dispatched Mission actively
-holds stays narrow.<a href="#section-13-2.4.1" class="pilcrow">¶</a></p>
+holds stays narrow.<a href="#section-13-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
@@ -3124,8 +3247,11 @@ than the creation instant (<a href="#template-consent" class="auto internal xref
 </li>
         <li class="normal" id="section-15-2.5">
           <p id="section-15-2.5.1">refuse a Dispatch outside the ceiling with <code>out_of_template_ceiling</code>
-and a Dispatch of a prohibited class with <code>dispatch_prohibited_class</code>
-(<a href="#denial-reasons" class="auto internal xref">Section 10</a>);<a href="#section-15-2.5.1" class="pilcrow">¶</a></p>
+and a Dispatch of a prohibited class that
+<a href="#standing-payment-exception" class="auto internal xref">Section 9.1</a> does not admit with
+<code>dispatch_prohibited_class</code> (<a href="#denial-reasons" class="auto internal xref">Section 10</a>), and, where it
+admits that exception, meet every condition and disclosure of that
+section;<a href="#section-15-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-15-2.6">
           <p id="section-15-2.6.1">make every Dispatch idempotent per <code>dispatch_event_id</code>, adopting the
@@ -3324,6 +3450,10 @@ object by that value.<a href="#section-16-10.4.1" class="pilcrow">¶</a></p>
 <a href="#section-17.1" class="section-number selfRef">17.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
         </h3>
 <dl class="references">
+<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
+        <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-runtime">[I-D.draft-mcguinness-mission-runtime]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Runtime Enforcement"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-runtime.html</a>&gt;</span>. </dd>
@@ -3405,10 +3535,6 @@ object by that value.<a href="#section-16-10.4.1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"An Architecture for Mission-Bound Authorization"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html</a>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-mission-metering">[I-D.draft-mcguinness-mission-metering]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Consumption Metering"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-metering.html</a>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-mcguinness-mission-shaping">[I-D.draft-mcguinness-mission-shaping]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Intent Shaping"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-shaping.html</a>&gt;</span>. </dd>
@@ -3442,129 +3568,144 @@ object by that value.<a href="#section-16-10.4.1" class="pilcrow">¶</a></p>
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Clarification (#1661, D793): a Dispatch performs exactly one creation
+          <p id="appendix-A-2.1.1">Changes a requirement (#813, D814, D830): Standing Payment Exception
+admits, as an option, dispatch of one designated payment-execution
+operation whose only prohibited class is the irreversible class,
+under committed destinations per vendor, a per-payment bound, an
+exact budget shared across every instance of any template committing
+it and their successors with a per-instance <code>max_budget</code> in one
+currency, Approval Governance's class-named exceptions where a
+Governance Record is kept, and an authenticated human approver.
+Every other prohibited class and predicate stays prohibited, a Child
+Mission is refused under such an instance unless charged to the
+budget, and each payment still takes a fresh runtime decision with
+its payee bound through execution reverification. Metering becomes a
+normative reference.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Clarification (#1661, D793): a Dispatch performs exactly one creation
 derivation per <code>dispatch_event_id</code>, and a retry is recovery of its
 delivery. Returning the delivered access token, while it is valid and
 carries no authority the instance has since lost, counts nothing;
 minting a replacement delivery, after expiry or narrowing, counts
 once under ordinary issuance accounting and repeats no creation
-accounting; concurrent retries recover the same replacement.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">A successful Dispatch Handoff exchange is a derivation from the
-instance, counted once and apart from its redemption, as Derivation
-Limits' Token Exchange rule counts it (#1648, D764).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+accounting; concurrent retries recover the same replacement.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">The Dispatch Handoff states its effect on grant bindings: the handoff
+          <p id="appendix-A-2.3.1">A successful Dispatch Handoff exchange is a derivation from the
+instance, counted once and apart from its redemption, as Derivation
+Limits' Token Exchange rule counts it (#1648, D764).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">The Dispatch Handoff states its effect on grant bindings: the handoff
 grant establishes no grant lineage, its redemption resolves the
 instance from the grant's authenticated <code>mission</code> claim and issues a
 derived token without creating or extending a binding, and the
 delegation-family exchange creates the instance's first binding
-(#1589, D726).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+(#1589, D726).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Dispatch and Conformance: a dispatched instance's
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Dispatch and Conformance: a dispatched instance's
 <code>activation_actor</code> has the Mission Issuer's identifier as <code>iss</code> and,
 as <code>sub</code>, the Dispatcher's <code>client_id</code> that client authentication
 established, never a value from the Dispatch request's parameters
-or dispatch intent (#1325).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+or dispatch intent (#1325).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Editorial: a non-normative Template Overview (roles, the flow from
+        <li class="normal" id="appendix-A-2.6">
+          <p id="appendix-A-2.6.1">Editorial: a non-normative Template Overview (roles, the flow from
 consent to work, how an agent uses a template) and examples that
 follow one nightly-reconciliation scenario through the template,
 Dispatch, instance record, <code>mission</code> claim, handoff, redemption,
 and a denial. Dispatch is organized as request and response,
 adjudication, and idempotency and recovery; the Dispatch Handoff is
 its own section; the disclosure-rendering note moves to
-Terminology, which defines Instance and Dispatch Handoff (#1176).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">A Dispatcher that is itself the selected Agent skips the Dispatch
-Handoff and obtains its delegation handle through the continuation
-profile's handle exchange, a counted derivation (#1195).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+Terminology, which defines Instance and Dispatch Handoff (#1176).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">The Dispatch Handoff conveys a dispatched instance to its selected
+          <p id="appendix-A-2.7.1">A Dispatcher that is itself the selected Agent skips the Dispatch
+Handoff and obtains its delegation handle through the continuation
+profile's handle exchange, a counted derivation (#1195).<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">The Dispatch Handoff conveys a dispatched instance to its selected
 Agent: the Dispatcher exchanges the instance's token
 (<code>mission_dispatch_handoff</code>) for a single-use grant naming the Agent,
 which the Agent redeems for its own delegation handle (#1158). Its
-redemption is a further derivation.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">A dispatched instance's accountable principal is its
-<code>approval_basis.consent_principal</code>. The template keeps its own
-<code>active</code>, <code>revoked</code>, and <code>expired</code> states, distinct from the
-<code>active</code>/<code>terminated</code> Mission lifecycle (#705).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+redemption is a further derivation.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Template Consent, Dispatch and Conformance: where Mission
+          <p id="appendix-A-2.9.1">A dispatched instance's accountable principal is its
+<code>approval_basis.consent_principal</code>. The template keeps its own
+<code>active</code>, <code>revoked</code>, and <code>expired</code> states, distinct from the
+<code>active</code>/<code>terminated</code> Mission lifecycle (#705).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Template Consent, Dispatch and Conformance: where Mission
 Derivation Limits is adopted, the Dispatch Policy states the rule
 that establishes each instance's <code>derivation_limit</code> and its
 maximum, committed under <code>template_hash</code>; the template consent
 renders them beside <code>max_active</code> and <code>dispatch_rate</code>, and each
 instance establishes its own limit afresh, never above that
-maximum (#1119).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+maximum (#1119).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">Template Consent and Dispatch: template consent establishes the
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1">Template Consent and Dispatch: template consent establishes the
 authority source its instances draw on, retained with the consent to
 that exact <code>template_version</code>. Each instance carries that source,
 never Dispatcher input or a substituted policy. A new step 8 checks
 that the source applies to the instance's Subject and covers the
 instance Authority Set, and the creation commit makes that check
 against the source as it stands then, with the effective-expiry
-check (#1118).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.11">
-          <p id="appendix-A-2.11.1">Template Consent: creating a Mission Template is a human approval
-that creates no Mission, so it is the standing consent each
-dispatched instance's approval event is decided under, not an
-approval event itself (#1078).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
+check (#1118).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.12">
-          <p id="appendix-A-2.12.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
+          <p id="appendix-A-2.12.1">Template Consent: creating a Mission Template is a human approval
+that creates no Mission, so it is the standing consent each
+dispatched instance's approval event is decided under, not an
+approval event itself (#1078).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.13">
+          <p id="appendix-A-2.13.1">Dispatch: a dispatched instance's <code>approval_event_id</code> identifies the
 Dispatch, never the template's approval: a unique value allocated
 with the Dispatch's reservation and retained with the instance, so a
 retry recovers it and reuse of the key after its tombstone expires
-receives a new one (#1017).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
+receives a new one (#1017).<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.13">
-          <p id="appendix-A-2.13.1">The Mission Issuer selects a dispatched instance's Agent from
+        <li class="normal" id="appendix-A-2.14">
+          <p id="appendix-A-2.14.1">The Mission Issuer selects a dispatched instance's Agent from
 <code>allowed_recipients</code> <code>agents</code> under the Dispatch Policy, never from
 Dispatcher input: one listed Agent is selected directly, and several
 need the Dispatch Policy's selection rule. The selection is recorded
 at commit, kept on retries, and separate from Dispatcher
-authentication and the token's presenter binding (#970).<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
+authentication and the token's presenter binding (#970).<a href="#appendix-A-2.14.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.14">
-          <p id="appendix-A-2.14.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
+        <li class="normal" id="appendix-A-2.15">
+          <p id="appendix-A-2.15.1"><code>dispatch_policy</code> is an activation policy reference (<code>id</code>,
 <code>version</code>, <code>digest</code>) under the issuance profile's Standing-Consent
 Bases, replacing the <span class="bcp14">SHOULD</span> to commit the policy body. Dispatch
 verifies it as a new step 3 and refuses a mismatch with the new
 <code>dispatch_policy_changed</code> reason; the <code>template</code> lineage member and
-each Dispatch record carry the digest.<a href="#appendix-A-2.14.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.15">
-          <p id="appendix-A-2.15.1">The consumption-bound rationale under Prohibited Classes states
-that dispatch multiplies an instance's bound by <code>max_active</code> and
-<code>dispatch_rate</code>, and that the template consent renders that product
-under the metering profile.<a href="#appendix-A-2.15.1" class="pilcrow">¶</a></p>
+each Dispatch record carry the digest.<a href="#appendix-A-2.15.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.16">
-          <p id="appendix-A-2.16.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
-<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
-and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
-any listed Agent may serve any listed Subject.<a href="#appendix-A-2.16.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.16.1">The consumption-bound rationale under Prohibited Classes states
+that dispatch multiplies an instance's bound by <code>max_active</code> and
+<code>dispatch_rate</code>, and that the template consent renders that product
+under the metering profile.<a href="#appendix-A-2.16.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.17">
-          <p id="appendix-A-2.17.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
+          <p id="appendix-A-2.17.1"><code>allowed_dispatchers</code> lists <code>client_id</code> strings, and
+<code>allowed_recipients</code> is an object of <code>subjects</code> (<code>iss</code> and <code>sub</code>)
+and <code>agents</code> (<code>client_id</code>), each checked separately at Dispatch, so
+any listed Agent may serve any listed Subject.<a href="#appendix-A-2.17.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.18">
+          <p id="appendix-A-2.18.1">The dispatch bounds have stated encodings. <code>instance_lifetime</code> and
 <code>review_cadence</code> are positive integer seconds, the latter measured
 from the approval's <code>approved_at</code>; <code>max_active</code> is a positive
 integer; <code>dispatch_rate</code> is a <code>limit</code> of committed instantiations per
 trailing <code>window</code> of seconds, counting neither refused Dispatches nor
-recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.17.1" class="pilcrow">¶</a></p>
+recovered retries; and <code>expires_at</code> is an RFC 3339 date-time.<a href="#appendix-A-2.18.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -1210,7 +1210,10 @@ and approval.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
                 <p id="section-toc.1-1.6.2.3.1"><a href="#section-6.3" class="auto internal xref">6.3</a>.  <a href="#name-shaping-ceiling-and-default" class="internal xref">Shaping Ceiling and Default Deny</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.4">
-                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-delegation-and-child-missio" class="internal xref">Delegation and Child Missions</a></p>
+                <p id="section-toc.1-1.6.2.4.1"><a href="#section-6.4" class="auto internal xref">6.4</a>.  <a href="#name-constraints-from-trusted-co" class="internal xref">Constraints from Trusted Context</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6.2.5">
+                <p id="section-toc.1-1.6.2.5.1"><a href="#section-6.5" class="auto internal xref">6.5</a>.  <a href="#name-delegation-and-child-missio" class="internal xref">Delegation and Child Missions</a></p>
 </li>
             </ul>
 </li>
@@ -1299,13 +1302,16 @@ and approval.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
             <p id="section-toc.1-1.16.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-worked-example" class="internal xref">Worked Example</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.17">
-            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
+            <p id="section-toc.1-1.17.1"><a href="#appendix-B" class="auto internal xref">Appendix B</a>.  <a href="#name-example-constraints-from-tr" class="internal xref">Example: Constraints from Trusted Context</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.18">
-            <p id="section-toc.1-1.18.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+            <p id="section-toc.1-1.18.1"><a href="#appendix-C" class="auto internal xref">Appendix C</a>.  <a href="#name-document-history" class="internal xref">Document History</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.19">
-            <p id="section-toc.1-1.19.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+            <p id="section-toc.1-1.19.1"><a href="#appendix-D" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.20">
+            <p id="section-toc.1-1.20.1"><a href="#appendix-E" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
 </li>
         </ul>
 </nav>
@@ -1325,8 +1331,7 @@ Mission Issuer, derives an Authority Set, obtains the Approver's
 consent, and binds issued tokens to the approved Mission. The issuance
 profile does not specify how a deployment turns an open-ended task
 request, such as "resolve this billing dispute", into a Mission Intent
-with a goal, target resources, task bounds, success criteria, purpose,
-and expiry.<a href="#section-1-1" class="pilcrow">¶</a></p>
+with a goal, target resources, task bounds, purpose, and expiry.<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document describes that step, performed by a client-side Mission
 Shaper. The shaper can be a rules engine, a form, a workflow, or a
 function that uses a language model; whatever its implementation, its
@@ -1610,8 +1615,9 @@ remaining sections follow:<a href="#section-4-1" class="pilcrow">¶</a></p>
           <p id="section-4-2.1.1">Normalize and classify the task input.<a href="#section-4-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-4-2.2">
-          <p id="section-4-2.2.1">Separate facts the requester supplied, facts trusted context
-supplied, and facts the shaper inferred.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-4-2.2.1">Separate facts the requester supplied, facts and constraints
+trusted context supplied (<a href="#context-constraints" class="auto internal xref">Section 6.4</a>), and facts the
+shaper inferred.<a href="#section-4-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-4-2.3">
           <p id="section-4-2.3.1">Resolve candidate resources and actions against capability sources
@@ -1930,12 +1936,80 @@ task.<a href="#section-6.3-5.2.1" class="pilcrow">¶</a></p>
 ceiling is present.<a href="#section-6.3-6" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="delegation">
+<div id="context-constraints">
 <section id="section-6.4">
-        <h3 id="name-delegation-and-child-missio">
-<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-delegation-and-child-missio" class="section-name selfRef">Delegation and Child Missions</a>
+        <h3 id="name-constraints-from-trusted-co">
+<a href="#section-6.4" class="section-number selfRef">6.4. </a><a href="#name-constraints-from-trusted-co" class="section-name selfRef">Constraints from Trusted Context</a>
         </h3>
-<p id="section-6.4-1">The shaper does not author the <code>delegation</code> member of an Authority Set
+<p id="section-6.4-1">Trusted context can supply constraints the request does not state: a
+deployment policy, a preference the Subject recorded earlier, or a
+model's refusal to perform a step. Such a constraint narrows the
+proposal or is disclosed in it; it never widens it.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
+<p id="section-6.4-2">The proposal satisfies every applicable mandatory constraint.
+Comparable bounds combine toward the narrower result. If the
+constraints cannot be satisfied together, the shaper requests
+clarification (<a href="#clarifications" class="auto internal xref">Section 7.1</a>), refuses (<a href="#refusal" class="auto internal xref">Section 7.2</a>), or produces
+an explicitly partial proposal under the existing rules
+(<a href="#ambiguity" class="auto internal xref">Section 7</a>). A Subject's preference never widens deployment
+policy. An exception to deployment policy is the Mission Issuer's
+decision, and the Mission Issuer approves one only where the governing
+policy authorizes it; recording a broadening ambiguity resolution
+(<a href="#ambiguity" class="auto internal xref">Section 7</a>) does not itself authorize an exception.<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+<p id="section-6.4-3">The shaper carries each constraint through the mechanism that matches
+what the constraint requires:<a href="#section-6.4-3" class="pilcrow">¶</a></p>
+<table class="center" id="table-1">
+          <caption><a href="#table-1" class="selfRef">Table 1</a></caption>
+<thead>
+            <tr>
+              <th class="text-left" rowspan="1" colspan="1">Constraint</th>
+              <th class="text-left" rowspan="1" colspan="1">Carried as</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">A prohibition</td>
+              <td class="text-left" rowspan="1" colspan="1">Exclusion of the authority it forbids, recorded in <code>excluded_authority</code>, or a refusal (<a href="#refusal" class="auto internal xref">Section 7.2</a>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">A machine-enforceable bound</td>
+              <td class="text-left" rowspan="1" colspan="1">A structured constraint in the Authority Proposal, restated in <code>task_bounds</code> (<a href="#authority-ceiling" class="auto internal xref">Section 6.3</a>)</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">Confirmation before an action</td>
+              <td class="text-left" rowspan="1" colspan="1">The entry's <code>requires_action_approval</code> constraint (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>), which requires an action-bound approval at the point of use (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Action-Bound Approval"); the deployment's approval policy establishes who may give it</td>
+            </tr>
+            <tr>
+              <td class="text-left" rowspan="1" colspan="1">A preference</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <code>task_bounds</code> prose, which nothing enforces</td>
+            </tr>
+          </tbody>
+        </table>
+<p id="section-6.4-5">The <code>requires_action_approval</code> constraint requires an approval but
+does not name who gives it: an independent Approver or a policy
+authority can satisfy it. A confirmation the Subject must give
+therefore also needs an approval policy that requires the Subject's
+authenticated confirmation of the concrete action.<a href="#section-6.4-5" class="pilcrow">¶</a></p>
+<p id="section-6.4-6">A condition the Subject requires to hold is carried as a bound that
+enforces it, not as prose, and not as a confirmation: an approval at
+the point of use could permit an action the condition forbids. If no
+supported mechanism enforces a required condition, the shaper requests
+clarification, refuses, or produces an explicitly partial proposal
+under the existing rules. A model's refusal can remove a step from
+the proposal but never adds one (<a href="#model-output" class="auto internal xref">Section 12.1</a>). Shaping Evidence
+records each constraint and how the shaper carried it
+(<a href="#shaping-evidence" class="auto internal xref">Section 8</a>). Whether a later change at the source affects
+an approved Mission is a declared authority dependency
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>, Section "Authority
+Dependencies"), not something the evidence decides.<a href="#section-6.4-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="delegation">
+<section id="section-6.5">
+        <h3 id="name-delegation-and-child-missio">
+<a href="#section-6.5" class="section-number selfRef">6.5. </a><a href="#name-delegation-and-child-missio" class="section-name selfRef">Delegation and Child Missions</a>
+        </h3>
+<p id="section-6.5-1">The shaper does not author the <code>delegation</code> member of an Authority Set
 entry (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). If the
 task implies sub-agents, background workers, or other delegated
 execution, the shaper <span class="bcp14">SHOULD</span> propose that fact in the Authority
@@ -1945,8 +2019,8 @@ The shaper <span class="bcp14">MAY</span> also describe the desired delegation b
 <code>task_bounds</code>. The shaper <span class="bcp14">SHOULD NOT</span> infer
 delegated execution from the existence of a task graph or an agent
 harness: a child actor needs explicit authority derived by the Mission
-Issuer, not session ancestry.<a href="#section-6.4-1" class="pilcrow">¶</a></p>
-<p id="section-6.4-2">Where a deployment creates Child Missions
+Issuer, not session ancestry.<a href="#section-6.5-1" class="pilcrow">¶</a></p>
+<p id="section-6.5-2">Where a deployment creates Child Missions
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>), turning a
 sub-task into the proposed Child Mission Intent is a shaping act, and
 this document applies to it unchanged. The Parent Mission's Authority
@@ -1956,7 +2030,7 @@ exceeds the parent cannot be approved; the shaper instead requests
 clarification, refuses, or emits a partial proposal
 (<a href="#authority-ceiling" class="auto internal xref">Section 6.3</a>). Shaping Evidence for a child proposal <span class="bcp14">SHOULD</span>
 record the parent Mission identifier (<code>parent_mission</code>) and the
-parent-derived ceiling it shaped under (<code>shaping_ceiling</code>).<a href="#section-6.4-2" class="pilcrow">¶</a></p>
+parent-derived ceiling it shaped under (<code>shaping_ceiling</code>).<a href="#section-6.5-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -2156,7 +2230,7 @@ was supplied.<a href="#section-8-3.14.1" class="pilcrow">¶</a></p>
 <code>parent_mission</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.16">
           <p id="section-8-3.16.1">String. The Parent Mission identifier. Present for a Child Mission
-proposal (<a href="#delegation" class="auto internal xref">Section 6.4</a>).<a href="#section-8-3.16.1" class="pilcrow">¶</a></p>
+proposal (<a href="#delegation" class="auto internal xref">Section 6.5</a>).<a href="#section-8-3.16.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.17">
@@ -2201,68 +2275,89 @@ shaping.<a href="#section-8-3.26.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.27">
-<code>capability_resolutions</code>:</dt>
+<code>context_constraints</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.28">
-          <p id="section-8-3.28.1">Array of objects, one per resource or action, with the members
+          <p id="section-8-3.28.1">Array of objects, one per constraint trusted context supplied
+(<a href="#context-constraints" class="auto internal xref">Section 6.4</a>), with the members <code>source</code> (string:
+<code>deployment_policy</code>, <code>subject_preference</code>, <code>model_refusal</code>, or a
+deployment-defined value), <code>description</code> (string, the constraint as
+its source states it), <code>source_uri</code> (string, the source document
+consulted, when there is one), <code>source_digest</code> (string, defined
+below), <code>policy_rule</code> (string, the <code>policy_decisions</code> identifier
+that applied the constraint, when one did), <code>applies_to</code> (object
+naming the <code>resource</code> and <code>action</code> it bears on, as in
+<code>entry_rationales</code>), <code>effect</code> (string: <code>prohibition</code>, <code>bound</code>,
+<code>confirmation</code>, or <code>preference</code>), and <code>disposition</code> (string:
+<code>excluded</code>, <code>constrained</code>, <code>action_approval</code>, <code>disclosed</code>,
+<code>clarified</code>, or <code>refused</code>). It records how the shaper carried each
+constraint. Consent Evidence's <code>constraint_provenance</code> attributes
+the bounds the Mission Issuer approved
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-8-3.28.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.29">
+<code>capability_resolutions</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.30">
+          <p id="section-8-3.30.1">Array of objects, one per resource or action, with the members
 <code>requested</code> (string), <code>resolved</code> (string), <code>basis</code> (string, a
 resolution basis of <a href="#capability-resolution" class="auto internal xref">Section 5</a>), <code>source_uri</code>
 (string, the source consulted, for <code>catalog</code> and
 <code>capability_projection</code>), <code>source_digest</code> (string, defined below),
-and optionally <code>confidence</code> (number, audit evidence only).<a href="#section-8-3.28.1" class="pilcrow">¶</a></p>
+and optionally <code>confidence</code> (number, audit evidence only).<a href="#section-8-3.30.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
-<dt id="section-8-3.29">
+<dt id="section-8-3.31">
 <code>entry_rationales</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-3.30">
-          <p id="section-8-3.30.1">Array of objects, one per proposed resource or action, with the
+        <dd style="margin-left: 1.5em" id="section-8-3.32">
+          <p id="section-8-3.32.1">Array of objects, one per proposed resource or action, with the
 members <code>applies_to</code> (object naming the <code>resource</code> and <code>action</code>) and
 <code>basis</code> (string, the user-supplied or inferred fact that motivated
 its inclusion). A consent surface draws on this record to answer why
 the task needs an entry (Disclosure Interrogation,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-8-3.30.1" class="pilcrow">¶</a></p>
-</dd>
-        <dd class="break"></dd>
-<dt id="section-8-3.31">
-<code>ambiguities</code>:</dt>
-        <dd style="margin-left: 1.5em" id="section-8-3.32">
-          <p id="section-8-3.32.1">Array of objects, one per material ambiguity, with the members
-<code>description</code> (string) and <code>handling</code> (string: <code>clarified</code>,
-<code>narrowed</code>, <code>refused</code>, or <code>resolved_by_policy</code>), plus <code>policy_rule</code>
-(string) when <code>handling</code> is <code>resolved_by_policy</code> (<a href="#ambiguity" class="auto internal xref">Section 7</a>).<a href="#section-8-3.32.1" class="pilcrow">¶</a></p>
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-consent-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-consent-evidence</a>]</span>).<a href="#section-8-3.32.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.33">
-<code>excluded_authority</code>:</dt>
+<code>ambiguities</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.34">
-          <p id="section-8-3.34.1">Array of objects in the form of Authority Proposal entries.
-Plausible authority the shaper deliberately excluded.<a href="#section-8-3.34.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.34.1">Array of objects, one per material ambiguity, with the members
+<code>description</code> (string) and <code>handling</code> (string: <code>clarified</code>,
+<code>narrowed</code>, <code>refused</code>, or <code>resolved_by_policy</code>), plus <code>policy_rule</code>
+(string) when <code>handling</code> is <code>resolved_by_policy</code> (<a href="#ambiguity" class="auto internal xref">Section 7</a>).<a href="#section-8-3.34.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.35">
-<code>refusal_input</code>:</dt>
+<code>excluded_authority</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.36">
-          <p id="section-8-3.36.1">Object. For a re-proposal, the refusal signal that motivated it
-(<a href="#re-shaping" class="auto internal xref">Section 10</a>): the <code>error</code> code and any <code>error_description</code>, or
-the <code>mission_rejected_scope</code> and
-<code>mission_rejected_authorization_details</code> values of a required
-revision.<a href="#section-8-3.36.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.36.1">Array of objects in the form of Authority Proposal entries.
+Plausible authority the shaper deliberately excluded.<a href="#section-8-3.36.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.37">
-<code>predecessor_evidence</code>:</dt>
+<code>refusal_input</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.38">
-          <p id="section-8-3.38.1">String. For a re-proposal, the <code>shaping_evidence_hash</code> of the
-predecessor proposal's evidence, or a deployment identifier for that
-evidence when no hash was computed.<a href="#section-8-3.38.1" class="pilcrow">¶</a></p>
+          <p id="section-8-3.38.1">Object. For a re-proposal, the refusal signal that motivated it
+(<a href="#re-shaping" class="auto internal xref">Section 10</a>): the <code>error</code> code and any <code>error_description</code>, or
+the <code>mission_rejected_scope</code> and
+<code>mission_rejected_authorization_details</code> values of a required
+revision.<a href="#section-8-3.38.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-8-3.39">
-<code>model_trace</code>:</dt>
+<code>predecessor_evidence</code>:</dt>
         <dd style="margin-left: 1.5em" id="section-8-3.40">
-          <p id="section-8-3.40.1">Deployment-defined. Model prompts, outputs, or tool calls used
+          <p id="section-8-3.40.1">String. For a re-proposal, the <code>shaping_evidence_hash</code> of the
+predecessor proposal's evidence, or a deployment identifier for that
+evidence when no hash was computed.<a href="#section-8-3.40.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-8-3.41">
+<code>model_trace</code>:</dt>
+        <dd style="margin-left: 1.5em" id="section-8-3.42">
+          <p id="section-8-3.42.1">Deployment-defined. Model prompts, outputs, or tool calls used
 during shaping. When retained, it <span class="bcp14">MUST</span> be treated as sensitive audit
 data (<a href="#privacy-considerations" class="auto internal xref">Section 13</a>). It <span class="bcp14">MUST NOT</span> be rendered as
-authority.<a href="#section-8-3.40.1" class="pilcrow">¶</a></p>
+authority.<a href="#section-8-3.42.1" class="pilcrow">¶</a></p>
 </dd>
       <dd class="break"></dd>
 </dl>
@@ -3020,107 +3115,200 @@ named the tenant, the shaper would have asked the requester instead of
 guessing (<a href="#clarifications" class="auto internal xref">Section 7.1</a>).<a href="#appendix-A-9" class="pilcrow">¶</a></p>
 </section>
 </div>
-<div id="document-history">
+<div id="example-context-constraints">
 <section id="appendix-B">
-      <h2 id="name-document-history">
-<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      <h2 id="name-example-constraints-from-tr">
+<a href="#appendix-B" class="section-number selfRef">Appendix B. </a><a href="#name-example-constraints-from-tr" class="section-name selfRef">Example: Constraints from Trusted Context</a>
       </h2>
-<p id="appendix-B-1">[[ To be removed from the final specification ]]<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-1">A user asks an agent: "Book my flight to New York for Tuesday's
+customer meeting." The deployment's travel policy allows economy class
+only. The Subject's recorded preferences ask to confirm an itinerary
+before it is booked and to avoid overnight flights. In this example
+the travel service's operation contract defines a <code>cabin</code> constraint
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+<p id="appendix-B-2">The shaper proposes <code>flights.book</code> at <code>https://travel.example.com</code>
+with a <code>cabin</code> constraint of <code>economy</code> and the
+<code>requires_action_approval</code> constraint set to <code>true</code>. That constraint
+requires an approval before each booking; the deployment's trusted
+approval policy for <code>flights.book</code> requires the Subject's
+authenticated confirmation of the concrete itinerary, so the approval
+is the Subject's and no other approver can satisfy it. The shaper
+restates the cabin bound and the confirmation in <code>task_bounds</code>, with
+the overnight-flight preference (<a href="#context-constraints" class="auto internal xref">Section 6.4</a>). Shaping
+Evidence records the three constraints:<a href="#appendix-B-2" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="appendix-B-3">
+<pre>
+{
+  "context_constraints": [
+    {
+      "source": "deployment_policy",
+      "description": "economy class only",
+      "source_uri": "https://policy.example.com/travel/v4",
+      "source_digest":
+        "sha-256:ho9DC6mg1MieFrYZUP32XSHJpdawVeJXqcpcj366W-Y",
+      "policy_rule": "travel-v4-economy-only",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "bound",
+      "disposition": "constrained"
+    },
+    {
+      "source": "subject_preference",
+      "description": "confirm the itinerary before booking",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "confirmation",
+      "disposition": "action_approval"
+    },
+    {
+      "source": "subject_preference",
+      "description": "avoid overnight flights",
+      "source_uri": "https://prefs.example.com/subjects/alice/travel",
+      "source_digest":
+        "sha-256:cIMrbo763UoOlUSHTDnypiWp3PKj6TDHZ7gVd08q4ns",
+      "applies_to": {
+        "resource": "https://travel.example.com",
+        "action": "flights.book"
+      },
+      "effect": "preference",
+      "disposition": "disclosed"
+    }
+  ]
+}
+</pre><a href="#appendix-B-3" class="pilcrow">¶</a>
+</div>
+<p id="appendix-B-4">Nothing enforces the overnight-flight preference; it guides which
+flight the agent selects. Had the Subject required it, the shaper would
+carry it as a bound only if the travel service's operation contract
+defines one that enforces it, such as a departure-time window;
+otherwise it would request clarification or refuse, and never leave
+the condition to an approval at the point of use. Had the request
+asked for business class, the
+travel policy would govern: the shaper excludes that authority and
+records it in <code>excluded_authority</code>. An exception is possible only
+where the travel policy authorizes the Mission Issuer to approve one.<a href="#appendix-B-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="document-history">
+<section id="appendix-C">
+      <h2 id="name-document-history">
+<a href="#appendix-C" class="section-number selfRef">Appendix C. </a><a href="#name-document-history" class="section-name selfRef">Document History</a>
+      </h2>
+<p id="appendix-C-1">[[ To be removed from the final specification ]]<a href="#appendix-C-1" class="pilcrow">¶</a></p>
 <ul class="normal">
-<li class="normal" id="appendix-B-2.1">
-          <p id="appendix-B-2.1.1">Authority Proposal describes entries that correspond across
+<li class="normal" id="appendix-C-2.1">
+          <p id="appendix-C-2.1.1">Constraints from Trusted Context (<a href="#context-constraints" class="auto internal xref">Section 6.4</a>)
+describes how the shaper carries a deployment policy, a preference
+the Subject recorded, or a model's refusal into the proposal: the
+proposal satisfies every applicable mandatory constraint, comparable
+bounds combine toward the narrower result, constraints that cannot
+be satisfied together lead to clarification, refusal, or a partial
+proposal, and each kind of constraint maps to the mechanism that
+carries it. Shaping Evidence gains a
+<code>context_constraints</code> member among its recommended content, with an
+example. No requirement keyword is added or changed.<a href="#appendix-C-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.2">
+          <p id="appendix-C-2.2.1">Authority Proposal describes entries that correspond across
 resource servers: each pinned to the same reference in its own
 vocabulary, with a pin the agent adds after approval binding the
-legs to each other, not to approved content (#1019).<a href="#appendix-B-2.1.1" class="pilcrow">¶</a></p>
+legs to each other, not to approved content (#1019).<a href="#appendix-C-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.2">
-          <p id="appendix-B-2.2.1">The Mission Intent no longer carries <code>success_criteria</code>, following
+        <li class="normal" id="appendix-C-2.3">
+          <p id="appendix-C-2.3.1">The Mission Intent no longer carries <code>success_criteria</code>, following
 the OAuth binding. The shaper writes completion outcomes, where
 useful, into <code>goal</code>; the default-deny posture and the
 delegation-bound description name <code>task_bounds</code> only, and the
 recommendation against encoding authority in <code>success_criteria</code>
-goes with the member.<a href="#appendix-B-2.2.1" class="pilcrow">¶</a></p>
+goes with the member.<a href="#appendix-C-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.3">
-          <p id="appendix-B-2.3.1">Model Output Is Not Authority points to the OAuth binding's
+        <li class="normal" id="appendix-C-2.4">
+          <p id="appendix-C-2.4.1">Model Output Is Not Authority points to the OAuth binding's
 issuer-side counterpart: a model enters adjudication only as a
 recorded input to a deterministic policy, without changing any
-requirement of this document.<a href="#appendix-B-2.3.1" class="pilcrow">¶</a></p>
+requirement of this document.<a href="#appendix-C-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.4">
-          <p id="appendix-B-2.4.1">Restructured for readability without changing any requirement.
+        <li class="normal" id="appendix-C-2.5">
+          <p id="appendix-C-2.5.1">Restructured for readability without changing any requirement.
 Sections follow the processing model, and the shaper's role and the
 Authority Proposal each have one home. The construction table became
 a per-member list, the two examples became one end-to-end appendix
 showing the Intent, the Authority Proposal, and Shaping Evidence,
 and the Conformance section and "What Shaping Adds and Does Not"
 were folded into Conventions, Deployment Considerations, and the
-Introduction.<a href="#appendix-B-2.4.1" class="pilcrow">¶</a></p>
+Introduction.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.5">
-          <p id="appendix-B-2.5.1">Corrected statements against their sources: the derivation-refusal
+        <li class="normal" id="appendix-C-2.6">
+          <p id="appendix-C-2.6.1">Corrected statements against their sources: the derivation-refusal
 codes in Re-Shaping, the AAuth binding's intake (a natural-language
 proposal, not a Mission Intent), the narrowing mode that replaced
 the reproducibility rule, and open-ended invariants, which are
-Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-B-2.5.1" class="pilcrow">¶</a></p>
+Authority Proposal constraints rather than <code>task_bounds</code>.<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.6">
-          <p id="appendix-B-2.6.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
+        <li class="normal" id="appendix-C-2.7">
+          <p id="appendix-C-2.7.1">Reconciled the shaping-ceiling outcomes with Ambiguity Handling and
 defined a partial proposal; fixed the condition on the broadening
 record; named the parties the keywords bind; limited Shaping
 Evidence to consent disclosure and audit at the Mission Issuer;
 made signing and integrity envelopes consistent; and moved
-staleness to one client-side rule.<a href="#appendix-B-2.6.1" class="pilcrow">¶</a></p>
+staleness to one client-side rule.<a href="#appendix-C-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.7">
-          <p id="appendix-B-2.7.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
+        <li class="normal" id="appendix-C-2.8">
+          <p id="appendix-C-2.8.1">Replaced the "sound shaper" idiom with BCP 14 keywords. Member
 guidance covers <code>goal_lang</code> and the <code>target_resources</code> containment
-rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-B-2.7.1" class="pilcrow">¶</a></p>
+rule, and <code>purpose</code> is chosen only when the request supports it.<a href="#appendix-C-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.8">
-          <p id="appendix-B-2.8.1">Only a re-proposal after an authority refusal narrows; a
+        <li class="normal" id="appendix-C-2.9">
+          <p id="appendix-C-2.9.1">Only a re-proposal after an authority refusal narrows; a
 construction error is corrected without broadening. The
 derivation-limit and intent-bound-evidence guidance follow their
 owning drafts, and an ambiguity narrowing that drops necessary
-authority is a partial proposal.<a href="#appendix-B-2.8.1" class="pilcrow">¶</a></p>
+authority is a partial proposal.<a href="#appendix-C-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.9">
-          <p id="appendix-B-2.9.1">Renamed the <code>authority_source</code> resolution basis to
+        <li class="normal" id="appendix-C-2.10">
+          <p id="appendix-C-2.10.1">Renamed the <code>authority_source</code> resolution basis to
 <code>capability_projection</code>; retained evidence is not rewritten. The
 recommended evidence members are typed, with their applicability,
 new members for the outcome, the emitted proposal, the ceiling, the
 parent Mission, and the re-proposal chain, and a defined
 <code>source_digest</code>. A shaping ceiling is an <code>authorization_details</code>
 array, and one that must constrain authority requires an Authority
-Proposal.<a href="#appendix-B-2.9.1" class="pilcrow">¶</a></p>
+Proposal.<a href="#appendix-C-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.10">
-          <p id="appendix-B-2.10.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
+        <li class="normal" id="appendix-C-2.11">
+          <p id="appendix-C-2.11.1">The evidence hash travels in the <code>mission_shaping_evidence_hash</code>
 pushed authorization request parameter that Consent Evidence
-defines.<a href="#appendix-B-2.10.1" class="pilcrow">¶</a></p>
+defines.<a href="#appendix-C-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-B-2.11">
-          <p id="appendix-B-2.11.1">Tightened the prose by removing restatement: previews in the
+        <li class="normal" id="appendix-C-2.12">
+          <p id="appendix-C-2.12.1">Tightened the prose by removing restatement: previews in the
 Introduction, repeated scope and conformance statements, and
 sentences that restated an adjacent requirement. Two clarification
 requirements that said the same thing are one. No other requirement
-changed.<a href="#appendix-B-2.11.1" class="pilcrow">¶</a></p>
+changed.<a href="#appendix-C-2.12.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
 </div>
 <div id="acknowledgments">
-<section id="appendix-C">
+<section id="appendix-D">
       <h2 id="name-acknowledgments">
 <a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
       </h2>
-<p id="appendix-C-1">This document builds on Mission-Bound Authorization for OAuth 2.0
+<p id="appendix-D-1">This document builds on Mission-Bound Authorization for OAuth 2.0
 <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> and complements Mission-Bound
-Runtime Enforcement <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>.<a href="#appendix-C-1" class="pilcrow">¶</a></p>
+Runtime Enforcement <span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="authors-addresses">
-<section id="appendix-D">
+<section id="appendix-E">
       <h2 id="name-authors-address">
 <a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
       </h2>
