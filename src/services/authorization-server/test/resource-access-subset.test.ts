@@ -142,6 +142,34 @@ describe("the supported-subset fixture freezes the payments contract and the ini
     expect(resourceContractDigest(contract.document as unknown as JsonValue)).toBe(contract.reference.digest);
   });
 
+  // #249 (D712, D865): the contract's resource applicability, in a file of its
+  // own beside the frozen contract and subset files. The file is frozen at the
+  // version current when it was frozen, 2026-10-24; #1693's v15 made
+  // 2026-10-26 current, so the file's reference is checked as a version the
+  // payments deployment still declares and performs, not as the current one.
+  it("names, in a separate frozen applicability file, the one resource a declared payments contract version is current for, and the contract cases carry exactly that configuration", () => {
+    const applicability = read<{
+      format: string;
+      contracts: { resource: string; resource_match: string; current: { file: string; reference: ResourceContractRef } }[];
+    }>(join(SUBSET_DIR, "payments-contract-applicability-2026-10-26.json"));
+    expect(applicability.format).toBe("mission-resource-contract-applicability/1");
+    expect(applicability.contracts).toHaveLength(1);
+    const [current] = applicability.contracts;
+    expect(current?.resource_match).toBe("exact");
+    const frozen = read<ContractFile>(join(SUBSET_DIR, current?.current.file ?? ""));
+    expect(current?.current.reference).toEqual(frozen.reference);
+    const declared = RESOURCE_CONTRACTS.versionOf(current?.current.reference);
+    expect(declared).toBeDefined();
+    expect(["current", "superseded"]).toContain(declared?.version.state);
+    expect(declared?.version.document).toEqual(frozen.document);
+    const configured = [{ resource: current?.resource, reference: current?.current.reference }];
+    const carrying = readCases().filter(
+      (c) => c.check === "entry-validation" && (c.input as { contracts?: unknown }).contracts !== undefined,
+    );
+    expect(carrying.map((c) => c.id)).toEqual(["ev-rc-01", "ev-rc-02", "ev-rc-03"]);
+    for (const c of carrying) expect((c.input as { contracts: unknown }).contracts, c.id).toEqual(configured);
+  });
+
   it("keeps the superseded versions 2026-10-20 and 2026-10-24 declared exactly as they were frozen, each with a declared retention (#252, #1693)", () => {
     expect(supersededContracts.map((c) => c.reference.version)).toEqual(["2026-10-20", "2026-10-24"]);
     for (const superseded of supersededContracts) {
