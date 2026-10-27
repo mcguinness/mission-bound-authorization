@@ -177,9 +177,12 @@ export const TOOL_BASE = "mcp://payments.demo/tools";
  * live Operation Profile; one naming another performs under that retained
  * profile (`PepDeps.retainedOperationProfiles`, by default
  * {@link RETAINED_OPERATION_PROFILES}), or not at all. v14 (#252) adds the
- * compensate crossing `reverse_wire_transfer`.
+ * compensate crossing `reverse_wire_transfer`. v15 (#1693, D873, D879)
+ * changes only that crossing: its tenant is the current tenant of the vendor
+ * the committed wire paid, and it does not depend on the vendor the invoice
+ * names now.
  */
-export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v14";
+export const PAYMENTS_PROFILE_VERSION = "payments-runtime-profile-v15";
 
 /**
  * @spec txn-authorization#offline-verification — present exactly when the
@@ -533,20 +536,34 @@ const TOOL_ACTIONS: Record<string, ActionMapping> = {
   send_remittance_email: { action: "payments:remittance.send", actionClass: "external_commitment", tier: "transaction-assurance", target: PAYMENTS_SERVICE_CONTRACT, needsInvoice: true, idempotencyKey: true, reachesRecipients: true },
 };
 
+/** The live table without the compensate crossing: every crossing it names performs as the live profile does. */
+const WITHOUT_REVERSAL: Readonly<Record<string, ActionMapping>> = Object.freeze(
+  Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
+);
+
 /**
- * @spec runtime#resource-contract rule 3 (#249, #252): the Operation Profiles
- * of the superseded contract versions this resource still performs within
- * their declared retention, keyed by the `operation_profile` their documents
- * name. `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
- * live profile without the compensate crossing `reverse_wire_transfer`, which
- * v14 added: every crossing it names performs exactly as it did, and the
- * crossing it does not name is not performed under it. A snapshot taken at
- * load, never the live table.
+ * @spec runtime#resource-contract rule 3 (#249, #252, #1693): the Operation
+ * Profiles of the superseded contract versions this resource still performs
+ * within their declared retention, keyed by the `operation_profile` their
+ * documents name. A snapshot taken at load, never the live table.
+ *
+ * - `payments-runtime-profile-v13` (contract version `2026-10-20`) is the
+ *   live profile without the compensate crossing `reverse_wire_transfer`,
+ *   which v14 added.
+ * - `payments-runtime-profile-v14` (contract version `2026-10-24`) named that
+ *   crossing, under the tenant of the vendor the invoice names now. v15
+ *   changed only that crossing (D873, D879), and this resource no longer
+ *   performs the v14 reversal, so v14 is retained without it: a reversal
+ *   pinned to `2026-10-24` is never performed under v15's semantics, and is
+ *   refused `resource_contract_unresolvable` before any decision request,
+ *   while every other v14 crossing performs exactly as it did.
+ *
+ * Every crossing a retained profile names performs exactly as it did, and a
+ * crossing it does not name is not performed under it.
  */
 export const RETAINED_OPERATION_PROFILES: Readonly<Record<string, Readonly<Record<string, ActionMapping>>>> = Object.freeze({
-  "payments-runtime-profile-v13": Object.freeze(
-    Object.fromEntries(Object.entries(TOOL_ACTIONS).filter(([tool]) => tool !== "reverse_wire_transfer")),
-  ),
+  "payments-runtime-profile-v13": WITHOUT_REVERSAL,
+  "payments-runtime-profile-v14": WITHOUT_REVERSAL,
 });
 
 /**
@@ -1429,9 +1446,11 @@ export interface EnforceResult {
  * @spec resource-access#initial-common-constraints, runtime#evaluation-context-binding
  * (#1266, #773): the live resource facts a decision request carries for an
  * invoice-scoped crossing, from one observation of the store records: the
- * vendor the invoice names, the invoice's issuance instant (an invoice with
- * none carries no fact, which satisfies no issuance bound), the tenant that
- * owns it (its vendor's), and its own classification label. The context
+ * vendor the records name (the vendor the invoice names now, or on a
+ * compensate crossing the vendor the committed wire paid, #1693), the
+ * invoice's issuance instant (an invoice with none carries no fact, which
+ * satisfies no issuance bound), that vendor's current tenant, and the
+ * invoice's own classification label. The context
  * capture commits the same records, so the facts the decision evaluates and
  * the facts its binding commits are one observation, with no await between
  * them (the owner's #1663 review 3).
@@ -2598,6 +2617,8 @@ export class Pep {
     /** A bound list read's members, when a bound it could rely on reads a member fact (#1266). */
     let listMemberFacts: CollectionMemberFacts[] | undefined;
     let targetVendorId: string | undefined;
+    /** A compensate crossing's named invoice, whose committed wire the link below establishes (#252). */
+    let compensatedInvoiceId: string | undefined;
     let recipients: string[] | undefined;
     let recipientsRouted = false;
     if (mapping.targetsVendor) {
@@ -2626,7 +2647,22 @@ export class Pep {
         },
       };
     }
-    if (mapping.needsInvoice) {
+    if (mapping.needsInvoice && mapping.compensates) {
+      // @spec runtime#compound-actions (#252, #1693, D879): a compensate
+      // crossing names the invoice whose committed wire it offsets, and that
+      // invoice must exist; the link below requires the wire it establishes
+      // to be that invoice's. Its vendor is the vendor the committed wire
+      // paid, which only the link names, and its effect parameters are that
+      // wire's. Nothing here reads the vendor the invoice names now (its
+      // record, its routing, or parameters built from it), so an invoice
+      // reassigned to a vendor that has no record still reverses the wire it
+      // paid. The snapshot taken once the link is established reads the
+      // invoice and the paid vendor.
+      const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+      if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
+      compensatedInvoiceId = invoice.id;
+      resourceObj = { type: "invoice", id: invoice.id };
+    } else if (mapping.needsInvoice) {
       const invoiceId = String(args.invoice_id ?? "");
       const invoice = this.deps.payments.getInvoice(invoiceId);
       if (!invoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
@@ -2819,8 +2855,8 @@ export class Pep {
         return await this.refuse(boundary, token, "out_of_authority", mapping.action, view);
       }
       const established =
-        mapping.compensates && effective
-          ? await this.compensatedEffect(missionAnchor, effective.invoice_id, mapping.compensates)
+        mapping.compensates && compensatedInvoiceId !== undefined
+          ? await this.compensatedEffect(missionAnchor, compensatedInvoiceId, mapping.compensates)
           : undefined;
       if (!established) {
         return await this.refuse(boundary, token, "compensation_link_unavailable", mapping.action, view, undefined, {
@@ -2842,19 +2878,29 @@ export class Pep {
       // invoice names, taken now, after the last await of link
       // establishment, is what both the decision's live properties and the
       // context capture below are built from, with no await between them.
-      // A record gone by now is the same pre-decision refusal as above.
+      // An invoice gone by now is refused `unknown_invoice`, as above.
+      //
+      // @spec resource-access#initial-common-constraints, runtime#compound-actions
+      // (#1693, D873): the vendor record read is the vendor the committed wire
+      // paid, never the vendor the invoice names now. The wire fixes which
+      // vendor the reversal concerns, and that vendor's record supplies its
+      // current tenant, so `vendor_id`, the tenant bound and the offset
+      // effect name one vendor. An invoice reassigned since neither blocks
+      // nor widens the reversal; a paid vendor the store no longer holds is
+      // refused here, before the decision request.
       const snapshotInvoice = this.deps.payments.getInvoice(established.wire.invoiceId);
       if (!snapshotInvoice) return await this.refuse(boundary, token, "unknown_invoice", mapping.action, view);
-      const snapshotVendor = this.deps.payments.getVendor(snapshotInvoice.vendor_id);
+      const snapshotVendor = this.deps.payments.getVendor(established.wire.vendorId);
       if (!snapshotVendor) {
         return await this.refuse(boundary, token, "unknown_vendor", mapping.action, view, undefined, {
           resource: { type: "invoice", id: snapshotInvoice.id },
         });
       }
       const snapshot: StoreRecords = { invoice: snapshotInvoice, vendor: snapshotVendor, payments: this.deps.payments };
-      // The vendor the decision evaluates stays the wire's: only the live
-      // facts are read from the store (the owner's ruling: the existing
-      // decision semantics are preserved).
+      // The vendor the decision evaluates is the wire's, the vendor the
+      // snapshot read, so the explicit `vendor_id` below repeats what the
+      // live properties already carry: only the live facts come from the
+      // store.
       resourceObj = {
         type: "invoice",
         id: snapshotInvoice.id,
@@ -3758,6 +3804,45 @@ export class Pep {
       effectiveParameterDigest: freshDigest,
       ...(contextDigest !== undefined ? { effectiveEvaluationContextDigest: contextDigest } : {}),
     };
+  }
+
+  /**
+   * @spec txn-authorization#offline-verification, runtime#compound-actions
+   * (#252, #1693, D889): the parameter digest of a challenged compensate
+   * crossing, recomputed for its transaction-token retry exactly as the
+   * enforcement path builds it. The link is established again from this PEP's
+   * own retained, verified evidence for the challenged Mission and the named
+   * invoice, the committed wire's ledger record is read through it, and the
+   * reversal form is built from that record. The invoice's current vendor is
+   * never read, and no digest the token or the pending record carries is
+   * used. A link or record that no longer answers yields none, so the retry
+   * refuses; a record that changed yields a different digest.
+   */
+  async compensationParameterDigest(
+    tool: string,
+    args: Readonly<Record<string, unknown>>,
+    mission: { id: string; issuer: string },
+  ): Promise<string | undefined> {
+    const mapping = this.toolAction(tool);
+    if (!mapping?.compensates) return undefined;
+    const target = this.operationTargetFor(tool, args);
+    if (!target.ok) return undefined;
+    const invoice = this.deps.payments.getInvoice(String(args.invoice_id ?? ""));
+    if (!invoice) return undefined;
+    const established = await this.compensatedEffect(
+      { id: mission.id, issuer: mission.issuer },
+      invoice.id,
+      mapping.compensates,
+    );
+    if (!established) return undefined;
+    return parameterDigest(
+      buildReversalParams({
+        action: mapping.action,
+        wire: established.wire,
+        resource: target.target,
+        reverses: established.link.opKey,
+      }),
+    );
   }
 
   /** The reversal form's digest, re-derived now from the committed wire's ledger record (#252). */
