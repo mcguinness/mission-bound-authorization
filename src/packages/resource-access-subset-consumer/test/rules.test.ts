@@ -9,35 +9,46 @@ import { domainToASCII, fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   type ConsumerConfig,
+  type ContractReference,
+  type CurrentContract,
   compareDecimal,
   compareInstant,
+  contractApprovalRefusal,
+  contractDefinition,
   ENTRY_TYPE,
   entryValidationCheck,
   isCurrencyCode,
   isValidRecipientDomain,
   isWithinDomain,
   parseAbsoluteUri,
+  parseCurrentContracts,
   parseDecimal,
+  parseEntry,
   parseInstant,
+  runCase,
   subsetCheck,
+  type VectorCase,
 } from "../src/index.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const subsetDir = resolve(here, "../../../../vectors/mission-resource-access-subset");
-const contractFile = JSON.parse(
-  readFileSync(join(subsetDir, "payments-contract-2026-10-20.json"), "utf8"),
-) as {
-  reference: { id: string; version: string; digest: string };
-  document: { operations: Record<string, { action: string }> };
-};
-const reference = contractFile.reference;
-const config: ConsumerConfig = {
-  currentContracts: [
-    { reference, actions: Object.values(contractFile.document.operations).map((o) => o.action) },
-  ],
-};
+function contractFileOf(name: string): unknown {
+  return JSON.parse(readFileSync(join(subsetDir, name), "utf8"));
+}
+// The two frozen versions of the payments contract; 2026-10-24 adds
+// payments:payment.reverse.
+const v20 = contractDefinition(contractFileOf("payments-contract-2026-10-20.json"));
+const v24 = contractDefinition(contractFileOf("payments-contract-2026-10-24.json"));
+const definitions = [v20, v24];
 
 const RESOURCE = "https://payments.example/mcp";
+const reference = v20.reference;
+// The general configuration of these tests: 2026-10-20 is current for the
+// payments resource and for no other.
+const config: ConsumerConfig = {
+  currentContracts: [{ resource: RESOURCE, reference }],
+  definitions,
+};
 const base = {
   type: "mission_resource_access",
   resource: RESOURCE,
@@ -900,5 +911,189 @@ describe("resource_contract (resource-access#resource-contract)", () => {
     // when it is not the version current at intake.
     const old = withContract({ ...reference, version: "2026-10-01" });
     expect(subsetCheck(old, old).outcome).toBe("subset");
+  });
+});
+
+describe("resource_contract currency per resource (resource-access#resource-contract Approval; #249)", () => {
+  // The Approval rule refuses "a proposed entry whose resource_contract does
+  // not equal, member for member, the reference of a contract its
+  // configuration names as current for the entry's resource and that defines
+  // every action and action family the entry lists".
+  const OTHER = "https://ledger.example/mcp";
+  const entryWith = (rc: ContractReference, resource = RESOURCE, actions = base.actions) => ({
+    ...base,
+    resource,
+    actions,
+    resource_contract: { ...rc },
+  });
+  const configured = (...currentContracts: CurrentContract[]): ConsumerConfig => ({
+    currentContracts,
+    definitions,
+  });
+  const outcome = (entry: unknown, cfg: ConsumerConfig) => entryValidationCheck(entry, cfg).outcome;
+  const current24 = configured({ resource: RESOURCE, reference: v24.reference });
+
+  function parsedEntry(value: unknown) {
+    const result = parseEntry(value);
+    if (!result.ok) throw new Error(result.reason);
+    return result.entry;
+  }
+
+  it("reads each frozen contract file into the actions its operations name", () => {
+    expect([...v20.actions].sort()).toEqual([
+      "payments:invoice.list",
+      "payments:invoice.read",
+      "payments:payment.execute",
+      "payments:payment.schedule",
+      "payments:payment.schedule.cancel",
+      "payments:remittance.send",
+      "payments:vendor.read",
+    ]);
+    expect([...v24.actions].sort()).toEqual([...v20.actions, "payments:payment.reverse"].sort());
+    expect(() => contractDefinition({ format: "mission-resource-access-subset/1" })).toThrow();
+    const file = contractFileOf("payments-contract-2026-10-24.json") as Record<string, unknown>;
+    expect(() => contractDefinition({ ...file, reference: v20.reference })).toThrow();
+  });
+
+  it("admits the reference configuration names as current for the entry's resource", () => {
+    const result = entryValidationCheck(entryWith(v24.reference), current24);
+    expect(result.outcome).toBe("valid");
+    expect(result.error).toBeUndefined();
+  });
+
+  it("refuses that reference on a resource configuration names no contract current for", () => {
+    const result = entryValidationCheck(entryWith(v24.reference, OTHER), current24);
+    expect(result.outcome).toBe("refuse");
+    expect(result.error).toBe("invalid_authorization_details");
+    // Control: configured as current for that resource too, it is admitted
+    // there.
+    const both = configured(
+      { resource: RESOURCE, reference: v24.reference },
+      { resource: OTHER, reference: v24.reference },
+    );
+    expect(outcome(entryWith(v24.reference, OTHER), both)).toBe("valid");
+  });
+
+  it("compares the configured resource character for character", () => {
+    const variants = [
+      "https://payments.example/mcp/",
+      "https://PAYMENTS.example/mcp",
+      "HTTPS://payments.example/mcp",
+      "https://payments.example:443/mcp",
+      "https://payments.example/mcp?x=1",
+      "https://payments.example/%6Dcp",
+    ];
+    for (const resource of variants) {
+      expect(outcome(entryWith(v24.reference, resource), current24), resource).toBe("refuse");
+      // Control: each variant passes intake, so the contract rule alone
+      // refuses it.
+      expect(outcome({ ...base, resource }, current24), resource).toBe("valid");
+    }
+    expect(outcome(entryWith(v24.reference, RESOURCE), current24)).toBe("valid");
+  });
+
+  it("refuses a held version configuration does not name as current", () => {
+    expect(outcome(entryWith(v20.reference), current24)).toBe("refuse");
+    // Control: with 2026-10-20 named current, the same entry is admitted.
+    const current20 = configured({ resource: RESOURCE, reference: v20.reference });
+    expect(outcome(entryWith(v20.reference), current20)).toBe("valid");
+    expect(outcome(entryWith(v24.reference), current20)).toBe("refuse");
+  });
+
+  it("requires id, version and digest each to equal the configured reference", () => {
+    const r = v24.reference;
+    const changed = [
+      { ...r, id: "https://payments.example/contracts/payments2" },
+      { ...r, version: "2026-10-25" },
+      { ...r, digest: v20.reference.digest },
+      { ...r, version: v20.reference.version },
+    ];
+    for (const rc of changed) {
+      expect(outcome(entryWith(rc), current24), JSON.stringify(rc)).toBe("refuse");
+    }
+  });
+
+  it("keeps each resource's current version to that resource", () => {
+    const split = configured(
+      { resource: RESOURCE, reference: v24.reference },
+      { resource: OTHER, reference: v20.reference },
+    );
+    expect(outcome(entryWith(v24.reference, RESOURCE), split)).toBe("valid");
+    expect(outcome(entryWith(v20.reference, OTHER), split)).toBe("valid");
+    expect(outcome(entryWith(v20.reference, RESOURCE), split)).toBe("refuse");
+    expect(outcome(entryWith(v24.reference, OTHER), split)).toBe("refuse");
+  });
+
+  it("names no contract current when configuration lists none", () => {
+    const none = configured();
+    expect(outcome(entryWith(v24.reference), none)).toBe("refuse");
+    expect(outcome(entryWith(v20.reference), none)).toBe("refuse");
+    expect(outcome(base, none)).toBe("valid");
+  });
+
+  it("leaves an entry without resource_contract unaffected, on any resource", () => {
+    for (const cfg of [configured(), current24, config]) {
+      expect(outcome(base, cfg)).toBe("valid");
+      expect(outcome({ ...base, resource: OTHER }, cfg)).toBe("valid");
+    }
+    expect(contractApprovalRefusal(parsedEntry(base), configured())).toBeUndefined();
+  });
+
+  it("requires the current version to define every action the entry lists", () => {
+    // payments:payment.reverse is defined by 2026-10-24 only.
+    const reverse = ["payments:invoice.read", "payments:payment.reverse"];
+    expect(outcome(entryWith(v24.reference, RESOURCE, reverse), current24)).toBe("valid");
+    const current20 = configured({ resource: RESOURCE, reference: v20.reference });
+    const refused = entryValidationCheck(entryWith(v20.reference, RESOURCE, reverse), current20);
+    expect(refused.outcome).toBe("refuse");
+    expect(refused.error).toBe("invalid_authorization_details");
+    expect(refused.reason).toMatch(/payments:payment\.reverse/);
+  });
+
+  it("refuses a current reference whose document the consumer does not hold", () => {
+    const unheld: ConsumerConfig = { ...current24, definitions: [v20] };
+    expect(outcome(entryWith(v24.reference), unheld)).toBe("refuse");
+    expect(outcome(entryWith(v24.reference), current24)).toBe("valid");
+  });
+
+  it("reads a case's contracts as the configuration, an absent one naming none", () => {
+    const evCase = (contracts?: unknown): VectorCase => ({
+      id: "rules-ev-rc",
+      requires: ["member.resource_contract"],
+      check: "entry-validation",
+      input:
+        contracts === undefined
+          ? { entry: entryWith(v24.reference) }
+          : { entry: entryWith(v24.reference), contracts },
+      expected: { outcome: "valid" },
+    });
+    const listed = (resource: string) => [{ resource, reference: { ...v24.reference } }];
+    expect(runCase(evCase(listed(RESOURCE)), definitions).outcome).toBe("valid");
+    expect(runCase(evCase(listed(OTHER)), definitions).outcome).toBe("refuse");
+    expect(runCase(evCase([]), definitions).outcome).toBe("refuse");
+    const absent = runCase(evCase(), definitions);
+    expect(absent.outcome).toBe("refuse");
+    expect(absent.error).toBe("invalid_authorization_details");
+  });
+
+  it("throws on a malformed configuration rather than reading it as none", () => {
+    const malformed: unknown[] = [
+      {},
+      "https://payments.example/mcp",
+      [null],
+      [[RESOURCE, v24.reference]],
+      [{ resource: RESOURCE }],
+      [{ reference: v24.reference }],
+      [{ resource: 1, reference: v24.reference }],
+      [{ resource: RESOURCE, reference: { ...v24.reference, digest: "sha-256:short" } }],
+      [{ resource: RESOURCE, resource_match: "prefix", reference: v24.reference }],
+    ];
+    for (const contracts of malformed) {
+      expect(() => parseCurrentContracts(contracts), JSON.stringify(contracts)).toThrow();
+    }
+    expect(parseCurrentContracts(undefined)).toEqual([]);
+    expect(parseCurrentContracts([{ resource: RESOURCE, reference: v24.reference }])).toEqual([
+      { resource: RESOURCE, reference: v24.reference },
+    ]);
   });
 });
