@@ -513,7 +513,7 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
-import { actionClassesAt, evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
@@ -604,6 +604,7 @@ import {
   assertStandingPaymentCoverage,
   assertStandingPaymentExactProfile,
   type ProhibitedPredicateMapping,
+  publishedProhibitedPredicateMapping,
   type TemplateConsentProvenance,
 } from "../kernel/standing-payment.js";
 import type { TemplateStore } from "../kernel/template-store.js";
@@ -6685,21 +6686,20 @@ async function serializeDispatch(kernel: MissionKernel, ctx: KoaContextWithOIDC,
 }
 
 /**
- * @spec mission-template#prohibited-classes (#813): the deployment's
+ * @spec mission-template#prohibited-classes (#813, #1710): the deployment's
  * published prohibited-predicate mapping: the approval-authentication floor's
- * classification (resource-scoped runtime action classes), the published
- * external-communication actions, and the resource-to-AS map, where a
- * resource another AS serves is cross-domain (no map: none is known local).
+ * classification (resource-scoped runtime action classes and the resources it
+ * states are cross-domain), the published external-communication actions,
+ * and the resource-to-AS map, where a resource another AS serves is also
+ * cross-domain (no map: none is known local).
  */
 export function prohibitedPredicateMappingOf(opts: AdapterOptions): ProhibitedPredicateMapping {
   const resourceToAs = opts.resourceToAs;
-  return {
-    classesOf: (entry, action) => actionClassesAt(opts.approvalFloor, entry, action),
-    externalCommunicationActions: new Set(
-      opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
-    ),
-    isCrossDomain: (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
-  };
+  return publishedProhibitedPredicateMapping(
+    opts.approvalFloor,
+    opts.progressive?.externalCommunicationActions ?? PROGRESSIVE_PROFILE.external_communication_actions,
+    (resource) => !resourceToAs || resourceToAs(resource) !== opts.issuer,
+  );
 }
 
 async function handleMissionDispatchGrant(
