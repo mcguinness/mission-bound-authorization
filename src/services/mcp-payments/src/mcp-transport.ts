@@ -66,7 +66,11 @@ export interface MediatedToolResult {
    */
   error?: string;
   transaction_challenge?: string;
-  /** Present only when an effect committed and its evidence is missing (#1104, #1640); never a refusal. */
+  /**
+   * A disposition record that could not be written (#1104, #1640, #821,
+   * #1715): with no `refusal_reason`, an effect committed and its evidence is
+   * missing; beside one, nothing executed and the refusal's record is missing.
+   */
   gap?: TransactionToolResult["gap"] | DispositionGap;
   /** Present on a denial whose Decision Evidence did not verify (#1640, D770 ruling 6). */
   evidence_gap?: DecisionEvidenceGap;

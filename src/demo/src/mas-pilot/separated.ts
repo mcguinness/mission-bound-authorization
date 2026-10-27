@@ -159,6 +159,10 @@ export async function composeSeparatedMasPilot(opts: SeparatedMasPilotOptions): 
   // and, @spec #831 C2, its Status keys held through its jwks_uri: the
   // trusted Status kids only, refreshed within the freshness the MAS
   // declares, so a Status key rotation is followed without a restart.
+  // @spec status#historical-key-set (#831 B3, D901): where the validated
+  // metadata advertises a historical key set, a key it lists never verifies a
+  // Status response the pilot relies on now, though a cached jwks_uri still
+  // carries it (`missionStatusIssuer` passes the set's URI to the keys).
   const statusIssuer = await missionStatusIssuer(config.mission_issuer, {
     read,
     location: base,

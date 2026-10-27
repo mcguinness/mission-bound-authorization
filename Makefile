@@ -53,6 +53,21 @@ READER_EDITION_BUNDLES := edition-floor.txt edition-agent.txt
 GHPAGES_EXTRA += $(READER_EDITION_FLOOR_HTML) $(READER_EDITION_AGENT_HTML) \
   $(READER_EDITION_INDEXES) $(READER_EDITION_BUNDLES)
 
+## A draft's previous version is its own last tag (#1781).
+##
+## lib/id.mk finds it with `$(filter $(draft)-%,$(drafts_tags))`, which also
+## matches a longer-named sibling's tags: draft-mcguinness-oauth-mission-%
+## matches draft-mcguinness-oauth-mission-resource-access-00, so the
+## binding's computed next version came out as -01 (already published) and
+## its previous version as -00, in drafts_next, drafts_prev and
+## drafts_with_prev. The diff targets themselves come from
+## lib/build-targets.sh, which already matches exact tags. Match only the
+## draft's own tags, `$(draft)-00` through `$(draft)-99`, exactly.
+## `override` holds this definition against lib/id.mk's plain assignment.
+
+f_prev_tag_versions := $(foreach a,0 1 2 3 4 5 6 7 8 9,$(foreach b,0 1 2 3 4 5 6 7 8 9,$(a)$(b)))
+override f_prev_tag = $(patsubst $(draft)-%,%,$(lastword $(filter $(addprefix $(draft)-,$(f_prev_tag_versions)),$(drafts_tags))))
+
 -include $(LIBDIR)/main.mk
 
 $(LIBDIR)/main.mk:
