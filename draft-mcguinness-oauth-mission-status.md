@@ -351,7 +351,7 @@ request:
 
 The AS MUST refuse a request not authenticated on one of the two
 paths, with the outcome {{mission-status-auth-failures}}
-assigns: `unauthorized` (HTTP 401) or `invalid_client` (HTTP 400). The
+assigns. The
 path and method are
 determined by wire evidence in order: a request presenting an access
 token in `Authorization` takes the access-token path, and any client
@@ -446,12 +446,17 @@ credential it presented:
   {{Section 7.1 of RFC9449}}, including its `algs` parameter and error
   codes.
 - A request whose client authentication fails at the HTTP layer
-  receives HTTP 400 with the `invalid_client` error
-  code, as {{Section 5.2 of RFC6749}} answers a failed client
-  authentication carried outside the `Authorization` header. It carries
-  no `WWW-Authenticate` challenge and is not reported as an
-  access-token failure. A client certificate rejected during the TLS
-  handshake fails at the TLS layer, before any HTTP response.
+  receives the error response that the method's specification defines
+  for that failure, with any error code, status, and challenge it
+  requires, such as a method that answers a missing server-provided
+  challenge or a stale credential with its own error. Where the method
+  defines none, the request receives HTTP 400 with the `invalid_client`
+  error code, as {{Section 5.2 of RFC6749}} answers a failed client
+  authentication carried outside the `Authorization` header, with no
+  `WWW-Authenticate` challenge. A failed client authentication is not
+  reported as an access-token failure. A client certificate rejected
+  during the TLS handshake fails at the TLS layer, before any HTTP
+  response.
 - A request that presented no credential receives, where the endpoint
   accepts an access-token scheme, HTTP 401 `unauthorized` with one
   challenge for each access-token scheme the endpoint accepts and no
@@ -460,7 +465,8 @@ credential it presented:
 
 Every challenge carries the `resource_metadata` parameter naming the
 endpoint's Protected Resource Metadata ({{Section 5.1 of RFC9728}}).
-A 401 response carries the challenge or challenges and a JSON body
+A 401 response this section assigns to an access-token failure or a
+missing credential carries the challenge or challenges and a JSON body
 ({{mission-status-errors}}): a challenge's `error` attribute, when
 present, follows its scheme as above and is distinct from the body's
 `error`, which is `unauthorized`.
@@ -842,7 +848,7 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `error` | HTTP | Description |
 |---|---|---|
 | `invalid_request` | 400 | Malformed request: an unparseable body, a required member missing or malformed, an invalid member combination, a Lifecycle `operation` the AS does not serve ({{mission-lifecycle-endpoint}}), or a retransmitted `nonce` whose operation members differ from the original's, present or absent alike ({{idempotency}}). |
-| `invalid_client` | 400 | Direct client authentication (mTLS or private-key JWT) failed, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
+| `invalid_client` | 400 | Direct client authentication failed and its method defines no other error, or no credential was presented where no access-token scheme is accepted ({{mission-status-auth-failures}}). |
 | `unauthorized` | 401 | Access-token authentication failed, or no credential was presented where an access-token scheme is accepted; the response carries the challenges of {{mission-status-auth-failures}}. |
 | `not_found` | 404 | Reference does not exist OR is not visible. |
 | `conflict` | 409 | Lifecycle operation not legal from the current state ({{idempotency}}). |
@@ -850,6 +856,10 @@ Wire error codes (carried in the `error` member of a JSON body):
 | `rate_limited` | 429 | Consumer is rate-limited. |
 | `unavailable` | 503 | AS temporarily cannot serve status. |
 {: title="Error codes"}
+
+A client authentication method's own error codes and statuses
+({{mission-status-auth-failures}}) can also appear, in addition to
+those in the table.
 
 Note the distinction between the access failures: `unauthorized`
 (401) and `invalid_client` (400) mean the request carried no valid
