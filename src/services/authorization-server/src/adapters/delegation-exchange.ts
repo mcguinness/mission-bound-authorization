@@ -23,6 +23,7 @@
 import { canonicalize, delegatedRoutingRefusal, entryOverlapsResource, type JsonValue } from "@mission/core";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
+import { audienceReferences, derivedAudiences } from "../kernel/approved-audience.js";
 import type { DelegateCandidate } from "../kernel/delegate-matcher.js";
 import { projectThroughEffectiveWithOrigin, SourceUnavailableError } from "../kernel/derive.js";
 import { GateError } from "../kernel/kernel.js";
@@ -331,7 +332,7 @@ export async function handleDesignationExchange(
   const effective = withOrigin.map((e) => e.entry);
   // The designated client is the delegate, at the next accounted depth: the
   // policy is asked here, and again at the redemption.
-  const authority = delegableAuthority(
+  const delegable = delegableAuthority(
     opts,
     active,
     presented,
@@ -339,8 +340,19 @@ export async function handleDesignationExchange(
     { sub: designee, assertedProfile: opts.kernel.actorProfile(designee) },
     issuance.depth + 1,
   );
-  if (authority.length === 0) {
+  if (delegable.length === 0) {
     txError(ctx, 400, "invalid_target", "the presented authority carries no entry the designated client may be delegated");
+    return;
+  }
+  // @spec mission#token-response, mission#transformation-capabilities (#1717,
+  // D859): an entry without an original approved audience is not carried,
+  // whether the Mission retains none for it or its association cannot be
+  // established (D733 ruling 4); no redemption could issue it. A designation
+  // left with no entry is refused here, before anything is counted.
+  const references = audienceReferences(active.authority_set, active.approved_audiences);
+  const authority = delegable.filter((entry) => derivedAudiences(entry, references).length > 0);
+  if (authority.length === 0) {
+    txError(ctx, 400, "invalid_target", "no entry the designation would carry has an original approved audience");
     return;
   }
   // Audience separation, against the Mission's own resources.
@@ -420,6 +432,18 @@ export async function handleDelegatedExchange(
   const { kernel } = opts;
   const params = ctx.oidc.params as Record<string, unknown>;
   const client = ctx.oidc.client as NonNullable<typeof ctx.oidc.client>;
+
+  // 0. @spec mission#delegated-exchange (#1718, D845): the delegate is a
+  // client the AS authenticates by a method it relies on to identify the
+  // client. The token endpoint has authenticated the request by the client's
+  // registered method, so every method but `none` qualifies; a public client
+  // (`none`) offers only its claimed client_id and is not a delegate. Refused
+  // before anything is read or counted, with the status the endpoint's own
+  // client-authentication refusals use.
+  if (client.clientAuthMethod === undefined || client.clientAuthMethod === "none") {
+    txError(ctx, 401, "invalid_client", "a delegated exchange requires client authentication; a public client is not a delegate");
+    return;
+  }
 
   // 1. Parse.
   if (params.subject_token_type !== ACCESS_TOKEN_TOKEN_TYPE) {

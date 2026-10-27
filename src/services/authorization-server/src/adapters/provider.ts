@@ -510,7 +510,7 @@ import {
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
-import { IntentError } from "../kernel/intent.js";
+import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
 import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
@@ -3446,9 +3446,9 @@ async function handleDeferredGrant(
     }
     // #1348: the deferred token is a token of this Mission, minted on its own
     // grant, so only the Mission's own client may open a deferral on it. Another
-    // client gets the same answer as for an unknown Mission (the store's), and
-    // gets it before the store's subset check, so the refusal discloses neither
-    // the Mission's state nor its authority.
+    // client gets the same answer as for an unknown Mission, and gets it before
+    // the store's state and subset checks, so the refusal discloses neither the
+    // Mission's state nor its authority (#1740, D862).
     const clientId = ctx.oidc.client?.clientId as string;
     if (opts.kernel.get(intent.mission_id)?.client_id !== clientId) {
       throw new errors.InvalidRequest("mission is not active");
@@ -3474,9 +3474,23 @@ async function handleDeferredGrant(
         },
       });
     } catch (e) {
-      // Requested authority exceeds the active Mission (or it is not active):
-      // AROP never widens -> not a deferrable request.
-      if (e instanceof DeferralError) throw new errors.InvalidRequest(e.message);
+      // @spec mission#subset, mission#error-mapping (#1720 item 3, D859): AROP
+      // never widens, so requested authority the comparison cannot establish
+      // as a subset of the active Mission, whether it exceeds it or the
+      // comparison cannot decide, is refused invalid_authorization_details,
+      // as the originating grant's own validation would refuse it (DTR -00
+      // Section 5.3.1). The ownership and authentication refusals above keep
+      // their codes.
+      if (e instanceof DeferralError) {
+        if (e.code === "out_of_authority") throw new InvalidAuthorizationDetails(e.message);
+        // @spec mission#issuance-gating, mission#error-mapping (#1740, D862,
+        // D863): only the Mission's own client reaches the store, so a Mission
+        // that is not active, suspension included, is refused invalid_grant,
+        // as any grant other than a Token Exchange is. The refusal carries no
+        // mission_error: that diagnostic goes only to a client presenting the
+        // Mission's grant, and this initiation presents none.
+        throw new errors.InvalidGrant(e.message);
+      }
       throw e;
     }
     // DTR initiation body (HTTP 400). Set on ctx directly: the OAuth error
@@ -6901,6 +6915,18 @@ function approvalGrantId(uid: string): string {
   return createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 }
 
+/**
+ * @spec mission#approval-commit (#1721, D845): how a direct approval decision
+ * completes the authorization request on an intake or commit refusal. A
+ * requested ceiling that passed while the approval was pending, whether the
+ * decision's re-validation or the commit's own atomic check finds it, is
+ * `access_denied`, with no Mission and no code; every other refusal keeps
+ * its mapped code.
+ */
+function decisionRefusal(e: IntentError): { error: string; error_description: string } {
+  return { error: e instanceof ExpiryPassedError ? "access_denied" : e.code, error_description: e.message };
+}
+
 async function decide(
   provider: Provider,
   opts: AdapterOptions,
@@ -7038,12 +7064,13 @@ async function decide(
   // requested ceiling that passed while the approval pends completes the
   // request with its refusal, as the commit's own expiry check does when it
   // passes during the commit, before anything is written and never a 500.
+  // Both complete `access_denied` (@spec mission#approval-commit, #1721).
   let submission: ReturnType<typeof opts.kernel.validateSubmission>;
   try {
     submission = opts.kernel.validateSubmission(String(params.mission_intent));
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7093,7 +7120,7 @@ async function decide(
         : undefined;
   } catch (e) {
     if (e instanceof IntentError) {
-      await finish({ error: e.code, error_description: e.message });
+      await finish(decisionRefusal(e));
       return;
     }
     throw e;
@@ -7201,10 +7228,7 @@ async function decide(
       authority = opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey));
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({
-          error: e.code,
-          error_description: e.message,
-        });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7233,7 +7257,7 @@ async function decide(
       opts.kernel.assertDrawdownPolicyHeld(ceiling);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7398,7 +7422,7 @@ async function decide(
       current = currentContext(authority, rendered);
     } catch (e) {
       if (e instanceof IntentError) {
-        await finish({ error: e.code, error_description: e.message });
+        await finish(decisionRefusal(e));
         return;
       }
       throw e;
@@ -7470,10 +7494,7 @@ async function decide(
         prepared = opts.kernel.prepareApproval(approveInput);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7551,7 +7572,7 @@ async function decide(
         }
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({ error: e.code, error_description: e.message });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;
@@ -7566,10 +7587,7 @@ async function decide(
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
       } catch (e) {
         if (e instanceof IntentError) {
-          await finish({
-            error: e.code,
-            error_description: e.message,
-          });
+          await finish(decisionRefusal(e));
           return undefined;
         }
         throw e;

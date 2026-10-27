@@ -118,9 +118,18 @@ export interface DeferredToken {
   approved_until: string;
 }
 
+/**
+ * A refusal to open a deferral. `out_of_authority`: the comparison cannot
+ * establish that the requested authority is a subset of the active Mission,
+ * whether the request exceeds it or the comparison cannot decide; the handler
+ * answers invalid_authorization_details (@spec mission#subset, #1720 item 3,
+ * D859). `mission_not_active`: the Mission is not active; the handler answers
+ * the Mission's own client invalid_grant, with no mission_error (@spec
+ * mission#issuance-gating, #1740, D863).
+ */
 export class DeferralError extends Error {
   constructor(
-    readonly code: "out_of_authority",
+    readonly code: "out_of_authority" | "mission_not_active",
     message: string,
   ) {
     super(message);
@@ -160,7 +169,7 @@ export class DeferralStore {
   }): DeferralPending {
     const mission = this.kernel.get(input.missionId);
     if (!mission || this.kernel.applyExpiry(mission).state !== "active") {
-      throw new DeferralError("out_of_authority", "mission is not active");
+      throw new DeferralError("mission_not_active", "mission is not active");
     }
     // @spec D42: AROP grant is a subset of the active Mission; widening -> Expansion.
     // Containment: the ceiling is the EFFECTIVE set, so a contained capability
@@ -168,7 +177,7 @@ export class DeferralStore {
     if (!isSubsetSetIgnoringCapabilitySources(input.requested, this.kernel.effectiveAuthoritySet(mission))) {
       throw new DeferralError(
         "out_of_authority",
-        "requested authority exceeds the active Mission; use Expansion to widen",
+        "requested authority is not within the active Mission; use Expansion to widen",
       );
     }
     input.admit?.(mission);
