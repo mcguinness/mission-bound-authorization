@@ -5818,10 +5818,8 @@ therefore forbids its use as a Mission Identifier or as a replay or
 idempotency key.
 
 A consumer that needs to bind to or correlate a specific Mission uses
-the Mission Identifier. Where a deployment discloses `authority_hash`
-to a resource server, it is an audit correlator, not an enforcement
-input, and not proof that the carried entries are a subset of the
-approved set.
+the Mission Identifier. A disclosed `authority_hash` is only an audit
+correlator ({{rs-carried-authority}}).
 
 ### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
 
