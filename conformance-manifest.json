@@ -62192,6 +62192,71 @@
    "notes": "Added with the alignment to Attenuating Agent Tokens -02. Vacuous for the reference today: no assembly advertises mission_attenuation_supported (D186, #927), so no metadata document is bound by it. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
   },
   {
+   "id": "attenuation.consumer.substrate-verification.every-audience",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "conformance",
+   "text": "MUST verify the attenuation chain and proof-of-possession per the attenuation substrate",
+   "facet": "the audience of every token in the chain (AAT -02 Section 8, step 6c)",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
+    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses at the consumer a child narrowed to another resource server, and accepts the same chain narrowed to this one",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+  },
+  {
+   "id": "attenuation.consumer.child-identity-claims-no-authority",
+   "spec": "draft-mcguinness-oauth-mission-attenuation.md",
+   "anchor": "mission-binding-check",
+   "text": "The substrate gives a claim it does not define no authority in a derived token unless a profile defines how it carries across derivation",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a child's `sub` and `client_id`, claims neither the substrate nor this profile carries across derivation, are ignored: the consumer's subject and client are the root's, so a holder-set value changes neither the decision subject, the recorded effect nor its evidence",
+    "local": "the payments consumer reads sub and client_id from the verified root, whose profile requires them; a root without sub refuses, with no fallback to a child (D882); the child mint copies neither"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > takes the subject from the root: a forged child sub changes neither the decision subject, the recorded payment nor its evidence",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: every token's audience, and the subject from the root only (@spec attenuation#mission-binding-check, #1758) > refuses a root without its subject rather than falling back to a child's sub",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "#1758 (D876, D882). TokenFacts.sub was leafPayload.sub ?? rootPayload.sub, so a holder chose the decision, idempotency and recorded subject. Mutations: a leaf-first sub, a leaf-first client_id and dropping the root profile's sub requirement each fail a witness; restoring the child mint's sub and client_id copy fails the mint test in the same block."
+  },
+  {
    "id": "resource-access.subset.same-matcher",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "subset",
