@@ -473,11 +473,11 @@ carries `typ` of `mission-status-response+jwt` and a `kid` identifying
 the signing key. Per {{Section 4.1.9 of RFC7515}}, the `typ` header
 omits the `application/` prefix; the full media type
 `application/mission-status-response+jwt`
-({{media-type-registration}}) is used as the HTTP `Content-Type`.
-Exact validation of the protected
-`typ` value, together with mutually exclusive validation rules for
-the other JWTs the AS signs, implements the substitution defense of
-{{Section 3.11 of RFC8725}} and {{Section 3.12 of RFC8725}}.
+({{media-type-registration}}) is the HTTP `Content-Type`. Exact
+validation of the protected `typ` value, with mutually exclusive
+validation rules for the other JWTs the AS signs, implements the
+substitution defense of {{Section 3.11 of RFC8725}} and
+{{Section 3.12 of RFC8725}}.
 
 A Mission Status Response is evidence of Mission state for the
 consumer that requested it, not a bearer credential, an access token,
@@ -485,23 +485,18 @@ or an authorization grant: presenting one authorizes nothing, and a
 resource server validating access tokens under {{Section 4 of RFC9068}}
 rejects it by its `typ`.
 
-{{RFC9701}} signed introspection responses are scoped to token
-introspection and do not apply to a lookup keyed by `mission_id`; the
-dedicated Mission Status operation therefore uses a new media type and a
-JWS, not {{RFC9701}} (see {{rfc-9701-vs-media-type}}). Implementations
-MUST NOT use {{RFC9701}} for the dedicated Mission Status operation.
+{{RFC9701}} is scoped to token introspection and does not apply to a
+lookup keyed by `mission_id` ({{rfc-9701-vs-media-type}}).
+Implementations MUST NOT use {{RFC9701}} for the dedicated Mission
+Status operation.
 
-In the ERP examples in this document, the operation contract identifies
+In this document's ERP examples, the operation contract identifies
 `https://erp.example.com` as the operation target
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}). Actions and
-constraints determine the permitted operations within that service.
-In the audience-scoped Mission Status example below, the consumer is
-the ERP resource server, client `erp-rs`, which the Mission Issuer's
-configuration authorizes for that audience; its client identifier is
-the response's `sub`.
-
-The signed payload reports the Mission's current state and the
-audience-scoped evidence the consumer needs.
+({{I-D.draft-mcguinness-oauth-mission-resource-access}}). In the
+audience-scoped example below, the consumer is the ERP resource
+server, client `erp-rs`, which the Mission Issuer's configuration
+authorizes for that audience; its client identifier is the response's
+`sub`.
 
 ~~~ http-message
 HTTP/1.1 200 OK
@@ -570,41 +565,39 @@ The members are:
   operation or a base lifecycle operation, the AS MUST set `sub` to
   the authenticated client's identifier: the presented access token's
   `client_id`, or the client that authenticated directly. When the
-  request omitted `audience`
-  ({{mission-status-request}}), the response is state-only and the AS
-  MUST set `aud` to the authenticated client's `client_id`, as the
-  Lifecycle endpoint does ({{mission-lifecycle-endpoint}}); the
-  consumer's `aud` verification below then checks that identifier. `exp` bounds the validity of the signed response
-  itself; how long the consumer MAY rely on the reported `state` is
-  given separately by `mission.fresh_until` below.
+  request omitted `audience` ({{mission-status-request}}), the
+  response is state-only and the AS MUST set `aud` to the
+  authenticated client's `client_id`, as the Lifecycle endpoint does
+  ({{mission-lifecycle-endpoint}}); the consumer's `aud` verification
+  below then checks that identifier. `exp` bounds the validity of the
+  signed response itself; how long the consumer MAY rely on the
+  reported `state` is given separately by `mission.fresh_until` below.
 - `mission`: the `mission` object, the same shape as the `mission`
   claim of {{I-D.draft-mcguinness-oauth-mission}} (Section "Mission
   Claim") with status members added. It carries:
   - `id`, `issuer`: the subject Mission's identifier and issuer.
   - `authority_hash`: OPTIONAL. The issuance profile's consent
-    commitment over the Authority Set ({{I-D.draft-mcguinness-oauth-mission}},
-    Section "Integrity Anchors"), disclosed at the AS's discretion to
-    a caller it authorizes for audit or correlation use, on the same
-    minimization footing as the issuance profile's introspection
-    disclosure privilege ({{I-D.draft-mcguinness-oauth-mission}},
-    Section "Caller Authorization and Minimization"). Not carried on
-    the issuance profile's baseline `mission` claim.
+    commitment over the Authority Set
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Integrity
+    Anchors"), disclosed at the AS's discretion to a caller it
+    authorizes for audit or correlation use, on the same minimization
+    footing as the issuance profile's introspection disclosure
+    privilege ({{I-D.draft-mcguinness-oauth-mission}}, Section "Caller
+    Authorization and Minimization"). Not carried on the issuance
+    profile's baseline `mission` claim.
   - `state`: REQUIRED. The current Mission lifecycle state. The
-    authoritative
-    state space is the issuance profile's
+    authoritative state space is the issuance profile's
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
     Lifecycle"): `active` and `terminated`, this document's `suspended`
     when the Mission Lifecycle endpoint's `suspend` operation
     ({{lifecycle-operations}}) is deployed, and any further state a
-    companion profile defines and
-    the deployment runs. A consumer applies the issuance profile's
-    forward-compatibility rule: only `active` permits reliance, and
-    every other value, recognized or not, is non-active. This
-    document's reliance behavior does not depend on recognizing a
-    companion-defined state; the fail-safe rule above governs. A
-    non-active state gates new authorization decisions only: it
-    does not establish that work already accepted under the Mission has
-    stopped, or that completed effects were undone.
+    companion profile defines and the deployment runs. A consumer
+    applies the issuance profile's forward-compatibility rule: only
+    `active` permits reliance, and every other value, recognized or
+    not, is non-active. A non-active state gates new authorization
+    decisions only: it does not establish that work already accepted
+    under the Mission has stopped, or that completed effects were
+    undone.
   - `termination`: CONDITIONAL. Present exactly when `state` is
     `terminated`: the Mission's `termination`
     ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
@@ -624,15 +617,14 @@ The members are:
     Mission record's `expires_at`
     ({{I-D.draft-mcguinness-oauth-mission}}).
   - `fresh_until`: REQUIRED. An RFC 3339 {{RFC3339}} date-time giving
-    the point
-    until which the consumer MAY rely on the reported `state` without
-    re-checking, governing caching ({{mission-status-caching}}). It is
-    report-freshness metadata, carried in `mission` so it travels with
-    `state` even on the introspection projection, which has no signed
-    envelope to carry it ({{introspection-projection}}).
+    the point until which the consumer MAY rely on the reported `state`
+    without re-checking, governing caching ({{mission-status-caching}}).
+    It is report-freshness metadata, carried in `mission` so it travels
+    with `state` even on the introspection projection, which can lack a
+    signed envelope to carry it ({{introspection-projection}}).
   - `suspend_until`, `on_expiry`: CONDITIONAL. Present only while the
     Mission is `suspended` under a deadline
-    ({{mission-lifecycle-endpoint}}): the RFC 3339 {{RFC3339}}
+    ({{lifecycle-operations}}): the RFC 3339 {{RFC3339}}
     deadline, and the transition (`resume` or `revoke`) the AS applies
     when it passes.
   - `version`: REQUIRED. A positive integer, the Mission's
@@ -651,13 +643,12 @@ The members are:
 - `authorization_details`: the Effective Authority Set entries of every
   AS-supported `authorization_details` type
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authorization
-  Details Types") relevant to the requesting audience, audience
-  relevance determined per each entry's own type specification (for
-  the general-purpose `mission_resource_access` type, by its
-  `resource` member,
-  {{I-D.draft-mcguinness-oauth-mission-resource-access}}), carried at
-  the top level as a sibling of `mission` (as on the token and in the
-  introspection response). Entries addressed to other audiences MUST
+  Details Types") relevant to the requesting audience, as each entry's
+  own type specification determines (for the general-purpose
+  `mission_resource_access` type, by its `resource` member,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}). The member
+  is a top-level sibling of `mission`, as on the token and in the
+  introspection response. Entries addressed to other audiences MUST
   NOT be disclosed. When the request names an `audience`, the response
   MUST carry `authorization_details`, as an empty array when no entry
   is relevant to that audience. The entries are carried whatever the
@@ -720,9 +711,7 @@ own validity and the deployment's advertised revocation-propagation
 tolerance. The skew tolerance is a clock-skew allowance on the
 `mission.fresh_until` comparison only, bounding the disagreement
 between the AS's and the consumer's clocks, not a property of state
-reversibility: the response's `exp`, the Mission's expiry and the
-advertised ceiling are hard bounds that no allowance extends. The
-clock-skew tolerance of the response checks
+reversibility. The clock-skew tolerance of the response checks
 ({{mission-status-response}}) decides only whether a response is
 accepted, never how long it is relied on, so a response accepted
 after its `exp` supports no decision ({{mission-status-failures}}).
@@ -739,7 +728,7 @@ Without one, the decision MUST NOT proceed, whatever the cause: an
 error response such as `unavailable`, `rate_limited` or `not_found`, a
 failed check, a network failure, or a lapsed reliance bound. For
 example, a resource server refuses the request it is deciding, and a
-consuming Authorization Server issues no token.
+consuming authorization server issues no token.
 
 That outcome establishes only that the decision cannot proceed; it is
 not evidence that the Mission terminated. A transient failure, such as
@@ -751,7 +740,7 @@ bound.
 ## Anti-Oracle Property {#mission-status-anti-oracle}
 
 A `mission_id` is never a bearer capability. The AS MUST authenticate
-the requester and authorize it for the requested `mission_id` and
+the caller and authorize it for the requested `mission_id` and
 audience.
 
 Unknown `mission_id` values and known-but-unauthorized references MUST
@@ -794,13 +783,12 @@ step 3.
 
 Mission Status outcomes are of two kinds. A success outcome is a found,
 visible, authorized Mission: the AS returns HTTP 200 with a signed
-Mission Status Response, and the outcome is described by `mission.state`
-in that response, not by a separate symbol. A wire error is a hard
-failure: the AS returns the matching HTTP status with a JSON object
-{{RFC8259}} body whose `error` member carries the symbol below.
+Mission Status Response, whose `mission.state`, not a separate symbol,
+describes the outcome. A wire error is a hard failure: the AS returns
+the matching HTTP status with a JSON object {{RFC8259}} body whose
+`error` member carries the symbol below.
 
-Success outcomes (HTTP 200, signed Mission Status Response, described by
-`mission.state`):
+Success outcomes:
 
 | `mission.state` | Description |
 |---|---|
@@ -809,18 +797,11 @@ Success outcomes (HTTP 200, signed Mission Status Response, described by
 | `terminated` | Mission has ended; `mission.termination` gives the reason. |
 {: title="Success outcomes by Mission state"}
 
-A `terminated` Mission's `mission.termination.reason` names how it
-ended, and the set of reasons is not closed: a deployment reports
-whichever reason its profiles define, and a consumer's reliance
-decision never depends on recognizing it. The issuance profile defines
-`revoked` and `expired` ({{I-D.draft-mcguinness-oauth-mission}}), this
-document defines `completed`, and a companion profile can define
-further reasons. The governing rule is the issuance profile's
-forward-compatibility rule:
-every state other than `active` is non-active, whether or not the
-consumer recognizes it.
+A `terminated` Mission's `mission.termination.reason` comes from an
+open set ({{mission-status-response}}), and a consumer's reliance
+decision never depends on recognizing it.
 
-Wire error codes (carried in the `error` member of a JSON body):
+Wire error codes:
 
 | `error` | HTTP | Description |
 |---|---|---|
@@ -835,16 +816,13 @@ Wire error codes (carried in the `error` member of a JSON body):
 {: title="Error codes"}
 
 A client authentication method's own error codes and statuses
-({{mission-status-auth-failures}}) can also appear, in addition to
-those in the table.
+({{mission-status-auth-failures}}) can also appear.
 
-Note the distinction between the access failures: `unauthorized`
-(401) and `invalid_client` (400) mean the request carried no valid
-authentication, whereas a request that is authenticated but not
-authorized for the referenced Mission returns `not_found` (404), never
-an authentication failure, so that an unauthorized reference is
-indistinguishable from an unknown one
-({{mission-status-anti-oracle}}). The error body is:
+`unauthorized` and `invalid_client` mean the request carried no valid
+authentication; a request authenticated but not authorized for the
+referenced Mission receives `not_found`, never an authentication
+failure ({{mission-status-anti-oracle}}). An example not-found
+response:
 
 ~~~ http-message
 HTTP/1.1 404 Not Found
@@ -868,13 +846,13 @@ unauthorized references. For `rate_limited`, the response SHOULD
 include a `Retry-After` header {{RFC9110}} and a `retry_after` body
 member in seconds.
 
-The body is `application/json` with `Cache-Control:
-no-store`. `error_description` is diagnostic and is never
-authorization input. `nonce` correlates the response to the request in
-support of the signed-response and retry model of {{idempotency}} and
-is not, by itself, replay protection, per the absent-or-malformed-`nonce`
-rule above. These endpoints use this OAuth error-response shape, not
-RFC 9457 {{RFC9457}} problem details.
+The body is `application/json` with `Cache-Control: no-store`.
+`error_description` is diagnostic and is never authorization input.
+`nonce` correlates the response to the request in support of the
+signed-response and retry model of {{idempotency}} and is not, by
+itself, replay protection (see the rule above for an absent or
+malformed `nonce`). These endpoints use this OAuth error-response
+shape, not the problem details of {{RFC9457}}.
 
 # Token Introspection Mission Projection {#introspection-projection}
 
