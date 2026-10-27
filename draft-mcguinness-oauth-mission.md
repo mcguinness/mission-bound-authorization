@@ -1928,37 +1928,11 @@ the Intent like any other, but does not interpret the carried policy
 beyond its type's declared capabilities; the resource server or policy
 decision point (PDP) evaluates it at request time.
 
-The following is an example of an Authority Set with a Cedar policy
-entry for a finance audience that consumes Cedar, alongside a
-`mission_resource_access` entry for a calendar audience that does
-not. The Cedar `policySet` is abbreviated:
-
-~~~ json
-[
-  {
-    "type": "account_information",
-    "rarFormat": "cedar",
-    "policySet": "permit(principal, action, resource) when {...};"
-  },
-  {
-    "type": "mission_resource_access",
-    "resource": "https://calendar.example.com",
-    "actions": ["events.read"],
-    "constraints": { "window_days": 30 }
-  }
-]
-~~~
-
-Both entries are committed by the one `authority_hash` and bound to the
-Mission. The Cedar entry is evaluated by the finance audience's PDP; the
-`mission_resource_access` entry is enforced as in
-{{mission-bound-tokens}}.
-
 Because the Cedar profile defines no subset or delegation rule over
-policy sets, the AS carries the Cedar entry as approved, so it does not
+policy sets, the AS carries a Cedar entry as approved, so it does not
 appear in a delegated token or cross-domain grant. Delegation controls
-on other entries, such as the `mission_resource_access` entry, apply to
-those entries only.
+on other entries in the same Authority Set, such as a
+`mission_resource_access` entry, apply to those entries only.
 
 Invoking a Model Context Protocol tool or a function call is modeled
 as a `mission_resource_access` entry with no separate type; the
@@ -2165,8 +2139,10 @@ show the Approver less than the record holds.
 
 Rendering a bound is not the same as enforcing it: a deployment MUST
 NOT present a rendered bound as enforced when no party enforces it.
-The enforcement table ({{rs-responsibilities}}) summarizes which party
-enforces each bound and what holds when that enforcer is absent.
+Which party enforces each bound, and what holds when that party is
+absent, follows from Enforcement Requirements ({{rs-requirements}})
+and, for a resource server that enforces only `scope`, from Scope
+Projection ({{scope-projection}}).
 An AS SHOULD make clear to the Approver which rendered bounds its
 deployment actually enforces, so consent is not given to a limit that
 binds nowhere.
@@ -2206,22 +2182,17 @@ resources. The consent object remains the complete derived Authority
 Set. The following non-normative practices can help make it
 reviewable:
 
-- **Group** entries by resource and action, so the Approver reviews
-  kinds of authority rather than a list of entries, while keeping
-  material differences in constraints visible: a group of identical
-  actions still shows an entry whose resource range or consumption
-  bound is much broader than the rest.
-- **Summarize with drill-down**: a summary covering every resource,
-  action, and bound, with each complete entry one interaction away. A
-  summary is a view of the set, never a substitute for it.
-- **Surface high-risk entries**: make the irreversible,
-  external-commitment, privileged-administration, and
-  consumption-bounded authority of {{approval-authentication}}
-  prominent in the initial view, distinguishing materially different
-  risks and bounds.
-- **Split rather than approve**: when the set is too large or varied
-  for one decision, narrower Missions can keep each approval
-  meaningful ({{applicability}}).
+- **Group** entries by resource and action, keeping visible an entry
+  whose constraints, such as its resource range or consumption bound,
+  differ materially from the rest of its group.
+- **Summarize with drill-down**: cover every resource, action, and
+  bound, with each complete entry one interaction away; a summary is a
+  view of the set, never a substitute for it.
+- **Surface high-risk entries**: make the high-risk authority of
+  {{approval-authentication}} prominent in the initial view,
+  distinguishing materially different risks and bounds.
+- **Split rather than approve** when the set is too large or varied
+  for one decision ({{applicability}}).
 
 Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
@@ -2354,23 +2325,19 @@ Mission. Two richer patterns are out of scope:
 Where a deployment needs either, the Approval Governance Record
 ({{I-D.draft-mcguinness-mission-approval-governance}}) records it,
 and Consent Evidence can carry a partial presentation of that record
-through `co_approvals` and its approval-governance members
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
 The `adjudication.governance_record` member ({{mission-record}})
 marks an approval such a record backs, and {{role-mapping}} shows how
 each scenario assigns the three `approval_basis` roles.
 
-The Approval Governance Record is signed by the Mission Issuer and
-names the Mission's approval event and its Intent and Authority Set
-commitments. The issuer retains it, and this document defines no
-surface that discloses it. An artifact that refers to it does so by
-its record digest, as Consent Evidence's `approval_governance_digest`
-and audit transparency registration do
-({{I-D.draft-mcguinness-mission-audit}}). The record binds a
-governance evaluation to the Mission's approval event. It does not,
-by itself, establish a separate business decision for each subsequent
-action.
+The issuer retains the Approval Governance Record, and this document
+defines no surface that discloses it. An artifact that refers to it
+does so by its record digest
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Conventions and Definitions"). The record binds a governance
+evaluation to the Mission's approval event. It does not, by itself,
+establish a separate business decision for each subsequent action.
 
 Authenticating approval evidence does not, by itself, establish that
 conditions governing later reliance remain satisfied. Whether
@@ -2730,21 +2697,17 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor. The Template
-  profile's Dispatch Handoff
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) returns a handoff
-  grant that establishes no grant lineage; its redemption issues a
-  derived token for the dispatched Mission, creating or extending no
-  grant binding, and the later delegation-family exchange creates
-  that Mission's first grant binding. In the continuation profile's
-  Identity Continuation Transport
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), the root and
-  onward exchanges return ID-JAGs that identify the Mission, and the
-  identity provider's hop record is continuation state, not a grant
-  lineage. Redeeming such an ID-JAG at a Resource AS produces a local
-  derived access token. A Resource AS holds a destination-side grant
-  binding only where it separately establishes a redeemable grant
-  lineage mapped to the Mission, such as a refresh-token family.
+  grant, and expansion, which creates a successor. Redeeming the
+  Template profile's handoff grant
+  ({{I-D.draft-mcguinness-oauth-mission-template}}) issues a derived
+  token and creates or extends no grant binding. In the continuation
+  profile's Identity Continuation Transport
+  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), redeeming a
+  root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
+  at a Resource AS produces a local derived access token. A Resource
+  AS holds a destination-side grant binding only where it separately
+  establishes a redeemable grant lineage mapped to the Mission, such
+  as a refresh-token family.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
@@ -2761,13 +2724,10 @@ The grant binding relates to other mechanisms as follows:
   binding. They relate to their origin only by lineage (the
   child's `parent` member, the successor's `predecessor` member).
 
-A grant binding is also distinct from a decision-time runtime join, such
-as the Mission Join of
+A decision-time runtime join, such as the Mission Join of
 {{I-D.draft-mcguinness-mission-authority-server}}, in which a policy
 decision point joins an ordinary OAuth credential to a Mission per
-request.
-
-Such a join is not a Mission grant binding: it does not make the joined
+request, is not a Mission grant binding: it does not make the joined
 OAuth grant Mission-bound, and it rests on its own authenticated inputs
 and evidence, never on a Mission grant binding.
 
@@ -3639,46 +3599,19 @@ attribute only in a response to a validly signed, audience-correct
 token whose holder its deployment permits to learn the distinction
 ({{denial-disclosure}}).
 
-## Enforcement Responsibilities {#rs-responsibilities}
-
-Every bound this document defines is enforced by a party this document
-names. The following table summarizes which party enforces each bound a
-Mission carries and what holds when that enforcer is absent. Where a
-row names a type specification, it is the one for
-`mission_resource_access`
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}):
-
-| Bound | Enforced by | When that enforcer is absent |
-|---|---|---|
-| `resource` and `actions` | any resource server that enforces `mission_resource_access` per its type specification ({{rs-enforcement}}) | a scope-only resource server is served only where the AS established a safe scope projection ({{scope-projection}}); the AS refuses issuance to it otherwise |
-| per-entry `constraints` | a resource server that understands and enforces the key, per that type's specification ({{rs-enforcement}}) | a Mission-aware Resource Server fails closed; a scope-only resource server is served only where the projection independently accounts for the constraint ({{scope-projection}}) |
-{: title="Enforcement of an entry's resource, actions, and constraints"}
-
 ## Remediation Grains {#remediation-grains}
 
 A denial can carry independent remediation grains: separate
 remediation mechanisms, each naming a next step without granting
-anything. The three remediation grains are:
-
-`mission_denial`:
-: - Carriage: `WWW-Authenticate` attribute
-  - Defined by: This document ({{rs-denials}})
-
-`insufficient_authorization` with `authorization_remediation`:
-: - Carriage: `WWW-Authenticate` error code and parameter
-  - Defined by: {{I-D.draft-ietf-oauth-rar-metadata-remediation}}
-
-Requestable denial:
-: - Carriage: AuthZEN denial response: `context.access_request` with
-    `next_action: request`
-  - Defined by: {{AuthZEN.ARAP}}, profiled by
-    {{I-D.draft-mcguinness-mission-authzen}}
-
-A resource server can also respond with the
-`insufficient_authorization` error code and the
+anything. There are three: the `mission_denial` attribute of the
+`WWW-Authenticate` challenge ({{rs-denials}}); the
+`insufficient_authorization` error code with the
 `authorization_remediation` parameter
-({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names
-what `mission_denial: insufficient_authority` only points at. Each
+({{I-D.draft-ietf-oauth-rar-metadata-remediation}}), which names what
+`mission_denial: insufficient_authority` only points at; and the
+requestable denial of {{AuthZEN.ARAP}}, profiled by
+{{I-D.draft-mcguinness-mission-authzen}}, which routes the same denial
+into a governed access request rather than a fresh derivation. Each
 grain keeps the wire shape and response status its defining document
 gives it.
 
@@ -3699,10 +3632,6 @@ an expansion where that companion is deployed
 ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
 A client holding no refresh grant that covers the entries proposes
 them as for a new Mission.
-
-A third grain, the requestable denial of {{AuthZEN.ARAP}}, profiled by
-{{I-D.draft-mcguinness-mission-authzen}}, routes the same denial into a
-governed access request rather than a fresh derivation.
 
 The three grains compose: a deployment can offer any subset, and none
 widens authority beyond what {{authorization-derivation}} derives
@@ -8064,6 +7993,16 @@ Cross-Domain:
   self-exchange, and each of those paths points to the list; the
   Implementation Map gains an operation index naming the sections each
   operation needs (#1723, D845).
+- Editorial, no requirement change: Policy-Language Types drops its
+  Cedar example; Remediation Grains names its three grains in one
+  paragraph; Grant Bindings and Related Mechanisms leaves the Template
+  and Identity Continuation exchange mechanics to their profiles and
+  merges the Mission Join paragraphs; Single Accountable Approver
+  points to the Approval Governance Record for its mechanics, keeping
+  both limitations; Approval Comprehension condenses its practices; and
+  the Enforcement Responsibilities table is removed, with Rendering
+  Safeguards pointing to Enforcement Requirements and Scope Projection
+  (#1793, D919).
 
 -01
 
