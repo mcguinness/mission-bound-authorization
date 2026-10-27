@@ -54,8 +54,9 @@ const VERIFIER = "issuance-only-capabilities-verifier-0123456789-0123456789";
 const READ = [{ type: "mission_resource_access", resource: PLAIN_RS_AUDIENCE, actions: ["reports:report.read"] }];
 /**
  * Metadata members no assembly advertises (#897): no capability controls them,
- * because the provider serves neither surface. The token endpoint parses no
- * `mission_attenuation_root`, and no route serves the in-process catalog.
+ * because the provider serves neither surface. The token endpoint takes no
+ * attenuation root request (an `attenuating_agent_token` authorization detail),
+ * and no route serves the in-process catalog.
  */
 const WITHDRAWN_MEMBERS = ["mission_attenuation_supported", "service_catalog_endpoint"];
 
