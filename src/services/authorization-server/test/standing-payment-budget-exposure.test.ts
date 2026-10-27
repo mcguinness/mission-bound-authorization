@@ -657,6 +657,44 @@ describe("reading one budget counter in the declared unit (@spec template#standi
     expect(() => readCounterExposure(port(null), key, usd2)).toThrow(BudgetExposureUnavailableError);
   });
 
+  it("renders a never-charged budget counter on the standing-payment consent page as zero at the exponent the Enforcement Scope Statement declares (#813, D877)", async () => {
+    const issuer = "http://localhost:15008";
+    const statement = meteringStatement(issuer);
+    statement.extensions.budget_metering.unit = { currency: "USD", exponent: 3 };
+    const sessions = new ApprovalSessionStore();
+    const built = await buildAuthorizationServer({
+      issuer,
+      capabilities: ON,
+      approvalSessions: sessions,
+      dispatchPolicies: POLICIES,
+      enforcementScopeStatement: statement,
+      budgetExposure: new FakeBudgetCounters(),
+    });
+    const listening = built.provider.listen(15008);
+    try {
+      const proposed = await fetch(`${issuer}/templates/proposals`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+        body: JSON.stringify({
+          ...proposal("bob"),
+          recipients: { subjects: [{ iss: issuer, sub: "bob" }], agents: ["ap-agent"] },
+        }),
+      });
+      const { proposal_id } = (await proposed.json()) as { proposal_id: string };
+      expect(proposed.status).toBe(201);
+      const headers = floorApprovalHeaders(sessions, proposal_id, "", { sub: "bob", subject: null });
+      const page = await fetch(`${issuer}/templates/proposals/${proposal_id}`, {
+        headers: { cookie: headers.cookie as string },
+      });
+      expect(page.status).toBe(200);
+      expect(await page.text()).toContain(
+        `Budget ${OWNER}/${BUDGET_ID} exposure: consumption to date 0.000 USD committed; outstanding reservations 0.000 USD reserved and 0.000 USD held pending reconciliation, as read at this rendering.`,
+      );
+    } finally {
+      listening.close();
+    }
+  });
+
   it("refuses a counter reading when no unit is declared, as when the Enforcement Scope Statement declares none (#813, D877)", () => {
     expect(() => readCounterExposure(port(undefined), key, undefined)).toThrow(BudgetExposureUnavailableError);
   });
@@ -775,6 +813,11 @@ describe("an ordinary deferral's approval is unchanged by the budget exposure (@
     );
     const ordinary = renderDeferralPage(review, context, {});
     expect(ordinary).not.toContain("budget-exposure");
+    // As the page rendered before the budget exposure: one line per section
+    // between the expiry and the form, the empty ones included, and no more.
+    expect(ordinary.slice(ordinary.indexOf("</time></p>"), ordinary.indexOf("<form"))).toBe(
+      `</time></p>\n\n<h2>The chain's outstanding restrictions (this approval clears none)</h2>\n<p class="restrictions">None.</p>\n\n\n`,
+    );
     // The exposure section is the only difference a standing-payment
     // successor's page makes: removing it leaves the ordinary page exactly.
     const metered = renderDeferralPage(review, deferralContext(review, FAR_FUTURE, exposure).context, {});
