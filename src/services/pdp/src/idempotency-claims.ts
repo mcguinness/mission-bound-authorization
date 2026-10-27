@@ -209,6 +209,35 @@ export interface ClaimDomainOptions {
    * {@link onReservationHeld} raised. A hook that throws is ignored.
    */
   onReservationReleased?: (released: ReleasedReservation) => void;
+  /**
+   * @spec metering#settlement-contract "Conflicting redelivery",
+   * metering#settlement-states "Conflicting settlement" (#816, D877): told of
+   * every settlement record that conflicts with the one applied to its claim
+   * (a second `execution_id`, or the same one with another outcome), once
+   * per distinct record, after the transaction that retained it commits.
+   * The applied settlement is unchanged and the record is retained; the
+   * deployment wires this to its audit and alarm path. A hook that throws is
+   * ignored.
+   */
+  onSettlementConflict?: (conflict: SettlementConflict) => void;
+}
+
+/**
+ * A settlement record that conflicts with the applied one, as the operator
+ * alarm reports it: identifiers and outcomes only, never the record's
+ * parameters.
+ */
+export interface SettlementConflict {
+  evaluation_id: string;
+  /** The `mission.id` of the claim's idempotency scope. */
+  mission_id: string | undefined;
+  /** The conflicting record's attempt and outcome. */
+  execution_id: string;
+  outcome: string;
+  /** The settlement applied to the claim, left unchanged. */
+  applied_execution_id: string;
+  applied_outcome: string;
+  detected_at: string;
 }
 
 /** A held reservation since released, as the operator notice reports it: identifiers and the cause only. */
@@ -570,6 +599,20 @@ const MIGRATIONS = [
     cause TEXT NOT NULL,
     at_ms INTEGER NOT NULL
   ) STRICT;`,
+  // @spec metering#settlement-contract "Conflicting redelivery" (#816, D877):
+  // each settlement record that conflicts with the applied one, retained as
+  // evidence once per (evaluation, attempt, outcome). Never purged.
+  `CREATE TABLE settlement_conflicts (
+    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+    evaluation_id TEXT NOT NULL,
+    execution_id TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    applied_execution_id TEXT NOT NULL,
+    applied_outcome TEXT NOT NULL,
+    record_json TEXT NOT NULL,
+    received_at_ms INTEGER NOT NULL,
+    UNIQUE (evaluation_id, execution_id, outcome)
+  ) STRICT;`,
 ];
 
 /**
@@ -614,6 +657,26 @@ interface CounterRow {
  * commits such a reservation.
  */
 const NO_PERMIT_RELEASES: ReadonlySet<string> = new Set(["not_persisted", "prior_boot_unpersisted", "abandoned_unpersisted"]);
+
+/**
+ * @spec metering#settlement-contract (#816, D877): the refusal a conflicting
+ * settlement record receives. It keeps the reason a second attempt always
+ * received (the claim is already settled and the record is not applied to
+ * it); what changed is that the record is now retained and alarmed, and that
+ * the same attempt with another outcome receives it too instead of a
+ * duplicate acknowledgement.
+ */
+const CONFLICTING_SETTLEMENT = "already_settled";
+
+/** The `mission.id` of a claim's idempotency scope, or `undefined` where the stored scope does not parse. */
+function missionIdOf(row: ClaimRow): string | undefined {
+  try {
+    const id = (JSON.parse(row.scope_json) as { mission?: { id?: unknown } }).mission?.id;
+    return typeof id === "string" ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** The causes a budget correction commits under: a redelivery of one is acknowledged as a duplicate. */
 const CORRECTION_CAUSE = /^(corrected_completed:|operator_reconciled:executed:)/;
@@ -1326,8 +1389,12 @@ export class IdempotencyClaimDomain {
       if (redeemer !== executionId) return { accepted: false, reason: "not_the_redeeming_attempt" };
     }
     const outcomeRef = typeof content.evidence_id === "string" ? content.evidence_id : executionId;
-    const settled = this.tx(() => this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled"));
-    if (settled.accepted || next !== "completed") return settled;
+    const settled = this.tx(() =>
+      this.applySettlement(requester, evaluationId, executionId, next, String(outcome), outcomeRef, "settled", record),
+    );
+    // A conflicting record was retained and alarmed; its budget effect, if
+    // any, is already applied (a conflicting `completed` commits).
+    if (settled.accepted || next !== "completed" || settled.reason === CONFLICTING_SETTLEMENT) return settled;
     // @spec metering#settlement-states (#816, owner review of #1713): the
     // claim refused the record (its window closed, it was purged, or it was
     // settled otherwise), but the budget's accounting does not depend on the
@@ -1425,6 +1492,7 @@ export class IdempotencyClaimDomain {
     outcome: string,
     outcomeRef: string,
     cause: string,
+    record?: unknown,
   ): SettlementResult {
     const nowMs = this.now().getTime();
     const found = this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined;
@@ -1432,9 +1500,24 @@ export class IdempotencyClaimDomain {
     if (!row) return { accepted: false, reason: "unknown_evaluation" };
     if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
     if (row.execution_id !== null) {
-      return row.execution_id === executionId && (row.state === "completed" || row.state === "failed")
-        ? { accepted: true, state: row.state, duplicate: true }
-        : { accepted: false, reason: "already_settled" };
+      // A redelivery of the applied record (same attempt, same outcome) is
+      // acknowledged and applied nothing.
+      if (row.execution_id === executionId && row.outcome === outcome && (row.state === "completed" || row.state === "failed")) {
+        return { accepted: true, state: row.state, duplicate: true };
+      }
+      // @spec metering#settlement-contract "Conflicting redelivery",
+      // metering#settlement-states "Conflicting settlement" (#816, D877): a
+      // second `execution_id`, or the same one with another outcome, fails
+      // closed. The applied settlement is unchanged, the record is retained
+      // and the conflict alarmed; it is never acknowledged as a duplicate. A
+      // conflicting `completed` proves the money moved, so the claim's
+      // reservations commit (a released one included, with the overspend
+      // alert), through the same transition as a correction.
+      this.retainConflict(row, executionId, outcome, record, nowMs);
+      if (next === "completed") {
+        this.transitionReservations(evaluationId, ["reserved", "held", "released"], "committed", `conflict_completed:${outcomeRef}`, nowMs);
+      }
+      return { accepted: false, reason: CONFLICTING_SETTLEMENT };
     }
     if (row.state !== "permit_issued" && row.state !== "unresolved") return { accepted: false, reason: `not_settleable_${row.state}` };
     const horizonMs = this.classes.get(row.action_class)?.horizonMs;
@@ -1448,6 +1531,64 @@ export class IdempotencyClaimDomain {
     this.log(row, row.state, next, cause, nowMs);
     this.settleReservations(evaluationId, next, outcome, nowMs);
     return { accepted: true, state: next, duplicate: false };
+  }
+
+  /**
+   * @spec metering#settlement-contract "Conflicting redelivery" (#816,
+   * D877): retain a conflicting settlement record, once per (evaluation,
+   * attempt, outcome), and queue {@link ClaimDomainOptions.onSettlementConflict}
+   * for after the enclosing transaction commits. A redelivery of a record
+   * already retained alarms nothing new.
+   */
+  private retainConflict(row: ClaimRow, executionId: string, outcome: string, record: unknown, nowMs: number): void {
+    const inserted = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO settlement_conflicts (evaluation_id, execution_id, outcome, applied_execution_id, applied_outcome,
+           record_json, received_at_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(row.evaluation_id, executionId, outcome, row.execution_id ?? "", row.outcome ?? "", JSON.stringify(record ?? null), nowMs)
+      .changes;
+    if (inserted !== 1) return;
+    this.log(row, row.state, row.state, `conflict_retained:${outcome}`, nowMs);
+    const hook = this.options.onSettlementConflict;
+    if (!hook) return;
+    const conflict: SettlementConflict = {
+      evaluation_id: row.evaluation_id,
+      mission_id: missionIdOf(row),
+      execution_id: executionId,
+      outcome,
+      applied_execution_id: row.execution_id ?? "",
+      applied_outcome: row.outcome ?? "",
+      detected_at: new Date(nowMs).toISOString(),
+    };
+    afterCommit(this.db, () => {
+      try {
+        hook(conflict);
+      } catch {
+        /* the alarm sink's failure never reaches the claim domain */
+      }
+    });
+  }
+
+  /**
+   * @spec metering#settlement-contract (#816, D877): the conflicting
+   * settlement records retained for one evaluation, oldest first, for audit.
+   */
+  settlementConflicts(evaluationId: string): Array<{ execution_id: string; outcome: string; applied_execution_id: string; applied_outcome: string; record: unknown }> {
+    return this.tx(() =>
+      (
+        this.db
+          .prepare("SELECT * FROM settlement_conflicts WHERE evaluation_id = ? ORDER BY seq")
+          .all(evaluationId) as Array<{ execution_id: string; outcome: string; applied_execution_id: string; applied_outcome: string; record_json: string }>
+      ).map((r) => ({
+        execution_id: r.execution_id,
+        outcome: r.outcome,
+        applied_execution_id: r.applied_execution_id,
+        applied_outcome: r.applied_outcome,
+        record: JSON.parse(r.record_json) as unknown,
+      })),
+    );
   }
 
   /**
@@ -1588,10 +1729,19 @@ export class IdempotencyClaimDomain {
   /** Apply what time and restart alone decide for one row; `undefined` when it was purged. */
   private advance(row: ClaimRow, nowMs: number): ClaimRow | undefined {
     let current = row;
+    // @spec metering#retry (#816, D877): a metered claim (one that carries
+    // budget reservations) is never purged by time. The Metering profile
+    // requires the horizon to reach at least the Mission's `expires_at`, and
+    // the owner's refinement to cover every path that could present the
+    // operation identity again; this PDP observes neither a Mission's expiry
+    // nor its successors' closure, so the row is kept as its reservations
+    // are, and the key resolves against it for as long as any credential of
+    // the Mission is accepted. Unmetered claims keep the class horizon.
     if (
       (current.state === "completed" || current.state === "failed") &&
       current.retain_until_ms !== null &&
-      nowMs >= current.retain_until_ms
+      nowMs >= current.retain_until_ms &&
+      !this.carriesReservations(current.evaluation_id)
     ) {
       this.db
         .prepare("DELETE FROM claims WHERE scope_digest = ? AND idempotency_key = ?")
@@ -1757,10 +1907,12 @@ export class IdempotencyClaimDomain {
    * A metered retry is suppressed instead, and reserves nothing more.
    */
   private metered(row: ClaimRow, input: ClaimInput): boolean {
-    return (
-      input.budget !== undefined ||
-      this.db.prepare("SELECT 1 FROM budget_reservations WHERE evaluation_id = ? LIMIT 1").get(row.evaluation_id) !== undefined
-    );
+    return input.budget !== undefined || this.carriesReservations(row.evaluation_id);
+  }
+
+  /** Whether an evaluation charged any budget counter (its claim is metered). */
+  private carriesReservations(evaluationId: string): boolean {
+    return this.db.prepare("SELECT 1 FROM budget_reservations WHERE evaluation_id = ? LIMIT 1").get(evaluationId) !== undefined;
   }
 
   private select(scopeDigest: string, key: string): ClaimRow | undefined {
