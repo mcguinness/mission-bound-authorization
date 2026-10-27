@@ -8,6 +8,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { kernelStoreFromEnv, loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
+import { evidenceKeysFromEnv } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
 
@@ -47,6 +48,8 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   const signingKeys = signingKeysFromEnv(env);
   // @spec #250: a kernel kept across restarts, only with a key ring.
   const kernelStore = kernelStoreFromEnv(env);
+  // @spec #831 (scope inventory): durable evidence keys, or keys generated per boot.
+  const evidenceKeys = evidenceKeysFromEnv(env);
   return {
     openfgaUrl,
     presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey,
@@ -55,6 +58,7 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
     resourcePolicyStore,
     signingKeys,
     ...(kernelStore ? { kernelStore } : {}),
+    ...(evidenceKeys ? { evidenceKeys } : {}),
     target: "as-native",
   };
 }
@@ -114,6 +118,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
       stack.pdpClaims.close();
       stack.writeReservations.close();
       stack.evidenceRetention.close();
+      stack.evidenceKeySets.close();
       // Last: everything above may still read the kernel while it stops.
       if (options.kernelStore) stack.kernel.close();
     })());
