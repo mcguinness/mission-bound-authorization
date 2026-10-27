@@ -33,6 +33,7 @@
  */
 
 import { existsSync } from "node:fs";
+import { isAbsolute } from "node:path";
 import { type Database, openDurableStore, openStore } from "@mission/store";
 
 /** The store's owner, recorded on first open. */
@@ -86,6 +87,29 @@ export function openRasRedemptionStore(file: string): Database {
     );
   }
   return db;
+}
+
+/**
+ * @spec #1767 (D901): a launcher's redemption store, from its environment.
+ * `MISSION_RAS_REDEMPTIONS` names the store file, an absolute path created once
+ * with `pnpm ras-redemptions init`. It is required whenever `MISSION_KEY_RING`
+ * is set: issuer keys that survive a restart let an ID-JAG the RAS redeemed
+ * before it verify after it, so persistent keys require persistent
+ * consumption records (D366). Without a key ring and without the variable,
+ * the claims stay in memory. Nothing here creates a store.
+ */
+export function rasRedemptionsFromEnv(env: Readonly<Record<string, string | undefined>>): { file: string } | undefined {
+  const file = env.MISSION_RAS_REDEMPTIONS?.trim();
+  if (!file) {
+    if (env.MISSION_KEY_RING?.trim()) {
+      throw new RasRedemptionStoreError(
+        "MISSION_KEY_RING requires MISSION_RAS_REDEMPTIONS: with issuer keys that survive a restart, an ID-JAG the RAS redeemed before it would redeem again (create the store once with `pnpm ras-redemptions init --file <path>`)",
+      );
+    }
+    return undefined;
+  }
+  if (!isAbsolute(file)) throw new RasRedemptionStoreError(`MISSION_RAS_REDEMPTIONS must be an absolute path, not ${file}`);
+  return { file };
 }
 
 /** An in-memory store, for a RAS whose claims may die with it. */
