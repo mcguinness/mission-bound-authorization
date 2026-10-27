@@ -39,7 +39,7 @@ type Handler = (req: IncomingMessage, res: ServerResponse, form: URLSearchParams
 let server: Server;
 let base: string;
 let handler: Handler;
-const requests: Array<{ method: string; path: string; search: string; contentType: string; form: URLSearchParams }> = [];
+const requests: Array<{ method: string; path: string; search: string; contentType: string; authorization?: string; form: URLSearchParams }> = [];
 let clientKey: CryptoKey;
 let clientPublic: Record<string, unknown>;
 
@@ -79,6 +79,7 @@ beforeAll(async () => {
         path: url.pathname,
         search: url.search,
         contentType: req.headers["content-type"] ?? "",
+        ...(req.headers.authorization !== undefined ? { authorization: req.headers.authorization } : {}),
         form,
       });
       void handler(req, res, form);
@@ -201,6 +202,20 @@ async function expectRefusedUncached(
   expect(requests.length).toBe(before + 2);
 }
 
+describe("MissionStatusResolver authenticates without a shared client secret (@spec status#mission-status-authentication)", () => {
+  it("presents private_key_jwt alone: an asymmetrically signed client assertion, with no Authorization header, no client_secret and no bare client_id", async () => {
+    expect((await resolver().resolve(ref)).ok).toBe(true);
+    const [request] = requests;
+    expect(request?.authorization).toBeUndefined();
+    expect(request?.form.has("client_secret")).toBe(false);
+    expect(request?.form.has("client_id")).toBe(false);
+    expect(request?.form.get("client_assertion_type")).toBe("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
+    const alg = decodeProtectedHeader(request?.form.get("client_assertion") ?? "").alg;
+    expect(["HS256", "HS384", "HS512", "none"]).not.toContain(alg);
+    expect(alg).toBe("ES256");
+  });
+});
+
 describe("MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2)", () => {
   it("reads the Mission at the issuer's Status endpoint as the profile's form POST, authenticated by private-key JWT, audience-scoped and nonce-bound, and builds the view", async () => {
     const r = resolver();
@@ -282,6 +297,14 @@ describe("MissionStatusResolver: a response that does not verify establishes not
   it("refuses another issuer's response", async () => {
     handler = respond((p) => {
       p.iss = "https://impostor.example";
+    });
+    await expectRefusedUncached(resolver(), "unverifiable");
+  });
+
+  it("refuses a response naming another issuer throughout, though the issuer's own Status key signed it: the expected issuer is the resolver's configuration, never the response's (@spec status#mission-status, #1724 D5)", async () => {
+    handler = respond((p) => {
+      p.iss = "https://impostor.example";
+      mission(p).issuer = "https://impostor.example";
     });
     await expectRefusedUncached(resolver(), "unverifiable");
   });

@@ -191,6 +191,61 @@ export function refreshingStatusKeys(
   };
 }
 
+/** One Mission issuer's Status operation, as a consumer configures it ({@link missionStatusIssuer}). */
+export interface MissionStatusIssuer {
+  /** The issuer's validated metadata document. */
+  metadata: Record<string, unknown>;
+  /** Its advertised `mission_status_endpoint`. */
+  statusEndpoint: string;
+  /** The declared Status keys at its `jwks_uri`, and the means to replace the declared `kid`s ({@link refreshingStatusKeys}). */
+  keys: JWTVerifyGetKey;
+  trust: (kids: readonly string[]) => void;
+}
+
+/**
+ * @spec status#mission-status (#1724 D5): a consumer resolves the Mission
+ * Status endpoint "from the expected issuer, which comes from its own issuer
+ * trust or configuration, never from the response under verification". The
+ * issuer is `expected`; its metadata is validated as RFC 8414 Section 3.3
+ * requires, its `issuer` equal to the identifier the consumer looked up; the
+ * endpoint is the one that metadata advertises; and responses verify only
+ * under the declared Status `kids` at that metadata's `jwks_uri`.
+ *
+ * `location` is where the consumer's configuration says the issuer's metadata
+ * is served: the issuer identifier itself unless the deployment places it
+ * elsewhere (the MAS pilot names its MAS by URL). `read` fetches one JSON
+ * document. Metadata for another issuer, or advertising no
+ * `mission_status_endpoint` or no `jwks_uri`, is refused, naming why.
+ */
+export async function missionStatusIssuer(
+  expected: string,
+  opts: {
+    read: (url: string) => Promise<unknown>;
+    location?: string;
+    kids: readonly string[];
+    algs: readonly string[];
+    now?: () => number;
+    fetch?: IssuerKeysFetch;
+  },
+): Promise<MissionStatusIssuer> {
+  const at = (opts.location ?? expected).replace(/\/$/, "");
+  const metadata = await opts.read(`${at}/.well-known/openid-configuration`);
+  if (!isRecord(metadata) || metadata.issuer !== expected) {
+    const named = isRecord(metadata) ? String(metadata.issuer) : "nothing";
+    throw new Error(`the issuer metadata at ${at} names ${named}, not the expected issuer ${expected}`);
+  }
+  if (typeof metadata.mission_status_endpoint !== "string") {
+    throw new Error(`the issuer at ${at} advertises no mission_status_endpoint`);
+  }
+  if (typeof metadata.jwks_uri !== "string") throw new Error(`the issuer at ${at} advertises no jwks_uri`);
+  const { keys, trust } = refreshingStatusKeys(metadata.jwks_uri, opts.kids, {
+    algs: opts.algs,
+    ...(opts.now ? { now: opts.now } : {}),
+    ...(opts.fetch ? { fetch: opts.fetch } : {}),
+  });
+  return { metadata, statusEndpoint: metadata.mission_status_endpoint, keys, trust };
+}
+
 /**
  * @spec status#mission-status-authentication: a client of the Mission Status
  * endpoint that authenticates by private-key JWT (RFC 7523).
