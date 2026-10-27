@@ -834,6 +834,38 @@ Mission-bound token:
   references or carries Mission data without the gates is not
   Mission-bound ({{conformance}}).
 
+Applicable entry:
+: An `authorization_details` entry that applies, under the entry's
+  type, to a request to a resource server: where the type defines a
+  `resource`, the request's operation target matches it under that type
+  ({{token-response}}). {{rs-requirements}} governs an entry whose type
+  the resource server does not implement, or whose type-defined
+  enforcement it cannot complete.
+
+Delegate:
+: A sub-agent, service, or tool, itself an OAuth client authenticated
+  as a distinct actor, that obtains a delegated token by Token Exchange
+  ({{delegation}}).
+
+Delegating party:
+: The holder of a Mission-bound access token that obtains a
+  designation for a delegate: the Mission's approved agent, or a
+  delegate delegating further ({{designation}}).
+
+Designation:
+: The delegating party's authorization, obtained by Token Exchange,
+  for one delegate to obtain delegated tokens ({{designation}}).
+
+Delegated exchange (delegated token):
+: The Token Exchange in which a delegate redeems a designation naming
+  it for a delegated token, whose `act` claim names that delegate as
+  the current actor ({{delegated-exchange}}).
+
+Self-exchange (no-actor exchange):
+: A Token Exchange with no actor in which an agent presents its own
+  Mission-bound access token to obtain a narrowed one; it delegates
+  nothing ({{self-exchange}}).
+
 ## Principal Model {#principal-model}
 
 This document maps principals onto native OAuth constructs:
@@ -3566,10 +3598,9 @@ specifies.
 A resource server consults the issuer about a Mission-bound token in
 one of three cases, with different obligations:
 
-- **JWT state observation.** A Mission-state-aware resource server
-  holding a JWT Mission-bound token introspects it to observe the
-  Mission's current state per request instead of waiting for the
-  token to expire.
+- **JWT state observation.** A resource server that observes Mission
+  state per request introspects the JWT Mission-bound token it holds,
+  instead of waiting for the token to expire.
 - **Opaque-token consumption.** For an opaque Mission-bound token,
   introspection is the claims carriage: an active response carries
   what the JWT would ({{introspected-consumption}}).
