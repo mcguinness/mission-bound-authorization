@@ -1066,6 +1066,14 @@ operation it has not adopted, with `invalid_request`
 ({{mission-status-errors}}) before looking up the Mission, leaving the
 Mission unchanged, so the refusal discloses nothing about it.
 
+The AS answers a successful base operation with the signed,
+state-only Mission Status Response ({{mission-status-response}}),
+whose `aud` is the authenticated client's `client_id` and whose
+`nonce` is the request's. A retransmit of an accepted request replays
+that original response ({{idempotency}}). An extension operation's
+outcome and result shape are those its companion profile defines
+(below).
+
 A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior,
