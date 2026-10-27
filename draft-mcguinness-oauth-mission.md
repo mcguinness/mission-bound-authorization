@@ -2761,9 +2761,6 @@ tokens signed under it remain valid. A token the AS issues only for
 presentation back to itself, such as a designation ({{designation}}),
 creates no publication duty by itself.
 
-Every emitted `authorization_details` entry is a subset of a Mission
-Authority Set entry ({{subset}}).
-
 ## Audience and Token Response {#token-response}
 
 The AS audience-restricts the token per {{Section 2 of RFC8707}} and
