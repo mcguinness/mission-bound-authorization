@@ -341,6 +341,7 @@ export class AgentClient {
    *
    * @spec aauth#section-8.1
    * @spec aauth#section-8.2
+   * @spec mission-aauth#reference
    */
   async proposeMission(proposal: Record<string, unknown>): Promise<MissionApproval> {
     const { mission_endpoint: endpoint } = await this.personServer();
@@ -431,6 +432,7 @@ export class AgentClient {
    * different.
    *
    * @spec aauth#section-6.7.3
+   * @spec mission-aauth#ref-propagation
    */
   async verifyChallenge(
     resourceToken: string,

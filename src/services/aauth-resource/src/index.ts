@@ -156,6 +156,7 @@ export interface ResourceTokenInput {
  *
  * @spec aauth#section-6.7
  * @spec aauth#section-6.7.1
+ * @spec mission-aauth#ref-propagation
  */
 export function buildResourceTokenClaims(input: ResourceTokenInput): Record<string, unknown> {
   const { presented } = input;

@@ -218,6 +218,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
    * @spec aauth#section-8.2
    * @spec aauth#section-8.7
    * @spec aauth#section-8.8
+   * @spec mission-aauth#reference
    */
   const gateMission = (
     agent: string,
@@ -328,6 +329,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     }
   };
 
+  /** @spec mission-aauth#ref-propagation: a governed agent's missionless token request. */
   const governedMissionless = () =>
     new PsError(
       403,
@@ -480,6 +482,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
    * POST {person_token_endpoint}.
    *
    * @spec aauth#section-7.1
+   * @spec mission-aauth#ref-propagation
    */
   const personToken = async (
     res: ServerResponse,
@@ -536,6 +539,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
    * @spec aauth#section-6.7.2
    * @spec aauth#section-7.2
    * @spec aauth#section-9.4.1
+   * @spec mission-aauth#ref-propagation
    */
   const authToken = async (
     res: ServerResponse,

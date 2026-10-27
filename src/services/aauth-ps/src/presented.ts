@@ -123,6 +123,7 @@ function sameOrBothAbsent(a: unknown, b: unknown): boolean {
  * mismatch or omission is `invalid_resource_token`.
  *
  * @spec aauth#section-6.7.2
+ * @spec mission-aauth#ref-propagation
  */
 export function matchResourceToken(presented: VerifiedToken, resourceToken: VerifiedToken): void {
   const p = presented.payload;
