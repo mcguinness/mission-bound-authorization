@@ -518,6 +518,7 @@ import {
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
 import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { ActivationRefusedError } from "../kernel/authority-source.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
   type DischargeReceiptObservation,
@@ -4062,13 +4063,17 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
    * approval session for the interaction, or a trusted headless approval
    * service with the Subject it names. Read-only, so no CSRF: it authorizes
    * nothing, and the decision authenticates its principal itself and must
-   * present the same key. Undefined for an anonymous rendering, a preview no
-   * decision can rest on.
+   * present the same key. Undefined when neither authenticates the request:
+   * the Mission approval page then renders nothing (#1802). The achieved
+   * context (`acr`, `auth_time`) and whether it is the browser login
+   * (`interactive`) are the trusted surface's, as the decision reads them.
    */
   const renderPrincipal = (
     ctx: KoaCtx,
     uid: string,
-  ): { key: string; subject: string; sub: string; selected?: string } | undefined => {
+  ):
+    | { key: string; subject: string; sub: string; selected?: string; acr: string; auth_time: number; interactive: boolean }
+    | undefined => {
     const cookie = ctx.get("cookie");
     const sessionKey = opts.approvalSessions?.sessionKey(cookie, uid);
     const session = opts.approvalSessions?.principalFor(cookie, uid);
@@ -4078,6 +4083,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         subject: session.subject ?? session.sub,
         sub: session.sub,
         ...(session.subject ? { selected: session.subject } : {}),
+        acr: session.acr,
+        auth_time: session.auth_time,
+        interactive: true,
       };
     }
     const token = ctx.get("x-service-token");
@@ -4092,6 +4100,9 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       subject,
       sub: service.approver.sub,
       ...(selected ? { selected } : {}),
+      acr: service.approver.acr,
+      auth_time: service.approver.auth_time,
+      interactive: false,
     };
   };
 
@@ -4310,21 +4321,53 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // `user_code` started renders only while its session is pending, and
       // only for an authenticated Approver: entering the code selected the
       // session and established neither the Approver nor the Subject.
+      const uid = interactionMatch[1] as string;
       const deviceJti = (details as { deviceCode?: string }).deviceCode;
       const deviceSession = deviceJti ? await loadDeviceSession(provider, deviceJti) : undefined;
-      const deviceSubject = deviceJti
-        ? opts.approvalSessions?.subjectFor(ctx.get("cookie"), interactionMatch[1] as string)
-        : undefined;
       if (deviceJti && !devicePending(deviceSession)) {
         ctx.status = 400;
         ctx.body = { error: "invalid_request", error_description: "the device authorization session is no longer pending" };
         return;
       }
-      if (deviceJti && !deviceSubject) {
-        ctx.status = 401;
-        ctx.body = { error: "unauthorized", error_description: "authenticate as the Approver to review this request" };
+      // @spec mission#direct-approval-steps, mission#approval-preparation
+      // (steps 1 to 3, #1802): nothing of the request renders before the AS
+      // has established the Approver, the Subject with the Approver's
+      // authority to approve for it, and the authority source with the
+      // Approver's authority to activate it. A refusal answers a notice that
+      // carries nothing from the request and mints no revision. One that
+      // concerns this Approver alone (403) leaves the interaction pending, so
+      // another Approver can sign in. The decision runs every check again
+      // (#1446): authority withdrawn after the rendering still refuses there.
+      const loginHref = (selected?: string) =>
+        opts.approverLogin && opts.approvalSessions
+          ? `/interaction/${encodeURIComponent(uid)}/approver-login${selected ? `?${new URLSearchParams({ subject: selected })}` : ""}`
+          : undefined;
+      const notice = (status: 401 | 403, error: string, message: string, href?: string) => {
+        ctx.status = status;
+        ctx.set("cache-control", "no-store");
+        ctx.set("content-type", "text/html; charset=utf-8");
+        ctx.body = approvalNoticePage(error, message, href);
+      };
+      // Step 1: the Approver, from this user agent's approval session for the
+      // interaction or a trusted headless approval service, never from the
+      // interaction cookie, which the initiating client also holds. A device
+      // approval is made on the verification user agent alone.
+      // @spec mission#approval-context-changes (#1446, D583): the principal
+      // this rendering is made to, whose revision a decision must name.
+      const rendering = renderPrincipal(ctx, uid);
+      if (
+        !rendering ||
+        (deviceJti && !rendering.interactive) ||
+        rendering.auth_time > Math.floor(kernel.nowDate().getTime() / 1000)
+      ) {
+        notice(401, "unauthorized", "Sign in as the Approver to review this request.", loginHref());
         return;
       }
+      // @spec mission#approval-authentication (#826): the Subject is the one
+      // the authenticated approval surface selected, or the Approver for a
+      // self-approval; never `login_hint`, which concerns the Approver.
+      const approver = rendering.sub;
+      const subject = rendering.subject;
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
       // object intent_hash commits), never the envelope.
@@ -4376,6 +4419,60 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
+      // @spec progressive#progressive-authorization (#1017): the ceiling this
+      // deployment's approval surface offers, rendered for the Approver; the
+      // decision consents only exactly this offer. A device approval offers
+      // none (#1256).
+      const ceilingOffer =
+        !deviceJti && opts.progressive?.ceilingOffer
+          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
+          : undefined;
+      // Step 2 (#1802): the decision's own predicates for who may approve:
+      // the Subject is known, and the Approver is that Subject or holds
+      // approve-for authority over it under local policy; write-bearing
+      // authority needs a distinct Approver with the approver role (D37).
+      if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
+        notice(403, "approval_forbidden", "This Approver may not approve for the Subject this approval selected.");
+        return;
+      }
+      const writeBearing = authority.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
+      if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
+        notice(403, "approval_forbidden", "This Approver may not approve this request.");
+        return;
+      }
+      // Step 3 (#1802): the source this approval draws on, established for
+      // this Subject, Approver and client from the trusted catalog (gates 1,
+      // 2, 4 and 5), and the derived set within its authority (gate 3), on one
+      // resolution, which the page and its revision both show. An Approver
+      // who may not activate the source is refused alone (403); every other
+      // refusal holds for any Approver and keeps the derivation refusal's
+      // mapping.
+      let established: ReturnType<typeof kernel.establishAuthoritySource>;
+      try {
+        established = kernel.establishAuthoritySource({
+          clientId: String(params.client_id),
+          subject: { iss: opts.issuer, sub: subject },
+          approver: { iss: opts.issuer, sub: approver },
+        });
+        kernel.assertAuthorityWithinSource(established, authority);
+      } catch (e) {
+        if (e instanceof ActivationRefusedError) {
+          notice(403, "access_denied", "This Approver may not activate the authority this request draws on.");
+          return;
+        }
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
+        }
+        throw e;
+      }
+      // @spec mission#approval-event (step 5) — the rendering MUST identify the
+      // authority source and, for `organizational`, the governed policy it
+      // draws on: the source step 3 established. A catalog change before the
+      // decision re-establishes the source there, and refuses rather than
+      // committing what was never rendered.
+      const authoritySource: AuthoritySource = established.provenance;
       // @spec mission#intent-submission-evidence — MATERIAL verified
       // provenance is INPUT to the approval rendering: the Approver sees the
       // normalized verified facts (never the raw artifacts), re-verified from
@@ -4392,34 +4489,6 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             opts.clients.find((c) => c.client_id === params.client_id),
           ),
           requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
-        });
-      } catch (e) {
-        if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
-          return;
-        }
-        throw e;
-      }
-      // @spec mission#approval-event (step 5) — the rendering MUST identify the
-      // authority source and, for `organizational`, the governed policy it
-      // draws on. Resolved from the deployment's trusted catalog at render
-      // time; a catalog change before the decision re-enters `kernel.approve`
-      // with the changed inputs, which re-establishes the source and refuses
-      // rather than committing what was never rendered. The Subject the
-      // decision binds is the one the approval session for this interaction
-      // selected (#827, #826; `login_hint` concerns the Approver), so the
-      // rendering resolves for it; without a session it shows only a
-      // provenance every source of this client shares.
-      // @spec mission#approval-context-changes (#1446, D583): the principal
-      // this rendering is made to, whose revision a decision must name.
-      const rendering = renderPrincipal(ctx, interactionMatch[1] as string);
-      const selectedSubject = rendering?.subject;
-      let authoritySource: AuthoritySource;
-      try {
-        authoritySource = kernel.renderAuthoritySource({
-          clientId: String(params.client_id),
-          ...(selectedSubject ? { subject: { iss: opts.issuer, sub: selectedSubject } } : {}),
         });
       } catch (e) {
         if (e instanceof IntentError) {
@@ -4459,76 +4528,65 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         asyncDelegation: opts.familyStore !== undefined,
         progressive: opts.progressive !== undefined,
       });
-      // @spec progressive#progressive-authorization (#1017): the ceiling this
-      // deployment's approval surface offers, rendered for the Approver; the
-      // decision consents only exactly this offer. A device approval offers
-      // none (#1256).
-      const ceilingOffer =
-        !deviceJti && opts.progressive?.ceilingOffer
-          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-          : undefined;
       // The decision is bound to this rendering, never to an offer computed afresh.
-      retainRenderedOffer(provider, interactionMatch[1] as string, ceilingOffer, details.exp);
+      retainRenderedOffer(provider, uid, ceilingOffer, details.exp);
       // @spec mission#approval-context-changes (#1446, D583): the context this
       // page shows, committed under a revision bound to the principal it is
-      // rendered to, superseding that principal's earlier rendering. An
-      // anonymous rendering mints no revision: no decision can rest on it.
-      // The page shows the effective `expires_at` an approval now commits,
-      // the one a decision on this revision commits.
+      // rendered to, superseding that principal's earlier rendering. The page
+      // shows the effective `expires_at` an approval now commits, the one a
+      // decision on this revision commits.
       const expiresAt = kernel.resolveEffectiveExpiry({ requested: intent.expires_at, createdAt: kernel.nowDate().toISOString() });
-      let revision: string | undefined;
-      if (rendering) {
-        let rendered: ReturnType<typeof approvalContext>;
-        try {
-          rendered = approvalContext({
-            kernel,
-            issuer: opts.issuer,
-            intent,
-            proposal,
-            authority,
-            clientId: String(params.client_id),
-            subject: rendering.subject,
-            scopeProjection: opts.scopeProjection,
-            expiresAt,
-          });
-        } catch (e) {
-          if (e instanceof IntentError) {
-            ctx.status = 400;
-            ctx.body = { error: e.code, error_description: e.message };
-            return;
-          }
-          throw e;
+      let rendered: ReturnType<typeof approvalContext>;
+      try {
+        rendered = approvalContext({
+          kernel,
+          issuer: opts.issuer,
+          intent,
+          proposal,
+          authority,
+          clientId: String(params.client_id),
+          subject,
+          resolved: established,
+          scopeProjection: opts.scopeProjection,
+          expiresAt,
+        });
+      } catch (e) {
+        if (e instanceof IntentError) {
+          ctx.status = 400;
+          ctx.body = { error: e.code, error_description: e.message };
+          return;
         }
-        revision = retainRenderRevision(
-          provider,
-          interactionMatch[1] as string,
-          rendering.key,
-          { clientId: String(params.client_id), ...rendered },
-          details.exp,
-        );
-        ctx.set(RENDER_REVISION_HEADER, revision);
-        ctx.set("cache-control", "no-store");
+        throw e;
       }
+      const revision = retainRenderRevision(
+        provider,
+        uid,
+        rendering.key,
+        { clientId: String(params.client_id), ...rendered },
+        details.exp,
+      );
+      ctx.set(RENDER_REVISION_HEADER, revision);
+      ctx.set("cache-control", "no-store");
       ctx.status = 200;
       ctx.set("content-type", "text/html; charset=utf-8");
       ctx.body = renderApprovalPage(
-        interactionMatch[1] as string,
+        uid,
         intent,
         authority,
         { clientId: registeredClient.clientId, clientName: registeredClient.clientName },
         proposal,
         provenance,
         authoritySource,
-        deviceSession && deviceSubject
+        deviceSession
           ? {
               userCode: formatUserCode(deviceSession.userCode),
               client: deviceClientView(registeredClient),
-              subject: deviceSubject,
+              subject,
             }
           : undefined,
         derivation,
         ceilingOffer,
-        { ...(revision ? { revision } : {}), changed: ctx.query.changed === "1", expiresAt, bindings },
+        { revision, changed: ctx.query.changed === "1", expiresAt, bindings },
       );
       return;
     }
@@ -8071,6 +8129,16 @@ function renderRegisteredClient(client: { clientId: string; clientName?: string 
  */
 function renderSuppliedBy(clientId: string): string {
   return `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
+}
+
+/**
+ * @spec mission#approval-preparation (#1802): the Mission approval page's
+ * answer when it renders nothing: the refusal and, where the deployment logs
+ * its Approvers in, the login link. It carries nothing from the request.
+ */
+function approvalNoticePage(error: string, message: string, loginHref?: string): string {
+  return `<!doctype html><title>Mission approval</title>
+<p class="approval-notice" data-error="${escapeHtml(error)}">${escapeHtml(message)}</p>${loginHref ? `\n<p><a class="approver-login" href="${escapeHtml(loginHref)}">Sign in as the Approver</a></p>` : ""}`;
 }
 
 function renderApprovalPage(
