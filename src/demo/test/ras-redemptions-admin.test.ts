@@ -26,6 +26,7 @@ describe("pnpm ras-redemptions (@spec cross-domain#validation-at-resource-as, #1
     const out = rasRedemptionsAdmin(["init", "--file", "state/redemptions.sqlite"], { INIT_CWD: dir });
     const file = join(dir, "state", "redemptions.sqlite");
     expect(out).toContain(`created the redemption store ${file}`);
+    expect(out).toContain(`start the as-native target with MISSION_RAS_REDEMPTIONS=${file}`);
     openRasRedemptionStore(file).close();
     expect(() => rasRedemptionsAdmin(["init", "--file", file], {})).toThrow(/already exists/);
   });

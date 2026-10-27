@@ -423,6 +423,7 @@ the connector effect, then evidence, then claim settlement.
 | Payments store, DPoP replay cache, actor records | in memory, seeded per boot | none | lost or reseeded |
 | Mission kernel (Mission records, lifecycle events, the continuation and delegation-family tables) and the provider's grants, codes and refresh tokens | in memory by default; `MISSION_KERNEL_STORE` keeps the kernel in a file, WAL with `synchronous=FULL` on every open (normal locking; exclusive under a recovery witness; #1684), with a key ring (§12). The provider uses oidc-provider's memory adapter (`provider-integration-port.md` §1) | the floor's | without the kernel file, lost: no Mission, grant or refresh token survives (`control-plane-deployment.md`, Restart inventory); with it, the Missions survive and the provider's grants, codes and refresh tokens do not (§12) |
 | AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring file named by `MISSION_KEY_RING`, or generated per boot under `MISSION_EPHEMERAL_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with a ring; regenerated otherwise. Rotation and resource-side JWKS refresh: #831 |
+| RAS single-use ID-JAG claims | in memory by default; a SQLite file named by `MISSION_RAS_REDEMPTIONS`, exclusive lock, WAL, `synchronous=FULL`, required with a key ring (§12, #1767) | one claim insert, keyed by issuer and `jti`, before the local token is minted | without the file, lost: an ID-JAG whose signing key survives the restart redeems again; with it, each claim is kept until the grant's `exp` plus 300 s |
 | Other keys (the PEP's `rs-txn` and evidence signers, the PDP's `pdp-decision-evidence`, client keys) | generated per boot under fixed kids (`channel-key-matrix.md`) | none | regenerated (#831) |
 
 Witnesses for the durable stores:
@@ -793,6 +794,17 @@ one process on one host. It also requires a recovery witness
 kernel holds its file exclusively and starts only when the store matches the
 witness, so a store restored from before it refuses startup:
 `the as-native launcher in process, OpenFGA client stubbed (D332) > refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)`.
+`MISSION_RAS_REDEMPTIONS=<absolute path>` keeps the RAS's single-use ID-JAG
+claims in that file across restarts (#1767), and `MISSION_KEY_RING` requires
+it: with issuer keys that survive a restart, an ID-JAG the RAS redeemed
+before it would redeem again. `pnpm ras-redemptions init --file <path>`
+creates the file once. The launcher never creates one: a missing store, or
+one `init` did not create, refuses startup before anything listens:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > requires MISSION_RAS_REDEMPTIONS with a key ring, and refuses a missing or uninitialized store before anything listens, creating none (#1767)`. Its restart is witnessed:
+`the as-native launcher in process, OpenFGA client stubbed (D332) > keeps the RAS's single-use claims in the file MISSION_RAS_REDEMPTIONS names, with a key ring: an ID-JAG redeemed before a restart is refused after it (#1767)`.
+A lost store is restored, not replaced, while any grant it could have
+recorded is still acceptable; a restored older copy loses the claims made
+after it was taken, and nothing detects that (D901).
 With `OPENFGA_STORE_ID` and `OPENFGA_MODEL_ID`
 set it attaches to that store and model, verifying the model and creating
 nothing; with neither it bootstraps a development store seeded from

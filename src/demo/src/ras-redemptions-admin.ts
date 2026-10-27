@@ -36,6 +36,6 @@ export function rasRedemptionsAdmin(
   initRasRedemptionStore(file);
   return [
     `init: created the redemption store ${file}`,
-    "give it to the RAS as its redemption store (`redemptions.file`); once configured, the RAS refuses to start without it",
+    `start the as-native target with MISSION_RAS_REDEMPTIONS=${file} (a key ring requires it); once configured, the RAS refuses to start without it`,
   ].join("\n");
 }
