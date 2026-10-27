@@ -356,6 +356,11 @@ authorization server metadata {{RFC8414}}:
   attenuation roots ({{root}}) and derives their authority from the
   Mission's Authority Set ({{root-mapping}}).
 
+Such an issuer also lists `attenuating_agent_token` in
+`authorization_details_types_supported`, the substrate's root issuer
+discovery
+({{Section 6.1.1 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+
 A client requests a Mission-bound attenuation root at the token
 endpoint, on any grant the issuance profile uses to issue a
 Mission-bound token (for example, the Mission's `refresh_token` grant).
@@ -372,9 +377,13 @@ narrowing detail, each with a distinct role:
   requested-token-type for asking for a root, so this boolean, not a
   token-type identifier, is what asks for one.
 
-The client MUST carry the holder's confirmation key, which binds the
-root to the holder as both profiles require
-({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}, {{root}}).
+The client MUST carry the holder's public key in the substrate's
+`req_cnf` parameter
+({{Section 6.1.2 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
+The Mission Issuer verifies that the client possesses the
+corresponding private key and binds that key as the root's `cnf.jwk`
+({{Section 6.1.3 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+{{root}}).
 
 The client MAY carry an `attenuating_agent_token` authorization detail
 {{RFC9396}} to request a root narrower than the full mapped Authority
@@ -927,6 +936,12 @@ this document, {{request-discovery}}.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Requesting a Root and Discovery: the holder key travels in the
+  substrate's `req_cnf`, and the Mission Issuer verifies possession
+  before binding it as `cnf.jwk`; a Mission Issuer that advertises this
+  profile also lists `attenuating_agent_token` in
+  `authorization_details_types_supported`.
 
 - Requesting a Root and Discovery: a requested tool or argument
   constraint beyond the mapped Authority Set refuses the request with
