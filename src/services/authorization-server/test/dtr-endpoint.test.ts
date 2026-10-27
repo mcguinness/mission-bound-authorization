@@ -553,7 +553,8 @@ describe("requested authority the deferral initiation cannot establish as a subs
   // AROP never widens: requested authority the comparison cannot establish as
   // a subset of the active Mission is refused with invalid_authorization_details,
   // whether it exceeds the Mission or the comparison cannot decide. A Mission
-  // that is not active is a different refusal and keeps invalid_request.
+  // that is not active is a different refusal: invalid_grant, with no
+  // mission_error (#1740, D862, D863).
   type Body = { error?: string; error_description?: string; deferral_code?: string; access_token?: string };
   const deferralRows = (): number =>
     (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
@@ -601,7 +602,7 @@ describe("requested authority the deferral initiation cannot establish as a subs
     await expectSubsetRefusal(incomparable as AuthorityEntry[]);
   });
 
-  it("an initiation by the Mission's own client on its Mission that is not active keeps invalid_request, not the subset refusal, opening no deferral", async () => {
+  it("an initiation by the Mission's own client on its Mission that is not active is refused invalid_grant, not the subset refusal, opening no deferral (#1740, D862)", async () => {
     const own = await issueBaseMissionToken();
     const requested = (as.kernel.get(own.missionId) as { authority_set: AuthorityEntry[] }).authority_set
       .filter((e) => e.actions.includes("payments:invoice.read"))
@@ -615,8 +616,8 @@ describe("requested authority the deferral initiation cannot establish as a subs
       });
       const body = (await res.json()) as Body;
       expect(res.status, JSON.stringify(body)).toBe(400);
-      expect(body.error).toBe("invalid_request");
-      expect(body.error_description).toBe("mission is not active");
+      expect(body.error).toBe("invalid_grant");
+      expect(body).not.toHaveProperty("mission_error");
       expect(body.deferral_code).toBeUndefined();
       expect(body.access_token).toBeUndefined();
     }
@@ -996,5 +997,150 @@ describe("the AROP deferred grant against a Mission that is not active (@spec mi
     const r = await pollBody(code);
     expect(r.status, JSON.stringify(r.body)).toBe(400);
     expect(r.body.error).toBe("authorization_pending");
+  });
+});
+
+describe("the AROP deferral initiation on a Mission that is not active (@spec mission#issuance-gating, mission#error-mapping, #1740, D862, D863)", () => {
+  // Only the Mission's own client learns that the Mission is not active: it is
+  // refused invalid_grant, as any grant other than a Token Exchange is, with no
+  // mission_error, since the initiation presents no Mission grant (D863).
+  // Another client, and any client naming an unknown Mission, gets one
+  // indistinguishable invalid_request, and client authentication is checked
+  // before either. No refusal opens a deferral, issues a token or counts a
+  // derivation.
+  type Body = {
+    error?: string;
+    error_description?: string;
+    mission_error?: string;
+    deferral_code?: string;
+    access_token?: string;
+  };
+  const deferralRows = (): number =>
+    (as.deferrals.db.prepare("SELECT COUNT(*) AS n FROM deferrals").get() as { n: number }).n;
+  const count = (id: string): number => (as.kernel.get(id) as { derivation_count: number }).derivation_count;
+
+  /** A Mission of its own (the shared base Mission stays active) and an invoice.read subset of it. */
+  async function ownMission(): Promise<{ id: string; requested: AuthorityEntry[] }> {
+    const own = await issueBaseMissionToken();
+    const requested = (as.kernel.get(own.missionId) as { authority_set: AuthorityEntry[] }).authority_set
+      .filter((e) => e.actions.includes("payments:invoice.read"))
+      .map((e) => ({ ...e, actions: ["payments:invoice.read"] }));
+    return { id: own.missionId, requested };
+  }
+
+  /** Revoke or suspend the Mission, or move its expires_at into the past. */
+  function makeInactive(id: string, state: "revoked" | "expired" | "suspended"): void {
+    if (state === "expired") {
+      as.kernel.db
+        .prepare("UPDATE missions SET expires_at = ? WHERE id = ?")
+        .run(new Date(Date.now() - 1000).toISOString(), id);
+      return;
+    }
+    as.kernel.transition(id, state === "revoked" ? "revoke" : "suspend");
+  }
+
+  /** Initiate a deferral of `requested` on `id`, as `client` (default: the Mission's own client). */
+  async function initiateOn(
+    id: string,
+    requested: AuthorityEntry[],
+    client?: ClientAuth,
+  ): Promise<{ status: number; body: Body }> {
+    const res = await tokenRequest(
+      { grant_type: DEFERRED_GRANT_TYPE, deferred_authorization: JSON.stringify({ mission_id: id, requested }) },
+      dpopKeys,
+      undefined,
+      client,
+    );
+    return { status: res.status, body: (await res.json()) as Body };
+  }
+
+  /** The refusal carries no mission_error member, no deferral_code and no access_token. */
+  function expectBareRefusal(r: { body: Body }, label = ""): void {
+    expect(r.body, label).not.toHaveProperty("mission_error");
+    expect(r.body.deferral_code, label).toBeUndefined();
+    expect(r.body.access_token, label).toBeUndefined();
+  }
+
+  it.each([["revoked"], ["expired"], ["suspended"]] as const)(
+    "the Mission's own client initiating on its Mission that is %s is refused invalid_grant with no mission_error, opening no deferral, issuing no token and counting no derivation",
+    async (state) => {
+      const { id, requested } = await ownMission();
+      makeInactive(id, state);
+      const rows = deferralRows();
+      const before = count(id);
+      const r = await initiateOn(id, requested);
+      expect(r.status, JSON.stringify(r.body)).toBe(400);
+      expect(r.body.error).toBe("invalid_grant");
+      expectBareRefusal(r);
+      expect(deferralRows()).toBe(rows);
+      expect(count(id)).toBe(before);
+      if (state === "suspended") expect(as.kernel.get(id)?.state).toBe("suspended");
+    },
+  );
+
+  it("an initiation refused under a suspended Mission succeeds after resume: the same request opens a deferral", async () => {
+    const { id, requested } = await ownMission();
+    const rows = deferralRows();
+    const before = count(id);
+    makeInactive(id, "suspended");
+    const refused = await initiateOn(id, requested);
+    expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+    expect(refused.body.error).toBe("invalid_grant");
+    expectBareRefusal(refused);
+    expect(deferralRows()).toBe(rows);
+    expect(count(id)).toBe(before);
+    as.kernel.transition(id, "resume");
+    const r = await initiateOn(id, requested);
+    expect(r.status, JSON.stringify(r.body)).toBe(400);
+    expect(r.body.error).toBe("authorization_pending");
+    expect(r.body.deferral_code).toMatch(/^dfr_/);
+    expect(r.body.mission_error).toBeUndefined();
+    expect(deferralRows()).toBe(rows + 1);
+  });
+
+  it.each([["revoked"], ["expired"], ["suspended"]] as const)(
+    "another client initiating on a Mission that is %s is refused invalid_request exactly as an unknown Mission is, with no mission_error, opening no deferral, issuing no token and counting no derivation",
+    async (state) => {
+      const { id, requested } = await ownMission();
+      makeInactive(id, state);
+      const rows = deferralRows();
+      const before = count(id);
+      const unknownToOther = await initiateOn("msn_does-not-exist", requested, reconciler);
+      const unknownToOwner = await initiateOn("msn_does-not-exist", requested);
+      for (const [label, unknown] of [
+        ["unknown to another client", unknownToOther],
+        ["unknown to the owner", unknownToOwner],
+      ] as const) {
+        expect(unknown.status, `${label}: ${JSON.stringify(unknown.body)}`).toBe(400);
+        expect(unknown.body.error, label).toBe("invalid_request");
+        expectBareRefusal(unknown, label);
+      }
+      expect(unknownToOwner.body).toEqual(unknownToOther.body);
+      const r = await initiateOn(id, requested, reconciler);
+      expect(r.status, JSON.stringify(r.body)).toBe(400);
+      // The whole body: neither the code, the description nor a diagnostic
+      // tells another client the Mission exists or what state it is in.
+      expect(r.body).toEqual(unknownToOther.body);
+      expectBareRefusal(r);
+      expect(deferralRows()).toBe(rows);
+      expect(count(id)).toBe(before);
+    },
+  );
+
+  it("a client that fails authentication is refused invalid_client before any Mission check, with no mission_error, opening no deferral, issuing no token and counting no derivation", async () => {
+    const { id, requested } = await ownMission();
+    makeInactive(id, "revoked");
+    // ap-agent's client_id under a key it never registered.
+    const forged: ClientAuth = { id: "ap-agent", key: (await generateKeyPair("ES256")).privateKey };
+    const rows = deferralRows();
+    const before = count(id);
+    for (const ref of [id, "msn_does-not-exist"]) {
+      const r = await initiateOn(ref, requested, forged);
+      expect(r.status, `${ref}: ${JSON.stringify(r.body)}`).toBe(401);
+      expect(r.body.error, ref).toBe("invalid_client");
+      expectBareRefusal(r, ref);
+    }
+    expect(deferralRows()).toBe(rows);
+    expect(count(id)).toBe(before);
   });
 });
