@@ -21,11 +21,13 @@
 import { type Server } from "node:http";
 import {
   aamReconciliationTemplate,
+  APPROVAL_FLOOR,
   CANONICAL_RESOURCE,
   DERIVATION_POLICY,
   demoReconciliationTemplate,
   DEV_SERVICE_TOKEN,
   DISPATCH_PROHIBITED_ACTIONS,
+  PROGRESSIVE_PROFILE,
 } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -44,6 +46,8 @@ import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import {
   buildAuthorizationServer,
   type BuiltAs,
+  prohibitedPredicatesOf,
+  publishedProhibitedPredicateMapping,
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
@@ -442,22 +446,24 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
   });
 
   it("a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)", async () => {
-    const LEDGER = "http://localhost:4406/mcp";
+    // The second audience is the reports API: the ledger's actions are
+    // cross-domain, so a Dispatch never grants them (#1710, D877).
+    const REPORTS = "http://localhost:4410/api";
     const payments = { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } };
-    const ledger = { type: "mission_resource_access", resource: LEDGER, actions: ["ledger:vendor.read"], constraints: { vendors: ["acme"] } };
-    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), ceiling: [payments, ledger] });
+    const reports = { type: "mission_resource_access", resource: REPORTS, actions: ["reports:report.read"] };
+    const created = await createTemplateAdmin({ ...readOnlyTemplateBody(), ceiling: [payments, reports] });
     const createdBody = (await created.json()) as { template_id?: string };
     expect(created.status, JSON.stringify(createdBody)).toBe(201);
     const res = await dispatch({
       templateId: createdBody.template_id as string,
-      intent: JSON.stringify({ intent: { goal: "reconcile Acme invoices and vendors", target_resources: [RESOURCE, LEDGER], expires_at: FAR_FUTURE } }),
+      intent: JSON.stringify({ intent: { goal: "reconcile Acme invoices against the quarterly reports", target_resources: [RESOURCE, REPORTS], expires_at: FAR_FUTURE } }),
       dispatchEventId: `evt-audience-${seq++}`,
-      authorizationDetails: JSON.stringify([payments, ledger]),
+      authorizationDetails: JSON.stringify([payments, reports]),
     });
     const body = (await res.json()) as { access_token?: string; mission_id?: string; authorization_details?: Array<{ resource: string }> };
     expect(res.status, JSON.stringify(body)).toBe(200);
     const instance = as.kernel.get(body.mission_id as string);
-    expect(new Set(instance?.authority_set.map((e) => e.resource))).toEqual(new Set([RESOURCE, LEDGER]));
+    expect(new Set(instance?.authority_set.map((e) => e.resource))).toEqual(new Set([RESOURCE, REPORTS]));
     const claims = decodeJwt(body.access_token as string);
     const carried = claims.authorization_details as Array<{ resource: string }>;
     expect(carried.length).toBeGreaterThan(0);
@@ -776,6 +782,77 @@ describe("mission-dispatch grant at /token (@spec mission-template#dispatch)", (
     expect(body.mission_denial_reason).toBe("review_overdue");
     expect(body.access_token).toBeUndefined();
   }, 15_000);
+});
+
+describe("a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877)", () => {
+  const LEDGER = "http://localhost:4406/mcp";
+  const EPOCH = "1970-01-01T00:00:00.000Z";
+  /** The published mapping, read from configuration alone (no resource-to-AS map). */
+  const published = publishedProhibitedPredicateMapping(APPROVAL_FLOOR, PROGRESSIVE_PROFILE.external_communication_actions);
+
+  /** A template whose ceiling is the whole derivation-policy ceiling, so each prohibited action is within both ceilings. */
+  async function wideTemplate(): Promise<string> {
+    const created = await createTemplateAdmin({
+      template_version: "tmpl-wide-predicates-1",
+      issuer: ISSUER,
+      approver: { iss: ISSUER, sub: "bob" },
+      ceiling: DERIVATION_POLICY.ceiling,
+      dispatch_policy: { id: "wide-reconciliation", version: "1" },
+      dispatchers: ["ap-agent"],
+      recipients: { subjects: [{ iss: ISSUER, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+      per_instance_lifetime_s: 900,
+      max_active: 5,
+      rate_per_min: 30,
+      review_cadence_s: 86400,
+      approval_event_id: `tmpl-evt-wide-predicates-${seq++}`,
+      expires_at: FAR_FUTURE,
+    });
+    const body = (await created.json()) as { template_id: string };
+    expect(created.status, JSON.stringify(body)).toBe(201);
+    return body.template_id;
+  }
+
+  // Privileged administration has no shipped action; its witness is at the
+  // kernel (template.test.ts), under a classification that makes one.
+  it.each([
+    ["irreversible_action", RESOURCE, "payments:payment.execute"],
+    ["external_commitment", RESOURCE, "payments:remittance.send"],
+    ["external_communication", RESOURCE, "payments:vendor.read"],
+    ["cross_domain", LEDGER, "ledger:vendor.read"],
+    ["cross_domain", LEDGER, "ledger:journal.write"],
+  ] as const)(
+    "refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies %s (%s %s), within both ceilings",
+    async (predicate, resource, action) => {
+      const entry = { type: "mission_resource_access" as const, resource, actions: [action] };
+      expect(prohibitedPredicatesOf(published, entry, action)).toEqual([predicate]);
+      expect(DISPATCH_PROHIBITED_ACTIONS).toContain(action);
+      const templateId = await wideTemplate();
+      const missionsBefore = as.kernel.allMissions().length;
+      const dispatchEventId = `evt-predicate-${seq++}`;
+      const res = await dispatch({
+        templateId,
+        intent: JSON.stringify({ intent: { goal: `dispatch ${action}`, target_resources: [resource], expires_at: FAR_FUTURE } }),
+        dispatchEventId,
+        authorizationDetails: JSON.stringify([entry]),
+      });
+      const body = (await res.json()) as { mission_denial_reason?: string; access_token?: string; mission_id?: string };
+      expect(res.status, JSON.stringify(body)).toBe(400);
+      expect(body.mission_denial_reason).toBe("dispatch_prohibited_class");
+      expect(body.access_token).toBeUndefined();
+      expect(body.mission_id).toBeUndefined();
+      // Nothing committed: no Mission, no dispatch event, and no reservation
+      // of the event id, which the same Dispatcher then reuses for a Dispatch
+      // the set admits.
+      expect(as.kernel.allMissions().length).toBe(missionsBefore);
+      expect(as.templateStore.dispatchesSince(templateId, EPOCH)).toBe(0);
+      const read = { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] };
+      const retry = await dispatch({ templateId, intent: readOnlyIntent(), dispatchEventId, authorizationDetails: JSON.stringify([read]) });
+      const retryBody = (await retry.json()) as { authorization_details?: Array<{ actions: string[] }> };
+      expect(retry.status, JSON.stringify(retryBody)).toBe(200);
+      expect(retryBody.authorization_details?.flatMap((e) => e.actions)).toEqual(["payments:invoice.read"]);
+      expect(as.kernel.allMissions().length).toBe(missionsBefore + 1);
+    },
+  );
 });
 
 describe("activation_actor is the authenticated Dispatcher (@spec mission-template#dispatch, #1325)", () => {

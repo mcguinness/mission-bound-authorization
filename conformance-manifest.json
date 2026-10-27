@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "ed0de4157152f4453f78eb511485f0011059d32f",
-    "content_sha256": "69a15b7d2282b92ee0f1d0a424770d9ca985ee5466550f4d2defa7878922f999"
+    "revision": "bdb8ff582b7a90ce3fa9853d79c7a04df12edc3e",
+    "content_sha256": "ab1debebb33bfd0391a3ab60bbd5621e5365ac6bb31dba213c7e62a31b2f6dff"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -325,7 +325,10 @@
    "harness.work-item-attachment",
    "runtime.work-item-attribution",
    "template.standing-payment",
-   "metering.exact-budget"
+   "metering.exact-budget",
+   "metering.child-accounting",
+   "metering.escrow-allocation",
+   "consent-evidence.recording"
   ]
  },
  "profiles": [
@@ -12469,7 +12472,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the deployment publishes a statement that declares the deployment scope it applies to and the minimum approval-authentication strength it enforces for every kind of high-risk authority the deployment can admit; a statement with no deployment scope or no floor is not a publication of the floor",
-    "local": "config/approval-floor.json is the published statement, documented in config/README.md and read at boot by the strict loader loadApprovalFloor as APPROVAL_FLOOR, which is the AS's floor (buildAuthorizationServer uses opts.approvalFloor ?? APPROVAL_FLOOR). Its deployment_scope is every Mission the AS approves through its approval interaction; its high-risk-authority floor covers irreversible_action, external_commitment and privileged_administration with a browser Approver, accepted acr mfa and a 300 second age bound. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so the three action kinds are the high-risk kinds it can admit. The binding requires no serialization, so the AS serves no endpoint or metadata member for the statement; publication is the deployment document. The loader refuses a statement with no or an empty deployment_scope and one with no floors, so the AS does not start without a published floor."
+    "local": "config/approval-floor.json is the published statement, documented in config/README.md and read at boot by the strict loader loadApprovalFloor as APPROVAL_FLOOR, which is the AS's floor (buildAuthorizationServer uses opts.approvalFloor ?? APPROVAL_FLOOR). Its deployment_scope is every Mission the AS approves through its approval interaction; its high-risk-authority floor covers irreversible_action, external_commitment and privileged_administration with a browser Approver, accepted acr mfa and a 300 second age bound. With the opt-in standing-payment-dispatch capability off, as shipped, the AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS, and PAR refuses max_budget), so the three action kinds are the high-risk kinds it can admit; with it on, a standing-payment instance's Intent carries max_budget, admitted only on dispatch intake under a template consent at the floor and committed with the consumption_bound class-named exception (#813, #1712). The binding requires no serialization, so the AS serves no endpoint or metadata member for the statement; publication is the deployment document. The loader refuses a statement with no or an empty deployment_scope and one with no floors, so the AS does not start without a published floor."
    },
    "level": "unit",
    "coverage": "tested",
@@ -30233,7 +30236,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten, and the supported-subset fixture test checks that both superseded versions stay declared as frozen."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Partial: the shipped contract document's material (each tool's action, phase, class, target rule and catalog capability digest) is pinned against TOOL_ACTIONS and the served catalog, so a material change without a new version fails the suite, and a changed document under an unchanged digest is refused at load. The parameter forms and constraint-extraction material are pinned as text only, and no runtime check compares the live material with the declared version. #1693 (D879): the reversal's changed tenant fact is published as version 2026-10-26 with its own digest; 2026-10-24 is not rewritten. #813, #816 (D877): the Operation Profile change to v16 is published as version 2026-10-27 with its own digest, differing from 2026-10-26 only in its version and profile; 2026-10-26 is not rewritten, and the supported-subset fixture tests check that the three superseded versions stay declared as frozen."
   },
   {
    "id": "runtime.resource-contract.declared-states",
@@ -30272,9 +30275,15 @@
      "name": "declared contract versions (@spec runtime#resource-contract, #249) > states each version's state: a superseded version declares its retention, and one version at most is current",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/evaluation-context.test.ts",
+     "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879): the shipped statement declares three versions: 2026-10-26 current (payments-runtime-profile-v15), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z)."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -30483,9 +30492,21 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > an entry pinned to 2026-10-26 performs the reversal under the paid vendor's current tenant",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the payments resource declares its contract versions (@spec runtime#resource-contract, #249) > performs the superseded 2026-10-26 version under the retained v15 profile: every crossing the live v16 profile names, each exactly as the live profile does, the reversal included (#813, #816, D877)",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/resource-contract-pep.test.ts",
+     "name": "the shipped superseded 2026-10-26 version is still performed within its retention (@spec runtime#resource-contract, #813, #816, D877) > a read and a write decided under the 2026-10-26 reference are performed under the retained v15 profile within its retention, and refused before any decision past it (#813, #816, D877)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): the shipped contract is 2026-10-26 (payments-runtime-profile-v15, current), with 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under v15; an entry pinned to 2026-10-26 performs the reversal under v15. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A retained version is performed under the Operation Profile its document names (PepDeps.retainedOperationProfiles): under a v1 profile whose get_invoice targets the invoice, the decision request's operation_target and parameter_digest follow v1, and under v2 they follow the live profile; both execute. Proved by normalizing every version under the live profile. #1693 (D879): v15 changes only reverse_wire_transfer's tenant source, so the shipped retained v14 profile (RETAINED_OPERATION_PROFILES) is the live table without the reversal: an entry pinned to 2026-10-24 performs the wire execute and a read under that reference with the parameter digest an unpinned entry gets, and its reversal is refused resource_contract_unresolvable before any decision request, never performed under a later profile. Mutations: P1 (v14 mapped to the live table) performs the v14-pinned reversal and fails the refusal and retained-table witnesses; P2 (no retained v14 profile) refuses the v14-pinned wire execute and read, failing the unaffected-operation witness; P3 (the live profile left at v14) fails the refusal, retained-table and v15-pinned witnesses. #813, #816 (D877): the shipped contract is 2026-10-27 (payments-runtime-profile-v16, current), with 2026-10-26 (v15), 2026-10-24 (v14) and 2026-10-20 (v13) superseded. v16 changes no crossing, so the shipped retained v15 profile is every crossing of the live table: the superseded 2026-10-26 version is performed under it, a read and a write decided under the 2026-10-26 reference execute within its retention in both PEP modes and are refused before any decision past it, and an entry pinned to 2026-10-26 performs the reversal under the retained v15. Mutations: R1 (no retained v15) fails the retained-table, within-retention and 2026-10-26 reversal witnesses; R2 (retained v15 without schedule_payment) fails the retained-table and within-retention witnesses; R2b (retained v15 without the reversal) fails the retained-table and 2026-10-26 reversal witnesses; R3 (2026-10-26 retained only until 2026-10-27) fails the within-retention witness."
   },
   {
    "id": "runtime.resource-contract.approval-bound-to-reference",
@@ -32808,19 +32829,31 @@
    "assertion": "replay",
    "observation": {
     "normative": "for a high-consequence operation whose outcome no declared lookup establishes, the outcome stays undetermined and its idempotency claim and any consumption reservation stay held until evidence resolves it, never released by time",
-    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key"
+    "local": "the PDP's claim closes indeterminate at the reconciliation window's end and keeps refusing the key. A budget reservation on such a claim (#816) is held when the lease elapses, at a restart, or when the window closes, and stays charged through the window and the claim's horizon purge; only a settlement from the redeeming attempt or an operator's recorded reconciliation (D830 ruling 7) moves it. The PDP consults no outcome lookup itself."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/idempotency-claim.test.ts",
      "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > crash boundaries and restart > an unresolved claim closes indeterminate at the window's end and stays refused",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a later suppressed settlement from the redeeming attempt for the permit's own evaluation releases a held reservation (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "Partial: the idempotency-claim half is witnessed; consumption reservations are the metering companion's, which the reference does not implement. Proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again."
+   "notes": "Idempotency-claim half: proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again. Consumption-reservation half (#816 slice 2, merged in #1713, D870): a reservation whose permit was never settled is held at lease expiry, still held past the reconciliation window and the claim's horizon purge, with the next request seeing the reduced headroom, and released only by the redeeming attempt's suppressed settlement for its own evaluation. Releasing on lease or restart (C1), at the window close (C6) or at the horizon purge (C7) fails the first budget witness; not releasing a held reservation on that settlement (M1) fails the second (mutants recorded on metering.settlement-states.timeout-never-releases and metering.settlement-states.suppressed-releases). Reservations exist only under a claimed budget_metering declaration, and the standing-payment capability stays disabled and unclaimed (D830)."
   },
   {
    "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
@@ -39702,7 +39735,7 @@
     "kind": "unconditional"
    },
    "profiles": [],
-   "surface": "par",
+   "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
     "normative": "a Mission Intent's max_budget currency takes max_amount's form: the authorization server admits exactly three upper-case ASCII letters and refuses any other value"
@@ -39710,7 +39743,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the dispatch and expansion intakes admit max_budget under the standing-payment capability and check its currency as a currency code, but no test submits a malformed currency; the capability stays disabled and unclaimed."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Todo: the dispatch and expansion intakes admit max_budget under the standing-payment capability and check its currency as a currency code, but no test submits a malformed currency; the capability stays disabled and unclaimed. D877 ledger pass: surface follows max-budget-amount-decimal (PAR refuses max_budget; it is admitted only on dispatch intake under standing-payment-dispatch)."
   },
   {
    "id": "metering.bounds.max-budget-currency-exact",
@@ -39752,7 +39785,7 @@
     "capability": "metering.exact-budget"
    },
    "profiles": [],
-   "surface": "par",
+   "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
     "normative": "a max_budget whose amount is absent or is not a string holding a decimal number is refused at intake, and no Mission is created"
@@ -39760,7 +39793,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the dispatch and expansion intakes refuse a max_budget whose amount is not a decimal string, but no test submits a malformed one, and PAR admits no max_budget at all; the capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form."
+   "notes": "#816, D830. Surface token-endpoint (D877): max_budget is admitted only at the dispatch intake (the mission-dispatch grant at /token, under the standing-payment-dispatch capability) and at the expansion intake of a standing-payment lineage (the continuation grant at /token); PAR's closed Intent refuses the member as unknown (metering.consent.unmetered-bound-refused-at-intake), so its amount form is observable only at /token. Todo: validateMissionIntentObject (kernel/intent.ts), reached through the kernel's validateSubmission, refuses an amount that is absent or not a decimal string, but no test submits a malformed one; the capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form."
   },
   {
    "id": "metering.bounds.committed-by-intent-hash",
@@ -39792,8 +39825,11 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "consent-evidence.recording"
+    ]
    },
    "profiles": [],
    "surface": "approval-ceremony",
@@ -39804,7 +39840,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: no test renders the authority summary of a Mission carrying max_budget in recorded Consent Evidence (standing-payment instances are dispatched unattended); the capability stays disabled and unclaimed."
+   "notes": "#816, D830. Todo: no test renders the authority summary of a Mission carrying max_budget in recorded Consent Evidence (standing-payment instances are dispatched unattended); the capability stays disabled and unclaimed. D877 (2026-10-26) ruling 2: gated on metering and on recording Consent Evidence (consent-evidence.recording), since the authority summary this row constrains is the Consent Evidence rendering; todo there. The separate obligations to render bounds at human approval and to disclose consumption and outstanding exposure stay ungated by this and are the AS track's (template.standing-payment.consent-disclosure, raise-disclosure-renders-exposure, template.instance-composition.successor-approval-renders-consumption)."
   },
   {
    "id": "metering.consent.enforced-only-if-metered",
@@ -39821,7 +39857,8 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an approval page renders max_budget as an enforced limit only where the Enforcement Scope Statement's budget metering declaration covers the bound's currency and the governed action"
+    "normative": "an approval page renders max_budget as an enforced limit only where the Enforcement Scope Statement's budget metering declaration covers the bound's currency and the governed action",
+    "local": "The only approval surface that renders a consumption bound is the standing-payment template consent page: templateConsentDisclosure (adapters/template-consent.ts) renders the budget's limit and the per-instance maximum on max_budget only under its standingPayment option, which the provider sets only with the standing-payment-dispatch capability on (adapters/provider.ts). With it off, a template designating a standing payment gets the plain prohibited-classes statement and no budget lines. With it on, buildAuthorizationServer always hands the provider its Dispatch Policy registry, whose construction is refused (assertStandingPaymentExactProfile, adapters/provider.ts) unless the Enforcement Scope Statement claims budget_metering and declares each designating policy's budget under the exact profile, in the policy's unit and currency, with its limit and committed policy reference, metering payments:payment.execute at commit."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -39833,7 +39870,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.' Slice 3b (impl/813-budget-binding-3b at 62325958): the standing-payment consent page that renders the budget, and the per-instance maximum on max_budget, as limits runs only on an AS that started, and a capability-on AS starts only where its Enforcement Scope Statement declares the budget under budget_metering with the exact profile, in the policy's unit, metering payments:payment.execute at commit, with the policy's currency and limit and its committed policy reference; the composed stack hands the AS and the PDP the same statement, and the PDP meters both counters under it. dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial on level only: the witness is a startup refusal, not an approval page."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.' Slice 3b (impl/813-budget-binding-3b at 62325958): the standing-payment consent page that renders the budget, and the per-instance maximum on max_budget, as limits runs only on an AS that started, and a capability-on AS starts only where its Enforcement Scope Statement declares the budget under budget_metering with the exact profile, in the policy's unit, metering payments:payment.execute at commit, with the policy's currency and limit and its committed policy reference; the composed stack hands the AS and the PDP the same statement, and the PDP meters both counters under it. Dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: the startup witness covers the capability-on half only. No test renders the consent page of a template designating a standing payment with the capability off and asserts no budget line appears, so a page rendering the terms whatever the option would pass. That approval-page test, at this row's level and surface, killed by a mutant ignoring the standingPayment option in templateConsentDisclosure, closes the row; the level stays endpoint, approval-ceremony."
   },
   {
    "id": "metering.consent.unmetered-bound-refused-at-intake",
@@ -40091,7 +40128,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the Enforcement Scope Statement's budget metering declaration names the Exact enforcement profile for the Mission-keyed max_budget counter and for each declared standing-consent budget counter",
-    "local": "design decision c: the budget_metering extension's enforcement_profile is exact"
+    "local": "design decision c: the budget_metering extension's enforcement_profile is exact. The declaration names one enforcement_profile, and the loader refuses any value but exact (budgetMeteringFindings, services/pdp/src/budget-metering.ts). That one profile names the profile of every counter the declaration meters: resolveBudgetCharge resolves the Mission-keyed max_budget counter (counter_scope mission, keyed by the issuer and the successor chain's first Mission) and the standing_consent counter (keyed by owner and budget_id) together, and only for a binding that names a budget the declaration lists. The mission counter is therefore not listed separately, and no counter is metered outside the declared profile."
    },
    "level": "unit",
    "coverage": "partial",
@@ -40103,7 +40140,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a budget_metering declaration naming any profile other than exact (bounded) is refused at load, claimed or not; skipping every budget_metering finding (L1) fails the witness, with no isolated mutant for the profile finding. Partial: the declaration names one enforcement_profile for every counter it meters; there is no per-counter member, and the instance (mission) counter is not itself declared."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a budget_metering declaration naming any profile other than exact (bounded) is refused at load, claimed or not; skipping every budget_metering finding (L1) fails the witness. That the declaration's one profile names every counter it meters, the mission counter included, is observation.local (D877). Partial: no isolated mutant for the profile finding; removing only the enforcement_profile check in budgetMeteringFindings should fail the witness's 'Bounded profile' case, and recording that mutant closes the row."
   },
   {
    "id": "metering.topology.no-unmeetable-exact-claim",
@@ -40354,8 +40391,11 @@
    "role": "PDP",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.child-accounting"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -40366,7 +40406,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.child-accounting, a ledger reporting distinction (not a protocol capability) for charging a Child Mission to its ancestors' counters. Stays todo, deferred by D830. A deployment cannot escape the accounting requirement by omitting the label while allowing children: refusing a Child Mission under a metered instance is a prerequisite of the exact-budget claim and must be tested before it (metering.capacity-across-missions.child-refused-without-accounting, metering.capacity-across-missions.standing-consent-child-refused and template.instance-composition.child-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-within-ancestor-remaining",
@@ -40376,8 +40416,11 @@
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "token-endpoint",
@@ -40388,7 +40431,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-closed-at-terminal",
@@ -40398,8 +40441,11 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -40410,7 +40456,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.escrow-remainder-after-closure",
@@ -40420,8 +40466,11 @@
    "role": "PDP",
    "strength": "MUST NOT",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "capabilities",
+    "all_of": [
+     "metering.exact-budget",
+     "metering.escrow-allocation"
+    ]
    },
    "profiles": [],
    "surface": "decision-request",
@@ -40432,7 +40481,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed."
+   "notes": "#816, D830. Deferred by D830: children are refused until their accounting is supported; not passed. D877 (2026-10-26) ruling 1: gated on metering.escrow-allocation, a ledger reporting distinction (not a protocol capability) for escrowed allocations across consistency domains, whose conditions differ from in-domain child charging. Stays todo, deferred by D830. A deployment cannot escape it by omitting the label while allowing cross-domain children: refusing cross-domain derivations is a prerequisite of the claim and must be tested before it (template.instance-composition.cross-boundary-derivation-refused, partial today)."
   },
   {
    "id": "metering.capacity-across-missions.successor-continues-counter",
@@ -40450,7 +40499,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an Expansion successor's metered actions draw on the counter its predecessor used: consumption to date carries forward, and the successor's max_budget caps the chain's cumulative consumption instead of opening a fresh balance",
-    "local": "design decision a: the instance counter is keyed by the first Mission of the successor chain, counter_scope mission"
+    "local": "design decision a: the instance counter is keyed by the first Mission of the successor chain, counter_scope mission. A successor keeps the dispatched instance's max_budget exactly: assertSuccessorMaxBudget (kernel/standing-payment.ts), called by createExpansion (kernel/expansion.ts) and createCeilingDrawdownInCallerTx (kernel/progressive.ts), refuses a successor Intent whose max_budget differs in amount or currency or is absent, and standingPaymentBudgetBindingOf derives underivable (denied constraint_unsupported at the PDP) for a Mission whose max_budget differs from the instance's. The successor's bound is therefore the bound the chain's instance counter is limited by; a successor bound that differs from its predecessor's does not arise."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -40468,7 +40517,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment draws on the dispatched instance's mission counter with its consumption to date (refused beyond the 25.00 left of 150.00, then permitted to exhaust it); keying the successor's binding by its own id (U2) or deriving it unbound (U1) opens a fresh balance or none, and dropping the instance limit (Q3p) lets the chain exceed its cap, each failing the witness. Partial: predecessor and successor carry the same max_budget, so the successor's own bound capping the chain is not distinguished."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment draws on the dispatched instance's mission counter with its consumption to date (refused beyond the 25.00 left of 150.00, then permitted to exhaust it); keying the successor's binding by its own id (U2) or deriving it unbound (U1) opens a fresh balance or none, and dropping the instance limit (Q3p) lets the chain exceed its cap, each failing the witness. Tested under observation.local (D877): a successor's max_budget equals its predecessor's, so the bound these witnesses show capping the chain is the successor's own. The earlier partial reason (the two bounds are not distinguished) describes a case the reference refuses; the AS witness of that refusal is 'refuses an expansion successor of a standing-payment instance that changes or drops its max_budget (#813)' (template-standing-payment.test.ts)."
   },
   {
    "id": "metering.capacity-across-missions.policy-successor-no-raise",
@@ -40507,12 +40556,13 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the human approval of a successor that raises max_budget renders the chain's consumption to date"
+    "normative": "the human approval of a successor that raises max_budget renders the chain's consumption to date",
+    "local": "No successor raises max_budget in the reference: assertSuccessorMaxBudget (kernel/standing-payment.ts), called by createExpansion (kernel/expansion.ts) and createCeilingDrawdownInCallerTx (kernel/progressive.ts), refuses any successor max_budget that differs from its predecessor's in amount or currency, or is absent. This is a local choice stricter than Metering, which lets a successor raise a bound under a fresh human approval. The approval rendering this clause requires therefore has no case."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: no successor approval renders the chain's consumption to date yet; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. No successor can raise a bound (observation.local, D877). Todo: the AS witness 'refuses an expansion successor of a standing-payment instance that changes or drops its max_budget (#813)' (template-standing-payment.test.ts) refuses a lowered and an absent max_budget but no raised one. A raised and an other-currency case on the expansion and drawdown paths, killed by a mutant that refuses only a smaller max_budget in assertSuccessorMaxBudget, would witness that the case does not arise."
   },
   {
    "id": "metering.capacity-across-missions.template-bound-rendered-per-instance",
@@ -40532,12 +40582,13 @@
    "surface": "approval-ceremony",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the consent page of a template whose instances carry max_budget, with no aggregate bound metered across them, presents the bound as per instance, beside max_active and dispatch_rate"
+    "normative": "the consent page of a template whose instances carry max_budget, with no aggregate bound metered across them, presents the bound as per instance, beside max_active and dispatch_rate",
+    "local": "In the reference only a standing-payment instance and its successors carry max_budget, always metered under the standing_consent budget the Dispatch Policy commits. Only two intakes admit the member: the dispatch intake under the standing-payment-dispatch capability (adapters/provider.ts) and the expansion intake of a standing-payment lineage (adapters/continuation-grant.ts), both through validateSubmission's admitMaxBudget. dispatchFromTemplate (kernel/template.ts) refuses max_budget with invalid_request when the template's Dispatch Policy states no standing payment, and assertSuccessorMaxBudget refuses it on any successor outside a standing-payment lineage. A template whose instances carry max_budget with no aggregate bound metered across them does not arise."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: in the reference only a standing-payment template's instances carry max_budget, always under a metered standing-consent budget, so a template with no aggregate bound across its instances does not arise; the capability stays disabled and unclaimed."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. The case does not arise (observation.local, D877). Todo: no test dispatches, with the capability on, a template that does not designate the standing payment with an Intent carrying max_budget. That refusal (invalid_request, nothing created), killed by a mutant removing the check in dispatchFromTemplate, would witness it."
   },
   {
    "id": "metering.capacity-across-missions.standing-consent-child-refused",
@@ -41205,12 +41256,13 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Execution Evidence of a completed metered payment carries a metering entry whose consumed member is the executed amount as {amount, currency}"
+    "normative": "where the Operation Profile conveys a metered payment's committed quantity by consumed, the Execution Evidence of a completed metered payment carries a metering entry whose consumed member is the executed amount as {amount, currency}; where it defines no actual measure, none is conveyed",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment, so its committed quantity is not conveyed by consumed: the PEP's Execution Evidence carries no metering member, and the clause's condition does not hold in the reference."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: the PEP's Execution Evidence carries no metering consumed entry; the PDP commits the reserved amount. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed. The clause binds where the committed quantity is conveyed by consumed; under profile v16 (D877) the payment class defines no actual measure, so it is not (observation.local). The normative observation states the consumed case without its condition and should be re-scoped to it. Todo: no test asserts that a completed metered wire's Execution Evidence carries no metering member; that assertion, added to the end-to-end exhaustion witness and killed by a PEP that emits a consumed entry, would witness the condition's absence."
   },
   {
    "id": "metering.metering-evidence.counter-scope-values",
@@ -41725,12 +41777,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Operation Profile of the metered payment action either defines the actual measure conveyed in consumed or states that the reserved amount commits"
+    "normative": "the Operation Profile of the metered payment action either defines the actual measure conveyed in consumed or states that the reserved amount commits",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) states it for payments:payment.execute at its commit crossing, execute_wire_transfer: the payment class defines no actual measure, what a wire consumes is the amount the decision charged (the invoice's {amount, currency}), Execution Evidence conveys no consumed, and a completed settlement commits the reserved amount. The PEP's Execution Evidence carries no metering member, and the PDP's claim domain commits the reserved amount on a completed settlement (services/pdp/src/idempotency-claims.ts)."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state that the reserved amount commits; the capability stays disabled and unclaimed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local). The behavior it states is witnessed under metering.settlement-states.completed-commits (PDP role). Todo: the statement is prose, and no test reads the profile or a machine-readable copy of it, so nothing at this row's unit, deployment-documentation level observes it, and no PEP-role witness ties the rule to the profile; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-states.failed-rule-defined). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.suppressed-releases",
@@ -41789,10 +41849,11 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a completed outcome commits the conveyed consumed amount, or the reserved amount where the class defines no actual measure, on every counter the decision reserved, and releases any reserved excess"
+    "normative": "a completed outcome commits the conveyed consumed amount, or the reserved amount where the class defines no actual measure, on every counter the decision reserved, and releases any reserved excess",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines no actual measure for the metered payment: the PEP conveys no consumed, the reserved amount commits, and no reserved excess arises, so the conveyed-quantity and excess-release clauses have no case in the reference."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41825,7 +41886,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Partial: the reference ignores a conveyed consumed amount and commits the reserved amount, so committing the conveyed amount and releasing a reserved excess are not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a completed settlement commits the reserved amount on both counters, whether the reservation is open, held after a restart, or already released by the operator (then the overspend alert names each counter pushed past its limit), at the claim domain and through the executing PEP. Not committing on completed (T8e), not committing a released reservation (R4), and raising no overspend alert (R5) fail their witnesses. Tested under observation.local (D877): profile v16 states that the payment class defines no actual measure, so no consumed is conveyed and no reserved excess arises; the earlier partial reason (committing a conveyed amount and releasing an excess are not exercised) describes cases the profile rules out."
   },
   {
    "id": "metering.settlement-states.failed-rule-defined",
@@ -41842,12 +41903,20 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the Operation Profile states the commit-or-refund rule for a failed metered payment"
+    "normative": "the Operation Profile states the commit-or-refund rule for a failed metered payment",
+    "local": "payments-runtime-profile-v16 (src/docs/operation-profile-payments-v1.md, section Budget metering; #813, #816, D877) defines the rule for payments:payment.execute at execute_wire_transfer: a failed settlement leaves the reservation held pending reconciliation (D830 ruling 10); a timeout, a restart or an elapsed lease never releases it, and release is only on affirmative non-execution (the redeeming attempt's own suppressed settlement, or an operator's not_executed once the permit and its lease have elapsed). A permit the PEP suppresses before redeeming it stays charged the same way."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the payments Operation Profile does not yet state the commit-or-refund rule for a failed metered payment; the capability stays disabled and unclaimed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/operation-profile-statement.test.ts",
+     "name": "the payments Operation Profile states how the metered payment settles (@spec metering#settlement-contract, metering#settlement-states, #813, #816, D877) > names the live profile version, and states for payments:payment.execute at commit that the payment class defines no actual measure so the reserved amount commits, and that a failed wire stays charged pending reconciliation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Profile v16 (D877) states the rule (observation.local); the PDP behavior it states is witnessed by template.standing-payment.failed-remains-charged and metering.settlement-states.failed-stays-charged (PDP role). Todo: the statement is prose, and no test reads it, so nothing at this row's unit, deployment-documentation level observes it; a unit test reading the shipped Operation Profile, asserting that its version line names PAYMENTS_PROFILE_VERSION and that its Budget metering section states the rule, killed by deleting that statement, would close the row (shared with metering.settlement-contract.reserved-commits-stated). Witnessed by the profile statement test (ec10186f): deleting either statement, reversing the failed rule, or a version mismatch between the document and PAYMENTS_PROFILE_VERSION fails it (mutants D1 to D4, V1 to V3, H1, M1)."
   },
   {
    "id": "metering.settlement-states.failed-stays-charged",
@@ -41905,12 +41974,13 @@
    "surface": "decision-request",
    "assertion": "output-bound",
    "observation": {
-    "normative": "every budget reservation is recorded with a finite lease"
+    "normative": "every budget reservation is recorded with a finite lease",
+    "local": "A budget reservation has no lease column of its own: it is written in its idempotency claim's transaction (budget_reservations, keyed by evaluation_id) and takes that claim's lease, the permit's valid_until plus the action class's declared execution_lease_max_seconds (leaseMaxMs in services/pdp/src/idempotency-claims.ts; 30 s for irreversible_action in the shipped transaction_assurance declaration). The claim domain's sweep moves a reservation still reserved past that lease to held (cause lease_elapsed; restart_unknown after a restart; window_closed when the reconciliation window ends). The lease bounds the wait before reconciliation and never releases the reservation."
    },
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. Todo: a reservation records no lease of its own; it is bounded by its claim's permit lifetime and the class's execution lease, which the sweep enforces (lease_elapsed), and no test asserts a finite lease per reservation. The capability stays disabled and unclaimed."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. A reservation's lease is its claim's (observation.local, D877). Todo: the existing witness 'with a limit of 100,000 minor units, a 60,000 reservation held after a lost acknowledgement makes a 50,000 request quota_exceeded (@spec metering#settlement-states, metering#aggregate-bounds, #816)' (budget-reservations.test.ts) asserts the reservation held once the permit's validity and the 30 s lease have passed, but no recorded mutant removes the lease_elapsed hold (the permit_issued branch of the claim sweep in idempotency-claims.ts). Recording that mutant against the witness closes the row."
   },
   {
    "id": "metering.settlement-states.lease-expiry-reconciles",
@@ -53090,7 +53160,7 @@
     "normative": "a Dispatch whose surviving instance authority includes an action the deployment classifies in a prohibited class, other than an operation the Standing Payment Exception admits, is refused dispatch_prohibited_class even when the action is within both the derivation-policy ceiling and the Template Ceiling"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template.test.ts",
@@ -53102,6 +53172,42 @@
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatch_prohibited_class: within both ceilings, but a dispatch-prohibited action",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a Dispatch never grants a privileged-administration action (@spec mission-template#prohibited-classes, #1710) > refuses dispatch_prohibited_class, committing nothing, a Dispatch granting an action the published mapping classifies as privileged administration, once the configured set covers that mapping (#1710)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -53153,7 +53259,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the kernel unit test and the /token test witness the irreversible class (payments:payment.execute, within both ceilings, refused dispatch_prohibited_class), and the AAM e2e step 2 (live OpenFGA only) witnesses the external-commitment class (payments:remittance.send). Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): under a designating template with the capability on, remittance (external commitment) and the payment where it is also cross-domain authority are refused dispatch_prohibited_class at /token, and the kernel refuses the payment where the mapping also classifies it privileged administration, external commitment or external communication. Mutations: the /token remittance test fails only when the predicate admission and the AGR high-risk gate are both disabled (two independent layers); the /token cross-domain test fails when the predicate admission refuses nothing, when every predicate of the payment is waived, or when the cross-domain predicate is unmapped; round-1 mutants kill the kernel tests. Still partial: the shipped configured set leaves out payments:vendor.read (external communication in config/progressive.json) and the ledger actions at the cross-domain resource, so per the builder's finding the ordinary dispatch path admits authority its own mapping prohibits (#1710); and no predicate refusal asserts that nothing is committed (deferring the admission refusal past the commit leaves the external-communication and cross-domain kernel tests passing)."
+   "notes": "#813, D830; #1710, D877 item 4. One refusal witness per prohibited predicate, each committing nothing (impl/1710-prohibited-coverage at 3f72c8e1a). At /token a template whose ceiling is the whole derivation-policy ceiling (policy wide-reconciliation) dispatches a proposal of one action within both ceilings: payments:payment.execute (irreversible), payments:remittance.send (external commitment), payments:vendor.read (external communication), ledger:vendor.read or ledger:journal.write (cross-domain). Each case asserts that the published mapping gives the action exactly that predicate and that the shipped set lists it, then expects 400 dispatch_prohibited_class with no token and no mission_id, no new Mission, no dispatch event, and the same dispatch_event_id reusable for an admitted payments:invoice.read Dispatch. No shipped action is privileged administration, so that witness is at the kernel: a classification makes hr:role.grant privileged administration, the coverage check's gap adds it to the configured set, and the Dispatch is refused with no Mission and no dispatch event, while the shipped set, which leaves it out, admits it. The AAM e2e step 2 (live OpenFGA only) still witnesses remittance. Mutations (2026-10-26): a guard that refuses nothing fails the kernel gate test, the older /token test and every per-predicate witness; a guard that refuses only after the instance and dispatch event commit fails the five /token witnesses and the kernel privileged-administration witness; a guard that admits one listed action while the set still lists it fails that action's witness alone, for each of the six. The older /token test dispatches the whole wide ceiling, so it no longer isolates the irreversible class: admitting payment.execute leaves it passing while remittance and the vendor read still refuse. Slice 3a (impl/813-standing-payment-admission at a7063aab): under a designating template with the capability on, remittance and the payment where it is also cross-domain authority are refused dispatch_prohibited_class at /token, and the kernel refuses the payment where the mapping also classifies it privileged administration, external commitment or external communication. Mutations: the /token remittance test fails only when the predicate admission and the AGR high-risk gate are both disabled (two independent layers); the /token cross-domain test fails when the predicate admission refuses nothing, when every predicate of the payment is waived, or when the cross-domain predicate is unmapped; round-1 mutants kill the kernel tests."
   },
   {
    "id": "template.prohibited-classes.dispatch-policy-never-dispatches",
@@ -53173,12 +53279,48 @@
     "normative": "under every committed Dispatch Policy, including one whose ceiling and rules would otherwise admit the instance, a Dispatch bearing a prohibited class the Standing Payment Exception does not admit is refused dispatch_prohibited_class"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
      "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > dispatch_prohibited_class: within both ceilings, but a dispatch-prohibited action",
      "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "a Dispatch never grants a privileged-administration action (@spec mission-template#prohibited-classes, #1710) > refuses dispatch_prohibited_class, committing nothing, a Dispatch granting an action the published mapping classifies as privileged administration, once the configured set covers that mapping (#1710)",
+     "level": "unit",
      "surface": "token-endpoint"
     },
     {
@@ -53230,7 +53372,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. partial: the /token witness dispatches under a wide Dispatch Policy (wide-reconciliation, ceiling equal to the derivation-policy ceiling) and is refused. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed through the issuer's refusal. Shares the mutation proof of template.prohibited-classes.dispatch-never-instantiates. Mutation (2026-10-25): with the kernel guard in dispatchFromTemplate disabled (step d), the kernel unit test and the /token test each fail; the AAM test needs live OpenFGA and was not run locally. Slice 3a (impl/813-standing-payment-admission at a7063aab): the policy snapshot varies. A Dispatch Policy designating the standing payment does not lift the prohibition with the capability off (kernel), and with it on it still leaves remittance and every other prohibited predicate of the payment refused dispatch_prohibited_class (kernel and /token). Mutations: removing the capability-off configured refusal fails the kernel capability-off test; the /token and kernel predicate tests are killed as recorded on template.prohibited-classes.dispatch-never-instantiates. Still partial: the shipped configured set leaves out the external-communication and cross-domain actions of the published mapping, so a Dispatch bearing them is admitted under any policy (#1710)."
+   "notes": "#813, D830; #1710, D877 item 4. The reference keeps the prohibition in the issuer's configured set, outside the policy snapshot, so the policy's own duty is witnessed through the issuer's refusal under a policy that would otherwise admit the instance. #1710 (impl/1710-prohibited-coverage at 3f72c8e1a): at /token a template under the wide-reconciliation Dispatch Policy (ceiling equal to the derivation-policy ceiling) is refused dispatch_prohibited_class, committing nothing, for one action per predicate the shipped set lists (payments:payment.execute, payments:remittance.send, payments:vendor.read, ledger:vendor.read, ledger:journal.write), and the same template, policy and dispatch_event_id then admit a payments:invoice.read Dispatch. Privileged administration has no shipped action: at the kernel a Dispatch granting hr:role.grant, classified privileged administration, is refused under the configured set the coverage check yields and admitted under the shipped set, which leaves it out. Slice 3a (impl/813-standing-payment-admission at a7063aab): a Dispatch Policy designating the standing payment does not lift the prohibition with the capability off (kernel), and with it on still leaves remittance and every other prohibited predicate of the payment refused dispatch_prohibited_class (kernel and /token). Mutations: shared with template.prohibited-classes.dispatch-never-instantiates (a guard that refuses nothing, refuses only after the commit, or admits one listed action fails the matching witnesses); removing the capability-off configured refusal fails the kernel capability-off test."
   },
   {
    "id": "template.prohibited-classes.configured-set-covers-mapping",
@@ -53250,11 +53392,17 @@
     "normative": "every action the published classification maps to the irreversible, external-commitment or privileged-administration class, to the external-communication predicate, or to cross-domain authority appears in the configured dispatch-prohibited action set"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
-     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the published mapping states, for every action the reference serves, which prohibited predicates it satisfies, and every classification states whether its resource is cross-domain (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published mapping classifies as irreversible, external-commitment, privileged-administration, external-communication or cross-domain (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -53278,12 +53426,48 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under irreversible_action, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under external_commitment, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under external_communication, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under cross_domain, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > fails on a configured set that leaves out an action under privileged_administration, naming it under that predicate alone (@spec template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
      "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > refuses a configured set that leaves out an action the published classification classifies as irreversible, naming it (@spec template#prohibited-classes)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > reads cross-domain from the classification's statement, and the AS's resource-to-AS map only adds to it (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. approval-floor.json's classification and enforcement-scope.json's execution capabilities and resource contract classify payments:payment.reverse as irreversible_action; the MUST is on the mapping, not on reachability. Slice 3a (impl/813-standing-payment-admission at a7063aab): config/policy.json adds payments:payment.reverse to dispatch_prohibited_actions, and dispatchProhibitedCoverageGaps / assertDispatchProhibitedCoverage check all five predicates. A unit check holds the shipped set to the three class predicates. Mutations: dropping payment.reverse from policy.json fails the first, second, fourth and fifth coverage tests; a gap check that skips every action fails the third, fourth and fifth. Partial: the external-communication and cross-domain clauses are not asserted for the shipped set, and per the builder's finding they fail today (payments:vendor.read, ledger:vendor.read, ledger:journal.write); #1710 owns them. The check runs as a unit test, not a startup refusal."
+   "notes": "#813, D830; #1710, D877 item 4. The published mapping is configuration alone: config/approval-floor.json's classification (each action's class, and each classification's cross_domain statement: true for the ledger at http://localhost:4406/mcp, false for payments and reports) and config/progressive.json's external-communication actions (payments:vendor.read). approval-floor.json and enforcement-scope.json classify payments:payment.reverse as irreversible_action; the MUST is on the mapping, not on reachability. config/policy.json's dispatch_prohibited_actions lists payments:payment.execute, payments:payment.reverse, payments:remittance.send, payments:vendor.read, ledger:vendor.read and ledger:journal.write. #1710 (impl/1710-prohibited-coverage at 3f72c8e1a): a table test states the predicates the mapping gives each of the twelve served actions and that every classification states cross_domain; the shipped set is checked under all five predicates; one gap test per predicate shows the check names exactly that action under that predicate alone and throws (privileged administration has no shipped action, so its case adds a classification that makes hr:role.grant one); the AS's resource-to-AS map only adds cross-domain resources and never clears one the classification states. Mutations (2026-10-26): leaving payment.execute, remittance.send, vendor.read, ledger:vendor.read or ledger:journal.write out of policy.json fails the shipped-set test and the gap tests (payment.reverse: slice 3a, impl/813-standing-payment-admission at a7063aab); the ledger's cross_domain set false or removed, the mapping ignoring the statement or dropping the external-communication actions, or the predicate reader never adding cross_domain each fail the table test and the gap tests; a gap check that drops external communication fails the external-communication gap tests, and one that skips every classified action fails all five; a resource-to-AS map that no longer adds, or that overrides the classification, fails the cross-domain statement test. The check runs as a unit test, not a startup refusal: an AS whose resource-to-AS map places payments at another AS (the standing-payment /token cross-domain test) would see every payments read action as a gap."
   },
   {
    "id": "template.prohibited-classes.checked-after-intersection",
@@ -53303,9 +53487,52 @@
     "normative": "the prohibited-class check reads the post-intersection set: a prohibited action the derivation-policy or Template Ceiling already removed never yields dispatch_prohibited_class, and one that survives the intersection does"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#813, D830. Optional row (adjudication step 6). Todo: no test proposes a prohibited action that the ceiling clips and shows the Dispatch is not refused dispatch_prohibited_class."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "seeded demo reconciliation template (@spec mission-template) > createTemplate accepts the demo descriptor and it dispatches a read-only instance",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "seeded demo reconciliation template (@spec mission-template) > the seeded template's ceiling carries no dispatch-prohibited action, so a Dispatch to every resource it names is admitted under the shipped set (@spec mission-template#prohibited-classes, #1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies irreversible_action (http://localhost:4403/mcp payments:payment.execute), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_commitment (http://localhost:4403/mcp payments:remittance.send), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies external_communication (http://localhost:4403/mcp payments:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:vendor.read), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
+     "name": "a Dispatch never grants a prohibited class, one witness per predicate (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a Dispatch whose only action the published mapping classifies cross_domain (http://localhost:4406/mcp ledger:journal.write), within both ceilings",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#813, D830; #1710, D877 item 4. Optional row (adjudication step 6). The kernel applies the guard to the final set, after the double intersection. Witnessed (impl/1710-prohibited-coverage at 3f72c8e1a): in template mode the derivation-policy derivation at the payments resource carries payments:payment.execute, payments:remittance.send and payments:vendor.read, the seeded Template Ceiling removes them, and the kernel admits the Dispatch under the shipped set with payments:invoice.list and payments:invoice.read (and reports:report.read where the Intent targets the reports API); at /token, a prohibited action that survives both ceilings is refused dispatch_prohibited_class, one per predicate. Partial: no recorded mutant makes the guard read the pre-intersection set, and the removed-then-admitted half is witnessed only at the kernel and only in template mode, not as a proposal the ceiling clips."
   },
   {
    "id": "template.standing-payment.other-classes-stay-prohibited",
@@ -53368,9 +53595,57 @@
      "name": "standing-payment prohibited classes at the token endpoint (@spec template#prohibited-classes, #813) > refuses dispatch_prohibited_class at the token endpoint the payment where it is also cross-domain authority, waiving no predicate but irreversible_action (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class, committing nothing, a designating template whose ceiling also carries payments:vendor.read, under the shipped set and published mapping (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses the vendor read by its external-communication predicate, committing nothing, even under a configured set that leaves it out (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class at dispatch, committing nothing, a designating template whose stored ceiling has gained ledger:vendor.read at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses dispatch_prohibited_class at dispatch, committing nothing, a designating template whose stored ceiling has gained ledger:journal.write at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > the standing-payment admission refuses ledger:vendor.read in an instance's authority by the configured set, and under a set that leaves it out by the cross-domain predicate (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > the standing-payment admission refuses ledger:journal.write in an instance's authority by the configured set, and under a set that leaves it out by the cross-domain predicate (#1710)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses at consent a designating template whose ceiling also carries ledger:vendor.read at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "the standing payment waives nothing else its ceiling carries (@spec mission-template#prohibited-classes, #1710, D877) > refuses at consent a designating template whose ceiling also carries ledger:journal.write at the ledger resource (#1710)",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): witnessed per excluded class under a designating template. External commitment: remittance refused dispatch_prohibited_class at /token and in the kernel, and the payment refused where the mapping also classifies it external commitment. Cross-domain: the payment refused at /token on an AS whose resourceToAs places the payments resource at another AS, and in the kernel. Privileged administration and external communication: the payment refused in the kernel where a mapping so classifies it (no shipped action is privileged administration). Mutations: /token remittance fails only with the predicate admission and the AGR high-risk gate both disabled; /token cross-domain fails with the predicate admission refusing nothing, every predicate waived, or the cross-domain predicate unmapped; kernel remittance fails with the configured-set refusal removed; the four kernel predicate tests fail with every predicate of the payment waived."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): witnessed per excluded class under a designating template. External commitment: remittance refused dispatch_prohibited_class at /token and in the kernel, and the payment refused where the mapping also classifies it external commitment. Cross-domain: the payment refused at /token on an AS whose resourceToAs places the payments resource at another AS, and in the kernel. Privileged administration and external communication: the payment refused in the kernel where a mapping so classifies it (no shipped action is privileged administration). Mutations: /token remittance fails only with the predicate admission and the AGR high-risk gate both disabled; /token cross-domain fails with the predicate admission refusing nothing, every predicate waived, or the cross-domain predicate unmapped; kernel remittance fails with the configured-set refusal removed; the four kernel predicate tests fail with every predicate of the payment waived. #1710 (D877 item 4, impl/1710-prohibited-coverage at 3f72c8e1a), under the shipped set and published mapping: a designating template whose ceiling also carries payments:vendor.read is refused dispatch_prohibited_class at dispatch by the configured set, committing nothing, and under a set that leaves it out by its external-communication predicate; a ledger action (cross-domain) in a designating ceiling is refused at consent (a standing-payment ceiling names exactly one resource), refused dispatch_prohibited_class at dispatch, committing nothing, when a stored ceiling gains it, and refused by the admission by the configured set and, under a set that leaves it out, by cross_domain, while the payment alone stays admitted. Mutations (2026-10-26): the admission dropping its configured-set clause fails the vendor-read and ledger admission tests; waiving every predicate of a non-designated action fails the external-communication vendor-read test and the ledger admission tests; a standing-payment ceiling allowed another resource fails the ledger consent and dispatch-time tests; leaving vendor.read or a ledger action out of policy.json fails the matching test."
   },
   {
    "id": "template.standing-payment.no-other-predicate-waived",
@@ -53608,7 +53883,7 @@
     },
     {
      "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
-     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published classification classifies as irreversible, external-commitment or privileged-administration (@spec template#prohibited-classes)",
+     "name": "dispatch-prohibited coverage (@spec template#prohibited-classes, #813) > the shipped dispatch-prohibited set covers every action the published mapping classifies as irreversible, external-commitment, privileged-administration, external-communication or cross-domain (@spec template#prohibited-classes, #1710)",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -53619,7 +53894,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set. With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Slice 3b (impl/813-budget-binding-3b at 62325958): the Exact-profile condition is refused at startup (observation.local, owner ruling); dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: a budget-member defect is refused at template consent, not at Dispatch."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The existing dispatch_prohibited_class witnesses cover the template that does not admit the exception. Slice 3a (impl/813-standing-payment-admission at a7063aab): with the capability off the payment is refused dispatch_prohibited_class with the configured-set message (kernel and /token); the coverage check holds payments:payment.execute in the shipped configured set (since #1710 under all five predicates; leaving payment.execute out of policy.json fails it). With the capability on each failed condition refuses dispatch_prohibited_class at dispatch: no human consent retained; a stored ceiling without a per-payment max_amount, bounding in another currency, or naming a vendor without a committed destination; a policy committing no destination; a stored approver who is the Dispatcher or the Agent; max_budget absent, above per_instance_max or in another currency; a missing class-named exception; recency past the exception's maximum. Mutations: capability-off configured refusal removed (kernel); capability always on or removed from the opt-in list (/token); stored ceiling not re-checked; Dispatcher or Agent not re-checked; unusable terms read as an ordinary template; admission refusal deferred past the commit; max_budget presence, per_instance_max and currency checks; dispatch-time consent check; round-1 gate and recency mutants. Slice 3b (impl/813-budget-binding-3b at 62325958): the Exact-profile condition is refused at startup (observation.local, owner ruling); dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Partial: a budget-member defect is refused at template consent, not at Dispatch."
   },
   {
    "id": "template.standing-payment.per-payment-max-amount",
@@ -54337,7 +54612,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "the policy view the runtime receives for an admitted instance carries the committed destinations and the budget exactly as the Dispatch Policy whose digest the template commits states them, never values from the Dispatch request",
-    "local": "design decision d: the budget binding is PDP-local (MissionView.budget, derived from the kernel's committed policy snapshot) and never enters req.context"
+    "local": "design decision d: the budget binding is PDP-local (MissionView.budget, derived from the kernel's committed policy snapshot) and never enters req.context. standingPaymentBudgetBindingOf (kernel/standing-payment.ts) takes the owner, id, currency, limit, committed policy reference and destinations only from the Dispatch Policy snapshot the dispatched instance's activation retained, verified against the committed digest. The Dispatch request cannot supply them: its Intent is closed (validateMissionIntentObject, kernel/intent.ts) and admits only max_budget, the instance bound, which the dispatch checks against the policy's per_instance_max and currency."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -54373,7 +54648,7 @@
      "surface": "propagation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack), and no Dispatch request carries a conflicting destination or budget, since the dispatch intake admits neither member. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. That no Dispatch request value reaches the binding is observation.local (D877). Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack). The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.failed-remains-charged",
@@ -63468,9 +63743,15 @@
      "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > keeps a carried current reference, and refuses a carried reference configuration does not name as current, or one with no declarations",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling pinned to a version no longer current does not activate: a new approval meets the current-reference rule",
+     "level": "unit",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -63521,9 +63802,15 @@
      "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > records the current reference in a ceiling entry whose resource requires one, at a commit with no consent page",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > records the configured current reference in the bounded set before evaluation, and the activation commits exactly the evaluated set",
+     "level": "unit",
+     "surface": "governance-decision"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -63616,9 +63903,15 @@
      "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > a superseded ceiling reference within its retention survives the Dispatch, and a retired one refuses",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling carrying a reference carries it into the activation, and refuses a proposal naming another",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -69557,7 +69850,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the issuer classifies the committed Mission's whole derived Authority Set and any Intent consumption bound, so an unclassified action or a high-risk class the Mission carries governs the evaluation",
-    "local": "Witnessed for the derived Authority Set: a governed activation refuses an action the root does not classify and holds a high-risk class to its exception, while a Mission without the class activates under the default ceiling; a recorded ceiling drawdown's gate classifies the whole successor and falls back on a kept high-risk action. The consumption-bound source has no witness: the reference's closed Intent admits no consumption-bound member (intent.ts TOP_LEVEL), so no Mission here can carry one."
+    "local": "Witnessed for the derived Authority Set: a governed activation refuses an action the root does not classify and holds a high-risk class to its exception, while a Mission without the class activates under the default ceiling; a recorded ceiling drawdown's gate classifies the whole successor and falls back on a kept high-risk action. The consumption-bound source: the shipped deployment admits no consumption bound, since the closed Intent refuses max_budget unless the opt-in standing-payment-dispatch capability is on, and that capability stays disabled and unclaimed (D830). With it on, a standing-payment instance's Intent carries max_budget, and the template recording rule's gate (templateGovernanceGate, kernel/template-approval-record.ts) classifies it as the consumption-bound class under the reference-local key consumption_bound (D830 ruling 9). The dispatch passes the bound as present, since it refuses an instance Intent without max_budget, and the re-check derives it from the retained Intent's max_budget."
    },
    "level": "unit",
    "coverage": "partial",
@@ -69581,7 +69874,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The same consumption-bound gap is recorded on approval-governance.governed-policy.check-recency-high-risk and approval-governance.recency.high-risk-standing-consent-no-record. The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency)."
+   "notes": "Rows the recency-evaluation section (#1522 review follow-up). The Relying Auditor counterpart is approval-governance.re-check.steps (step 1 binds evaluated_at to the Mission's creation; step 6 replays recency). Consumption-bound source (#813 slice 3a, merged in #1712, D869): the kernel test 'refuses dispatch_prohibited_class when the committed policy has no class-named exception for the consumption bound, committing nothing (@spec approval-governance#recency-high-risk, #813)' (template-standing-payment.test.ts) exercises the classification and asserts the consumption_bound reason, but no recorded mutant removes the classification (the consumption-bound class added to templateGovernanceGate's present set), so it is not cited and the row stays partial; once that mutant is recorded the test can be cited. approval-governance.governed-policy.check-recency-high-risk keeps its gap: a governed-policy activation arrives through PAR, whose closed Intent refuses max_budget whatever the capability."
   },
   {
    "id": "approval-governance.recency.strictest-across-classes",
@@ -69844,7 +70137,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "where an issuer records an Approval Governance Record for a Mission whose basis stands in for the accountable assertion, and the Mission's whole Authority Set or Intent carries a high-risk class with no committed class-named exception, no record is created and no Mission is activated on it",
-    "local": "Witnessed for ceiling_drawdown, the one standing-consent basis the reference records (#1470 Q5, D626): a successor that keeps an irreversible action its predecessor's human approval granted passes Progressive (which checks only newly widened actions) but carries a high-risk class with no exception in the recording rule, so it falls back to a fresh human approval before activation, with no record and no policy-activated successor (kernel and token endpoint). template and policy_drawdown record nothing; the reference's closed Intent admits no consumption bound."
+    "local": "Witnessed for ceiling_drawdown (#1470 Q5, D626): a successor that keeps an irreversible action its predecessor's human approval granted passes Progressive (which checks only newly widened actions) but carries a high-risk class with no exception in the recording rule, so it falls back to a fresh human approval before activation, with no record and no policy-activated successor (kernel and token endpoint). policy_drawdown records nothing. The template basis records one only under the opt-in standing-payment-dispatch capability, which stays disabled and unclaimed (D830): with it on, a standing-payment instance whose committed Dispatch Policy has no class-named exception for irreversible_action or for consumption_bound (the Intent's max_budget, D830 ruling 9) is refused dispatch_prohibited_class, and no instance is created (#813 slice 3a). The shipped deployment's closed Intent admits no consumption bound."
    },
    "level": "unit",
    "coverage": "tested",
@@ -69862,7 +70155,7 @@
      "surface": "governance-record"
     }
    ],
-   "notes": "#1470 slice 2 (D626 Q8): the eligibility gate checks the whole successor, its Intent included. Mutation: dropping the gate's high-risk clause activates the successor."
+   "notes": "#1470 slice 2 (D626 Q8): the eligibility gate checks the whole successor, its Intent included. Mutation: dropping the gate's high-risk clause activates the successor. Template basis (#813 slice 3a, merged in #1712, D869): the kernel tests refusing a standing-payment dispatch whose committed policy lacks the consumption_bound or the irreversible_action exception assert that no instance is dispatched (and, for the consumption bound, that no Mission is created); their zero-count assertions fail when accounting is written before the transaction or the gate refusal is deferred past commit. No recorded kernel mutant drops the exception requirement itself (the AGR-gate mutant ran only against the endpoint file), so they are not cited here."
   },
   {
    "id": "approval-governance.governed-policy.check-event-binding",

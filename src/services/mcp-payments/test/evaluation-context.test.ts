@@ -1314,8 +1314,10 @@ function contractRef(version: string): ResourceContractRef {
 }
 /** Contract version 2026-10-24, naming payments-runtime-profile-v14 (#252), superseded by v15 (#1693). */
 const V14_CONTRACT = contractRef("2026-10-24");
-/** Contract version 2026-10-26, naming payments-runtime-profile-v15 (#1693), current. */
+/** Contract version 2026-10-26, naming payments-runtime-profile-v15 (#1693), superseded by v16 (#813). */
 const V15_CONTRACT = contractRef("2026-10-26");
+/** Contract version 2026-10-27, naming payments-runtime-profile-v16 (#813, #816), current. */
+const V16_CONTRACT = contractRef("2026-10-27");
 
 /** `TOKEN` whose credential's one entry pins `contract`, as the Mission's entry does. */
 const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
@@ -1333,10 +1335,12 @@ const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
 const commitArgs = () => ({ invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` });
 
 describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879)", () => {
-  it("declares 2026-10-26 current under v15 and 2026-10-24 superseded under v14, with a retention", () => {
+  it("declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)", () => {
     const [declared] = RESOURCE_CONTRACTS.declarations;
     const byVersion = (v: string) => declared?.versions.find((x) => x.version === v);
-    expect(byVersion("2026-10-26")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v15" });
+    expect(byVersion("2026-10-27")).toMatchObject({ state: "current", operation_profile: "payments-runtime-profile-v16" });
+    expect(byVersion("2026-10-26")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v15" });
+    expect(byVersion("2026-10-26")?.retained_until).toEqual(expect.any(String));
     expect(byVersion("2026-10-24")).toMatchObject({ state: "superseded", operation_profile: "payments-runtime-profile-v14" });
     expect(byVersion("2026-10-24")?.retained_until).toEqual(expect.any(String));
   });
@@ -1384,6 +1388,7 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
 
   for (const [mode, contract] of [
     ["pinned to 2026-10-26", V15_CONTRACT],
+    ["pinned to 2026-10-27", V16_CONTRACT],
     ["unpinned", undefined],
   ] as const) {
     it(`an entry ${mode} performs the reversal under the paid vendor's current tenant`, async () => {
