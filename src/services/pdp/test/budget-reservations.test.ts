@@ -1126,7 +1126,9 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       const req = request(c, { action: SCHEDULE, actionClass: null, phase: null });
       // An explicit absent class: the shared fixture adds a default class only when the key is missing.
       const unclassified: EvaluationRequest = { ...req, context: { ...req.context, action_class: undefined } };
-      await expect(evaluate(unclassified, options(claims, c, view("msn_a", binding("msn_a"))))).rejects.toBeInstanceOf(DecisionRequestRefused);
+      const refused = evaluate(unclassified, options(claims, c, view("msn_a", binding("msn_a"))));
+      await expect(refused).rejects.toBeInstanceOf(DecisionRequestRefused);
+      await expect(refused).rejects.toMatchObject({ denial_reason: "action_class_missing" });
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
     });
