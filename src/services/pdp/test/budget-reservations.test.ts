@@ -1852,6 +1852,21 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
     });
+
+    it("the sweep alone tombstones a settled metered claim's stored decision past the reconciliation window, and past the class horizon keeps the claim and its reservations (@spec metering#retry, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      c.set(T0 + PAST_WINDOW_MS + 60_000);
+      claims.sweep();
+      c.set(T0 + HORIZON_MS + 60_000);
+      claims.sweep();
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", decision_json: null });
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
+    });
   });
 
   describe("the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states)", () => {
