@@ -476,6 +476,9 @@ export async function handleTokenExchangeGrant(
       {
         issuer: opts.issuer,
         ...(opts.crossOrg ? { crossOrg: opts.crossOrg } : {}),
+        // @spec cross-org-delegation#projection (D941): the declarations this
+        // AS's kernel reads, so a projected contract resolves as a carried one.
+        resourceContracts: opts.kernel.resourceContracts(),
         tokenKey: opts.childGrantKey as CryptoKey,
         tokenKid: opts.childGrantKid as string,
         verifyDpop: (proofJws) => verifyTokenEndpointDpop(opts, proofJws),

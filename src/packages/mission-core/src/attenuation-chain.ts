@@ -6,8 +6,9 @@
  * tool-identifier encoding, `par_hash`, and the per-hop `aud` and `exp`
  * nesting rules. A Mission-bound chain is verified by the -02 substrate
  * verifier (`aat-verify.ts`) with the Mission layer of `mission-aat.ts` on
- * top. The cross-organization chain (`kernel/cross-org-chain.ts`, #1759) still
- * verifies its hops with {@link toolsSubset} until it moves to -02.
+ * top, and so is the cross-organization chain (`kernel/cross-org-chain.ts`,
+ * #1759). {@link toolsSubset} is the earlier cross-organization subset rule,
+ * which no verifier uses.
  */
 
 import { createHash } from "node:crypto";
@@ -77,7 +78,8 @@ function constraintSubset(child: AATConstraint, parent: AATConstraint): boolean 
 
 /**
  * @spec cross-org-delegation#derivation: capability monotonicity as the
- * cross-organization chain checks it today (#1759 moves it to -02): `child`
+ * earlier cross-organization wire checked it; since #1759 the chain is
+ * verified under AAT -02 Section 4.5 (`aat-constraints.ts`) instead. `child`
  * is a subset of `parent` when every child tool exists in the parent, every
  * constraint the parent placed on that tool is present on the child and at
  * least as tight, and the child adds no tool the parent lacks.

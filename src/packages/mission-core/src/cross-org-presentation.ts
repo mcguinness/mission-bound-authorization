@@ -1,10 +1,11 @@
 /**
  * @spec cross-org-delegation#chain-presentation — the Chain Presentation: the
- * closed JSON envelope carrying an ordered root-to-leaf compact-JWS chain and
- * hop-aligned actor-binding credentials. Pure structure: parsing, closure,
- * bounds (checked BEFORE any signature verification, which lives with the
- * consumer), and the chain digest over the JCS canonical bytes of the `chain`
- * array exactly as presented.
+ * closed JSON envelope carrying an ordered root-to-leaf compact-JWS chain, as
+ * the substrate's `aat_chain` (AAT -02 Section 7.4, #1759), and hop-aligned
+ * actor-binding credentials. Pure structure: parsing, closure, bounds
+ * (checked BEFORE any signature verification, which lives with the
+ * consumer), and the chain digest over the JCS canonical bytes of the
+ * `aat_chain` array exactly as presented.
  */
 import { createHash } from "node:crypto";
 import { canonicalize, type JsonValue } from "./canonicalize.js";
@@ -15,7 +16,7 @@ export const CHAIN_MEDIA_TYPE = "application/mission-delegation-chain+json";
 export const CHAIN_DIGEST_TYP = "mission-delegation-chain";
 
 export interface ActorCredentialEntry {
-  /** 0-based index into `chain` of the hop this credential binds. */
+  /** 0-based index into `aat_chain` of the hop this credential binds. */
   hop: number;
   /** Registered actor-credential type identifier. */
   type: string;
@@ -24,8 +25,8 @@ export interface ActorCredentialEntry {
 }
 
 export interface ChainPresentation {
-  /** Compact-JWS hop tokens, root first, leaf last. */
-  chain: string[];
+  /** Compact-JWS hop tokens, root first, leaf last (the substrate's `aat_chain`). */
+  aat_chain: string[];
   actor_credentials?: ActorCredentialEntry[];
 }
 
@@ -39,7 +40,7 @@ export class ChainPresentationError extends Error {}
 /**
  * Parse a base64url-encoded Chain Presentation under declared bounds.
  * @spec cross-org-delegation#chain-presentation — the top level is closed
- * (unknown member refused); bounds are enforced before the caller verifies
+ * (unknown member refused, the -01 `chain` member included); bounds are enforced before the caller verifies
  * any signature; `actor_credentials` entries are typed and hop-aligned.
  */
 export function parseChainPresentation(
@@ -66,13 +67,13 @@ export function parseChainPresentation(
   }
   const obj = raw as Record<string, unknown>;
   for (const key of Object.keys(obj)) {
-    if (key !== "chain" && key !== "actor_credentials") {
+    if (key !== "aat_chain" && key !== "actor_credentials") {
       throw new ChainPresentationError(`unknown top-level member: ${key}`);
     }
   }
-  const chain = obj.chain;
+  const chain = obj.aat_chain;
   if (!Array.isArray(chain) || chain.length === 0 || !chain.every((t) => typeof t === "string")) {
-    throw new ChainPresentationError("chain must be a non-empty array of compact-JWS strings");
+    throw new ChainPresentationError("aat_chain must be a non-empty array of compact-JWS strings");
   }
   if (chain.length > bounds.maxHops) {
     throw new ChainPresentationError("chain exceeds the declared hop bound");
@@ -116,12 +117,12 @@ export function parseChainPresentation(
       return { hop, type: entry.type, credential: entry.credential };
     });
   }
-  return { chain: chain as string[], ...(creds ? { actor_credentials: creds } : {}) };
+  return { aat_chain: chain as string[], ...(creds ? { actor_credentials: creds } : {}) };
 }
 
 /**
  * @spec cross-org-delegation#chain-presentation — the chain digest: sha-256
- * over the JCS canonical bytes of the `chain` array exactly as presented (an
+ * over the JCS canonical bytes of the `aat_chain` array exactly as presented (an
  * ordered JSON array of compact-JWS strings), in the family's encoded form.
  * It commits to the complete ordered chain and to nothing else; the typ
  * `mission-delegation-chain` names the digest kind.
