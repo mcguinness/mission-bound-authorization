@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-28T05:31:44Z
-Source repository commit: 168b7cc0dc1506327eadb0d374f110d453aa3386
+Generated: 2026-10-28T15:19:17Z
+Source repository commit: d5d039d145f53bde64d9416a86836b5777b4923b
 Member count: 9
 
 Reading order:
@@ -10601,8 +10601,14 @@ Table of Contents
    [RFC9068] fixes the JWT's required claims (including jti), the typ
    header parameter value at+jwt, and resource server validation
    (Section 2.1 of [RFC9068], Section 2.2 of [RFC9068], Section 4 of
-   [RFC9068]).  In addition to what that profile requires, a derived
-   token:
+   [RFC9068]).  A token whose format a companion profile explicitly
+   defines, with its own typ and verification rules, follows that
+   profile instead, as the Mission Offline Attenuation root does
+   ([I-D.draft-mcguinness-oauth-mission-attenuation]).  JWT access-token
+   validation remains governed by Section 4 of [RFC9068], including
+   acceptance of at+jwt or application/at+jwt.  A companion-format token
+   is consumed only under that companion's verification rules.  In
+   addition to what [RFC9068] requires, a derived token:
 
    *  carries the token's Mission-derived authority as
       authorization_details ([RFC9396]); this MAY be the full Authority
@@ -14835,6 +14841,12 @@ Table of Contents
               bound-authorization/draft-mcguinness-oauth-mission-
               approved-set-verification.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -16327,6 +16339,12 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Token Claims: a token whose format a companion profile explicitly
+      defines, with its own typ and verification rules (the Mission
+      Offline Attenuation root), follows that profile; JWT access-token
+      validation stays under Section 4 of RFC 9068, accepting at+jwt or
+      application/at+jwt (#1760).
 
    *  Configured-mapping mode can key on the requested scope values for
       a scope-only target, through that target's trusted scope-
@@ -28466,8 +28484,19 @@ Table of Contents
       bound decided either deny (Section 7).
 
    *  A request whose authority is absent, or carries an entry the PDP
-      cannot evaluate in full, is denied credential_invalid: the PDP
-      MUST NOT fall back to the Mission's authority.
+      cannot evaluate in full, is denied credential_invalid, and the PDP
+      MUST NOT fall back to the Mission's authority.  This profile
+      deliberately requires the credential's entire authority
+      description to be evaluable, so an unevaluable credential entry
+      invalidates the request even when another entry could authorize it
+      under Resource Access's alternative-entry rule
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]).  That is
+      this profile's credential validation policy; the prohibition on
+      falling back to the Mission's authority does not by itself require
+      it.  An entry the PDP evaluates and finds unsatisfied invalidates
+      nothing: another complete entry of authority still authorizes the
+      action.  The policy has an interoperability cost: adding an entry
+      a PDP cannot evaluate makes the credential unusable at that PDP.
 
 5.7.  Action Parameters and Parameter Digest
 
@@ -31280,6 +31309,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Credential Decision Context: requiring a credential's whole
+      authority description to be evaluable is this profile's credential
+      validation policy, stricter than Resource Access's alternative-
+      entry rule and not a consequence of the prohibition on falling
+      back to the Mission's authority; an entry the PDP evaluates and
+      finds unsatisfied still lets another complete entry authorize; the
+      interoperability cost is stated (#1806).
 
    *  Changes a requirement (#956, D814): where the runtime Enforcement
       Scope Statement declares action classes, the PDP refuses a
