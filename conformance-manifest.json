@@ -23730,7 +23730,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type is application/jwk-set+jwt (`HISTORICAL_KEY_SET_MEDIA_TYPE`), the media type OpenID Federation registers for a signed JWK Set (Section 15.6)."
+   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type against the literal application/jwk-set+jwt, the media type OpenID Federation registers for a signed JWK Set (Section 15.6), not against the server's own constant. Mutation-proved (#1813 review, D945): the server serving application/jwk-set+json fails it; the earlier assertion against the shared constant let that pass."
   },
   {
    "id": "status.historical-key-set.explicit-freshness",
@@ -23763,7 +23763,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control max-age, the same lifetime /jwks declares (`JWKS_MAX_AGE_SECONDS`, 300 s in the reference); the draft fixes no lifetime."
+   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control is a max-age with a positive delta-seconds, not the server's own constant: the draft fixes no lifetime (the reference declares 300 s, as /jwks does). Mutation-proved (#1813 review): a lifetime that is not a valid delta-seconds fails it."
   },
   {
    "id": "status.historical-key-set.consumer-refetches",
