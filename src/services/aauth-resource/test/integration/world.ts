@@ -14,6 +14,10 @@
  * the identifier's host. There is no TLS. Key discovery goes through the
  * library's resolver, egress admission and pinned fetch, admitting only
  * the hosts registered here. One clock drives every party.
+ *
+ * The Resource's revoked set is durable SQLite on a temporary file, and
+ * its revocation endpoint sits behind the testkit's switch
+ * (`revocationSwitch`), so a test can make revocation unavailable.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -37,6 +41,7 @@ import {
   createAgent,
   createAgentProvider,
   decodeClaims,
+  EndpointSwitch,
   LoopbackNetwork,
   type LoopbackResponse,
   ManualClock,
@@ -49,7 +54,9 @@ import {
   listen,
   loadResourceConfig,
   mintResourceToken,
+  REVOCATION_PATH,
   type Resource,
+  SqliteRevocationStore,
 } from "../../src/index.js";
 
 export const AP = "https://ap.test";
@@ -115,6 +122,8 @@ export interface World {
   ps: PersonServer;
   store: ObservedStore;
   resource: Resource;
+  /** The switch in front of the Resource's revocation endpoint. */
+  revocationSwitch: EndpointSwitch;
   /** Every mission `s256` a test approved or named, for {@link World.records}. */
   missions: Set<string>;
   seconds(): number;
@@ -150,11 +159,13 @@ export async function world(): Promise<World> {
     config: loadResourceConfig(CONFIG_DIR),
     resolver: net.resolver({ now: clock.now }),
     now: clock.now,
+    revocations: new SqliteRevocationStore(join(dir, "resource.db")),
   });
+  const revocationSwitch = new EndpointSwitch({ path: REVOCATION_PATH });
   await net.serve(AP, provider.handler);
   let running = await ps.listen();
   net.attach(PS, running.server);
-  net.attach(RESOURCE, await listen(resource.handler));
+  net.attach(RESOURCE, await listen(revocationSwitch.wrap(resource.handler)));
   const missions = new Set<string>();
 
   const w: World = {
@@ -166,6 +177,7 @@ export async function world(): Promise<World> {
     },
     store,
     resource,
+    revocationSwitch,
     missions,
     seconds: () => Math.floor(clock.now() / 1000),
     agent: (local = "assistant", misbehavior) =>
@@ -211,6 +223,7 @@ export async function world(): Promise<World> {
     close: async () => {
       await net.close();
       store.close();
+      resource.revocations.close();
       rmSync(dir, { recursive: true, force: true });
     },
   };
