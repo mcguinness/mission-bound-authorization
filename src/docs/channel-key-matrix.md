@@ -46,7 +46,10 @@ ring's `revision`, and the AS serves the revision it loaded as its `/jwks`
 they carry this revision and exactly the ring's pending, active and overlap
 generations, and records what that confirms: when a generation was first
 published, when the AS stopped signing under it, and when it was withdrawn.
-One operator edits a ring at a time; nothing locks it.
+One operator edits a ring at a time; nothing locks the ring. The key binding
+record has its own lock: an AS start that records a new `kid` holds
+`<record>.lock` while it re-reads and appends, and a start that finds
+another process holding it is refused (#1833).
 
 - `pnpm keys rotate` stages a `pending` generation, published once the AS
   restarts, not signing.
