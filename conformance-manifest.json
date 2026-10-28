@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5257c35b038c4d3dbea79a1abeffe9bb1b61366c",
-    "content_sha256": "a270d0a4a4ce798051b32fc4bedfa6fee5c7e300864e92bb0b5083ed4634cc8d"
+    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
+    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -23698,6 +23698,168 @@
     }
    ],
    "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+  },
+  {
+   "id": "status.historical-key-set.media-type",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS serves the set with the media type `application/jwk-set+jwt` ({{OpenID.Federation}}, Section 15.6).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with the HTTP Content-Type application/jwk-set+jwt"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type is application/jwk-set+jwt (`HISTORICAL_KEY_SET_MEDIA_TYPE`), the media type OpenID Federation registers for a signed JWK Set (Section 15.6)."
+  },
+  {
+   "id": "status.historical-key-set.explicit-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS declares a freshness lifetime for the set with explicit freshness information ({{Section 4.2.1 of RFC9111}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with explicit freshness information, a freshness lifetime of its choosing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control max-age, the same lifetime /jwks declares (`JWKS_MAX_AGE_SECONDS`, 300 s in the reference); the draft fixes no lifetime."
+  },
+  {
+   "id": "status.historical-key-set.consumer-refetches",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer refetches the set, or revalidates its copy ({{Section 4.3 of RFC9111}}), once that lifetime ends; a response without valid explicit freshness information is stale when received ({{Section 4.2.2 of RFC9111}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a historical key set fetches it again once the freshness lifetime the set declared ends, so it learns a key a later set lists, and treats a set served without explicit freshness as stale on receipt, fetching it again at each use"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > refetches the set once the lifetime it declares ends, learning a key a later set lists, and treats a set without explicit freshness as stale when received",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). Witnessed at the PDP's holder, the reference's only reader of the set: a key a later set lists is learned once the declared 300 s end, and a set served without Cache-Control is fetched at each use. Mutation-proved: never refetching a held set fails the learning assertion; giving a set without explicit freshness a heuristic lifetime fails the fetch count."
+  },
+  {
+   "id": "status.historical-key-set.compromise-not-cleared",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "a consumer MUST NOT treat it as no longer compromised because a later set omits it, an earlier set is presented again, or a fetch of the set fails.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a key a historical key set the consumer verified has listed stays refused for current reliance: a later set that omits it, an earlier valid set replayed, a set that does not verify, or a failed fetch of the set leaves it refused"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), the D887 consumer rule made normative. Witnessed at the PDP's holder, the reference's only reader of the set: a failed fetch and a set that does not verify keep the learned key refused; a replayed empty set the current key signed does not remove it; a set signed under a learned-compromised key is refused whole. Mutation-proved in #1766 (D887): replacing the held list on each set, and dropping the learned-signer check, each fail their witness."
+  },
+  {
+   "id": "status.historical-key-set.no-jwks-extension",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "the set's freshness never extends that of the consumer's cached `jwks_uri`, which {{signing-key-retention}} governs.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a fresh historical key set still refuses current reliance once its cached jwks_uri is stale and cannot be revalidated: the set extends nothing about the live keys"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > never lets a held set extend the cached jwks_uri's freshness: a stale jwks_uri that cannot be revalidated refuses, though the set is fresh",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), from D887's outage ruling: keeping verified compromise information during an outage does not extend the current JWKS's freshness. Witnessed at the PDP's consumer: with the set fresh for an hour and the jwks_uri's 60 s passed and unrevalidatable, a Status response under the current key is refused. Mutation-proved: a stale-if-error fallback on the live keys while a set is held fails it."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
