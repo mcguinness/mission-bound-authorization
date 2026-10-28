@@ -275,9 +275,9 @@ Mission loader.
 | **PDP** (one per deployment, shared by every PEP and issuer it serves): idempotency claims | (scope digest, idempotency key); the scope carries the Mission issuer | Key | `idempotency-claim.test.ts` ("gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's") |
 | Decision Evidence sequences | (issuer, Mission, emitter, role) | Key | `decision-evidence-sequence.test.ts` ("keeps a distinct counter for each Mission and each emitter, across a restart") |
 | `mission` budget counters | (issuer, root Mission) | Key | `budget-reservations.test.ts` ("keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares") |
-| `standing_consent` budget counters | (owner, budget id) | Declared: the budget's accounting domain. One standing consent spans every Mission whose committed policy commits that budget, under any issuer whose policy the PDP's budget declaration lists | The same `budget-reservations.test.ts` case |
+| `standing_consent` budget counters | (owner, budget id) | The budget's accounting domain, not the issuer: one standing consent spans every Mission whose committed policy commits that budget, under any issuer whose policy the PDP's budget declaration lists | The same `budget-reservations.test.ts` case |
 | Claim and budget transitions, budget reservations, settlement conflicts, claims in flight, duration leases | Evaluation identifier, counter or activity; a renewal's scope digest carries the Mission issuer | PDP-minted identifiers, or key | None |
-| Mission Status resolver cache | Mission identifier | One resolver per issuer and scope; a reference or response naming another issuer is refused | `mission-status-resolver.test.ts` ("never reads a reference naming another issuer") |
+| Mission Status resolver cache | Mission identifier | One resolver per issuer and scope; a reference or response naming another issuer is refused, and a cached read answers nothing for one | `mission-status-resolver.test.ts` ("never reads a reference naming another issuer"; "returns what an earlier resolve established, never reads the source, and returns nothing once a bound has passed") |
 | **PEP, per composition:** operations, permit redemptions, the connector ledger, reversals and outbox, outcome alerts | `op:<Mission>:...`, the bare Mission identifier | Declared: one Mission issuer per composition (below) | `kernel-mission-view-issuer.test.ts`; `token-profile.test.ts` ("answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token ...") |
 | Execution Evidence sequences, durable and in memory | (Mission, emitter, role) | Declared: one Mission issuer per composition | As above |
 | Write reservations, payment schedules | (scope digest, key), the scope carrying the Mission issuer; unique (Mission issuer, Mission, invoice) | Key | None |
@@ -503,7 +503,7 @@ a check at the next guarded transaction, after that write committed.
 | `mission_approval_deferrals` | `mission-approval-deferral.ts` | managed (open, completion, direct approval); statement (resolve, cancel, polls, delivery claims) |
 | `mission_deferred_authorization_codes` | `adapters/deferred-mission-approval.ts` | managed (`openOnce`); statement (`stage`) |
 | `recovery_marker` | `recovery-witness.ts` | managed (every guarded transaction; reconciliation) |
-| `kernel_issuer` | `kernel.ts` | boot (the first open records the issuer) |
+| `kernel_issuer` | `kernel.ts` | boot (the first open records the issuer; on a witnessed store that write is a guarded transaction, so the first open after an upgrade advances the marker and the witness once) |
 
 Not supported: a way back from an older store by invalidating its authority under
 a new generation (deferred, D820), more than one writer, and more than one host
@@ -612,10 +612,10 @@ one issuer's store, or under a declared separation (the namespace inventory
 under
 [Control-plane implementation boundary](#control-plane-implementation-boundary)).
 The declared separations are one AS per process, for the provider's memory
-adapter and the device decisions in progress; one Mission issuer per PEP
-composition, for its operation keys and Execution Evidence sequences; and the
-budget's accounting domain, for a standing consent's shared counter. A
-Lifecycle client's grant can be scoped to a tenant's Subjects, or to Subjects
+adapter and the device decisions in progress, and one Mission issuer per PEP
+composition, for its operation keys and Execution Evidence sequences. A
+standing consent's shared counter keys on the budget's accounting domain
+(owner and budget id), not on the issuer. A Lifecycle client's grant can be scoped to a tenant's Subjects, or to Subjects
 and requesting clients, and any other Mission answers that client as unknown.
 Shared services bind each operation to its issuer: the PDP's idempotency
 claims, Decision Evidence sequences and Mission budget counters, the Signals
