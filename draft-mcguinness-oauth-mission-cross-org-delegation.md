@@ -405,8 +405,9 @@ specifies, with these profile rules:
 1. sign the child with the key bound by the parent's `cnf`;
 2. bind the child to the exact parent through `par_hash`;
 3. narrow or preserve the mapped capability entry under the
-   attenuation substrate's tool and constraint subset model; no other
-   authorization-details entry is added;
+   attenuation substrate's tool and constraint subset model, and its
+   `mission_constraints` member under the attenuation profile's
+   narrowing rule; no other authorization-details entry is added;
 4. keep `aud` equal to or narrower than the parent's;
 5. set `exp` no later than the parent's and no later than the
    destination trust policy permits;
@@ -417,8 +418,8 @@ specifies, with these profile rules:
 9. bind the child to the recipient workload's own
    proof-of-possession key, carried as the child's public `cnf.jwk`.
 
-The recipient proves possession of the leaf key at redemption or
-direct resource access.
+The recipient proves possession of the leaf key at the projection
+exchange or at direct invocation ({{verification}}, step 8).
 
 # Trust Model {#trust-model}
 
@@ -579,7 +580,8 @@ names for a path whose minter is not the Mission's issuer
 2. **Authority bound.** The root's mapped entry lies within the
    Mission Authority Set ({{root-issuance}}); each hop is a subset of
    its parent under the attenuation substrate's tool and constraint
-   model ({{derivation}}); the local token carries only the locally
+   model and the attenuation profile's `mission_constraints` rule
+   ({{derivation}}); the local token carries only the locally
    permitted subset of the verified leaf ({{projection}}).
 3. **Mission state.** The originating Mission Issuer issues the root
    only while the Mission is `active` ({{root-issuance}}). A holder
@@ -663,7 +665,8 @@ the canonical actor `{"iss": "https://id.org1.example", "sub":
 "wl-agent-a"}`, records the mapping and version, and mints the root:
 `typ` per the substrate, `iss` the Mission Issuer, `aud`
 `["https://api.org3.example"]`, `cnf.jwk` agent A's public key, the
-mapped capability entry, `del_depth` 0, `del_max_depth` 2, `act`
+mapped capability entry with its `mission_constraints` member,
+`del_depth` 0, `del_max_depth` 2, `act`
 naming agent A, and the `mission` claim with `id`, `issuer`,
 `authority_hash`, and `subject`.
 
