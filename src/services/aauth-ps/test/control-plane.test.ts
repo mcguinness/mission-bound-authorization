@@ -255,6 +255,22 @@ describe("control plane: an absent mission and an unauthorized one are answered 
     );
   });
 
+  it("answers an owning agent as any unauthorized caller where the PS does not admit owning agents", async () => {
+    const { s256 } = await mission(assistant);
+    await w.restart({
+      config: (doc) => {
+        (doc.management as Record<string, unknown>).admit_owning_agent = false;
+      },
+    });
+    const baseline = observable(await control(w, assistant, absent, { action: "status" }));
+    expect(baseline.status).toBe(404);
+    expect(observable(await control(w, assistant, s256, { action: "status" }))).toEqual(baseline);
+    expect(observable(await control(w, assistant, s256, terminateBody()))).toEqual(baseline);
+    expect(w.durable.findOwnedMission(ASSISTANT, s256)?.state).toBe("active");
+    // An administrator still reaches it.
+    expect((await control(w, w.admins.alice, s256, { action: "status" })).status).toBe(200);
+  });
+
   it("admits no agent the allowlist has dropped, even for a mission it owns", async () => {
     const { s256 } = await mission(assistant);
     await w.restart({
