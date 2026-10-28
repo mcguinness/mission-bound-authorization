@@ -60,12 +60,19 @@ operation with the one scope an auth token must grant for it. The scope
 check is the Resource's own policy on the PS-issued auth token (Section
 13.7); the Resource never evaluates a mission.
 
+`revocation_limits` (#836 slice 3) bounds each PS at the revocation
+endpoint (aauth -11 Section 11.12.3): the unexpired revocations one issuer
+can hold (`entries_per_issuer`, default 10000) and the revocation requests
+it can make in one minute (`requests_per_issuer_per_minute`, default 600).
+A member left out takes its default.
+
 - **Owner.** The Resource's operator.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown members, an issuer that is not a server identifier, a lifetime
   over 300 seconds, an unsupported algorithm, an operation at a reserved
-  path, an operation scope the file does not define, and a duplicate
-  operation.
+  path (`/authorize`, `/revoke`), an operation scope the file does not
+  define, a duplicate operation, and a revocation limit that is not an
+  integer from 1 to 1000000.
 - **Updating.** Edit, review, and restart the Resource. Resource tokens
   already issued keep their scope.
 
