@@ -1856,25 +1856,26 @@ permits omission; it never modifies the entry under a claimed subset
 relation. A malformed entry is refused as {{authority-proposal}}
 states.
 
-The AS relates each entry to the audiences that consume it through a
-trusted entry-to-audience mapping, such as authenticated configuration
-or protected resource metadata ({{RFC9728}}). An entry's original
-approved audience is the audience or audiences that mapping assigned
-the entry when the Mission was approved. An entry's `resource` value is
-not by itself an audience ({{token-response}}). The AS MUST retain that
-association with the Mission; a later change to the mapping does not
-redefine it.
+The following rules govern an entry's original approved audience:
 
-A Mission created from earlier authority, such as a Child Mission
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a successor
-({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an instance of a
-standing consent ({{standing-consent-bases}}), does not reassign the
-original approved audience of an entry it inherits: the entry keeps that
-of the authority it derives from. Only a fresh approval of the entry, or
-a transformation under a declared capability, establishes a different
-one. Where the AS cannot establish an entry's original approved
-audience, the entry has none; the current mapping MUST NOT stand in
-for it.
+- The AS relates each entry to the audiences that consume it through a
+  trusted entry-to-audience mapping, such as authenticated
+  configuration or protected resource metadata ({{RFC9728}}). An
+  entry's original approved audience is the audience or audiences that
+  mapping assigned the entry when the Mission was approved. An entry's
+  `resource` value is not by itself an audience ({{token-response}}).
+- The AS MUST retain that association with the Mission; a later change
+  to the mapping does not redefine it.
+- A Mission created from earlier authority, such as a Child Mission
+  ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}), a
+  successor ({{I-D.draft-mcguinness-oauth-mission-expansion}}), or an
+  instance of a standing consent ({{standing-consent-bases}}), does not
+  reassign the original approved audience of an entry it inherits: the
+  entry keeps that of the authority it derives from. Only a fresh
+  approval of the entry, or a transformation under a declared
+  capability, establishes a different one.
+- Where the AS cannot establish an entry's original approved audience,
+  the entry has none; the current mapping MUST NOT stand in for it.
 
 Issuing an entry to an audience other than its original approved
 audience, including audience projection to a Resource AS
