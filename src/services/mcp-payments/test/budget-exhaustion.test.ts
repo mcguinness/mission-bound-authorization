@@ -238,6 +238,29 @@ describe("exact budget exhaustion through the executing PEP (@spec metering#aggr
     });
     await h.close();
   });
+
+  it("a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while the wire's Decision Evidence carries one entry per counter (@spec metering#metering-evidence, #816, D877)", async () => {
+    const h = await harness();
+    const paid = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+    expect(paid.ok, JSON.stringify(paid)).toBe(true);
+    const executions = h.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content as unknown as Record<string, unknown>] : []));
+    const completed = executions.filter((e) => e.outcome === "completed");
+    expect(completed).toHaveLength(1);
+    for (const record of executions) {
+      expect(record).not.toHaveProperty("metering");
+      expect(record).not.toHaveProperty("requested");
+      expect(record).not.toHaveProperty("remaining");
+    }
+    const permit = h.evidence
+      .all()
+      .flatMap((e) => (e.kind === "decision" ? [e.content as DecisionEvidenceObject] : []))
+      .find((d) => d.decision === "permit");
+    expect(permit?.metering?.map((m) => [m.counter_scope, m.counter_id])).toEqual([
+      ["mission", budgetCounterId("mission", { issuer: "https://as.test", mission_id: "msn_816" })],
+      ["standing_consent", SHARED],
+    ]);
+    await h.close();
+  });
 });
 
 describe("a budget-bound wire permit suppressed before redemption (@spec metering#settlement-states, #813, #816, owner ruling)", () => {

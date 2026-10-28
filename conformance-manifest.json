@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "65aca267b53baaaf312334515596ead8bd4cd808",
-    "content_sha256": "a1efcd28a1983362f4a5d735728d54a887d1facab8944c52465906eb8fc277c0"
+    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
+    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -32955,7 +32955,7 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -32964,9 +32964,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a later suppressed settlement from the redeeming attempt for the permit's own evaluation releases a held reservation (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/budget-reconciler-cadence.test.ts",
+     "name": "the declared reconciler processes budget reservations at its real cadence (@spec metering#settlement-states, runtime#evidence, #816, D877 ruling 3) > runs at start and then every five minutes for PT15M: the run after a permit's lease elapses holds its reservation and raises budget_reservation_held once, the run after the window closes raises claim_indeterminate for an outcome it cannot establish, and the reservations stay held and charged indefinitely (@spec metering#settlement-states, runtime#evidence, #816, D830 ruling 7, D877 ruling 3)",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "Idempotency-claim half: proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again. Consumption-reservation half (#816 slice 2, merged in #1713, D870): a reservation whose permit was never settled is held at lease expiry, still held past the reconciliation window and the claim's horizon purge, with the next request seeing the reduced headroom, and released only by the redeeming attempt's suppressed settlement for its own evaluation. Releasing on lease or restart (C1), at the window close (C6) or at the horizon purge (C7) fails the first budget witness; not releasing a held reservation on that settlement (M1) fails the second (mutants recorded on metering.settlement-states.timeout-never-releases and metering.settlement-states.suppressed-releases). Reservations exist only under a claimed budget_metering declaration, and the standing-payment capability stays disabled and unclaimed (D830)."
+   "notes": "Idempotency-claim half: proved in #817 by deleting the claim at window close instead of closing it indeterminate: the PDP then permits the key again. Consumption-reservation half (#816 slice 2, merged in #1713, D870): a reservation whose permit was never settled is held at lease expiry, still held past the reconciliation window and the claim's horizon purge, with the next request seeing the reduced headroom, and released only by the redeeming attempt's suppressed settlement for its own evaluation. Releasing on lease or restart (C1), at the window close (C6) or at the horizon purge (C7) fails the first budget witness; not releasing a held reservation on that settlement (M1) fails the second (mutants recorded on metering.settlement-states.timeout-never-releases and metering.settlement-states.suppressed-releases). Reservations exist only under a claimed budget_metering declaration, and the standing-payment capability stays disabled and unclaimed (D830). Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): through the declared reconciler, a prior process's outcome it cannot establish closes indeterminate with claim_indeterminate, while both reservations stay held an hour on; a reconciler run that skips the claim listing (CD2) fails that witness."
   },
   {
    "id": "runtime.execution-capabilities.compensation-declaration-grants-no-authority",
@@ -39942,16 +39948,28 @@
     "normative": "the cumulative budget counter compares currencies exactly: a debit whose currency differs from max_budget's in any character, case included, is never counted as within the cap, and no conversion applies"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a request or binding whose currency differs from the budget's only in case is denied constraint_unsupported and reserves nothing (@spec metering#bounds, metering#metering, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a well-formed binding whose currency, or whose instance max_budget currency, is not the budget's declared currency is denied constraint_unsupported and reserves nothing (@spec metering#bounds, metering#metering, #816, D877)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a binding whose currency (and max_budget currency) is EUR under a USD declaration, and a USD binding with an EUR request amount, are each denied constraint_unsupported and reserve nothing; no conversion applies. Dropping every currency comparison (E1) fails the binding case; the request-amount case has no isolated mutant. Partial: a currency differing only in case (usd) or in one character is not exercised."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Metering's max_budget currency takes max_amount's form. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a binding whose currency (and max_budget currency) is EUR under a USD declaration, and a USD binding with an EUR request amount, are each denied constraint_unsupported and reserve nothing; no conversion applies. Dropping every currency comparison (E1) fails the binding case; the request-amount case has no isolated mutant. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a request in usd, differing from the budget's USD only in case, is denied constraint_unsupported and reserves nothing (comparing case-insensitively, W18, fails it); a binding in usd is refused too, by the currency-code shape check before any comparison; and a well-formed binding whose currency, or whose instance max_budget currency, is EUR is denied constraint_unsupported and reserves nothing (removing either comparison, W18b or W18c, fails it)."
   },
   {
    "id": "metering.bounds.max-budget-amount-decimal",
@@ -40142,7 +40160,7 @@
     "normative": "every metered action under a Mission whose Intent carries max_budget draws on that Mission's budget counter; none is permitted without a reservation on it"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -40185,9 +40203,15 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a metered action presented under a class the claim domain does not claim is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance duty to meter every consumption bound a governed Mission carries. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): with a budget binding on the Mission view, every permit of the declared metered action at commit carries a reservation on both counters; removing the reservation from the claim (A1) fails all three witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): the co-resident decision point meters the binding its own source derives, whether the caller's view omits the binding or carries another budget's, and through the composed stack a dispatched instance whose Intent carries max_budget is metered on its instance counter and the shared counter; a Mission whose binding cannot be derived (the underivable marker, a throwing source, a malformed binding, a retained snapshot that is gone) is denied constraint_unsupported for every otherwise-permitted action and reserves and claims nothing. Consulting the source only when the caller supplies a binding (B2), keeping the caller's binding (B1), not attaching the source's (B4) or not binding the source (B5) fails the source witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered; reading the marker or a throwing source as unbound (F1, F2) or removing the unreadable-binding guard (F3) fails the underivable witness, F1 and F3 fail the snapshot one, and deferring that refusal past the claim (Z2) fails its zero-count alone. Partial: the refusal of a metered action in a class the claim domain does not claim is code no witness exercises."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance duty to meter every consumption bound a governed Mission carries. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): with a budget binding on the Mission view, every permit of the declared metered action at commit carries a reservation on both counters; removing the reservation from the claim (A1) fails all three witnesses. Slice 3b (impl/813-budget-binding-3b at 62325958): the co-resident decision point meters the binding its own source derives, whether the caller's view omits the binding or carries another budget's, and through the composed stack a dispatched instance whose Intent carries max_budget is metered on its instance counter and the shared counter; a Mission whose binding cannot be derived (the underivable marker, a throwing source, a malformed binding, a retained snapshot that is gone) is denied constraint_unsupported for every otherwise-permitted action and reserves and claims nothing. Consulting the source only when the caller supplies a binding (B2), keeping the caller's binding (B1), not attaching the source's (B4) or not binding the source (B5) fails the source witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered; reading the marker or a throwing source as unbound (F1, F2) or removing the unreadable-binding guard (F3) fails the underivable witness, F1 and F3 fail the snapshot one, and deferring that refusal past the claim (Z2) fails its zero-count alone. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a metered action presented under a class the claim domain does not claim (consequential_write) is denied constraint_unsupported and reserves and claims nothing; removing that refusal (W1) fails it."
   },
   {
    "id": "metering.metering.max-budget-reserve-per-action",
@@ -40323,12 +40347,12 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): eight concurrent 300.00 requests in flight against a 1000.00 counter leave three permits, five quota_exceeded refusals and 900.00 reserved; dropping the limit check (A2) or checking only the instance counter (D2) fails it at 2400.00. Committed and held spend count against the cap: with 300.00 held and 200.00 committed, the next request sees 500.00 remaining (dropping spend at the horizon purge, C7, fails it). A completed settlement that arrives after an operator released the reservation still commits and raises the overspend alert rather than drop the spend; that path is outside the decision-time cap this row observes."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): eight concurrent 300.00 requests in flight against a 1000.00 counter leave three permits, five quota_exceeded refusals and 900.00 reserved; dropping the limit check (A2) or checking only the instance counter (D2) fails it at 2400.00. Committed and held spend count against the cap: with 300.00 held and 200.00 committed, the next request sees 500.00 remaining (dropping spend at the horizon purge, C7, fails it). A completed settlement that arrives after an operator released the reservation still commits and raises the overspend alert rather than drop the spend; that path is outside the decision-time cap this row observes. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged. C7, run while they still were, no longer reaches a metered claim; purging a metered claim at the class horizon (RT1) fails the retention witness instead."
   },
   {
    "id": "metering.topology.profile-named-per-counter",
@@ -40462,16 +40486,22 @@
     "normative": "a payment request reusing an idempotency key under a different normalized action (another amount or payee) is refused and reserves nothing on any budget counter"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > retry, replay and key reuse (@spec metering#retry) > a key reused for a different operation is refused idempotency_conflict and reserves nothing (@spec metering#retry, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a key reused for the same amount to another payee is refused idempotency_conflict and leaves both counters unchanged (@spec metering#retry, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. The refusal code is homed by authzen.parameter-digest.idempotency-conflict-on-mismatched-operation (tested); this row adds the no-draw observation on the counters. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a key reused for a payment of another amount is refused idempotency_conflict, with no reservation for the reused evaluation and both counters unchanged; reserving before the conflict check (Z2) fails the zero-count alone. Partial: the payee variant is not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. The refusal code is homed by authzen.parameter-digest.idempotency-conflict-on-mismatched-operation (tested); this row adds the no-draw observation on the counters. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a key reused for a payment of another amount is refused idempotency_conflict, with no reservation for the reused evaluation and both counters unchanged; reserving before the conflict check (Z2) fails the zero-count alone. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a key reused for the same amount to another payee is refused idempotency_conflict, with no reservation for the reused evaluation and both counters unchanged; an operation identity without the parameter digest (W2) fails it and the amount variant."
   },
   {
    "id": "metering.retry.reserve-commit-posture-declared",
@@ -40530,10 +40560,11 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "a generic failure signal (a transport error, a PEP error response, or a missing acknowledgement) neither commits nor releases a budget reservation; only an evidence state does"
+    "normative": "a generic failure signal (a transport error, a PEP error response, or a missing acknowledgement) neither commits nor releases a budget reservation; only an evidence state does",
+    "local": "In the reference the PDP receives a settlement only as PEP-signed Execution Evidence over the claim channel: a transport error or a lost acknowledgement means nothing reaches it, and a PEP error report that is not the permit's own disposition (a replay refused permit_consumed) is refused not_a_settling_outcome and settles nothing."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -40543,12 +40574,18 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a suppressed record from a replay refused permit_consumed settles nothing: the reservation stays charged and is held once the lease elapses (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a settlement lost in transit (the acknowledgement lost and nothing reaching the PDP) neither commits nor releases: the reservation stays charged, held once the lease elapses, and the next request sees the reduced remaining. Releasing on lease or restart (C1) fails both witnesses; releasing at the window close (C6) fails the second. Partial: a PEP error response is not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a settlement lost in transit (the acknowledgement lost and nothing reaching the PDP) neither commits nor releases: the reservation stays charged, held once the lease elapses, and the next request sees the reduced remaining. Releasing on lease or restart (C1) fails both witnesses; releasing at the window close (C6) fails the second. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a PEP-signed suppressed record that is not the permit's disposition (a replay the PEP refused permit_consumed) settles nothing: it is refused not_a_settling_outcome, the reservation stays reserved, and it is held once the lease elapses; settling such a record (W3) fails it. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged."
   },
   {
    "id": "metering.retry.horizon-covers-expiry",
@@ -40565,12 +40602,32 @@
    "surface": "decision-request",
    "assertion": "replay",
    "observation": {
-    "normative": "a duplicate of a metered payment presented at any time before the Mission's expires_at resolves against its recorded idempotency claim and draws nothing further on either counter"
+    "normative": "a duplicate of a metered payment presented at any time before the Mission's expires_at resolves against its recorded idempotency claim and draws nothing further on either counter",
+    "local": "The reference never purges a metered claim by time (the stored decision is tombstoned after the window; the row and its reservations stay), so a same-Mission duplicate meets the claim for the Mission's whole life, and a terminal Mission is refused mission_inactive before the claim step. The idempotency scope keeps the Mission (D907): an Expansion successor's same-key re-presentation takes a new claim while continuing the same budget counters. The payments ledger's one-settlement-per-invoice rule is a separate duplicate guard, not lineage-wide idempotency: within a process it refuses the wire and the duplicate reservation is released; across a restart the in-memory ledger is the documented limit."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: the claim horizon is the action class's declared idempotency_horizon_seconds, and no test relates it to a Mission's expires_at by presenting a duplicate late in the Mission's life; the capability stays disabled and unclaimed."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a metered claim is retained while its Mission can present it (@spec metering#retry) > a metered claim outlives the class idempotency horizon: while the Mission is active a duplicate, from its own credential or another client instance, resolves against it duplicate_suppressed and draws nothing; once the Mission is terminal every presentation is refused mission_inactive with no fresh claim or reservation, and a stale active view still meets the retained claim (@spec metering#retry, #816, D877)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a metered claim is retained while its Mission can present it (@spec metering#retry) > the sweep alone tombstones a settled metered claim's stored decision past the reconciliation window, and past the class horizon keeps the claim and its reservations (@spec metering#retry, metering#settlement-states, #816, D877)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses an expansion successor's re-presentation of a paid invoice under the instance's key with nothing wired twice: the successor's claim is its own, so a fresh permit reserves on both counters, the ledger refuses the wire already_settled, and that suppression releases the reservation, leaving the amount committed once (@spec metering#retry, metering#settlement-states, metering#capacity-across-missions, #816, D877)",
+     "level": "cross-component",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a metered claim is never purged by time. Past the class idempotency horizon, with the Mission still active, a duplicate from its own credential or another client instance resolves duplicate_suppressed against the retained claim and draws nothing; once the Mission is terminal every presentation is refused mission_inactive with no fresh claim or reservation; a stale active view still meets the retained claim; and the sweep alone tombstones the stored decision while keeping the claim and its reservations. Purging a metered claim at the class horizon (RT1) and a sweep that skips such rows (RF6a) fail them. Partial, a limitation the owner's ruling (D907) keeps: the idempotency scope keeps the Mission, so an Expansion successor presenting the same key takes a new claim while continuing the same budget counters, and its fresh permit reserves on both. The payments ledger's one-settlement-per-invoice rule is a separate duplicate guard, not lineage-wide idempotency: within a process it refuses the wire already_settled, and that suppression releases the duplicate reservation, leaving the amount committed once (removing the ledger check, S1, or holding instead of releasing, S2, fails the stack witness). Across a restart the in-memory ledger does not hold: the documented limit."
   },
   {
    "id": "metering.capacity-across-missions.child-refused-without-accounting",
@@ -41031,16 +41088,22 @@
     "normative": "the standing-consent counter is keyed by the budget owner and the budget identifier together: equal identifiers under different owners never share a counter"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > two budgets with one budget id under different owners draw on separate standing_consent counters, each held to its own declared limit (@spec metering#aggregate-bounds, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 1. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a binding naming the declared budget id under another owner is never metered on the declared owner's counter: it is denied constraint_unsupported and reserves nothing; matching on budget id alone (E7) fails it. Partial: two declared budgets with equal ids under different owners, each on its own counter, are not exercised."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 1. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a binding naming the declared budget id under another owner is never metered on the declared owner's counter: it is denied constraint_unsupported and reserves nothing; matching on budget id alone (E7) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): two declared budgets with one budget id under different owners draw on separate standing_consent counters, each held to its own declared limit (the second owner's 500.00 refuses 300.00 with 200.00 remaining while the first has headroom); looking a budget up by id alone (W4) fails it."
   },
   {
    "id": "metering.aggregate-bounds.policy-is-limit-home",
@@ -41108,16 +41171,22 @@
     "normative": "a standing-consent budget declaration that references the Dispatch Policy identifies it by id, version and digest and discloses the budget's counter scope, currency and limit; a declaration carrying only a budget identifier, or a policy reference missing any of the three, is refused at load"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > the budget_metering declaration (decision c) > the claim domain refuses to open on a malformed budget_metering declaration, claimed or not (@spec metering#topology, #816)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > the loader refuses a budget declared by its identifier alone and a policy reference without its id (@spec metering#aggregate-bounds, #816)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST, adding the digest. D830 ruling 5. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a declared budget whose policies list is empty, is a single policy rather than a list, lists one version twice, or holds a reference lacking its version or digest, carrying a digest that is not sha-256, or taking the template shape, or whose budget names another currency, another counter scope, or a limit the unit cannot count, is refused at load, claimed or not; accepting any policy reference (L4) fails the policy case and skipping every finding (L1) fails the witness. Partial: a policy reference missing only its id, and a budget carrying only an identifier, are not cases."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST, adding the digest. D830 ruling 5. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a declared budget whose policies list is empty, is a single policy rather than a list, lists one version twice, or holds a reference lacking its version or digest, carrying a digest that is not sha-256, or taking the template shape, or whose budget names another currency, another counter scope, or a limit the unit cannot count, is refused at load, claimed or not; accepting any policy reference (L4) fails the policy case and skipping every finding (L1) fails the witness. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): the loader refuses, claimed or not, a budget declared by its owner and identifier alone and a policy reference without its id; not checking the policy id (W5) fails it."
   },
   {
    "id": "metering.aggregate-bounds.restart-continues-counter",
@@ -41141,7 +41210,7 @@
     "local": "A reservation whose decision was never persisted is released at boot, because no permit existed; a reservation whose permit issued stays charged across the restart, moved from reserved to held."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41166,9 +41235,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a crash before the decision is persisted releases the reservation at the next boot, since no permit existed, and the retry under the same key reserves once (@spec metering#settlement-states, metering#retry, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > committed spend and the remaining headroom on both counters are unchanged across a restart (@spec metering#aggregate-bounds, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a reservation whose permit issued before a restart is still charged after it (held, with the operator alert once) and after a second restart, and its later completed settlement commits it; a reservation whose decision never persisted is released at the next boot (the local carve-out). Releasing on restart (C1) fails the held witnesses; keeping the abandoned reservation (R2) fails the carve-out. Partial: committed spend across a restart is not asserted."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a reservation whose permit issued before a restart is still charged after it (held, with the operator alert once) and after a second restart, and its later completed settlement commits it; a reservation whose decision never persisted is released at the next boot (the local carve-out). Releasing on restart (C1) fails the held witnesses; keeping the abandoned reservation (R2) fails the carve-out. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): committed spend and the remaining headroom on both counters are unchanged across a restart (300.00 committed; the next 100.00 sees 600.00 remaining on each); dropping committed spend at open (W6) fails it."
   },
   {
    "id": "metering.aggregate-bounds.reconsent-continues-counter",
@@ -41191,16 +41266,22 @@
     "normative": "a successor Dispatch Policy version or a fresh consent continues the same standing-consent counter with its consumption to date"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a new policy version for the same budget leaves a held reservation held and reduces the next instance's headroom (@spec metering#capacity-across-missions, #816, D830 ruling 7)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a new policy version with committed, reserved and held quantities present at the change keeps every one of them charged on the same counter and measures the raised limit against that whole exposure (@spec metering#aggregate-bounds, #816, D830 ruling 7)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The replacement-template clause is now covered by template.standing-payment counter sharing across templates (metering.aggregate-bounds.standing-consent-instances-share). D830 ruling 1. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): after a re-consent under Dispatch Policy version 2 raising the limit to 1200.00, the next instance sees 600.00 remaining with the earlier 600.00 still held: 700.00 is refused and 600.00 permitted. Keying the shared counter by policy version (T8g), releasing on lease or restart (C1), and debiting the counters one at a time (D3) each fail it by assertion. Partial: only a held reservation crosses the version change; committed consumption is not exercised."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The replacement-template clause is now covered by template.standing-payment counter sharing across templates (metering.aggregate-bounds.standing-consent-instances-share). D830 ruling 1. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): after a re-consent under Dispatch Policy version 2 raising the limit to 1200.00, the next instance sees 600.00 remaining with the earlier 600.00 still held: 700.00 is refused and 600.00 permitted. Keying the shared counter by policy version (T8g), releasing on lease or restart (C1), and debiting the counters one at a time (D3) each fail it by assertion. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): with 200.00 committed, 300.00 held and 100.00 reserved at a policy version change raising the limit to 1200.00, the counter_id is unchanged and every quantity stays charged (the restart holds the open 100.00): 601.00 is refused with 600.00 remaining and 600.00 is permitted. A fresh counter per version (W7, which also breaks every shared-counter lookup; the reviewer's narrower variant, a fresh counter for version 2 only, is killed too), dropping committed spend at open (W6) and per-counter debiting (W8) fail it."
   },
   {
    "id": "metering.aggregate-bounds.fresh-consent-no-release",
@@ -41223,16 +41304,22 @@
     "normative": "a fresh template consent leaves every reservation that remains charged still charged and every committed quantity committed on the standing-consent counter, so the next instance sees the reduced remaining"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a new policy version for the same budget leaves a held reservation held and reduces the next instance's headroom (@spec metering#capacity-across-missions, #816, D830 ruling 7)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a new policy version with committed, reserved and held quantities present at the change keeps every one of them charged on the same counter and measures the raised limit against that whole exposure (@spec metering#aggregate-bounds, #816, D830 ruling 7)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 7. Also homes the template's 'The approval neither releases a reservation that remains charged nor resets consumption'. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a re-consent (Dispatch Policy version 2) leaves a held reservation held, before and after the next instance's permit, and the next instance sees the reduced remaining; releasing on lease or restart (C1) fails it. Partial: a committed quantity across the re-consent is not exercised."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 7. Also homes the template's 'The approval neither releases a reservation that remains charged nor resets consumption'. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a re-consent (Dispatch Policy version 2) leaves a held reservation held, before and after the next instance's permit, and the next instance sees the reduced remaining; releasing on lease or restart (C1) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a re-consent with 200.00 committed, 300.00 held and 100.00 reserved at the change leaves 200.00 committed and all 400.00 outstanding charged (the open 100.00 is held by the restart the version change takes and stays charged), so the next instance sees 600.00 of 1200.00; W6, W7 and W8 fail it."
   },
   {
    "id": "metering.aggregate-bounds.raised-limit-measured-against-exposure",
@@ -41255,16 +41342,22 @@
     "normative": "after a fresh consent raises the budget's limit, the remaining a decision sees is the new limit less consumption to date and less the outstanding reserved and held quantity"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a new policy version for the same budget leaves a held reservation held and reduces the next instance's headroom (@spec metering#capacity-across-missions, #816, D830 ruling 7)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a new policy version with committed, reserved and held quantities present at the change keeps every one of them charged on the same counter and measures the raised limit against that whole exposure (@spec metering#aggregate-bounds, #816, D830 ruling 7)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): after a re-consent raises the limit from 1000.00 to 1200.00 with 600.00 held, the remaining is 600.00: 700.00 is refused and 600.00 permitted. Keying the shared counter by policy version (T8g), debiting the counters one at a time (D3) and releasing on lease or restart (C1) each fail it by assertion. Partial: consumption to date (committed) and an open reserved quantity at the raise are not exercised."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): after a re-consent raises the limit from 1000.00 to 1200.00 with 600.00 held, the remaining is 600.00: 700.00 is refused and 600.00 permitted. Keying the shared counter by policy version (T8g), debiting the counters one at a time (D3) and releasing on lease or restart (C1) each fail it by assertion. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a raise to 1200.00 with 200.00 committed, 300.00 held and 100.00 reserved at the change leaves 600.00 remaining: 601.00 is refused and 600.00 permitted. The open 100.00 is held by the restart the version change takes, and still counted. W6, W7 and W8 fail it."
   },
   {
    "id": "metering.aggregate-bounds.counters-reserve-together",
@@ -41284,10 +41377,11 @@
    "surface": "decision-request",
    "assertion": "concurrency",
    "observation": {
-    "normative": "a permitted payment reserves its amount on the standing-consent counter and the Mission's max_budget counter in one atomic step: no observer, concurrent decision or crash sees one reservation without the other"
+    "normative": "a permitted payment reserves its amount on the standing-consent counter and the Mission's max_budget counter in one atomic step: no observer, concurrent decision or crash sees one reservation without the other",
+    "local": "Both debits and the claim insert share one transaction of the claim file, so a crash between the two debits leaves neither; the crash witnesses cover the boundaries before the decision persists and after the permit."
    },
    "level": "concurrency",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41324,9 +41418,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > a crash after the permit was issued leaves the reservation held across the restart, and the operator alert fires once (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > at the parked point of eight concurrent requests, each permitted instance has debited its own counter and the shared one together, and no refused instance has debited either (@spec metering#aggregate-bounds, metering#topology, #816)",
+     "level": "concurrency",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Design decision a: both counters are debited in the transaction of the PDP idempotency claim. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a permit reserves on both counters in the claim's one transaction (two reserved entries per permit; six reservations for three concurrent permits), a refusal reserves on neither, a crash before the decision persisted releases both at the next boot, a store failure before the persist releases both at the next sweep, and a crash after the permit holds both; debiting the counters one at a time (D3) fails the refusal witnesses alone, and keeping the unpersisted reservation (R2, R6) fails the crash and store-failure witnesses. Partial: no witness observes both counters at a concurrent interleaving point (the concurrency witness reads only the shared counter while the evaluations are parked); a crash between the two debits cannot be observed at this surface."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Design decision a: both counters are debited in the transaction of the PDP idempotency claim. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a permit reserves on both counters in the claim's one transaction (two reserved entries per permit; six reservations for three concurrent permits), a refusal reserves on neither, a crash before the decision persisted releases both at the next boot, a store failure before the persist releases both at the next sweep, and a crash after the permit holds both; debiting the counters one at a time (D3) fails the refusal witnesses alone, and keeping the unpersisted reservation (R2, R6) fails the crash and store-failure witnesses. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): at the parked point of eight concurrent requests, each of the three permitted instances has debited its own counter and the shared one together (300.00 each, 900.00 shared), no refused instance has debited either, and the debited set is exactly the permitted set; per-counter debiting (W8) fails it on that assertion alone."
   },
   {
    "id": "metering.aggregate-bounds.refusal-charges-neither",
@@ -41588,9 +41688,15 @@
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > a successor that shares its predecessor's first Mission draws on the same mission counter, never on a fresh one (@spec metering#capacity-across-missions, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a counter's committed identifier is the same across a restart (@spec metering#metering-evidence, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Partial: no witness compares counter_id across a restart, and the reference's Execution Evidence carries no metering entry (the reserved amount commits), so its clause is unasserted."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): the standing_consent counter_id is the same on two instances' Decision Evidence, under one policy and under two committed policies, and a successor's entries carry its predecessor's counter_ids; removing the reservation (A1), keying the instance counter by the successor's own id (T8f) and keying the shared counter by policy version (T8g) fail them. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): each counter's committed identifier is the same across a restart (qualifying it by the boot, W9, fails it). Through the executing PEP a completed wire's Execution Evidence carries no metering member while its Decision Evidence names both counters, so no Execution Evidence entry can disagree (W19, artificial: the PEP copies a metering member into Execution Evidence, fails it). The Execution Evidence half is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
   },
   {
    "id": "metering.metering-evidence.requested-and-remaining",
@@ -41619,7 +41725,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. Partial: the reference's Execution Evidence carries no metering entry, so 'Execution Evidence entries carry neither' is unasserted."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): each Decision Evidence entry, on a permit and on a refusal, carries requested and remaining as {amount, currency}; removing the reservation (A1) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): through the executing PEP a completed wire's Execution Evidence carries no metering member, so neither requested nor remaining, while its Decision Evidence carries one entry per counter; W19 (artificial: the PEP copies a metering member into Execution Evidence) fails it. That clause is the emitting PEP's conduct, witnessed on the composed path. Partial: the Decision Evidence clauses are witnessed at the PDP; the Execution Evidence clause is the emitting PEP's conduct and rests only on the composed PEP path with an artificial mutant (W19), so it is not credited on this PDP row."
   },
   {
    "id": "metering.metering-evidence.reserved-on-permit",
@@ -41709,16 +41815,22 @@
     "normative": "a permitted metered payment's entry carries settlement_state reserved under the reserve-then-commit posture, a refusal's entry carries none, and no later commit, release or hold rewrites the record"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > Decision Evidence (@spec metering#metering-evidence) > a charged permit's signed Decision Evidence carries one metering entry per counter, mission and standing_consent, with the reservation, and a quota_exceeded refusal carries the exhausted counter's entry with its unchanged remainder and charges neither counter (@spec metering#metering-evidence, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > the stored decision's Decision Evidence keeps settlement_state reserved, byte for byte, after its reservation commits, is released or is held (@spec metering#metering-evidence, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a permitted payment's entries carry settlement_state reserved and a refusal's carry none (exact entry comparison); removing the reservation (A1) fails it. Partial: no witness re-reads a permit's record after its commit, release or hold."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a permitted payment's entries carry settlement_state reserved and a refusal's carry none (exact entry comparison); removing the reservation (A1) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): the stored decision's Decision Evidence is byte for byte unchanged, with settlement_state reserved on both entries, after its reservation commits, is released or is held; rewriting the stored decision on settlement (W10) fails it."
   },
   {
    "id": "metering.metering-evidence.one-entry-per-counter",
@@ -41934,9 +42046,16 @@
     "normative": "a settlement outside the integrity envelope, or failing verification against the claimed emitter key, scope or audience binding, is refused and changes no counter"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no test presents a settlement that fails verification for a budget-bound claim and asserts both counters unchanged; the capability stays disabled and unclaimed."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > forged, wrongly signed and wrong-PEP settlements for a budget-bound claim are refused and leave both counters unchanged (@spec metering#settlement-contract, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a settlement whose content no longer matches its envelope, one signed under another key, and one delivered by another PEP are each refused, with both reservations still reserved and both counters unchanged; skipping signature verification (W11a) or the PEP check (W11b) fails it. Partial: a record carrying no envelope at all, and one bound to another audience, are not cases."
   },
   {
    "id": "metering.settlement-contract.ack-after-durable-apply",
@@ -41953,12 +42072,20 @@
    "surface": "evidence-emission",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a settlement the intake acknowledged is reflected in the counter after a PDP restart, and a crash before the durable apply leaves the delivery unacknowledged so its redelivery applies it once"
+    "normative": "a settlement the intake acknowledged is reflected in the counter after a PDP restart, and a crash before the durable apply leaves the delivery unacknowledged so its redelivery applies it once",
+    "local": "The reference applies a settlement inside the claim file's transaction and returns only after it commits; the crash is modeled as a commit that fails, not a killed process."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no test crashes the PDP between applying and acknowledging a budget settlement; the capability stays disabled and unclaimed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a settlement is acknowledged only once it is durably applied: an acknowledged one survives a restart, and one whose transaction fails is not acknowledged and applies once when redelivered (@spec metering#settlement-contract, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): an acknowledged settlement is still applied after a restart, and a settlement whose transaction fails at commit (injected through the store's commit guard) is not acknowledged, changes nothing, and applies once when redelivered, after which its redelivery is the duplicate; acknowledging when the transaction throws (W12) and dropping committed spend at open (W6) fail it."
   },
   {
    "id": "metering.settlement-contract.duplicate-no-reapply",
@@ -41978,16 +42105,34 @@
     "normative": "a redelivered settlement with the same execution_id and settlement-relevant content is acknowledged and changes no counter: no second commit and no second release"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
      "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > retry, replay and key reuse (@spec metering#retry) > a duplicate settlement is acknowledged as a no-op and commits the reservation once (@spec metering#settlement-contract, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a redelivered suppressed settlement is acknowledged as a duplicate and releases nothing a second time (@spec metering#settlement-contract, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a redelivery identical to the applied record, its attempt, outcome and non-empty error alike, is acknowledged as the duplicate and retains and alarms nothing, for an applied suppressed record and an applied failed one (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a redelivery of an applied record that carried no error, now carrying error null, is acknowledged as the duplicate and retains and alarms nothing, for an applied failed record and an applied completed one (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Design decision e: a duplicate settlement is a no-op. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a redelivered completed settlement (same execution_id and content) is acknowledged as a duplicate and the reservation commits once (committed 250.00, reserved 0.00); re-applying the duplicate's commit (T8d) fails it. Partial: a redelivered suppressed settlement (no second release) is not exercised."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Design decision e: a duplicate settlement is a no-op. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a redelivered completed settlement (same execution_id and content) is acknowledged as a duplicate and the reservation commits once (committed 250.00, reserved 0.00); re-applying the duplicate's commit (T8d) fails it. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a redelivered suppressed settlement is acknowledged as the duplicate and releases nothing a second time (the other evaluation's 200.00 stays reserved); releasing again on a duplicate (W13) fails it alone. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e and c136037a, mutation at c136037a): the duplicate is the same attempt, outcome and error. An identical redelivery of an applied suppressed or failed record carrying a non-empty error is acknowledged as the duplicate and retains and alarms nothing; storing NULL instead of the applied error (M2), or leaving it out of the settling UPDATE (M3), fails it. A redelivery carrying error null for an applied failed or completed record that carried none is the duplicate too, since an explicit null counts as no error; mapping null to the string \"null\" again (M6) fails it alone, and storing an empty string for an absent error (M4) fails it as well."
   },
   {
    "id": "metering.settlement-contract.conflict-fails-closed",
@@ -42004,12 +42149,86 @@
    "surface": "evidence-emission",
    "assertion": "replay",
    "observation": {
-    "normative": "a settlement for an already settled evaluation_id with a different outcome or metering entry, or under a second execution_id, leaves the applied settlement and both counters unchanged, is retained, and raises an audit alarm"
+    "normative": "a settlement for an already settled evaluation_id with a different outcome or metering entry, or under a second execution_id, leaves the applied settlement unchanged, is retained as evidence, and raises an audit alarm",
+    "local": "In the reference a verified conflicting completed record from the permit's own PEP and redemption-store epoch commits a released or held reservation under Metering's Exact qualification, raising the overspend alert where the commit passes a counter's limit, and any other conflicting record moves no counter. The refusal stays already_settled. The alarm is raised after the retaining transaction commits, so a crash between them loses the alarm while the retained record survives."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no test presents a conflicting settlement (another outcome, metering entry or execution_id) for a settled budget-bound claim; the capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a completed record arriving after an applied suppressed settlement commits the budget, leaves the applied claim settlement unchanged, is retained, and raises the conflict alarm once (@spec metering#settlement-contract, metering#settlement-states, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a record from the applied attempt with another outcome is retained and alarmed, never acknowledged as a duplicate, and leaves the applied settlement and both counters unchanged (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > once a settlement is applied, a non-completed record goes to the conflict check whatever the redemption owner can answer: the applied attempt's suppressed record with no answer and a second attempt's failed record are each retained and alarmed, and neither moves a counter (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a completed record from another attempt commits a reservation an applied failed record holds, and is retained and alarmed (@spec metering#settlement-contract, metering#settlement-states, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > an applied failed record holds the reservation, and the same attempt's later suppressed record is a conflict that leaves it held, retained and alarmed, while the failed record redelivered without a redemption answer is the duplicate (@spec metering#settlement-contract, metering#settlement-states, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a conflicting completed record from another redemption-store epoch of the permit's PEP is retained and alarmed but commits nothing, as the correction path refuses it, and the same record from the permit's own epoch commits (@spec metering#settlement-states, metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a conflicting completed record never commits a reservation released because no permit left the PDP, a state written into the file here since no path produces it on a settled claim (@spec metering#settlement-states, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > two conflicting records of one attempt that differ only in their error are each retained and alarmed once, and a redelivery of either retains nothing new (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a record from the applied suppressed attempt with the same outcome and another error is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement, its error and both counters are unchanged (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a record from the applied failed attempt with the same outcome and a changed error, one added where the applied record carried none or one replacing the error it carried, is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement and the held reservations are unchanged (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > a conflicting settlement fails closed (@spec metering#settlement-contract) > a redelivery identical to the applied record, its attempt, outcome and non-empty error alike, is acknowledged as the duplicate and retains and alarms nothing, for an applied suppressed record and an applied failed one (@spec metering#settlement-contract, #816, D877)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/demo/test/standing-payment-e2e.test.ts",
+     "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > surfaces a conflicting settlement on the composed stack's alarm path: a second completed record for a settled wire raises one settlement_conflict operator alert, and the applied settlement and the committed amount are unchanged (@spec metering#settlement-contract, #816, D877)",
+     "level": "cross-component",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement-states 'Conflicting settlement' item. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a record conflicting with the applied settlement (a second execution_id, or the applied attempt with another outcome) is refused already_settled, never acknowledged as the duplicate, leaves the applied claim settlement unchanged (read from the claim file), is retained once per distinct record, and raises one settlement_conflict alarm, also on the composed stack's alert path; a redelivered conflict retains and alarms nothing new. Once a settlement is applied, a non-completed record reaches the conflict check whatever the redemption owner answers and moves no counter; an applied failed record's later same-attempt suppressed record leaves the reservation held; a conflicting completed record commits a held or released reservation only from the permit's own PEP and epoch, and never one released because no permit left the PDP. Not retaining (X2), not alarming (X3), not committing a conflicting completed (X4), overwriting the applied settlement (X5; MD on the stack), re-alarming a redelivery (X6), moving counters for a non-completed conflict (X7, alone), acknowledging the same attempt's other outcome as a duplicate (X1), keeping the redeemer gate on a settled claim (RF1), committing only released reservations (MC), applying a non-completed conflict's own effect (ME), dropping the epoch or no-permit guard (RF5a, RF5b, RF5c), keying retention without the error (RF7) and leaving the stack's alarm unwired (X8) each fail their witness. #1771 review (D907; impl/816-pdp-slice4 at 7bb6835e, with the failed record's replaced-error case at 4c237470 and the null-error normalization at c136037a; mutation rerun at c136037a): the claim keeps the applied record's error, so the applied attempt with the same outcome and another error is a conflict too. An applied suppressed record's changed error, and an applied failed record's error added where it carried none or replaced by another, are each refused already_settled, never acknowledged as the duplicate, retained and alarmed once, with the applied settlement, its stored error and the counters unchanged; an identical redelivery carrying an error is acknowledged as the duplicate and retains and alarms nothing. Dropping the error from the duplicate check (M1) fails the first two, and at 4c237470, with that case run first, fails the replaced-error case on its own; storing NULL instead of the applied error (M2), or leaving the error out of the settling UPDATE (M3, the same stored state), fails all three; storing an empty string for an absent error (M4) fails the second; treating a stored NULL as matching any error (M5) fails the second alone. Partial: a redelivery that differs from the applied record only in a metering entry is still acknowledged as the duplicate, because the reference's settlement reads the attempt, outcome and error and ignores a metering member (its Execution Evidence carries none)."
   },
   {
    "id": "metering.settlement-contract.reserved-commits-stated",
@@ -42195,7 +42414,7 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
     },
@@ -42206,7 +42425,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 10. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a failed settlement holds the reservation on both counters and raises the operator alert; a held reservation, whatever held it, survives lease expiry, the reconciliation window, the claim horizon and a restart, released only by operator reconciliation. Releasing on failed (C2) fails the first witness; releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails the others. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged. C7, run while they still were, no longer reaches a metered claim; purging a metered claim at the class horizon (RT1) fails the retention witness instead."
   },
   {
    "id": "metering.settlement-states.bounded-lease",
@@ -42260,7 +42479,7 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -42283,7 +42502,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second. Slice 3b (impl/813-binding at 33a88d93): through the composed stack a wired payment whose settlement never reaches the PDP is held at the sweep past its permit and lease, still charged on the shared counter, with an operator alert of kind budget_reservation_held and cause lease_elapsed on the deployment's alert sink, until an operator reconciles it. Leaving the held alert unwired, naming another kind, or dropping its cause (A1, A2, A3) fails the witness at the alert; when the operator releases it a resolution notice follows, and raising no notice or not wiring it (V4, V4b) fails the witness there. At the decision point a reservation held for its elapsed lease, with the lease_elapsed alert, is released by the operator's not_executed with one resolution notice, and a repeated not_executed is an idempotent no-op raising none; raising no notice (owner-review mutant V4) fails it."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. D830 ruling 7. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): an unsettled reservation whose lease expires is listed for reconciliation and held, still charged (the next request sees the reduced remaining), until operator reconciliation releases or commits it. Releasing on lease or restart (C1) fails all three; releasing at the window close (C6) fails the second. Slice 3b (impl/813-binding at 33a88d93): through the composed stack a wired payment whose settlement never reaches the PDP is held at the sweep past its permit and lease, still charged on the shared counter, with an operator alert of kind budget_reservation_held and cause lease_elapsed on the deployment's alert sink, until an operator reconciles it. Leaving the held alert unwired, naming another kind, or dropping its cause (A1, A2, A3) fails the witness at the alert; when the operator releases it a resolution notice follows, and raising no notice or not wiring it (V4, V4b) fails the witness there. At the decision point a reservation held for its elapsed lease, with the lease_elapsed alert, is released by the operator's not_executed with one resolution notice, and a repeated not_executed is an idempotent no-op raising none; raising no notice (owner-review mutant V4) fails it. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged."
   },
   {
    "id": "metering.settlement-states.timeout-never-releases",
@@ -42313,12 +42532,12 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 rulings 7 and 10. The restart half is metering.settlement-states.restart-never-releases. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): lease expiry, the reconciliation window and the claim horizon leave a reservation held and the remaining reduced. Releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails it."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 rulings 7 and 10. The restart half is metering.settlement-states.restart-never-releases. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): lease expiry, the reconciliation window and the claim horizon leave a reservation held and the remaining reduced. Releasing on lease or restart (C1), at the window close (C6), or at the horizon purge (C7) fails it. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged. C7, run while they still were, no longer reaches a metered claim; purging a metered claim at the class horizon (RT1) fails the retention witness instead."
   },
   {
    "id": "metering.settlement-states.release-only-on-non-execution",
@@ -42373,7 +42592,7 @@
     },
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
-     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)",
      "level": "endpoint",
      "surface": "decision-request"
     },
@@ -42396,7 +42615,7 @@
      "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness. Slice 3b (impl/813-binding at 33a88d93) (owner ruling: a reservation is released only with durable proof): the owner's sequence at the decision point, a permit of 300.00 refused before redemption whose PEP-signed suppressed record names no redeeming attempt, is no settlement: both reservations stay reserved, the next 1000.00 against the 1000.00 budget is quota_exceeded naming the standing_consent counter, and a later completed commits the 300.00 alone; through the composed stack the changed-account permit suppressed at admission stays charged, is held with the alert once the lease elapses, and the second instance's payment is quota_exceeded. Settling a suppression without its redeeming attempt at the PDP (owner-review mutant W2) fails the decision-point witness; that together with the PEP settling every suppression (W3) fails the end-to-end one. The earlier same-epoch release witnesses and their mutants (S and V series) are retired with the path."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a held reservation is released only by the redeeming attempt's suppressed settlement for its own evaluation, or by the operator's not_executed reconciliation once the permit and its lease can no longer be used; another evaluation's suppressed settlement, the PEP's unredeemed reconciliation, an operator answer while the permit is still redeemable, lease expiry, the window, the horizon, a restart and a re-consent all leave it held. Not releasing on suppressed (M1), releasing every held reservation (M2), releasing on the PEP's unredeemed answer (C5), accepting the operator's answer while redeemable (R3), accepting operator reconciliation of a reservation that is not held (C4), releasing on lease or restart (C1) and releasing at the window close (C6) each fail their witness. Slice 3b (impl/813-binding at 33a88d93) (owner ruling: a reservation is released only with durable proof): the owner's sequence at the decision point, a permit of 300.00 refused before redemption whose PEP-signed suppressed record names no redeeming attempt, is no settlement: both reservations stay reserved, the next 1000.00 against the 1000.00 budget is quota_exceeded naming the standing_consent counter, and a later completed commits the 300.00 alone; through the composed stack the changed-account permit suppressed at admission stays charged, is held with the alert once the lease elapses, and the second instance's payment is quota_exceeded. Settling a suppression without its redeeming attempt at the PDP (owner-review mutant W2) fails the decision-point witness; that together with the PEP settling every suppression (W3) fails the end-to-end one. The earlier same-epoch release witnesses and their mutants (S and V series) are retired with the path. The horizon witness was renamed at slice 4 (metered claims are no longer purged by time); its assertions are unchanged."
   },
   {
    "id": "metering.settlement-states.compensation-not-non-execution",
@@ -42413,12 +42632,20 @@
    "surface": "decision-request",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "neither a successful retry nor a compensating payment reversal releases or refunds the original payment's reservation or committed amount"
+    "normative": "neither a successful retry nor a compensating payment reversal releases or refunds the original payment's reservation or committed amount",
+    "local": "Under a budget-bound Mission a retry of a completed payment is suppressed and a compensate phase carrying an amount is refused constraint_unsupported (decision h), so neither a successful retry nor an executed reversal reaches the PDP; the witness shows both attempts leave the committed amount committed."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no test checks that a retry or a compensating reversal leaves the original reservation or commitment in place (a compensate phase under a budget-bound Mission is refused constraint_unsupported); the capability stays disabled and unclaimed."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > after a completed payment, a retry under its key and a refused compensate request leave the committed amount committed (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): after a completed 300.00 payment, a retry under its key is suppressed duplicate_suppressed and a compensate request naming it is refused constraint_unsupported; both reservations stay committed, with 300.00 committed on the shared counter. Releasing a completed payment on its retry (W14) fails it. Partial: the witness shows the compensate phase refused constraint_unsupported under decision h; that a reversal is never taken as non-execution is not asserted directly, since no path reaches it, so the row is not promoted on unreachability."
   },
   {
    "id": "metering.settlement-states.contain-does-not-settle",
@@ -42441,9 +42668,16 @@
     "normative": "containing a Mission leaves its open budget reservations to settle on their evidence state: contain neither commits nor releases them"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no test contains a Mission holding an open budget reservation; the capability stays disabled and unclaimed."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > containing a Mission that holds an open reservation settles nothing: the contained request is refused authority_contained, no counter moves, and the permit's later completed settlement still commits (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): containing a Mission that holds an open 300.00 reservation refuses the contained request authority_contained and moves no counter, and the permit's later completed settlement still commits. Partial: no killing mutant is recorded; the PDP has no path from contain to settlement, so the witness guards against one being added."
   },
   {
    "id": "metering.settlement-states.reconciliation-cadence",
@@ -42460,12 +42694,26 @@
    "surface": "deployment-documentation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the deployment publishes the cadence of its orphaned-evidence reconciliation for budget reservations, or records a justified departure"
+    "normative": "the deployment publishes the cadence of its orphaned-evidence reconciliation for budget reservations, or records a justified departure",
+    "local": "The published cadence is the reconciler's: at start, then every third of the declared window (300 s for PT15M), sized so each unresolved claim gets at least two runs before its window closes, at one claim listing per run. Unresolved reservations stay held and charged indefinitely under D830 ruling 7; no run, restart, timeout or closed window releases one. No operator reconciliation interface ships: reconcileHeldReservation has no caller outside tests, so a held reservation stays held, with its alert, until the deployment's own tooling acts."
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. Todo: no published cadence for budget-reservation reconciliation is asserted; the capability stays disabled and unclaimed. Design decision e holds a reservation indefinitely, with an alert, where no reconciliation path exists; a departure is recorded, not failed."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/budget-reconciler-cadence.test.ts",
+     "name": "the declared reconciler processes budget reservations at its real cadence (@spec metering#settlement-states, runtime#evidence, #816, D877 ruling 3) > runs at start and then every five minutes for PT15M: the run after a permit's lease elapses holds its reservation and raises budget_reservation_held once, the run after the window closes raises claim_indeterminate for an outcome it cannot establish, and the reservations stay held and charged indefinitely (@spec metering#settlement-states, runtime#evidence, #816, D830 ruling 7, D877 ruling 3)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/budget-reconciler-cadence.test.ts",
+     "name": "the declared reconciler processes budget reservations at its real cadence (@spec metering#settlement-states, runtime#evidence, #816, D877 ruling 3) > runs once at start, before its first interval elapses: permits whose leases elapsed before the reconciler started are held, each raising budget_reservation_held, at start (@spec metering#settlement-states, runtime#evidence, #816, D877 ruling 3)",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): D877 ruling 3. The deployment publishes the cadence (initial-runtime-deployment.md §7): the declared OutcomeReconciler runs at start and then every third of the outcome_reconciliation window, 300 s for PT15M. Against the shipped statement claiming budget_metering, the running reconciler's interval is five minutes; its run at start holds reservations whose leases had already elapsed; the run after a lease elapses holds the reservation and raises budget_reservation_held once; the run after the window closes raises claim_indeterminate; and an hour on both reservations stay held and charged. An interval of half the window (CD1), a run that skips the claim listing (CD2) and a start without its immediate run (MA) each fail a witness. The reconciler runs in the PEP process and acts on the PDP's reservations through the claim channel."
   },
   {
    "id": "metering.settlement-states.restart-never-releases",
@@ -54716,9 +54964,15 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > an admitted instance's payment still takes a fresh runtime decision: one requiring an action-bound approval is refused without it, and one with no parameter_digest is refused, each reserving nothing (@spec mission-template#standing-payment-exception, metering#metering, #813)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. Partial: the transaction-assurance tier and an applicable action-bound approval under an admitted instance are not exercised, and a request carrying no parameter_digest is not a case. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): an admitted instance's payment requiring an action-bound approval is refused action_approval_required without it, and one with no parameter_digest is refused parameter_violation, each reserving and claiming nothing; ignoring the approval requirement (W16a) or removing the committed-destination check (W16b) fails it. Partial: failing the transaction-assurance tier under an admitted instance is not a case."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
@@ -90901,18 +91155,17 @@
    "role": "PDP",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "metering.exact-budget"
+    "kind": "unconditional"
    },
    "profiles": [],
    "surface": "decision-request",
    "assertion": "refusal",
    "observation": {
     "normative": "an applicable constraint or consumption bound the PDP does not recognize or does not meter is an evaluated PDP denial carrying constraint_unsupported in the decision context and as denial_reason in Decision Evidence, never a permit, a parameter_violation, or a Refusal Record",
-    "local": "the reference's unmetered case is a max_budget binding its budget_metering declaration cannot meter, or an amount-bearing spend the declaration does not meter, under a budget-bound Mission"
+    "local": "the reference's unmetered case is a max_budget binding its budget_metering declaration cannot meter, or an amount-bearing spend the declaration does not meter, under a budget-bound Mission; its unrecognized case is a Mission entry constraints key outside the set the PDP evaluates; credential-specific qualification: a credential entry carrying an unrecognized constraint is denied credential_invalid under authzen#context-credential, not constraint_unsupported; as reference behavior, when every candidate entry fails, the denial carries the reason of the evaluation stage that eliminates the final surviving candidate"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -90955,9 +91208,57 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement) > refuses an entry carrying an unrecognized constraints key rather than ignoring it",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > an entry carrying an unrecognized key is denied constraint_unsupported whatever the facts, and a supported key the facts violate is denied parameter_violation",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > an entry carrying an unrecognized key does not stop another complete, supported entry from authorizing, in either order, and the permit relies on the supported entry",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > an unrecognized constraint key and a budget the PDP cannot meter each sign denial_reason constraint_unsupported with no authority_bound (@spec authzen#failure-condition-coverage, #1772)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > an unsupported entry beside a violated entry, in either order, is denied parameter_violation: the constraint stage eliminates the final surviving candidate",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-common-constraints.test.ts",
+     "name": "PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772) > one entry carrying both an unrecognized key and a violated constraint is denied constraint_unsupported: the unrecognized-key stage eliminates it before its constraints are evaluated",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence.test.ts",
+     "name": "Decision Evidence records the entries a decision turned on (@spec runtime-evidence#decision-evidence-object) > Decision Evidence names the authority bound an authority deny failed (@spec authzen#evidence authority_bound, #825 PR 2b-ii) > a violated credential entry beside an unsupported Mission entry is the credential's parameter_violation, never constraint_unsupported (#1772)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > a constraint_unsupported denial records denial_reason constraint_unsupported in its signed Decision Evidence (@spec authzen#failure-condition-coverage, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a binding the decision point's source answers underivable, throws on, or returns malformed is an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim, a read included; through the composed stack such an instance's payment is refused constraint_unsupported. F1, F2, F3 and Z2 fail the decision-point witness; F1, F3, F4, F5 and F5b fail the end-to-end one. Partial: an unrecognized constraint other than a budget binding is not witnessed, and no witness reads denial_reason in the Decision Evidence of a constraint_unsupported denial. The unclaimed and shipped-statement witnesses show the duty also holds without the capability, so applicability may be unconditional. Merged with #956: an unclassified request is refused before evaluation as action_class_missing, earlier than decision h, so its unclassified case is no longer cited here (the separate pre-evaluation witness shows nothing reserved or claimed)."
+   "notes": "#816, D830. Proposed from slice 2 (impl/816-budget-reservations 22c1fae0); the capability stays disabled and unclaimed. An unmetered budget binding (currency, undeclared budget, owner, limit, unlisted policy), a remote or ephemeral PDP, an unclaimed declaration, and an unmetered amount-bearing spend are each an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim (E1, E2, E3a, E3, E3c, E7, E8, E4, E5, E6, E9, N2 to N5, H1, P4a, P4b). Slice 3b (impl/813-budget-binding-3b at 62325958): a binding the decision point's source answers underivable, throws on, or returns malformed is an evaluated denial (decision false) carrying constraint_unsupported, with no reservation or claim, a read included; through the composed stack such an instance's payment is refused constraint_unsupported. F1, F2, F3 and Z2 fail the decision-point witness; F1, F3, F4, F5 and F5b fail the end-to-end one. The unclaimed and shipped-statement witnesses show the duty also holds without the capability. Merged with #956: an unclassified request is refused before evaluation as action_class_missing, earlier than decision h, so its unclassified case is no longer cited here (the separate pre-evaluation witness shows nothing reserved or claimed). Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a constraint_unsupported denial records decision deny and denial_reason constraint_unsupported in its signed, verified Decision Evidence; recording another reason (W17) fails it. #1772 (D907, fix/1772-constraint-unsupported at 8dcec123): a Mission entry carrying a constraints key outside the set the PDP evaluates provides no authority and, with no other applicable entry, is an evaluated denial carrying constraint_unsupported with no authority_bound, never parameter_violation (kept for an evaluated violation), and the Decision Evidence witness reads denial_reason constraint_unsupported for an unrecognized key and for an unmeterable budget; mutants a (the key back to parameter_violation), b (an unsupported entry denies the whole request), c (the key treated as satisfied), d (an evaluated violation reclassified), e and i (the signed reason rewritten for each case), f (the unmetered gate rewritten) and j (refused before evaluation) each fail a cited witness. Credential-specific qualification: a credential entry carrying an unrecognized constraint is denied credential_invalid under authzen#context-credential (the table's credential-authority row), not constraint_unsupported. D929 (fix/1772-constraint-unsupported at 65d6fcf7): the row is unconditional, since refusing an unsupported constraint does not depend on metering.exact-budget and every unrecognized-key witness runs without it; the stage-precedence witnesses (an unsupported entry beside a violated one in either order is parameter_violation, one entry carrying both is constraint_unsupported, a violated credential entry beside an unsupported Mission entry is the credential's parameter_violation) fail under mutants k (constraint_unsupported preferred whenever an entry was unsupported), l (the reason taken from the last entry in array order), m (the unrecognized-key stage run before the credential bound) and n (the unrecognized-key stage run after the constraint stage)."
   },
   {
    "id": "evidence.refusal.work-item-invalid",
