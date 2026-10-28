@@ -919,9 +919,12 @@ describe("Deferred Mission Approval capability (@spec deferred-approval#deferred
         .getSetCookie()
         .map((l) => l.split(";")[0])
         .join("; ");
+      // The ordinary approval page, not a deferral: it asks for the Approver
+      // before it renders anything (#1802).
       const page = await fetch(new URL(auth.headers.get("location") as string, issuer), { redirect: "manual", headers: { cookie } });
-      expect(page.status).toBe(200);
+      expect(page.status).toBe(401);
       expect(page.headers.get("content-type")).toMatch(/text\/html/);
+      expect(await page.text()).toContain('<p class="approval-notice" data-error="unauthorized">');
       // A Mission approval deferral code is unknown here.
       const keys = await newKeys();
       const proof = await new SignJWT({ htu: `${issuer}/token`, htm: "POST" })

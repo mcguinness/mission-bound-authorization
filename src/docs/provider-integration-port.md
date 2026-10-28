@@ -118,9 +118,9 @@ the store.
 
 | Obligation | Required for this path | Provider hook | Transaction or acceptance boundary | Permitted asynchronous work | Crash and recovery | Public-surface test | Unsupported or residual |
 |---|---|---|---|---|---|---|---|
-| Trusted approval input and achieved authentication context | Yes, both configurations | `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
-| Canonical Subject resolution and approve-for authorization | Yes | `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
-| Source and authority derivation | Yes | `kernel.derive`; the source gates in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3) |
+| Trusted approval input and achieved authentication context | Yes, both configurations | The approval page (`GET /interaction/{uid}`) before it renders; the `/interaction/{uid}/decide` route, then `decide()` (§3.1) | In request, before any write; no commit of its own | None | Approval sessions and pending interactions are in memory and are lost; nothing to recover | Yes, HTTP (§3.1) | Achieved context checked, not retained; no render-to-decision binding (§3.1) |
+| Canonical Subject resolution and approve-for authorization | Yes | The approval page before it renders, and `decide()`: the approval surface's Subject selection, `knownSubjects`, `approverApprovesFor`, `approverRoleSubs`; the Approver as provider account (§3.2) | In request, before any rendering and before `kernel.approve` | None | Configuration only; nothing to recover | Yes, HTTP (§3.2) | External Subject unsupported and refused (§3.2) |
+| Source and authority derivation | Yes | `kernel.derive`; the source gates on the approval page before it renders and in `kernel.approve` (§3.3) | Computed before the record transaction | None | Nothing written before §4.1 | Yes, HTTP; gate detail is kernel-level (§3.3) | No test exercises the decision-time `scope` check on a catalog-sourced `scope_only` target (§3.3) |
 | Record and grant binding | Yes | `kernel.prepareApproval`; `grant.save()` under the interaction's grant identity; `kernel.approve` and `insertRecord`, committing the record already bound; the code on the resume request (§3.4) | Every refusal before any write, a consented ceiling's entries and drawdown policy included, except the commit's revalidation of the authority source and drawdown policy; the record commits bound (§4.1); the grant save precedes it and the code follows it on a later request | Publication of the activating event | A failure before the commit leaves an inert grant and no Mission; after it, an `active`, bound Mission whose code is not issued yet; provider state is lost at restart (§4.5) | Yes, HTTP (§3.4) | `{#approval-event}` step 7 record/code atomicity not met: the code is issued on a later request (#250; §3.4) |
 | Issuance | Yes | `at.save()`: `extraTokenClaims`, `formats.customizers.jwt`, `access_token.issued` (§3.5) | The counter `UPDATE` autocommits before signing; no acceptance callback (§4.2) | None before delivery | A failure the request observes returns the count; a crash or a lost response keeps it (§4.3) | Yes, HTTP (§3.5) | Uncoupled counter: a crash or a lost response after the count stays counted (§4.3); revoke-versus-issue window (§3.5) |
 | Refresh and revocation gating | Yes | `rotateRefreshToken`; the gates in `extraTokenClaims`; the lifecycle route (§3.6) | The lifecycle commit is one kernel transaction; grant destruction follows it | Grant destruction and publication | File-backed state survives; provider grants do not (§4.5) | Yes, HTTP (§3.6) | A state change between the refresh pre-check and the save-time gate is refused after rotation consumes the presented token (§3.6; #250); a fully contained family is refused after rotation, losing no recoverable issuance authority (§3.6) |
@@ -174,6 +174,41 @@ the store.
   and the floor must hold, so an absent or weaker request never relaxes the
   floor. A miss of either finishes the interaction `access_denied`, before any
   Mission, Grant or code.
+- **The approval page runs steps 1 to 3 before it renders (#1802).** `GET
+  /interaction/{uid}` resolves its principal through `renderPrincipal`: the
+  approval session this user agent holds for the interaction, or, with
+  `allowHeadlessAdjudication`, a registered service token holding
+  `mission_approval`. The interaction cookie, which the initiating client
+  also holds, establishes no one. With no principal, an `auth_time` in the
+  future, or (on the device path) a principal other than the verification
+  user agent's login, the page answers 401 with a notice that carries nothing
+  of the request and, where `approverLogin` is configured, the link to
+  `/interaction/{uid}/approver-login`. After derivation it checks the
+  requested `acr_values`, `max_age` and `prompt=login`, and the floor over
+  the derived set, against the principal's trusted context, as `decide()`
+  does: a login that falls short gets a 401 step-up notice
+  (`insufficient_user_authentication`), with the login link keeping its
+  selected Subject, and a headless registration never meets a browser-only
+  floor. Authority the classification does not name is refused 400
+  `access_denied` for every Approver, as a derivation refusal is. Such a
+  refusal, and any other no Approver can lift (the request no longer
+  validates or derives, a capability binding that does not resolve, a source
+  gate other than activation), names its cause only to a principal who
+  passes the Approver checks of steps 1 to 3 over the derived set (the
+  requested strength, the floor over its classified authority, approve-for,
+  D37 and, on a resolved source, activation). It fails closed: with no
+  derived set, or a check that cannot run, every principal gets the same
+  status and error code and a generic description. A binding that does not
+  resolve is refused against the derived set it was binding. Evidence
+  verification and the client lookup await after these checks, so after the
+  last await the page resolves its principal again (the same login, still
+  authenticated) and runs steps 1 to 3 again before any detail, detailed
+  refusal or revision; a change answers the first gate's notice. A ceiling
+  the page offers is classified with the derived set and offered only to a
+  login that meets the floor over both; any other sees the page without it
+  and can consent none (#1255). No refusal mints a render revision, and the
+  interaction stays pending. `decide()` keeps every check, so a login that
+  ages out after the rendering is refused there.
 - **Boundary.** In request. Nothing is written before these checks pass.
 - **Asynchronous work.** None.
 - **Crash and recovery.** `ApprovalSessionStore` is an in-process `Map`, and
@@ -196,10 +231,12 @@ the store.
   - `the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session`
   - `> refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa`
   - `> the age bound: an Approver authenticated exactly max_authentication_age_seconds ago satisfies it, one second older does not`
+  - `> the age bound at the decision: a login inside the bound at the rendering and past it at the decision is refused, with nothing created (#1802)`
   - `> classifies the complete derived set: a high-risk entry after a low-risk one still invokes the floor`
   - `> refuses admitted authority the classification does not name: unclassified authority fails closed`
   - `the floor and the client's requested strength are conjunctive (@spec mission#approval-authentication, #826, D425) > a satisfied weaker request does not relax the floor: Alice requests and achieves password, and the floor refuses`
-  - `the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code`
+  - `the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > offers a ceiling admitting floor-class authority only to a login that meets the floor over it: a password Approver sees the page without it and can consent none (#1802)`
+  - `> refuses a ceiling admitting floor-class authority at the decision when the login ages past the floor after the rendering: access_denied, with no Mission, Grant or code (#1255, #1802)`
   - `> approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it`
   - `> refuses a consented drawdown_policy the issuer does not hold, at an unknown id or another version, invalid_request before any write: no grant, Mission or code`
   - `the floor's classification agrees with the deployment's operation definitions (@spec mission#approval-authentication, #826, D425) > the high-risk payments actions are exactly those with an irreversible or external-commitment operation`
@@ -217,6 +254,18 @@ the store.
   - `> refuses an authorization response that names another issuer (RFC 9207), recording no login`
   - `> completes two logins started one after the other in one browser that delivers cookies by path, and each approval decides (RFC 6265 Section 5.1.4)`
   - `> completes a login only in the user agent that started it, and only once`
+  - `> answers the interaction cookie alone with a sign-in notice whose link starts this login, and renders the page to the Approver it logs in (#1802)`
+  - `> asks a password-only login to sign in again for high-risk authority, keeping its selected Subject in the link, before anything renders (#1802)`
+- **Tests (HTTP, the approval page's render gate, `approval-page-render-gate.test.ts`):**
+  `the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802)`,
+  every case: the interaction cookie alone and a future `auth_time` get 401
+  and nothing of the request; a login the floor or the client's
+  `acr_values` or `max_age` refuses gets the step-up notice; a headless
+  rendering of authority behind the browser-only floor is refused; and a
+  login that ages past `max_age` after the rendering is refused at the
+  decision. The device page's cases are
+  `the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802)`
+  (`device-authorization.test.ts`), every case.
 - **Tests (the reference provider, `demo/test/approver-idp.test.ts`):**
   `the reference upstream OpenID Provider authenticates the Approver (@spec mission#approval-authentication, #1320, D496)`, every case: `mfa` only after the password and the one-time
   code, `pwd` for the password alone, and no login from a wrong password or
@@ -267,14 +316,26 @@ the store.
   Authority Set needs a distinct Approver with the approver role
   (`approverRoleSubs`, D37); otherwise 403. Inside `kernel.approve`,
   `establishAuthoritySource` applies the source's subject discipline (gate 4).
-- **Boundary.** In request. The identity checks run before derivation and the
-  write-bearing check after it. All run before `kernel.approve`.
+  The approval page (`GET /interaction/{uid}`) runs the same predicates for
+  its principal before it renders anything (#1802), on the browser, device
+  and headless paths: a refusal is 403 `approval_forbidden` with a notice
+  carrying nothing of the request and no render revision, and the
+  interaction stays pending for another Approver. When the Subject is not the
+  Approver, the page names it (`<p class="subject">`), from the selection
+  the authenticated surface made, never from client text.
+- **Boundary.** In request. In `decide()` the identity checks run before
+  derivation and the write-bearing check after it; on the page all of them
+  run after derivation and the authentication checks, before the source gates
+  and any rendering. All run before `kernel.approve`.
 - **Asynchronous work.** None.
 - **Crash and recovery.** Configuration only; nothing to recover.
 - **Tests (HTTP):**
   - `approval resolution establishes identity from the surface (#759, #761) > the Subject is the approval surface's selection, authorized for the Approver, never the client's login_hint` (`demo/test/approval-resolution-identity.test.ts`)
   - `approval resolution establishes identity from the surface (#759, #761) > write-bearing distinctness and role checks run over the resolved identities` (same file)
   - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied at the decision when the subject discipline fails` (`rar-carriage.test.ts`)
+  - `authority source on the approval surface (@spec mission#authority-sources) > refuses the subject discipline before anything renders, for every Approver, and the decision approves nothing` (same file)
+  - `the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802)`: the approve-for refusals before rendering (Alice for Bob, Dana for Alice, a headless service naming Dana), the D37 refusal of a write-bearing self-approval, the refusal at the decision of approve-for authority withdrawn after the rendering (through `buildAuthorizationServer`'s `approverApprovesFor`), and the Subject named on an approval for another principal (`approval-page-render-gate.test.ts`)
+  - `an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 1a (approval authorization): an Approver not authorized to approve for the workload principal is refused before any Mission` (`workload-principal-agent.test.ts`)
 - **Kernel principal namespace (#829).** The kernel accepts only canonical
   local principals: a Subject and an Approver whose `iss` is byte-equal to the
   kernel's principal namespace, `principalIssuer` in `KernelOptions` (default:
@@ -367,6 +428,20 @@ the store.
   (`assertDischargePoliciesResolvable`). Each refusal is an
   `IntentError`; `decide()` finishes the interaction with its code
   (`access_denied` for the source gates).
+- **The source is established before the page renders (#1802).** After
+  derivation and steps 1 and 2, `GET /interaction/{uid}` runs
+  `establishAuthoritySource` for the client, the Subject and the Approver of
+  its principal and `assertAuthorityWithinSource` on that one resolution
+  (gates 1 to 5), renders that resolution's provenance, and commits it in the
+  render revision (`approvalContext`'s `resolved`). An Approver outside the
+  source's activators (`ActivationRefusedError`, an `access_denied`
+  `IntentError`) gets 403 with a notice carrying nothing of the request and
+  no revision, and the interaction stays pending for one who may activate
+  it; every other gate refusal holds for any Approver and keeps the render's
+  derivation-refusal mapping (400 with the gate's code, its description
+  shown only to a principal who passes the Approver checks, §3.1). The decision runs
+  the gates again, so a source or activation withdrawn after the rendering
+  refuses there.
 - **Per-principal resolution (#827).** Gate 1 selects one root for the
   authenticated client and the issuer-qualified Subject, through the
   `authoritySourceResolver` in `KernelOptions` (default: the resolver over the
@@ -376,10 +451,10 @@ the store.
   resolver runs, and refuses `access_denied` when the resolver is unavailable
   or answers for a different Subject, client, deployment or source.
   `kernel.approve`, Expansion and template consent each resolve once per
-  completion. The render consults the same resolver: for the Subject the
-  approval session selected, or with none through `resolveForRendering`,
-  which answers only a provenance every Subject of the client shares and
-  otherwise refuses.
+  completion. The render consults the same resolver, for the Subject its
+  principal selected; with no principal it renders nothing (#1802), so the
+  approval page no longer calls `resolveForRendering`, which answers only a
+  provenance every Subject of the client shares and otherwise refuses.
   Gate 4's human-principal list stays kernel configuration; it can only
   refuse.
 - **Committed roots (#827).** Every Mission records the root it committed
@@ -408,7 +483,10 @@ the store.
 - **Tests (HTTP, `rar-carriage.test.ts`):**
   - `authority source on the approval surface (@spec mission#authority-sources) > renders the user-delegated source and approves`
   - `authority source on the approval surface (@spec mission#authority-sources) > renders the organizational source with the governed policy it draws on`
-  - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source`
+  - `authority source on the approval surface (@spec mission#authority-sources) > refuses an Approver who may not activate the source before anything renders, leaving the request pending for one who may`
+  - `authority source on the approval surface (@spec mission#authority-sources) > refuses access_denied when the Approver may not activate the source` (activation withdrawn after an authorized rendering, refused at the decision)
+  - `an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 1b (source ceiling): a request beyond the service_owned source's own authority is refused access_denied, creating no Mission` and `> step 1b at the decision: a source ceiling narrowed after the rendering is refused access_denied, creating no Mission (#1802)` (`workload-principal-agent.test.ts`)
+  - `the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver who may not activate the established source 403 before rendering, leaving the interaction pending` (`approval-page-render-gate.test.ts`)
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > configured-mapping mode (no proposal) that derives nothing is access_denied`
   - `derivation refusal at the authorization decision (@spec mission#error-mapping) > a submitted proposal that derives nothing is invalid_authorization_details`
   - `authority source rendering for a shared agent registration (@spec mission#approval-event, mission#authority-sources, #827) > renders the source of the Subject the approval session selected, never one login_hint names, and refuses to render one that depends on an unnamed Subject` (`authority-source-render.test.ts`)
