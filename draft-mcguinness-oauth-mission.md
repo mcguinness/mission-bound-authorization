@@ -8037,6 +8037,9 @@ Cross-Domain:
   Principals and Approval Basis lists the rules that follow its member
   definitions; and Instance Context in Delegated Tokens lists its rules
   (#1723, D845).
+- Editorial, no requirement change: Declared Transformation
+  Capabilities, Mission Lifecycle and Conformance drop restatements of
+  rules their home sections state (#1793, D919).
 
 -01
 
