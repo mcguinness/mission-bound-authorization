@@ -4746,17 +4746,18 @@ The following subsections define the record's members.
       `approval_basis.type` ({{record-principal-members}}).
 
     `governance_record`:
-    : OPTIONAL. A boolean. `true` when an Approval Governance Record
-      is recorded for this approval event
-      ({{I-D.draft-mcguinness-mission-approval-governance}}), joined
-      by this Mission's own `approval_event_id`. It never changes
-      `kind`, which follows the basis (below and
-      {{standing-consent-bases}}). Approval Governance
-      aligns the record's accountable assertion, where it carries
-      one, with that `kind`: a governed decision still names its
-      mechanism, and the record supplies the fuller assertion set
-      behind it, including any multi-assertion set, never flattened
-      into it.
+    : OPTIONAL. A boolean. `true` when an Approval Governance Record is
+      recorded for this approval event
+      ({{I-D.draft-mcguinness-mission-approval-governance}}), joined by
+      this Mission's own `approval_event_id`.
+
+      - It never changes `kind`, which follows the basis (below and
+        {{standing-consent-bases}}).
+      - Approval Governance aligns the record's accountable assertion,
+        where it carries one, with that `kind`: a governed decision
+        still names its mechanism, and the record supplies the fuller
+        assertion set behind it, including any multi-assertion set,
+        never flattened into it.
 
     For `kind: human`: no additional kind-specific members; the
     deciding human is `consent_principal`.
@@ -4770,32 +4771,32 @@ The following subsections define the record's members.
     activates, and the AS MUST NOT let it supply or widen authority.
     A model is never itself the deciding policy or workflow.
 
-    Where `adjudication` is present for `direct`, `kind` MUST be
-    `human`, with or without `governance_record`: a policy decides
-    an instance only under a standing-consent basis
-    ({{standing-consent-bases}}).
-
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
     ({{approval-event}}); a standing-consent basis carries it
     ({{standing-consent-bases}}).
 
-  For `direct`, `activation.approval_event_id` MUST identify a human
-  approval event ({{approval-event}}). Approval Governance states how
-  a record backing a `direct` approval keeps that human decision as
-  its accountable assertion
-  ({{I-D.draft-mcguinness-mission-approval-governance}}).
+  The following rules apply to `approval_basis`:
 
-  `approval_basis` is provenance: none of the record's integrity
-  anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
-  covers it
-  ({{integrity-anchors}}); a profile that commits the Mission Record
-  itself covers it under that profile's own anchor. Two optional
-  profiles commit it ({{consent-binding}}). Its disclosure
-  through introspection follows
-  {{caller-authorization-and-minimization}}. It is not carried on the
-  baseline `mission` claim ({{mission-claim}}), and it MUST NOT be
-  relied on to grant or widen authority wherever it does appear.
+  - Where `adjudication` is present for `direct`, `kind` MUST be
+    `human`, with or without `governance_record`: a policy decides an
+    instance only under a standing-consent basis
+    ({{standing-consent-bases}}).
+  - For `direct`, `activation.approval_event_id` MUST identify a human
+    approval event ({{approval-event}}). Approval Governance states how
+    a record backing a `direct` approval keeps that human decision as
+    its accountable assertion
+    ({{I-D.draft-mcguinness-mission-approval-governance}}).
+  - `approval_basis` is provenance: none of the record's integrity
+    anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`,
+    covers it ({{integrity-anchors}}); a profile that commits the
+    Mission Record itself covers it under that profile's own anchor. Two
+    optional profiles commit it ({{consent-binding}}).
+  - Its disclosure through introspection follows
+    {{caller-authorization-and-minimization}}.
+  - It is not carried on the baseline `mission` claim
+    ({{mission-claim}}), and it MUST NOT be relied on to grant or widen
+    authority wherever it does appear.
 
 `authority_source`:
 : REQUIRED. An object. The source of the authority the approval
@@ -4818,13 +4819,15 @@ The following subsections define the record's members.
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
-    draws on. `digest` is a prefixed commitment
-    ({{commitment-mechanisms}}) whose exact committed input and
-    construction the policy's format specifies: its species and, for
-    an envelope anchor, its `typ`, `iss`, and `value`. The party that
-    produces the reference computes `digest`; a consumer holding the
-    policy can reproduce it, and one that does not compares it as an
-    opaque value.
+    draws on.
+
+    - `digest` is a prefixed commitment ({{commitment-mechanisms}})
+      whose exact committed input and construction the policy's format
+      specifies: its species and, for an envelope anchor, its `typ`,
+      `iss`, and `value`.
+    - The party that produces the reference computes `digest`; a
+      consumer holding the policy can reproduce it, and one that does
+      not compares it as an opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
