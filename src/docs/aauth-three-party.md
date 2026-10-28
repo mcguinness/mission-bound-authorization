@@ -87,7 +87,10 @@ service are not.
   `superseded` (with `replacement_s256`, another mission in its scope) or
   `administrative`, and must give a `purpose`. The shipped administrator
   (`https://admin.ps.test`, `mission-admin.json`) is enrolled under a key
-  no one in this repository holds; a deployment enrolls its own.
+  no one in this repository holds; a deployment enrolls its own. The
+  pinned key is the whole of an administrator's authentication: it does
+  not satisfy the companion's step-up authentication or dual control for
+  high-blast-radius automation, which is not built.
 
 **Check order.** Every request is a signed JSON POST covering
 Content-Digest and Content-Type. The PS checks the signature (401 with
@@ -101,6 +104,14 @@ An absent mission and one outside the caller's authorization are both
 each caller class (P2). Each miss goes to the security-event list under a
 keyed digest, never the reference. The action then runs under one
 transaction.
+
+**The same-second limitation.** The control plane keeps the library's
+default replay key, (signing-key thumbprint, `created`, method, authority,
+path), so two requests from the same caller to the same mission URL signed
+in the same second collide: the second is 401 `invalid_signature`
+("duplicate signed request"), even when its body differs. A caller spaces
+its requests to one mission URL into distinct seconds, as the testkit's
+management client does. Widening the key is a separate decision.
 
 **`status`** applies expiry first, then answers `mission_s256`,
 `mission_status`, `approved_at`, `expires_at`, `observed_at`, `fresh_until`
@@ -128,7 +139,14 @@ token endpoint (a resource token or presented token carrying the
 reference) and the owner's read refuse the mission with
 `mission_terminated`. Slice 2's issuance commit applies unchanged: a
 request in flight when termination commits reads the terminated state at
-its mission gate and issues nothing.
+its mission gate and issues nothing. A token is recorded before it is
+minted, and signing awaits, so the mission is read again after signing,
+immediately before the response, with no await between that check and the
+send: at the person token endpoint, the auth token endpoint and an
+approval that returns person tokens, a mission that terminated or reached
+`expires_at` while the token was signed is refused `mission_terminated`
+and no token is released. The token's record stays, so it remains a
+Tracked Credential and the termination's revocation covers it.
 
 ## Revocation and residuals
 
@@ -140,9 +158,13 @@ presented to one. For each attempt it reads `{aud}/.well-known/aauth-resource.js
 POSTs `{jti, exp}` with `exp` from its own record, signed under
 Signature-Key `jwks_uri` with its issuer as `id`, `aauth-person.json` as
 `dwk` and its signing key's `kid`, covering Content-Digest and
-Content-Type. Each attempt is recorded and logged before it is sent, its
-result after, with the token named by (`iss`, `jti`). Requests to one
-endpoint go one at a time, in distinct seconds.
+Content-Type. Each attempt is counted, recorded and logged before it is
+sent, its result after, with the token named by (`iss`, `jti`); the
+attempt budget is checked before anything is counted or sent. Requests to
+one endpoint go one at a time, in distinct seconds. Discovery and that
+wait take time, so the clock is read again immediately before signing: a
+credential at or past its `exp` is not sent and is recorded `expired`, and
+an attempt whose time limit already ended sends nothing.
 
 | Outcome | State | Next |
 |---|---|---|
@@ -151,10 +173,23 @@ endpoint go one at a time, in distinct seconds.
 | `400` | rejected | none |
 | `429` | pending | after Retry-After |
 | `401`, `5xx`, `202`, a malformed `200`, a dropped or refused connection, a timeout | pending | backoff |
+| the credential reached its `exp` before the request was sent | expired | none; no longer needed |
+| the attempts already reached the bound when the attempt came due (the last one was cut short) | exhausted | none; unconfirmed until `exp` |
 
 The shipped retry policy (`management.revocation`): at most 6 attempts,
 spaced 30 seconds and doubling to a 900-second cap, each attempt limited
-to 5000 ms, and never after the token's `exp`. A `202` is not polled.
+to 5000 ms, and none sent at or after the token's `exp`. A `202` is not
+polled.
+
+**Two same-second protections.** AAuth's optional replay key has no
+request body in it, so two revocations at one endpoint signed in the same
+second would collide. The PS spaces its revocations to one endpoint into
+distinct seconds, which protects it at any recipient that keeps the base
+key; the Resource also keys its revocation replay cache on the covered
+Content-Digest, which protects it against any PS that does not space. Each
+alone keeps two revocations of different tokens apart (the integration
+tests fail only with both removed); both are kept, since neither side can
+assume the other.
 
 **The Resource's endpoint.** `POST /revoke` accepts only a request signed
 under `jwks_uri` covering Content-Digest and Content-Type, from a signer
@@ -192,9 +227,12 @@ lives 300 seconds and is redeemable only at the PS, which refuses it.
   file keeps every terminal state and reason, refuses the mission at every
   issuance path, replays a retained receipt, and, when it listens, runs the
   revocation work that is due and then runs it on its poll interval, so an
-  attempt interrupted by the restart is retried. The PS generates its
-  signing key at boot unless one is given; the integration tests restart it
-  with the same key, and a restart with a new key is not exercised.
+  attempt interrupted by the restart is retried, unless it was the last
+  the budget allows: its outcome is unknown, so the credential is
+  exhausted, unconfirmed until its `exp`, and nothing more is sent. The PS
+  generates its signing key at boot unless one is given; the integration
+  tests restart it with the same key, and a restart with a new key is not
+  exercised.
 - **Resource.** A restarted Resource on the same file keeps its revoked set
   and refuses each revoked token until its `exp`.
 
@@ -222,11 +260,13 @@ await before its record is written:
   which read the time after authentication.
 
 The record is written first and the token is minted after, from claims
-already fixed, so no token is issued already expired. When the cap fails
-because the agent token that authenticated the request expired meanwhile,
-the answer is 401 with `Signature-Error: error=expired_jwt`, as for any
-failure of the Signature-Key token. Tests drive these paths by advancing
-the clock while a key is resolved, and terminate a mission at that point.
+already fixed, so no token is issued already expired; after the token is
+minted, the mission is read again immediately before release (Local
+gating). When the cap fails because the agent token that authenticated the
+request expired meanwhile, the answer is 401 with `Signature-Error:
+error=expired_jwt`, as for any failure of the Signature-Key token. Tests
+drive these paths by advancing the clock while a key is resolved or a
+token is signed, and terminate a mission at those points.
 
 ## Exclusions
 
@@ -387,12 +427,11 @@ records, and no effect.
 19. The optional replay cache keys on "(signing-key-thumbprint, created,
     @method, @authority, @path)", so an honest second request to one URL in
     the same second collides. The agent, the management client and the
-    PS's revocation sender each wait for the next second; the control plane
-    keeps that key, and the Resource's revocation endpoint also keys on the
-    covered Content-Digest, so two revocations of different tokens signed
-    in one second do not collide. Either measure alone keeps the PS's
-    revocations apart; the integration tests fail only with both removed.
-    A possible upstream note, the owner's call.
+    PS's revocation sender each wait for the next second. The control plane
+    keeps that key for this pilot, so the same caller, the same mission URL
+    and the same second give 401; the Resource's revocation endpoint also
+    keys on the covered Content-Digest. A possible upstream note, the
+    owner's call.
 20. Content-Digest and Content-Type are required on requests with a body
     only, and the Resource publishes no `additional_signature_components`;
     the control plane and the revocation endpoint require them on every
@@ -503,3 +542,13 @@ records, and no effect.
 58. The management client's `request_id` is `t-` and 32 hex characters
     (128 random bits), and it refuses to send an administrator's terminate
     without a `purpose` or an action the PS does not list.
+59. A token whose mission terminates or reaches `expires_at` while it
+    is signed is refused at release, and its record is kept: the PS tracks
+    conservatively, so a termination revokes a token the agent never
+    received.
+60. A final attempt cut short before its outcome (a crash, a restart)
+    is not sent again: the credential is exhausted, last outcome
+    `interrupted`, unconfirmed until its `exp`, though the recipient may
+    have recorded it.
+61. A credential that reaches its `exp` before its revocation could
+    be sent is recorded `expired`, a state of its own, not a failure.
