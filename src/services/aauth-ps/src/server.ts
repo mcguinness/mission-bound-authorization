@@ -26,7 +26,11 @@ import type { AgentEntry, PsConfig } from "./config.js";
 import { CONTROL_ACTIONS } from "./config.js";
 import { type ControlPlane, createControlPlane, SCHEDULER } from "./control.js";
 import { matchResourceToken, PsError, verifyPresentedToken } from "./presented.js";
-import { createRevocationWorker, type OutboundTransport, type RevocationWorker } from "./revocation.js";
+import {
+  createRevocationWorker,
+  type OutboundTransport,
+  type RevocationWorker,
+} from "./revocation.js";
 import type {
   IssuedTokenRecord,
   MissionControlStore,

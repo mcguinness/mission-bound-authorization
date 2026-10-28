@@ -368,7 +368,14 @@ export class SqlitePsStore implements PsStore, MissionControlStore {
     const row = this.db
       .prepare("SELECT * FROM terminate_requests WHERE caller = ? AND request_id = ?")
       .get(caller, requestId) as
-      | { caller: string; request_id: string; s256: string; body: string; receipt: string; at: number }
+      | {
+          caller: string;
+          request_id: string;
+          s256: string;
+          body: string;
+          receipt: string;
+          at: number;
+        }
       | undefined;
     if (!row) return undefined;
     return {

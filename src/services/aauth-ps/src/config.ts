@@ -259,7 +259,8 @@ function parseManagement(
     const where = `management.administrators[${i}]`;
     const a = object(entry, where);
     only(a, where, ["id", "dwk", "key", "persons", "actions"]);
-    if (!isServerIdentifier(a.id)) throw new PsConfigError(`${where}.id is not a server identifier`);
+    if (!isServerIdentifier(a.id))
+      throw new PsConfigError(`${where}.id is not a server identifier`);
     if (a.id === issuer) throw new PsConfigError(`${where}.id is the person server's own issuer`);
     if (ids.has(a.id)) throw new PsConfigError(`management.administrators names ${a.id} twice`);
     ids.add(a.id);

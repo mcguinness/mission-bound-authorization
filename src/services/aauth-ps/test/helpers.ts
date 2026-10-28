@@ -21,6 +21,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,11 +31,15 @@ import {
   createFetchJson,
   type FetchJson,
   generateSigningKey,
+  InMemoryReplayCache,
   JwksResolver,
   jwkThumbprint,
   mintToken,
+  SignatureError,
   type SigningKey,
   signRequest,
+  type VerifiedRequest,
+  verifyRequest,
 } from "@mission/aauth-wire";
 import { vi } from "vitest";
 import {
@@ -43,6 +48,8 @@ import {
   listen,
   type MissionLogEntry,
   type MissionRecord,
+  type OutboundRequest,
+  type OutboundResponse,
   type PersonServer,
   type PsStore,
   parsePsConfig,
@@ -67,6 +74,10 @@ export const STRANGER = "aauth:stranger@ap.test";
 export class Clock {
   ms = T0;
   readonly now = () => this.ms;
+  /** Waiting advances the shared clock instead of the wall clock. */
+  readonly sleep = async (ms: number): Promise<void> => {
+    this.ms += ms;
+  };
   get s(): number {
     return Math.floor(this.ms / 1000);
   }
@@ -121,7 +132,53 @@ export class LoopbackNet {
       }),
     });
   }
+
+  /**
+   * The PS's outbound transport: an identifier URL travels as plain HTTP
+   * to its host's loopback port, the target as written and `Host` the
+   * identifier's host. Nothing off the net is reachable, and the attempt's
+   * signal aborts the request.
+   */
+  readonly request = (message: OutboundRequest): Promise<OutboundResponse> => {
+    let target: { port: number; host: string; path: string };
+    try {
+      target = this.transport(message.url);
+    } catch (err) {
+      return Promise.reject(err);
+    }
+    return new Promise((resolve, reject) => {
+      const req = request(
+        {
+          host: "127.0.0.1",
+          port: target.port,
+          method: message.method,
+          path: target.path,
+          headers: { ...message.headers, host: target.host },
+          agent: false,
+          ...(message.signal ? { signal: message.signal } : {}),
+        },
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => chunks.push(chunk));
+          res.on("error", reject);
+          res.on("end", () => {
+            const headers: Record<string, string> = {};
+            for (const [name, values] of Object.entries(res.headersDistinct)) {
+              if (values) headers[name] = values.join(", ");
+            }
+            resolve({ status: res.statusCode ?? 0, headers, body: Buffer.concat(chunks) });
+          });
+        },
+      );
+      req.on("error", reject);
+      if (message.body !== undefined) req.write(message.body);
+      req.end();
+    });
+  };
 }
+
+/** A further route of a stub: true when it answered the request. */
+export type StubRoute = (req: IncomingMessage, res: ServerResponse, body: Buffer) => boolean;
 
 /** An issuer stub: its metadata document and JWKS, served on loopback. */
 export interface IssuerStub {
@@ -129,14 +186,28 @@ export interface IssuerStub {
   key: SigningKey;
   kid: string;
   running: RunningServer;
+  /** The metadata document; a test may change it. */
+  metadata: Record<string, unknown>;
   mint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
+  /** Stop listening: a connection to the stub is refused until {@link IssuerStub.up}. */
+  down(): Promise<void>;
+  /** Listen again, on a new port the net maps the identifier to. */
+  up(): Promise<void>;
 }
 
-export async function startIssuer(net: LoopbackNet, id: string, dwk: string): Promise<IssuerStub> {
+export async function startIssuer(
+  net: LoopbackNet,
+  id: string,
+  dwk: string,
+  route?: StubRoute,
+): Promise<IssuerStub> {
   const kid = `${new URL(id).hostname}-key-1`;
   const key = generateSigningKey("Ed25519", kid);
-  const metadata = { issuer: id, jwks_uri: `${id}/.well-known/jwks.json` };
-  const running = await listen(async (req, res) => {
+  const metadata: Record<string, unknown> = { issuer: id, jwks_uri: `${id}/.well-known/jwks.json` };
+  const handler = async (req: IncomingMessage, res: ServerResponse) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    if (route?.(req, res, Buffer.concat(chunks))) return;
     const body =
       req.url === `/.well-known/${dwk}`
         ? metadata
@@ -145,16 +216,152 @@ export async function startIssuer(net: LoopbackNet, id: string, dwk: string): Pr
           : undefined;
     res.writeHead(body ? 200 : 404, { "content-type": "application/json" });
     res.end(JSON.stringify(body ?? {}));
-  });
-  net.register(id, running.origin);
-  return {
+  };
+  const stub: IssuerStub = {
     id,
     key,
     kid,
-    running,
+    running: await listen(handler),
+    metadata,
     mint: (typ, claims) =>
       mintToken(typ, claims, { alg: key.alg, privateKey: key.privateKey, kid }),
+    down: () => stub.running.close(),
+    up: async () => {
+      stub.running = await listen(handler);
+      net.register(id, stub.running.origin);
+    },
   };
+  net.register(id, stub.running.origin);
+  return stub;
+}
+
+/** How the revocation recipient answers a verified revocation. */
+export type RecipientMode =
+  | "ok"
+  | "ok-json"
+  | "garbage"
+  | "unavailable"
+  | "rate-limited"
+  | "unsupported-iss"
+  | "bad-request"
+  | "deferred"
+  | "hang"
+  | "reset";
+
+/** A revocation the recipient verified and recorded. */
+export interface RecordedRevocation {
+  iss: string;
+  jti: string;
+  exp: number;
+  /** The verified request: its signer and covered components. */
+  verified: VerifiedRequest;
+  /** The `created` of its signature. */
+  created: number;
+}
+
+/**
+ * A minimal revocation recipient (AAuth -11 Section 11.12): a resource's
+ * `revocation_endpoint` that verifies the caller as a server signing under
+ * `jwks_uri` through the library, with a replay cache, records `(iss, jti,
+ * exp)` with `iss` the verified signer, and answers as `mode` says.
+ * Only `revoked` holds what it recorded; `requests` counts every POST.
+ */
+export interface Recipient extends IssuerStub {
+  mode: RecipientMode;
+  /** `jti` values answered 503 whatever the mode. */
+  failFor: Set<string>;
+  revoked: RecordedRevocation[];
+  requests: number;
+  /** Seconds a `rate-limited` answer asks the PS to wait. */
+  retryAfter: number;
+  /** Run when a revocation arrives, before it is answered. */
+  onRequest?: (jti: string) => void;
+}
+
+export const REVOKE_PATH = "/revoke";
+
+export async function startRecipient(
+  net: LoopbackNet,
+  id: string,
+  clock: Clock,
+  resolver: () => JwksResolver,
+): Promise<Recipient> {
+  const replayCache = new InMemoryReplayCache();
+  let recipient: Recipient | undefined;
+  const route: StubRoute = (req, res, body) => {
+    if (req.method !== "POST" || req.url !== REVOKE_PATH || !recipient) return false;
+    const r = recipient;
+    r.requests += 1;
+    const headers: Record<string, string[]> = {};
+    for (const [name, value] of Object.entries(req.headersDistinct)) {
+      if (value) headers[name] = value;
+    }
+    const answer = (status: number, json?: unknown, extra: Record<string, string> = {}) => {
+      if (json === undefined) {
+        res.writeHead(status, extra);
+        res.end();
+      } else {
+        res.writeHead(status, { "content-type": "application/json", ...extra });
+        res.end(typeof json === "string" ? json : JSON.stringify(json));
+      }
+    };
+    void verifyRequest(
+      { method: "POST", url: `${id}${req.url}`, headers, body },
+      {
+        resolver: resolver(),
+        now: clock.now,
+        acceptedSchemes: ["jwks_uri"],
+        requireBodyComponents: true,
+        replayCache,
+      },
+    ).then(
+      (verified) => {
+        const params = JSON.parse(body.toString("utf8")) as { jti: string; exp: number };
+        r.onRequest?.(params.jti);
+        if (r.mode === "reset") {
+          req.socket.destroy();
+          return;
+        }
+        if (r.mode === "hang") return;
+        if (r.failFor.has(params.jti) || r.mode === "unavailable") {
+          return answer(503, { error: "server_error" });
+        }
+        if (r.mode === "unsupported-iss") return answer(403, { error: "unsupported_iss" });
+        if (r.mode === "bad-request") return answer(400, { error: "invalid_request" });
+        if (r.mode === "rate-limited") {
+          return answer(429, { error: "rate_limited" }, { "retry-after": String(r.retryAfter) });
+        }
+        if (r.mode === "deferred") return answer(202, undefined, { location: `${id}/pending/1` });
+        r.revoked.push({
+          iss: (verified.signer as { id: string }).id,
+          jti: params.jti,
+          exp: params.exp,
+          verified,
+          created: verified.created,
+        });
+        if (r.mode === "garbage") return answer(200, "not json at all");
+        if (r.mode === "ok-json") return answer(200, { downstream: [] });
+        return answer(200);
+      },
+      (err: unknown) => {
+        if (err instanceof SignatureError) {
+          return answer(401, { error: err.code, detail: err.detail }, err.headers);
+        }
+        return answer(500, { error: "server_error" });
+      },
+    );
+    return true;
+  };
+  const stub = await startIssuer(net, id, "aauth-resource.json", route);
+  stub.metadata.revocation_endpoint = `${id}${REVOKE_PATH}`;
+  recipient = Object.assign(stub, {
+    mode: "ok" as RecipientMode,
+    failFor: new Set<string>(),
+    revoked: [],
+    requests: 0,
+    retryAfter: 120,
+  });
+  return recipient;
 }
 
 export interface Agent {
@@ -194,6 +401,8 @@ export interface Reply {
   status: number;
   headers: Headers;
   body: Record<string, unknown>;
+  /** The body exactly as received. */
+  text: string;
 }
 
 /**
@@ -236,6 +445,7 @@ export function send(
           status: res.statusCode ?? 0,
           headers: received,
           body: text ? JSON.parse(text) : {},
+          text,
         });
       });
     });
@@ -306,6 +516,96 @@ export function shape(r: Reply): { status: number; body: unknown; headers: strin
 }
 
 /**
+ * Everything an observer can compare: the status, the exact body bytes,
+ * and every header with its value. `date` is the wall clock at sending,
+ * so only its presence is compared.
+ */
+export function observable(r: Reply): { status: number; text: string; headers: string[][] } {
+  const headers: string[][] = [];
+  r.headers.forEach((value, name) => {
+    headers.push([name, name === "date" ? "<present>" : value]);
+  });
+  headers.sort(([a], [b]) => ((a as string) < (b as string) ? -1 : 1));
+  return { status: r.status, text: r.text, headers };
+}
+
+/** A statically configured administrator, with the private half of its enrolled key. */
+export interface Admin {
+  id: string;
+  dwk: string;
+  kid: string;
+  key: SigningKey;
+}
+
+export function makeAdmin(id: string, kid = "admin-1"): Admin {
+  return { id, dwk: "mission-admin.json", kid, key: generateSigningKey("Ed25519", kid) };
+}
+
+/** Its configuration entry: the enrolled public key, persons and actions. */
+export function adminEntry(
+  admin: Admin,
+  persons: string[],
+  actions: string[] = ["status", "terminate"],
+): Record<string, unknown> {
+  return { id: admin.id, dwk: admin.dwk, key: admin.key.publicJwk, persons, actions };
+}
+
+/** The headers and body of a request an administrator signs under `jwks_uri`. */
+export function prepareAdmin(
+  clock: Clock,
+  url: string,
+  admin: Admin,
+  body: unknown,
+  options: { tick?: number; dwk?: string; kid?: string; key?: SigningKey } = {},
+): { headers: Record<string, string>; body: string } {
+  clock.advance(options.tick ?? 1);
+  const text = JSON.stringify(body);
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  const key = options.key ?? admin.key;
+  const added = signRequest(
+    { method: "POST", url, headers, body: text },
+    {
+      alg: key.alg,
+      privateKey: key.privateKey,
+      signatureKey: {
+        scheme: "jwks_uri",
+        id: admin.id,
+        dwk: options.dwk ?? admin.dwk,
+        kid: options.kid ?? admin.kid,
+      },
+      created: clock.s,
+    },
+  );
+  return { headers: { ...headers, ...added }, body: text };
+}
+
+/** A control-plane request to `{mission_control_endpoint}/{s256}` from an agent or an administrator. */
+export function control(
+  w: World,
+  caller: Agent | Admin,
+  s256: string,
+  body: unknown,
+  options: { tick?: number } = {},
+): Promise<Reply> {
+  const url = `${w.origin}/mission-control/${s256}`;
+  if ("dwk" in caller) return send("POST", url, prepareAdmin(w.clock, url, caller, body, options));
+  return signed(w.clock, "POST", url, caller, body, options);
+}
+
+/** A terminate body with a fresh 128-bit `request_id`. */
+export function terminateBody(
+  reason = "revoked",
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    action: "terminate",
+    reason,
+    request_id: `t-${randomUUID().replaceAll("-", "")}`,
+    ...extra,
+  };
+}
+
+/**
  * The durable store behind switches a test flips: a mission read that
  * cannot establish state, a record write that fails, or a persisted blob
  * altered after approval.
@@ -359,24 +659,65 @@ export function shippedConfig(): Record<string, unknown> {
 export interface WorldOptions {
   /** Adjust the configuration document before it is validated. */
   config?: (doc: Record<string, unknown>) => void;
+  /** Serve the control plane (default true). */
+  management?: boolean;
+  /** Run revocation work on this interval once listening (default 0: only when asked). */
+  pollIntervalMs?: number;
+}
+
+export const ADMIN = "https://admin.ps.test";
+export const ADMIN_BOB = "https://admin-bob.ps.test";
+export const AUDITOR = "https://auditor.ps.test";
+
+/**
+ * The test deployment's control-plane policy: the shipped one, with three
+ * administrators whose keys the tests hold (alice's, bob's, and a
+ * status-only auditor of alice's missions), and a small retry bound.
+ */
+function testManagement(doc: Record<string, unknown>, admins: Record<string, Admin>): void {
+  const m = doc.management as Record<string, unknown>;
+  m.administrators = [
+    adminEntry(admins.alice as Admin, ["alice"]),
+    adminEntry(admins.bob as Admin, ["bob"]),
+    adminEntry(admins.auditor as Admin, ["alice"], ["status"]),
+  ];
+  // Wall-clock limits generous enough for a loaded test run: a test that
+  // needs an attempt to time out sets its own.
+  m.revocation = {
+    max_attempts: 4,
+    retry_base_seconds: 30,
+    retry_max_seconds: 120,
+    attempt_timeout_ms: 4000,
+    immediate_wait_ms: 10000,
+  };
 }
 
 export interface World {
   clock: Clock;
   net: LoopbackNet;
   ap: IssuerStub;
-  rs: IssuerStub;
+  /** A resource that publishes a revocation endpoint. */
+  rs: Recipient;
+  /** A resource that publishes none. */
   rs2: IssuerStub;
   /** Another person server, publishing its own keys. */
   ps2: IssuerStub;
   ps: PersonServer;
   faults: FaultyStore;
+  /** The durable store behind `faults`, which the control plane uses directly. */
+  durable: SqlitePsStore;
+  admins: { alice: Admin; bob: Admin; auditor: Admin };
   /** The PS's identifier, under which agents address and sign its endpoints. */
   origin: string;
   /** Where the PS listens: `http://127.0.0.1:<port>`, a transport address. */
   loopback: string;
   /** A token signed with the PS's own key, as the PS would never mint it. */
   psMint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
+  /**
+   * Stop the PS, close its store, and start another PS on the same file
+   * with the same configuration and signing key: a restart.
+   */
+  restart(options?: { pollIntervalMs?: number }): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -385,44 +726,85 @@ export async function world(options: WorldOptions = {}): Promise<World> {
   const clock = new Clock();
   const net = new LoopbackNet();
   const ap = await startIssuer(net, AP, "aauth-agent.json");
-  const rs = await startIssuer(net, RS, "aauth-resource.json");
+  const rs = await startRecipient(net, RS, clock, () => net.resolver(clock));
   const rs2 = await startIssuer(net, RS2, "aauth-resource.json");
   const ps2 = await startIssuer(net, PS2, "aauth-person.json");
+  const admins = {
+    alice: makeAdmin(ADMIN),
+    bob: makeAdmin(ADMIN_BOB),
+    auditor: makeAdmin(AUDITOR),
+  };
   const doc = shippedConfig();
+  testManagement(doc, admins);
   options.config?.(doc);
+  const config = parsePsConfig(doc);
   const dir = mkdtempSync(join(tmpdir(), "aauth-ps-"));
-  const durable = new SqlitePsStore(join(dir, "ps.db"));
-  const faults = new FaultyStore(durable);
-  const ps = createPersonServer({
-    config: parsePsConfig(doc),
-    store: faults,
-    resolver: net.resolver(clock),
-    now: clock.now,
-  });
-  const running = await ps.listen();
+  const file = join(dir, "ps.db");
+  const managed = options.management ?? true;
+  const boot = (durable: SqlitePsStore, signingKey?: SigningKey, pollIntervalMs = 0) => {
+    const faults = new FaultyStore(durable);
+    const ps = createPersonServer({
+      config,
+      store: faults,
+      resolver: net.resolver(clock),
+      now: clock.now,
+      ...(signingKey ? { signingKey } : {}),
+      ...(managed
+        ? {
+            management: {
+              store: durable,
+              transport: net.request,
+              sleep: clock.sleep,
+              pollIntervalMs,
+            },
+          }
+        : {}),
+    });
+    return { faults, ps };
+  };
+  const durable = new SqlitePsStore(file);
+  const first = boot(durable, undefined, options.pollIntervalMs ?? 0);
+  let running = await first.ps.listen();
   net.register(PS, running.origin);
   activeNet = net;
-  const kid = ps.signingKey.publicJwk.kid as string;
-  return {
+  const w: World = {
     clock,
     net,
     ap,
     rs,
     rs2,
     ps2,
-    ps,
-    faults,
+    ps: first.ps,
+    faults: first.faults,
+    durable,
+    admins,
     origin: PS,
     loopback: running.origin,
     psMint: (typ, c) =>
-      mintToken(typ, c, { alg: ps.signingKey.alg, privateKey: ps.signingKey.privateKey, kid }),
+      mintToken(typ, c, {
+        alg: w.ps.signingKey.alg,
+        privateKey: w.ps.signingKey.privateKey,
+        kid: w.ps.signingKey.publicJwk.kid as string,
+      }),
+    restart: async (restartOptions = {}) => {
+      await running.close();
+      w.durable.close();
+      w.durable = new SqlitePsStore(file);
+      const next = boot(w.durable, w.ps.signingKey, restartOptions.pollIntervalMs ?? 0);
+      w.ps = next.ps;
+      w.faults = next.faults;
+      running = await w.ps.listen();
+      net.register(PS, running.origin);
+      w.loopback = running.origin;
+    },
     close: async () => {
       await running.close();
       for (const stub of [ap, rs, rs2, ps2]) await stub.running.close();
-      durable.close();
+      w.durable.close();
       rmSync(dir, { recursive: true, force: true });
     },
   };
+  return w;
 }
 
 /** POST {mission_endpoint}. */

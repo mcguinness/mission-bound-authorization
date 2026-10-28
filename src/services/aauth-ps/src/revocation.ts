@@ -174,7 +174,12 @@ export function createRevocationWorker(options: RevocationWorkerOptions): Revoca
       {
         alg: options.signingKey.alg,
         privateKey: options.signingKey.privateKey,
-        signatureKey: { scheme: "jwks_uri", id: issuer, dwk: "aauth-person.json", kid: options.kid },
+        signatureKey: {
+          scheme: "jwks_uri",
+          id: issuer,
+          dwk: "aauth-person.json",
+          kid: options.kid,
+        },
         created,
       },
     );

@@ -472,9 +472,7 @@ export function createControlPlane(options: ControlPlaneOptions): ControlPlane {
           requested_reason: reason,
         };
         if (purpose !== undefined) later.purpose = purpose;
-        store.appendLog([
-          { s256, at, event: "termination_request_after_terminal", detail: later },
-        ]);
+        store.appendLog([{ s256, at, event: "termination_request_after_terminal", detail: later }]);
       }
       const ended = store.findOwnedMission(record.agent, s256);
       if (ended?.state !== "terminated") throw serverError("the termination did not commit");

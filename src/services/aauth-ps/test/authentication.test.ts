@@ -161,6 +161,8 @@ describe("PS metadata", () => {
       person_token_endpoint: "https://ps.test/person",
       auth_token_endpoint: "https://ps.test/token",
       mission_endpoint: "https://ps.test/mission",
+      mission_control_endpoint: "https://ps.test/mission-control",
+      mission_control_actions_supported: ["status", "terminate"],
     });
     const jwksResponse = await fetch(`${w.loopback}/.well-known/jwks.json`);
     expect(jwksResponse.headers.get("cache-control")).toBe("max-age=300");
@@ -173,5 +175,16 @@ describe("PS metadata", () => {
       kid: "ps-signing-1",
     });
     expect(jwks.keys[0]).not.toHaveProperty("d");
+  });
+
+  it("publishes no control plane when it serves none, whatever the configuration holds", async () => {
+    const bare = await world({ management: false });
+    try {
+      const meta = await (await fetch(`${bare.loopback}/.well-known/aauth-person.json`)).json();
+      expect(meta).not.toHaveProperty("mission_control_endpoint");
+      expect(meta).not.toHaveProperty("mission_control_actions_supported");
+    } finally {
+      await bare.close();
+    }
   });
 });
