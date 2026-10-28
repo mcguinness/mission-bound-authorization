@@ -498,7 +498,7 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
     // The approval RENDERING covers the verified provenance facts (material
     // verified provenance is INPUT to approval).
     const page = await fetch(`${ISSUER_E2E}/interaction/${uid}`, {
-      headers: { cookie: cookieHeader() },
+      headers: { cookie: floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader()).cookie as string },
     });
     const html = await page.text();
     expect(html).toContain("Verified intent provenance");

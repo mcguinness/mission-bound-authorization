@@ -392,6 +392,38 @@ describe("the approval surface's upstream Approver login (@spec mission#approval
     expectFloorRefused(r, /older than the high-risk-authority floor allows/);
   });
 
+  it("answers the interaction cookie alone with a sign-in notice whose link starts this login, and renders the page to the Approver it logs in (#1802)", async () => {
+    op.shape = (b) => ({ claims: b });
+    const { uid, jar } = await pendingApproval(READ);
+    const anonymous = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieOf(jar) } });
+    const notice = await anonymous.text();
+    expect(anonymous.status).toBe(401);
+    expect(notice).toContain(`<a class="approver-login" href="/interaction/${uid}/approver-login">Sign in as the Approver</a>`);
+    expect(notice).not.toContain("Pay Acme invoices");
+    expect(notice).not.toContain("payments:");
+    const approver: Jar = new Map();
+    const login = await logIn(uid, approver);
+    expect(login.status, login.description).toBe(200);
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: [cookieOf(jar), cookieOf(approver)].join("; ") } });
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain("Pay Acme invoices");
+  });
+
+  it("asks a password-only login to sign in again for high-risk authority, keeping its selected Subject in the link, before anything renders (#1802)", async () => {
+    op.shape = (b) => ({ claims: { ...b, acr: "pwd" } });
+    const { uid, jar } = await pendingApproval(REMIT);
+    const approver: Jar = new Map();
+    const login = await logIn(uid, approver);
+    expect(login.status, login.description).toBe(200);
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: [cookieOf(jar), cookieOf(approver)].join("; ") } });
+    const html = await page.text();
+    expect(page.status).toBe(401);
+    expect(html).toContain('data-error="insufficient_user_authentication"');
+    expect(html).toContain(`href="/interaction/${uid}/approver-login?subject=alice"`);
+    expect(html).not.toContain("Pay Acme invoices");
+    expect(html).not.toContain("payments:");
+  });
+
   it("admits low-risk authority after a password-only login: the floor does not apply", async () => {
     const r = await approveThroughLogin(READ, (b) => ({ claims: { ...b, acr: "pwd" } }));
     expect(r.login.status, r.login.description).toBe(200);
