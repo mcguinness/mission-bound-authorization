@@ -35,6 +35,7 @@
 import { isAbsolute, resolve } from "node:path";
 import {
   activateSigningKeyGeneration,
+  bindSigningKeyRing,
   AS_SIGNING_ROLES,
   compromiseSigningKeyGeneration,
   initSigningKeyRing,
@@ -49,21 +50,23 @@ import {
 import { AUDIT_HORIZON_SECONDS, DERIVATION_POLICY, TOPOLOGY } from "@mission/demo-data";
 
 const USAGE = [
-  "usage: pnpm keys init --ring <path> [--issuer <url>]",
+  "usage: pnpm keys init --ring <path> [--bindings <path>] [--issuer <url>]",
+  "       pnpm keys bind --ring <path> --bindings <path> [--issuer <url>]",
   "       pnpm keys migrate --ring <path> [--issuer <url>]",
-  "       pnpm keys rotate --ring <path> --role <role> [--activate] [--issuer <url>]",
+  "       pnpm keys rotate --ring <path> --role <role> [--activate] [--bindings <path>] [--issuer <url>]",
   "       pnpm keys retire --ring <path> --role <role> --kid <kid> [--kernel-store <path> | --in-memory-kernel] [--issuer <url>]",
-  "       pnpm keys compromise --ring <path> --role <role> --kid <kid> [--compromised-at <time>] [--issuer <url>]",
+  "       pnpm keys compromise --ring <path> --role <role> --kid <kid> [--compromised-at <time>] [--bindings <path>] [--issuer <url>]",
   "       pnpm keys verify --ring <path> [--issuer <url>]",
 ].join("\n");
 
 /** Each command's value flags, required and optional, and its boolean flags. */
 const COMMANDS: Record<string, { required: string[]; optional: string[]; switches: string[] }> = {
-  init: { required: ["--ring"], optional: ["--issuer"], switches: [] },
+  init: { required: ["--ring"], optional: ["--issuer", "--bindings"], switches: [] },
+  bind: { required: ["--ring", "--bindings"], optional: ["--issuer"], switches: [] },
   migrate: { required: ["--ring"], optional: ["--issuer"], switches: [] },
-  rotate: { required: ["--ring", "--role"], optional: ["--issuer"], switches: ["--activate"] },
+  rotate: { required: ["--ring", "--role"], optional: ["--issuer", "--bindings"], switches: ["--activate"] },
   retire: { required: ["--ring", "--role", "--kid"], optional: ["--issuer", "--kernel-store"], switches: ["--in-memory-kernel"] },
-  compromise: { required: ["--ring", "--role", "--kid"], optional: ["--issuer", "--compromised-at"], switches: [] },
+  compromise: { required: ["--ring", "--role", "--kid"], optional: ["--issuer", "--compromised-at", "--bindings"], switches: [] },
   verify: { required: ["--ring"], optional: ["--issuer"], switches: [] },
 };
 
@@ -102,6 +105,10 @@ export async function keysAdmin(
   }
   const ringArg = flags.get("--ring") as string;
   const ring = isAbsolute(ringArg) ? ringArg : resolve(env.INIT_CWD ?? cwd, ringArg);
+  // @spec #1815 (D945): the key binding record, kept apart from the ring.
+  const bindingsArg = flags.get("--bindings");
+  const bindings =
+    bindingsArg === undefined ? undefined : isAbsolute(bindingsArg) ? bindingsArg : resolve(env.INIT_CWD ?? cwd, bindingsArg);
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
   const roles = { asToken, asStatus, asTxn, asContinuation };
   const kids = AS_SIGNING_ROLES.map((r) => roles[r].kid).join(", ");
@@ -111,10 +118,22 @@ export async function keysAdmin(
 
   switch (command) {
     case "init": {
-      const published = await initSigningKeyRing(ring, issuer, roles);
+      const published = await initSigningKeyRing(ring, issuer, roles, undefined, bindings ? { bindings } : {});
       return [
         `initialized ${ring} for ${issuer}: ${published.length} keys (${kids})`,
-        `start the AS with MISSION_KEY_RING=${ring}`,
+        ...(bindings
+          ? [`recorded its kids in the key binding record ${bindings}`, `start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=${bindings}`]
+          : [
+              `record its kids once with \`pnpm keys bind --ring ${ring} --bindings <path>\` (outside the ring's directory), then start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=<path>`,
+            ]),
+      ].join("\n");
+    }
+    case "bind": {
+      const n = await bindSigningKeyRing(ring, issuer, roles, bindings as string);
+      return [
+        `recorded the ${n} kids of ${ring} in the key binding record ${bindings}`,
+        "the AS given this record refuses a ring that holds a recorded kid under other key material",
+        `start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=${bindings}`,
       ].join("\n");
     }
     case "migrate": {
@@ -128,7 +147,7 @@ export async function keysAdmin(
           "\n",
         );
       }
-      const staged = await stageSigningKeyGeneration(ring, issuer, roles, role);
+      const staged = await stageSigningKeyGeneration(ring, issuer, roles, role, undefined, bindings ? { bindings } : {});
       return [
         `staged ${staged.kid} for ${role}: to be published, not signing`,
         `${next}. Activation waits ${JWKS_MAX_AGE_SECONDS}s from the publication that verification confirms`,
@@ -165,7 +184,10 @@ export async function keysAdmin(
       const raw = flags.get("--compromised-at");
       const compromisedAt = raw === undefined ? undefined : new Date(raw);
       if (compromisedAt && Number.isNaN(compromisedAt.getTime())) throw new Error(`--compromised-at is not a time: ${raw}`);
-      const done = await compromiseSigningKeyGeneration(ring, issuer, roles, role, kid, compromisedAt ? { compromisedAt } : {});
+      const done = await compromiseSigningKeyGeneration(ring, issuer, roles, role, kid, {
+        ...(compromisedAt ? { compromisedAt } : {}),
+        ...(bindings ? { bindings } : {}),
+      });
       return [
         `withdrew ${kid} for ${role} as compromised${done.replacement ? `; ${done.replacement} replaces it as the signer` : ""}`,
         `${next}. Until the AS restarts it keeps the key set it loaded; a consumer keeps a key set it fetched until it fetches again, and accepts ${done.replacement ?? "a replacement"} only once its trusted kids for ${role} list it (this deployment: config/topology.json keys.${role}.trusted, then SIGUSR2 to the demo's processes)`,

@@ -184,6 +184,43 @@ describe("verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 st
     });
   });
 
+  it("refuses a child that names a tool its parent lacks, or widens a tool it keeps (I4, step 4p)", () => {
+    const added = jws(
+      holder,
+      CHILD_HEADER,
+      childOf(root, {
+        authorization_details: [
+          { type: "attenuating_agent_token", tools: { ...LEAF_TOOLS, delete_file: {} } },
+        ],
+      }),
+    );
+    expect(
+      verifyAatChain({ chain: [root, added], trustAnchors: anchors, now: NOW, policy }),
+    ).toMatchObject({ verdict: "DENY", step: "4p1" });
+    const widened = jws(
+      holder,
+      CHILD_HEADER,
+      childOf(root, {
+        authorization_details: [
+          {
+            type: "attenuating_agent_token",
+            tools: {
+              read_file: { path: { constraint_type: "one_of", values: ["/a", "/b", "/c"] } },
+            },
+          },
+        ],
+      }),
+    );
+    const refused = verifyAatChain({
+      chain: [root, widened],
+      trustAnchors: anchors,
+      now: NOW,
+      policy,
+    });
+    expect(refused).toMatchObject({ verdict: "DENY" });
+    expect((refused as { step?: string }).step).toMatch(/^4p[2-4]$/);
+  });
+
   it("refuses a chain with no aud anywhere when chain audience is required", () => {
     const { aud: _aud, ...noAud } = rootClaims();
     const unscoped = jws(anchor, ROOT_HEADER, noAud);

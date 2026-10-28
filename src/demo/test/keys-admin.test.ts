@@ -18,6 +18,31 @@ import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import { keysAdmin } from "../src/keys-admin.js";
 
+describe("pnpm keys init --bindings and pnpm keys bind (@spec #1815, D945)", () => {
+  it("init records the new ring's kids in a key binding record outside the ring's directory; bind records an existing ring's once; rotate given the record skips its kids", async () => {
+    const started = mkdtempSync(join(tmpdir(), "keys-admin-"));
+    const ring = join(started, "keys", "ring.json");
+    const bindings = join(started, "bindings", "key-bindings.json");
+    const out = await keysAdmin(["init", "--ring", ring, "--bindings", "bindings/key-bindings.json"], { INIT_CWD: started });
+    expect(out).toContain(`recorded its kids in the key binding record ${bindings}`);
+    const recorded = (JSON.parse(readFileSync(bindings, "utf8")) as { bindings: { kid: string }[] }).bindings.map((b) => b.kid);
+    expect(recorded).toEqual(["as-token", "as-status", "as-txn", "as-continuation"]);
+    await loadSigningKeyRing(ring, `http://localhost:${TOPOLOGY.ports.as}`, ROLES, { bindings });
+
+    const other = join(mkdtempSync(join(tmpdir(), "keys-admin-")), "keys", "ring.json");
+    await keysAdmin(["init", "--ring", other], {});
+    const otherBindings = join(mkdtempSync(join(tmpdir(), "keys-admin-")), "key-bindings.json");
+    expect(await keysAdmin(["bind", "--ring", other, "--bindings", otherBindings], {})).toContain(
+      `recorded the 4 kids of ${other} in the key binding record ${otherBindings}`,
+    );
+    await expect(keysAdmin(["bind", "--ring", other, "--bindings", otherBindings], {})).rejects.toThrow(/created once/);
+    await expect(keysAdmin(["bind", "--ring", other], {})).rejects.toThrow(/usage: pnpm keys/);
+
+    const staged = await keysAdmin(["rotate", "--ring", ring, "--role", "asToken", "--bindings", bindings], {});
+    expect(staged).toContain("staged as-token-2 for asToken");
+  });
+});
+
 describe("pnpm keys init (@spec #831 slice 1)", () => {
   it("creates the ring once at a path resolved against the directory pnpm started in, for the configured AS issuer, and names it for MISSION_KEY_RING", async () => {
     const started = mkdtempSync(join(tmpdir(), "keys-admin-"));
@@ -26,7 +51,7 @@ describe("pnpm keys init (@spec #831 slice 1)", () => {
     expect(out).toBe(
       [
         `initialized ${ring} for http://localhost:${TOPOLOGY.ports.as}: 4 keys (as-token, as-status, as-txn, as-continuation)`,
-        `start the AS with MISSION_KEY_RING=${ring}`,
+        `record its kids once with \`pnpm keys bind --ring ${ring} --bindings <path>\` (outside the ring's directory), then start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=<path>`,
       ].join("\n"),
     );
     expect(statSync(ring).mode & 0o777).toBe(0o600);
@@ -41,7 +66,7 @@ describe("pnpm keys init (@spec #831 slice 1)", () => {
   });
 
   it("refuses an unknown command, a missing or unknown flag, and an issuer that is not an http or https URL", async () => {
-    const usage = /^usage: pnpm keys init --ring <path> \[--issuer <url>\]\n {7}pnpm keys migrate/;
+    const usage = /^usage: pnpm keys init --ring <path> \[--bindings <path>\] \[--issuer <url>\]\n {7}pnpm keys bind --ring <path> --bindings <path>/;
     for (const argv of [
       [],
       ["revoke", "--ring", "x"],
