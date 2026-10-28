@@ -8042,6 +8042,17 @@ Cross-Domain:
   Principals and Approval Basis lists the rules that follow its member
   definitions; and Instance Context in Delegated Tokens lists its rules
   (#1723, D845).
+- Editorial, no requirement change: Refresh Tokens, Designation, Direct
+  Approval Steps, Preparing the Approval, Committing the Mission,
+  Submission Processing Order, and Enforcement Requirements point to the
+  rules of their operation that other sections state, which stay in
+  place: the `mission_intent` exemption and the Mission-governed
+  resource refusal (Authority Proposal), consent reuse (Establishing and
+  Resolving a Binding), the unrecognized authority source and approval
+  idempotency (Principals and Approval Basis, Provenance and Expiry),
+  duplicate member names (Commitment Mechanisms), and the
+  resource-server rules of Mission Lifecycle, Mission Claim, Audience
+  and Token Response, and Designation (#1723, D845).
 
 -01
 
