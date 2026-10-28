@@ -11,8 +11,8 @@
     "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "9f21e8b33e4be8c1e8912676a0a771b6224b9b9a2d67be938c11b5e94087e7a8"
+    "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
+    "content_sha256": "6360896049e20743ced8e1e89e1788c2df5b10045511f5a5d1ca2a7a42ffc4fe"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "05499ae43217ce7d528485c06622df662331aeed",
-    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
+    "revision": "f840e2a086868bc25fa12eb25664b0116fb372ea",
+    "content_sha256": "031258375b9f81c473dc9d5f4cb8a0b044a7caafcba3fe653d1c4975a3f0e713"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -13992,6 +13992,40 @@
     }
    ],
    "notes": "#1720 item 1 (D845). The condition is in the quoted clause: an AS issuing only tokens presented back to itself, such as designations, has no publication duty; the reference also issues resource-server tokens, so that exemption has no witness. The witness fetches /jwks directly; no test reads the RFC 8414 jwks_uri member and verifies an access token there, and the binding names jwks_uri only as an example. Mutation-proved: dropping the access-token role's keys from the published set (publicJwks in src/index.ts) fails the witness with JWKSNoMatchingKey."
+  },
+  {
+   "id": "core.token-claims.companion-format-not-access-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-claims",
+   "text": "JWT access-token validation remains governed by {{Section 4 of RFC9068}}, including acceptance of `at+jwt` or `application/at+jwt`. A companion-format token is consumed only under that companion's verification rules.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server validating a JWT access token applies Section 4 of RFC 9068: it accepts typ at+jwt or application/at+jwt and refuses any other typ, so a companion-format token such as an aat+jwt attenuation root is not accepted as a JWT access token; a companion-format token is consumed only under its companion's verification rules"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1760 (D904, go in D932; wording corrected at the #1812 review, D938). Scoped to JWT access-token validation: the applicability stays unconditional because JWT validation is the baseline path, and opaque-token consumption is governed separately under core.introspected-consumption, which this row does not cover. Witnesses: the refusal of an aat+jwt token presented as a Mission access token (dropping the access-token profile's typ check fails it), and the acceptance of application/at+jwt (dropping the application/ prefix handling in mediaTypeOf fails it)."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
@@ -37772,8 +37806,45 @@
      "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac): an unevaluable credential entry beside a complete one is refused credential_invalid in either order; dropping unevaluable entries one by one, as Resource Access's alternative-entry rule would (V2), fails that witness and the mixed-entry case of 'refuses a credential authority with %s'."
+  },
+  {
+   "id": "authzen.context-credential.unsatisfied-entry-not-invalidating",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An entry the PDP evaluates and finds unsatisfied invalidates nothing: another complete entry of `authority` still authorizes the action.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential whose authority holds one entry the PDP evaluates and finds unsatisfied and another complete entry the action satisfies is permitted, in either entry order; the unsatisfied entry neither denies the request nor makes it credential_invalid"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac). Distinguishes evaluates-but-unsatisfied from cannot-evaluate (authzen.context-credential.authority-no-fallback). A credential bound denying on any evaluated, unsatisfied entry (V1) fails the witness in both orders."
   },
   {
    "id": "authzen.pdp-request.credential-expiry",
