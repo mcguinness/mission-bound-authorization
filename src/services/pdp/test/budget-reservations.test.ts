@@ -45,6 +45,7 @@ import {
   type DecisionMeteringEntry,
 } from "../src/decision-evidence.js";
 import { createDecisionPoint, createEphemeralDecisionPoint } from "../src/decision-point.js";
+import { type BoundaryEvidenceKey, buildBoundaryEvidenceKeyResolver, type EnforcementBoundaries } from "../src/enforcement-boundary.js";
 import type { EnforcementScopeStatement } from "../src/enforcement-scope.js";
 import {
   type Decision,
@@ -75,9 +76,10 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const evaluate = (req: EvaluationRequest, opts: EvaluateOptions) => evaluateRequest(withCredential(req), opts);
 
@@ -137,17 +139,17 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
-  o: { error?: string | null; signer?: CryptoKeyLike } = {},
+  o: { error?: string | null; signer?: CryptoKeyLike; missionId?: string; audience?: string; emitterId?: string } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
     evaluation_id: evaluationId,
-    mission_id: "msn_a",
-    audience: RESOURCE,
+    mission_id: o.missionId ?? "msn_a",
+    audience: o.audience ?? RESOURCE,
     outcome,
     outcome_at: new Date(T0).toISOString(),
     sequence: 1,
-    emitter: { id: RESOURCE, role: outcome === "completed" ? "executor" : "pep" },
+    emitter: { id: o.emitterId ?? RESOURCE, role: outcome === "completed" ? "executor" : "pep" },
     ...(outcome === "suppressed" ? { error: o.error ?? "kill_switch" } : o.error !== undefined ? { error: o.error } : {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(content, EXECUTION_EVIDENCE_MEDIA_TYPE, {
@@ -261,7 +263,7 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] }],
+    authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] })],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
     ...(budget ? { budget } : {}),
@@ -307,7 +309,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
     resource: RESOURCE,
     ...(o.parameters ?? {}),
   };
-  return {
+  return withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { vendor_id: vendor, audience: RESOURCE, operation_target: RESOURCE } },
     action: {
@@ -324,7 +326,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
       ...(o.compensates !== undefined ? { compensates_evaluation_id: o.compensates } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-816-a" };
@@ -747,6 +749,40 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
         requested: { amount: "500.00", currency: "USD" },
         remaining: { amount: "400.00", currency: "USD" },
       });
+      claims.close();
+    });
+
+    it("every reservation carries its claim's bounded lease, the permit's valid_until plus the class's declared execution lease: both are still reserved at the lease's last instant and held lease_elapsed, with the operator alert, the first instant after it (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const alerts: HeldReservation[] = [];
+      const { open } = domainOnFile(c, { held: alerts });
+      const claims = open();
+      const d = await evaluate(request(c, { amount: "300.00" }), options(claims, c, view("msn_a", binding("msn_a"))));
+      expectPermit(d);
+      const evaluationId = d.context.evaluation_id as string;
+      const validUntilMs = Date.parse((d.context.conditions as { valid_until: string }).valid_until);
+      const declared = (
+        budgetStatement().extensions.transaction_assurance as Array<{ mediated_class_or_scope: string; execution_lease_max_seconds: number }>
+      ).find((t) => t.mediated_class_or_scope === "irreversible_action");
+      const leaseEndMs = validUntilMs + (declared?.execution_lease_max_seconds ?? Number.NaN) * 1000;
+      expect(Number.isFinite(leaseEndMs) && leaseEndMs > validUntilMs).toBe(true);
+      // The lease's last instant: both reservations are still open, and no alert has fired.
+      c.set(leaseEndMs);
+      claims.sweep();
+      expect(claims.reservationsFor(evaluationId).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(alerts).toEqual([]);
+      // The first instant after it: the lease bounds the wait, so both are held for reconciliation, never released.
+      c.set(leaseEndMs + 1);
+      claims.sweep();
+      const held = claims.reservationsFor(evaluationId);
+      expect(held.map((r) => r.counter_scope).sort()).toEqual(["mission", "standing_consent"]);
+      expect(held.map((r) => [r.state, r.cause])).toEqual([
+        ["held", "lease_elapsed"],
+        ["held", "lease_elapsed"],
+      ]);
+      expect(alerts.map((a) => [a.evaluation_id, a.cause, a.counters.length])).toEqual([[evaluationId, "lease_elapsed", 2]]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" } });
       claims.close();
     });
 
@@ -1313,6 +1349,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       const malformed: Array<[string, unknown]> = [
         ["not an object", "metered"],
         ["Bounded profile", { ...declaration(), enforcement_profile: "bounded" }],
+        ["no enforcement profile", (({ enforcement_profile: _profile, ...rest }) => rest)(declaration())],
         ["another topology", { ...declaration(), topology: "shared-linearizable" }],
         ["commit before execution", { ...declaration(), reserve_posture: "commit_before_execution" }],
         ["budget without an owner", { ...declaration(), budgets: [{ ...declaration().budgets[0], owner: "" }] }],
@@ -1436,6 +1473,60 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     expect(countsOf(file)).toEqual({ claims: 3, reservations: 4, counters: 2 });
   });
 
+  it("at the decision point, an expansion successor's payments, metered on the binding the point's own source derives for it (rooted at the dispatched instance) whatever the caller's view carries, reserve and commit on the predecessor's mission counter and the shared counter with consumption to date, the successor's max_budget caps the chain, and no counter keyed by the successor exists (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)", async () => {
+    const c = clock();
+    const { file, open } = domainOnFile(c);
+    const claims = open();
+    // The deployment's source derives one binding for the dispatched instance msn_a and its expansion successor
+    // msn_a2: the instance's budget and max_budget, rooted at msn_a.
+    const source: MissionBudgetSource = (m) =>
+      m.issuer === ISSUER && (m.id === "msn_a" || m.id === "msn_a2") ? binding("msn_a", { maxBudget: "500.00" }) : undefined;
+    const point = createDecisionPoint({
+      evidence: { signer: { kid: "pdp-816", key: evidenceKey.privateKey }, verificationKey: evidenceKey.publicKey, emitterId: RESOURCE, audience: RESOURCE },
+      claims,
+      resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
+      evaluationContextBinding: EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
+      budgetBindings: source,
+    });
+    const decide = point.decideAs(REQUESTER);
+    // The predecessor pays 300.00, and the payment completes: consumption to date is committed spend.
+    const first = await decide(withCredential(request(c, { missionId: "msn_a", amount: "300.00" })), callerOptions(c, view("msn_a")));
+    expectPermit(first);
+    expect(await claims.settle(REQUESTER, await executionRecord(first.context.evaluation_id as string, "completed"))).toEqual({
+      accepted: true,
+      state: "completed",
+      duplicate: false,
+    });
+    // The successor's caller view carries a fresh binding rooted at the successor itself; the point meters its own source's.
+    const successorView = view("msn_a2", binding("msn_a2", { maxBudget: "500.00" }));
+    const over = await decide(withCredential(request(c, { missionId: "msn_a2", amount: "300.00" })), callerOptions(c, successorView));
+    expectDenied(over, "quota_exceeded");
+    expect(entry(over, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a"), requested: { amount: "300.00" }, remaining: { amount: "200.00" } });
+    expect(entry(over, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "700.00" } });
+    const second = await decide(withCredential(request(c, { missionId: "msn_a2", amount: "200.00" })), callerOptions(c, successorView));
+    expectPermit(second);
+    const secondId = second.context.evaluation_id as string;
+    expect(entry(second, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a"), reserved: { amount: "200.00" }, remaining: { amount: "0.00" } });
+    expect(entry(second, "standing_consent")).toMatchObject({ counter_id: SHARED, reserved: { amount: "200.00" }, remaining: { amount: "500.00" } });
+    expect(claims.reservationsFor(secondId).map((r) => r.counter_id).sort()).toEqual([instanceCounter("msn_a"), SHARED].sort());
+    expect(await claims.settle(REQUESTER, await executionRecord(secondId, "completed", undefined, { missionId: "msn_a2" }))).toEqual({
+      accepted: true,
+      state: "completed",
+      duplicate: false,
+    });
+    expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "500.00" } });
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "500.00" } });
+    // The chain has consumed the successor's max_budget: the next payment is refused on the mission counter while
+    // the shared counter still has headroom.
+    const capped = await decide(withCredential(request(c, { missionId: "msn_a2", amount: "0.01" })), callerOptions(c, successorView));
+    expectDenied(capped, "quota_exceeded");
+    expect(entry(capped, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a"), remaining: { amount: "0.00" } });
+    expect(entry(capped, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "500.00" } });
+    expect(claims.budgetCounter(instanceCounter("msn_a2"))).toBeUndefined();
+    claims.close();
+    expect(countsOf(file)).toEqual({ claims: 2, reservations: 4, counters: 2 });
+  });
+
   it("createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding and reserves and claims nothing (@spec metering#metering, #816, #813, decision d)", async () => {
     const c = clock();
     const metering = domainOnFile(c);
@@ -1543,12 +1634,12 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     const capped: MissionView = {
       ...view("msn_a", binding("msn_a")),
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: MISSION_RESOURCE_ACCESS_TYPE,
           resource: RESOURCE,
           actions: [EXECUTE],
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
+        }),
       ],
     };
     // withCredential gives the request a credential with no constraints, so
@@ -2197,6 +2288,60 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
     });
 
+    it("over the deployment's boundary key resolver, a settlement carrying no integrity envelope, one claiming an audience its key is not published for, and one naming an emitter other than the key's are each refused and leave both counters unchanged, while the record bound as published commits (@spec metering#settlement-contract, runtime-evidence#decision-evidence-integrity, #816)", async () => {
+      const c = clock();
+      const OTHER_BOUNDARY = "http://localhost:4499/mcp";
+      const otherKey = generateKeyPairSync("ec", { namedCurve: "P-256" });
+      // The statement's boundaries: this PEP's Execution Evidence key is published for this boundary and emitter
+      // only; another boundary in the same declaration publishes its own.
+      const boundaries: EnforcementBoundaries = {
+        versions: [
+          {
+            version: "1",
+            effective_at: "2026-01-01T00:00:00Z",
+            boundaries: [
+              { boundary: RESOURCE, pep_locations: ["payments-pep"], evidence_keys: [{ kid: "pep-exec-816", emitter: RESOURCE, role: "executor" }] },
+              { boundary: OTHER_BOUNDARY, pep_locations: ["other-pep"], evidence_keys: [{ kid: "pep-other-816", emitter: OTHER_BOUNDARY, role: "executor" }] },
+            ],
+          },
+        ],
+      };
+      const published: BoundaryEvidenceKey[] = [
+        { kid: "pep-exec-816", publicKey: executionKey.publicKey, emitterId: RESOURCE, role: "executor" },
+        { kid: "pep-other-816", publicKey: otherKey.publicKey, emitterId: OTHER_BOUNDARY, role: "executor" },
+      ];
+      const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
+      const claims = openIdempotencyClaimDomain({
+        file,
+        owner: CLAIM_OWNER,
+        statement: budgetStatement(),
+        now: c.now,
+        settlementKeys: buildBoundaryEvidenceKeyResolver(boundaries, published),
+      });
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const unchanged = () => {
+        expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+        expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
+        expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
+      };
+      // Outside the integrity envelope: the record's content, with no evidence_envelope member at all.
+      const { evidence_envelope: _dropped, ...unenveloped } = await executionRecord(a, "completed");
+      expect((await claims.settle(REQUESTER, unenveloped)).accepted).toBe(false);
+      unchanged();
+      // Signed under this PEP's key, but claiming the other boundary's audience, which that key is not published for.
+      const otherAudience = await executionRecord(a, "completed", undefined, { audience: OTHER_BOUNDARY });
+      expect((await claims.settle(REQUESTER, otherAudience)).accepted).toBe(false);
+      unchanged();
+      // Signed under this PEP's key, for this audience, but naming another emitter than the one the key is published for.
+      const otherEmitter = await executionRecord(a, "completed", undefined, { emitterId: OTHER_BOUNDARY });
+      expect((await claims.settle(REQUESTER, otherEmitter)).accepted).toBe(false);
+      unchanged();
+      // Control: the record bound as the statement publishes it is accepted and commits.
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
     it("a settlement is acknowledged only once it is durably applied: an acknowledged one survives a restart, and one whose transaction fails is not acknowledged and applies once when redelivered (@spec metering#settlement-contract, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
@@ -2272,10 +2417,19 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       const a = await permitted(claims, c, v, { amount: "300.00" });
       const contained: MissionView = { ...v, version: 2, containment: { version: 1, contained: [{ resource: RESOURCE, actions: [EXECUTE] }] } };
       expectDenied(await evaluate(request(c, { amount: "100.00" }), options(claims, c, contained)), "authority_contained");
+      // Contain neither commits nor releases the open reservation, on either counter.
       expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
-      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
-      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "300.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({
+        reserved: { amount: "300.00" },
+        held: { amount: "0.00" },
+        committed: { amount: "0.00" },
+      });
+      // The reservation then settles on its evidence state: the permit's completed record is the settlement itself, not a correction.
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
       expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
       claims.close();
     });
 
@@ -2291,6 +2445,28 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       expectDenied(await evaluate(request(c, { amount: "100.00", digest: null }), options(claims, c, v)), "parameter_violation");
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    });
+
+    it("an admitted instance's payment that fails its class's transaction-assurance tier is refused: presented with no idempotency_key, the Exact claim the tier requires cannot be taken, so no permit issues and nothing is claimed or reserved, while the same payment with its key is claimed and charged (@spec mission-template#standing-payment-exception, runtime#idempotency, #813)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      // The parameters and their digest are the PEP's as usual; only the key the tier claims is absent.
+      const unkeyed = request(c, { amount: "100.00" });
+      delete (unkeyed.action.properties as Record<string, unknown>).idempotency_key;
+      expect(unkeyed.context.parameter_digest).toBeDefined();
+      const refused = await evaluate(unkeyed, options(claims, c, v));
+      expect(refused.decision, JSON.stringify(refused.context)).toBe(false);
+      expect(refused.context.conditions).toBeUndefined();
+      expect(claims.budgetCounter(SHARED)).toBeUndefined();
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toBeUndefined();
+      // Control: keyed, the same payment takes the claim and both reservations.
+      const keyed = await evaluate(request(c, { amount: "100.00" }), options(claims, c, v));
+      expectPermit(keyed);
+      expect(claims.reservationsFor(keyed.context.evaluation_id as string).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
     });
 
     it("a constraint_unsupported denial records denial_reason constraint_unsupported in its signed Decision Evidence (@spec authzen#failure-condition-coverage, #816)", async () => {

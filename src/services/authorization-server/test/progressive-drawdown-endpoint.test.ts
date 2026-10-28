@@ -302,6 +302,36 @@ let currentOffer: CeilingDecision | undefined;
  * ACTIVE Mission and its DPoP-bound access token. The approval page offers the
  * ceiling the decision consents unless `offer` names another.
  */
+/** The assembly an issuer names. */
+function assemblyAt(issuer: string): BuiltAs {
+  const built = new Map<string, BuiltAs>([
+    [ISSUER, as],
+    [OFF_ISSUER, asOff],
+    [REFUSE_ISSUER, asRefuse],
+    [RECORDING_ISSUER, asRecording],
+    [CLASSIFIED_ISSUER, asClassified],
+    [CONTRACT_ISSUER, asContract],
+  ]).get(issuer);
+  if (!built) throw new Error(`no assembly at ${issuer}`);
+  return built;
+}
+
+/**
+ * @spec resource-access#resource-contract (#249, D875): the offer the page
+ * renders, assembled from the issuing assembly's configuration, which the
+ * decision posts. Where configuration requires no reference it is the offer.
+ */
+function renderedOfferOf(issuer: string, ceiling: CeilingDecision | undefined): CeilingDecision | undefined {
+  if (!ceiling) return undefined;
+  return (assembledCeilingOffer(ceiling, assemblyAt(issuer).kernel.resourceContracts()) as CeilingDecision | undefined) ?? ceiling;
+}
+
+/** `entries` as a ceiling consent records them: the offer assembled from the main assembly's configuration. */
+function consented(entries: AuthorityEntry[]): AuthorityEntry[] {
+  return (renderedOfferOf(ISSUER, { authority_ceiling: entries } as CeilingDecision) as CeilingDecision)
+    .authority_ceiling as unknown as AuthorityEntry[];
+}
+
 async function issueMission(
   actions: string[],
   ceiling: CeilingDecision | undefined,
@@ -358,7 +388,7 @@ async function issueMission(
     method: "POST",
     redirect: "manual",
     headers: { ...decideHeaders, "content-type": "application/json" },
-    body: JSON.stringify({ decision: "approve", render_revision, ...((opts.decided ?? ceiling) ?? {}) }),
+    body: JSON.stringify({ decision: "approve", render_revision, ...((opts.decided ?? renderedOfferOf(issuer, ceiling)) ?? {}) }),
   });
   storeCookies(res, jar);
   location = res.headers.get("location") as string;
@@ -719,11 +749,11 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
     const ref = record.drawdown_policy;
     expect(ref?.id).toBe("drawdown-std");
     expect(ref?.version).toBe("1");
-    expect(record.authority_ceiling).toEqual(FULL_CEILING);
+    expect(record.authority_ceiling).toEqual(consented(FULL_CEILING));
     // ceiling_hash: typ mission-authority-ceiling over exactly the two members.
     expect(record.ceiling_hash).toBe(
       computeAnchor("mission-authority-ceiling", ISSUER, {
-        authority_ceiling: FULL_CEILING,
+        authority_ceiling: consented(FULL_CEILING),
         drawdown_policy: ref,
       } as unknown as JsonValue),
     );
@@ -793,7 +823,7 @@ describe("ceiling consent (@spec progressive#progressive-authorization)", () => 
     const record = as.kernel.get(m.missionId) as MissionRecord;
     expect(record.drawdown_policy).toBeUndefined();
     expect(record.ceiling_hash).toBe(
-      computeAnchor("mission-authority-ceiling", ISSUER, { authority_ceiling: FULL_CEILING } as unknown as JsonValue),
+      computeAnchor("mission-authority-ceiling", ISSUER, { authority_ceiling: consented(FULL_CEILING) } as unknown as JsonValue),
     );
   });
 });
@@ -1201,7 +1231,7 @@ async function approveAndPoll(
     authentication: FIXTURE_BROWSER_LOGIN,
     approvalEventId: `apev-${crypto.randomUUID()}`,
     approvedUntil: FAR_EXP,
-    ...(ceiling ? { ceiling } : {}),
+    ...(ceiling ? { ceiling: renderedOfferOf(ISSUER, ceiling) } : {}),
   });
   const res = await tokenRequest({
     grant_type: DEFERRED_GRANT_TYPE,
@@ -1286,7 +1316,7 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
       ceilingOf("drawdown-std", raised),
     );
     const s1 = as.kernel.get(approved.mission_id) as MissionRecord;
-    expect(s1.authority_ceiling).toEqual(raised);
+    expect(s1.authority_ceiling).toEqual(consented(raised));
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): a
     // re-consent is a fresh consent, so it retains the association the
     // mapping assigns the raised ceiling at that decision.
@@ -1295,7 +1325,7 @@ describe("ceiling re-consent (@spec progressive#ceiling-reconsent, progressive#c
     expect(s1.drawdown_policy?.id).toBe("drawdown-std");
     expect(s1.ceiling_hash).toBe(
       computeAnchor("mission-authority-ceiling", ISSUER, {
-        authority_ceiling: raised,
+        authority_ceiling: consented(raised),
         drawdown_policy: s1.drawdown_policy,
       } as unknown as JsonValue),
     );
@@ -1818,7 +1848,7 @@ describe("policy narrowing and the consent commitment (@spec progressive#drawdow
     // The first drawdown holds invoice.list, so only the undrawn vendor.read retires.
     const d1 = await drawdown(root.accessToken, crypto.randomUUID(), READ_LIST);
     const s1 = get(d1.mission_id);
-    const narrowed1 = without(FULL_CEILING, [VENDOR]);
+    const narrowed1 = without(consented(FULL_CEILING), [VENDOR]);
     expect(s1.authority_ceiling).toEqual(narrowed1);
     expect(s1.ceiling_hash).toBe(hashOf(narrowed1, r0));
     expect(s1.ceiling_hash).not.toBe(r0.ceiling_hash);
@@ -1830,7 +1860,7 @@ describe("policy narrowing and the consent commitment (@spec progressive#drawdow
     // The second drops invoice.list, which now retires too: drawn against a ceiling no human consented.
     const d2 = await drawdown(d1.access_token, crypto.randomUUID(), [...READ, "payments:payment.schedule"]);
     const s2 = get(d2.mission_id);
-    const narrowed2 = without(FULL_CEILING, NARROWED_ACTIONS);
+    const narrowed2 = without(consented(FULL_CEILING), NARROWED_ACTIONS);
     expect(s2.authority_ceiling).toEqual(narrowed2);
     expect(s2.ceiling_hash).toBe(hashOf(narrowed2, r0));
     expect(s2.ceiling_hash).not.toBe(s1.ceiling_hash);
@@ -1891,8 +1921,8 @@ describe("policy narrowing and the consent commitment (@spec progressive#drawdow
       ceilingOf("drawdown-std"),
     );
     const h = get(approved.mission_id);
-    expect(h.authority_ceiling).toEqual(FULL_CEILING);
-    expect(h.ceiling_hash).toBe(hashOf(FULL_CEILING, h));
+    expect(h.authority_ceiling).toEqual(consented(FULL_CEILING));
+    expect(h.ceiling_hash).toBe(hashOf(consented(FULL_CEILING), h));
     expect(h.ceiling_consent_hash).toBe(h.ceiling_hash);
     expect(h.ceiling_consent_hash).not.toBe(r0.ceiling_hash);
     expect(Date.parse(h.ceiling_consented_at as string)).toBeGreaterThan(Date.parse(r0.ceiling_consented_at as string));
@@ -2103,7 +2133,7 @@ describe("the deferred expansion's consent disclosure (@spec progressive#fresh-a
     const code = await openFreshApproval(root.missionId, root.accessToken, [...READ, VENDOR]);
     currentOffer = ceilingOf("drawdown-wide");
     expect(as.expansionDeferrals.disclosure(code)?.ceiling?.reconsent_offer).toEqual({
-      authority_ceiling: FULL_CEILING,
+      authority_ceiling: consented(FULL_CEILING),
       drawdown_policy: { id: "drawdown-wide", version: "1" },
       adjudication:
         "Within this ceiling, expansions of this Mission are adjudicated by drawdown policy drawdown-wide version 1, without a further approval from you. Authority beyond the ceiling, and the classes this deployment reserves for a fresh approval, still require your approval.",
@@ -2115,7 +2145,7 @@ describe("the deferred expansion's consent disclosure (@spec progressive#fresh-a
         authentication: FIXTURE_BROWSER_LOGIN,
         approvalEventId: `apev-${crypto.randomUUID()}`,
         approvedUntil: FAR_EXP,
-        ceiling: ceilingOf("drawdown-std"),
+        ceiling: renderedOfferOf(ISSUER, ceilingOf("drawdown-std")),
       }),
     ).toThrowError(IntentError);
     // Still pending: the rendered offer is accepted (approve only acts on a pending deferral).
@@ -2131,7 +2161,7 @@ describe("the deferred expansion's consent disclosure (@spec progressive#fresh-a
       authentication: FIXTURE_BROWSER_LOGIN,
       approvalEventId: `apev-${crypto.randomUUID()}`,
       approvedUntil: FAR_EXP,
-      ceiling,
+      ceiling: renderedOfferOf(ISSUER, ceiling),
     });
     // The disclosure renders drawdown-std; the offer then changes to drawdown-wide.
     currentOffer = ceilingOf("drawdown-std");
@@ -2330,7 +2360,7 @@ describe("the expansion deferral's approval page (@spec expansion#completion-mod
     currentOffer = ceilingOf("drawdown-wide");
     const headers = login(code);
     const shown = await page(code, headers);
-    expect(pre(shown.html, "reconsent-ceiling")).toEqual(FULL_CEILING);
+    expect(pre(shown.html, "reconsent-ceiling")).toEqual(consented(FULL_CEILING));
     expect(shown.html).toContain(
       '<p class="reconsent-policy">Drawdown policy <code>drawdown-wide</code> version <code>1</code></p>',
     );

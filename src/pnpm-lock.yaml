@@ -142,6 +142,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.115.0
         version: 0.115.0(zod@4.4.3)
+      '@mission/demo-data':
+        specifier: workspace:*
+        version: link:../packages/demo-data
       '@mission/mcp-payments':
         specifier: workspace:*
         version: link:../services/mcp-payments
@@ -290,6 +293,10 @@ importers:
       jose:
         specifier: ^6.1.3
         version: 6.2.3
+    devDependencies:
+      '@mission/demo-data':
+        specifier: workspace:*
+        version: link:../../packages/demo-data
 
   services/agent:
     dependencies:

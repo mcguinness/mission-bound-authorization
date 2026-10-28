@@ -21,6 +21,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, type MockInstance, vi } from "vitest";
 import { CANONICAL_RESOURCE, credentialAuthorityFrom, type DecisionEvidence, type TokenFacts } from "@mission/mcp-payments";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import { Fga } from "@mission/pdp";
 import { approveDemoMission, composeStack, type DemoStack } from "../src/stack.js";
 
@@ -70,7 +71,8 @@ describe("the composed stack links a compensation to its committed original (@sp
         mission: { id: view.id, issuer: view.issuer, authority_hash: view.authority_hash },
         credentialAuthority: credentialAuthorityFrom([
           ...view.authority_set,
-          { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.reverse"] },
+          // Approved against the intended contract, as the credential is (#249, D865).
+          pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.reverse"] }),
         ]),
       };
       const wire = await stack.server.callTransactionTool(

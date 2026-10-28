@@ -307,13 +307,15 @@ describe("a prefix request is never within an exact grant naming the same resour
     );
     expect(refused.status, JSON.stringify(refused.body)).toBe(400);
     expect(refused.body.error).toBe("invalid_authorization_details");
-    // Control: the exact entry naming the same resource is within the grant.
+    // Control: the exact entry naming the same resource is within the grant,
+    // restated with any contract reference the grant carries (#249, D865).
+    const granted = record?.authority_set[0]?.resource_contract;
     const exact = await token(
       {
         grant_type: "refresh_token",
         refresh_token: issued.rt,
         resource: RESOURCE,
-        authorization_details: JSON.stringify([schedule()]),
+        authorization_details: JSON.stringify([{ ...schedule(), ...(granted ? { resource_contract: granted } : {}) }]),
       },
       issued.keys,
     );

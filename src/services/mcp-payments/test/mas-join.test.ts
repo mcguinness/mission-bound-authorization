@@ -28,6 +28,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, RESOURCE_POLICY_REFUSES_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -66,6 +67,9 @@ const view: MissionView = {
   subject: { iss: "https://idp.test", sub: "alice" },
   client_id: "ap-agent",
 };
+
+/** The same Mission approved against the current contract (#249), as the pinned Mission-bound credential requires. */
+const PINNED_VIEW: MissionView = { ...view, authority_set: [pinnedToCurrentContract(DIRECT_ENTRY)] };
 
 const loadViewFor = (v: MissionView) => (ref: { id: string; issuer: string }) =>
   ref.id === v.id && ref.issuer === v.issuer
@@ -409,7 +413,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
   // authority covers BOTH that and the vendor read.
   const missionShortView: MissionView = {
     ...view,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ] }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ] })],
   };
   const BROAD_CREDENTIAL: () => AuthorityEntry[] = () => [
     { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [INVOICE_READ, READ] },
@@ -483,7 +487,7 @@ describe("baseline MAS Join: rule 8's three bounds, one denial each (@spec autho
 
 describe("baseline MAS Join: the Mission-bound path is unaffected (@spec authority-server#mission-join)", () => {
   it("a Mission-bound credential (token.mission present) enforces exactly as before, even with masJoin fully configured", async () => {
-    const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
+    const pep = build({ masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } }, PINNED_VIEW);
     const missionBoundToken: TokenFacts = {
       sub: "alice",
       clientId: "ap-agent",
@@ -504,10 +508,10 @@ describe("baseline MAS Join: the PDP decides over the Mission's own view, never 
   // the credential only the vendor read.
   const broadView: MissionView = {
     ...view,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ, INVOICE_READ] }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ, INVOICE_READ] })],
   };
   const NARROW_CREDENTIAL: () => AuthorityEntry[] = () => [
-    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ] },
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ] }),
   ];
 
   it("permits the action a narrower ordinary credential covers under a broader Mission entry, deciding over the whole entry", async () => {
@@ -590,7 +594,7 @@ describe("baseline MAS Join: context.mission_join carriage (@spec authority-serv
 
   it("carries no context.mission_join on a Mission-bound decision", async () => {
     const capture = capturingDecide();
-    const pep = build({ decide: capture.decide, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } });
+    const pep = build({ decide: capture.decide, masJoin: { resolveOrdinaryAuthority: FULL_AUTHORITY } }, PINNED_VIEW);
     const missionBoundToken: TokenFacts = {
       sub: "alice",
       clientId: "ap-agent",

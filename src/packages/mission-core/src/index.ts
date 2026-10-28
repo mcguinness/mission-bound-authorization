@@ -85,18 +85,10 @@ export {
 export {
   AAT_DETAIL_TYPE,
   AAT_TYP,
-  type AATConstraint,
-  type AATExactConstraint,
-  type AATOneOfConstraint,
-  type AATRangeConstraint,
-  type AATToolArgs,
-  type AATTools,
   aatToolId,
   audNesting,
-  expNesting,
   parHash,
   parseAatToolId,
-  toolsSubset,
 } from "./attenuation-chain.js";
 export {
   AuthorityDependencyConfigError,

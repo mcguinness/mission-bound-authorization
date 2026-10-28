@@ -39,8 +39,9 @@ import {
   RUNTIME_POSTURE,
   type RuntimePosture,
 } from "../src/runtime-posture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -59,17 +60,17 @@ const view: MissionView = {
   version: 1,
   authority_hash: "sha-256:m918",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:payment.schedule", "payments:payment.schedule.cancel", "payments:payment.execute"],
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
 };
 
-const request = (action: string, key?: unknown): EvaluationRequest => ({
+const request = (action: string, key?: unknown): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice", properties: { iss: "https://as.test" } },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: action, ...(key !== undefined ? { properties: { idempotency_key: key as string } } : {}) },

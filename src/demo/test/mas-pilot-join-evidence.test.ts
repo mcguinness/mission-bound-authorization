@@ -28,6 +28,7 @@ import { dirname, join } from "node:path";
 import {
   type ActingToken,
   DEFAULT_AUDIT_RETENTION_S,
+  bindSigningKeyRing,
   initSigningKeyRing,
   type JoinAssertionDeployment,
   reconcileKernelRecovery,
@@ -279,6 +280,8 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
     const keyRing = join(dir, "keys", "ring.json");
     await initSigningKeyRing(keyRing, MAS_URL, { asToken, asStatus, asTxn, asContinuation });
+    const keyBindings = join(mkdtempSync(join(tmpdir(), "mas-bindings-")), "key-bindings.json");
+    await bindSigningKeyRing(keyRing, MAS_URL, { asToken, asStatus, asTxn, asContinuation }, keyBindings);
     const config = joinConfig();
     const configPath = join(dir, "mas-pilot.json");
     writeFileSync(configPath, JSON.stringify(config));
@@ -303,6 +306,7 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       configPath,
       statusClients: [pdp.registration],
       keyRing,
+      keyBindings,
       kernelStore: join(dir, "state", "kernel.db"),
       kernelWitness: kernelWitnessFor(join(dir, "state", "kernel.db"), join(dir, "witness", "kernel.witness")),
       joinIntrospectionSecret,

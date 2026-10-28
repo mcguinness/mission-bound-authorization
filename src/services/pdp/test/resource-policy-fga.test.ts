@@ -7,6 +7,7 @@
  * Skipped automatically when OpenFGA is unreachable; CI runs it.
  */
 
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createEphemeralDecisionPoint } from "../src/decision-point.js";
 import type { DecisionEvidenceObject } from "../src/decision-evidence.js";
@@ -17,6 +18,7 @@ import { relationForAction, stalenessBound } from "../src/policy.js";
 import { clientObject, fgaResourcePolicy, issuerLocalClients, issuerLocalPrincipals, principalObject, type ResourcePolicy } from "../src/resource-policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { withCurrentContractReference } from "../src/test-support.js";
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -42,18 +44,18 @@ const ALICE = principalObject({ iss: ISSUER, sub: "alice" });
 const AP_AGENT = clientObject({ iss: ISSUER, client: "ap-agent" });
 const CONNECTION = { apiUrl: API_URL, presharedKey: KEY, ...(CA ? { caCertPath: CA } : {}) };
 
-const READ_ENTRY: AuthorityEntry = {
+const READ_ENTRY: AuthorityEntry = pinnedToCurrentContract({
   type: "mission_resource_access",
   resource: RESOURCE,
   actions: ["payments:invoice.read", "payments:invoice.list"],
   constraints: { vendors: ["acme", "globex"] },
-};
-const PAY_ENTRY: AuthorityEntry = {
+});
+const PAY_ENTRY: AuthorityEntry = pinnedToCurrentContract({
   type: "mission_resource_access",
   resource: RESOURCE,
   actions: ["payments:payment.execute"],
   constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme", "globex"] },
-};
+});
 const view = (authority: AuthorityEntry[] = [READ_ENTRY, PAY_ENTRY]): MissionView => ({
   id: "msn_rp_fga",
   issuer: ISSUER,
@@ -78,28 +80,28 @@ const context = (over: Partial<EvaluationRequest["context"]> = {}): EvaluationRe
 
 /** A keyed payment on one invoice: the verified subject, the PEP-resolved vendor, a fresh key. */
 const payReq = (invoiceId: string, vendorId: string, iss = ISSUER): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss } },
     resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorId } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
     context: context({ action_class: "irreversible_action", parameter_digest: `sha-256:pd-${invoiceId}`, amount: { amount: "125.00", currency: "USD" } }),
-  });
+  }));
 
 const readReq = (invoiceId: string, vendorId: string, iss = ISSUER, clientId = "ap-agent"): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss } },
     resource: { type: "invoice", id: invoiceId, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorId } },
     action: { name: "payments:invoice.read" },
     context: context({ action_class: "consequential_read", actor: { client_id: clientId } }),
-  });
+  }));
 
 const listReq = (vendorIds: string[]): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: vendorIds[0] as string, vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
     context: context({ action_class: "consequential_read" }),
-  });
+  }));
 
 let fga: Fga;
 let storeId: string;

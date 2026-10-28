@@ -123,6 +123,19 @@ const fullAuthority = () => [
 ];
 
 /** A strict subset of the full authority (narrowed by action). */
+/**
+ * @spec resource-access#resource-contract (#249, D865): `entries` as a client
+ * restates them from its Mission: each with the reference of the Mission
+ * entry covering it, where that entry carries one.
+ */
+function restatedFrom<E extends { resource: unknown; actions: string[] }>(missionId: string, entries: E[]): E[] {
+  const granted = as.kernel.get(missionId)?.authority_set ?? [];
+  return entries.map((e) => {
+    const ref = granted.find((g) => g.resource === e.resource && e.actions.every((a) => g.actions.includes(a)))?.resource_contract;
+    return ref === undefined ? e : { ...e, resource_contract: ref };
+  });
+}
+
 const confinedAuthority = () => [
   {
     type: "mission_resource_access",
@@ -2935,7 +2948,7 @@ describe("a fully contained family is refused after rotation, within the owner's
     const a = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: confinedAuthority() })).json()) as {
       refresh_token: string;
     };
-    const b = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: remittanceOnly() })).json()) as {
+    const b = (await (await asyncDelegate(baseAccessToken, { authorizationDetails: restatedFrom(missionId, remittanceOnly()) })).json()) as {
       refresh_token: string;
     };
     // Contain exactly family A's whole subset (invoice.read); B's survives.
@@ -3441,7 +3454,7 @@ describe("a requested family set the projection cannot issue whole is refused, n
       const countBefore = as.kernel.get(missionId)?.derivation_count;
       const res = await asyncDelegate(handle, {
         rawSubject: true,
-        authorizationDetails: [entryOf(["payments:invoice.read"]), poisoned],
+        authorizationDetails: restatedFrom(missionId, [entryOf(["payments:invoice.read"]), poisoned]),
       });
       const body = (await res.json()) as {
         error?: string;
@@ -3458,7 +3471,7 @@ describe("a requested family set the projection cannot issue whole is refused, n
       expect(as.kernel.get(missionId)?.derivation_count).toBe(countBefore);
     }
     const whole = await asyncDelegate(baseAccessToken, {
-      authorizationDetails: [entryOf(["payments:invoice.read"]), entryOf(["payments:remittance.send"])],
+      authorizationDetails: restatedFrom(missionId, [entryOf(["payments:invoice.read"]), entryOf(["payments:remittance.send"])]),
     });
     const wholeBody = (await whole.json()) as { authorization_details?: Array<{ actions: string[] }> };
     expect(whole.status, JSON.stringify(wholeBody)).toBe(200);

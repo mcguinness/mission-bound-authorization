@@ -44,6 +44,7 @@ import {
   type WriteReservationStore,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const BASE_MS = Date.parse("2026-10-05T12:00:00.000Z");
@@ -68,12 +69,12 @@ const VIEW: MissionView = {
   version: 1,
   authority_hash: `sha-256:${MISSION}`,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute", "payments:payment.schedule", "payments:payment.schedule.cancel"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

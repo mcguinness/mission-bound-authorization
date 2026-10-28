@@ -309,4 +309,9 @@ function isUniqueViolation(e: unknown): boolean {
   );
 }
 
-export { canonicalPath, witnessSharesStoreTree, writeDurableFile } from "./durable-file.js";
+export {
+  canonicalPath,
+  createDurableFile,
+  witnessSharesStoreTree,
+  writeDurableFile,
+} from "./durable-file.js";

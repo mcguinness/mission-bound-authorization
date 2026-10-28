@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f840e2a086868bc25fa12eb25664b0116fb372ea",
-    "content_sha256": "031258375b9f81c473dc9d5f4cb8a0b044a7caafcba3fe653d1c4975a3f0e713"
+    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
+    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -15908,92 +15908,6 @@
    "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. D733: the template dispatch witness in scope-projection.test.ts recovers an instance created while the target was unmapped and issues for it once the mapping is back, because the instance inherits the association its template retained at consent. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
   },
   {
-   "id": "core.other-types.original-audience-refusal",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "Without `narrowing`, a token for another audience does not carry the entry",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "token-endpoint",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
-    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
-   },
-   "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
-     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/device-authorization.test.ts",
-     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
-     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    }
-   ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
-  },
-  {
    "id": "core.other-types.capability-carrier-first-false-governs",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
@@ -25210,8 +25124,104 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential names another subject",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential from an untrusted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential naming an issuer that is not an accepted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential whose signature does not verify",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired actor credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential of an unknown type",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a listed actor-credential type the verifier does not implement",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. One witness per clause of Actor-Binding Credentials: type (unknown, and listed but not implemented), issuer trust (an unaccepted signing key, and an accepted key naming another issuer), validity (a signature that does not verify, an expired credential), subject, and bound key. Proved by skipping each check in turn (the subject comparison, the lifetime, the signature, the issuer binding, either type check): each witness fails."
+  },
+  {
+   "id": "cross-org.actor.credential-alignment",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "actor-identity",
+   "text": "A hop carrying `act` MUST have exactly one aligned entry in the `actor_credentials` presented with the Chain, at the projection exchange or at direct invocation, and its credential MUST validate under {{actor-evidence}}; a Chain naming an actor on a hop with a missing, misaligned, or invalid credential MUST be refused.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the projection exchange, a named hop with no aligned `actor_credentials` entry, an entry whose `hop` index is out of range or repeated, a credential aligned to a key-only hop, and a named hop whose credential fails validation (cross-org.actor.credential-validation) each refuse the Chain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose actor credential is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a misaligned hop index",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses duplicate hop entries",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential aligned to a key-only hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1821 (D941). The projection exchange's half of the sentence: its witnesses run the exchange's presentation parser and chain verifier. The direct-invocation half (`actor_credentials` in the substrate's presentation object) stays with the todo row cross-org.chain.direct-presentation-actor-credentials. The invalid-credential clause is witnessed clause by clause under cross-org.actor.credential-validation. Proved by treating a missing credential as key-only, skipping the key-only alignment check, and skipping the parser's range and repeat checks: each witness fails."
   },
   {
    "id": "cross-org.actor.root-resolution",
@@ -25285,7 +25295,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a revoked, expired, or staleness-exceeded Mission state prevents chain acceptance"
+    "normative": "a revoked, expired, staleness-exceeded, or unavailable Mission state prevents chain acceptance"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -25295,8 +25305,27 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on stale Mission state",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on unavailable Mission state",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a revoked Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired Mission",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. Each clause has its own witness: stale (the freshness bound), unavailable (no locally available state source, which the quoted text requires), revoked and expired (both `terminated`; the expired witness takes its record from the kernel's own expiry, so the verifier's clock stays inside the chain's lifetime, which the root caps at the Mission's expiry). Proved by reading an unavailable state as active, refusing only `suspended`, and skipping the freshness bound: each witness fails."
   },
   {
    "id": "cross-org.projection.provenance-recorded",
@@ -41287,7 +41316,7 @@
     "local": "design decision c: the budget_metering extension's enforcement_profile is exact. The declaration names one enforcement_profile, and the loader refuses any value but exact (budgetMeteringFindings, services/pdp/src/budget-metering.ts). That one profile names the profile of every counter the declaration meters: resolveBudgetCharge resolves the Mission-keyed max_budget counter (counter_scope mission, keyed by the issuer and the successor chain's first Mission) and the standing_consent counter (keyed by owner and budget_id) together, and only for a binding that names a budget the declaration lists. The mission counter is therefore not listed separately, and no counter is metered outside the declared profile."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41296,7 +41325,7 @@
      "surface": "deployment-documentation"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a budget_metering declaration naming any profile other than exact (bounded) is refused at load, claimed or not; skipping every budget_metering finding (L1) fails the witness. That the declaration's one profile names every counter it meters, the mission counter included, is observation.local (D877). Partial: no isolated mutant for the profile finding; removing only the enforcement_profile check in budgetMeteringFindings should fail the witness's 'Bounded profile' case, and recording that mutant closes the row."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a budget_metering declaration naming any profile other than exact (bounded) is refused at load, claimed or not; skipping every budget_metering finding (L1) fails the witness. That the declaration's one profile names every counter it meters, the mission counter included, is observation.local (D877). D961 (impl/813-proof-runtime at 5a44a14e): the witness gains a 'no enforcement profile' case beside 'Bounded profile'. Removing only the enforcement_profile check in budgetMeteringFindings (P4: the line `if (declared.enforcement_profile !== \"exact\") push(member, ...)` deleted; it is the only check of that member in services/pdp/src) fails the witness at 'Bounded profile (claimed: true)'; tolerating an absent profile (P4b: the condition `declared.enforcement_profile !== undefined && declared.enforcement_profile !== \"exact\"`) fails it at 'no enforcement profile (claimed: true)'. Tested."
   },
   {
    "id": "metering.topology.no-unmeetable-exact-claim",
@@ -41715,7 +41744,7 @@
     "local": "design decision a: the instance counter is keyed by the first Mission of the successor chain, counter_scope mission. A successor keeps the dispatched instance's max_budget exactly: assertSuccessorMaxBudget (kernel/standing-payment.ts), called by createExpansion (kernel/expansion.ts) and createCeilingDrawdownInCallerTx (kernel/progressive.ts), refuses a successor Intent whose max_budget differs in amount or currency or is absent, and standingPaymentBudgetBindingOf derives underivable (denied constraint_unsupported at the PDP) for a Mission whose max_budget differs from the instance's. The successor's bound is therefore the bound the chain's instance counter is limited by; a successor bound that differs from its predecessor's does not arise."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -41728,9 +41757,15 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > at the decision point, an expansion successor's payments, metered on the binding the point's own source derives for it (rooted at the dispatched instance) whatever the caller's view carries, reserve and commit on the predecessor's mission counter and the shared counter with consumption to date, the successor's max_budget caps the chain, and no counter keyed by the successor exists (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment draws on the dispatched instance's mission counter with its consumption to date (refused beyond the 25.00 left of 150.00, then permitted to exhaust it); keying the successor's binding by its own id (U2) or deriving it unbound (U1) opens a fresh balance or none, and dropping the instance limit (Q3p) lets the chain exceed its cap, each failing the witness. Tested under observation.local (D877): a successor's max_budget equals its predecessor's, so the bound these witnesses show capping the chain is the successor's own. The earlier partial reason (the two bounds are not distinguished) describes a case the reference refuses; the AS witness of that refusal is 'refuses an expansion successor of a standing-payment instance that changes or drops its max_budget (#813)' (template-standing-payment.test.ts)."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. A carryover replacement cannot arise while children are refused. Also homes the template's 'its successors continue its budget counters' for the instance counter. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the same mission counter: the same counter_id, 200.00 remaining of a 500.00 max_budget after 300.00, and a 200.00 payment fills it. Keying the instance counter by the successor's own Mission id (T8f) fails it; so do removing the reservation (A1) and refusing at equality (T8a). Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment draws on the dispatched instance's mission counter with its consumption to date (refused beyond the 25.00 left of 150.00, then permitted to exhaust it); keying the successor's binding by its own id (U2) or deriving it unbound (U1) opens a fresh balance or none, and dropping the instance limit (Q3p) lets the chain exceed its cap, each failing the witness. A successor's max_budget equals its predecessor's (observation.local, D877), and the AS witness of the refusal of an unequal one is 'refuses an expansion successor of a standing-payment instance that changes or drops its max_budget (#813)' (template-standing-payment.test.ts). D961: that refusal does not make ordinary continuation unreachable, so it is witnessed directly (impl/813-proof-runtime at 5a44a14e) at the decision point: createDecisionPoint's budgetBindings source answers the instance msn_a and its successor msn_a2 with the one binding rooted at msn_a (max_budget 500.00). The predecessor's 300.00 completes; the successor, whose caller view carries a fresh binding rooted at itself, is refused quota_exceeded for 300.00 on the predecessor's mission counter with 200.00 remaining, is permitted 200.00 on that counter and the shared one, and its completed settlement commits 500.00 on both; a further 0.01 is refused on the mission counter at 0.00 remaining while the shared counter keeps 500.00; no counter keyed by msn_a2 exists. Re-rooting the charge at the successor's own id (S2i: budgetCharge's binding replaced by { ...binding, instance: { ...binding.instance, root_mission_id: view.id } } in evaluate.ts), an unbounded instance limit (S2ii: the mission counter's limitMinor: Number.MAX_SAFE_INTEGER in resolveBudgetCharge), metering the caller's presented binding (S2iii: attachBudgetBinding returns the view when it carries one) and dropping every binding (S2iv: attachBudgetBinding returns the view unbound) each fail it; with every assertion before it removed, S2i and S2iii each fail the no-successor-counter assertion alone. Tested."
   },
   {
    "id": "metering.capacity-across-missions.policy-successor-no-raise",
@@ -42549,7 +42584,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed. The clause binds where the committed quantity is conveyed by consumed; under profile v16 (D877) the payment class defines no actual measure, so it is not (observation.local). The normative observation states the consumed case without its condition and should be re-scoped to it. Todo: no test asserts that a completed metered wire's Execution Evidence carries no metering member; that assertion, added to the end-to-end exhaustion witness and killed by a PEP that emits a consumed entry, would witness the condition's absence."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the settlement contract's max_budget conveyance through consumed. The normative observation already carries the clause's condition: it binds where the Operation Profile conveys a metered payment's committed quantity by consumed, and states that where the profile defines no actual measure none is conveyed. payments-runtime-profile-v16 (D877; src/docs/operation-profile-payments-v1.md, section Budget metering) defines no actual measure for the metered payment: a completed settlement commits the reserved amount and Execution Evidence conveys no consumed (observation.local). The positive obligation, an Execution Evidence record of a completed metered payment carrying a metering entry whose consumed is the executed amount, is therefore not exercised in the reference, and no reference test can witness it. Todo by D961: an absence assertion (a completed wire's Execution Evidence carrying no metering member) witnesses only that the condition does not hold, never the positive obligation, so it does not promote this row. The row stays todo until an Operation Profile the reference implements conveys an actual measure by consumed."
   },
   {
    "id": "metering.metering-evidence.counter-scope-values",
@@ -42991,9 +43026,15 @@
      "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > forged, wrongly signed and wrong-PEP settlements for a budget-bound claim are refused and leave both counters unchanged (@spec metering#settlement-contract, #816)",
      "level": "endpoint",
      "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > over the deployment's boundary key resolver, a settlement carrying no integrity envelope, one claiming an audience its key is not published for, and one naming an emitter other than the key's are each refused and leave both counters unchanged, while the record bound as published commits (@spec metering#settlement-contract, runtime-evidence#decision-evidence-integrity, #816)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a settlement whose content no longer matches its envelope, one signed under another key, and one delivered by another PEP are each refused, with both reservations still reserved and both counters unchanged; skipping signature verification (W11a) or the PEP check (W11b) fails it. Partial: a record carrying no envelope at all, and one bound to another audience, are not cases."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): a settlement whose content no longer matches its envelope, one signed under another key, and one delivered by another PEP are each refused, with both reservations still reserved and both counters unchanged; skipping signature verification (W11a) or the PEP check (W11b) fails it. D961 (impl/813-proof-runtime at 5a44a14e): a second witness runs the intake over the deployment's own key resolver, buildBoundaryEvidenceKeyResolver (services/pdp/src/enforcement-boundary.ts, as the composed stack wires it), with this PEP's key published for this boundary and emitter only and a second boundary in the declaration. A record with no evidence_envelope member, one signed under this PEP's key claiming the other boundary's audience, and one naming another emitter are each refused with both reservations reserved and both counters unchanged, and the record bound as published commits. Accepting an unenveloped record (I5a: settle treats a record without evidence_envelope as verified), resolving the key by kid across every boundary whatever the audience (I5b) and dropping the emitter comparisons from the resolver (I5c) each fail it at their case's refusal and, with that refusal assertion removed, at the unchanged-counters assertion alone. Partial: the audience case has a second reading the reference does not refuse. A completed record signed under the other boundary's published key, bound to that boundary's audience and emitter, naming this permit's evaluation_id and delivered by the permit's own PEP, is accepted and commits the reservation (a local probe, not a committed test): the intake verifies each record against its own claimed audience but never compares that audience with the boundary of the permit it settles, which the evidence companion requires to be the linked Decision Evidence's boundary identifier byte for byte (runtime-evidence#execution-evidence-object). Reported as a possible source defect in settle (services/pdp/src/idempotency-claims.ts), not fixed; the row stays partial pending the owner's ruling."
   },
   {
    "id": "metering.settlement-contract.ack-after-durable-apply",
@@ -43384,9 +43425,16 @@
     "local": "A budget reservation has no lease column of its own: it is written in its idempotency claim's transaction (budget_reservations, keyed by evaluation_id) and takes that claim's lease, the permit's valid_until plus the action class's declared execution_lease_max_seconds (leaseMaxMs in services/pdp/src/idempotency-claims.ts; 30 s for irreversible_action in the shipped transaction_assurance declaration). The claim domain's sweep moves a reservation still reserved past that lease to held (cause lease_elapsed; restart_unknown after a restart; window_closed when the reconciliation window ends). The lease bounds the wait before reconciliation and never releases the reservation."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. A reservation's lease is its claim's (observation.local, D877). Todo: the existing witness 'with a limit of 100,000 minor units, a 60,000 reservation held after a lost acknowledgement makes a 50,000 request quota_exceeded (@spec metering#settlement-states, metering#aggregate-bounds, #816)' (budget-reservations.test.ts) asserts the reservation held once the permit's validity and the 30 s lease have passed, but no recorded mutant removes the lease_elapsed hold (the permit_issued branch of the claim sweep in idempotency-claims.ts). Recording that mutant against the witness closes the row."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > settlement and recovery transitions (@spec metering#settlement-states) > every reservation carries its claim's bounded lease, the permit's valid_until plus the class's declared execution lease: both are still reserved at the lease's last instant and held lease_elapsed, with the operator alert, the first instant after it (@spec metering#settlement-states, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#816, D830. The capability stays disabled and unclaimed. A reservation's lease is its claim's (observation.local, D877). The earlier witness 'with a limit of 100,000 minor units, a 60,000 reservation held after a lost acknowledgement makes a 50,000 request quota_exceeded' shows the reservations held once the lease has passed but asserts no lease, so it is not cited. D961 (impl/813-proof-runtime at 5a44a14e): a dedicated witness reads the permit's valid_until and the class's declared execution_lease_max_seconds (30 s for irreversible_action) and sweeps at the lease's last instant, where both reservations, mission and standing_consent, are still reserved and no alert has fired, and at the first instant after it, where both are held lease_elapsed with one operator alert naming both counters. Removing the lease hold (L6a: the sweep's `if (restarted || nowMs > current.valid_until_ms + this.leaseMaxMs(current))` to `if (restarted)`) and an unbounded lease (L6b: leaseMaxMs returns Number.POSITIVE_INFINITY) each fail the held assertion; a lease shorter than declared (L6c: leaseMaxMs returns 0) fails the still-reserved assertion. Tested."
   },
   {
    "id": "metering.settlement-states.lease-expiry-reconciles",
@@ -43606,7 +43654,7 @@
     "normative": "containing a Mission leaves its open budget reservations to settle on their evidence state: contain neither commits nor releases them"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -43615,7 +43663,7 @@
      "surface": "evidence-emission"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): containing a Mission that holds an open 300.00 reservation refuses the contained request authority_contained and moves no counter, and the permit's later completed settlement still commits. Partial: no killing mutant is recorded; the PDP has no path from contain to settlement, so the witness guards against one being added."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): containing a Mission that holds an open 300.00 reservation refuses the contained request authority_contained and moves no counter, and the permit's later completed settlement still commits. D961 (impl/813-proof-runtime at 5a44a14e): the behavior is reachable and exercised, so the distinguishing mutations introduce the forbidden path at the PDP's only contain site, the authority_contained branch of evaluate (services/pdp/src/evaluate.ts). The witness also asserts the mission counter beside the shared one, and that the later completed record settles as itself ({accepted: true, state: completed, duplicate: false}, never a budget correction). Contain releasing the Mission's open reservations (C1r: transitionReservations(evaluation_id, ['reserved'], 'released', 'contained') for each of the Mission's reserved evaluations) and contain committing them (C1c: the same to 'committed') each fail the reservation-state assertion; with that assertion removed each fails the shared-counter assertion, and with both removed C1r fails the mission-counter assertion. Contain settling the claim itself (C1x: the Mission's permit_issued claims set failed before any evidence) leaves the reservations reserved and fails the settlement assertion (already_settled). Tested."
   },
   {
    "id": "metering.settlement-states.reconciliation-cadence",
@@ -45493,8 +45541,8 @@
    "coverage": "partial",
    "tests": [
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "toolsSubset (capability monotonicity) > adding a tool the parent lacks is NOT a subset (widen)",
+     "file": "src/packages/mission-core/test/aat-verify.test.ts",
+     "name": "verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 steps 1 to 5 and 6c, #1756) > refuses a child that names a tool its parent lacks, or widens a tool it keeps (I4, step 4p)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -45505,7 +45553,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain runs the same verifier since #1759 (#1818), and the earlier toolsSubset rule is retired (#1819). The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -55889,7 +55937,7 @@
     "normative": "admission confers no execution: each designated-operation payment under an admitted instance is evaluated by a fresh runtime decision, and a request lacking parameter binding, failing its transaction-assurance tier, or missing an applicable action approval is refused as under any other Mission"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -55908,9 +55956,15 @@
      "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > an admitted instance's payment still takes a fresh runtime decision: one requiring an action-bound approval is refused without it, and one with no parameter_digest is refused, each reserving nothing (@spec mission-template#standing-payment-exception, metering#metering, #813)",
      "level": "endpoint",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877) > the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states) > an admitted instance's payment that fails its class's transaction-assurance tier is refused: presented with no idempotency_key, the Exact claim the tier requires cannot be taken, so no permit issues and nothing is claimed or reserved, while the same payment with its key is claimed and charged (@spec mission-template#standing-payment-exception, runtime#idempotency, #813)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): an admitted instance's payment requiring an action-bound approval is refused action_approval_required without it, and one with no parameter_digest is refused parameter_violation, each reserving and claiming nothing; ignoring the approval requirement (W16a) or removing the committed-destination check (W16b) fails it. Partial: failing the transaction-assurance tier under an admitted instance is not a case."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): each payment of a dispatched instance is decided afresh by the PDP, which denies parameter_violation, reserving and claiming nothing, a metered payment whose disclosed parameters do not recompute to its parameter_digest or name another vendor, amount or currency than the request; through the composed stack an admitted instance's payment to a changed account is denied by its own Decision Evidence and nothing is wired. Not recomputing the digest, or not comparing vendor, amount or currency (P3, P4, P5, P5b), fails the decision-point witness; removing the destination check (P1) or the payee comparison (P2) lets the composed payment execute. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged. Slice 4 (#816, D877; impl/816-pdp-slice4 at 793d2e85, mutation on impl/816-pdp-track at eeb034e5, the same commits): an admitted instance's payment requiring an action-bound approval is refused action_approval_required without it, and one with no parameter_digest is refused parameter_violation, each reserving and claiming nothing; ignoring the approval requirement (W16a) or removing the committed-destination check (W16b) fails it. D961 (impl/813-proof-runtime at 5a44a14e), the transaction-assurance case: the PDP-side duty of the tier for the payment's class (irreversible_action) is the Exact idempotency claim (runtime#idempotency); single-use consumption, Execution Evidence and outcome reconciliation are PEP-side duties homed on their own rows. An admitted instance's payment presented with no idempotency_key, its parameters and parameter_digest intact, is refused with no permit conditions and nothing claimed, reserved or counted, while the same payment with its key is claimed and charged. Minting a key for an unkeyed request (T7: the refusal `if (!isIdempotencyKey(key)) return deny(\"parameter_violation\")` replaced by a key generated as idem_ plus randomUUID() whenever the presented one is not a key) permits it and fails the refusal assertion, and with the refusal assertions removed fails the zero-counter assertion alone. The denial reason is not pinned: the decision profile names none for a missing key. Every clause of the observation now has a killed assertion. Tested."
   },
   {
    "id": "template.standing-payment.payee-compared-with-destination",
@@ -55983,16 +56037,22 @@
     "normative": "a payee account that differs at execution from the payee the permit was decided on, including a changed bank account for an approved vendor, fails execution reverification and no payment effect occurs"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/demo/test/standing-payment-e2e.test.ts",
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > refuses a payment to a changed bank account with nothing wired: parameter_violation when the account changed before the decision, and target_drift suppression at admission when it changed after the permit, whose reservation stays charged, held with the alert once the lease elapses, so a second instance's payment against the budget is quota_exceeded (@spec mission-template#standing-payment-exception, runtime#execution-reverification, metering#settlement-states, #813, D830 ruling 4, owner ruling)",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/budget-exhaustion.test.ts",
+     "name": "execution reverification binds a standing-payment instance's payee (@spec mission-template#standing-payment-exception, runtime#execution-reverification, #813) > an approved vendor's bank account changed after the permit was decided on its committed account fails execution reverification at the wire: refused target_drift with nothing wired, the suppressed Execution Evidence carrying the permit's parameter and context digests beside unequal effective ones (@spec mission-template#standing-payment-exception, runtime#execution-reverification, #813, D830 ruling 4)",
+     "level": "endpoint",
+     "surface": "resource-operation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Slice 3b (impl/813-binding at 33a88d93): through the composed stack, an approved vendor's account changed between the permit and its use suppresses the permit at admission with target_drift, and nothing is wired. Reverification binds the payee twice, through the effective parameters parameter_digest covers and through the evaluation-context payee fact: freezing the fact (Rb) turns the refusal into parameter_mismatch and fails the witness, and blinding both layers (Rab) lets the wire execute; keeping the decided payee in the fresh parameters alone (Ra) survives by design, since the evaluation-context layer still suppresses. Partial on level only: the witness is cross-component; no endpoint-level resource-operation witness. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. D830 ruling 4. Slice 3b (impl/813-binding at 33a88d93): through the composed stack, an approved vendor's account changed between the permit and its use suppresses the permit at admission with target_drift, and nothing is wired. Reverification binds the payee twice, through the effective parameters parameter_digest covers and through the evaluation-context payee fact: freezing the fact (Rb) turns the refusal into parameter_mismatch and fails the witness, and blinding both layers (Rab) lets the wire execute; keeping the decided payee in the fresh parameters alone (Ra) survives by design, since the evaluation-context layer still suppresses. D961 level review (impl/813-proof-runtime at 5a44a14e): an endpoint witness at the PEP's own surface can be built, so it is. budget-exhaustion.test.ts drives the real PEP through McpPaymentsServer.callTransactionTool, the resource operation, over its co-resident decision point and claim domain under a budget-bound standing-payment Mission, as the PEP's other endpoint resource-operation witnesses do (operation-target-pep, resource-contract-pep, authority-dependency-pep and idempotency-claim-pep tests). The approved vendor's account changes after the permit is decided on the committed account: the wire is refused target_drift, nothing is wired and the invoice stays payable, and the one suppressed Execution Evidence record carries the permit's parameter and context digests beside unequal effective ones. Freezing the payee fact the evaluation-context layer reads (R1: the payments-store:invoice.payee_account resolver returns a constant) turns the refusal into parameter_mismatch and fails it; blinding both layers (R2: R1 plus reverify's fresh parameters keeping the decided payee) wires the payment and fails it, and with the refusal assertion removed fails the nothing-wired assertion alone; blinding the parameter layer alone (R3) survives by design, since the context layer classifies first. Tested at endpoint; the cross-component citation stays. The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged."
   },
   {
    "id": "template.standing-payment.raise-needs-new-version",
@@ -56503,7 +56563,7 @@
     "normative": "payments under an expansion successor of such an instance remain bound by the budget and draw on the predecessor's instance counter and the same standing-consent counter, consumption to date included; the successor never runs unmetered or on a fresh budget"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/budget-reservations.test.ts",
@@ -56516,9 +56576,15 @@
      "name": "standing-payment dispatch metered end to end through the composed stack (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816) > continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > at the decision point, an expansion successor's payments, metered on the binding the point's own source derives for it (rooted at the dispatched instance) whatever the caller's view carries, reserve and commit on the predecessor's mission counter and the shared counter with consumption to date, the successor's max_budget caps the chain, and no counter keyed by the successor exists (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)",
+     "level": "endpoint",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Shares witnesses with metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's instance counter and the same standing_consent counter with consumption to date; keying the instance counter by the successor's own id (T8f) fails it. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment is metered on the dispatched instance's mission counter and the shared counter with consumption to date: refused quota_exceeded beyond the instance's remaining, then permitted to exhaust it, and no counter keyed by the successor exists. Deriving the successor unbound (U1) or keyed by its own id (U2) lets its payment run unmetered or on a fresh counter, and dropping the instance limit (Q3p) lets it through, each failing the witness. Partial on level only: the successor's binding reaches the PDP only through the composed stack; the endpoint witness injects it. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the AS-side prerequisite is witnessed but not cited here (role): at /token an expansion successor of a standing-payment instance, approved on its page, derives the same budget binding as the instance, rooted at it; a binding walk that stops at the Mission itself (30) fails it. The PDP row's level gap is unchanged."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Shares witnesses with metering.capacity-across-missions.successor-continues-counter and metering.aggregate-bounds.standing-consent-successors-share. Slice 2 (#816, impl/816-budget-reservations 22c1fae0, decision point over a real claim-domain file): a successor bound to its predecessor's first Mission draws on the predecessor's instance counter and the same standing_consent counter with consumption to date; keying the instance counter by the successor's own id (T8f) fails it. Slice 3b (impl/813-budget-binding-3b at 62325958): through the composed stack an expansion successor's payment is metered on the dispatched instance's mission counter and the shared counter with consumption to date: refused quota_exceeded beyond the instance's remaining, then permitted to exhaust it, and no counter keyed by the successor exists. Deriving the successor unbound (U1) or keyed by its own id (U2) lets its payment run unmetered or on a fresh counter, and dropping the instance limit (Q3p) lets it through, each failing the witness. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the AS-side prerequisite is witnessed but not cited here (role): at /token an expansion successor of a standing-payment instance, approved on its page, derives the same budget binding as the instance, rooted at it; a binding walk that stops at the Mission itself (30) fails it. D961 level review (impl/813-proof-runtime at 5a44a14e): the PDP's public surface is the decision request plus the budget source the deployment binds to its decision point (createDecisionPoint budgetBindings). The PDP never derives the successor chain; the Mission Issuer's kernel does, witnessed at the AS above and not cited here by role. So an endpoint witness at that surface can be built, and is: the successor witness of metering.capacity-across-missions.successor-continues-counter decides through createDecisionPoint, whose source answers the successor with the binding rooted at the dispatched instance while the caller's view carries a fresh one. The successor's payments reserve and commit on the predecessor's mission counter and the shared counter with consumption to date, are capped by the instance's max_budget, and no counter keyed by the successor exists. S2i (re-rooting at the successor's own id), S2ii (no instance cap), S2iii (the caller's binding metered) and S2iv (every binding dropped, so the successor would run unmetered) each fail it. Tested at endpoint."
   },
   {
    "id": "template.instance-composition.successor-approval-renders-consumption",
@@ -62456,7 +62522,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
-    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; an attenuation root carries max_amount unchanged in mission_constraints, and a mint refuses a malformed currency before signing (the consumer's own reading); the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
    },
    "level": "unit",
    "coverage": "tested",
@@ -62481,18 +62547,18 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > refuses a malformed currency before signing, rather than carrying or folding it",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "name": "an attenuation root never carries a malformed max_amount (@spec mission#max-amount) > carries a well-formed max_amount unchanged, as a decimal string, and reads it back unchanged",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); admitting a malformed currency at the mint's carriable check (the consumer's own reading) fails its attenuation witness."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
@@ -62531,7 +62597,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > carries a well-formed code ISO 4217 does not assign unchanged, and reads it back",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64848,7 +64914,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the consumer recovers the same exact target for every action, whatever the audience",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64877,18 +64943,18 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an action whose tool identifier would read back as another target, rather than minting it",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
@@ -65014,7 +65080,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
+   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, a changed resource_contract (the parent carries one, #249 C.1), an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
   },
   {
    "id": "attenuation.discovery.lists-aat-type",
@@ -65169,7 +65235,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/attenuation.test.ts",
-     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or a changed resource_contract",
      "level": "cross-component",
      "surface": "verification"
     }
@@ -77745,7 +77811,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
-    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -77811,7 +77877,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Absorbs core.other-types.original-audience-refusal (#1793, D919): its Declared Transformation Capabilities sentence restated this rule, on the same tests, and was removed. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.tokens.multi-audience-refusal",
