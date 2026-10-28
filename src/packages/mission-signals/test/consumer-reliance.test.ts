@@ -184,23 +184,25 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
         rematerialize: true,
       });
       expect(r.hasGap("msn_a")).toBe(true);
+      expect(r.needsRematerialization("msn_a")).toBe(true);
       expect(r.lease("msn_a", nowIso())).toBeUndefined();
       expect((await r.verifyAndApply(await set("msn_a", 4, "active", nowIso()))).status).toBe(
         "applied",
       );
       expect(r.hasGap("msn_a")).toBe(true);
       expect(r.lease("msn_a", nowIso())).toBeUndefined();
-      // Status covers the gap; the missing event may have narrowed authority,
-      // so the latch stays until the consumer acknowledges.
+      // The consumer acknowledges rematerialization at the gap's marker (a
+      // stale acknowledgement fails); the gap alone still withholds the lease.
+      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(false);
+      expect(r.markRematerialized("msn_a", { version: 3 })).toBe(true);
+      expect(r.needsRematerialization("msn_a")).toBe(false);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // A verified Status refresh covers the gap.
       expect(await refresh(r, "msn_a", 4, "active")).toMatchObject({
         status: "resynchronized",
         version: 4,
       });
       expect(r.hasGap("msn_a")).toBe(false);
-      expect(r.needsRematerialization("msn_a")).toBe(true);
-      expect(r.lease("msn_a", nowIso())).toBeUndefined();
-      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(false);
-      expect(r.markRematerialized("msn_a", { version: 4 })).toBe(true);
       expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 4 });
     } finally {
       r.close();
