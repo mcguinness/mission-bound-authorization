@@ -8584,7 +8584,7 @@
     {
      "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
      "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers the interaction cookie alone, with no Approver session, 401 and nothing of the request; an authorized Approver then renders and approves the same interaction",
-     "level": "cross-component",
+     "level": "endpoint",
      "surface": "approval-ceremony"
     }
    ],
