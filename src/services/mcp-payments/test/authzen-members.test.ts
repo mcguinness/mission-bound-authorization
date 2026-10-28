@@ -23,6 +23,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 const token: TokenFacts = {
   sub: "alice",
@@ -39,11 +40,11 @@ const view: MissionView = {
   state: "active",
   version: 7,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list"],
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -95,7 +96,12 @@ describe("the PEP sends the AuthZEN profile's members (@spec authzen#context-aud
     expect(f.requests[0]?.resource).toEqual({
       type: "invoice",
       id: "inv-1",
-      properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" },
+      properties: {
+        audience: CANONICAL_RESOURCE,
+        operation_target: CANONICAL_RESOURCE,
+        vendor_id: "acme",
+        resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }),
+      },
     });
   });
 

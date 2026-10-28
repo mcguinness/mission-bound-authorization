@@ -40,6 +40,7 @@ import {
   MAS_JOIN,
   RAS_LOCAL_POLICY,
   SCOPE_PROJECTION,
+  pinnedToCurrentContract,
   TOPOLOGY,
 } from "@mission/demo-data";
 import { evaluate as evaluateRequest, relationForAction, stalenessBound, type Fga, type MissionView } from "@mission/pdp";
@@ -51,7 +52,7 @@ import {
   validateAuthoritySourceCatalog,
   validateMissionIntent,
 } from "../src/index.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "@mission/pdp/test-support";
 import type { EvaluationRequest } from "@mission/pdp";
 import { withCredential } from "../../pdp/test/with-credential.js";
 
@@ -89,7 +90,9 @@ function deriveDemoAuthoritySet() {
       expires_at: "2027-01-01T00:00:00Z",
     }),
   );
-  return deriveAuthoritySet(intent, DERIVATION_POLICY as never, DEMO_PROPOSAL);
+  // As an approval records it: with the reference configuration names for
+  // each entry (#249, D865).
+  return deriveAuthoritySet(intent, DERIVATION_POLICY as never, DEMO_PROPOSAL).map((e) => pinnedToCurrentContract(e));
 }
 
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
@@ -125,7 +128,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
   it("list_invoices authorizes with no context.amount supplied", async () => {
     const derived = deriveDemoAuthoritySet();
     const decision = await evaluate(
-      {
+      withCurrentContractReference({
         subject: { id: "alice" },
         resource: { type: "vendor", id: "acme", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme", vendor_ids: ["acme"] } },
         action: { name: "payments:invoice.list" },
@@ -134,7 +137,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
           // No context.amount: list_invoices supplies none (needsInvoice:
           // false, mcp-payments/src/pep.ts).
         },
-      },
+      }),
       {
         view: viewFor(derived),
         fga: alwaysAllowFga,
@@ -150,8 +153,10 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
 
   it("payment.execute still refuses parameter_violation with no context.amount (the #733 guard, unweakened)", async () => {
     const derived = deriveDemoAuthoritySet();
+    // With the reference an enforcement point sends (#249, D865), so the
+    // amount guard is what refuses.
     const decision = await evaluate(
-      {
+      withCurrentContractReference({
         subject: { id: "alice" },
         resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" } },
         action: { name: "payments:payment.execute" },
@@ -161,7 +166,7 @@ describe("shipped config/policy.json authorizes its own demo (#743)", () => {
           // MUST refuse (#733), never fall through as unenforced. This
           // proves the fix did not simply disable the protection.
         },
-      },
+      }),
       {
         view: viewFor(derived),
         fga: alwaysAllowFga,

@@ -76,9 +76,10 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const evaluate = (req: EvaluationRequest, opts: EvaluateOptions) => evaluateRequest(withCredential(req), opts);
 
@@ -262,7 +263,7 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] }],
+    authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] })],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
     ...(budget ? { budget } : {}),
@@ -308,7 +309,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
     resource: RESOURCE,
     ...(o.parameters ?? {}),
   };
-  return {
+  return withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { vendor_id: vendor, audience: RESOURCE, operation_target: RESOURCE } },
     action: {
@@ -325,7 +326,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
       ...(o.compensates !== undefined ? { compensates_evaluation_id: o.compensates } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-816-a" };
@@ -1633,12 +1634,12 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     const capped: MissionView = {
       ...view("msn_a", binding("msn_a")),
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: MISSION_RESOURCE_ACCESS_TYPE,
           resource: RESOURCE,
           actions: [EXECUTE],
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
+        }),
       ],
     };
     // withCredential gives the request a credential with no constraints, so

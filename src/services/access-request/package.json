@@ -15,6 +15,9 @@
     "@mission/mcp-payments": "workspace:*",
     "@mission/pdp": "workspace:*"
   },
+  "devDependencies": {
+    "@mission/demo-data": "workspace:*"
+  },
   "scripts": {
     "typecheck": "tsc --build",
     "dev": "tsx watch src/server.ts"

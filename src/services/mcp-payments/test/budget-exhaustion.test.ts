@@ -48,6 +48,7 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const BASE_MS = Date.parse("2026-10-25T12:00:00.000Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
@@ -117,12 +118,12 @@ const view = (bound = true): MissionView => ({
   version: 1,
   authority_hash: "sha-256:m816",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",

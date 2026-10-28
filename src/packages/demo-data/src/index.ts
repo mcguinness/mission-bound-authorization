@@ -30,6 +30,7 @@ import {
   parseScopeProjectionMapping,
   parseStrictJson,
   ResourceContractDeclarations,
+  type ResourceContractRef,
   refusedEntryMember,
   resourceMatchViolation,
   type ScopeProjectionMapping,
@@ -580,6 +581,91 @@ export const RESOURCE_CONTRACTS: ResourceContractDeclarations = (() => {
     throw new ConfigError("enforcement-scope.json", `extensions.${(e as Error).message}`);
   }
 })();
+
+/**
+ * @spec resource-access#resource-contract (#249, D865): the reference a fresh
+ * approval against the intended contract records for `entry`: the current
+ * reference of the one declared contract whose resource set contains the
+ * entry's and whose current version defines every action it lists, or
+ * undefined where none applies. For fixtures that build approved authority,
+ * credentials or requests by hand, so they stand under a configuration that
+ * requires a reference; derived from the declarations, never hardcoded.
+ */
+export function currentContractRef(
+  entry: { resource: unknown; resource_match?: unknown; actions: readonly string[] },
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+): ResourceContractRef | undefined {
+  const { current } = contracts.forEntry(entry);
+  return current.length === 1 ? current[0] : undefined;
+}
+
+/**
+ * `entry` as a fresh approval against the intended contract records it: with
+ * {@link currentContractRef}, where one applies and the entry carries none.
+ * An entry no declared contract covers, or one already carrying a
+ * reference, is returned unchanged.
+ */
+export function pinnedToCurrentContract<
+  E extends {
+    resource: unknown;
+    resource_match?: unknown;
+    actions: readonly string[];
+    resource_contract?: unknown;
+  },
+>(entry: E, contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS): E {
+  if (entry.resource_contract !== undefined) return entry;
+  const ref = currentContractRef(entry, contracts);
+  return ref === undefined ? entry : { ...entry, resource_contract: ref };
+}
+
+/**
+ * @spec runtime#resource-contract (#249): the Operation Profile version the
+ * current contract declared for `resource` names (its document's
+ * `operation_profile`), the version a Transaction Authorization Server
+ * registers for that resource so an entry carrying the contract's reference
+ * resolves to it; undefined where no contract is declared for it.
+ */
+export function currentContractProfileVersion(
+  resource: string,
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+): string | undefined {
+  const [ref] = contracts.forEntry({ resource, actions: [] }).current;
+  return ref === undefined ? undefined : contracts.versionOf(ref)?.version.operation_profile;
+}
+
+/**
+ * @spec resource-access#resource-contract (#249, D875): `contracts` with each
+ * declaration requiring a reference for exactly those of `actions` its
+ * supported versions define, everything else unchanged: the configuration on
+ * either side of a cutover, for fixtures that need authority approved before
+ * it and witnesses that compare the two.
+ */
+export function contractsRequiring(
+  actions: readonly string[],
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+): ResourceContractDeclarations {
+  return new ResourceContractDeclarations(
+    contracts.declarations.map((d) => {
+      const served = new Set(
+        d.versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations),
+      );
+      return {
+        resource: d.resource,
+        ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+        id: d.id,
+        requires_reference: actions.filter((a) => served.has(a)),
+        versions: d.versions.map((v) => ({
+          version: v.version,
+          state: v.state,
+          digest: v.digest,
+          ...(v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+          ...(v.document !== undefined ? { document: v.document } : {}),
+        })),
+      };
+    }),
+  );
+}
+
 /**
  * @spec runtime#evaluation-context-binding (#773): the statement's
  * Evaluation-Context Binding claim and declaration, validated at load: every
