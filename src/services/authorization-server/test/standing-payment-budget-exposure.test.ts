@@ -469,6 +469,21 @@ describe("budget exposure on a standing-payment successor's approval (@spec temp
     expect(html).toContain(exposureLine(`Budget ${OWNER}/${BUDGET_ID}`, "300.00", "10.00", "5.00"));
   });
 
+  it("renders the shared budget's line from the standing-consent counter every instance and successor draws on, not from the dispatched instance's counter (#813, D877)", async () => {
+    const { code, instance } = await standingPaymentSuccessorDeferral();
+    // Each of the shared counter's three totals differs from the instance
+    // counter's, so a shared line read from, or rendered with, the instance
+    // counter cannot match in any member.
+    counters.set(
+      { counter_scope: "mission", issuer: ISSUER, mission_id: instance },
+      { committed: "45.00", reserved: "11.00", held: "6.00" },
+    );
+    counters.set(SHARED, { committed: "345.00", reserved: "22.00", held: "13.00" });
+    const { status, html } = await deferralPage(code, login(code, "bob"));
+    expect(status, html).toBe(200);
+    expect(html).toContain(exposureLine(`Budget ${OWNER}/${BUDGET_ID}`, "345.00", "22.00", "13.00"));
+  });
+
   it("refuses a successor approval when the budget's consumption changed between its rendering and the decision, naming the budget exposure, and approves the successor rendered again (@spec mission#approval-context-changes, #1586, #813, D877)", async () => {
     const { code, instance } = await standingPaymentSuccessorDeferral();
     const key = { counter_scope: "mission", issuer: ISSUER, mission_id: instance } as const;
