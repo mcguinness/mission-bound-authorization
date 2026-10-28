@@ -5534,19 +5534,199 @@
      "surface": "lifecycle-endpoint"
     },
     {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
-     "level": "cross-component",
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses to reopen an ordinary file-backed store under another issuer, and its owner reopens it with its Mission intact",
+     "level": "unit",
      "surface": "lifecycle-endpoint"
     },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses a witnessed store under another issuer without advancing its witness, and releases the witness's lock so its owner reopens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses another issuer over a populated store without recording anything, then binds it to the issuer its Missions name",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses another issuer over a populated witnessed store without advancing the witness or recording anything, then its owner reopens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > binds an empty store to the issuer that opens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > binds a store whose only state is a tombstone to that tombstone's issuer, and refuses any other",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses every issuer over state naming two issuers, though one of them holds every Mission",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses every issuer over state that names no issuer",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "One issuer owns each kernel database, recorded in kernel_issuer: an open under another issuer is refused, ordinary or witnessed, releasing the witness's lock, and foreign record insertion is refused. A store written before the record binds only as its own state allows: an empty store to the issuer that opens it, a populated one only to the one issuer its state names (every issuer column and the source bindings' deployment); state naming another issuer, several issuers or none is refused and the store left unchanged (#1748, #1836 review). The shared emitter outbox keys on issuer and event identity plus audience, tested with equal Mission and event IDs at two issuers, and its migration preserves signed bytes. Retaining consumers' state is witnessed on the -retaining-consumer rows (RS, PDP, PEP), split by acting role. The namespace inventory in src/docs/control-plane-deployment.md names every mutable seam in the reference with its key and its witness or declared separation. Partial: one AS per process is declared, not enforced (oidc-provider's memory adapter and the device decisions in progress are process-global)."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the Signals receiver, a retaining consumer at the resource: its version high-water marks, observations, gap and rematerialization markers, retained SETs, sequences, seen jti values and recovery and resynchronization nonces are keyed by (issuer, audience, Mission) and the value they track, finer than the tuple. Witnessed: receivers for two issuers sharing one file keep one Mission identifier's state and sequence apart, and a SET whose embedded Mission issuer is not the receiver's own is refused. Keyed but not witnessed across issuers: the seen jti values (witnessed across audiences). Its signing authorization is the one issuer's Status keys it trusts; deny caches, queues, quotas and replication authority have no subject in the receiver"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
     {
      "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
      "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review): the receiver acts, so its citations moved here from the AS row. Partial: the seen jti values are issuer-keyed but not witnessed across issuers, and four of the clause's seams have no subject in the receiver."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer-pdp",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the PDP, one per deployment and shared by every PEP and issuer it serves. Idempotency records: a claim keys on a scope digest that carries the Mission issuer; the same key and operation under one local Mission identifier at two issuers are two claims. Counters: Decision Evidence sequences key on (issuer, Mission, emitter, role), witnessed across a restart. Quotas: the mission budget counter keys on (issuer, root Mission), each issuer's instance counter witnessed apart; the standing_consent counter keys on (owner, budget_id), an explicitly shared accounting domain that deliberately combines Missions and issuers, while the mission counters and the charge claims keep the qualified Mission identity; it charges only through the trusted budget source (the kernel's committed policy snapshot, never the request) and the declared policy references, so matching identifiers alone charge nothing. Version observations: one Mission Status resolver per issuer and scope refuses a reference or response naming another issuer, its cached read included. Claim and budget transitions, reservations, settlement conflicts and leases key on PDP-minted identifiers. Signing authorization: one Decision Evidence key per PDP, each record naming the Mission's issuer and identifier. Deny caches, queues and replication authority have no subject in the PDP"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim scope carries the canonical Mission identity (@spec control-plane#isolation, #1748) > gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > keeps a distinct counter for each Mission and each emitter, across a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares (@spec control-plane#isolation, #1748)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding and reserves and claims nothing (@spec metering#metering, #816, #813, decision d)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2) > never reads a reference naming another issuer",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a synchronous peek answers only from a read still within its bounds (#818, D560) > returns what an earlier resolve established, never reads the source, and returns nothing once a bound has passed",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review). The standing_consent key is the owner's ruling on #1836: an explicitly shared accounting domain, admitted only through the trusted budget source and the declared policy references. Partial: the Decision Evidence key's binding to the qualified identity is stated, not witnessed across issuers, and three of the clause's seams have no subject in the PDP."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer-pep",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the PEP composition, an McpPaymentsServer with its Mission loader. Tested issuer-qualified storage and admission: actor-depth records key on (issuer, Mission, client), and a same-identifier record from another issuer is ignored; the kernel Mission loader resolves a reference only under its own issuer, so the same local identifier under another issuer resolves nothing; a Mission-bound credential whose mission.issuer is not its verified iss, the PEP's configured issuer, is answered 401 before the PEP. Keyed on the Mission issuer but not witnessed across issuers: write reservations (a scope digest carrying it) and payment schedules (unique Mission issuer, Mission, invoice). Declared, not enforced: the operation keys (op:<Mission>:..., used by permit redemptions, operations, the connector ledger, reversals and outbox, and outcome alerts) and the Execution Evidence sequences key on the bare Mission identifier, so a composition and every persistent store it opens serve one Mission issuer for that store's whole lifetime, restarts included: a PEP store is never reopened by a composition serving another Mission issuer"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > ignores a same-id record from another issuer: records are keyed on the canonical (issuer, id) pair",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/kernel-mission-view-issuer.test.ts",
+     "name": "the kernel Mission loader resolves a reference only under its own issuer (@spec control-plane#isolation, #1748) > resolves the Mission under its issuer, and nothing for the same local identifier under another issuer",
+     "level": "unit",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review). Partial: the one-Mission-issuer separation of the operation keys and Execution Evidence sequences is declared, not enforced, and holds across restarts only by deployment; the write reservations and payment schedules are issuer-keyed without a two-issuer witness."
   },
   {
    "id": "control-plane.consistency.fanout",
@@ -40974,16 +41154,22 @@
     "normative": "a max_budget whose amount is absent or is not a string holding a decimal number is refused at intake, and no Mission is created"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
      "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses invalid_request at /token a max_budget whose amount is not a decimal string: 100 as a number, 1e3 or empty, creating nothing (@spec metering#bounds, #813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses invalid_request at /token a max_budget with no amount, alone or beside another member, creating nothing (@spec metering#bounds, #813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#816, D830. Surface token-endpoint (D877): max_budget is admitted only at the dispatch intake (the mission-dispatch grant at /token, under the standing-payment-dispatch capability) and at the expansion intake of a standing-payment lineage (the continuation grant at /token); PAR's closed Intent refuses the member as unknown (metering.consent.unmetered-bound-refused-at-intake), so its amount form is observable only at /token. The capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the /token dispatch intake a max_budget amount of 100 (a number), '1e3' or '' is refused invalid_request, creating nothing. Mutation: not checking the amount as a decimal (15) fails it. Partial: an absent amount is not submitted."
+   "notes": "#816, D830. Surface token-endpoint (D877): max_budget is admitted only at the dispatch intake (the mission-dispatch grant at /token, under the standing-payment-dispatch capability) and at the expansion intake of a standing-payment lineage (the continuation grant at /token); PAR's closed Intent refuses the member as unknown (metering.consent.unmetered-bound-refused-at-intake), so its amount form is observable only at /token. The capability stays disabled and unclaimed. Sibling of metering.bounds.max-budget-currency-form. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the /token dispatch intake a max_budget amount of 100 (a number), '1e3' or '' is refused invalid_request, creating nothing. Mutation: not checking the amount as a decimal (15) fails it. D961 proof (impl/813-proof-as at 5bd160e1b): the absent-amount witness submits {currency: 'USD'} and {currency: 'USD', value: '100.00'}, each refused with the intake's description, creating nothing. Mutants, each alone: M1a (kernel/intent.ts `Object.keys(cap).length !== 2 || typeof cap.amount !== \"string\" || !isValidAmount(cap.amount) ||` to `Object.keys(cap).length > 2 || (cap.amount !== undefined && (typeof cap.amount !== \"string\" || !isValidAmount(cap.amount))) ||`, an absent amount admitted at intake) fails the absent-amount witness at its error_description line, status and error passing, since the kernel admission still refuses without the intake's description; M1c (the form checked only after the instance commits: kernel/intent.ts `if (obj.max_budget !== undefined) {` to `if (false && obj.max_budget !== undefined) {`, kernel/template.ts dropping `const budget = maxBudgetRefusal(input.intent.max_budget, terms); if (budget) return budget;` and, before the audit trail, throwing the intake's IntentError where a standing payment's max_budget amount is not a decimal string) fails both witnesses at the creating-nothing line, a Mission and an instance created. Each clause is asserted at /token and killed: an absent amount (M1a), an amount that is not a decimal string (15), no Mission created (M1c). The expansion intake shares the validator (kernel.validateSubmission with admitMaxBudget) and also requires a successor to keep the instance's max_budget exactly."
   },
   {
    "id": "metering.bounds.committed-by-intent-hash",
@@ -41003,16 +41189,16 @@
     "normative": "a Mission's max_budget is recorded on the Mission and covered by intent_hash: the hash recomputed over the approved Intent, max_budget included, matches, and a different max_budget yields a different hash"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > commits max_budget in the instance's intent_hash: the dispatched instance's hash recomputes over its Intent, and another max_budget yields another hash (@spec metering#bounds, #813)",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > records max_budget on the dispatched instance and commits it in its intent_hash: the stored Intent carries it, the hash recomputes over that Intent, and another max_budget yields another hash (@spec metering#bounds, #813)",
      "level": "endpoint",
      "surface": "commitment"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance section's Issuer duty to carry the consented bounds committed by intent_hash. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): a standing payment dispatched at /token has an intent_hash that recomputes over its recorded Intent, and the same Intent with another max_budget yields another hash. Mutation: an intent_hash that omits max_budget (19) fails it. Partial: 'recorded on the Mission' is not asserted at /token (the recompute would also pass if max_budget were dropped from the stored Intent on both sides); one assertion on the instance's intent.max_budget would close it. The kernel dispatch test asserts the member but has no recorded kill for it."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the Conformance section's Issuer duty to carry the consented bounds committed by intent_hash. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): a standing payment dispatched at /token has an intent_hash that recomputes over its recorded Intent, and the same Intent with another max_budget yields another hash. Mutation: an intent_hash that omits max_budget (19) fails it. D961 proof (impl/813-proof-as at 5bd160e1b): the witness, renamed, asserts the stored instance's intent.max_budget equals the dispatched {amount: '1000.00', currency: 'USD'} before the recompute. Each clause is killed on its own line after the 200, each mutant alone: M2a (kernel/template.ts, before `kernel.insertRecord(record, undefined, {`, `record.intent` replaced by the Intent without max_budget and `record.intent_hash` recomputed over it) fails the recorded line alone, the recompute and another-hash lines passing; M2b (`intent_hash: intentHash(template.issuer, input.intent as never),` to the hash over the Intent without max_budget) fails the recompute line; M2c (packages/mission-core anchors.ts intentHash hashing the Intent without max_budget) fails the another-hash line."
   },
   {
    "id": "metering.consent.bounds-in-authority-summary",
@@ -55243,7 +55429,7 @@
     "normative": "the deployment's published mapping classifies the designated operation as irreversible and as no other prohibited class"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
@@ -55256,9 +55442,15 @@
      "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > classifies the designated payment under the shipped mapping as irreversible and no other prohibited class, and refuses to start where the mapping covers it but not as irreversible (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-prohibited-coverage.test.ts",
+     "name": "the designated standing payment under the published mapping (@spec template#standing-payment-exception, #813) > classifies the designated payment under the shipped published mapping as irreversible and as no other prohibited class: not external-commitment, privileged-administration, external-communication or cross-domain (@spec template#standing-payment-exception, #813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The designation itself moved to the Dispatch Policy (template.standing-payment.only-designated-operation-admitted). Slice 3a (impl/813-standing-payment-admission at a7063aab): startup refuses a Dispatch Policy designating the payment at a resource the published mapping does not cover (StandingPaymentConfigError). Mutation: admitting an uncovered operation at startup fails it. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the batch asserts the shipped mapping classifies payments:payment.execute as exactly irreversible_action, and that startup refuses a mapping that covers the payment but not as irreversible. Mutation: accepting such a mapping at startup (27) fails the startup half. Partial: the shipped-mapping assertion has no recorded kill (one config mutant reclassifying the payment would give it one), and the payment's external-communication and cross-domain predicates under the shipped configuration are not asserted here."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. The designation itself moved to the Dispatch Policy (template.standing-payment.only-designated-operation-admitted). Slice 3a (impl/813-standing-payment-admission at a7063aab): startup refuses a Dispatch Policy designating the payment at a resource the published mapping does not cover (StandingPaymentConfigError). Mutation: admitting an uncovered operation at startup fails it. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the batch asserts the shipped mapping classifies payments:payment.execute as exactly irreversible_action, and that startup refuses a mapping that covers the payment but not as irreversible. Mutation: accepting such a mapping at startup (27) fails the startup half. D961 proof (impl/813-proof-as at 5bd160e1b): the new witness reads the published mapping as template.prohibited-classes.configured-set-covers-mapping does (config/approval-floor.json's classification and config/progressive.json's external-communication actions) and asserts each of the five predicates for payments:payment.execute on its own line. One configuration mutant per predicate, each alone and each failing its own line: config/approval-floor.json `\"payments:payment.execute\": \"irreversible_action\",` to `\"payments:payment.execute\": \"consequential_write\",` (irreversible); a second classification at the prefix resource http://localhost:4403 restating the payments actions with payments:payment.execute as external_commitment (external commitment) or as privileged_administration (privileged administration), the payment staying irreversible; config/progressive.json `\"external_communication_actions\": [\"payments:vendor.read\"],` gaining payments:payment.execute (external communication); the payments classification's `\"cross_domain\": false,` to `true` (cross-domain). The startup half keeps mutant 27. The AS's resource-to-AS map only adds cross-domain resources (the configured-set row's witness), and the shipped default places the payments resource at the issuer."
   },
   {
    "id": "template.standing-payment.only-designated-operation-admitted",
@@ -55650,7 +55842,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a designating Dispatch Policy whose budget omits owner, id, currency, limit or per_instance_max is refused at consent with the terms parser's exact message. Mutation: not requiring the budget member set fails all five. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): a Dispatch Policy whose budget omits its limit refuses startup, and in the kernel a template created before the capability under such a policy is refused dispatch_prohibited_class at dispatch with the terms parser's message. Mutations: not requiring the budget member set (26) lets startup succeed; reading unusable terms as an ordinary template (33) fails the kernel test. Partial on level only: a running AS holds no such policy, so no /token Dispatch can draw on one. The exact-profile row's owner ruling (a startup refusal satisfies it) is the precedent for resolving this."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): a designating Dispatch Policy whose budget omits owner, id, currency, limit or per_instance_max is refused at consent with the terms parser's exact message. Mutation: not requiring the budget member set fails all five. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): a Dispatch Policy whose budget omits its limit refuses startup, and in the kernel a template created before the capability under such a policy is refused dispatch_prohibited_class at dispatch with the terms parser's message. Mutations: not requiring the budget member set (26) lets startup succeed; reading unusable terms as an ordinary template (33) fails the kernel test. Partial on level only: a running AS holds no such policy, so no /token Dispatch can draw on one. The exact-profile row's owner ruling (a startup refusal satisfies it) is the precedent for resolving this. D961 level review (impl/813-proof-as): unchanged. No /token Dispatch reaches this refusal without weakening startup: the AS parses every held Dispatch Policy at construction (StandingPaymentConfigError), and Dispatch evaluates only a held snapshot that reproduces the template's committed digest, so an edit in place refuses dispatch_policy_changed first. Proposed correction, not applied: level unit and surface deployment-documentation, as the exact-profile row's owner ruling; that needs startup witnesses for an omitted owner, id and per_instance_max (only limit has one), each pinning the member-set message, since the non-empty and decimal checks also refuse each omission."
   },
   {
    "id": "template.standing-payment.instance-max-budget-within-maximum",
@@ -55839,9 +56031,21 @@
      "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance under a Dispatch Policy that commits no class-named exception for the consumption bound, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance under a Dispatch Policy that commits no class-named exception for the irreversible class, creating nothing (@spec approval-governance#recency-high-risk, #813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states no recency ceiling (@spec approval-governance#recency-high-risk, #813)",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Gated with core.governance-record: the condition binds where the deployment records an Approval Governance Record. Slice 3a (impl/813-standing-payment-admission at a7063aab): the committed record's rule snapshot carries both class-named exceptions and its re-check replays, and a policy missing the consumption_bound or the irreversible_action exception is refused dispatch_prohibited_class, committing no instance and no dispatch row. Mutations: a re-check refusing a true consent commitment fails the record test; accounting written before the transaction, and gate refusal deferred past commit, fail both missing-exception tests on their zero-count assertions. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Dispatch under a policy that commits no class-named exception for the consumption bound is refused dispatch_prohibited_class, creating nothing. Mutations: a governance gate that skips a class with no exception (13) issues a token; deferring the gate refusal past the commit (36) fails the count line alone. Partial: the irreversible-exception case is witnessed only in the kernel, where the recorded kills fail its count line, not its refusal; the requirement-dropping mutant (13) ran against the /token batch only."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Gated with core.governance-record: the condition binds where the deployment records an Approval Governance Record. Slice 3a (impl/813-standing-payment-admission at a7063aab): the committed record's rule snapshot carries both class-named exceptions and its re-check replays, and a policy missing the consumption_bound or the irreversible_action exception is refused dispatch_prohibited_class, committing no instance and no dispatch row. Mutations: a re-check refusing a true consent commitment fails the record test; accounting written before the transaction, and gate refusal deferred past commit, fail both missing-exception tests on their zero-count assertions. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Dispatch under a policy that commits no class-named exception for the consumption bound is refused dispatch_prohibited_class, creating nothing. Mutations: a governance gate that skips a class with no exception (13) issues a token; deferring the gate refusal past the commit (36) fails the count line alone. D961 proof (impl/813-proof-as at 5bd160e1b, ceiling witness at 8d94e21d7): the irreversible /token witness dispatches under sp-batch-no-ia (only the consumption_bound exception; startup and consent accept it) and asserts 400 invalid_request, mission_denial_reason dispatch_prohibited_class, no token, and no Mission or instance. Mutants, each alone: M4-13 (kernel/template-approval-record.ts gate `if (!exception) { return no(\"governance_high_risk\", ...); }` to `if (!exception) { continue; }`, mutant 13) issues a token at both /token witnesses and fails both kernel missing-exception witnesses at their refusal ('the dispatch was not refused'); M4-13i (`if (cls === \"irreversible_action\") continue;` before that refusal) fails the irreversible witness alone, the consumption-bound witness passing; M4-reason (the gate's DispatchError reason `\"dispatch_prohibited_class\"` to `\"out_of_template_ceiling\"`) fails both /token witnesses at the reason line; M4-36 (the gate refusal held in a module variable and thrown after the creation transaction commits) fails both at the creating-nothing line. With a recency ceiling: the terms parser requires each exception to be exactly {max_age_s} with a positive integer, so a running AS holds no exception without a ceiling and no /token Dispatch can carry one; the startup witness refuses an exception without one for each class, and M4-ceil (kernel/standing-payment.ts `if (!isObject(exception) || !exactly(exception, [\"max_age_s\"]) || !positiveInteger(exception.max_age_s)) {` to `if (!isObject(exception)) {`) lets startup succeed. The ceiling's effect at dispatch is the kernel recency witnesses. Partial: every clause is now asserted and killed, the irreversible and consumption-bound refusals at /token (M4-13, M4-13i, M4-reason, M4-36) and the recency-ceiling clause at startup only (M4-ceil); a startup refusal would satisfy that clause as the exact-profile row's owner ruling did for that row, and promotion awaits the owner extending that ruling to this clause."
   },
   {
    "id": "template.standing-payment.approval-authentication-floor",
@@ -56382,9 +56586,15 @@
      "name": "standing-payment Dispatch Policy defects refused at construction (@spec template#standing-payment-exception, #813, D877) > refuses to start with a Dispatch Policy whose budget is in a currency other than USD (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment template defects refused at the token endpoint, creating nothing (@spec template#standing-payment-exception, template#grant-type, #813, D877) > refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. Partial on level only: no /token Dispatch carries a currency mismatch (the consent route and startup refuse first; the max_budget mismatch is refused in the kernel)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): an instance max_budget in EUR against a USD budget is refused dispatch_prohibited_class; a ceiling bounding the payment in EUR is refused at consent and, from a stored ceiling under an EUR derivation policy, at dispatch, committing no instance. Mutations: not checking the max_budget currency fails the first; not checking the ceiling currency fails the consent and dispatch tests; skipping the stored-ceiling re-check fails the dispatch test. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at the consent route a ceiling bounding the payment in EUR is refused and no template is created; a Dispatch Policy whose budget is in EUR refuses startup. Mutations: not checking the ceiling currency (21) creates the template; not checking the budget currency (25) lets startup succeed. D961 level review (impl/813-proof-as at 5bd160e1b): the max_budget leg is reachable at /token, the intake admitting any three upper-case letters, so the new witness submits {amount: '100.00', currency: 'EUR'}; MC-cur (kernel/standing-payment.ts maxBudgetRefusal's `if (maxBudget.currency !== terms.budget.currency) { return ...; }` removed) issues a token. Partial: under the shipped derivation policy a stored ceiling bounding the payment in EUR is refused out_of_template_ceiling at /token before the currency re-check (observed: the policy's USD max_amount and the ceiling's EUR one intersect to nothing), so that leg reaches dispatch_prohibited_class only under a derivation policy bounding in the same other currency, as the kernel witness uses; the budget leg is refused at startup, a running AS holding no non-USD budget; and exactness is not observable at /token, the intake refusing any currency that is not three upper-case letters (MC-exact, a case-insensitive comparison, survives the witness)."
   },
   {
    "id": "template.standing-payment.conveys-policy-view",
@@ -56444,7 +56654,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. That no Dispatch request value reaches the binding is observation.local (D877). Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack). The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a dispatch Intent carrying destinations or a budget is refused invalid_request as an unknown member, creating nothing, so no Dispatch request can supply either. Mutation: an Intent top level that is not closed (17) issues a token."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Slice 3b (impl/813-binding at 33a88d93): the Mission Issuer's kernel derives each instance's budget binding (owner, id, currency, limit, committed policy, destinations and the instance's max_budget) from the Dispatch Policy snapshot the instance's activation retained, and the stack hands it to the co-resident decision point as its budget source. Taking the limit from per_instance_max (KB1) or dropping the destinations (KB2) fails the derivation witness; a stack source that answers nothing (Pa) or a kernel that derives no binding (Pb) lets the composed payment run unmetered and the changed-account payment execute, and Pb fails the end-to-end binding match. A snapshot that is gone or no longer reproduces the committed digest, an admission naming another policy or budget, a Mission without the instance's max_budget, a Child Mission anywhere in the lineage, or a missing predecessor or parent record derives underivable, never unbound: accepting them (F6 to F10, V9, V11; F10 and V10 by the reason assertion only) fails the kernel witness, and reading underivable, an unheld Mission or another issuer's Mission as unbound (F4, F5, F5b) fails the end-to-end one. That no Dispatch request value reaches the binding is observation.local (D877). Partial: no endpoint-level propagation witness (the binding reaches the runtime only through the kernel function and the composed stack). The end-to-end test was renamed by the owner review (the suppressed permit's reservation stays charged); the mutants named above ran against earlier forms of it whose asserted lines are unchanged. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a dispatch Intent carrying destinations or a budget is refused invalid_request as an unknown member, creating nothing, so no Dispatch request can supply either. Mutation: an Intent top level that is not closed (17) issues a token. D961 level review (impl/813-proof-as): unchanged. The AS has no HTTP surface for this conveyance: under decision d the binding is PDP-local, derived by the exported kernel function standingPaymentBudgetBindingOf, which the deployment wires as its decision point's budget source (demo/src/kernel-mission-view.ts); it is in no token, introspection response or req.context, so an endpoint-level witness would need a new AS surface. Proposed correction, not applied: level unit at surface propagation, the exported derivation being the AS's surface for it, with the composed-stack tests as cross-component confirmation. Recorded kills: destinations (KB2), the limit (KB1), the digest binding and retained snapshot (F6 to F10, V9, V11), no Dispatch request value (17 at /token). Owner, budget_id and currency are asserted by the derivation witness's whole-binding equality but have no per-member kill."
   },
   {
    "id": "template.standing-payment.failed-remains-charged",
