@@ -18,6 +18,8 @@
  * invalidation is recorded in the cache's audit log.
  */
 
+import { type ResourceContractDeclarations, type ResourceContractRef, sameResourceContract } from "@mission/core";
+import { parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
 import {
   type AuthorityEntry,
   type DelegatePolicy,
@@ -50,8 +52,16 @@ export interface MappingContractDocument {
   mission_issuer: string;
   subjects: SubjectMappingRow[];
   clients: ClientMappingRow[];
-  /** Scope value to actions at `resource`, per credential issuer. */
-  scopes: { resource: string; issuers: Record<string, Record<string, string[]>> };
+  /**
+   * Scope value to actions at `resource`, per credential issuer, and the
+   * contract each contract-stating value grants them under (#1847, D989):
+   * a value absent from `contracts` states none.
+   */
+  scopes: {
+    resource: string;
+    issuers: Record<string, Record<string, string[]>>;
+    contracts: Record<string, Record<string, ResourceContractRef>>;
+  };
   /** Rule 4's enumerated delegates, keyed by Mission-namespace client. */
   delegates: Record<string, { max_depth: number }>;
   instance: { supported: false; required: false };
@@ -120,7 +130,10 @@ const keyOf = (iss: string, id: string): string => JSON.stringify([iss, id]);
  * accepted: each row is still one decision, and the audit log records which
  * estate identity was resolved.
  */
-export function parseMappingContract(raw: unknown): MappingContractDocument {
+export function parseMappingContract(
+  raw: unknown,
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+): MappingContractDocument {
   const root = object(raw, "contract", TOP_LEVEL);
   const version = root.version;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
@@ -165,23 +178,37 @@ export function parseMappingContract(raw: unknown): MappingContractDocument {
   });
 
   const scopesRaw = object(root.scopes, "scopes", ["resource", "issuers"]);
+  const scopesResource = text(scopesRaw.resource, "scopes.resource");
   const issuersRaw = scopesRaw.issuers;
   if (issuersRaw === null || typeof issuersRaw !== "object" || Array.isArray(issuersRaw)) {
     throw new MappingContractError("scopes.issuers must be an object");
   }
   const issuers: Record<string, Record<string, string[]>> = {};
+  const scopeContracts: Record<string, Record<string, ResourceContractRef>> = {};
   for (const [iss, valuesRaw] of Object.entries(issuersRaw as Record<string, unknown>)) {
     if (valuesRaw === null || typeof valuesRaw !== "object" || Array.isArray(valuesRaw)) {
       throw new MappingContractError(`scopes.issuers.${iss} must be an object`);
     }
     const values: Record<string, string[]> = {};
-    for (const [scope, actions] of Object.entries(valuesRaw as Record<string, unknown>)) {
-      if (!Array.isArray(actions) || actions.length === 0) {
-        throw new MappingContractError(`scopes.issuers.${iss}.${scope} must be a non-empty array`);
-      }
-      values[scope] = actions.map((a, i) => text(a, `scopes.issuers.${iss}.${scope}[${i}]`));
+    const stated: Record<string, ResourceContractRef> = {};
+    for (const [scope, value] of Object.entries(valuesRaw as Record<string, unknown>)) {
+      // @spec resource-access#resource-contract (#1847, D989): an action list,
+      // or `{actions, resource_contract}` under a contract the declarations
+      // support for the mapped resource.
+      const mapped = parseScopeMappingValue(
+        value,
+        `scopes.issuers.${iss}.${scope}`,
+        scopesResource,
+        (message) => {
+          throw new MappingContractError(message);
+        },
+        contracts,
+      );
+      values[scope] = mapped.actions;
+      if (mapped.resource_contract) stated[scope] = mapped.resource_contract;
     }
     issuers[iss] = values;
+    scopeContracts[iss] = stated;
   }
 
   const delegatesRaw = root.delegates;
@@ -218,7 +245,7 @@ export function parseMappingContract(raw: unknown): MappingContractDocument {
     mission_issuer: missionIssuer,
     subjects,
     clients,
-    scopes: { resource: text(scopesRaw.resource, "scopes.resource"), issuers },
+    scopes: { resource: scopesResource, issuers, contracts: scopeContracts },
     delegates,
     instance: { supported: false, required: false },
     failure: "mission_binding_failed",
@@ -247,7 +274,7 @@ class MappingSnapshot implements JoinMappingContract {
   readonly delegatePolicy: DelegatePolicy;
   private readonly subjects = new Map<string, SubjectMappingRow>();
   private readonly clients = new Map<string, ClientMappingRow>();
-  private readonly scopes = new Map<string, Map<string, string[]>>();
+  
 
   constructor(
     private readonly doc: MappingContractDocument,
@@ -262,7 +289,6 @@ class MappingSnapshot implements JoinMappingContract {
     };
     for (const row of doc.subjects) this.subjects.set(keyOf(row.from.iss, row.from.sub), row);
     for (const row of doc.clients) this.clients.set(keyOf(row.from.iss, row.from.client_id), row);
-    for (const [iss, values] of Object.entries(doc.scopes.issuers)) this.scopes.set(iss, new Map(Object.entries(values)));
   }
 
   /** Usable from install until `maxStaleSeconds` later, and never before install. */
@@ -324,11 +350,15 @@ class MappingSnapshot implements JoinMappingContract {
     now: Date;
   }): AuthorityEntry[] | undefined {
     if (!this.fresh(input.now) || input.resource !== this.doc.scopes.resource || input.scope === undefined) return undefined;
-    const values = this.scopes.get(input.issuer);
+    const values = this.doc.scopes.issuers[input.issuer];
     if (!values) return undefined;
-    const actions = [...new Set(input.scope.split(" ").flatMap((value) => values.get(value) ?? []))];
-    if (actions.length === 0) return undefined;
-    return [{ type: "mission_resource_access", resource: input.resource, actions }];
+    // @spec resource-access#resource-contract (#1847, D989): one entry per
+    // contract a scope value states, the values stating none in their own.
+    return scopeMappingEntries(
+      input.scope.split(" "),
+      { actions: values, contracts: this.doc.scopes.contracts[input.issuer] ?? {} },
+      input.resource,
+    );
   }
 }
 
@@ -343,6 +373,8 @@ class MappingSnapshot implements JoinMappingContract {
 export class MappingContractCache {
   private snapshot: MappingSnapshot | undefined;
   private highestVersion = 0;
+  /** The last installed document: a newer version may not repoint its scopes (#1847). */
+  private installed: MappingContractDocument | undefined;
   private readonly log: MappingAuditRecord[] = [];
   private readonly maxStaleMs: number;
   private readonly now: () => Date;
@@ -371,7 +403,19 @@ export class MappingContractCache {
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
     }
+    // @spec resource-access#resource-contract (#1847, D989): a scope value's
+    // contract never repoints. A newer version that grants an existing value
+    // under another contract, or under one where it stated none, or none
+    // where it stated one, is refused: a new contract takes a new value, so a
+    // credential issued under the earlier mapping never gains a contract.
+    const repointed = this.installed ? repointedScope(this.installed, doc) : undefined;
+    if (repointed !== undefined) {
+      const reason = `mapping contract: version ${doc.version} repoints scope ${repointed} to another contract; a new contract takes a new scope value`;
+      this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
+      return { ok: false, reason };
+    }
     this.highestVersion = doc.version;
+    this.installed = doc;
     this.snapshot = new MappingSnapshot(doc, at.getTime(), this.maxStaleMs, (entry) => this.log.push(entry));
     this.log.push({
       kind: "install",
@@ -415,4 +459,22 @@ export class MappingContractCache {
   audit(): readonly MappingAuditRecord[] {
     return this.log;
   }
+}
+
+/**
+ * The first `issuer scope` both documents map whose stated contract differs
+ * (a reference against none counts), or undefined (#1847, D989).
+ */
+function repointedScope(before: MappingContractDocument, after: MappingContractDocument): string | undefined {
+  for (const [iss, values] of Object.entries(after.scopes.issuers)) {
+    const earlier = before.scopes.issuers[iss];
+    if (!earlier) continue;
+    for (const scope of Object.keys(values)) {
+      if (!(scope in earlier)) continue;
+      const was = before.scopes.contracts[iss]?.[scope];
+      const now = after.scopes.contracts[iss]?.[scope];
+      if (!sameResourceContract(was, now) && !(was === undefined && now === undefined)) return `${iss} ${scope}`;
+    }
+  }
+  return undefined;
 }

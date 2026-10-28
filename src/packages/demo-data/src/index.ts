@@ -667,6 +667,97 @@ export function contractsRequiring(
 }
 
 /**
+ * @spec authority-server#mission-join rule 8, authority-server#mapping-contract,
+ * resource-access#resource-contract (#1847, D989): one value of a joined
+ * credential's scope mapping. Either an action list, a mapping that states no
+ * contract, or `{actions, resource_contract}`, a mapping that grants its
+ * actions under exactly that contract. A stated reference must be one the
+ * declarations support for `resource` now: declared for it, not retired,
+ * within its retention, with its digest, and defining every mapped action.
+ * A scope's contract never changes; a new contract version takes a new,
+ * distinguishable scope value, so a credential issued under a mapping that
+ * stated none never gains one.
+ */
+export function parseScopeMappingValue(
+  raw: unknown,
+  ctx: string,
+  resource: string,
+  fail: (message: string) => never,
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+  now: Date = new Date(),
+): { actions: string[]; resource_contract?: ResourceContractRef } {
+  const actionsOf = (value: unknown, at: string): string[] => {
+    if (
+      !Array.isArray(value) ||
+      value.length === 0 ||
+      !value.every((a) => typeof a === "string" && a.length > 0)
+    ) {
+      fail(`${at} must be a non-empty array of non-empty strings`);
+    }
+    return [...(value as string[])];
+  };
+  if (Array.isArray(raw)) return { actions: actionsOf(raw, ctx) };
+  if (raw === null || typeof raw !== "object")
+    fail(`${ctx} must be an action array or an object naming actions and a resource_contract`);
+  const value = raw as Record<string, unknown>;
+  for (const member of Object.keys(value)) {
+    if (member !== "actions" && member !== "resource_contract")
+      fail(`${ctx}.${member} is not a known member`);
+  }
+  const actions = actionsOf(value.actions, `${ctx}.actions`);
+  if (value.resource_contract === undefined)
+    fail(`${ctx}.resource_contract is required in the object form`);
+  const violation = contracts.carriedViolation(
+    { resource, actions, resource_contract: value.resource_contract },
+    now,
+  );
+  if (violation !== undefined) fail(`${ctx}.resource_contract: ${violation}`);
+  return { actions, resource_contract: value.resource_contract as ResourceContractRef };
+}
+
+/**
+ * @spec authority-server#mission-join rule 8 (bound 1), resource-access#resource-contract
+ * (#1847, D989): the authority a credential's scope values confer on
+ * `resource` under a scope mapping: one entry per distinct contract
+ * reference, the values stating none in an entry of their own. Contracts are
+ * never combined, and no entry gains a reference its scope did not state.
+ * Undefined where no value maps to an action.
+ */
+export function scopeMappingEntries(
+  values: readonly string[],
+  mapping: {
+    actions: Readonly<Record<string, readonly string[]>>;
+    contracts: Readonly<Record<string, ResourceContractRef>>;
+  },
+  resource: string,
+):
+  | Array<{
+      type: "mission_resource_access";
+      resource: string;
+      actions: string[];
+      resource_contract?: ResourceContractRef;
+    }>
+  | undefined {
+  const groups = new Map<string, { ref?: ResourceContractRef; actions: Set<string> }>();
+  for (const value of values) {
+    const actions = mapping.actions[value];
+    if (!actions) continue;
+    const ref = mapping.contracts[value];
+    const key = ref === undefined ? "" : `${ref.id}|${ref.version}|${ref.digest}`;
+    const group = groups.get(key) ?? { ...(ref ? { ref } : {}), actions: new Set<string>() };
+    for (const a of actions) group.actions.add(a);
+    groups.set(key, group);
+  }
+  if (groups.size === 0) return undefined;
+  return [...groups.values()].map((g) => ({
+    type: "mission_resource_access" as const,
+    resource,
+    actions: [...g.actions],
+    ...(g.ref ? { resource_contract: g.ref } : {}),
+  }));
+}
+
+/**
  * @spec runtime#evaluation-context-binding (#773): the statement's
  * Evaluation-Context Binding claim and declaration, validated at load: every
  * descriptor document hashes to its reference, and a claim names its covered
@@ -1863,6 +1954,12 @@ export interface MasJoinPolicy {
    */
   scope_actions: Record<string, string[]>;
   /**
+   * @spec resource-access#resource-contract (#1847, D989): the contract each
+   * contract-stating scope value grants its actions under, from the object
+   * form of its `scope_actions` value. A scope value absent here states none.
+   */
+  scope_contracts: Record<string, ResourceContractRef>;
+  /**
    * @spec authority-server#mapping-contract (#818): the mapping contract this
    * deployment's join applies, documented. With `scope_actions` (its scope
    * mapping, the credential-authority adapter) and `delegates` (its delegate
@@ -1993,12 +2090,20 @@ export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
   }
   const scopeActionsRaw = asObject(file, root.scope_actions, "mas_join.scope_actions");
   const scope_actions: Record<string, string[]> = {};
-  for (const scope of Object.keys(scopeActionsRaw)) {
-    const actions = reqStringArray(file, scopeActionsRaw, scope, "mas_join.scope_actions");
-    if (actions.length === 0) {
-      throw new ConfigError(file, `mas_join.scope_actions.${scope} must be non-empty`);
-    }
-    scope_actions[scope] = actions;
+  const scope_contracts: Record<string, ResourceContractRef> = {};
+  for (const [scope, value] of Object.entries(scopeActionsRaw)) {
+    // @spec resource-access#resource-contract (#1847, D989): the bound this
+    // route computes names the payments resource.
+    const mapped = parseScopeMappingValue(
+      value,
+      `mas_join.scope_actions.${scope}`,
+      CANONICAL_RESOURCE,
+      (message) => {
+        throw new ConfigError(file, message);
+      },
+    );
+    scope_actions[scope] = mapped.actions;
+    if (mapped.resource_contract) scope_contracts[scope] = mapped.resource_contract;
   }
   const governed_resources = reqStringArray(file, root, "governed_resources", "mas_join");
   const join_resource = reqString(file, root, "join_resource", "mas_join");
@@ -2012,6 +2117,7 @@ export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
     join_resource,
     delegates,
     scope_actions,
+    scope_contracts,
     ...(root.mapping_contract !== undefined
       ? { mapping_contract: parseMasJoinContract(file, root.mapping_contract) }
       : {}),
