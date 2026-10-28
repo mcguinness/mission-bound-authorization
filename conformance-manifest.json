@@ -84325,6 +84325,27 @@
    "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutation: keeping a reserialization of the decoded bytes (X07) fails the approval test, whose blob has unusual whitespace and member order; the PS's compact encoding round-trips, so V1 shows equality with the persisted bytes but cannot catch a reserialization alone."
   },
   {
+   "id": "aauth.approval.agent-verifies-blob-agent",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "approval",
+   "text": "verify that the blob's `agent` member identifies the requesting agent",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent receiving an approval envelope whose `s256` verifies but whose blob's `agent` member names another agent, or whose blob is not a JSON object, refuses it before any use: it does not operate under the mission and keeps no person token the envelope carried"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934). Born todo; the witness is cited in the next commit."
+  },
+  {
    "id": "mandate.claims.approver-from-consent-principal",
    "spec": "draft-mcguinness-mission-mandate.md",
    "anchor": "claims",
