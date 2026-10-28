@@ -1014,7 +1014,11 @@ bindings ({{dry-run}}) is load-bearing. The membership binding
 prevents time-of-review to time-of-execution growth: without it, a
 filter re-evaluated at execute time could match Missions created after
 the operator reviewed the dry-run count, so a reviewed "revoke these
-3" could silently become "revoke these 30". Single use prevents a
+3" could silently become "revoke these 30". Its per-member version
+prevents deciding over state the reviewer did not see: a member resumed
+and re-suspended after review returns to its reviewed state at a newer
+version, and the comparison at execute reports it `stale_version`
+instead of undoing the newer suspension. Single use prevents a
 captured or logged token from re-running the sweep; the short lifetime
 bounds how stale the reviewed set can be; and the caller binding keeps
 the reviewed set and the executing principal the same.
