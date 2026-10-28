@@ -59,6 +59,8 @@ type Outcome =
   | { state: "confirmed"; outcome: "revoked"; status: number }
   | { state: "unsupported"; outcome: "no_revocation_endpoint" | "unsupported_iss"; status?: number }
   | { state: "rejected"; outcome: "rejected"; status: number }
+  /** The credential reached its `exp` before the request could be sent. */
+  | { state: "expired"; outcome: "expired"; status?: number }
   | {
       state: "pending";
       outcome: "revocation_unavailable" | "rate_limited" | "signature_refused" | "deferred";
@@ -165,6 +167,12 @@ export function createRevocationWorker(options: RevocationWorkerOptions): Revoca
     if (last !== undefined && nowS() <= last) {
       await options.sleep((last + 1) * 1000 - options.now());
     }
+    // Discovery and the wait above took time, so the clock is read again
+    // immediately before signing: a credential at or past its `exp` needs
+    // no revocation, and an attempt its time limit already ended sends
+    // nothing more.
+    if (nowS() >= row.exp) return { state: "expired", outcome: "expired" };
+    if (signal.aborted) return unavailable();
     const created = nowS();
     lastCreated.set(endpoint, created);
     const body = JSON.stringify({ jti: row.jti, exp: row.exp });

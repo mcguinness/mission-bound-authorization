@@ -51,9 +51,17 @@ export interface MissionLogEntry {
  * are terminal without confirmation, so the credential stays unconfirmed
  * until its `exp`: `unsupported` (no revocation endpoint advertised, or
  * `unsupported_iss`), `rejected` (a `400`), `exhausted` (the retry bound
- * reached).
+ * reached, or a last attempt cut short). `expired` is a credential that
+ * reached its `exp` before a request could be sent: no longer needed, not a
+ * failure.
  */
-export type RevocationState = "pending" | "confirmed" | "unsupported" | "rejected" | "exhausted";
+export type RevocationState =
+  | "pending"
+  | "confirmed"
+  | "unsupported"
+  | "rejected"
+  | "exhausted"
+  | "expired";
 
 export interface RevocationRecord {
   iss: string;
@@ -213,7 +221,7 @@ const MIGRATIONS = [
      s256 TEXT NOT NULL,
      kind TEXT NOT NULL CHECK (kind IN ('person', 'auth')),
      exp INTEGER NOT NULL,
-     state TEXT NOT NULL CHECK (state IN ('pending', 'confirmed', 'unsupported', 'rejected', 'exhausted')),
+     state TEXT NOT NULL CHECK (state IN ('pending', 'confirmed', 'unsupported', 'rejected', 'exhausted', 'expired')),
      endpoint TEXT,
      attempts INTEGER NOT NULL,
      next_at INTEGER NOT NULL,

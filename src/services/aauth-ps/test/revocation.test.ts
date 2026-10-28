@@ -8,8 +8,18 @@
  * bounded retries, and recovery of terminal state, receipts and pending
  * work across a restart.
  */
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { generateSigningKey } from "@mission/aauth-wire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { type RevocationRecord, rfc3339 } from "../src/index.js";
+import {
+  createRevocationWorker,
+  type OutboundTransport,
+  type RevocationRecord,
+  rfc3339,
+  SqlitePsStore,
+} from "../src/index.js";
 import {
   type Agent,
   ASSISTANT,
@@ -438,6 +448,124 @@ describe("revocation timing", () => {
       revocation_attempted: 1,
       revocation_confirmed: 1,
       complete: false,
+    });
+  });
+
+  /**
+   * A revocation worker alone: its own store on a temporary file, a manual
+   * clock starting at second 1000, and `transport`. `run` runs `body`
+   * against them and removes the store after.
+   */
+  function lone(transport: OutboundTransport, attemptTimeoutMs = 2000) {
+    const clock = { ms: 1_000_000 };
+    const dir = mkdtempSync(join(tmpdir(), "aauth-ps-revocation-"));
+    const store = new SqlitePsStore(join(dir, "ps.db"));
+    const worker = createRevocationWorker({
+      issuer: PS,
+      signingKey: generateSigningKey("Ed25519", "ps-signing-1"),
+      kid: "ps-signing-1",
+      store,
+      policy: {
+        maxAttempts: 4,
+        retryBaseSeconds: 30,
+        retryMaxSeconds: 120,
+        attemptTimeoutMs,
+        immediateWaitMs: 0,
+      },
+      now: () => clock.ms,
+      sleep: async (ms) => {
+        clock.ms += ms;
+      },
+      transport,
+    });
+    const pending = (jti: string, exp: number): RevocationRecord => ({
+      iss: PS,
+      jti,
+      recipient: RS,
+      s256: "mission",
+      kind: "person",
+      exp,
+      state: "pending",
+      attempts: 0,
+      nextAt: 1000,
+      updatedAt: 1000,
+    });
+    const run = async (body: () => Promise<void>) => {
+      try {
+        await body();
+      } finally {
+        store.close();
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+    return { clock, store, worker, pending, run };
+  }
+
+  const metadataOf = () => ({
+    status: 200,
+    headers: { "content-type": "application/json" },
+    body: Buffer.from(JSON.stringify({ issuer: RS, revocation_endpoint: `${RS}${REVOKE_PATH}` })),
+  });
+
+  it("never sends a revocation at or after the credential's exp, though discovery and the same-second wait take time: it is recorded expired, not failed", async () => {
+    await boot();
+    const posts: { jti: string; exp: number; at: number }[] = [];
+    const t = lone(async (request) => {
+      if (request.method === "GET") return metadataOf();
+      posts.push({ ...JSON.parse(request.body as string), at: t.clock.ms / 1000 });
+      return { status: 200, headers: {}, body: Buffer.alloc(0) };
+    });
+    await t.run(async () => {
+      // Two credentials at one recipient, both expiring at second 1001.
+      t.store.addRevocations([t.pending("a", 1001), t.pending("b", 1001)]);
+      await t.worker.runDue();
+      expect(
+        posts.every((p) => p.at < p.exp),
+        JSON.stringify(posts),
+      ).toBe(true);
+      // The first goes at second 1000; the second waits for second 1001, its exp, and is not sent.
+      expect(posts.map((p) => p.jti)).toEqual(["a"]);
+      expect(
+        t.store.revocations("mission").map((r) => [r.jti, r.state, r.lastOutcome, r.attempts]),
+      ).toEqual([
+        ["a", "confirmed", "revoked", 1],
+        ["b", "expired", "expired", 1],
+      ]);
+      expect(
+        t.store
+          .missionLog("mission")
+          .filter((e) => e.event === "revocation_result")
+          .map((e) => [(e.detail.token as { jti: string }).jti, e.detail.outcome, e.detail.state]),
+      ).toEqual([
+        ["a", "revoked", "confirmed"],
+        ["b", "expired", "expired"],
+      ]);
+    });
+  });
+
+  it("sends nothing for an attempt its time limit has already ended, even once discovery completes", async () => {
+    await boot();
+    const posts: string[] = [];
+    const t = lone(async (request) => {
+      if (request.method === "GET") {
+        // Discovery answers only after the attempt's 50 ms limit.
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return metadataOf();
+      }
+      posts.push(request.body as string);
+      return { status: 200, headers: {}, body: Buffer.alloc(0) };
+    }, 50);
+    await t.run(async () => {
+      t.store.addRevocations([t.pending("a", 5000)]);
+      await t.worker.runDue();
+      expect(t.store.revocations("mission")[0]).toMatchObject({
+        state: "pending",
+        attempts: 1,
+        lastOutcome: "revocation_unavailable",
+      });
+      // Discovery completes after the attempt was ruled out: nothing is sent.
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      expect(posts).toEqual([]);
     });
   });
 });
