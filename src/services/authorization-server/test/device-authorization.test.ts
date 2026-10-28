@@ -27,7 +27,8 @@ import {
   registerIntentSubmissionEvidenceType,
   unregisterIntentSubmissionEvidenceType,
 } from "../src/index.js";
-import { browserApprovalHeaders, renderedRevision } from "./approval-fixture.js";
+import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
+import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { commitAtNextIssue, expectFenceRefusal } from "./release-fence.helper.js";
 
 const PORT = 14763;
@@ -91,6 +92,10 @@ beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
     approvalSessions: SESSIONS,
+    // A trusted headless approval service exists, so the device page's
+    // refusal of it is observable (#1802).
+    allowHeadlessAdjudication: true,
+    serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     capabilities: new Set<ProviderCapability>([...ALL_PROVIDER_CAPABILITIES, "device-authorization"]),
     testClients: [
       publicClient,
@@ -308,7 +313,7 @@ interface Session {
 /** A device session up to the Approver's authenticated approval page, before any decision. */
 async function pendingSession(
   client: string = PUBLIC,
-  approver: { sub: string; subject?: string; acr?: string } = ALICE_BY_BOB,
+  approver: { sub: string; subject?: string; acr?: string; auth_time?: number } = ALICE_BY_BOB,
   extra: Record<string, string> = {},
   how: "typed" | "complete" = "typed",
 ): Promise<Session> {
@@ -750,7 +755,10 @@ describe("Mission Device Authorization approval (@spec device-authorization#appr
     expect(pending.status).toBe(400);
     expect(pending.body.error).toBe("authorization_pending");
     expect(missionOf(uid)).toBeUndefined();
-    const page = await approvalPage(uid, browserApprovalHeaders(SESSIONS, uid, { sub: "alice" }, cookieOf(jar)));
+    // The Intent-only request derives write-bearing authority the
+    // approval-authentication floor covers, so the page renders only to a
+    // distinct Approver (D37) whose login meets the floor (#1802).
+    const page = await approvalPage(uid, browserApprovalHeaders(SESSIONS, uid, { ...ALICE_BY_BOB, acr: "mfa" }, cookieOf(jar)));
     expect(page.html).toContain('name="confirm_user_code"');
   });
 
@@ -907,15 +915,140 @@ describe("Mission Device Authorization approval (@spec device-authorization#appr
   });
 });
 
+// @spec mission#direct-approval-steps, mission#approval-preparation,
+// device-authorization#approval (#1802): the verification page is a direct
+// approval event's rendering, so it shows nothing before steps 1 to 3: an
+// Approver authenticated on the verification user agent, with the
+// authentication the floor requires, who may approve for the Subject and
+// activate the source. A refusal of that Approver leaves the session pending.
+describe("the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802)", () => {
+  const REMIT = [
+    {
+      type: "mission_resource_access",
+      resource: RESOURCE,
+      actions: ["payments:invoice.read", "payments:remittance.send"],
+      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+    },
+  ];
+  /** Nothing of the request: no Intent, derived entry, client, Subject, source or user_code. */
+  const expectNothingOfTheRequest = (html: string, userCode: string) => {
+    expect(html).not.toContain(INTENT.goal);
+    expect(html).not.toContain("payments:");
+    expect(html).not.toContain(PUBLIC);
+    expect(html).not.toContain("alice");
+    expect(html).not.toContain("Authority source");
+    expect(html).not.toContain(userCode);
+    expect(html).not.toContain("confirm_user_code");
+  };
+  const stillPending = async (s: Session) => {
+    expect(missionOf(s.uid)).toBeUndefined();
+    expect((await poll(PUBLIC, s.deviceCode, await newKeys())).body.error).toBe("authorization_pending");
+  };
+
+  it("answers the verification user agent with no Approver session 401 and nothing of the request", async () => {
+    const s = await pendingSession();
+    const page = await approvalPage(s.uid, { cookie: cookieOf(s.jar) });
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('<p class="approval-notice" data-error="unauthorized">');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+  });
+
+  it("answers a headless approval service 401: a device approval is made on the verification user agent", async () => {
+    const s = await pendingSession();
+    const page = await approvalPage(s.uid, { ...trustedApprovalHeaders("bob", { approver_acr: "mfa" }, "alice"), cookie: cookieOf(s.jar) });
+    expect(page.status).toBe(401);
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+  });
+
+  it("refuses an Approver who may not activate the source 403 before rendering, leaving the session pending", async () => {
+    const s = await pendingSession(PUBLIC, { sub: "dana", acr: "mfa" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(403);
+    expect(page.html).toContain('data-error="access_denied"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    // Bob, who may, then approves the same session.
+    const bob = browserApprovalHeaders(SESSIONS, s.uid, ALICE_BY_BOB, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, bob)).status).toBe(200);
+    expect((await decide(s.uid, bob, CONFIRMED)).status).toBe(200);
+    expect(missionOf(s.uid)?.state).toBe("active");
+  });
+
+  it("refuses an Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering", async () => {
+    const s = await pendingSession(PUBLIC, { sub: "dana", acr: "mfa", subject: "alice" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(403);
+    expect(page.html).toContain('data-error="approval_forbidden"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+  });
+
+  it("asks a login that fails the client's requested acr_values to sign in again, with nothing of the request", async () => {
+    // acr_values rides only with openid, which only a self-approval may carry (#826).
+    const s = await pendingSession(PUBLIC, { sub: "alice", acr: "password" }, { scope: "openid", acr_values: "mfa" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    const strong = browserApprovalHeaders(SESSIONS, s.uid, { sub: "alice", acr: "mfa" }, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, strong)).status).toBe(200);
+  });
+
+  it("asks a login older than the client's requested max_age to sign in again, with nothing of the request", async () => {
+    const stale = Math.floor(Date.now() / 1000) - 120;
+    const s = await pendingSession(PUBLIC, { sub: "alice", acr: "mfa", auth_time: stale }, { scope: "openid", max_age: "60" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    const fresh = browserApprovalHeaders(SESSIONS, s.uid, { sub: "alice", acr: "mfa" }, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, fresh)).status).toBe(200);
+  });
+
+  it("asks a login the approval-authentication floor refuses to sign in again, with nothing of the request", async () => {
+    const s = await pendingSession(PUBLIC, { ...ALICE_BY_BOB, acr: "password" }, { authorization_details: JSON.stringify(REMIT) });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    const strong = browserApprovalHeaders(SESSIONS, s.uid, { ...ALICE_BY_BOB, acr: "mfa" }, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, strong)).status).toBe(200);
+  });
+});
+
 describe("Mission Device Authorization polling (@spec device-authorization#polling, #1202)", () => {
   it("answers access_denied after a decline, a refused creation commit or an abort, and invalid_scope for openid when the Approver is not the Subject", async () => {
     const declined = await pendingSession();
     expect((await decide(declined.uid, declined.headers, { decision: "deny" })).status).toBe(200);
     expect((await poll(PUBLIC, declined.deviceCode, await newKeys())).body.error).toBe("access_denied");
     expect(missionOf(declined.uid)).toBeUndefined();
-    // Dana activates no source this client resolves: the commit creates no Mission.
-    const refused = await pendingSession(PUBLIC, { sub: "dana" });
-    expect((await decide(refused.uid, refused.headers, CONFIRMED)).status).toBe(200);
+    // Activation withdrawn after the rendering: the commit creates no Mission.
+    // (An Approver who may not activate the source at all is refused before
+    // anything renders, and the session stays pending: #1802.)
+    const refused = await pendingSession();
+    const render_revision = await renderedRevision(ISSUER, refused.uid, refused.headers);
+    const resolver = (as.kernel as unknown as { sourceResolver: AuthoritySourceResolver }).sourceResolver;
+    const original = resolver.resolveForApproval.bind(resolver);
+    const withdrawn = vi.spyOn(resolver, "resolveForApproval").mockImplementation((input) => {
+      const r = original(input);
+      return { ...r, entry: { ...r.entry, activators: ["dana"] } };
+    });
+    try {
+      const committed = await fetch(`${ISSUER}/interaction/${refused.uid}/decide`, {
+        method: "POST",
+        redirect: "manual",
+        headers: { ...refused.headers, "content-type": "application/json" },
+        body: JSON.stringify({ ...CONFIRMED, render_revision }),
+      });
+      expect(committed.status).toBe(200);
+    } finally {
+      withdrawn.mockRestore();
+    }
     expect(missionOf(refused.uid)).toBeUndefined();
     expect((await poll(PUBLIC, refused.deviceCode, await newKeys())).body.error).toBe("access_denied");
     const openid = await pendingSession(PUBLIC, ALICE_BY_BOB, { scope: "openid" });

@@ -91,8 +91,12 @@ export type ApprovalFloorOutcome =
   | { outcome: "not_applicable" }
   /** Every invoked floor holds. */
   | { outcome: "satisfied"; floors: string[] }
-  /** Refused before any Mission, Grant or code exists. */
-  | { outcome: "refused"; reason: string };
+  /**
+   * Refused before any Mission, Grant or code exists. `unclassified` marks a
+   * refusal no Approver's authentication can lift (#1802): the classification
+   * does not name admitted authority.
+   */
+  | { outcome: "refused"; reason: string; unclassified?: true };
 
 /**
  * Classify every action of the derived entries, then evaluate each floor the
@@ -117,6 +121,7 @@ export function evaluateApprovalFloor(
         return {
           outcome: "refused",
           reason: `the approval-authentication floor's classification does not name ${action} at ${entry.resource}; unclassified authority is refused`,
+          unclassified: true,
         };
       }
       for (const cls of classes) {
