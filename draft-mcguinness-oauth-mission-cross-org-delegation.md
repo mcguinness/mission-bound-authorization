@@ -30,7 +30,9 @@ author:
 
 normative:
   RFC8693:
+  RFC8705:
   RFC9396:
+  RFC9449:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
     title: "Attenuating Authorization Tokens for Agentic Delegation Chains"
     author:
@@ -458,17 +460,24 @@ following, in order:
 2. validate the root: substrate type, signature, time bounds,
    Mission-Issuer equality, the issuer-asserted root `act`, and the
    `mission` claim including `subject`;
-3. validate every `par_hash` link and every child signature through
-   the leaf, verifying each child with the public key carried in its
-   parent's `cnf.jwk`;
+3. verify the Chain under steps 1 to 5 of the substrate's chain
+   verification algorithm
+   ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}),
+   which validate every `par_hash` link and every child signature
+   through the leaf, verifying each child with the public key carried
+   in its parent's `cnf.jwk`;
 4. verify the `mission` invariants unchanged across all hops: value
    equality of `id`, `issuer`, `authority_hash`, and `subject`;
 5. verify monotonic `del_depth`, the preserved `del_max_depth`,
    nested `aud` and `exp`, and the mapped capability entry's subset
    relation at every hop under the attenuation substrate's tool and
-   constraint model; an authorization-details entry of an unknown or
-   unmapped type MUST NOT be treated as conferred authority, and its
-   presence beyond the mapped entry refuses the Chain;
+   constraint model, including the narrowing of its
+   `mission_constraints` member
+   ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section
+   "Mission Constraints Member"); an authorization-details entry of an
+   unknown or unmapped type MUST NOT be treated as conferred
+   authority, and its presence beyond the mapped entry refuses the
+   Chain;
 6. classify each hop as named (`act` present with its aligned
    credential validated per {{actor-evidence}}) or key-only (`act`
    absent), refusing a named hop whose credential is missing,
@@ -476,7 +485,12 @@ following, in order:
    named actor and the hop is key-only;
 7. reconstruct the ordered actor history from the validated
    artifacts, rejecting conflicting or duplicated representations;
-8. verify the leaf presenter's proof of possession; identity
+8. verify the leaf presenter's proof of possession of the leaf
+   `cnf.jwk` key: at direct invocation, under steps 6 and 7 of the
+   substrate's algorithm, which bind the proof to the invoked tool
+   and its arguments; at the projection exchange, which invokes no
+   tool, through the token request's proof ({{projection-exchange}})
+   in place of the substrate's proof-of-possession JWT; identity
    verification never substitutes for the authority-chain checks;
 9. establish that the Mission is `active` from a locally available
    state source within the deployment's declared freshness bound
@@ -530,8 +544,12 @@ endpoint as an {{RFC8693}} token exchange:
 * `resource` or `audience`: the requested local audience, within the
   leaf's `aud`;
 * client authentication as the Resource AS's policy requires; and
-* proof of possession of the leaf `cnf.jwk` key on the request (DPoP
-  or mTLS), the same mechanism the issued local token is bound to.
+* proof of possession of exactly the leaf `cnf.jwk` key on the
+  request, by DPoP ({{RFC9449}}) or mutual TLS ({{RFC8705}}), the same
+  mechanism the issued local token is bound to.  A DPoP proof passes
+  the checks of {{Section 4.3 of RFC9449}}, including its method, URI,
+  and creation-time window, and its `jti` is accepted once within
+  that window ({{Section 11.1 of RFC9449}}).
 
 A Presentation that is malformed, carries an unknown top-level
 member, or exceeds a declared bound refuses with `invalid_request`; a
