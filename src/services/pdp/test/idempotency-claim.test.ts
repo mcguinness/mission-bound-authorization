@@ -18,7 +18,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openDurableStore } from "@mission/store";
+import { type Database, openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "../src/decision-evidence.js";
 import type { BoundaryStatementVersion, EnforcementBoundaries } from "../src/enforcement-boundary.js";
@@ -37,7 +37,7 @@ import {
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { decisionCacheKey } from "../src/projections.js";
-import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
+import { EXECUTION_EVIDENCE_MEDIA_TYPE, type EvidenceKeyResolver, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
@@ -97,12 +97,13 @@ async function executionRecord(
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
   error?: string,
+  audience = RESOURCE,
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
     evaluation_id: evaluationId,
     mission_id: "msn_917",
-    audience: RESOURCE,
+    audience,
     outcome,
     outcome_at: new Date(T0).toISOString(),
     sequence: 1,
@@ -1180,5 +1181,65 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       }
       claims.close();
     });
+  });
+});
+
+describe("settlement is bound to the adopting permit's boundary across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1841, D974)", () => {
+  it("a claim adopted through a replaced identifier's scope is settled at the boundary its permit was decided at: a record validly signed for the replaced identifier the claim's scope still names is refused audience_mismatch and leaves the claim unchanged, and the record for the permit's boundary settles it", async () => {
+    const c = clock();
+    // OTHER_RESOURCE is replaced by RESOURCE: a key claimed under the old identifier is the new one's key.
+    const statement = statementWithPrivilegedAdministration();
+    const [shipped] = (statement.enforcement_boundaries as EnforcementBoundaries).versions as [BoundaryStatementVersion];
+    statement.enforcement_boundaries = {
+      versions: [
+        {
+          ...shipped,
+          version: "payments-boundary-v0",
+          effective_at: "1970-01-01T00:00:00Z",
+          boundaries: shipped.boundaries.map((b) => ({ ...b, boundary: OTHER_RESOURCE })),
+        },
+        {
+          ...shipped,
+          effective_at: new Date(T0 - 86_400_000).toISOString(),
+          replaces: [{ boundary: RESOURCE, previous_version: "payments-boundary-v0", previous_boundary: OTHER_RESOURCE }],
+        },
+      ],
+    };
+    // This PEP's key verifies a record for either identifier, so only the boundary binding can refuse one.
+    const keys: EvidenceKeyResolver = (p) =>
+      p.kid === "pep-exec-917" && p.emitter.id === RESOURCE && (p.audience === RESOURCE || p.audience === OTHER_RESOURCE)
+        ? { key: executionKey.publicKey }
+        : undefined;
+    const file = join(mkdtempSync(join(tmpdir(), "claim-1841-")), "claims.sqlite");
+    const claims = openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement, now: c.now, settlementKeys: keys });
+    const key = freshKey();
+    // Claimed under the old identifier, its permit never persisted (the evidence signer failed): the row is adoptable.
+    const failing: DecisionEvidenceEmitter = {
+      emit: async () => {
+        throw new Error("evidence signer down");
+      },
+    };
+    await expect(evaluate(request(c, { key, audience: OTHER_RESOURCE, target: RESOURCE }), options(claims, c, { evidence: failing }))).rejects.toThrow(
+      /signer down/,
+    );
+    // The retry at the new identifier meets that row through the lineage and adopts it.
+    const permit = await evaluate(request(c, { key, target: RESOURCE }), options(claims, c));
+    expect(permit.decision, JSON.stringify(permit.context)).toBe(true);
+    const evaluationId = permit.context.evaluation_id as string;
+    const db = (claims as unknown as { db: Database }).db;
+    const row = () => db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as Record<string, unknown>;
+    const transitions = () => db.prepare("SELECT * FROM claim_transitions WHERE evaluation_id = ? ORDER BY seq").all(evaluationId);
+    expect(String(transitions().map((t) => (t as { cause: string }).cause))).toMatch(/adopted:/);
+    // The row stays under the scope it was claimed in; the permit's boundary is the adopting request's.
+    expect((JSON.parse(String(row().scope_json)) as { audience: string }).audience).toBe(OTHER_RESOURCE);
+    expect(row().audience).toBe(RESOURCE);
+    const before = { claim: row(), transitions: transitions() };
+    const stale = await executionRecord(evaluationId, "completed", undefined, undefined, OTHER_RESOURCE);
+    expect(await claims.settle(REQUESTER, stale)).toEqual({ accepted: false, reason: "audience_mismatch" });
+    expect({ claim: row(), transitions: transitions() }).toEqual(before);
+    // Control: the record for the boundary the permit was decided at settles the claim.
+    expect(await claims.settle(REQUESTER, await executionRecord(evaluationId, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+    expect(row()).toMatchObject({ state: "completed" });
+    claims.close();
   });
 });
