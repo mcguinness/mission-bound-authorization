@@ -8,7 +8,9 @@
  * file exercises the ADAPTER around it over a real HTTP AS built with
  * `crossOrg` configured: the wire shape, leaf proof of possession, the
  * origin-principal mapping, the local-ceiling intersection, the mint, error
- * minimization on refusals, and derivation evidence.
+ * minimization on refusals, and derivation evidence. The chain is the AAT
+ * -02 wire with `mission_constraints`, and the local token carries both
+ * layers' restrictions or the exchange is refused (#1759).
  */
 
 import { type Server } from "node:http";
@@ -23,6 +25,13 @@ import {
   type JWK,
 } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import {
+  type AttenuationOperations,
+  ResourceContractDeclarations,
+  type ResourceContractRef,
+  resourceContractDigest,
+} from "@mission/core";
+import { TEST_OPERATIONS } from "./attenuation.helper.js";
 import { SWITCHED_RETRY_AFTER_S, switchableDpopReplay } from "./dpop-replay-switch.helper.js";
 import {
   buildAuthorizationServer,
@@ -91,6 +100,38 @@ const DISJOINT_CEILING: AuthorityEntry[] = [
   { type: "mission_resource_access", resource: "https://unrelated.test", actions: ["storage:object.read"] },
 ];
 
+/**
+ * @spec resource-access#resource-contract: the destination resource's
+ * contract, v1 superseded within retention and v2 current; an entry carries
+ * one only when its proposal does.
+ */
+const CONTRACT = "https://api.org3.test/contracts/payments";
+const contractDoc = (version: string) => ({
+  id: CONTRACT,
+  version,
+  operation_profile: `profile-${version}`,
+  operations: { op_0: { action: READ }, op_1: { action: SCHEDULE } },
+});
+const contractRef = (version: string): ResourceContractRef => ({
+  id: CONTRACT,
+  version,
+  digest: resourceContractDigest(contractDoc(version)),
+});
+const V1 = contractRef("v1");
+const V2 = contractRef("v2");
+const CONTRACTS = new ResourceContractDeclarations([
+  {
+    resource: RESOURCE,
+    resource_match: "prefix",
+    id: CONTRACT,
+    requires_reference: [],
+    versions: [
+      { version: "v1", state: "superseded", retained_until: "2099-01-01T00:00:00Z", digest: V1.digest, document: contractDoc("v1") },
+      { version: "v2", state: "current", digest: V2.digest, document: contractDoc("v2") },
+    ],
+  },
+]);
+
 async function pub(k: Keys): Promise<JWK> {
   return exportJWK(k.publicKey) as Promise<JWK>;
 }
@@ -110,8 +151,12 @@ async function buildChain(
     actions?: string[];
     maxAmount?: string;
     subject?: { iss: string; sub: string };
+    resourceContract?: ResourceContractRef;
+    rootAud?: string[];
+    /** The leaf's authority, from the root's; defaults to the root's unchanged. */
+    leaf?: (root: Awaited<ReturnType<typeof deriveCrossOrgRoot>>) => Parameters<typeof mintCrossOrgChild>[2];
   } = {},
-): Promise<{ chain: string[]; leafKeys: Keys; tools: import("@mission/core").AATTools; missionId: string }> {
+): Promise<{ chain: string[]; leafKeys: Keys; tools: Record<string, Record<string, unknown>>; missionId: string }> {
   const actions = opts.actions ?? [READ, SCHEDULE];
   const rootKeys = await newKeys();
   const leafKeys = await newKeys();
@@ -126,6 +171,7 @@ async function buildChain(
         actions,
         constraints: { max_amount: { amount: opts.maxAmount ?? "500.00", currency: "USD" } },
         delegation: { max_depth: 3 },
+        ...(opts.resourceContract ? { resource_contract: opts.resourceContract } : {}),
       },
     ] as never,
     subject: opts.subject ?? ORIGIN_SUBJECT,
@@ -135,18 +181,30 @@ async function buildChain(
   });
   const derived = await deriveCrossOrgRoot(originKernel, originKeys.privateKey, "as-token", {
     missionId: mission.id,
-    aud: RESOURCE,
+    aud: opts.rootAud ?? RESOURCE,
     clientId: "agent-a",
     cnfJwk: await pub(rootKeys),
+    operations: TEST_OPERATIONS,
     actor: { iss: "https://id.org1.test", sub: "wl-agent-a" },
     mappingVersion: "map-1",
   });
-  const leaf = await mintCrossOrgChild(derived.root, rootKeys.privateKey, derived.tools, { cnfJwk: await pub(leafKeys) });
+  const leaf = await mintCrossOrgChild(derived.root, rootKeys.privateKey, opts.leaf ? opts.leaf(derived) : derived, {
+    cnfJwk: await pub(leafKeys),
+    aud: RESOURCE,
+  });
   return { chain: [derived.root, leaf], leafKeys, tools: derived.tools, missionId: mission.id };
 }
 
 function present(chain: string[]): string {
-  return Buffer.from(JSON.stringify({ chain }), "utf8").toString("base64url");
+  return Buffer.from(JSON.stringify({ aat_chain: chain }), "utf8").toString("base64url");
+}
+
+/** The authority details of a minted local access token. */
+function localDetails(accessToken: string): Array<Record<string, unknown>> {
+  const payload = JSON.parse(Buffer.from(accessToken.split(".")[1] as string, "base64url").toString()) as {
+    authorization_details: Array<Record<string, unknown>>;
+  };
+  return payload.authorization_details;
 }
 
 async function clientAssertion(): Promise<string> {
@@ -240,6 +298,7 @@ beforeAll(async () => {
     authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: originKeys.privateKey,
     statusKid: "as-status",
+    resourceContracts: CONTRACTS,
   });
   evidence = [];
   crossOrgOptions = {
@@ -258,6 +317,7 @@ beforeAll(async () => {
       ],
     },
     localCeiling: FULL_CEILING,
+    operations: TEST_OPERATIONS,
     evidence,
     accessTokenTTL: 300,
     // Always entitled, freshly observed: this file exercises the mapping
@@ -361,6 +421,21 @@ describe("leaf proof of possession (@spec cross-org-delegation#projection-exchan
     }
   });
 
+  // @spec cross-org-delegation#projection-exchange (#1759): a DPoP proof
+  // passes RFC 9449 Section 4.3, including its method and URI binding.
+  it("refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)", async () => {
+    for (const [label, claims] of [
+      ["another htu", { htu: "https://elsewhere.test/token" }],
+      ["another htm", { htm: "GET" }],
+    ] as const) {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), dpop: await dpopProof(leafKeys, claims) });
+      const body = (await res.json()) as { error?: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_dpop_proof");
+    }
+  });
+
   it("refuses a DPoP proof over a key that is not the leaf's cnf key (invalid_grant)", async () => {
     const { chain } = await buildChain();
     const otherKeys = await newKeys(); // valid proof, but not the leaf's key
@@ -379,6 +454,86 @@ describe("audience validation (@spec cross-org-delegation#projection-exchange)",
     const body = (await res.json()) as { error: string };
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_target");
+  });
+
+  // @spec cross-org-delegation#projection-exchange (#1759): the requested
+  // audience is within the aud of every hop, not of the root alone.
+  it("refuses an audience the root's aud names but a later hop's does not (invalid_target)", async () => {
+    const OTHER = "https://api2.org3.test";
+    const { chain, leafKeys } = await buildChain({ rootAud: [RESOURCE, OTHER] });
+    const res = await exchange({ subjectToken: present(chain), leafKeys, audience: OTHER });
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    // The same chain projects for the audience every hop names.
+    const ok = await exchange({ subjectToken: present(chain), leafKeys });
+    expect(ok.status).toBe(200);
+  });
+});
+
+describe("both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759)", () => {
+  it("carries the Mission entry's resource_contract and constraints into the local token", async () => {
+    const { chain, leafKeys } = await buildChain({ resourceContract: V2 });
+    const before = evidence.length;
+    const res = await exchange({ subjectToken: present(chain), leafKeys });
+    const body = (await res.json()) as { access_token: string };
+    expect(res.status).toBe(200);
+    const details = localDetails(body.access_token);
+    expect(details.length).toBeGreaterThan(0);
+    for (const d of details) {
+      expect(d.resource_contract).toEqual(V2);
+      expect(d.constraints).toEqual({ max_amount: { amount: "500.00", currency: "USD" } });
+    }
+    const record = evidence[before] as CrossOrgDerivationRecord;
+    expect(record.input_authority.every((e) => (e as { resource_contract?: unknown }).resource_contract !== undefined)).toBe(true);
+  });
+
+  it("refuses a hop whose resource_contract differs from its parent's (invalid_grant)", async () => {
+    const { chain, leafKeys } = await buildChain({
+      resourceContract: V2,
+      leaf: (root) => ({
+        tools: root.tools,
+        missionConstraints: Object.fromEntries(
+          Object.entries(root.missionConstraints).map(([t, v]) => [t, { ...v, resource_contract: V1 as unknown as Record<string, unknown> }]),
+        ),
+      }),
+    });
+    const res = await exchange({ subjectToken: present(chain), leafKeys });
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_grant");
+  });
+
+  it("refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence", async () => {
+    const { chain, leafKeys } = await buildChain({
+      leaf: (root) => ({
+        tools: Object.fromEntries(
+          Object.keys(root.tools).map((t) => [t, { target_id: { constraint_type: "exact", value: "inv-1" } }]),
+        ),
+        missionConstraints: root.missionConstraints,
+      }),
+    });
+    const before = evidence.length;
+    const res = await exchange({ subjectToken: present(chain), leafKeys });
+    const body = (await res.json()) as { error: string };
+    expect(res.status).toBe(400);
+    expect(body.error).toBe("invalid_target");
+    expect(evidence.length).toBe(before);
+  });
+
+  it("refuses a leaf constraint the destination's consumer does not establish (invalid_target)", async () => {
+    const noAmount: AttenuationOperations = (resource, action) =>
+      TEST_OPERATIONS(resource, action)?.map((op) => ({ ...op, establishes: op.establishes.filter((k) => k !== "max_amount") }));
+    crossOrgOptions.operations = noAmount;
+    try {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { error: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_target");
+    } finally {
+      crossOrgOptions.operations = TEST_OPERATIONS;
+    }
   });
 });
 
@@ -862,7 +1017,9 @@ describe("origin-principal entitlement authority narrowing (@spec cross-domain#d
     expect(body.authorization_details?.[0]?.actions).toEqual([READ]);
     // Entitlement narrows actions only: the ceiling's own constraints survive
     // (the amount as the projection normalizes it).
-    expect(body.authorization_details?.[0]?.constraints?.max_amount).toEqual({ amount: "500", currency: "USD" });
+    // The Mission entry's amount, unchanged: the projection reads it from
+    // mission_constraints (#1759), not back from a numeric argument range.
+    expect(body.authorization_details?.[0]?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "USD" });
     const record = evidence[evidence.length - 1] as CrossOrgDerivationRecord;
     expect(evidence.length).toBe(before + 1);
     expect(record.input_authority.flatMap((e) => e.actions)).toEqual(expect.arrayContaining([READ, SCHEDULE]));
