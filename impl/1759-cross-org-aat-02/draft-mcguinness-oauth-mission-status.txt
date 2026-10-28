@@ -1822,7 +1822,9 @@ Table of Contents
    [RFC8414]).  Its claims are iss (the AS's issuer identifier), iat,
    and keys: a JWK Set's keys array [RFC7517] holding each such key's
    public JWK, under its original kid, for at least the audit horizon of
-   every Mission whose responses it signed.
+   every Mission whose responses it signed.  The AS serves the set with
+   the media type application/jwk-set+jwt ([OpenID.Federation],
+   Section 15.6).
 
    The AS signs the set under its active Mission Status signing key and
    never under a key the set lists or a key of another role.  When that
@@ -1848,6 +1850,19 @@ Table of Contents
    Both are NumericDate values [RFC7519].  The set reuses OpenID
    Federation's revoked encoding only; this document defines no OpenID
    Federation endpoint and claims no conformance to it.
+
+   The AS declares a freshness lifetime for the set with explicit
+   freshness information (Section 4.2.1 of [RFC9111]).  A consumer
+   refetches the set, or revalidates its copy (Section 4.3 of
+   [RFC9111]), once that lifetime ends; a response without valid
+   explicit freshness information is stale when received (Section 4.2.2
+   of [RFC9111]).  A key a verified set lists stays compromised for the
+   consumer: a consumer MUST NOT treat it as no longer compromised
+   because a later set omits it, an earlier set is presented again, or a
+   fetch of the set fails.  While a fetch fails, the consumer keeps
+   refusing the keys it has learned are compromised; the set's freshness
+   never extends that of the consumer's cached jwks_uri, which
+   Section 10.5 governs.
 
 9.  Conformance
 
