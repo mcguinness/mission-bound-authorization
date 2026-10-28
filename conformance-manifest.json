@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
-    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
+    "revision": "486f66a36b7f2ccf5791db71092ae4582e9ece6e",
+    "content_sha256": "2cd631e61b91242cd5b02ff5ebe2958588060823424772971a8e18ec8f549c8f"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -13617,7 +13617,7 @@
    "id": "core.token-claims.companion-format-not-access-token",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "token-claims",
-   "text": "Access token validation is unchanged: a resource server validating an access token under this document requires `at+jwt` and refuses any other `typ`, so a companion-format token is never accepted as an access token.",
+   "text": "JWT access-token validation remains governed by {{Section 4 of RFC9068}}, including acceptance of `at+jwt` or `application/at+jwt`. A companion-format token is consumed only under that companion's verification rules.",
    "role": "RS",
    "strength": "stated",
    "applicability": {
@@ -13627,7 +13627,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a resource server validating an access token refuses a token whose typ is not at+jwt, so a companion-format token such as an aat+jwt attenuation root is never accepted as an access token"
+    "normative": "a resource server validating a JWT access token applies Section 4 of RFC 9068: it accepts typ at+jwt or application/at+jwt and refuses any other typ, so a companion-format token such as an aat+jwt attenuation root is not accepted as a JWT access token; a companion-format token is consumed only under its companion's verification rules"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -13637,9 +13637,15 @@
      "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)",
+     "level": "endpoint",
+     "surface": "verification"
     }
    ],
-   "notes": "#1760 (D904, go in D932): the companion-format clarification in Token Claims. Mutation: dropping the access-token profile's typ check (mission-access-profile.ts) fails the witness."
+   "notes": "#1760 (D904, go in D932; wording corrected at the #1812 review, D938). Scoped to JWT access-token validation: the applicability stays unconditional because JWT validation is the baseline path, and opaque-token consumption is governed separately under core.introspected-consumption, which this row does not cover. Witnesses: the refusal of an aat+jwt token presented as a Mission access token (dropping the access-token profile's typ check fails it), and the acceptance of application/at+jwt (dropping the application/ prefix handling in mediaTypeOf fails it)."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
