@@ -22,6 +22,7 @@ import {
   newDpopProofReplay,
   parseCredentialAuthority,
   readTxnMissionClaim,
+  type ResourceContractRef,
   verifyAatPresentation,
   verifyMissionAatChain,
   type IssuerKeysFetch,
@@ -109,6 +110,19 @@ import {
   type WriteReservation,
   type WriteReservationStore,
 } from "./write-reservations.js";
+
+/**
+ * The tool a PoP JWT names (`aat_tool`), read before verification: the
+ * substrate then verifies the proof against exactly this tool.
+ */
+function popToolOf(pop: string): string | undefined {
+  try {
+    const tool = (decodeJwt(pop) as { aat_tool?: unknown }).aat_tool;
+    return typeof tool === "string" && tool.length > 0 ? tool : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Called only after this path's signature, issuer/chain and expiry checks. */
 function verifiedCredentialRef(payload: JWTPayload): { issuer?: string; expires_at?: string } {
@@ -1353,11 +1367,14 @@ export class McpPaymentsServer {
     if (mapping === undefined) throw new AatPresentationRefused(`no operation ${JSON.stringify(tool)}`);
     const original = parseOriginalArguments(argumentsJson);
     if (original === undefined) throw new AatPresentationRefused("the invocation arguments are not a JSON object");
-    // @spec attenuation#root-mapping: the tool identifier is the operation's
-    // target, as its contract establishes it, and its action.
-    const target = establishOperationTarget(mapping.target, aatToPlainJson(original) as Record<string, unknown>);
-    if (!target.ok) throw new AatPresentationRefused("the operation target cannot be established");
-    const toolId = aatToolId(target.target, mapping.action);
+    const args = aatToPlainJson(original) as Record<string, unknown>;
+    // @spec attenuation#root-mapping (#1756 slice B3, D932): the tool the
+    // holder invokes is the one its proof names (`aat_tool`). The substrate
+    // verifies the proof, the leaf's grant of that tool and the arguments
+    // against that tool's constraints; the binding below then holds the tool
+    // to the operation this resource performs.
+    const toolId = popToolOf(presentation.aat_pop);
+    if (toolId === undefined) throw new AatPresentationRefused("the proof names no tool");
 
     // The trust anchor: the attenuation-root-role key that verifies the root,
     // through the same pinned resolver (role, `kid` and algorithm policy) the
@@ -1377,7 +1394,6 @@ export class McpPaymentsServer {
     }
 
     const nowS = Math.floor(Date.now() / 1000);
-    const sideEffecting = mapping.actionClass !== "consequential_read";
     const permit = verifyAatPresentation({
       chain: presentation.aat_chain,
       pop: presentation.aat_pop,
@@ -1388,7 +1404,9 @@ export class McpPaymentsServer {
       policy: {
         audiences: this.presentedAudiences(presentation),
         requireChainAud: true,
-        replay: { trackJti: sideEffecting, admit: (jti) => this.admitPopJti(jti) },
+        // @spec AAT -02 Section 7.3 and step 7i (D932): every class, the
+        // reads included, tracks the proof's `jti`.
+        replay: { trackJti: true, admit: (jti) => this.admitPopJti(jti) },
       },
     });
     if (permit.verdict === "DENY") throw new AatPresentationRefused(`AAT -02 step ${permit.step}: ${permit.reason}`);
@@ -1413,12 +1431,27 @@ export class McpPaymentsServer {
     let validated: ValidatedBoundary;
     try {
       root = readAttenuationRootClaims(permit.root.header.typ, rootClaims as JWTPayload, nowS);
-      missionLayer = verifyMissionAatChain(permit.chain, permit.anchorIssuer);
+      missionLayer = verifyMissionAatChain(permit.chain, permit.anchorIssuer, toolId);
       // @spec runtime-oauth#token-validation (#853, D487): the boundary the
       // root was validated against, which the PEP decides at.
       validated = this.requireAudience(rootClaims as JWTPayload, permit.root.header.typ, this.deps.issuer);
     } catch (e) {
       return refuse("invalid_credential", (e as Error).message);
+    }
+    // @spec attenuation#root-mapping, runtime#resource-contract (#1756 slice
+    // B3, D932): verification, contract selection and execution use one tool.
+    // The invoked tool's own `mission_constraints` names the contract the
+    // operation is performed under (none: the live Operation Profile); that
+    // contract's Operation Profile establishes the operation's target, and
+    // target and action must be the tool identifier the proof named. The
+    // credential authority is that tool's alone, so the PEP selects exactly
+    // this contract and no other leaf tool's authority reaches it.
+    const contract = missionLayer.missionConstraints[toolId]?.resource_contract as ResourceContractRef | undefined;
+    if (this.toolIdUnder(tool, mapping.action, args, contract) !== toolId) {
+      return refuse(
+        "invalid_credential",
+        `the proof's tool ${JSON.stringify(toolId)} is not the operation ${JSON.stringify(tool)} under its contract`,
+      );
     }
 
     // @spec cross-domain#mission-subject — the root's origin principal,
@@ -1443,8 +1476,32 @@ export class McpPaymentsServer {
       // The sender constraint is the leaf's key: its RFC 7638 thumbprint.
       cnfJkt: aatKeyThumbprint((permit.leaf.claims.cnf as { jwk: Record<string, unknown> }).jwk),
       credentialAuthority: missionLayer.credentialAuthority,
+      presentedFor: { tool, argumentsJson },
       validatedBoundary: validated,
     };
+  }
+
+  /**
+   * @spec attenuation#root-mapping, runtime#resource-contract (#1756 slice
+   * B3, D932): the tool identifier of `tool`'s operation on `args` when it is
+   * performed under `contract` (absent: the live Operation Profile): the
+   * operation target that contract's Operation Profile establishes, and the
+   * action. Undefined when the contract names no profile this resource holds,
+   * or that profile performs no such crossing or establishes no target.
+   */
+  private toolIdUnder(
+    tool: string,
+    action: string,
+    args: Readonly<Record<string, unknown>>,
+    contract: ResourceContractRef | undefined,
+  ): string | undefined {
+    const pep = this.deps.pep;
+    const profile = contract === undefined ? undefined : pep?.contracts().versionOf(contract)?.version.operation_profile;
+    if (contract !== undefined && profile === undefined) return undefined;
+    const crossing = pep ? pep.toolActionUnder(tool, profile) : TOOL_ACTIONS[tool];
+    if (crossing === undefined || crossing.action !== action) return undefined;
+    const target = establishOperationTarget(crossing.target, args);
+    return target.ok ? aatToolId(target.target, action) : undefined;
   }
 
   /**

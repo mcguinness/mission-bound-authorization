@@ -207,17 +207,25 @@ export function missionConstraintsNarrowingProblem(
 /** The verified Mission layer of a chain: the binding and the leaf's authority. */
 export interface MissionAatChain {
   mission: { id: string; issuer: string; authority_hash: string };
+  /** The leaf's authority: every leaf tool's, or with an invoked tool that one tool's alone. */
   credentialAuthority: readonly CredentialAuthorityEntry[];
+  /** The leaf's `mission_constraints`. */
+  missionConstraints: MissionConstraints;
 }
 
 /**
  * @spec attenuation#mission-binding-check (#1756, D902): the Mission layer
  * over a chain the substrate already verified, root first. Throws
  * {@link MissionAatError} for any failure, which refuses the whole chain.
+ *
+ * With `invokedTool`, the tool a presentation was verified for (#1756 slice
+ * B3, D932): the credential authority is that one leaf tool's alone, so no
+ * other leaf tool's restrictions or contract can authorize the invocation.
  */
 export function verifyMissionAatChain(
   chain: readonly AatVerifiedToken[],
   anchorIssuer: string,
+  invokedTool?: string,
 ): MissionAatChain {
   const root = chain[0];
   if (root === undefined) throw new MissionAatError("the chain is empty");
@@ -274,9 +282,23 @@ export function verifyMissionAatChain(
     leafMc = mc;
   }
   const leaf = chain[chain.length - 1] as AatVerifiedToken;
+  if (invokedTool !== undefined && !Object.hasOwn(leaf.tools, invokedTool)) {
+    throw new MissionAatError(
+      `the leaf does not carry the invoked tool ${JSON.stringify(invokedTool)}`,
+    );
+  }
+  // A computed key, so a tool identifier named __proto__ stays a member.
+  const authority =
+    invokedTool === undefined
+      ? credentialEntriesFromMissionAat(leaf.tools, leafMc)
+      : credentialEntriesFromMissionAat(
+          { [invokedTool]: leaf.tools[invokedTool] },
+          { [invokedTool]: leafMc[invokedTool] as MissionToolConstraints },
+        );
   return {
     mission: { id: mission.id, issuer: mission.issuer, authority_hash: mission.authority_hash },
-    credentialAuthority: credentialEntriesFromMissionAat(leaf.tools, leafMc),
+    credentialAuthority: authority,
+    missionConstraints: leafMc,
   };
 }
 

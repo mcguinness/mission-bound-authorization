@@ -255,6 +255,13 @@ export interface CommonTokenFacts {
    * caller assembled without a server validator.
    */
   validatedBoundary?: ValidatedBoundary;
+  /**
+   * @spec attenuation#mission-binding-check (#1756 slice B3, D932): set on
+   * facts an attenuation presentation yielded. The presentation's proof binds
+   * one invocation, so its facts authorize only the tool call it was verified
+   * for: this tool name, with these original arguments.
+   */
+  presentedFor?: { tool: string; argumentsJson: string };
 }
 
 /** The boundary and statement version a credential's audience was validated against. */
@@ -2348,6 +2355,15 @@ export class Pep {
     const established = await this.requestBoundary(token, mapping.action);
     if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
     const boundary = established.boundary;
+    // @spec attenuation#mission-binding-check (#1756 slice B3, D932): facts a
+    // presentation yielded authorize only the invocation it was verified for.
+    // Any other tool, or other arguments, are outside the credential's
+    // authority.
+    const presented = token.presentedFor;
+    if (presented !== undefined && (presented.tool !== tool || invocation?.argumentsJson !== presented.argumentsJson)) {
+      await this.recordRefusal(boundary, token, "out_of_authority", mapping.action);
+      return { ok: false, refusal_reason: "out_of_authority" };
+    }
     // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the seam where the
     // invocation's original arguments are checked before normalization. The
     // transport's original text must describe exactly the arguments it

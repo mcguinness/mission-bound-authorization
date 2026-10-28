@@ -126,7 +126,10 @@ function argumentMap(operations: readonly { arguments: Readonly<Record<string, {
  *
  * - the tool identifier carries the entry's whole target restriction
  *   ({@link carriedToolId});
- * - the resource server declares the operations the identifier names; and
+ * - the resource server declares the operations the identifier names, and
+ *   they declare at least one argument (D932 ruling 2: -02 reads an empty
+ *   argument map as admitting any argument, so `{}` never stands for "no
+ *   arguments"); and
  * - for every one of them it establishes each fact the entry's
  *   `constraints` restrict.
  */
@@ -142,6 +145,8 @@ function ceilingTools(
       if (toolId === undefined) continue;
       const ops = operations(entry.resource, action);
       if (ops === undefined || ops.length === 0) continue;
+      const args = argumentMap(ops);
+      if (Object.keys(args).length === 0) continue;
       if (!ops.every((op) => keys.every((k) => op.establishes.includes(k)))) continue;
       const value: MissionToolConstraints = {
         constraints: structuredClone((entry.constraints ?? {}) as Record<string, unknown>),
@@ -151,7 +156,7 @@ function ceilingTools(
       };
       const known = out.get(toolId);
       if (known === undefined) {
-        out.set(toolId, { args: argumentMap(ops), values: [value] });
+        out.set(toolId, { args, values: [value] });
       } else if (!known.values.some((v) => canonicalize(v as unknown as JsonValue) === canonicalize(value as unknown as JsonValue))) {
         known.values.push(value);
       }
