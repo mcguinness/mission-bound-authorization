@@ -8422,9 +8422,9 @@
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
-   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it is never inferred from the token `sub`.",
+   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it MUST NOT be inferred from the token `sub`.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -8451,7 +8451,8 @@
      "level": "cross-component",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K2): the sentence carries its MUST NOT, an obligation it already stated, in the passive voice it had; coverage unchanged."
   },
   {
    "id": "core.authority-sources.subject-discipline",

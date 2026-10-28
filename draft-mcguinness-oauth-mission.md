@@ -2241,7 +2241,7 @@ it before approval ({{direct-approval-steps}},
 The subject-representation discipline is the same in every source:
 
 - The accountable principal is the record's
-  `approval_basis.consent_principal` in every source; it is never
+  `approval_basis.consent_principal` in every source; it MUST NOT be
   inferred from the token `sub`.
 - `sub` carries a delegating person only in the user-delegated
   source. A service-owned or organizational Mission MUST record the
