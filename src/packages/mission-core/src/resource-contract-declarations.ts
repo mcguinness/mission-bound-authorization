@@ -41,7 +41,7 @@
  * member.
  */
 
-import { resourceWithin } from "./authority-subset.js";
+import { ACTION_VALUE, resourceWithin } from "./authority-subset.js";
 import type { JsonValue } from "./canonicalize.js";
 import {
   entryMatchesTarget,
@@ -86,7 +86,11 @@ export interface ResourceContractDeclaration {
   readonly resource_match?: "exact" | "prefix";
   /** The contract's `id`: the absolute URI naming it across its versions. */
   readonly id: string;
-  /** The operations (action identifiers) for which the resource requires a reference. */
+  /**
+   * The operations (action identifiers) for which the resource requires a
+   * reference: each one a current or superseded version defines, never an
+   * action family.
+   */
   readonly requires_reference: readonly string[];
   readonly versions: readonly DeclaredContractVersion[];
 }
@@ -294,6 +298,37 @@ function parseDeclaration(raw: unknown, path: string): ResourceContractDeclarati
       "declares more than one current version",
     );
   }
+  // @spec runtime#resource-contract (#1752, D875): "the operations that
+  // require a reference" are operations the resource serves. Each value is an
+  // action identifier, never an action family, which no reader expands; and
+  // some current or superseded version defines it, so a misspelled action is
+  // refused here rather than silently requiring nothing. A retired version's
+  // operations do not count, and a newer version's operation may be required
+  // though an older supported version lacks it.
+  const served = new Set(
+    versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations),
+  );
+  requires_reference.forEach((action, i) => {
+    const at = `${path}.requires_reference[${i}]`;
+    if (action.endsWith(".*")) {
+      throw new ResourceContractConfigError(
+        at,
+        `${JSON.stringify(action)} is an action family; name each action it covers`,
+      );
+    }
+    if (!ACTION_VALUE.test(action)) {
+      throw new ResourceContractConfigError(
+        at,
+        `${JSON.stringify(action)} is not an action identifier`,
+      );
+    }
+    if (!served.has(action)) {
+      throw new ResourceContractConfigError(
+        at,
+        `${JSON.stringify(action)} is not an operation any current or superseded version defines`,
+      );
+    }
+  });
   return {
     resource,
     ...(d.resource_match === "prefix" ? { resource_match: "prefix" as const } : {}),

@@ -31219,9 +31219,27 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > refuses at load a required operation that is an action family, outside the action grammar, or defined by no current or superseded version",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness. #1752 (D875): the operations requiring a reference are operations the resource serves. The loader refuses, naming the value, an action family, a value outside the action grammar, and an action no current or superseded version defines, even where a document names the value as an operation's action; a retired version's operations do not count, and a newer version's operation may be required though an older supported version lacks it (2026-10-20 lacks payments:payment.reverse). The shipped declaration loads, as does the same declaration requiring the current contract's five non-read actions. Proved by mutation, each alone (5 of 5): removing the family, grammar or served-operation check, counting a retired version's operations, or counting only the current version's, fails a witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
