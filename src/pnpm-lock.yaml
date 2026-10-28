@@ -259,6 +259,9 @@ importers:
       '@mission/aauth-wire':
         specifier: workspace:*
         version: link:../../packages/aauth-wire
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
       structured-headers:
         specifier: ^2.1.0
         version: 2.1.0
