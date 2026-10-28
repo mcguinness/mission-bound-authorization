@@ -706,6 +706,22 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
     );
   });
 
+  // The budget members the Template's exception and Metering's
+  // standing-consent budget name beside the limit. Each witness pins the
+  // member-set message: the later non-empty, currency and decimal checks also
+  // refuse an omission, so only the message shows which check refused it.
+  for (const member of ["owner", "id", "currency", "per_instance_max"] as const) {
+    it(`refuses to start with a Dispatch Policy whose budget omits its ${member} (#813)`, async () => {
+      const t = terms(`ap-no-${member}`);
+      const { [member]: _omitted, ...budget } = t.budget;
+      const built = startup(`sp-no-${member}`, { ...t, budget });
+      await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built).rejects.toThrow(
+        `Dispatch Policy sp-no-${member}: standing_payment: budget is not {owner, id, currency, limit, per_instance_max}`,
+      );
+    });
+  }
+
   it("classifies the designated payment under the shipped mapping as irreversible and no other prohibited class, and refuses to start where the mapping covers it but not as irreversible (#813)", async () => {
     const entry = {
       type: "mission_resource_access" as const,
