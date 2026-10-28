@@ -121,6 +121,7 @@ async function expectRevokedAtResource(agent: AgentClient, token: string, requir
 /** A control-plane refusal: exactly `status` and `error`, and no lifecycle member. */
 function expectControlRefused(r: ManagementResult, status: number, error: string): void {
   expect(r.status, r.text).toBe(status);
+  expect(r.headers["cache-control"]).toBe("no-store");
   expect(r.body).toMatchObject({ error });
   expect(r.body).not.toHaveProperty("mission_status");
   expect(r.body).not.toHaveProperty("terminated_at");
@@ -223,6 +224,9 @@ describe("termination through the control plane, with revocation at the Resource
     const status = await owner.status(s256);
     const at = w.seconds();
     expect(status.status).toBe(200);
+    // No shared cache may keep a status or terminate response.
+    expect(status.headers["cache-control"]).toBe("no-store");
+    expect(ended.headers["cache-control"]).toBe("no-store");
     expect(status.body).toEqual({
       mission_s256: s256,
       mission_status: "terminated",
@@ -624,6 +628,7 @@ describe("P2 at mission_control_endpoint: an unauthorized caller learns nothing 
   async function expectAlike(probe: (s256: string) => Promise<ManagementResult>, refs: string[]) {
     const absent = await probe(ABSENT);
     expect(absent.status).toBe(404);
+    expect(absent.headers["cache-control"]).toBe("no-store");
     expect(JSON.parse(absent.text)).toEqual({
       error: "mission_not_found",
       detail: "no such mission",
@@ -706,6 +711,7 @@ describe("authentication before anything else (@spec mission-aauth-management#au
     for (const res of answers) {
       expect(res.status).toBe(401);
       expect(res.headers["signature-error"]).toBeDefined();
+      expect(res.headers["cache-control"]).toBe("no-store");
       const body = res.json() as Record<string, unknown>;
       expect(body.error).not.toBe("mission_not_found");
       for (const member of ["mission_s256", "mission_status", "terminated_at", "token_residual"]) {
