@@ -147,6 +147,7 @@ export {
   type ReleasedReservation,
   type ReservationRecord,
   type ReservationState,
+  type SettlementConflict,
 } from "./idempotency-claims.js";
 export {
   BUDGET_METERING_EXTENSION,
