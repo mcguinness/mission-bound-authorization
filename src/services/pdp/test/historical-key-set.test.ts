@@ -286,3 +286,75 @@ describe("the historical key set through the configured issuer (@spec status#his
     }
   });
 });
+
+describe("the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931)", () => {
+  it("refetches the set once the lifetime it declares ends, learning a key a later set lists, and treats a set without explicit freshness as stale when received", async () => {
+    const status = await key("as-status-3");
+    const first = await key("as-status");
+    const second = await key("as-status-2");
+    const kids = ["as-status", "as-status-2", "as-status-3"];
+    let t = 0;
+    const state: { published: Record<string, unknown>[]; historical: string | Error | undefined } = {
+      published: [status.jwk, first.jwk, second.jwk],
+      historical: await status.signSet([revoked(first.jwk)]),
+    };
+    const { fetch } = issuer(state);
+    const held = refreshingStatusKeys(JWKS, kids, { algs: ["ES256"], fetch, now: () => t, historical: { uri: HISTORICAL, issuer: ISSUER } });
+    await expect(jwtVerify(await first.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+    // The AS lists the second key too. Within the 300 s its set declares, the consumer has not refetched it.
+    state.historical = await status.signSet([revoked(first.jwk), revoked(second.jwk)]);
+    t += 299_999;
+    await jwtVerify(await second.sign(), held.keys);
+    // Once that lifetime ends, it refetches and learns the second key.
+    t += 1;
+    await expect(jwtVerify(await second.sign(), held.keys)).rejects.toThrow(/withdrawn as compromised/);
+
+    // A set served without explicit freshness is stale when received: each use refetches it.
+    let setFetches = 0;
+    const set = await status.signSet([revoked(first.jwk)]);
+    const bare = refreshingStatusKeys(JWKS, kids, {
+      algs: ["ES256"],
+      now: () => 0,
+      fetch: async (url: string) => {
+        if (url === JWKS) {
+          return new Response(JSON.stringify({ keys: [status.jwk, first.jwk] }), { headers: { "cache-control": "max-age=300" } });
+        }
+        setFetches++;
+        return new Response(set, { headers: { "content-type": "application/jwk-set+jwt" } });
+      },
+      historical: { uri: HISTORICAL, issuer: ISSUER },
+    });
+    await expect(jwtVerify(await first.sign(), bare.keys)).rejects.toThrow(/withdrawn as compromised/);
+    await expect(jwtVerify(await first.sign(), bare.keys)).rejects.toThrow(/withdrawn as compromised/);
+    expect(setFetches).toBe(2);
+  });
+
+  it("never lets a held set extend the cached jwks_uri's freshness: a stale jwks_uri that cannot be revalidated refuses, though the set is fresh", async () => {
+    const status = await key("as-status-2");
+    const compromised = await key("as-status");
+    let t = 0;
+    let jwksDown = false;
+    const set = await status.signSet([revoked(compromised.jwk)]);
+    const held = refreshingStatusKeys(JWKS, ["as-status", "as-status-2"], {
+      algs: ["ES256"],
+      now: () => t,
+      fetch: async (url: string) => {
+        if (url === JWKS) {
+          if (jwksDown) throw new Error("connection refused");
+          return new Response(JSON.stringify({ keys: [status.jwk, compromised.jwk] }), { headers: { "cache-control": "max-age=60" } });
+        }
+        // The set declares an hour.
+        return new Response(set, { headers: { "content-type": "application/jwk-set+jwt", "cache-control": "max-age=3600" } });
+      },
+      historical: { uri: HISTORICAL, issuer: ISSUER },
+    });
+    await jwtVerify(await status.sign(), held.keys);
+    // The jwks_uri's 60 s pass and it cannot be revalidated; the set is still fresh.
+    jwksDown = true;
+    t += 60_000;
+    await expect(jwtVerify(await status.sign(), held.keys)).rejects.toMatchObject({ code: "unavailable" });
+    expect((await held.historical?.keys())?.map((k) => k.kid)).toEqual(["as-status"]);
+    // The listed key stays refused throughout.
+    await expect(jwtVerify(await compromised.sign(), held.keys)).rejects.toThrow();
+  });
+});

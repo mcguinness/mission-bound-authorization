@@ -438,12 +438,17 @@ export {
   mintChildOffline,
   deriveCrossOrgRoot,
   mintCrossOrgChild,
+  mapAuthorityToCeiling,
   mapAuthorityToTools,
   mapToolsToAuthority,
   AAT_TYP,
   MAX_ROOT_LIFETIME_S,
+  type AatToolMap,
+  type AttenuatedAuthority,
   type DeriveRootInput,
   type MintChildOptions,
+  type MintedRoot,
+  type RequestedAuthority,
   type CrossOrgRootInput,
 } from "./kernel/attenuation.js";
 export {

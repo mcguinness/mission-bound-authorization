@@ -7,7 +7,12 @@
  * root carries no resource member, so an `aud` naming the service never
  * widens the tool to the service: the
  * payments resource reads the tool's own target and matches the operation
- * target against it, under its live operation contract.
+ * target against it, under its live operation contract. On the -02 wire
+ * (#1756) the root maps the entry only to a tool whose operations the
+ * resource declares at that target: here, the invoice read under an
+ * invoice-level contract, whose target is the invoice. The consumer names
+ * the invoked tool by the operation's target, so the substrate itself
+ * refuses an invocation whose target is not the tool's.
  *
  * The credential bound refuses before any decision request, so the refusals
  * need no OpenFGA; the permitted case uses a stub FGA that always allows and
@@ -15,11 +20,11 @@
  */
 
 import { deriveAttenuationRoot, MissionKernel, validateMissionIntent } from "@mission/authorization-server";
+import { type AttenuationOperations, aatToolId } from "@mission/core";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
-import { calculateJwkThumbprint, exportJWK, generateKeyPair, SignJWT } from "jose";
-import { createHash } from "node:crypto";
+import { exportJWK, generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   type ActionMapping,
@@ -31,6 +36,7 @@ import {
   PAYMENTS_INVOICE_CONTRACT,
   PaymentsStore,
   Pep,
+  signAatPop,
   TOOL_ACTIONS,
   type TokenFacts,
 } from "../src/index.js";
@@ -39,24 +45,47 @@ const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POL
 const AS_ISS = "https://as.test";
 const READ_ACTION = "payments:invoice.read";
 const INV1 = `${CANONICAL_RESOURCE}/invoices/inv-1`;
+const INV2 = `${CANONICAL_RESOURCE}/invoices/inv-2`;
 const CEILING = [{ type: "mission_resource_access", resource: INV1, actions: [READ_ACTION] }] as const;
 
 let view: MissionView;
 let facts: TokenFacts;
 let tools: Record<string, unknown>;
+let root: string;
+let holderKeys: { privateKey: CryptoKey; publicKey: CryptoKey };
+let invoiceServer: McpPaymentsServer;
+let serviceServer: McpPaymentsServer;
 
 const loadView = (ref: { id: string; issuer: string }) =>
   ref.id === view.id && ref.issuer === view.issuer
     ? { view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } }
     : undefined;
 
-const ath = (token: string): string => createHash("sha256").update(token).digest("base64url");
+const INVOICE_PROFILE: Record<string, ActionMapping> = {
+  ...TOOL_ACTIONS,
+  get_invoice: { ...(TOOL_ACTIONS.get_invoice as ActionMapping), target: PAYMENTS_INVOICE_CONTRACT },
+};
+
+/**
+ * The invoice-level deployment's declaration: the invoice read at the one
+ * invoice's identifier, its target under the invoice contract.
+ */
+const INVOICE_OPERATIONS: AttenuationOperations = (resource, action) =>
+  resource === INV1 && action === READ_ACTION
+    ? [{ name: "get_invoice", arguments: { invoice_id: { required: true } }, establishes: ["vendors", "max_amount"] }]
+    : undefined;
+
+/** The presentation of the root by its holder for `get_invoice` on `invoiceId`, naming the tool `server` computes. */
+async function presentRoot(server: McpPaymentsServer, toolTarget: string, invoiceId: string): Promise<TokenFacts> {
+  const args = JSON.stringify({ invoice_id: invoiceId });
+  const pop = await signAatPop({ leaf: root, holderKey: holderKeys.privateKey, tool: aatToolId(toolTarget, READ_ACTION), argumentsJson: args });
+  return server.validateAatPresentation({ aat_chain: [root], aat_pop: pop }, "get_invoice", args);
+}
 
 beforeAll(async () => {
   const asKeys = await generateKeyPair("ES256", { extractable: true });
   const asPub = { ...(await exportJWK(asKeys.publicKey)), kid: "as-attenuation", alg: "ES256" };
-  const holderKeys = await generateKeyPair("ES256", { extractable: true });
-  const holderJkt = await calculateJwkThumbprint(await exportJWK(holderKeys.publicKey));
+  holderKeys = await generateKeyPair("ES256", { extractable: true });
   const policy = { policy_version: "attn-target-1", ceiling: CEILING };
   const kernel = new MissionKernel({
     issuer: AS_ISS,
@@ -91,31 +120,34 @@ beforeAll(async () => {
     missionId: mission.id,
     aud: [CANONICAL_RESOURCE, "https://ledger.example/mcp"],
     clientId: "ap-agent",
-    cnfJkt: holderJkt,
+    cnfJwk: await exportJWK(holderKeys.publicKey),
+    operations: INVOICE_OPERATIONS,
     delMaxDepth: 0,
   });
   tools = derived.tools;
-  const server = new McpPaymentsServer({
-    writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
-    pep: new Pep({
-      decide: EVIDENCE_KEYS.decide,
+  root = derived.root;
+  const serverUnder = (profile: Record<string, ActionMapping>) =>
+    new McpPaymentsServer({
+      writeReservations: openEphemeralWriteReservationStore({ owner: "mcp-payments-pep" }),
+      pep: new Pep({
+        decide: EVIDENCE_KEYS.decide,
+        payments: new PaymentsStore(),
+        evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
+        fga: {} as unknown as Fga,
+        modelId: "m",
+        loadView,
+        instanceEpoch: "epoch-attn-target",
+        operationProfile: () => profile,
+      }),
       payments: new PaymentsStore(),
-      evidence: new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver),
-      fga: {} as unknown as Fga,
-      modelId: "m",
       loadView,
-      instanceEpoch: "epoch-attn-target",
-    }),
-    payments: new PaymentsStore(),
-    loadView,
-    jwks: { keys: [asPub] },
-    keyRoles: { accessToken: [], attenuationRoot: ["as-attenuation"], transactionToken: [] },
-    issuer: AS_ISS,
-  });
-  const proof = await new SignJWT({ htu: CANONICAL_RESOURCE, htm: "POST", ath: ath(derived.root), iat: Math.floor(Date.now() / 1000), jti: crypto.randomUUID() })
-    .setProtectedHeader({ alg: "ES256", typ: "dpop+jwt", jwk: await exportJWK(holderKeys.publicKey) })
-    .sign(holderKeys.privateKey);
-  facts = await server.validateAttenuationChain([derived.root], proof, CANONICAL_RESOURCE, "POST");
+      jwks: { keys: [asPub] },
+      keyRoles: { accessToken: [], attenuationRoot: ["as-attenuation"], transactionToken: [] },
+      issuer: AS_ISS,
+    });
+  invoiceServer = serverUnder(INVOICE_PROFILE);
+  serviceServer = serverUnder(TOOL_ACTIONS);
+  facts = await presentRoot(invoiceServer, INV1, "inv-1");
 });
 
 /** A PEP over two Acme invoices, under `profile`, with a stub FGA that always allows. */
@@ -137,11 +169,6 @@ function pepUnder(profile: Record<string, ActionMapping>): Pep {
   });
 }
 
-const INVOICE_PROFILE: Record<string, ActionMapping> = {
-  ...TOOL_ACTIONS,
-  get_invoice: { ...(TOOL_ACTIONS.get_invoice as ActionMapping), target: PAYMENTS_INVOICE_CONTRACT },
-};
-
 describe("an attenuation root keeps a finer entry's target restriction at a coarser audience (@spec attenuation#root-mapping, #1276)", () => {
   it("the root's tool names the entry's invoice, and at the service audience it covers that invoice alone, never the service or another invoice", async () => {
     expect(Object.keys(tools)).toEqual([`${INV1}#${READ_ACTION}`]);
@@ -160,5 +187,10 @@ describe("an attenuation root keeps a finer entry's target restriction at a coar
     const servicePep = pepUnder(TOOL_ACTIONS);
     const service = await servicePep.enforce("get_invoice", { invoice_id: "inv-1" }, facts);
     expect(service).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
+    // The proof names the invoked tool by its target: a presentation for
+    // another invoice, or at the service-level contract, is refused by the
+    // substrate before any credential fact is derived.
+    await expect(presentRoot(invoiceServer, INV2, "inv-2")).rejects.toThrow(/step 6b: the leaf does not authorize the tool/);
+    await expect(presentRoot(serviceServer, CANONICAL_RESOURCE, "inv-1")).rejects.toThrow(/step 6b/);
   });
 });

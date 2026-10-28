@@ -8,7 +8,6 @@ import {
   CredentialAuthorityError,
   type CredentialTarget,
   credentialAuthorityPermits,
-  credentialEntriesFromAatTools,
   parseCredentialAuthority,
 } from "../src/index.js";
 
@@ -74,52 +73,6 @@ describe("parseCredentialAuthority: a credential's authority is read in full or 
     ["a malformed discharge condition", [entry({ constraints: { terminal_when: [{}] } })]],
   ])("refuses %s", (_label, value) => {
     expect(() => parseCredentialAuthority(value)).toThrow(CredentialAuthorityError);
-  });
-});
-
-describe("credentialEntriesFromAatTools: attenuation tools keep every restriction (#825)", () => {
-  it("maps a three-lower-case-letter amount suffix to the upper-case code, assigned or not (#1595, D727)", () => {
-    expect(
-      credentialEntriesFromAatTools({
-        [`${R}#payments:invoice.read`]: { amount_xyz: { constraint_type: "range", max: 5 } },
-      })[0]?.constraints,
-    ).toEqual({ max_amount: { amount: "5", currency: "XYZ" } });
-  });
-
-  it("maps each tool to one entry with its vendor and amount bounds", () => {
-    expect(
-      credentialEntriesFromAatTools({
-        [`${R}#payments:invoice.read`]: {
-          vendor: { constraint_type: "enum", values: ["acme"] },
-          amount_usd: { constraint_type: "range", max: 200 },
-        },
-      }),
-    ).toEqual([
-      {
-        type: "mission_resource_access",
-        resource: R,
-        actions: ["payments:invoice.read"],
-        constraints: { vendors: ["acme"], max_amount: { amount: "200", currency: "USD" } },
-      },
-    ]);
-  });
-
-  it.each([
-    ["a range lower bound", { amount_usd: { constraint_type: "range", max: 200, min: 10 } }],
-    ["an exact constraint", { amount_usd: { constraint_type: "exact", value: 5 } }],
-    ["an unknown argument", { region: { constraint_type: "enum", values: ["eu"] } }],
-    ["a vendor bound that is not an enum", { vendor: { constraint_type: "exact", value: "acme" } }],
-    // The argument name carries the code as three lower-case letters
-    // (#1595, D727); any other suffix is malformed, never folded.
-    ["an upper-case currency suffix", { amount_USD: { constraint_type: "range", max: 200 } }],
-    ["a two-letter currency suffix", { amount_us: { constraint_type: "range", max: 200 } }],
-    ["a four-letter currency suffix", { amount_usdx: { constraint_type: "range", max: 200 } }],
-    ["a numeric currency suffix", { amount_840: { constraint_type: "range", max: 200 } }],
-    ["an empty currency suffix", { amount_: { constraint_type: "range", max: 200 } }],
-  ])("refuses %s rather than dropping it", (_label, args) => {
-    expect(() =>
-      credentialEntriesFromAatTools({ [`${R}#payments:invoice.read`]: args as never }),
-    ).toThrow(CredentialAuthorityError);
   });
 });
 

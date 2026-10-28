@@ -301,20 +301,59 @@ export function noteCountedDerivation(ctx: unknown, missionId: string): void {
 }
 
 /**
- * @spec derivation-limits#counted-operations (#935, D772): settle the
+ * @spec derivation-limits#counted-operations (#935, D942): the FRESH derivation
+ * reservations a token request made and has not yet released, by request, for
+ * {@link settleCountedDerivations}.
+ */
+const reservationsMadeBy = new WeakMap<object, Array<{ reservationId: string; artifactId: string }>>();
+
+/**
+ * Record that the token request `ctx` made a fresh derivation reservation for
+ * `artifactId`, to be released as accepted when the request answers 200, or
+ * settled as not accepted when it fails in process before delivery (#935,
+ * D942). Only a fresh reservation is noted: a held or replayed one is
+ * released where it is used, since an earlier attempt may already have
+ * counted against it. Outside a request, the reservation is released at once.
+ */
+export function noteReservedDerivation(
+  kernel: MissionKernel,
+  ctx: unknown,
+  reservation: { reservationId: string; artifactId: string },
+): void {
+  if (!ctx || typeof ctx !== "object") {
+    kernel.releaseDerivation(reservation.reservationId, { artifactId: reservation.artifactId });
+    return;
+  }
+  const made = reservationsMadeBy.get(ctx);
+  if (made) made.push(reservation);
+  else reservationsMadeBy.set(ctx, [reservation]);
+}
+
+/**
+ * @spec derivation-limits#counted-operations (#935, D772, D942): settle the
  * derivations `ctx` counted: a response other than 200, or an exception that
  * escaped the request after its response was prepared (Koa then answers 500),
  * delivered no token, so each one failed in process before any artifact left
- * and is returned. A 200 that completed settles nothing, a 200 the release
- * fence then refuses included: that Mission has ended, and the fence refunds
- * nothing (D771).
+ * and is returned: a count taken without a reservation is refunded, and a
+ * fresh reservation is settled as not accepted, which returns its count once.
+ * A 200 that completed releases each fresh reservation as accepted and
+ * settles nothing else, a 200 the release fence then refuses included: that
+ * Mission has ended, and the fence refunds nothing (D771).
  */
 function settleCountedDerivations(kernel: MissionKernel, ctx: { status: number }, threw: boolean): void {
   const counted = derivationsCountedBy.get(ctx);
-  if (!counted) return;
+  const reserved = reservationsMadeBy.get(ctx);
+  if (!counted && !reserved) return;
   derivationsCountedBy.delete(ctx);
-  if (ctx.status === 200 && !threw) return;
-  for (const missionId of counted) kernel.refundDerivation(missionId);
+  reservationsMadeBy.delete(ctx);
+  if (ctx.status === 200 && !threw) {
+    for (const r of reserved ?? []) kernel.releaseDerivation(r.reservationId, { artifactId: r.artifactId });
+    return;
+  }
+  for (const missionId of counted ?? []) kernel.refundDerivation(missionId);
+  for (const r of reserved ?? []) {
+    kernel.reconcileDerivation(r.reservationId, { accepted: false, authority: IN_PROCESS_NON_ACCEPTANCE });
+  }
 }
 
 /** A request that reads no Mission state: discovery metadata or the key set (#250 step 3). */
@@ -461,6 +500,7 @@ import {
   ceilingAdjudicationLine,
   ceilingConsentOf,
   consentedCeilingEntries,
+  assembledCeilingOffer,
   consentsOffer,
   type ProgressiveDrawdownOptions,
 } from "../kernel/progressive.js";
@@ -475,7 +515,7 @@ import {
   standingConsentMaximumOf,
   SUBTREE_AGGREGATE_STATEMENT,
 } from "../kernel/standing-consent-limit.js";
-import { ID_JAG_TOKEN_TYPE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
+import { ID_JAG_TOKEN_TYPE, IN_PROCESS_NON_ACCEPTANCE, type DestinationClientRegistration } from "../kernel/cross-domain.js";
 import {
   authorizationDetailsTypesMetadata,
   malformedMatcherInRequest,
@@ -4671,10 +4711,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // that meets the floor over both: any other sees the page without it,
       // can consent no ceiling, and still approves the derived set it may. A
       // device approval offers none (#1256).
-      const deploymentOffer =
+      // @spec resource-access#resource-contract (#249, D875): its references
+      // assembled from configuration before the floor classifies it and the
+      // page renders it; an offer configuration cannot assemble is not offered.
+      const deploymentOffer = assembledCeilingOffer(
         !deviceJti && opts.progressive?.ceilingOffer
           ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-          : undefined;
+          : undefined,
+        kernel.resourceContracts(),
+      );
       let ceilingOffer: CeilingConsent | undefined;
       if (deploymentOffer) {
         let offered: AuthorityEntry[];
@@ -6825,7 +6870,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // enables it (adapters/capabilities.ts); the default enables all of them.
       // Not capability members: mission_attenuation_supported and
       // service_catalog_endpoint are never advertised (#897). The token
-      // endpoint parses no mission_attenuation_root, and no HTTP route serves
+      // endpoint takes no attenuation root request (an attenuating_agent_token
+      // authorization detail), and no HTTP route serves
       // the catalog, which is in-process (kernel/catalog.ts). Each member is
       // restored only alongside its working protocol surface and an
       // integration test that exercises that surface.
