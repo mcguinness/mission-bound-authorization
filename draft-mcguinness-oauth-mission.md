@@ -3066,7 +3066,10 @@ intact:
 ## Refresh Tokens {#refresh-tokens}
 
 Issuance on a refresh applies the checks of {{issuance-checks}} as
-that list states for a refresh.
+that list states for a refresh. {{authority-proposal}} states a
+refresh's exemption from `mission_intent` and, for a Mission-governed
+resource, the refusal's precedence and its timing relative to consuming
+or rotating the refresh token.
 
 A Mission-bound refresh token is bound to the client it was issued
 to. For a confidential client, client authentication supplies the
