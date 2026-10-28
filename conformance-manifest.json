@@ -5544,9 +5544,21 @@
      "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses to reopen an ordinary file-backed store under another issuer, and its owner reopens it with its Mission intact",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses a witnessed store under another issuer without advancing its witness, and releases the witness's lock so its owner reopens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
+   "notes": "One issuer owns each kernel database: its first open records the issuer, an open under another issuer is refused (ordinary or witnessed, releasing the witness's lock, #1748), and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The namespace inventory in src/docs/control-plane-deployment.md names every mutable seam in the reference with its key and its witness or declared separation (#1748); the PDP's claim scope and Mission budget counters, the PEP's actor-depth records and kernel Mission loader, and the RAS's redemptions have their two-issuer witnesses named there, not cited on this AS row. Partial: two separations are declared, not enforced: one AS per process (oidc-provider's memory adapter and the device decisions in progress are process-global), and one Mission issuer per PEP composition (its operation keys and Execution Evidence sequences key on the bare Mission identifier)."
   },
   {
    "id": "control-plane.consistency.fanout",
