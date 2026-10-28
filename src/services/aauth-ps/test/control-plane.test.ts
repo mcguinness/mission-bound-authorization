@@ -158,6 +158,23 @@ describe("control plane: status", () => {
     });
   });
 
+  it("attributes an expiry an issuance endpoint finds to the PS scheduler as well", async () => {
+    const expiresAt = w.clock.s + 100;
+    const { s256 } = await mission(assistant, {
+      description: "Summarize",
+      expires_at: rfc3339(expiresAt),
+    });
+    w.clock.advance(200);
+    const r = await requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
+    expect([r.status, r.body.termination_reason]).toEqual([403, "expired"]);
+    expect(w.durable.missionLog(s256).find((e) => e.event === "terminated")).toEqual({
+      s256,
+      at: expiresAt,
+      event: "terminated",
+      detail: { reason: "expired", actor: SCHEDULER, decision: "permit", policy: "expires_at" },
+    });
+  });
+
   it("answers an administrator for a mission of a person it governs, and logs it as such", async () => {
     const { s256 } = await mission(assistant);
     const r = await control(w, w.admins.alice, s256, { action: "status" });
@@ -238,6 +255,20 @@ describe("control plane: an absent mission and an unauthorized one are answered 
     );
   });
 
+  it("admits no agent the allowlist has dropped, even for a mission it owns", async () => {
+    const { s256 } = await mission(assistant);
+    await w.restart({
+      config: (doc) => {
+        doc.agents = (doc.agents as { agent: string }[]).filter((a) => a.agent !== ASSISTANT);
+      },
+    });
+    const baseline = observable(await control(w, assistant, absent, { action: "status" }));
+    expect(baseline.status).toBe(404);
+    expect(observable(await control(w, assistant, s256, { action: "status" }))).toEqual(baseline);
+    expect(observable(await control(w, assistant, s256, terminateBody()))).toEqual(baseline);
+    expect(w.durable.findOwnedMission(ASSISTANT, s256)?.state).toBe("active");
+  });
+
   it("checks the request before any lookup, so a bad request says nothing about the mission", async () => {
     const theirs = await mission(planner);
     const baseline = observable(
@@ -293,10 +324,27 @@ describe("control plane: request checks", () => {
   it("refuses a missing or unrecognized action, including one it does not advertise", async () => {
     const { s256 } = await mission(assistant);
     const before = snapshot(s256);
-    for (const body of [{}, { action: "delegation_tree" }, { action: "pause" }, { action: 7 }]) {
-      refusedWith(await control(w, assistant, s256, body), 400, "invalid_request");
+    const missing = await control(w, assistant, s256, {});
+    refusedWith(missing, 400, "invalid_request");
+    expect(missing.body.detail).toBe("action is required");
+    for (const body of [{ action: "delegation_tree" }, { action: "pause" }, { action: 7 }]) {
+      const r = await control(w, assistant, s256, body);
+      refusedWith(r, 400, "invalid_request");
+      expect(r.body.detail).toBe("action is not recognized");
     }
     expect(snapshot(s256)).toEqual(before);
+  });
+
+  it("refuses a body nested beyond its limit rather than scanning it", async () => {
+    const { s256 } = await mission(assistant);
+    const deep = `${"[".repeat(40)}${"]".repeat(40)}`;
+    const r = await rawControl(assistant, s256, `{"action":"status","x":${deep}}`);
+    refusedWith(r, 400, "invalid_request");
+    expect(r.body.detail).toMatch(/too deep/);
+    const shallow = `${"[".repeat(20)}${"]".repeat(20)}`;
+    expect((await rawControl(assistant, s256, `{"action":"status","x":${shallow}}`)).status).toBe(
+      200,
+    );
   });
 
   it("refuses a body that carries mission_s256, even naming the path's own mission", async () => {

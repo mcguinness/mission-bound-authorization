@@ -356,6 +356,25 @@ describe("revocation after termination", () => {
     });
   });
 
+  it("trusts no metadata document whose issuer is not the Resource, and no endpoint but https", async () => {
+    w.rs.metadata.issuer = "https://elsewhere.test";
+    const first = await approve(w, assistant, { description: "Summarize", resources: [RS] });
+    await control(w, assistant, first.s256, terminateBody());
+    expect(w.durable.revocations(first.s256)[0]).toMatchObject({
+      state: "pending",
+      lastOutcome: "revocation_unavailable",
+    });
+    w.rs.metadata.issuer = RS;
+    w.rs.metadata.revocation_endpoint = `http://rs.test${REVOKE_PATH}`;
+    const second = await approve(w, assistant, { description: "Draft", resources: [RS] });
+    await control(w, assistant, second.s256, terminateBody());
+    expect(w.durable.revocations(second.s256)[0]).toMatchObject({
+      state: "unsupported",
+      lastOutcome: "no_revocation_endpoint",
+    });
+    expect(w.rs.requests).toBe(0);
+  });
+
   it("confirms on a 200 with an empty body or a JSON object, and on nothing else", async () => {
     const outcomes: Record<string, string | undefined> = {};
     for (const mode of ["ok", "ok-json", "garbage", "deferred", "reset"] as const) {

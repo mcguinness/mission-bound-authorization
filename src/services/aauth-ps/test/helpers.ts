@@ -715,9 +715,13 @@ export interface World {
   psMint(typ: AAuthTokenType, claims: Record<string, unknown>): Promise<string>;
   /**
    * Stop the PS, close its store, and start another PS on the same file
-   * with the same configuration and signing key: a restart.
+   * with the same signing key: a restart. `config` adjusts the document
+   * the world started with, for a restart that changes deployment policy.
    */
-  restart(options?: { pollIntervalMs?: number }): Promise<void>;
+  restart(options?: {
+    pollIntervalMs?: number;
+    config?: (doc: Record<string, unknown>) => void;
+  }): Promise<void>;
   close(): Promise<void>;
 }
 
@@ -737,14 +741,20 @@ export async function world(options: WorldOptions = {}): Promise<World> {
   const doc = shippedConfig();
   testManagement(doc, admins);
   options.config?.(doc);
-  const config = parsePsConfig(doc);
   const dir = mkdtempSync(join(tmpdir(), "aauth-ps-"));
   const file = join(dir, "ps.db");
   const managed = options.management ?? true;
-  const boot = (durable: SqlitePsStore, signingKey?: SigningKey, pollIntervalMs = 0) => {
+  const boot = (
+    durable: SqlitePsStore,
+    signingKey?: SigningKey,
+    pollIntervalMs = 0,
+    adjust?: (doc: Record<string, unknown>) => void,
+  ) => {
     const faults = new FaultyStore(durable);
+    const current = structuredClone(doc);
+    adjust?.(current);
     const ps = createPersonServer({
-      config,
+      config: parsePsConfig(current),
       store: faults,
       resolver: net.resolver(clock),
       now: clock.now,
@@ -790,7 +800,12 @@ export async function world(options: WorldOptions = {}): Promise<World> {
       await running.close();
       w.durable.close();
       w.durable = new SqlitePsStore(file);
-      const next = boot(w.durable, w.ps.signingKey, restartOptions.pollIntervalMs ?? 0);
+      const next = boot(
+        w.durable,
+        w.ps.signingKey,
+        restartOptions.pollIntervalMs ?? 0,
+        restartOptions.config,
+      );
       w.ps = next.ps;
       w.faults = next.faults;
       running = await w.ps.listen();
