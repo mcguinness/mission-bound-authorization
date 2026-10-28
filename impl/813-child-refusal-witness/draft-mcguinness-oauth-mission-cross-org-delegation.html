@@ -1362,11 +1362,13 @@ verified per-hop subset relations provide that proof.<a href="#section-3-1" clas
 Presentation</strong>:<a href="#section-3.1-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-3.1-2">
           <dt id="section-3.1-2.1">
-<code>chain</code>:</dt>
+<code>aat_chain</code>:</dt>
           <dd style="margin-left: 1.5em" id="section-3.1-2.2">
             <p id="section-3.1-2.2.1"><span class="bcp14">REQUIRED</span>. An array of compact-serialization JWS strings
 (<span>[<a href="#RFC7515" class="cite xref">RFC7515</a>]</span>), the root first and the leaf last; each element is
-one hop token.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
+one hop token.  It is the substrate's presentation member of that
+name
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-7.4" class="relref">Section 7.4</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>).<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-3.1-2.3">
@@ -1374,7 +1376,7 @@ one hop token.<a href="#section-3.1-2.2.1" class="pilcrow">¶</a></p>
           <dd style="margin-left: 1.5em" id="section-3.1-2.4">
             <p id="section-3.1-2.4.1"><span class="bcp14">OPTIONAL</span>. An array of objects aligning actor-binding credentials to
 named hops (<a href="#actor-evidence" class="auto internal xref">Section 3.4</a>), each with <code>hop</code> (<span class="bcp14">REQUIRED</span>, the
-0-based index into <code>chain</code>), <code>type</code> (<span class="bcp14">REQUIRED</span>, a registered
+0-based index into <code>aat_chain</code>), <code>type</code> (<span class="bcp14">REQUIRED</span>, a registered
 actor-credential type identifier), and <code>credential</code> (<span class="bcp14">REQUIRED</span>, the
 credential in the serialization its type defines).<a href="#section-3.1-2.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1387,20 +1389,25 @@ without padding, carried as the <code>subject_token</code> of the projection
 exchange (<a href="#projection-exchange" class="auto internal xref">Section 8.1</a>) with <code>subject_token_type</code>
           <code>urn:ietf:params:oauth:token-type:mission-delegation-chain</code>; for
 retention and evidence its media type is
-<code>application/mission-delegation-chain+json</code> (<a href="#iana" class="auto internal xref">Section 16</a>).  Direct
-presentation of a Chain to a resource server is not defined in this
-version: a chain-verifying resource server obtains the Presentation
-through a deployment-defined channel and applies <a href="#verification" class="auto internal xref">Section 7</a>
-unchanged.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
-<p id="section-3.1-4">A verifier <span class="bcp14">MUST</span> declare maximum hop count, maximum Presentation size,
-and a verification-cost ceiling, and <span class="bcp14">MUST</span> refuse a Presentation
-exceeding any of them before verifying any signature.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
-<p id="section-3.1-5">The <strong>chain digest</strong> is the family anchor idiom
+<code>application/mission-delegation-chain+json</code> (<a href="#iana" class="auto internal xref">Section 16</a>).<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<p id="section-3.1-4">At direct invocation, the holder presents the Chain to a
+chain-verifying resource server in the substrate's presentation
+object
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-7.4" class="relref">Section 7.4</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>):
+<code>aat_chain</code>, the invocation's <code>aat_pop</code>, and <code>actor_credentials</code> as
+defined above.  That object is not closed: a chain-verifying resource
+server recognizes <code>actor_credentials</code> and validates it
+(<a href="#actor-identity" class="auto internal xref">Section 3.3</a>), and ignores other members it does not
+recognize, as the substrate specifies.<a href="#section-3.1-4" class="pilcrow">¶</a></p>
+<p id="section-3.1-5">A verifier <span class="bcp14">MUST</span> declare maximum hop count, maximum presentation size,
+and a verification-cost ceiling, and <span class="bcp14">MUST</span> refuse a presentation
+exceeding any of them before verifying any signature.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+<p id="section-3.1-6">The <strong>chain digest</strong> is the family anchor idiom
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) with typ
 <code>mission-delegation-chain</code> computed over the JCS canonical bytes of
-the <code>chain</code> array exactly as presented, an ordered JSON array of
+the <code>aat_chain</code> array exactly as presented, an ordered JSON array of
 compact-JWS strings.  It commits to the complete ordered chain and to
-nothing else.<a href="#section-3.1-5" class="pilcrow">¶</a></p>
+nothing else.<a href="#section-3.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="hop-members">
@@ -1481,7 +1488,8 @@ mapping and its version in the issuance derivation record.<a href="#section-3.3-
 <p id="section-3.3-2">A parent signature on a later hop proves only that the parent
 delegated to the child key; it does not authenticate the identity
 values the parent asserts.  A hop carrying <code>act</code> <span class="bcp14">MUST</span> have exactly
-one aligned entry in the Presentation's <code>actor_credentials</code>, and its
+one aligned entry in the <code>actor_credentials</code> presented with the
+Chain, at the projection exchange or at direct invocation, and its
 credential <span class="bcp14">MUST</span> validate under <a href="#actor-evidence" class="auto internal xref">Section 3.4</a>; a Chain naming an
 actor on a hop with a missing, misaligned, or invalid credential <span class="bcp14">MUST</span>
 be refused.  A hop without <code>act</code> is key-only: its holder is
@@ -1602,8 +1610,9 @@ specifies, with these profile rules:<a href="#section-5-1" class="pilcrow">¶</a
 </li>
         <li id="section-5-2.3">
           <p id="section-5-2.3.1">narrow or preserve the mapped capability entry under the
-attenuation substrate's tool and constraint subset model; no other
-authorization-details entry is added;<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
+attenuation substrate's tool and constraint subset model, and its
+<code>mission_constraints</code> member under the attenuation profile's
+narrowing rule; no other authorization-details entry is added;<a href="#section-5-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-5-2.4">
           <p id="section-5-2.4.1">keep <code>aud</code> equal to or narrower than the parent's;<a href="#section-5-2.4.1" class="pilcrow">¶</a></p>
@@ -1627,8 +1636,8 @@ boundary, and preserve <code>del_max_depth</code>;<a href="#section-5-2.6.1" cla
 proof-of-possession key, carried as the child's public <code>cnf.jwk</code>.<a href="#section-5-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ol>
-<p id="section-5-3">The recipient proves possession of the leaf key at redemption or
-direct resource access.<a href="#section-5-3" class="pilcrow">¶</a></p>
+<p id="section-5-3">The recipient proves possession of the leaf key at the projection
+exchange or at direct invocation (<a href="#verification" class="auto internal xref">Section 7</a>, step 8).<a href="#section-5-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="trust-model">
@@ -1695,9 +1704,12 @@ Mission-Issuer equality, the issuer-asserted root <code>act</code>, and the
 <code>mission</code> claim including <code>subject</code>;<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.3">
-          <p id="section-7-2.3.1">validate every <code>par_hash</code> link and every child signature through
-the leaf, verifying each child with the public key carried in its
-parent's <code>cnf.jwk</code>;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-7-2.3.1">verify the Chain under steps 1 to 5 of the substrate's chain
+verification algorithm
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>),
+which validate every <code>par_hash</code> link and every child signature
+through the leaf, verifying each child with the public key carried
+in its parent's <code>cnf.jwk</code>;<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.4">
           <p id="section-7-2.4.1">verify the <code>mission</code> invariants unchanged across all hops: value
@@ -1707,9 +1719,13 @@ equality of <code>id</code>, <code>issuer</code>, <code>authority_hash</code>, a
           <p id="section-7-2.5.1">verify monotonic <code>del_depth</code>, the preserved <code>del_max_depth</code>,
 nested <code>aud</code> and <code>exp</code>, and the mapped capability entry's subset
 relation at every hop under the attenuation substrate's tool and
-constraint model; an authorization-details entry of an unknown or
-unmapped type <span class="bcp14">MUST NOT</span> be treated as conferred authority, and its
-presence beyond the mapped entry refuses the Chain;<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
+constraint model, including the narrowing of its
+<code>mission_constraints</code> member
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>, Section
+"Mission Constraints Member"); an authorization-details entry of an
+unknown or unmapped type <span class="bcp14">MUST NOT</span> be treated as conferred
+authority, and its presence beyond the mapped entry refuses the
+Chain;<a href="#section-7-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.6">
           <p id="section-7-2.6.1">classify each hop as named (<code>act</code> present with its aligned
@@ -1723,7 +1739,12 @@ named actor and the hop is key-only;<a href="#section-7-2.6.1" class="pilcrow">�
 artifacts, rejecting conflicting or duplicated representations;<a href="#section-7-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.8">
-          <p id="section-7-2.8.1">verify the leaf presenter's proof of possession; identity
+          <p id="section-7-2.8.1">verify the leaf presenter's proof of possession of the leaf
+<code>cnf.jwk</code> key: at direct invocation, under steps 6 and 7 of the
+substrate's algorithm, which bind the proof to the invoked tool
+and its arguments; at the projection exchange, which invokes no
+tool, through the token request's proof (<a href="#projection-exchange" class="auto internal xref">Section 8.1</a>)
+in place of the substrate's proof-of-possession JWT; identity
 verification never substitutes for the authority-chain checks;<a href="#section-7-2.8.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-7-2.9">
@@ -1758,24 +1779,31 @@ Chain, it <span class="bcp14">MUST</span>:<a href="#section-8-1" class="pilcrow"
           <p id="section-8-2.1.1">carry only the locally permitted subset;<a href="#section-8-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.2">
-          <p id="section-8-2.2.1">preserve the <code>mission</code> claim invariants, including <code>subject</code>;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.2.1">preserve the restrictions of both layers of the leaf's capability
+entry: each local entry carries the <code>constraints</code> and
+<code>resource_contract</code> of its tool's <code>mission_constraints</code> value, and
+a restriction of either layer that the local token cannot
+represent, or its consumer cannot enforce, refuses the exchange;<a href="#section-8-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.3">
-          <p id="section-8-2.3.1">restart the local <code>act</code> chain at the local delegate (the
-cross-domain rule;
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>);<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.3.1">preserve the <code>mission</code> claim invariants, including <code>subject</code>;<a href="#section-8-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.4">
-          <p id="section-8-2.4.1">bind the token to the local presenter;<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.4.1">restart the local <code>act</code> chain at the local delegate (the
+cross-domain rule;
+<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>);<a href="#section-8-2.4.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.5">
-          <p id="section-8-2.5.1">cap its expiry by the leaf and local policy; and<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
+          <p id="section-8-2.5.1">bind the token to the local presenter;<a href="#section-8-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-8-2.6">
-          <p id="section-8-2.6.1">record in derivation evidence: the Chain digest, the leaf <code>jti</code>,
+          <p id="section-8-2.6.1">cap its expiry by the leaf and local policy; and<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-8-2.7">
+          <p id="section-8-2.7.1">record in derivation evidence: the Chain digest, the leaf <code>jti</code>,
 the input and output authority, the reconstructed actor lineage,
 the policy version, and the <code>principal_mapping</code> object
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-2.6.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-mission-runtime-evidence" class="cite xref">I-D.draft-mcguinness-mission-runtime-evidence</a>]</span>).<a href="#section-8-2.7.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="section-8-3">A local access token is not a new portable delegation root.
@@ -1807,21 +1835,31 @@ endpoint as an <span>[<a href="#RFC8693" class="cite xref">RFC8693</a>]</span> t
 </li>
           <li class="normal" id="section-8.1-2.5">
             <p id="section-8.1-2.5.1"><code>resource</code> or <code>audience</code>: the requested local audience, within the
+<code>aud</code> of every hop, as the substrate requires of an enforcement
+point at direct invocation
+(<span><a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02#section-8" class="relref">Section 8</a> of [<a href="#I-D.draft-niyikiza-oauth-attenuating-agent-tokens" class="cite xref">I-D.draft-niyikiza-oauth-attenuating-agent-tokens</a>]</span>,
+step 6c); with the nesting of <a href="#verification" class="auto internal xref">Section 7</a> step 5, this is the
 leaf's <code>aud</code>;<a href="#section-8.1-2.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.1-2.6">
             <p id="section-8.1-2.6.1">client authentication as the Resource AS's policy requires; and<a href="#section-8.1-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-8.1-2.7">
-            <p id="section-8.1-2.7.1">proof of possession of the leaf <code>cnf.jwk</code> key on the request (DPoP
-or mTLS), the same mechanism the issued local token is bound to.<a href="#section-8.1-2.7.1" class="pilcrow">¶</a></p>
+            <p id="section-8.1-2.7.1">proof of possession of exactly the leaf <code>cnf.jwk</code> key on the
+request, by DPoP (<span>[<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>) or mutual TLS (<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>), the same
+mechanism the issued local token is bound to.  A DPoP proof passes
+the checks of <span><a href="https://rfc-editor.org/rfc/rfc9449#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>, including its method, URI,
+and creation-time window, and its <code>jti</code> is accepted once within
+that window (<span><a href="https://rfc-editor.org/rfc/rfc9449#section-11.1" class="relref">Section 11.1</a> of [<a href="#RFC9449" class="cite xref">RFC9449</a>]</span>).<a href="#section-8.1-2.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-8.1-3">A Presentation that is malformed, carries an unknown top-level
 member, or exceeds a declared bound refuses with <code>invalid_request</code>; a
 Chain failing any step of <a href="#verification" class="auto internal xref">Section 7</a> refuses with
 <code>invalid_grant</code>, disclosing no partial verification detail; a
-requested audience outside the leaf's <code>aud</code> refuses with
+requested audience outside a hop's <code>aud</code>, or a restriction of either
+layer of the leaf's capability entry that the local token cannot
+represent or its consumer cannot enforce, refuses with
 <code>invalid_target</code>.  On success the Resource AS mints the
 audience-local token per the rules above.<a href="#section-8.1-3" class="pilcrow">¶</a></p>
 </section>
@@ -1850,7 +1888,8 @@ local token derives from a Chain the Resource AS verified
           <p id="section-9-2.2.1"><strong>Authority bound.</strong> The root's mapped entry lies within the
 Mission Authority Set (<a href="#root-issuance" class="auto internal xref">Section 4</a>); each hop is a subset of
 its parent under the attenuation substrate's tool and constraint
-model (<a href="#derivation" class="auto internal xref">Section 5</a>); the local token carries only the locally
+model and the attenuation profile's <code>mission_constraints</code> rule
+(<a href="#derivation" class="auto internal xref">Section 5</a>); the local token carries only the locally
 permitted subset of the verified leaf (<a href="#projection" class="auto internal xref">Section 8</a>).<a href="#section-9-2.2.1" class="pilcrow">¶</a></p>
 </li>
         <li id="section-9-2.3">
@@ -1950,7 +1989,11 @@ size; a chain whose hops carry thumbprint-only confirmations; a named
 hop whose credential subject differs from its <code>act</code>, whose bound key
 differs from the hop <code>cnf.jwk</code>, or whose credential issuer is
 untrusted, expired, or revoked; an unmapped authorization-details
-entry beyond the mapped capability entry; and valid delegated
+entry beyond the mapped capability entry; a <code>mission_constraints</code>
+member missing, widened, or carrying an unknown key at either hop; a
+direct invocation whose proof names another tool, and a replayed
+exchange proof; a leaf restriction of either layer the local token
+cannot represent or its consumer cannot enforce; and valid delegated
 authority denied by local entitlement or local policy.<a href="#section-12-3" class="pilcrow">¶</a></p>
 </section>
 </div>
@@ -1964,7 +2007,8 @@ the canonical actor <code>{"iss": "https://id.org1.example", "sub":
 "wl-agent-a"}</code>, records the mapping and version, and mints the root:
 <code>typ</code> per the substrate, <code>iss</code> the Mission Issuer, <code>aud</code>
         <code>["https://api.org3.example"]</code>, <code>cnf.jwk</code> agent A's public key, the
-mapped capability entry, <code>del_depth</code> 0, <code>del_max_depth</code> 2, <code>act</code>
+mapped capability entry with its <code>mission_constraints</code> member,
+<code>del_depth</code> 0, <code>del_max_depth</code> 2, <code>act</code>
 naming agent A, and the <code>mission</code> claim with <code>id</code>, <code>issuer</code>,
 <code>authority_hash</code>, and <code>subject</code>.<a href="#section-13-1" class="pilcrow">¶</a></p>
 <p id="section-13-2">Agent A delegates to organization 2's agent B: it signs a child with
@@ -1978,7 +2022,7 @@ key-only: the second child carries no <code>act</code>.<a href="#section-13-2" c
 <pre>
 POST /token
 grant_type=urn:ietf:params:oauth:grant-type:token-exchange
-&amp;subject_token=&lt;base64url({"chain":[root,hop1,hop2],
+&amp;subject_token=&lt;base64url({"aat_chain":[root,hop1,hop2],
   "actor_credentials":[{"hop":1,"type":"wimse-wit",
   "credential":"..."}]})&gt;
 &amp;subject_token_type=
@@ -2161,7 +2205,7 @@ controller: IESG.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
 <dd class="break"></dd>
 <dt id="I-D.draft-niyikiza-oauth-attenuating-agent-tokens">[I-D.draft-niyikiza-oauth-attenuating-agent-tokens]</dt>
         <dd>
-<span class="refAuthor">Niyikiza, N. A.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01</span>, <time datetime="2026-06-15" class="refDate">15 June 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-01</a>&gt;</span>. </dd>
+<span class="refAuthor">Niyikiza, N. A.</span>, <span class="refTitle">"Attenuating Authorization Tokens for Agentic Delegation Chains"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-niyikiza-oauth-attenuating-agent-tokens-02</span>, <time datetime="2026-10-26" class="refDate">26 October 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02">https://datatracker.ietf.org/doc/html/draft-niyikiza-oauth-attenuating-agent-tokens-02</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC2119">[RFC2119]</dt>
         <dd>
@@ -2183,13 +2227,21 @@ controller: IESG.<a href="#section-16.2-1" class="pilcrow">¶</a></p>
         <dd>
 <span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Nadalin, A.</span>, <span class="refAuthor">Campbell, B., Ed.</span>, <span class="refAuthor">Bradley, J.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"OAuth 2.0 Token Exchange"</span>, <span class="seriesInfo">RFC 8693</span>, <span class="seriesInfo">DOI 10.17487/RFC8693</span>, <time datetime="2020-01" class="refDate">January 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8693">https://www.rfc-editor.org/rfc/rfc8693</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC8725">[RFC8725]</dt>
         <dd>
 <span class="refAuthor">Sheffer, Y.</span>, <span class="refAuthor">Hardt, D.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"JSON Web Token Best Current Practices"</span>, <span class="seriesInfo">BCP 225</span>, <span class="seriesInfo">RFC 8725</span>, <span class="seriesInfo">DOI 10.17487/RFC8725</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8725">https://www.rfc-editor.org/rfc/rfc8725</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC9396">[RFC9396]</dt>
-      <dd>
+        <dd>
 <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Richer, J.</span>, and <span class="refAuthor">B. Campbell</span>, <span class="refTitle">"OAuth 2.0 Rich Authorization Requests"</span>, <span class="seriesInfo">RFC 9396</span>, <span class="seriesInfo">DOI 10.17487/RFC9396</span>, <time datetime="2023-05" class="refDate">May 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9396">https://www.rfc-editor.org/rfc/rfc9396</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9449">[RFC9449]</dt>
+      <dd>
+<span class="refAuthor">Fett, D.</span>, <span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Lodderstedt, T.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">D. Waite</span>, <span class="refTitle">"OAuth 2.0 Demonstrating Proof of Possession (DPoP)"</span>, <span class="seriesInfo">RFC 9449</span>, <span class="seriesInfo">DOI 10.17487/RFC9449</span>, <time datetime="2023-09" class="refDate">September 2023</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9449">https://www.rfc-editor.org/rfc/rfc9449</a>&gt;</span>. </dd>
 <dd class="break"></dd>
 </dl>
 </section>
