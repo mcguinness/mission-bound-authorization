@@ -38,6 +38,7 @@ import {
   MissionExchangeError,
   MissionGrantError,
   newResourceServer,
+  noteReservedDerivation,
   resourceServerInfoFor,
   SCOPE_DECIDED_AT_SAVE,
   tokenEndpointGateRefusal,
@@ -324,12 +325,17 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
   // only after the grant is signed, under the grant's own jti, so an exchange
   // refused before admission counts nothing; at the limit the signed grant is
   // discarded and the refusal is invalid_grant with derivations_exhausted, while
-  // a lifecycle refusal stays invalid_request (D369). A release-fence refusal
-  // after admission keeps the count: a tracked #935 limitation, not compliance
-  // with the failed-derivations rule.
+  // a lifecycle refusal stays invalid_request (D369). The fresh reservation is
+  // settled with the response (#935, D942): released when the exchange
+  // answers 200, settled as not accepted when the request fails in process
+  // before the grant is delivered (a request-path drain that throws, for
+  // one). A release-fence refusal after a 200 keeps the count: its Mission
+  // has ended, and the fence refunds nothing (D771, D772).
   try {
     const admitted = kernel.reserveDerivation(active.id, { operationId: `dispatch-handoff-exchange:${jti}`, artifactId: jti });
-    kernel.releaseDerivation(admitted.reservation.reservation.reservationId, { artifactId: jti });
+    const reservationId = admitted.reservation.reservation.reservationId;
+    if (admitted.reservation.kind === "reserved") noteReservedDerivation(kernel, ctx, { reservationId, artifactId: jti });
+    else kernel.releaseDerivation(reservationId, { artifactId: jti });
   } catch (e) {
     if (!(e instanceof GateError)) throw e;
     throw tokenEndpointGateRefusal(e.reason, e.message, gateErrorToMissionError(e.reason, kernel.observedRecord(active.id)), true);
@@ -458,6 +464,7 @@ export async function handleDispatchHandoffRedemption(
   //    attempt replays that reservation and never counts twice.
   let oidcGrant: { destroy: () => Promise<void> } | undefined;
   let derivationReservation: string | undefined;
+  let freshReservation = false;
   let jwt: string;
   let at: InstanceType<Provider["AccessToken"]>;
   try {
@@ -476,6 +483,7 @@ export async function handleDispatchHandoffRedemption(
     kernel.missionBoundGrants.record({ grantId, missionId: record.id, kind: "dispatch-handoff" });
     const admitted = kernel.reserveDerivation(record.id, { operationId: `dispatch-handoff:${grant.jti}` });
     derivationReservation = admitted.reservation.reservation.reservationId;
+    freshReservation = admitted.reservation.kind === "reserved";
 
     const info = resourceServerInfoFor(handleAudience, opts.accessTokenTTL ?? 300);
     info.accessTokenTTL = Math.min(
@@ -507,7 +515,16 @@ export async function handleDispatchHandoffRedemption(
     }
     throw gateRefusal(opts, e, record.id);
   }
-  kernel.releaseDerivation(derivationReservation as string, { artifactId: at.jti });
+  // @spec derivation-limits#counted-operations (#935, D942): a fresh
+  // reservation is settled with the response, released on a 200 and settled
+  // as not accepted when the request fails in process before the token is
+  // delivered; the grant stays consumed either way. A held reservation that
+  // this retry replayed is released here: an earlier attempt counted it.
+  if (freshReservation) {
+    noteReservedDerivation(kernel, ctx, { reservationId: derivationReservation as string, artifactId: at.jti });
+  } else {
+    kernel.releaseDerivation(derivationReservation as string, { artifactId: at.jti });
+  }
   kernel.dispatchHandoffs.confirm(grant.jti);
 
   ctx.status = 200;

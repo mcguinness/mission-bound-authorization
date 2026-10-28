@@ -19,7 +19,7 @@ import {
   createTemplate,
   deriveAttenuationRoot,
   deriveCrossOrgRoot,
-  mapAuthorityToTools,
+  mapAuthorityToCeiling,
   dispatchFromTemplate,
   inheritCapabilitySources,
   IntentError,
@@ -34,6 +34,7 @@ import {
 } from "../src/index.js";
 import { trustedCapabilityResolver } from "../src/adapters/capability-resolver.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -364,15 +365,26 @@ describe("wire-bound attenuation over recorded authority", () => {
   it("permits both root paths without putting recorded bindings on the AAT tools wire shape", async () => {
     const record = approve([resolution(READ_ACTION, "get_invoice")]);
     const { privateKey } = await generateKeyPair("ES256");
-    const requestedTools = mapAuthorityToTools(record.authority_set);
-    const common = { missionId: record.id, aud: RESOURCE, clientId: "ap-agent", cnfJkt: "test-key", requestedTools };
-    const root = await deriveAttenuationRoot(kernel, privateKey, "root", common);
-    expect(root.tools).toEqual(requestedTools);
-    const crossOrg = await deriveCrossOrgRoot(kernel, privateKey, "root", {
-      ...common, actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
+    const common = { missionId: record.id, aud: RESOURCE, clientId: "ap-agent" };
+    // The Mission-bound root requests its mapped ceiling: the recorded
+    // bindings reach neither its tools nor its mission_constraints.
+    const ceiling = mapAuthorityToCeiling(record.authority_set, TEST_OPERATIONS);
+    const root = await deriveAttenuationRoot(kernel, privateKey, "root", {
+      ...common, cnfJwk: HOLDER_JWK, operations: TEST_OPERATIONS, requested: { tools: ceiling.tools },
     });
-    expect(crossOrg.tools).toEqual(requestedTools);
+    expect(root.tools).toEqual(ceiling.tools);
+    expect(root.missionConstraints).toEqual(ceiling.missionConstraints);
     expect(JSON.stringify(root.tools)).not.toContain("capability_sources");
+    expect(JSON.stringify(root.missionConstraints)).not.toContain("capability_sources");
+    // The cross-organization root maps the same way (#1759).
+    const crossOrg = await deriveCrossOrgRoot(kernel, privateKey, "root", {
+      ...common, cnfJwk: HOLDER_JWK, operations: TEST_OPERATIONS, requested: { tools: ceiling.tools },
+      actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
+    });
+    expect(crossOrg.tools).toEqual(ceiling.tools);
+    expect(crossOrg.missionConstraints).toEqual(ceiling.missionConstraints);
+    expect(JSON.stringify(crossOrg.tools)).not.toContain("capability_sources");
+    expect(JSON.stringify(crossOrg.missionConstraints)).not.toContain("capability_sources");
   });
 });
 

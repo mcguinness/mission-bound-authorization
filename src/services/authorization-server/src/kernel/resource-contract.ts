@@ -24,7 +24,7 @@
  * never dropped.
  */
 
-import { type ResourceContractDeclarations, resourceContractViolation } from "@mission/core";
+import { canonicalize, isSubsetEntry, type ResourceContractDeclarations, resourceContractViolation } from "@mission/core";
 import { IntentError } from "./intent.js";
 import type { AuthorityEntry } from "./types.js";
 
@@ -105,4 +105,37 @@ export function assertCarriedContractsResolvable(
     const violation = contracts.carriedViolation(entry, now);
     if (violation !== undefined) refuse(violation);
   }
+}
+
+/**
+ * @spec resource-access#resource-contract (#1751, D875): "Every derivation,
+ * narrowing, and delegation preserves it exactly". The child is derived under
+ * the policy ceiling, which carries no reference, so a child entry carries one
+ * only when its proposal restated it; a ceiling drawdown likewise (#249 B.4),
+ * whose grantor is the consented ceiling. Carry the reference of the parent entry
+ * that, with that reference, authorizes the whole child entry on its own, and
+ * do it BEFORE the strict-subset proof. Nothing is borrowed from a parent
+ * entry that does not authorize the whole child entry, nothing is assembled
+ * from several, and a proposed reference stays as proposed: a conflicting one
+ * is refused by the proof, never replaced. When the parent entries that each
+ * authorize the whole child entry disagree, nothing is chosen: an unpinned
+ * child entry stands only on an unpinned parent entry, and otherwise the
+ * proof refuses it.
+ */
+export function inheritResourceContract(
+  childAuthority: readonly AuthorityEntry[],
+  parentEffective: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  return childAuthority.map((entry) => {
+    if (entry.resource_contract !== undefined) return entry;
+    const covering = new Map<string, AuthorityEntry["resource_contract"]>();
+    for (const p of parentEffective) {
+      const ref = p.resource_contract;
+      const candidate = ref === undefined ? entry : { ...entry, resource_contract: ref };
+      if (isSubsetEntry(candidate, p)) covering.set(ref === undefined ? "" : canonicalize(ref as never), ref);
+    }
+    if (covering.size !== 1) return entry;
+    const [ref] = covering.values();
+    return ref === undefined ? entry : { ...entry, resource_contract: ref };
+  });
 }

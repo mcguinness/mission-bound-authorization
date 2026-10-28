@@ -178,7 +178,7 @@
       "sha256": "a7e23c35362c1fb60018a63343f8b0fdc1ce4a8c01fbf73af4a85e7ecf79f0f2",
       "ref": "IETF Internet-Draft, rev 02 (2026-10-26)",
       "status": "established",
-      "note": "Attenuating Agent Tokens, the substrate Mission Offline Attenuation profiles; that draft pins the reference to -02 in front matter. Cross-Organizational Delegation, which also cites it normatively under this key, stays explicitly pinned to -01 in its front matter until its -02 migration (#1759, D876); its -01 citation has no entry here because the two drafts share the citation key and no bundle consumes Cross-Organizational Delegation. -02 breaks -01 implementations (its Appendix F); its Appendix E.3 records the reference implementation's cnf.jkt and DPoP divergence. Digest is of the published .txt, fetched from the archive URL on 2026-10-26.",
+      "note": "Attenuating Agent Tokens, the substrate Mission Offline Attenuation profiles; that draft pins the reference to -02 in front matter. Cross-Organizational Delegation, which also cites it normatively under this key, pins -02 in its front matter too (#1759, D932), so both drafts cite this one revision. -02 breaks -01 implementations (its Appendix F); its Appendix E.3 records the reference implementation's cnf.jkt and DPoP divergence. Digest is of the published .txt, fetched from the archive URL on 2026-10-26.",
       "reference_keys": ["I-D.draft-niyikiza-oauth-attenuating-agent-tokens"],
       "pin_id": "AAT@a7e23c35362c"
     }
