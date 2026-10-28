@@ -20,6 +20,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { authorityHash, canonicalize, intentHash, type JsonValue, proposalHash } from "@mission/core";
 import type Provider from "oidc-provider";
+import type { AuthoritySourceResolution } from "../kernel/authority-source.js";
 import type { ExpiryCeilings } from "../kernel/derive.js";
 import type { MissionKernel } from "../kernel/kernel.js";
 import type { AuthorityEntry, MissionIntent } from "../kernel/types.js";
@@ -44,9 +45,9 @@ const digest = contentDigest;
 /**
  * The approval context for an Intent, its proposal and the Authority Set
  * derived from them, as a rendering shows it and a decision re-establishes it.
- * With a Subject, the authority source is that Subject's full resolution;
- * without one, only the provenance a rendering can show, which no decision's
- * context matches. Throws what source resolution throws (an IntentError).
+ * The authority source is the Subject's full resolution: the one a rendering
+ * established (#1802), or a fresh one. Throws what source resolution throws
+ * (an IntentError).
  */
 export function approvalContext(input: {
   kernel: MissionKernel;
@@ -55,19 +56,21 @@ export function approvalContext(input: {
   proposal: readonly AuthorityEntry[] | undefined;
   authority: readonly AuthorityEntry[];
   clientId: string;
-  subject: string | undefined;
+  subject: string;
+  /** @spec mission#approval-preparation (step 3, #1802): the source a rendering established, which its page shows. */
+  resolved?: AuthoritySourceResolution;
   scopeProjection: unknown;
   /** The effective `expires_at`: a rendering's own, or a decision's ({@link decisionExpiry}). */
   expiresAt: string;
 }): { context: ApprovalContext; commitment: string } {
   const { kernel, issuer } = input;
-  let source: ApprovalContext["source"];
-  if (input.subject === undefined) {
-    source = { provenance: kernel.renderAuthoritySource({ clientId: input.clientId }) };
-  } else {
-    const resolved = kernel.resolveAuthoritySource({ clientId: input.clientId, subject: { iss: issuer, sub: input.subject } });
-    source = { provenance: resolved.provenance, root_id: resolved.rootId, catalog_revision: resolved.catalogRevision };
-  }
+  const resolved =
+    input.resolved ?? kernel.resolveAuthoritySource({ clientId: input.clientId, subject: { iss: issuer, sub: input.subject } });
+  const source: ApprovalContext["source"] = {
+    provenance: resolved.provenance,
+    root_id: resolved.rootId,
+    catalog_revision: resolved.catalogRevision,
+  };
   const registry = kernel.activationPolicies();
   const context: ApprovalContext = {
     intent_hash: intentHash(issuer, input.intent as unknown as JsonValue),
