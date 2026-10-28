@@ -11,8 +11,8 @@
     "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "9f21e8b33e4be8c1e8912676a0a771b6224b9b9a2d67be938c11b5e94087e7a8"
+    "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
+    "content_sha256": "6360896049e20743ced8e1e89e1788c2df5b10045511f5a5d1ca2a7a42ffc4fe"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
-    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
+    "revision": "7fb899a89a52b917a2711977ed0aef449e874836",
+    "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "05499ae43217ce7d528485c06622df662331aeed",
-    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
+    "revision": "f840e2a086868bc25fa12eb25664b0116fb372ea",
+    "content_sha256": "031258375b9f81c473dc9d5f4cb8a0b044a7caafcba3fe653d1c4975a3f0e713"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -10307,7 +10307,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted; and each Dispatch Handoff leg, the exchange and the redemption, settles its fresh reservation with the response, released on a 200 and settled as not accepted when the request fails in process before delivery, a request-path drain that throws included (D942). NOT covered, each by ruling: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted, the fail-safe (D772, D874); and a held or replayed reservation keeps its count, since an earlier attempt took it (a Dispatch Handoff redemption that fails inside the handler keeps its reservation for the retry that replays it). Partial on those: closing #935 does not establish unconditional compliance (D942)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -10363,6 +10363,24 @@
     {
      "file": "src/services/authorization-server/test/derivation-counting.test.ts",
      "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff exchange: a 200 releases its reservation and counts once; a drain failure after the handler answers 500 with no grant and settles the reservation as not accepted, returning the count once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a drain failure after the handler answers 500 with no token and settles its fresh reservation as not accepted, returning the count once; the grant stays consumed, so a retry is refused as already redeemed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a 200 releases its fresh reservation and counts once; a held reservation a retry replays keeps its count though that retry's drain fails",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -13974,6 +13992,40 @@
     }
    ],
    "notes": "#1720 item 1 (D845). The condition is in the quoted clause: an AS issuing only tokens presented back to itself, such as designations, has no publication duty; the reference also issues resource-server tokens, so that exemption has no witness. The witness fetches /jwks directly; no test reads the RFC 8414 jwks_uri member and verifies an access token there, and the binding names jwks_uri only as an example. Mutation-proved: dropping the access-token role's keys from the published set (publicJwks in src/index.ts) fails the witness with JWKSNoMatchingKey."
+  },
+  {
+   "id": "core.token-claims.companion-format-not-access-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-claims",
+   "text": "JWT access-token validation remains governed by {{Section 4 of RFC9068}}, including acceptance of `at+jwt` or `application/at+jwt`. A companion-format token is consumed only under that companion's verification rules.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server validating a JWT access token applies Section 4 of RFC 9068: it accepts typ at+jwt or application/at+jwt and refuses any other typ, so a companion-format token such as an aat+jwt attenuation root is not accepted as a JWT access token; a companion-format token is consumed only under its companion's verification rules"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1760 (D904, go in D932; wording corrected at the #1812 review, D938). Scoped to JWT access-token validation: the applicability stays unconditional because JWT validation is the baseline path, and opaque-token consumption is governed separately under core.introspected-consumption, which this row does not cover. Witnesses: the refusal of an aat+jwt token presented as a Mission access token (dropping the access-token profile's typ check fails it), and the acceptance of application/at+jwt (dropping the application/ prefix handling in mediaTypeOf fails it)."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
@@ -21156,6 +21208,27 @@
     }
    ],
    "notes": "#1535 finding 12 (D649); #1407: the advertised Mission Status endpoint shares the Lifecycle endpoint's authenticator (status.lifecycle.private-key-jwt-params)."
+  },
+  {
+   "id": "status.request.header-credentials-stay",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the Mission Status endpoint, and at the Mission Lifecycle endpoint, whose request carries the parameters \"as at the Mission Status endpoint\"; its credentials are not carried as form parameters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1780 N4 (D914): the twin of `mas.submission.header-credentials-stay`. Todo: the reference Mission Status and Lifecycle endpoints accept only private_key_jwt, whose parameters are form parameters; no header-carried method is served."
   },
   {
    "id": "status.request.form-post",
@@ -31180,9 +31253,27 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > refuses at load a required operation that is an action family, outside the action grammar, or defined by no current or superseded version",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness. #1752 (D875): the operations requiring a reference are operations the resource serves. The loader refuses, naming the value, an action family, a value outside the action grammar, and an action no current or superseded version defines, even where a document names the value as an operation's action; a retired version's operations do not count, and a newer version's operation may be required though an older supported version lacks it (2026-10-20 lacks payments:payment.reverse). The shipped declaration loads, as does the same declaration requiring the current contract's five non-read actions. Proved by mutation, each alone (5 of 5): removing the family, grammar or served-operation check, counting a retired version's operations, or counting only the current version's, fails a witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -37715,8 +37806,45 @@
      "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac): an unevaluable credential entry beside a complete one is refused credential_invalid in either order; dropping unevaluable entries one by one, as Resource Access's alternative-entry rule would (V2), fails that witness and the mixed-entry case of 'refuses a credential authority with %s'."
+  },
+  {
+   "id": "authzen.context-credential.unsatisfied-entry-not-invalidating",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An entry the PDP evaluates and finds unsatisfied invalidates nothing: another complete entry of `authority` still authorizes the action.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential whose authority holds one entry the PDP evaluates and finds unsatisfied and another complete entry the action satisfies is permitted, in either entry order; the unsatisfied entry neither denies the request nor makes it credential_invalid"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac). Distinguishes evaluates-but-unsatisfied from cannot-evaluate (authzen.context-credential.authority-no-fallback). A credential bound denying on any evaluated, unsatisfied entry (V1) fails the witness in both orders."
   },
   {
    "id": "authzen.pdp-request.credential-expiry",
@@ -41433,7 +41561,7 @@
     "normative": "a Child Mission creation request under a Mission carrying max_budget is refused and creates nothing, since the deployment neither charges ancestors nor escrows"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
@@ -41452,9 +41580,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it. The successor case covers a Mission carrying max_budget other than the dispatched instance."
+   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Tested: the successor is a Mission carrying max_budget, and each clause (refused, nothing created) is asserted and killed by a mutant that leaves every other layer in place. D877 ruling 1 keeps this refusal a tested prerequisite. The successor case covers a Mission carrying max_budget other than the dispatched instance."
   },
   {
    "id": "metering.capacity-across-missions.child-charged-to-ancestors",
@@ -41710,9 +41850,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -56267,9 +56419,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "template.instance-composition.cross-boundary-derivation-refused",
