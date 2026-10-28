@@ -461,6 +461,7 @@ import {
   ceilingAdjudicationLine,
   ceilingConsentOf,
   consentedCeilingEntries,
+  assembledCeilingOffer,
   consentsOffer,
   type ProgressiveDrawdownOptions,
 } from "../kernel/progressive.js";
@@ -4671,10 +4672,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // that meets the floor over both: any other sees the page without it,
       // can consent no ceiling, and still approves the derived set it may. A
       // device approval offers none (#1256).
-      const deploymentOffer =
+      // @spec resource-access#resource-contract (#249, D875): its references
+      // assembled from configuration before the floor classifies it and the
+      // page renders it; an offer configuration cannot assemble is not offered.
+      const deploymentOffer = assembledCeilingOffer(
         !deviceJti && opts.progressive?.ceilingOffer
           ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-          : undefined;
+          : undefined,
+        kernel.resourceContracts(),
+      );
       let ceilingOffer: CeilingConsent | undefined;
       if (deploymentOffer) {
         let offered: AuthorityEntry[];
