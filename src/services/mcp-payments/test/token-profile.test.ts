@@ -288,6 +288,13 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     await expect(overHttp(await mint({}, { typ: "aat+jwt" }))).rejects.toThrow(/typ must be at\+jwt/);
   });
 
+  it("accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)", async () => {
+    const token = await mint({}, { typ: "application/at+jwt" });
+    for (const facts of [await overHttp(token), await server.validateMissionToken(token)]) {
+      expect(facts).toMatchObject({ sub: "alice", clientId: "ap-agent", mission: MISSION });
+    }
+  });
+
   it("refuses an at+jwt presented as an attenuation root", async () => {
     // Signed under the root role's key, so the profile's type check is what refuses it.
     const token = await mint({}, { kid: "as-attenuation" }, rootSignKey);
