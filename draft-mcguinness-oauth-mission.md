@@ -2375,7 +2375,7 @@ The Mission Lifecycle States registry ({{iana-lifecycle-states}})
 holds these states, and the Mission Termination Reasons registry
 ({{iana-termination-reasons}}) holds the reasons. A companion profile
 MAY register an additional state for a lifecycle it introduces (for
-example, a paused state); only `active` permits issuance. A companion
+example, a paused state). A companion
 profile that defines a further way for a Mission to end registers a
 termination reason, not a state.
 
