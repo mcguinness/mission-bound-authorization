@@ -681,6 +681,21 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
     await expect(built).rejects.toThrow("budget currency is not USD");
   });
 
+  it("refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states no recency ceiling (@spec approval-governance#recency-high-risk, #813)", async () => {
+    for (const cls of ["irreversible_action", "consumption_bound"]) {
+      const built = startup(
+        `sp-no-ceiling-${cls}`,
+        terms(`ap-no-ceiling-${cls}`, {
+          approval_governance: recency({ ...BOTH_EXCEPTIONS, [cls]: {} } as never),
+        }),
+      );
+      await expect(built, cls).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built, cls).rejects.toThrow(
+        `approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`,
+      );
+    }
+  });
+
   it("refuses to start with a Dispatch Policy whose budget omits its limit (#813)", async () => {
     const t = terms("ap-no-limit");
     const { limit: _limit, ...budget } = t.budget;
