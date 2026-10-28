@@ -67,7 +67,7 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
-import { missionResourceAccessProfile, OperationProfileRegistry } from "../src/index.js";
+import { contractOperationProfiles, missionResourceAccessProfile, OperationProfileRegistry } from "../src/index.js";
 import { newDpopProofReplay } from "../src/adapters/dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -3351,7 +3351,9 @@ describe("an older supported contract reference at the Transaction Authorization
   ];
 
   /** The shipped TAS's registry, as `demo/src/stack.ts` builds it. */
-  const shipped = (): OperationProfileRegistry =>
+  const shipped = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE);
+  /** The registry the stack built before #1846: the current contract version's profile alone. */
+  const currentOnly = (): OperationProfileRegistry =>
     new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE)));
 
   /**
@@ -3462,5 +3464,19 @@ describe("an older supported contract reference at the Transaction Authorization
     expect(issued?.status, JSON.stringify(issued?.body)).toBe(200);
     expect(decided).toEqual([pinned?.version.operation_profile]);
     expect(decided[0]).not.toBe(currentContractProfileVersion(RESOURCE));
+  });
+
+  // The #1846 reproduction, kept as the control: the registry holding only the
+  // current version's profile refuses the same supported reference at admission.
+  it("a registry holding only the current version's profile refuses the same reference at admission, creating no workflow", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const { admitted, issued, decided } = await remitThrough(currentOnly(), m, "txn_older_current_only");
+    expect(admitted.status).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "the resource_contract reference names no Operation Profile version this TAS retains",
+    );
+    expect(issued).toBeUndefined();
+    expect(decided).toEqual([]);
   });
 });

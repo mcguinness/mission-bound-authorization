@@ -377,6 +377,7 @@ export {
   type StoredLifecycleResponse,
 } from "./kernel/lifecycle-idempotency.js";
 export {
+  contractOperationProfiles,
   missionResourceAccessProfile,
   type OperationProfile,
   OperationProfileRegistry,

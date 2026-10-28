@@ -28,7 +28,7 @@ import {
   resolveDestinationClientId,
   type IssuerEvidenceStore,
   MissionKernel,
-  missionResourceAccessProfile,
+  contractOperationProfiles,
   OperationProfileRegistry,
   type ProviderCapability,
   type SigningKeySource,
@@ -92,7 +92,6 @@ import {
   OutcomeReconciler,
   PaymentsStore,
   paymentsBoundaryContext,
-  PAYMENTS_PROFILE_VERSION,
   Pep,
   type PepDeps,
   type ReceiptIssuerScope,
@@ -263,6 +262,13 @@ export interface DemoStack {
   /** Issuer-side evidence (ingestion + Containment Evidence); set only on the
    * auth-server path (the in-process kernel path retains none). */
   issuerEvidence?: IssuerEvidenceStore;
+  /**
+   * @spec txn-authorization#resource-challenge (#1846): the Transaction
+   * Authorization Server's Operation Profile registry, set only on the
+   * auth-server path. Exposed so an operator surface can read which contract
+   * versions it resolves.
+   */
+  operationProfiles?: OperationProfileRegistry;
   connectors: Connectors;
   pep: Pep;
   server: McpPaymentsServer;
@@ -617,6 +623,10 @@ export async function composeStack(opts: {
   // provider retains ingestion + Containment Evidence there). Exposed so the
   // Activity Log join can read it (BuiltAs.issuerEvidence).
   let issuerEvidenceStore: IssuerEvidenceStore | undefined;
+  // @spec txn-authorization#resource-challenge (#1846): the Transaction
+  // Authorization Server's Operation Profile registry; present only on the
+  // auth-server path, where the TAS runs.
+  let operationProfiles: OperationProfileRegistry | undefined;
   // Resolved after the RS is constructed; the discovery listener reads it
   // lazily because the resource's own metadata names that listener's origin.
   let paymentsServerRef: McpPaymentsServer | undefined;
@@ -776,13 +786,11 @@ export async function composeStack(opts: {
         // family's own `mission_resource_access` entry, so that profile governs
         // its operations; an entry naming any other type is refused at
         // admission rather than read structurally.
-        // #249: registered under the payments profile version, the one the
-        // payments contract document names, so an entry carrying its
-        // `resource_contract` reference resolves to this profile.
-        operationProfiles: new OperationProfileRegistry().register(
-          CANONICAL_RESOURCE,
-          missionResourceAccessProfile(PAYMENTS_PROFILE_VERSION),
-        ),
+        // #249, #1846: one profile under each version the payments contract
+        // declares, named by its own document, the current one registered and
+        // the others retained, so a supported older reference resolves to its
+        // own profile and a retired one is refused by resolution.
+        operationProfiles: (operationProfiles = contractOperationProfiles(CANONICAL_RESOURCE)),
         // @spec txn-authorization#challenge-redemption step 7 — the deployment's
         // entitlement and resource-policy decision, run FRESH at completion
         // against LIVE state. A completed approval is context here, never a
@@ -1635,6 +1643,7 @@ export async function composeStack(opts: {
     ...(receiptIssuerScope ? { receiptIssuerScope } : {}),
     egressEvidence,
     ...(issuerEvidenceStore ? { issuerEvidence: issuerEvidenceStore } : {}),
+    ...(operationProfiles ? { operationProfiles } : {}),
     connectors,
     pep,
     server,
