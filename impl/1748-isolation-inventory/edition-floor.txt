@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-28T16:04:28Z
-Source repository commit: a630a28c1c5921d952258cb73972ece30f9754f9
+Generated: 2026-10-28T16:45:02Z
+Source repository commit: 2a58d87965ba7d7cf3a44f6fe48d1f11dde9f50d
 Member count: 7
 
 Reading order:
@@ -9186,6 +9186,8 @@ Table of Contents
    run when the submission arrives; step 7 can run provisionally then
    and is complete before the approval rendering (Section 5.1); step 8
    belongs to the approval event, and step 9 to activation.
+   Section 15.3 states how JSON destined for commitment is parsed,
+   including the rejection of duplicate member names.
 
    1.  Parse the Submission envelope, enforce both closed top levels and
        the size bounds (Section 4.2), and check that each evidence entry
@@ -9558,8 +9560,7 @@ Table of Contents
    original approved audience, or, except as scope under a declared
    projection, in any form other than exactly as approved, since it
    cannot prove that a transformed copy is still a subset of what was
-   approved.  Without narrowing, a token for another audience does not
-   carry the entry (Section 8.5).
+   approved.
 
    A type that declares delegation without narrowing is delegable only
    unchanged: the AS MUST NOT include an entry of such a type in a
@@ -9679,6 +9680,10 @@ Table of Contents
    (approval_basis, Section 14); a companion profile that relocates a
    direct approval keeps them unchanged (Section 16).
 
+   Section 8.2.1 states the rule that keeps consent reuse, for an
+   authorization request that carries no mission_intent, from selecting
+   a grant bound to a Mission.
+
    Refusals follow Section 10.
 
 6.2.1.  Preparing the Approval
@@ -9714,7 +9719,8 @@ Table of Contents
        checks: an organizational owner may be authorized to activate
        policy without personally holding every operational permission.
        The AS MUST refuse when either relationship cannot be
-       established.
+       established.  Section 14.3 states the refusal to approve a
+       Mission whose authority source the AS does not recognize.
 
    4.  *Establish the effective Mission expiry*: the requested
        intent.expires_at ceiling narrowed by applicable AS policy and
@@ -9791,7 +9797,9 @@ Table of Contents
    naming who consented and how); the authority source; the issuer's
    provenance (the policy version and the approval event's identifier);
    and the Mission's expiry and lifecycle state.  Section 14 defines
-   each member and when it is present.
+   each member and when it is present.  Section 14.4 states how the AS
+   deduplicates a retried or duplicate delivery of the same approval
+   decision on approval_event_id.
 
 6.3.  Subject Establishment
 
@@ -10076,10 +10084,9 @@ Table of Contents
    The Mission Lifecycle States registry (Section 23.7) holds these
    states, and the Mission Termination Reasons registry (Section 23.8)
    holds the reasons.  A companion profile MAY register an additional
-   state for a lifecycle it introduces (for example, a paused state);
-   only active permits issuance.  A companion profile that defines a
-   further way for a Mission to end registers a termination reason, not
-   a state.
+   state for a lifecycle it introduces (for example, a paused state).  A
+   companion profile that defines a further way for a Mission to end
+   registers a termination reason, not a state.
 
    Wherever a Mission state is reported, including the Mission Record
    and the introspection mission member, a consumer MUST treat only the
@@ -10781,7 +10788,10 @@ Table of Contents
 8.6.  Refresh Tokens
 
    Issuance on a refresh applies the checks of Section 8.1 as that list
-   states for a refresh.
+   states for a refresh.  Section 4.3 states a refresh's exemption from
+   mission_intent and, for a Mission-governed resource, the refusal's
+   precedence and its timing relative to consuming or rotating the
+   refresh token.
 
    A Mission-bound refresh token is bound to the client it was issued
    to.  For a confidential client, client authentication supplies the
@@ -11194,6 +11204,11 @@ Table of Contents
        introspection response or issuer-local resolution the resource
        server relies on, and the same checks apply to that response's
        mission member (Section 11.4).
+
+   Other sections state how a resource server treats a reported Mission
+   state (Section 7), mission claim members (Section 8.9), an entry's
+   resource against a request's target (Section 8.5), and a designation
+   presented to it (Section 12.1).
 
    A resource server can also:
 
@@ -12032,7 +12047,8 @@ Table of Contents
    accounting records as the token's outermost actor (Section 12.5).
 
    Issuing a designation applies the checks of Section 8.1 as that list
-   states for a designation.
+   states for a designation.  Section 4.3 states a designation request's
+   exemption from mission_intent and the checks that still apply to it.
 
    A designation the AS issues:
 
@@ -13437,15 +13453,13 @@ Table of Contents
 
    *  implements none of the optional capabilities.
 
-   A scope-only resource server is served only where the AS established
-   a safe scope projection for it (Section 8.8).  A Mission Issuer can
-   instead start from configured-mapping mode (Section 5), which is
-   equally conforming.  Neither starting point is a conformance class,
-   and neither removes a surface: the Mission Issuer still implements
-   every surface its role lists (Section 19.1), the evidence dispatch
-   and refusal rules included even when it supports no evidence type,
-   and the deployment still provides the authenticated revocation means
-   of Section 7.2.
+   A Mission Issuer can instead start from configured-mapping mode
+   (Section 5), which is equally conforming.  Neither starting point is
+   a conformance class, and neither removes a surface: the Mission
+   Issuer still implements every surface its role lists (Section 19.1),
+   the evidence dispatch and refusal rules included even when it
+   supports no evidence type, and the deployment still provides the
+   authenticated revocation means of Section 7.2.
 
 19.1.  Conformance Roles
 
@@ -16587,6 +16601,23 @@ Appendix G.  Document History
       for each member but task_bounds; Principals and Approval Basis
       lists the rules that follow its member definitions; and Instance
       Context in Delegated Tokens lists its rules (#1723, D845).
+
+   *  Editorial, no requirement change: Refresh Tokens, Designation,
+      Direct Approval Steps, Preparing the Approval, Committing the
+      Mission, Submission Processing Order, and Enforcement Requirements
+      point to the rules of their operation that other sections state,
+      which stay in place: the mission_intent exemption and the Mission-
+      governed resource refusal (Authority Proposal), consent reuse
+      (Establishing and Resolving a Binding), the unrecognized authority
+      source and approval idempotency (Principals and Approval Basis,
+      Provenance and Expiry), duplicate member names (Commitment
+      Mechanisms), and the resource-server rules of Mission Lifecycle,
+      Mission Claim, Audience and Token Response, and Designation
+      (#1723, D845).
+
+   *  Editorial, no requirement change: Declared Transformation
+      Capabilities, Mission Lifecycle and Conformance drop restatements
+      of rules their home sections state (#1793, D919).
 
    -01
 
