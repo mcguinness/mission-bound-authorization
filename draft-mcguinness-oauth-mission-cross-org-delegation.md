@@ -224,15 +224,17 @@ verified per-hop subset relations provide that proof.
 A Chain travels as one closed JSON envelope, the **Chain
 Presentation**:
 
-`chain`:
+`aat_chain`:
 : REQUIRED. An array of compact-serialization JWS strings
   ({{RFC7515}}), the root first and the leaf last; each element is
-  one hop token.
+  one hop token.  It is the substrate's presentation member of that
+  name
+  ({{Section 7.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}).
 
 `actor_credentials`:
 : OPTIONAL. An array of objects aligning actor-binding credentials to
   named hops ({{actor-evidence}}), each with `hop` (REQUIRED, the
-  0-based index into `chain`), `type` (REQUIRED, a registered
+  0-based index into `aat_chain`), `type` (REQUIRED, a registered
   actor-credential type identifier), and `credential` (REQUIRED, the
   credential in the serialization its type defines).
 
@@ -243,20 +245,26 @@ without padding, carried as the `subject_token` of the projection
 exchange ({{projection-exchange}}) with `subject_token_type`
 `urn:ietf:params:oauth:token-type:mission-delegation-chain`; for
 retention and evidence its media type is
-`application/mission-delegation-chain+json` ({{iana}}).  Direct
-presentation of a Chain to a resource server is not defined in this
-version: a chain-verifying resource server obtains the Presentation
-through a deployment-defined channel and applies {{verification}}
-unchanged.
+`application/mission-delegation-chain+json` ({{iana}}).
 
-A verifier MUST declare maximum hop count, maximum Presentation size,
-and a verification-cost ceiling, and MUST refuse a Presentation
+At direct invocation, the holder presents the Chain to a
+chain-verifying resource server in the substrate's presentation
+object
+({{Section 7.4 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}):
+`aat_chain`, the invocation's `aat_pop`, and `actor_credentials` as
+defined above.  That object is not closed: a chain-verifying resource
+server recognizes `actor_credentials` and validates it
+({{actor-identity}}), and ignores other members it does not
+recognize, as the substrate specifies.
+
+A verifier MUST declare maximum hop count, maximum presentation size,
+and a verification-cost ceiling, and MUST refuse a presentation
 exceeding any of them before verifying any signature.
 
 The **chain digest** is the family anchor idiom
 ({{I-D.draft-mcguinness-oauth-mission}}) with typ
 `mission-delegation-chain` computed over the JCS canonical bytes of
-the `chain` array exactly as presented, an ordered JSON array of
+the `aat_chain` array exactly as presented, an ordered JSON array of
 compact-JWS strings.  It commits to the complete ordered chain and to
 nothing else.
 
@@ -318,7 +326,8 @@ mapping and its version in the issuance derivation record.
 A parent signature on a later hop proves only that the parent
 delegated to the child key; it does not authenticate the identity
 values the parent asserts.  A hop carrying `act` MUST have exactly
-one aligned entry in the Presentation's `actor_credentials`, and its
+one aligned entry in the `actor_credentials` presented with the
+Chain, at the projection exchange or at direct invocation, and its
 credential MUST validate under {{actor-evidence}}; a Chain naming an
 actor on a hop with a missing, misaligned, or invalid credential MUST
 be refused.  A hop without `act` is key-only: its holder is
@@ -648,7 +657,7 @@ The worker presents the Chain at organization 3's Resource AS:
 ~~~
 POST /token
 grant_type=urn:ietf:params:oauth:grant-type:token-exchange
-&subject_token=<base64url({"chain":[root,hop1,hop2],
+&subject_token=<base64url({"aat_chain":[root,hop1,hop2],
   "actor_credentials":[{"hop":1,"type":"wimse-wit",
   "credential":"..."}]})>
 &subject_token_type=
