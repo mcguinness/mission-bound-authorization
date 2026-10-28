@@ -20,5 +20,32 @@
     { "contains": "wire transfer", "decision": "deny" },
     { "contains": "delete all", "decision": "deny" }
   ],
-  "default_decision": "approve"
+  "default_decision": "approve",
+  "management": {
+    "admit_owning_agent": true,
+    "status_fresh_seconds": 30,
+    "untracked_access": false,
+    "revocation": {
+      "max_attempts": 6,
+      "retry_base_seconds": 30,
+      "retry_max_seconds": 900,
+      "attempt_timeout_ms": 5000,
+      "immediate_wait_ms": 2000
+    },
+    "administrators": [
+      {
+        "id": "https://admin.ps.test",
+        "dwk": "mission-admin.json",
+        "key": {
+          "kty": "OKP",
+          "crv": "Ed25519",
+          "x": "kgZGdkxxG_cE41YQuD-lYePdfXM6HZ9bXGflZMSxAG8",
+          "alg": "Ed25519",
+          "kid": "admin-1"
+        },
+        "persons": ["alice"],
+        "actions": ["status", "terminate"]
+      }
+    ]
+  }
 }

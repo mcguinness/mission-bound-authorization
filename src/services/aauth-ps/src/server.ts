@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import {
   generateSigningKey,
@@ -23,8 +23,21 @@ import {
   rfc3339,
 } from "./blob.js";
 import type { AgentEntry, PsConfig } from "./config.js";
+import { CONTROL_ACTIONS } from "./config.js";
+import { type ControlPlane, createControlPlane, SCHEDULER } from "./control.js";
 import { matchResourceToken, PsError, verifyPresentedToken } from "./presented.js";
-import type { IssuedTokenRecord, MissionLogEntry, MissionRecord, PsStore } from "./store.js";
+import {
+  createRevocationWorker,
+  type OutboundTransport,
+  type RevocationWorker,
+} from "./revocation.js";
+import type {
+  IssuedTokenRecord,
+  MissionControlStore,
+  MissionLogEntry,
+  MissionRecord,
+  PsStore,
+} from "./store.js";
 
 /** The PS's endpoint paths, under its endpoint origin. */
 export const PS_PATHS = {
@@ -33,7 +46,28 @@ export const PS_PATHS = {
   person: "/person",
   token: "/token",
   mission: "/mission",
+  missionControl: "/mission-control",
 } as const;
+
+/** What the mission control plane needs beyond the PS itself. */
+export interface ManagementOptions {
+  /**
+   * The same durable store as `store`, with the control plane's records:
+   * a termination, its receipt and its revocation work commit together,
+   * and every issuance path reads the state they wrote.
+   */
+  store: MissionControlStore;
+  /** Sends revocation requests and resource-metadata fetches; the egress boundary. */
+  transport: OutboundTransport;
+  /** Wait `ms`. Default: a timer. */
+  sleep?: (ms: number) => Promise<void>;
+  /**
+   * When the server listens, revocation work due is attempted at once and
+   * then every this many milliseconds. Default 1000; 0 runs it only when a
+   * termination commits or a caller asks (`revocations.runDue()`).
+   */
+  pollIntervalMs?: number;
+}
 
 export interface PersonServerOptions {
   config: PsConfig;
@@ -55,12 +89,26 @@ export interface PersonServerOptions {
    * here. Default: the issuer.
    */
   endpointOrigin?: string;
+  /**
+   * The mission control plane (AAuth Mission Management). It is served,
+   * and published in metadata, only when this is given and the
+   * configuration has `management`.
+   */
+  management?: ManagementOptions;
 }
 
-/** An event surfaced to operators (AAuth -11 Section 6.7.2: tampering evidence). */
+/**
+ * An event surfaced to operators (AAuth -11 Section 6.7.2: tampering
+ * evidence; the management companion's security log of control-plane
+ * misses, which names a reference only by a keyed digest).
+ */
 export interface SecurityEvent {
   at: number;
-  type: "presented_token_mismatch" | "mission_integrity_failure" | "unowned_mission_reference";
+  type:
+    | "presented_token_mismatch"
+    | "mission_integrity_failure"
+    | "unowned_mission_reference"
+    | "control_plane_miss";
   agent: string;
   detail: string;
 }
@@ -74,6 +122,8 @@ export interface PersonServer {
   signingKey: SigningKey;
   store: PsStore;
   securityEvents: SecurityEvent[];
+  /** The revocation work after termination; present with the control plane. */
+  revocations?: RevocationWorker;
 }
 
 const NOT_THIS_AGENTS_MISSION = "mission_s256 does not name a mission of this agent";
@@ -144,13 +194,17 @@ function send(
  * The AAuth Person Server for the three-party route: its metadata and
  * JWKS, `mission_endpoint` (propose with deterministic approval, and the
  * owner's read of `{mission_endpoint}/{mission_s256}`), the person token
- * endpoint and the auth token endpoint in PS authorization access.
+ * endpoint and the auth token endpoint in PS authorization access, and,
+ * when configured, the mission control plane of AAuth Mission Management
+ * (`status` and `terminate`, with revocation attempts after termination).
  *
  * Every endpoint authenticates the caller by an HTTP Message Signature
  * under the Signature-Key `jwt` scheme presenting an agent token (AAuth
  * -11 Section 11.3); a body request must cover Content-Digest and
- * Content-Type. The PS signs only tokens, with the key its `jwks_uri`
- * publishes; it makes no signed request of its own in this route.
+ * Content-Type. The control plane also admits a configured administrator
+ * signing under `jwks_uri` with an enrolled key. The PS signs tokens, and
+ * its revocation requests under `jwks_uri`, with the key its `jwks_uri`
+ * publishes.
  *
  * @spec aauth#section-7
  * @spec aauth#section-8
@@ -172,7 +226,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     if (securityEvents.length > MAX_SECURITY_EVENTS) securityEvents.shift();
   };
 
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     issuer,
     jwks_uri: `${issuer}${PS_PATHS.jwks}`,
     person_token_endpoint: `${endpointOrigin}${PS_PATHS.person}`,
@@ -180,6 +234,49 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     mission_endpoint: `${endpointOrigin}${PS_PATHS.mission}`,
   };
   const jwks = { keys: [{ ...signingKey.publicJwk, kid, use: "sig" }] };
+  const windowSeconds = options.windowSeconds ?? 60;
+
+  /**
+   * The mission control plane, when configured: `mission_control_endpoint`
+   * and the actions it implements are published, and terminations start
+   * revocation work.
+   *
+   * @spec mission-aauth-management#metadata
+   */
+  let control: ControlPlane | undefined;
+  let revocations: RevocationWorker | undefined;
+  if (options.management && !config.management) {
+    throw new TypeError("the control plane needs the configuration's management member");
+  }
+  if (options.management && config.management) {
+    revocations = createRevocationWorker({
+      issuer,
+      signingKey,
+      kid,
+      store: options.management.store,
+      policy: config.management.revocation,
+      transport: options.management.transport,
+      now,
+      sleep:
+        options.management.sleep ??
+        ((ms) => new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)))),
+    });
+    control = createControlPlane({
+      config,
+      management: config.management,
+      store: options.management.store,
+      resolver,
+      replayCache,
+      windowSeconds,
+      endpointOrigin,
+      now,
+      worker: revocations,
+      surface: (event) => surface(event),
+      probeKey: randomBytes(32),
+    });
+    metadata.mission_control_endpoint = `${endpointOrigin}${PS_PATHS.missionControl}`;
+    metadata.mission_control_actions_supported = [...CONTROL_ACTIONS];
+  }
 
   /**
    * A sub-agent never calls the PS directly (AAuth -11 Sections 10.2.2 and
@@ -247,7 +344,11 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     if (record.state === "terminated") throw terminated(record.terminationReason);
     if (nowS >= record.expiresAt) {
       try {
-        store.terminate(agent, s256, "expired", record.expiresAt);
+        store.terminate(agent, s256, "expired", record.expiresAt, {
+          actor: SCHEDULER,
+          decision: "permit",
+          policy: "expires_at",
+        });
       } catch {
         // The refusal stands whether or not the transition was recorded.
       }
@@ -696,7 +797,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
         replayCache,
         requireBodyComponents: true,
         acceptedTokenTypes: ["aa-agent+jwt"],
-        windowSeconds: options.windowSeconds ?? 60,
+        windowSeconds,
       },
     );
   };
@@ -714,6 +815,21 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
             { allow: "GET" },
           );
         return send(res, 200, path === PS_PATHS.metadata ? metadata : jwks, CACHEABLE);
+      }
+      // @spec mission-aauth-management#endpoint: every action is a POST to
+      // a mission's own control-plane URL; none is defined at the bare URL.
+      if (control && path.startsWith(`${PS_PATHS.missionControl}/`)) {
+        if (method !== "POST") {
+          return send(
+            res,
+            405,
+            { error: "invalid_request", detail: "method not allowed" },
+            { allow: "POST" },
+          );
+        }
+        const segment = path.slice(PS_PATHS.missionControl.length + 1);
+        const answer = await control.handle(req, segment, await readBody(req));
+        return send(res, answer.status, answer.body);
       }
       const missionUrl = path.startsWith(`${PS_PATHS.mission}/`)
         ? path.slice(PS_PATHS.mission.length + 1)
@@ -759,14 +875,35 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     }
   };
 
-  return {
+  const pollIntervalMs = options.management?.pollIntervalMs ?? 1000;
+  const server: PersonServer = {
     handler,
-    listen: (listenOptions) => listen(handler, listenOptions),
+    /**
+     * Listen, and with the control plane resume revocation work: what is
+     * due runs at once, after a restart included, then on the interval.
+     *
+     * @spec mission-aauth-management#races-and-failures
+     */
+    listen: async (listenOptions) => {
+      const running = await listen(handler, listenOptions);
+      if (!revocations || pollIntervalMs <= 0) return running;
+      const worker = revocations;
+      worker.start(pollIntervalMs);
+      return {
+        ...running,
+        close: async () => {
+          worker.stop();
+          await running.close();
+        },
+      };
+    },
     issuer,
     signingKey,
     store,
     securityEvents,
   };
+  if (revocations) server.revocations = revocations;
+  return server;
 }
 
 export interface ListenOptions {
