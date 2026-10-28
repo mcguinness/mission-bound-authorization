@@ -2,28 +2,29 @@
  * @spec cross-org-delegation#verification — the ten-step destination
  * verification of a Cross-Organizational Mission Delegation Chain, and the
  * actor-binding credential validation of #actor-evidence. The Chain
- * Presentation structure (closure, bounds, digest) is mission-core's; this
- * module owns trust resolution, signatures, invariants, subset relations,
- * actor classification, and the state gate. Dual-axis local authorization
- * (step 10) is the caller's: it needs the local policy surface.
+ * Presentation structure (closure, bounds, digest) is mission-core's. The
+ * chain itself is verified by the substrate's algorithm (AAT -02 Section 8
+ * steps 1 to 5, {@link verifyAatChainLinks}) under trust anchors this
+ * deployment's federation names, then by the attenuation profile's Mission
+ * layer ({@link verifyMissionAatChain}: the `mission` claim, nested `aud`,
+ * and `mission_constraints`). This module adds what this profile requires on
+ * top: the origin principal `subject`, exactly the mapped entry, the
+ * issuer-asserted root actor, actor classification, and the state gate.
+ * Dual-axis local authorization (step 10) and the requested audience
+ * (substrate step 6c) are the caller's: they need the local policy surface.
  */
 import {
   AAT_DETAIL_TYPE,
-  AAT_TYP,
-  audNesting,
-  expNesting,
-  parHash,
-  toolsSubset,
-  type AATTools,
+  type AatTrustAnchor,
+  type AatVerifiedToken,
   type ChainPresentation,
+  MissionAatError,
+  type MissionConstraints,
+  verifyAatChainLinks,
+  verifyMissionAatChain,
 } from "@mission/core";
-import {
-  calculateJwkThumbprint,
-  decodeProtectedHeader,
-  importJWK,
-  jwtVerify,
-  type JWK,
-} from "jose";
+import { calculateJwkThumbprint, importJWK, jwtVerify, type JWK } from "jose";
+import type { AatToolMap } from "./attenuation.js";
 
 export const WORKLOAD_ATTESTATION_TYPE = "workload-attestation+jwt";
 
@@ -55,7 +56,7 @@ export interface VerifiedHop {
   /** Named actor, when the hop carries a validated `act`; absent = key-only. */
   actor?: { iss: string; sub: string; sub_profile?: string };
   cnfJwk: JWK;
-  tools: AATTools;
+  tools: AatToolMap;
 }
 
 export interface VerifiedChain {
@@ -63,54 +64,55 @@ export interface VerifiedChain {
   missionIssuer: string;
   authorityHash: string;
   subject: { iss: string; sub: string };
-  leaf: { payload: Record<string, unknown>; cnfJwk: JWK; tools: AATTools; aud: string[] };
+  leaf: {
+    payload: Record<string, unknown>;
+    cnfJwk: JWK;
+    tools: AatToolMap;
+    /** The leaf's `mission_constraints`, verified present and narrowed at every hop. */
+    missionConstraints: MissionConstraints;
+    aud: string[];
+  };
   /** Root-to-leaf reconstructed actor history ({@spec cross-org-delegation#verification} step 7). */
   lineage: VerifiedHop[];
+  /** The verified tokens, root first, for the audience check the caller applies (substrate step 6c). */
+  tokens: readonly AatVerifiedToken[];
 }
 
 export class ChainVerificationError extends Error {}
 
-interface HopClaims {
-  iss?: string;
-  aud?: string | string[];
-  exp?: number;
-  jti?: string;
-  cnf?: { jwk?: JWK; jkt?: string };
-  act?: { iss?: string; sub?: string; sub_profile?: string; [k: string]: unknown };
-  mission?: { id?: string; issuer?: string; authority_hash?: string; subject?: { iss?: string; sub?: string } };
-  del_depth?: number;
-  del_max_depth?: number;
-  par_hash?: string;
-  authorization_details?: Array<{ type?: string; tools?: AATTools }>;
-}
+type ActClaim = { iss?: unknown; sub?: unknown; sub_profile?: unknown; act?: unknown };
 
-function toolsOfHop(claims: HopClaims, label: string): AATTools {
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * @spec cross-org-delegation#verification step 5: the token carries exactly
+ * the mapped entry. The substrate ignores an entry of another type (AAT -02
+ * Section 8 step 4n); this profile refuses the Chain, because an entry of an
+ * unknown or unmapped type is never conferred authority and its presence
+ * beyond the mapped entry refuses.
+ */
+function requireOnlyMappedEntry(claims: Record<string, unknown>, label: string): void {
   const details = claims.authorization_details;
-  if (!Array.isArray(details) || details.length !== 1 || details[0]?.type !== AAT_DETAIL_TYPE) {
-    // @spec cross-org-delegation#verification step 5: an entry of an unknown or
-    // unmapped type is never conferred authority, and its presence beyond the
-    // mapped entry refuses the Chain.
+  if (!Array.isArray(details) || details.length !== 1 || !isObject(details[0]) || details[0].type !== AAT_DETAIL_TYPE) {
     throw new ChainVerificationError(
       `${label}: authorization_details must be exactly the mapped ${AAT_DETAIL_TYPE} entry`,
     );
   }
-  const tools = details[0]?.tools;
-  if (tools === undefined || tools === null || typeof tools !== "object") {
-    throw new ChainVerificationError(`${label}: mapped entry carries no tools`);
-  }
-  return tools;
 }
 
-function requireCnfJwk(claims: HopClaims, label: string): JWK {
-  const jwk = claims.cnf?.jwk;
-  if (!jwk) {
-    // @spec cross-org-delegation#hop-members — a thumbprint-only confirmation
-    // is not conforming on a cross-organizational Chain.
-    throw new ChainVerificationError(
-      `${label}: cnf must carry the full public jwk (thumbprint-only is not conforming)`,
-    );
+/** @spec cross-org-delegation#hop-members: the `mission` claim's origin principal. */
+function subjectOf(claims: Record<string, unknown>): { iss: string; sub: string } | undefined {
+  const subject = isObject(claims.mission) ? claims.mission.subject : undefined;
+  if (!isObject(subject) || typeof subject.iss !== "string" || !subject.iss || typeof subject.sub !== "string" || !subject.sub) {
+    return undefined;
   }
-  return jwk;
+  return { iss: subject.iss, sub: subject.sub };
+}
+
+/** The hop's `cnf.jwk`, which the substrate verified is a public key (steps 3l and 4b2). */
+function cnfJwkOf(claims: Record<string, unknown>): JWK {
+  return (claims.cnf as { jwk: JWK }).jwk;
 }
 
 /**
@@ -181,140 +183,92 @@ export interface VerifyChainOptions {
 
 /**
  * @spec cross-org-delegation#verification — steps 1 through 9. Step 10
- * (dual-axis local authorization) and leaf proof-of-possession are performed
- * by the caller at its own boundary.
+ * (dual-axis local authorization), the requested audience and the leaf
+ * proof of possession are performed by the caller at its own boundary.
  */
 export async function verifyCrossOrgChain(opts: VerifyChainOptions): Promise<VerifiedChain> {
   const { federation: fed, presentation, nowS } = opts;
-  const chain = presentation.chain;
   const credByHop = new Map<number, { type: string; credential: string }>();
   for (const e of presentation.actor_credentials ?? []) credByHop.set(e.hop, e);
 
-  // Step 2: root validation under a trust-model-resolved issuer (step 1).
-  const rootHeader = decodeProtectedHeader(chain[0] as string);
-  if (rootHeader.typ !== AAT_TYP) {
-    throw new ChainVerificationError("root typ is not the substrate token type");
+  // Step 1: the origin Mission Issuer resolves through the federation's
+  // accepted issuers and keys, never because the Chain names it. Steps 2 and
+  // 3: the substrate's chain verification, AAT -02 Section 8 steps 1 to 5
+  // (typ and alg, the root under a trust anchor, every child under its
+  // parent's cnf.jwk, iss, par_hash, depth, time and capability
+  // monotonicity, constraint well-formedness).
+  const trustAnchors: AatTrustAnchor[] = fed.issuers.flatMap((iss) =>
+    iss.jwks.keys.map((jwk) => ({
+      issuer: iss.issuer,
+      jwk: jwk as Record<string, unknown>,
+      ...(typeof jwk.kid === "string" ? { kid: jwk.kid } : {}),
+    })),
+  );
+  const links = verifyAatChainLinks({ chain: presentation.aat_chain, trustAnchors, now: nowS });
+  if (links.verdict === "DENY") {
+    throw new ChainVerificationError(`substrate step ${links.step}: ${links.reason}`);
   }
-  let rootPayload: HopClaims | undefined;
-  for (const iss of fed.issuers) {
-    for (const key of iss.jwks.keys) {
-      try {
-        const result = await jwtVerify(chain[0] as string, await importJWK(key, key.alg), {
-          issuer: iss.issuer,
-          currentDate: new Date(nowS * 1000),
-        });
-        rootPayload = result.payload as HopClaims;
-        break;
-      } catch {
-        // not this accepted issuer/key; the chain never selects its own trust
-      }
-    }
-    if (rootPayload) break;
+  const tokens = links.chain;
+
+  // Steps 2, 4 and 5, the attenuation profile's Mission layer: a root the
+  // Mission Issuer minted, the `mission` claim unchanged, nested `aud`, and
+  // `mission_constraints` present, understood and narrowed at every hop
+  // (attenuation#mission-binding-check, #mission-constraints).
+  let missionLayer;
+  try {
+    missionLayer = verifyMissionAatChain(tokens, links.anchorIssuer);
+  } catch (e) {
+    if (e instanceof MissionAatError) throw new ChainVerificationError(e.message);
+    throw e;
   }
-  if (!rootPayload) {
-    throw new ChainVerificationError("root is not signed by an accepted origin Mission Issuer");
-  }
-  const mission = rootPayload.mission;
-  if (!mission?.id || !mission.issuer || !mission.authority_hash) {
-    throw new ChainVerificationError("root mission claim is incomplete");
-  }
-  if (mission.issuer !== rootPayload.iss) {
-    throw new ChainVerificationError("root iss differs from mission.issuer");
-  }
-  const subject = mission.subject;
-  if (!subject?.iss || !subject.sub) {
+
+  // Steps 2 and 4, this profile's: the root carries the origin principal,
+  // and every hop carries it unchanged; every token carries exactly the
+  // mapped entry (step 5).
+  const root = tokens[0] as AatVerifiedToken;
+  const subject = subjectOf(root.claims);
+  if (!subject) {
     throw new ChainVerificationError("root mission.subject is required on a conforming Chain");
   }
-  const rootAct = rootPayload.act;
-  if (!rootAct?.iss || !rootAct.sub) {
+  for (const [i, t] of tokens.entries()) {
+    requireOnlyMappedEntry(t.claims, i === 0 ? "root" : `hop ${i}`);
+    const s = subjectOf(t.claims);
+    if (s?.iss !== subject.iss || s?.sub !== subject.sub) {
+      throw new ChainVerificationError(`hop ${i}: mission invariants changed across the chain`);
+    }
+  }
+
+  // Step 2: the issuer-asserted root act.
+  const rootAct = root.claims.act as ActClaim | undefined;
+  if (!isObject(rootAct) || typeof rootAct.iss !== "string" || !rootAct.iss || typeof rootAct.sub !== "string" || !rootAct.sub) {
     throw new ChainVerificationError("root MUST carry the issuer-asserted act (iss and sub)");
   }
   if (rootAct.act !== undefined) {
     throw new ChainVerificationError("root act carries a nested history: duplicated actor representation");
   }
-  if (typeof rootPayload.del_depth !== "number" || rootPayload.del_depth !== 0) {
-    throw new ChainVerificationError("root del_depth must be 0");
-  }
-  const delMax = rootPayload.del_max_depth;
-  if (typeof delMax !== "number" || delMax < 0) {
-    throw new ChainVerificationError("root del_max_depth missing");
-  }
-  if (chain.length - 1 > delMax) {
-    throw new ChainVerificationError("chain depth exceeds del_max_depth");
-  }
-
-  let parentPayload: HopClaims = rootPayload;
-  let parentToken = chain[0] as string;
-  let parentTools = toolsOfHop(rootPayload, "root");
-  let parentCnf = requireCnfJwk(rootPayload, "root");
   const lineage: VerifiedHop[] = [
     {
-      jti: String(rootPayload.jti ?? ""),
-      actor: { iss: rootAct.iss, sub: rootAct.sub, ...(typeof rootAct.sub_profile === "string" ? { sub_profile: rootAct.sub_profile } : {}) },
-      cnfJwk: parentCnf,
-      tools: parentTools,
+      jti: String(root.claims.jti ?? ""),
+      actor: {
+        iss: rootAct.iss,
+        sub: rootAct.sub,
+        ...(typeof rootAct.sub_profile === "string" ? { sub_profile: rootAct.sub_profile } : {}),
+      },
+      cnfJwk: cnfJwkOf(root.claims),
+      tools: root.tools,
     },
   ];
-  if (opts.requireNamedDepths?.has(0) && !lineage[0]?.actor) {
-    throw new ChainVerificationError("policy requires a named actor at depth 0");
-  }
 
-  // Steps 3-7 per child hop.
-  for (let i = 1; i < chain.length; i++) {
-    const token = chain[i] as string;
-    const header = decodeProtectedHeader(token);
-    if (header.typ !== AAT_TYP) {
-      throw new ChainVerificationError(`hop ${i}: typ is not the substrate token type`);
-    }
-    let payload: HopClaims;
-    try {
-      const result = await jwtVerify(token, await importJWK(parentCnf, parentCnf.alg ?? "ES256"), {
-        currentDate: new Date(nowS * 1000),
-      });
-      payload = result.payload as HopClaims;
-    } catch {
-      // step 3: each child verifies under the public key carried in its
-      // parent's cnf.jwk; anything else refuses.
-      throw new ChainVerificationError(`hop ${i}: signature does not verify under the parent cnf.jwk`);
-    }
-    if (payload.par_hash !== parHash(parentToken)) {
-      throw new ChainVerificationError(`hop ${i}: par_hash does not commit to the exact parent`);
-    }
-    // Step 4: mission invariants, value equality including subject.
-    const m = payload.mission;
-    if (
-      m?.id !== mission.id ||
-      m?.issuer !== mission.issuer ||
-      m?.authority_hash !== mission.authority_hash ||
-      m?.subject?.iss !== subject.iss ||
-      m?.subject?.sub !== subject.sub
-    ) {
-      throw new ChainVerificationError(`hop ${i}: mission invariants changed across the chain`);
-    }
-    // Step 5: depth, audience, expiry, mapped-capability subset.
-    if (payload.del_depth !== (parentPayload.del_depth as number) + 1) {
-      throw new ChainVerificationError(`hop ${i}: del_depth is not monotonic`);
-    }
-    if (payload.del_max_depth !== delMax) {
-      throw new ChainVerificationError(`hop ${i}: del_max_depth changed`);
-    }
-    if (!audNesting(payload.aud as string | string[], parentPayload.aud as string | string[])) {
-      throw new ChainVerificationError(`hop ${i}: audience widened`);
-    }
-    if (!expNesting(Number(payload.exp), Number(parentPayload.exp))) {
-      throw new ChainVerificationError(`hop ${i}: expiry extended`);
-    }
-    const tools = toolsOfHop(payload, `hop ${i}`);
-    if (!toolsSubset(tools, parentTools)) {
-      throw new ChainVerificationError(`hop ${i}: capability is not a subset of the parent`);
-    }
-    const cnfJwk = requireCnfJwk(payload, `hop ${i}`);
-    // Step 6: hop classification. act present => named, credential REQUIRED.
-    const act = payload.act;
+  // Steps 6 and 7: classify each later hop and reconstruct the actor history.
+  for (let i = 1; i < tokens.length; i++) {
+    const hop = tokens[i] as AatVerifiedToken;
+    const cnfJwk = cnfJwkOf(hop.claims);
+    // Step 6: act present => named, credential REQUIRED.
+    const act = hop.claims.act as ActClaim | undefined;
     let actor: VerifiedHop["actor"];
     const cred = credByHop.get(i);
     if (act !== undefined) {
-      if (!act.iss || !act.sub) {
+      if (!isObject(act) || typeof act.iss !== "string" || !act.iss || typeof act.sub !== "string" || !act.sub) {
         throw new ChainVerificationError(`hop ${i}: a named hop requires both act.iss and act.sub`);
       }
       if (act.act !== undefined) {
@@ -332,15 +286,12 @@ export async function verifyCrossOrgChain(opts: VerifyChainOptions): Promise<Ver
     } else if (opts.requireNamedDepths?.has(i)) {
       throw new ChainVerificationError(`hop ${i}: policy requires a named actor`);
     }
-    lineage.push({ jti: String(payload.jti ?? ""), ...(actor ? { actor } : {}), cnfJwk, tools });
-    parentPayload = payload;
-    parentToken = token;
-    parentTools = tools;
-    parentCnf = cnfJwk;
+    lineage.push({ jti: String(hop.claims.jti ?? ""), ...(actor ? { actor } : {}), cnfJwk, tools: hop.tools });
   }
 
   // Step 9: Mission state from a local source within the freshness bound.
-  const observation = opts.stateSource?.(mission.id, mission.issuer);
+  const { id: missionId, issuer: missionIssuer, authority_hash: authorityHash } = missionLayer.mission;
+  const observation = opts.stateSource?.(missionId, missionIssuer);
   if (!observation) {
     throw new ChainVerificationError("mission state unavailable: fail closed");
   }
@@ -351,18 +302,21 @@ export async function verifyCrossOrgChain(opts: VerifyChainOptions): Promise<Ver
     throw new ChainVerificationError(`mission is not active (${observation.state})`);
   }
 
-  const leafPayload = parentPayload as Record<string, unknown>;
-  const leafAud = Array.isArray(parentPayload.aud)
-    ? (parentPayload.aud as string[])
-    : parentPayload.aud
-      ? [parentPayload.aud as string]
-      : [];
+  const leaf = tokens[tokens.length - 1] as AatVerifiedToken;
+  const leafAud = leaf.claims.aud;
   return {
-    missionId: mission.id,
-    missionIssuer: mission.issuer,
-    authorityHash: mission.authority_hash,
-    subject: { iss: subject.iss, sub: subject.sub },
-    leaf: { payload: leafPayload, cnfJwk: parentCnf, tools: parentTools, aud: leafAud },
+    missionId,
+    missionIssuer,
+    authorityHash,
+    subject,
+    leaf: {
+      payload: leaf.claims,
+      cnfJwk: cnfJwkOf(leaf.claims),
+      tools: leaf.tools,
+      missionConstraints: missionLayer.missionConstraints,
+      aud: Array.isArray(leafAud) ? (leafAud as string[]) : typeof leafAud === "string" ? [leafAud] : [],
+    },
     lineage,
+    tokens,
   };
 }

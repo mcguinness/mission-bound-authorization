@@ -1852,7 +1852,7 @@ export class MissionKernel {
     // approval event is recorded with its `ceiling_hash`, and its consent
     // instant is this event's own.
     const ceiling = input.ceiling
-      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt, input.approver)
+      ? consentCeiling(this.opts.issuer, this.opts.activationPolicies, input.ceiling, createdAt, input.approver, this.resourceContracts())
       : undefined;
     // @spec mission#transformation-capabilities (D733 ruling 2): the ceiling's
     // entries keep the association the mapping assigns them at this consent,

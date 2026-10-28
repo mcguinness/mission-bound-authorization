@@ -14,6 +14,8 @@ import {
   CANONICAL_RESOURCE,
   type DpopKeys,
   dpopProofFor,
+  paymentsAatToolId,
+  signAatPop,
   type KeyRoles,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
@@ -129,21 +131,24 @@ describe("each token class verifies only under its own role's keys (@spec runtim
 
   it("refuses an attenuation root signed by the access-token key, and verifies the root key's signature", async () => {
     const rs = server();
-    const claims = { ...base(), mission: { ...MISSION, authority_hash: "sha-256:roles" } };
+    const { cnf: _jkt, ...rest } = base();
+    const claims = { ...rest, cnf: { jwk: await exportJWK(holder.publicKey) }, mission: { ...MISSION, authority_hash: "sha-256:roles" } };
+    const args = JSON.stringify({ invoice_id: "inv-1" });
+    const presented = async (t: string) => ({
+      aat_chain: [t],
+      aat_pop: await signAatPop({ leaf: t, holderKey: holder.privateKey, tool: paymentsAatToolId("get_invoice"), argumentsJson: args }),
+    });
     const wrongRole = await sign("aat+jwt", claims, access);
-    await expect(
-      rs.validateAttenuationChain([wrongRole], await dpopProofFor(holder, HTU, HTM, wrongRole), HTU, HTM),
-    ).rejects.toThrow(NO_KEY);
+    await expect(rs.validateAatPresentation(await presented(wrongRole), "get_invoice", args)).rejects.toThrow(NO_KEY);
     // Under its own role's key the signature verifies and the chain's own
-    // checks run (here, the toolless root fails them): the key was accepted.
+    // checks run (here, the bare root fails them): the key was accepted.
     const pinned = await sign("aat+jwt", claims, root);
-    const outcome = await rs
-      .validateAttenuationChain([pinned], await dpopProofFor(holder, HTU, HTM, pinned), HTU, HTM)
-      .then(
-        () => "admitted",
-        (e: Error) => e.message,
-      );
+    const outcome = await rs.validateAatPresentation(await presented(pinned), "get_invoice", args).then(
+      () => "admitted",
+      (e: Error) => e.message,
+    );
     expect(outcome).not.toMatch(NO_KEY);
+    expect(outcome).toMatch(/AAT -02 step 3c/);
   });
 
   it("refuses a transaction token signed by the access-token key, though that key is in the transaction key set", async () => {
