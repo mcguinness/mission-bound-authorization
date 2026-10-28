@@ -11528,9 +11528,9 @@
    "id": "core.termination.written-once-cause-preserved",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "termination",
-   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and never changes it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
+   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and MUST NOT change it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -11570,7 +11570,8 @@
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K4): the prohibition carries its MUST NOT, an obligation it already stated; the write-once clause stays declarative (narrow wording), and write-once atomicity stays a requirement this row's witnesses do not assert. Coverage unchanged."
   },
   {
    "id": "core.termination.retained-facts-only",

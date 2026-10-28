@@ -2432,7 +2432,7 @@ Mission adds the version of the transition that committed the
 termination as its audit reference.
 
 The issuer writes `termination` once, atomically with the transition
-to `terminated`, and never changes it: an expiry, or any later event,
+to `terminated`, and MUST NOT change it: an expiry, or any later event,
 does not replace the reason or references of a Mission already
 terminated.
 
