@@ -152,10 +152,10 @@ profile:
   ({{revocation-enforcement-classes}}): the `mission_max_stale_seconds`
   ceiling on reliance on an observation of Mission state, and how to
   size token lifetimes to the propagation mechanisms in use.
-- **Authorization server metadata** members
-  ({{as-metadata}}) advertising the endpoints above.
 
-Each extension is independently optional ({{conformance}}).
+Each extension is independently optional ({{conformance}}). The
+authorization server metadata an AS publishes ({{as-metadata}})
+follows from the extensions and authentication paths it supports.
 
 This document does not restate the issuance profile: the Mission
 Intent, authority derivation, the `mission` claim, the integrity
@@ -1066,6 +1066,14 @@ operation it has not adopted, with `invalid_request`
 ({{mission-status-errors}}) before looking up the Mission, leaving the
 Mission unchanged, so the refusal discloses nothing about it.
 
+The AS answers a successful base operation with the signed,
+state-only Mission Status Response ({{mission-status-response}}),
+whose `aud` is the authenticated client's `client_id` and whose
+`nonce` is the request's. A retransmit of an accepted request replays
+that original response ({{idempotency}}). An extension operation's
+outcome and result shape are those its companion profile defines
+(below).
+
 A companion profile MAY register a further `operation` value on this
 endpoint that changes no Mission-level state, provided it defines the
 value's request members, authorization, anti-oracle behavior,
@@ -1331,9 +1339,16 @@ Decoded JWS payload:
 }
 ~~~
 
+The Mission's Status version is 4: a suspension and a resumption
+between the Mission Status example ({{mission-status-response}}) and
+this revocation each advanced it.
+
 The next two examples use another Mission.
 
-Suspend request with a deadline, here also carrying the OPTIONAL
+Suspend request with a deadline from `admin-console`, an
+administrator client the deployment authorizes for `suspend` and
+the scheduled `revoke` ({{lifecycle-authorization}}), here also
+carrying the OPTIONAL
 `expected_version` guard against deciding over stale state
 ({{idempotency}}):
 
@@ -1360,8 +1375,8 @@ in `mission`. Decoded JWS payload:
 ~~~ json
 {
   "iss": "https://as.example.com",
-  "aud": "s6BhdRkqt3",
-  "sub": "s6BhdRkqt3",
+  "aud": "admin-console",
+  "sub": "admin-console",
   "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
   "iat": 1793607600,
   "exp": 1793607660,
@@ -1499,7 +1514,8 @@ The AS MUST process a lifecycle request in this order, refusing it at
 the first step that fails:
 
 1. Authenticate the caller ({{mission-status-authentication}}),
-   parsing the request body only as far as authentication needs. A
+   parsing the request body only as far as authentication and the
+   `nonce` echo of {{mission-status-errors}} need. A
    body that cannot be parsed is refused `invalid_request`, whatever
    credential the request presents; a client authentication parameter
    included more than once fails authentication, and no occurrence of
@@ -1599,8 +1615,8 @@ Each mechanism is discovered from its own metadata:
   event-driven propagation, discovered from that profile's own
   metadata.
 
-A deployment advertises `mission_max_stale_seconds` ({{as-metadata}}),
-the ceiling, in seconds, on reliance on an observation of Mission
+A deployment that claims revocation propagation ({{conformance}})
+advertises `mission_max_stale_seconds` ({{as-metadata}}), the ceiling, in seconds, on reliance on an observation of Mission
 state: the freshness cap of {{mission-status-caching}} applies it to a
 Mission Status Response, and the issuer applies it to an introspection
 projection's `fresh_until` ({{introspection-projection}}). It does
@@ -1734,7 +1750,8 @@ Metadata").
 `mission_max_stale_seconds`:
 : OPTIONAL. An integer. The ceiling, in seconds, on reliance on an
   observation of Mission state ({{revocation-enforcement-classes}}).
-  When absent, no such ceiling is declared.
+  A deployment claiming revocation propagation ({{conformance}})
+  advertises it. When absent, no such ceiling is declared.
 
 `mission_historical_jwks_uri`:
 : CONDITIONAL. A string containing an `https` URL. The URL of the AS's

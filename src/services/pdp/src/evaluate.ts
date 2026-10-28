@@ -577,7 +577,9 @@ export type DenialReason =
    * budget binding this PDP cannot meter (no budget store, a budget its
    * statement does not declare as bound, another currency, or a limit or
    * Dispatch Policy reference that differs from the declaration), so it refuses rather
-   * than pass the bound through unmetered.
+   * than pass the bound through unmetered. Also (#1772, D907): every
+   * applicable Mission entry carries a `constraints` key outside the set this
+   * PDP evaluates, so none can authorize.
    */
   | "constraint_unsupported";
 
@@ -2308,9 +2310,25 @@ async function evaluateInner(
   // enforce". The matched Mission entry is evaluated whole: a key outside the
   // set this PDP evaluates refuses here, never passes as though absent, so a
   // Common Constraint this deployment does not yet implement cannot reach a
-  // permit unenforced.
+  // permit unenforced. Such an entry provides no authority and is dropped
+  // from the candidates, so another applicable entry the PDP can fully
+  // evaluate still authorizes on its own (resource-access#common-constraints).
+  // @spec authzen#runtime-denial-classification, authzen#failure-condition-
+  // coverage "Unrecognized or unmetered constraint" (#1772, D907): when no
+  // candidate survives, the denial is `constraint_unsupported`, distinct from
+  // `parameter_violation`, which stays for a constraint the PDP evaluated and
+  // found violated. It names no `authority_bound`: that member is recorded
+  // only on an `out_of_authority` or `parameter_violation` deny.
+  // Reference precedence (D929): when every candidate fails, the denial is
+  // the reason of the stage that eliminates the final surviving candidate,
+  // not of the last entry in array order. An unsupported entry beside a
+  // violated one is `parameter_violation` (a later constraint stage removes
+  // the survivor); one entry carrying both is `constraint_unsupported`.
+  // Credential-specific qualification: a credential entry carrying an
+  // unrecognized constraint is denied `credential_invalid` at step 1a
+  // (authzen#context-credential), never `constraint_unsupported`.
   if (!narrow((e) => !e.constraints || Object.keys(e.constraints).every((k) => SUPPORTED_CONSTRAINT_KEYS.includes(k)))) {
-    return deny("parameter_violation", "mission");
+    return deny("constraint_unsupported");
   }
 
   const mapping = opts.relationForAction(req.action.name);

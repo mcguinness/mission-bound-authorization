@@ -9,7 +9,7 @@ import { dirname } from "node:path";
 import { kernelStoreFromEnv, loadSigningKeyRing, signingKeysFromEnv } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { openRasRedemptionStore, rasRedemptionsFromEnv } from "@mission/ras";
-import { evidenceKeysFromEnv } from "./evidence-key-files.js";
+import { evidenceKeySourceFromEnv } from "./evidence-key-files.js";
 import { resourcePolicyStoreFromEnv } from "./resource-policy-store.js";
 import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.js";
 
@@ -21,7 +21,9 @@ import { type ComposeStackOptions, composeStack, type DemoStack } from "./stack.
  * a development store; `resourcePolicyStoreFromEnv`) and the PDP mode
  * (`MISSION_PDP_MODE`), the signing keys (`MISSION_KEY_RING` or
  * `MISSION_EPHEMERAL_KEYS`), the kernel's file (`MISSION_KERNEL_STORE`,
- * which requires the key ring) and the RAS's redemption store
+ * which requires the key ring), the evidence keys
+ * (`MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or
+ * `MISSION_EPHEMERAL_EVIDENCE_KEYS`) and the RAS's redemption store
  * (`MISSION_RAS_REDEMPTIONS`, which the key ring requires), and nothing else, so never the test-only
  * ordinary-token minting fixture. A value that is set but unusable refuses
  * startup with an error naming it, before anything connects or listens.
@@ -50,8 +52,10 @@ export function asNativeLaunchOptions(env: Readonly<Record<string, string | unde
   const signingKeys = signingKeysFromEnv(env);
   // @spec #250: a kernel kept across restarts, only with a key ring.
   const kernelStore = kernelStoreFromEnv(env);
-  // @spec #831 (scope inventory): durable evidence keys, or keys generated per boot.
-  const evidenceKeys = evidenceKeysFromEnv(env);
+  // @spec #831 (D901): the deployment says where its evidence keys come from,
+  // the key files or keys generated at each boot.
+  const evidenceKeySource = evidenceKeySourceFromEnv(env);
+  const evidenceKeys = "pep" in evidenceKeySource ? evidenceKeySource : undefined;
   // @spec #1767 (D901): the RAS's single-use claims kept across restarts,
   // required with a key ring.
   const rasRedemptions = rasRedemptionsFromEnv(env);
@@ -153,6 +157,7 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
           ? `${options.kernelStore.file} (kept across restarts; recovery witness ${options.kernelStore.witness})`
           : "in memory (lost at restart)"
       }`,
+      `  evidence keys      ${options.evidenceKeys ? `key files (kept across restarts): PEP ${options.evidenceKeys.pep}, PDP ${options.evidenceKeys.pdp}` : "ephemeral (new at every restart)"}`,
       `  RAS redemptions    ${options.rasRedemptions ? `${options.rasRedemptions.file} (kept across restarts)` : "in memory (lost at restart)"}`,
       `  resource audience  ${resourceChannel.url}  (HTTP MCP, DPoP verified on every request)`,
       `  PDP mode           ${stack.pdpMode}`,

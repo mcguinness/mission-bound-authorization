@@ -98,7 +98,12 @@ import {
 } from "../kernel/child-delegation.js";
 import { IntentError } from "../kernel/intent.js";
 import { GateError } from "../kernel/kernel.js";
-import { deploymentCrossDomain, StandingPaymentLineageError, standingPaymentRootOf } from "../kernel/standing-payment.js";
+import {
+  assertSuccessorMaxBudget,
+  deploymentCrossDomain,
+  StandingPaymentLineageError,
+  standingPaymentRootOf,
+} from "../kernel/standing-payment.js";
 import {
   drawdownRequested,
   adjudicateDrawdown,
@@ -2766,6 +2771,10 @@ export async function handleExpansionExchange(
       undefined,
       standingPaymentRootOf(opts.kernel, resolved.record) ? { admitMaxBudget: true } : {},
     );
+    // @spec metering#capacity-across-missions (#813, D877): and it keeps it
+    // exactly, refused here, before a deferral asks an Approver to approve a
+    // successor its creation would refuse (the creation checks again).
+    assertSuccessorMaxBudget(opts.kernel, resolved.record, submission.intent);
   } catch (e) {
     if (e instanceof IntentError) throw intentErrorToOidc(e);
     throw new errors.InvalidRequest(e instanceof Error ? e.message : "invalid mission_intent");
