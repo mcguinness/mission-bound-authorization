@@ -83283,6 +83283,1248 @@
    "notes": "#966 (D356, owner review). The example is validated by scripts/check-aauth-management-examples.mjs; native tests are scoped to the #836 pilot if it reaches management."
   },
   {
+   "id": "aauth-management.errors.absent-unauthorized-same-response",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "For a syntactically valid `{mission_s256}` segment, a PS MUST return the same status, error, body, header set, and observably equivalent timing whether the mission is absent or the authenticated caller lacks authorization for it, and MUST answer both identically within each caller class.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "for a syntactically valid `{mission_s256}` segment, an absent mission and a mission the authenticated caller lacks authorization for receive the same status, error, body and header set, and the PS answers both identically within each caller class",
+    "local": "within the owning-agent class (another agent's mission, active or terminated; a stranger; a sub-agent; an agent the PS does not admit or whose allowlist entry was dropped) and within the administrator class (a person outside its scope, an action it lacks) the answer is 404 with the body bytes {\"error\":\"mission_not_found\",\"detail\":\"no such mission\"}; timing is the separate row aauth-management.errors.absent-unauthorized-same-timing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.errors.absent-unauthorized-same-timing",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "For a syntactically valid `{mission_s256}` segment, a PS MUST return the same status, error, body, header set, and observably equivalent timing whether the mission is absent or the authenticated caller lacks authorization for it, and MUST answer both identically within each caller class.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "an absent mission and a mission the authenticated caller lacks authorization for are answered with observably equivalent timing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.errors.mission-not-found-for-both",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "The PS MUST use `mission_not_found` for both.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PS answers an absent mission and a mission outside the caller's authorization with mission_not_found"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.errors.no-disclosure-before-authorization",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "It MUST NOT disclose the state, Agent identifier, timestamps, expiry, reason, or tenant before authorization succeeds.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "no answer given before authorization succeeds discloses the mission's state, Agent identifier, timestamps, expiry, termination reason or tenant",
+    "local": "an unauthorized caller's answer is the absent mission's, byte for byte; a request refused before the lookup (a reason the caller's class may not give, a failed authentication) is answered the same whether or not the mission exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.errors.repeated-failures-rate-limited-and-logged",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "Repeated failures MUST be rate limited and security logged.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "repeated control-plane failures are rate limited and recorded in a security log"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.errors.probe-log-keyed-digest",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "errors",
+   "text": "Logs for probes MUST avoid storing raw references longer than needed; a keyed digest can support abuse correlation without building a reusable existence index.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a log entry for a probe does not keep the raw reference longer than needed",
+    "local": "the security event never holds the reference; it names it by an HMAC under a per-process key, truncated to 22 characters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.authenticate-first",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "The PS MUST authenticate every caller before disclosing status or tree data or changing state.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a control-plane request whose caller does not authenticate is refused before any status is disclosed or any state changes",
+    "local": "401 with Signature-Error and no lifecycle member, the same for an existing and an absent mission; the mission, its log and the issued tokens are unchanged"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.authorize-before-existence",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "It MUST authorize the action against the target mission after authentication and before existence is disclosed.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the PS authorizes the action against the target mission after authenticating the caller and before disclosing whether the mission exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.owning-agent-sub-match",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "the `sub` of the verified Agent Token MUST exactly match the `agent` member of the mission blob",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PS admits an agent as a mission's Owning Agent only when the sub of its verified Agent Token exactly matches the mission blob's agent member"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.agent-token-no-administrative-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "An Agent Token alone MUST NOT confer administrative privilege.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a caller authenticated by an Agent Token alone gets no administrative privilege",
+    "local": "an agent reaches only its own missions and may give only revoked; administrative and superseded are invalid_termination_reason, another agent's mission is mission_not_found"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.administrator-least-privilege",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "Administrative authorization MUST be least-privilege and scoped at least by tenant or person population and action.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an administrator's authorization is scoped at least by tenant or person population and by action",
+    "local": "each configured administrator names its persons and its actions; a mission of another person, or an action it lacks, is mission_not_found"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.administrative-reason-administrator-only",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "Administrative reason `administrative` MUST be limited to this role.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "only an administrator terminates with reason administrative; any other caller's request giving it is refused",
+    "local": "invalid_termination_reason (400), and nothing changes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.administrator-request-recorded",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "The PS MUST record the authenticated principal, effective role, policy decision, and declared operational purpose for every successful administrative request.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every successful administrative request is recorded with the authenticated principal, the effective role, the policy decision and the declared operational purpose",
+    "local": "the mission-log entry's detail carries actor {id, role}, decision, policy and, for a terminate, purpose; a status action carries no purpose member, so none is recorded for it"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.authorization.administrator-step-up",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "authorization",
+   "text": "It SHOULD require step-up authentication or dual control for high-blast-radius automation.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PS requires step-up authentication or dual control for high-blast-radius administrative automation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.security.administrative-credentials",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "security",
+   "text": "A PS MUST scope them, rate limit them, protect them with sender constraint, and audit their use.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "administrative credentials are scoped, rate limited, protected with sender constraint, and audited"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.endpoint.action-required",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "endpoint",
+   "text": "A PS MUST reject a request with a missing or unrecognized `action` with `invalid_request`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a control-plane request whose action is missing or unrecognized is rejected with invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.endpoint.body-mission-s256-rejected",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "endpoint",
+   "text": "A request body MUST NOT carry a `mission_s256` member, and a PS MUST reject a body that does with `invalid_request`.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a control-plane request whose body carries a mission_s256 member is rejected with invalid_request"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.endpoint.duplicate-members-rejected",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "endpoint",
+   "text": "The PS MUST reject duplicate JSON member names.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a control-plane request body with a duplicated member name is rejected",
+    "local": "invalid_request, including a name repeated through a JSON escape"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.metadata.status-and-terminate-listed",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "metadata",
+   "text": "The array MUST contain `status` and `terminate` for conformance to this specification.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS's mission_control_actions_supported contains status and terminate"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.metadata.caller-resolves-endpoint",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "metadata",
+   "text": "A caller MUST resolve the endpoint from the metadata and MUST NOT construct it from `mission_endpoint`.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a management client takes mission_control_endpoint from the PS's metadata and never constructs it from mission_endpoint",
+    "local": "with no mission_control_endpoint published, the testkit's ManagementClient sends nothing and fails metadata_invalid"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.state.no-return-to-active",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "state",
+   "text": "Once the PS commits `terminated`, it MUST NOT return the mission to `active`.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "once the PS commits terminated, the mission is never again active",
+    "local": "status, later terminates, issuance and a restart of the PS on its store all find it terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.model.no-mission-blob",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "model",
+   "text": "The PS MUST NOT require the caller to send the mission blob, and a status or tree response MUST NOT return it.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "no control-plane request needs the mission blob, and no status or tree response returns it",
+    "local": "this PS serves no tree; a terminate answer carries the status representation and no blob either"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.status.observed-and-fresh-until",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "`observed_at` and `fresh_until` are REQUIRED RFC 3339 `date-time` values {{RFC3339}}: the instant the PS evaluated the mission's state, and the latest instant a consumer may rely on this response.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every status response carries observed_at, the instant the PS evaluated the mission's state, and fresh_until, the latest instant a consumer may rely on it, both RFC 3339 date-times",
+    "local": "fresh_until is observed_at plus status_fresh_seconds (30 in the shipped configuration)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.status.core-members",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "`mission_s256`, `mission_status`, and `approved_at` are REQUIRED.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every status response carries mission_s256, mission_status and approved_at"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.status.terminal-members",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "`terminated_at` is an RFC 3339 `date-time` {{RFC3339}}; it and `termination_reason` are REQUIRED when `mission_status` is `terminated` and MUST be absent while it is `active`.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a status response for a terminated mission carries terminated_at (an RFC 3339 date-time) and termination_reason, and one for an active mission carries neither"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.status.token-residual-when-terminated",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "status",
+   "text": "`token_residual` ({{terminate}}) is likewise REQUIRED when `mission_status` is `terminated` and MUST be absent while it is `active`",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a status response for a terminated mission carries token_residual, and one for an active mission does not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.expiry.scheduler-transition",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "expiry",
+   "text": "The transition AAuth requires at or after `expires_at` is committed with termination reason `expired` and attributed to the PS scheduler ({{logging}}), surfaced through AAuth's `mission_terminated` error and `mission_status` rather than a separate status value.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "at or after expires_at the transition is committed with reason expired, attributed to the PS scheduler in the mission log, and surfaced through mission_terminated and mission_status terminated, with no separate status value",
+    "local": "terminated_at is the expires_at instant, whichever path (status, terminate or an issuance endpoint) applies the expiry"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.terminate.revocation-never-delays-or-rolls-back",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "External revocation MUST NOT be allowed to delay or roll it back.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "external revocation neither delays the terminal commit nor rolls it back",
+    "local": "the answer waits at most immediate_wait_ms for revocation; a hanging, failing or unreachable recipient leaves the mission terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.terminate.full-status-response",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "The PS returns `200 OK` with the full status representation ({{status}}), whose `token_residual` member is the revocation summary",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a successful terminate is answered 200 with the full status representation, its token_residual the revocation summary"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.retain-outcome",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "The PS MUST retain the outcome of a terminate request under `(authenticated caller, request_id)` for at least 24 hours",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "the PS retains a terminate request's outcome under (authenticated caller, request_id) for at least 24 hours",
+    "local": "receipts are durable SQLite and never purged: a replay after a restart, and one 24 hours after the request, receive the retained outcome"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.conflict",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "Reusing a `request_id` for a request that is not equivalent, including one addressed to another mission, fails with `idempotency_conflict`.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a request_id reused for a request that is not equivalent, including one to another mission, fails with idempotency_conflict",
+    "local": "409; equivalence is the parsed body compared canonically, so member order does not matter and an unrecognized member counts"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.replay-no-effect",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "An equivalent request is a replay. It creates no second lifecycle event and initiates no revocation.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "an equivalent repeat creates no second lifecycle event and initiates no revocation"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.replay-receipt",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "Its response repeats the committed receipt exactly, namely `mission_s256`, `mission_status`, `terminated_at`, and `termination_reason`, and reports the rest of the status representation, including `observed_at`, `fresh_until`, and `token_residual`, as of the replay.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "replay",
+   "observation": {
+    "normative": "a replay's response repeats the committed mission_s256, mission_status, terminated_at and termination_reason exactly, and reports observed_at, fresh_until and token_residual as of the replay"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.first-outcome-stands",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "The first committed reason and timestamp remain authoritative; a later request MUST NOT overwrite them.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a later terminate request never overwrites the first committed reason and terminated_at"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.idempotency.one-transition",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "idempotency",
+   "text": "At most one request records the active-to-terminated transition.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "of concurrent terminations, expiry included, at most one records the active-to-terminated transition"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.residual.members",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`token_residual` contains `tracked`, `revocation_attempted`, and `revocation_confirmed`, each a non-negative integer, and the boolean `complete`, all REQUIRED, and `residual_until`, an RFC 3339 `date-time` {{RFC3339}}, when a residual is known.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "token_residual carries tracked, revocation_attempted and revocation_confirmed as non-negative integers and complete as a boolean, and residual_until as an RFC 3339 date-time when a residual is known"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.residual.counts-tracked-credentials",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "The counters count Tracked Credentials, so a Person Token counts like an Auth Token.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the residual counters count Tracked Credentials, a Person Token counting as an Auth Token does"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.residual.until-latest-unconfirmed",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "`residual_until` is the latest `exp` among unconfirmed Tracked Credentials.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "residual_until is the latest exp among the unconfirmed Tracked Credentials",
+    "local": "an unconfirmed credential leaves the bound once its own exp passes"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.residual.until-omitted-or-incomplete",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "terminate",
+   "text": "It MUST be omitted when no residual is known and MUST NOT be presented as a complete bound if untracked or opaque credentials may exist.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "residual_until is omitted when no residual is known, and is never presented as a complete bound where untracked or opaque credentials may exist",
+    "local": "where untracked access may serve the mission, complete is never true"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.residuals.untracked-access-incomplete",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "residuals",
+   "text": "Where any such path was possible, the PS MUST mark mission-wide revocation completeness as false or unknown.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where an access path outside the PS's tracking may serve the mission, mission-wide revocation completeness is reported false or unknown",
+    "local": "the configuration's management.untracked_access; when true, complete is false"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.gating.reject-after-commit",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "token-consequences",
+   "text": "Immediately after the terminal commit, the PS MUST reject every new request that names the mission, at any PS endpoint other than this control plane, with the AAuth `mission_terminated` error",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "from the terminal commit on, every new request naming the mission at a PS endpoint other than the control plane (through mission_s256, a token carrying it, or the mission's own URL for update or completion) is rejected with mission_terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.security.racing-request-not-issued",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "security",
+   "text": "Transactional state evaluation prevents a token request racing with termination from being issued after the commit.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "concurrency",
+   "observation": {
+    "normative": "a person token or auth token request in flight when termination commits is not issued"
+   },
+   "level": "concurrency",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.security.revocation-retries-durable",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "security",
+   "text": "Revocation retries are durable work and survive PS restarts.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "pending revocation retries survive a PS restart and are resumed by the restarted PS"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.signed-jti-exp",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "Each revocation is a signed `POST` of `{jti, exp}` to the recipient's `revocation_endpoint`, with `exp` taken from the PS's record of that token.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each revocation is a signed POST of {jti, exp} to the revocation_endpoint the recipient advertises, with exp from the PS's record of that token"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.server-signature",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "The PS signs as a server under the `jwks_uri` scheme, with its issuer as `id` and `aauth-person.json` as `dwk`, and the signature covers `content-digest` and `content-type`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each revocation request is signed under the jwks_uri scheme with the PS's issuer as id and aauth-person.json as dwk, covering content-digest and content-type"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.three-party-auth-token",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "In PS authorization (three-party), the PS revokes an Auth Token it issued at the Resource it was issued for.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "in three-party access, the PS revokes each Auth Token it issued at the Resource it was issued for"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.retries-bounded-and-recorded",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "Retries MUST be bounded, authenticated, rate limited, and recorded.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "revocation retries are bounded, authenticated, rate limited and recorded",
+    "local": "at most max_attempts, each signed, spaced by exponential backoff capped at retry_max_seconds or by Retry-After, and each attempt and result in the mission log"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.auth-token-confirmation",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "an Auth Token the PS revoked at the Resource it was issued for is confirmed by that Resource's `200`, which has nothing downstream and carries an empty body;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an Auth Token the PS revoked at the Resource it was issued for counts as confirmed on that Resource's 200",
+    "local": "a 200 with an empty body, or with a JSON object body, confirms; a 200 with any other body establishes nothing"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.no-false-success",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "The PS MUST NOT report successful mission-wide revocation merely because it marked its local state or contacted an AS.",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS never reports mission-wide revocation successful merely because it marked its local state or contacted an AS",
+    "local": "revocation_confirmed and complete follow the recipients' confirmations only; there is no AS here"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.unestablished-outcomes",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "a timeout, an unreachable or absent endpoint, a `5xx`, or an unparseable response establishes nothing.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a timeout, an unreachable or absent endpoint, a 5xx or an unparseable response leaves the credential unconfirmed"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.rate-limited-retry-after",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "`rate_limited` (`429`) carries a `Retry-After` interval the PS waits before retrying;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a 429 rate_limited answer, the PS waits the Retry-After interval before revoking that credential again"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.unsupported-iss",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "`unsupported_iss` (`403`) means the recipient does not accept revocations from this PS and honors the token until its `exp`;",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a 403 unsupported_iss, the PS treats the recipient as honoring the token until its exp: the credential stays unconfirmed and is not revoked there again"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.revocation.deferred-polling",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "revocation-attempts",
+   "text": "A `202` is pending: the PS polls the pending URL with a signed `GET` under the same identity, honoring `Retry-After`, until the terminal response",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after a 202, the PS polls the pending URL with a signed GET under the same identity, honoring Retry-After, until the terminal response"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.logging.events",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "The PS MUST append an ordered mission-log event for:",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the PS appends an ordered mission-log event for every authorized status read, every committed termination (automatic expiry and accepted completion included), every authorized termination request received after termination, every token-revocation attempt and result, and every authorized delegation-tree read"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.logging.event-members",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "A management event MUST contain the Mission Reference, PS-local ordered sequence value, event time, event type, authenticated actor and role, authorization decision or policy reference, and, when applicable, `request_id`, termination reason, purpose, and token-impact summary.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each management event contains the Mission Reference, a PS-local ordered sequence value, event time, event type, authenticated actor and role, authorization decision or policy reference, and, when applicable, request_id, termination reason, purpose and token-impact summary"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.logging.token-pair",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "Token events identify a token by the pair `(iss, jti)`, never `jti` alone.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every token event identifies the token by (iss, jti), never by jti alone"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.logging.security-log",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "logging",
+   "text": "A security log MUST capture rejected administrative requests and oracle probes without associating an unverified reference with a real mission.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "a security log captures rejected administrative requests and oracle probes, and never associates an unverified reference with a real mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth-management.security.no-shared-caching",
+   "spec": "draft-mcguinness-mission-aauth-management.md",
+   "anchor": "security",
+   "text": "Responses SHOULD carry cache controls preventing shared caching.",
+   "role": "Controller",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "control-plane responses carry cache controls that prevent shared caching",
+    "local": "cache-control: no-store on every control-plane answer, refusals included"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
    "id": "aauth.mission-log.supervision-decider",
    "spec": "draft-mcguinness-mission-aauth.md",
    "anchor": "mission-log",
@@ -84755,6 +85997,48 @@
     }
    ],
    "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934): the testkit agent client parses the decoded bytes only to read `agent`, after the digest check and before it changes the mission or caches any person token; the bytes it keeps are the decoded ones (aauth.reference.agent-preserves-blob). The approving-PS half of step 4 has no separate witness: the client records its own configured PS. Mutation: removing the `agent` comparison (AG1) fails the first cited test and the owner's probe."
+  },
+  {
+   "id": "aauth.lifecycle.terminated-rejects-governed",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "The PS MUST reject governed requests that reference it with AAuth's `mission_terminated` error",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a governed request that references a terminated mission is rejected with mission_terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
+  },
+  {
+   "id": "aauth.lifecycle.companion-returns-terminal-state",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "lifecycle",
+   "text": "An authenticated status or termination operation defined by a companion returns terminal state instead ({{mission-log}}).",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an authenticated status or termination operation of a companion, for a terminated mission, returns its terminal state instead of mission_terminated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Born todo; its witnesses are cited in the next commit."
   },
   {
    "id": "mandate.claims.approver-from-consent-principal",
