@@ -36,6 +36,7 @@ import {
   type BudgetCounterState,
   budgetCounterId,
   CLAIM_SETTLEMENT_INTAKE,
+  type ClaimChannel,
   Fga,
   RUNTIME_POSTURE,
   type RuntimePosture,
@@ -47,6 +48,8 @@ import { tokenGrantRequest } from "../src/oauth-client.js";
 import { composeStack, type DemoStack } from "../src/stack.js";
 
 const MISSION_DISPATCH_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:mission-dispatch";
+const TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange";
+const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
 const FAR_FUTURE = "2099-01-01T00:00:00Z";
 const POLICY_ID = "sp-e2e";
 const OWNER = "payments-operator";
@@ -168,8 +171,12 @@ function authServer(stack: DemoStack) {
   return as;
 }
 
-/** Bob consents, once, to the standing-payment template on the approval surface; returns its id. */
-async function consentTemplate(stack: DemoStack): Promise<string> {
+/**
+ * `subject` (Bob unless named) consents, once, on the approval surface, to
+ * the standing-payment template whose instances act for `subject` through
+ * `agent`; returns its id.
+ */
+async function consentTemplate(stack: DemoStack, subject = "bob", agent = "subagent-invoice-extractor"): Promise<string> {
   const as = authServer(stack);
   const proposed = await fetch(`${as.asUrl}/templates/proposals`, {
     method: "POST",
@@ -186,7 +193,7 @@ async function consentTemplate(stack: DemoStack): Promise<string> {
       ],
       dispatch_policy: { id: POLICY_ID, version: "1" },
       dispatchers: ["ap-agent"],
-      recipients: { subjects: [{ iss: as.asUrl, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+      recipients: { subjects: [{ iss: as.asUrl, sub: subject }], agents: [agent] },
       per_instance_lifetime_s: 900,
       max_active: 3,
       rate_per_min: 30,
@@ -197,7 +204,7 @@ async function consentTemplate(stack: DemoStack): Promise<string> {
   const { proposal_id } = (await proposed.json()) as { proposal_id: string };
   expect(proposed.status).toBe(201);
   const { sessions } = as.approverConsole as ApprovalConsole;
-  const { cookie, csrf } = sessions.establish(proposal_id, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
+  const { cookie, csrf } = sessions.establish(proposal_id, { sub: subject, acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
   const page = await fetch(`${as.asUrl}/templates/proposals/${proposal_id}`, { headers: { cookie } });
   expect(page.status).toBe(200);
   const decided = await fetch(`${as.asUrl}/templates/proposals/${proposal_id}/decide`, {
@@ -210,11 +217,18 @@ async function consentTemplate(stack: DemoStack): Promise<string> {
   return out.template_id;
 }
 
-/** The Dispatcher dispatches one instance, unattended, at the token endpoint; returns the instance's Mission id. */
-async function dispatchInstance(stack: DemoStack, templateId: string): Promise<string> {
+/**
+ * The Dispatcher dispatches one instance, unattended, at the token endpoint,
+ * proving possession of `dpop`; returns the instance's Mission id and its
+ * access token.
+ */
+async function dispatchWith(
+  stack: DemoStack,
+  templateId: string,
+  dpop: Parameters<typeof tokenGrantRequest>[2],
+): Promise<{ instance: string; accessToken: string }> {
   const as = authServer(stack);
   const before = new Set(stack.kernel.standingPayments.dispatchedInstances(templateId));
-  const dpop = await generateKeyPair("ES256", { extractable: true });
   const { status, body } = await tokenGrantRequest(as.asUrl, as.agentClientJwk, dpop, {
     grant_type: MISSION_DISPATCH_GRANT_TYPE,
     template_id: templateId,
@@ -231,7 +245,12 @@ async function dispatchInstance(stack: DemoStack, templateId: string): Promise<s
   expect(status, JSON.stringify(body)).toBe(200);
   const dispatched = stack.kernel.standingPayments.dispatchedInstances(templateId).filter((id) => !before.has(id));
   expect(dispatched).toHaveLength(1);
-  return dispatched[0] as string;
+  return { instance: dispatched[0] as string, accessToken: body.access_token as string };
+}
+
+/** The Dispatcher dispatches one instance, unattended, at the token endpoint; returns the instance's Mission id. */
+async function dispatchInstance(stack: DemoStack, templateId: string): Promise<string> {
+  return (await dispatchWith(stack, templateId, await generateKeyPair("ES256", { extractable: true }))).instance;
 }
 
 /** The acting credential's verified facts for `missionId`, as the resource's token validation establishes them. */
@@ -276,6 +295,9 @@ const wires = (stack: DemoStack) =>
   stack.connectors.ledgerEntries().map((e) => [e.invoice_id, e.payee_account, e.amount]);
 
 /** The commit-phase Decision Evidence the PDP signed for `missionId`, in order. */
+/** The executing PEP's claim channel; the stack's public type narrows its decision channel to `close`. */
+const claimChannel = (stack: DemoStack): ClaimChannel => (stack.decisionChannel as unknown as { claims: ClaimChannel }).claims;
+
 const commitDecisions = (stack: DemoStack, missionId: string) =>
   stack.evidence
     .forMission(missionId)
@@ -533,6 +555,53 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
+  it("surfaces a conflicting settlement on the composed stack's alarm path: a second completed record for a settled wire raises one settlement_conflict operator alert, and the applied settlement and the committed amount are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+    const stack = await compose(15029, newFiles());
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const alerts = () =>
+      stderr.mock.calls
+        .map(([chunk]) => String(chunk))
+        .filter((line) => line.startsWith('{"type":"operator_alert"'))
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      const paid = await wire(stack, instance, "inv-1");
+      expect(paid.ok, JSON.stringify(paid)).toBe(true);
+      const applied = stack.evidence
+        .forMission(instance)
+        .find((e) => e.kind === "execution" && e.content.outcome === "completed");
+      if (applied?.kind !== "execution") throw new Error("no completed Execution Evidence for the wire");
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
+      // A second attempt's completed record for the same permit, signed under the executor's key.
+      const conflicting = await stack.evidence.recordExecution(CANONICAL_RESOURCE, "executor", {
+        permitId: applied.permit_id,
+        opKey: applied.op_key,
+        evaluation_id: applied.content.evaluation_id,
+        mission_id: instance,
+        audience: applied.content.audience,
+        outcome: "completed",
+      });
+      expect(await claimChannel(stack).settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(alerts()).toEqual([
+        expect.objectContaining({ kind: "settlement_conflict", evaluation_id: applied.content.evaluation_id, mission_id: instance, cause: "completed_then_completed" }),
+      ]);
+      expect(stack.pdpClaims.settlementConflicts(applied.content.evaluation_id)).toEqual([
+        expect.objectContaining({ execution_id: conflicting.content.execution_id, outcome: "completed", applied_execution_id: applied.content.execution_id }),
+      ]);
+      // The applied settlement is unchanged: its own record, redelivered, is
+      // acknowledged as the duplicate, and the conflicting one is still refused,
+      // with no second alert.
+      expect(await claimChannel(stack).settle(applied.content)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(await claimChannel(stack).settle(conflicting.content)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(alerts()).toHaveLength(1);
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "125.00" });
+    } finally {
+      stderr.mockRestore();
+      await closeStack(stack);
+    }
+  });
+
   it("continues both counters in an expansion successor: its payment is metered on the dispatched instance's mission counter and on the shared counter (@spec metering#capacity-across-missions, mission-template#instance-composition, #813, #816)", async () => {
     const stack = await compose(15026, newFiles());
     try {
@@ -581,6 +650,57 @@ describe("standing-payment dispatch metered end to end through the composed stac
     }
   });
 
+  it("refuses an expansion successor's re-presentation of a paid invoice under the instance's key with nothing wired twice: the successor's claim is its own, so a fresh permit reserves on both counters, the ledger refuses the wire already_settled, and that suppression releases the reservation, leaving the amount committed once (@spec metering#retry, metering#settlement-states, metering#capacity-across-missions, #816, D877)", async () => {
+    const stack = await compose(15030, newFiles());
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      seedAcmeInvoices(stack, [["inv-6", "25.00"]]);
+      const key = `idem_${randomUUID()}`;
+      const pay = (missionId: string) =>
+        stack.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-6", idempotency_key: key }, tokenFor(stack, missionId));
+      const first = await pay(instance);
+      expect(first.ok, JSON.stringify(first)).toBe(true);
+      const { successor } = createExpansion(stack.kernel, {
+        predecessorId: instance,
+        intent: stack.kernel.validateIntent(
+          JSON.stringify({
+            goal: "pay approved Acme invoices",
+            target_resources: [CANONICAL_RESOURCE],
+            expires_at: FAR_FUTURE,
+            max_budget: { amount: "150.00", currency: "USD" },
+          }),
+          { admitMaxBudget: true },
+        ),
+        approver: { iss: stack.issuer, sub: "bob" },
+        approvalEventId: `sp-expansion-${randomUUID()}`,
+        approvedUntil: FAR_FUTURE,
+      });
+      // The idempotency scope names the Mission, so the successor's key meets no claim and its permit is fresh.
+      expect(await pay(successor.id)).toMatchObject({ ok: false, refusal_reason: "already_settled" });
+      const permits = commitDecisions(stack, successor.id).filter((d) => d.decision === "permit");
+      expect(permits).toHaveLength(1);
+      const evaluationId = String(permits[0]?.evaluation_id);
+      expect(stack.pdpClaims.reservationsFor(evaluationId).map((r) => [r.counter_scope, r.state, r.cause])).toEqual(
+        expect.arrayContaining([
+          ["mission", "released", "settled_suppressed"],
+          ["standing_consent", "released", "settled_suppressed"],
+        ]),
+      );
+      expect(
+        stack.evidence
+          .forMission(successor.id)
+          .filter((e) => e.kind === "execution")
+          .map((e) => [e.content.outcome, (e.content as { error?: string }).error]),
+      ).toEqual([["suppressed", expect.stringContaining("already_settled")]]);
+      expect(wires(stack)).toEqual([["inv-6", ACME_ACCOUNT, "25.00"]]);
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "0.00", held: "0.00", committed: "25.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "0.00", held: "0.00", committed: "25.00" });
+    } finally {
+      await closeStack(stack);
+    }
+  });
+
   it("denies constraint_unsupported every payment of a standing-payment instance whose committed policy snapshot is no longer retained, with nothing wired or charged, and the kernel-backed source answers underivable for a Mission it does not hold or holds under another issuer (@spec metering#metering, mission-template#standing-payment-exception, #813, decision d)", async () => {
     const stack = await compose(15027, newFiles());
     try {
@@ -603,6 +723,142 @@ describe("standing-payment dispatch metered end to end through the composed stac
       expect(stack.pdpClaims.budgetCounter(SHARED)).toBeUndefined();
       expect(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance))).toBeUndefined();
     } finally {
+      await closeStack(stack);
+    }
+  });
+
+  it("renders on a later template consent the budget's consumption to date that the composed stack's claim domain committed for an executed payment, through the AS's budget exposure port (@spec mission-template#standing-payment-exception, metering#aggregate-bounds, #813, #816, D877)", async () => {
+    const stack = await compose(15029, newFiles());
+    try {
+      const templateId = await consentTemplate(stack);
+      const instance = await dispatchInstance(stack, templateId);
+      expect((await wire(stack, instance, "inv-1")).ok).toBe(true);
+      const as = authServer(stack);
+      const proposed = await fetch(`${as.asUrl}/templates/proposals`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
+        body: JSON.stringify({
+          template_version: `sp-e2e-${randomUUID()}`,
+          ceiling: [
+            {
+              type: "mission_resource_access",
+              resource: CANONICAL_RESOURCE,
+              actions: ["payments:payment.execute"],
+              constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+            },
+          ],
+          dispatch_policy: { id: POLICY_ID, version: "1" },
+          dispatchers: ["ap-agent"],
+          recipients: { subjects: [{ iss: as.asUrl, sub: "bob" }], agents: ["subagent-invoice-extractor"] },
+          per_instance_lifetime_s: 900,
+          max_active: 3,
+          rate_per_min: 30,
+          review_cadence_s: 86400,
+          expires_at: FAR_FUTURE,
+        }),
+      });
+      const { proposal_id } = (await proposed.json()) as { proposal_id: string };
+      const { sessions } = as.approverConsole as ApprovalConsole;
+      const { cookie } = sessions.establish(proposal_id, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
+      const page = await fetch(`${as.asUrl}/templates/proposals/${proposal_id}`, { headers: { cookie } });
+      expect(page.status).toBe(200);
+      expect(await page.text()).toContain(
+        `Budget ${OWNER}/${BUDGET_ID} exposure: consumption to date 125.00 USD committed; outstanding reservations 0.00 USD reserved and 0.00 USD held pending reconciliation, as read at this rendering.`,
+      );
+    } finally {
+      await closeStack(stack);
+    }
+  });
+
+  it("renders on a standing-payment successor's approval page the dispatched instance's and the shared budget's committed, reserved and held totals as the composed stack's claim domain holds them after payments, through the AS's budget exposure port (@spec mission-template#instance-composition, metering#capacity-across-missions, metering#settlement-states, #813, #816, D877)", async () => {
+    const stack = await compose(15030, newFiles());
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      const as = authServer(stack);
+      // Alice's instances, so Bob may approve a write-bearing successor.
+      const templateId = await consentTemplate(stack, "alice", "ap-agent");
+      const dpop = await generateKeyPair("ES256", { extractable: true });
+      const { instance, accessToken } = await dispatchWith(stack, templateId, dpop);
+      const other = await dispatchInstance(stack, templateId);
+      seedAcmeInvoices(stack, [
+        ["inv-a1", "50.00"],
+        ["inv-a2", "25.00"],
+        ["inv-a3", "10.00"],
+        ["inv-b1", "20.00"],
+        ["inv-b2", "5.00"],
+      ]);
+      // Committed: a wire on each instance.
+      expect((await wire(stack, instance, "inv-a1")).ok).toBe(true);
+      expect((await wire(stack, other, "inv-b1")).ok).toBe(true);
+      // Held: a wire on the instance whose settlement never reaches the PDP,
+      // past its permit and lease.
+      const lost = vi.spyOn(stack.pdpClaims, "settle").mockRejectedValue(new Error("settlement lost"));
+      try {
+        expect((await wire(stack, instance, "inv-a2")).ok).toBe(true);
+      } finally {
+        lost.mockRestore();
+      }
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        vi.setSystemTime(Date.now() + 120_000);
+        stack.pdpClaims.sweep();
+      } finally {
+        vi.useRealTimers();
+      }
+      // Reserved: a permit on each instance, not yet redeemed.
+      for (const [missionId, invoiceId] of [
+        [instance, "inv-a3"],
+        [other, "inv-b2"],
+      ] as const) {
+        const permit = await stack.pep.enforce(
+          "execute_wire_transfer",
+          { invoice_id: invoiceId, idempotency_key: `idem_${randomUUID()}` },
+          tokenFor(stack, missionId),
+        );
+        expect(permit.permitted, JSON.stringify(permit.denial_reason)).toBe(true);
+      }
+      expect(totals(stack.pdpClaims.budgetCounter(instanceCounter(stack, instance)))).toEqual({ reserved: "10.00", held: "25.00", committed: "50.00" });
+      expect(totals(stack.pdpClaims.budgetCounter(SHARED))).toEqual({ reserved: "15.00", held: "25.00", committed: "70.00" });
+      // The instance's agent asks to widen it, deferred to an Approver.
+      const widened = await tokenGrantRequest(as.asUrl, as.agentClientJwk, dpop, {
+        grant_type: TOKEN_EXCHANGE,
+        subject_token: accessToken,
+        subject_token_type: ACCESS_TOKEN,
+        requested_token_type: ACCESS_TOKEN,
+        mission_intent: JSON.stringify({
+          intent: {
+            goal: "pay and read Acme invoices",
+            target_resources: [CANONICAL_RESOURCE],
+            expires_at: FAR_FUTURE,
+            max_budget: { amount: "150.00", currency: "USD" },
+          },
+        }),
+        authorization_details: JSON.stringify([
+          {
+            type: "mission_resource_access",
+            resource: CANONICAL_RESOURCE,
+            actions: ["payments:payment.execute", "payments:invoice.read"],
+            constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+          },
+        ]),
+        creation_request_id: randomUUID(),
+        completion_mode: "deferred",
+      });
+      expect(typeof widened.body.deferral_code, JSON.stringify(widened.body)).toBe("string");
+      const code = widened.body.deferral_code as string;
+      const { sessions } = as.approverConsole as ApprovalConsole;
+      const { cookie } = sessions.establish(code, { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) });
+      const page = await fetch(`${as.asUrl}/expansions/deferrals/${code}`, { headers: { cookie } });
+      const html = await page.text();
+      expect(page.status, html).toBe(200);
+      expect(html).toContain(
+        `Instance ${instance}: consumption to date 50.00 USD committed; outstanding reservations 10.00 USD reserved and 25.00 USD held pending reconciliation, as read at this rendering.`,
+      );
+      expect(html).toContain(
+        `Budget ${OWNER}/${BUDGET_ID}: consumption to date 70.00 USD committed; outstanding reservations 15.00 USD reserved and 25.00 USD held pending reconciliation, as read at this rendering.`,
+      );
+    } finally {
+      stderr.mockRestore();
       await closeStack(stack);
     }
   });
