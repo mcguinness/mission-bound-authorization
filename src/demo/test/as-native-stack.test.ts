@@ -24,7 +24,7 @@
  */
 
 import { type ChildProcess, spawn } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { createRequire } from "node:module";
@@ -35,6 +35,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   ALL_PROVIDER_CAPABILITIES,
   ApprovalSessionStore,
+  bindSigningKeyRing,
   initSigningKeyRing,
   loadSigningKeyRing,
   MissionKernel,
@@ -1432,6 +1433,14 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     ...files,
   });
 
+  /** A key binding record for `ring`, created once in a fresh directory outside the ring's (#1815): a key ring requires one. */
+  const bindingsFor = async (ring: string, issuer = `http://localhost:${LAUNCH_AS_PORT}`): Promise<string> => {
+    const file = join(mkdtempSync(join(tmpdir(), "as-native-bindings-")), "key-bindings.json");
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    await bindSigningKeyRing(ring, issuer, { asToken, asStatus, asTxn, asContinuation }, file);
+    return file;
+  };
+
   /** A RAS redemption store created once in a fresh directory (#1767): a key ring requires one. */
   const rasStore = (): string => {
     const file = join(mkdtempSync(join(tmpdir(), "as-native-ras-")), "state", "ras-redemptions.sqlite");
@@ -1452,11 +1461,13 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     expect(
       asNativeLaunchOptions({
         MISSION_KEY_RING: "/var/keys/ring.json",
+        MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json",
         MISSION_EPHEMERAL_EVIDENCE_KEYS: "1",
         MISSION_RAS_REDEMPTIONS: "/var/state/ras-redemptions.sqlite",
       }).signingKeys,
     ).toEqual({
       ring: "/var/keys/ring.json",
+      bindings: "/var/bindings/key-bindings.json",
     });
     const ca = fileURLToPath(import.meta.url);
     expect(
@@ -1521,7 +1532,9 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const roles = { asToken, asStatus, asTxn, asContinuation };
     const ring = join(mkdtempSync(join(tmpdir(), "as-native-ring-")), "keys", "ring.json");
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, roles);
-    const launched = await launchAsNative(launchOptions({ MISSION_KEY_RING: ring, MISSION_RAS_REDEMPTIONS: rasStore() }));
+    const launched = await launchAsNative(
+      launchOptions({ MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: await bindingsFor(ring), MISSION_RAS_REDEMPTIONS: rasStore() }),
+    );
     try {
       expect(launched.stack.authServer?.signingKeyMode).toBe("ring");
       expect(launched.summary).toContain("  signing keys       key ring (kept across restarts)");
@@ -1531,7 +1544,8 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const other = join(mkdtempSync(join(tmpdir(), "as-native-ring-")), "keys", "ring.json");
     await initSigningKeyRing(other, "https://elsewhere.example", roles);
     fgaBootstrap.mockClear();
-    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: other, MISSION_RAS_REDEMPTIONS: rasStore() }))).rejects.toThrow(
+    const unused = join(mkdtempSync(join(tmpdir(), "as-native-bindings-")), "key-bindings.json");
+    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: other, MISSION_KEY_BINDINGS: unused, MISSION_RAS_REDEMPTIONS: rasStore() }))).rejects.toThrow(
       /is for issuer https:\/\/elsewhere\.example/,
     );
     expect(fgaBootstrap).not.toHaveBeenCalled();
@@ -1544,7 +1558,13 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
     const kernelFile = join(dir, "state", "kernel.db");
     const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
-    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile, MISSION_RAS_REDEMPTIONS: rasStore() };
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: witnessFile,
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
 
     const first = await launchAsNative(launchOptions(env, files));
@@ -1592,7 +1612,7 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const ring = join(dir, "keys", "ring.json");
     await initSigningKeyRing(ring, issuer, roles);
     const store = rasStore();
-    const env = { MISSION_KEY_RING: ring, MISSION_RAS_REDEMPTIONS: store };
+    const env = { MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: await bindingsFor(ring), MISSION_RAS_REDEMPTIONS: store };
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
     // A continuation ID-JAG under the ring's as-continuation key, the ID-JAG
     // key the ring keeps across a restart (the cross-domain key is per boot).
@@ -1655,8 +1675,12 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
 
   it("requires MISSION_RAS_REDEMPTIONS with a key ring, and refuses a missing or uninitialized store before anything listens, creating none (#1767)", async () => {
     const evidence = { MISSION_EPHEMERAL_EVIDENCE_KEYS: "1" };
-    expect(() => asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json", ...evidence })).toThrow(/^MISSION_KEY_RING requires MISSION_RAS_REDEMPTIONS/);
-    expect(() => asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_RAS_REDEMPTIONS: "state/ras.sqlite", ...evidence })).toThrow(
+    expect(() => asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", ...evidence })).toThrow(
+      /^MISSION_KEY_RING requires MISSION_RAS_REDEMPTIONS/,
+    );
+    expect(() =>
+      asNativeLaunchOptions({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", MISSION_RAS_REDEMPTIONS: "state/ras.sqlite", ...evidence }),
+    ).toThrow(
       /^MISSION_RAS_REDEMPTIONS must be an absolute path, not state\/ras\.sqlite$/,
     );
     expect(asNativeLaunchOptions({ MISSION_EPHEMERAL_KEYS: "1", ...evidence }).rasRedemptions).toBeUndefined();
@@ -1664,20 +1688,81 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     const dir = mkdtempSync(join(tmpdir(), "as-native-ras-"));
     const ring = join(dir, "keys", "ring.json");
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const bindings = await bindingsFor(ring);
     const missing = join(dir, "state", "ras-redemptions.sqlite");
     const empty = join(dir, "empty.sqlite");
     writeFileSync(empty, "");
     fgaBootstrap.mockClear();
-    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: ring, MISSION_RAS_REDEMPTIONS: missing }))).rejects.toThrow(
+    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: bindings, MISSION_RAS_REDEMPTIONS: missing }))).rejects.toThrow(
       /no redemption store at .*pnpm ras-redemptions init/,
     );
     expect(existsSync(missing)).toBe(false);
-    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: ring, MISSION_RAS_REDEMPTIONS: empty }))).rejects.toThrow(
+    await expect(launchAsNative(launchOptions({ MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: bindings, MISSION_RAS_REDEMPTIONS: empty }))).rejects.toThrow(
       /is not a redemption store .* created: its history is lost/,
     );
     expect(fgaBootstrap).not.toHaveBeenCalled();
     // Nothing listened: the AS port is free.
     await (await holdPort(LAUNCH_AS_PORT))();
+  });
+
+  it("honors a Mission token issued before a restart of the whole target, with a key ring and a kernel file: the same token, DPoP-bound, reads after it (#1815 gap 1)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-restart-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const kernelFile = join(dir, "state", "kernel.db");
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness")),
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    const read = async (issued: IssuedMission) => {
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+      try {
+        return await client.callTool("get_invoice", { invoice_id: "inv-1" });
+      } finally {
+        await close();
+      }
+    };
+
+    const first = await launchAsNative(launchOptions(env, files));
+    let issued: IssuedMission;
+    try {
+      const as = first.stack.authServer;
+      if (!as) throw new Error("the as-native target runs the AS");
+      issued = await issueMissionToken(
+        as.asUrl,
+        as.agentClientJwk,
+        {
+          missionIntent: JSON.stringify({
+            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          }),
+          authorizationDetails: JSON.stringify([
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+          ]),
+        },
+        as.approverConsole,
+      );
+      const before = await read(issued);
+      expect(before.ok, JSON.stringify(before)).toBe(true);
+    } finally {
+      await first.close();
+    }
+
+    // The whole target restarts on the same files. The launcher runs the AS,
+    // the PEP and the resource in one process, so the resource cannot restart
+    // alone; this is the assembled restart #1815 gap 1 falls back to.
+    const second = await launchAsNative(launchOptions(env, files));
+    try {
+      const after = await read(issued);
+      expect(after.ok, JSON.stringify(after)).toBe(true);
+      expect((after.result as { id?: string } | undefined)?.id).toBe("inv-1");
+    } finally {
+      await second.close();
+    }
   });
 
   it("refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)", async () => {
@@ -1687,7 +1772,13 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
     const kernelFile = join(dir, "state", "kernel.db");
     const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
-    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile, MISSION_RAS_REDEMPTIONS: rasStore() };
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: witnessFile,
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
     const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
     // The store's restore unit, backed up before the deployment's first run.
     const backup = join(dir, "backup.db");
@@ -1769,6 +1860,26 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     }
   });
 
+  it("requires MISSION_KEY_BINDINGS with a key ring, and refuses a ring recreated under the recorded kids before anything connects (#1815)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const roles = { asToken, asStatus, asTxn, asContinuation };
+    const ring = join(mkdtempSync(join(tmpdir(), "as-native-ring-")), "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, roles);
+    const bindings = await bindingsFor(ring);
+    const original = readFileSync(ring, "utf8");
+    const env = { MISSION_KEY_RING: ring, MISSION_KEY_BINDINGS: bindings, MISSION_RAS_REDEMPTIONS: rasStore() };
+    // The ring is lost and recreated under the same configured kids.
+    rmSync(ring);
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, roles);
+    fgaBootstrap.mockClear();
+    await expect(launchAsNative(launchOptions(env))).rejects.toThrow(/a recreated ring under recorded identifiers/);
+    expect(fgaBootstrap).not.toHaveBeenCalled();
+    // The original ring restored: the target starts.
+    writeFileSync(ring, original, { mode: 0o600 });
+    const launched = await launchAsNative(launchOptions(env));
+    await launched.close();
+  });
+
   it("refuses an unusable configuration by name, before anything connects", () => {
     const cases: [Record<string, string>, RegExp][] = [
       [{ OPENFGA_HTTP_URL: "not a url" }, /^OPENFGA_HTTP_URL is not a URL: not a url$/],
@@ -1781,17 +1892,21 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
       [{}, /choose the signing keys: MISSION_KEY_RING=<path>/],
       [{ MISSION_KEY_RING: "var/keys/ring.json" }, /MISSION_KEY_RING must be an absolute path, not var\/keys\/ring\.json/],
       [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_EPHEMERAL_KEYS: "1" }, /MISSION_KEY_RING or MISSION_EPHEMERAL_KEYS=1, not both/],
+      // @spec #1815 (D945): a ring requires its key binding record, kept apart from it.
+      [{ MISSION_KEY_RING: "/var/keys/ring.json" }, /MISSION_KEY_RING requires MISSION_KEY_BINDINGS/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "bindings/key-bindings.json" }, /MISSION_KEY_BINDINGS must be an absolute path/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/keys/key-bindings.json" }, /MISSION_KEY_BINDINGS must be outside the ring's directory/],
       // @spec #250: a kernel kept across restarts needs keys kept across them.
       [{ MISSION_EPHEMERAL_KEYS: "1", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KEY_RING/],
-      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "state/kernel.db" }, /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", MISSION_KERNEL_STORE: "state/kernel.db" }, /^MISSION_KERNEL_STORE must be an absolute path, not state\/kernel\.db$/],
       // @spec #250 step 3: and a recovery witness outside the store's directory.
-      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS/],
+      [{ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", MISSION_KERNEL_STORE: "/var/state/kernel.db" }, /^MISSION_KERNEL_STORE requires MISSION_KERNEL_WITNESS/],
       [
-        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "witness/kernel.witness" },
+        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "witness/kernel.witness" },
         /^MISSION_KERNEL_WITNESS must be an absolute path, not witness\/kernel\.witness$/,
       ],
       [
-        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" },
+        { MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json", MISSION_KERNEL_STORE: "/var/state/kernel.db", MISSION_KERNEL_WITNESS: "/var/state/kernel.witness" },
         /^MISSION_KERNEL_WITNESS must be outside the store's directory/,
       ],
     ];
@@ -1824,7 +1939,13 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
     const kernelFile = join(dir, "state", "kernel.db");
     const witnessFile = initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness"));
-    const env = { MISSION_KEY_RING: ring, MISSION_KERNEL_STORE: kernelFile, MISSION_KERNEL_WITNESS: witnessFile, MISSION_RAS_REDEMPTIONS: rasStore() };
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: witnessFile,
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
     // The upstream Approver login provider starts before the AS, so a failed
     // startup releases its port too (#1320): pinned here so it can be probed.
     const provider = `http://127.0.0.1:${LAUNCH_IDP_PORT}`;
@@ -1984,6 +2105,7 @@ function runLauncher(env: Record<string, string>) {
     "OPENFGA_MODEL_ID",
     "MISSION_PDP_MODE",
     "MISSION_KEY_RING",
+    "MISSION_KEY_BINDINGS",
     "MISSION_EPHEMERAL_KEYS",
     "MISSION_PEP_EVIDENCE_KEYS",
     "MISSION_PDP_EVIDENCE_KEYS",
@@ -2133,7 +2255,12 @@ describe("the as-native launcher process, the entry pnpm as-native runs, against
       [{ OPENFGA_HTTP_URL: fga.url, OPENFGA_STORE_ID: FAKE_STORE_ID }, /set both OPENFGA_STORE_ID and OPENFGA_MODEL_ID to attach, or neither$/],
       [{ OPENFGA_HTTP_URL: fga.url, MISSION_EPHEMERAL_KEYS: "0" }, /choose the signing keys: MISSION_KEY_RING=<path>/],
       [
-        { OPENFGA_HTTP_URL: fga.url, MISSION_KEY_RING: "/nonexistent/keys/ring.json", MISSION_RAS_REDEMPTIONS: "/nonexistent/state/ras-redemptions.sqlite" },
+        {
+          OPENFGA_HTTP_URL: fga.url,
+          MISSION_KEY_RING: "/nonexistent/keys/ring.json",
+          MISSION_KEY_BINDINGS: "/nonexistent/bindings/key-bindings.json",
+          MISSION_RAS_REDEMPTIONS: "/nonexistent/state/ras-redemptions.sqlite",
+        },
         /signing key ring refused: no ring at \/nonexistent\/keys\/ring\.json/,
       ],
       [{ OPENFGA_HTTP_URL: `http://127.0.0.1:${closed}` }, /^as-native: startup failed: \S/],
