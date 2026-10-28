@@ -1141,3 +1141,8 @@ this surface.
 - A bulk `suspend` whose `on_expiry` is `revoke` needs the caller's
   bulk `revoke` authorization as well, checked at dry run and again
   at execute (#1535).
+- The bulk token pins each member's state version. An execute skips a
+  member whose version moved and reports it `stale_version`, and a
+  terminated member still reports `already_terminal`. The pinned
+  versions are the bulk-path form of the status profile's
+  `expected_version` guard (#997, D995).
