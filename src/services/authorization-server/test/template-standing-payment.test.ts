@@ -50,6 +50,7 @@ import {
   TemplateStore,
 } from "../src/index.js";
 import { standingPaymentPredicateRefusal } from "../src/kernel/standing-payment.js";
+import { aiAgents } from "./actor-profiles.helper.js";
 import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -86,6 +87,9 @@ beforeEach(() => {
     statusKey: key,
     statusKid: "as-status",
     now,
+    // The child actor the lineage tests name, asserted as an AI agent so the
+    // children grant's allowed_child_actors admits it.
+    actorProfiles: aiAgents("subagent-extractor"),
   });
   store = new TemplateStore(now);
 });
@@ -748,6 +752,101 @@ describe("standing-payment lineage (@spec mission-template#instance-composition,
     );
   });
 
+  /**
+   * A children grant narrower than the policy ceiling's (max_depth 2, five
+   * children of depth 2). A child entry that omits `delegation` inherits the
+   * ceiling's grant, which is broader than this one and so is no subset of
+   * it: the child restates the grant to stay within its parent.
+   */
+  const CHILDREN_GRANT = { max_depth: 1, children: { max_children: 2, max_child_depth: 1 } };
+  /** The parent's proposal: the payment and the invoice reads, with the children grant. */
+  const grantingProposal = (): AuthorityEntry[] => [
+    paymentEntry({
+      actions: [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
+      delegation: CHILDREN_GRANT,
+    }),
+  ];
+  /** A standing-payment instance's expansion successor, approved with the children grant. */
+  const grantingSuccessor = () => {
+    const { mission } = dispatch(consentTo().id);
+    const { successor } = createExpansion(kernel, {
+      predecessorId: mission.id,
+      intent: intentWith(),
+      proposedAuthority: grantingProposal(),
+      approver: { iss: ISS, sub: "human-approver" },
+      approvalEventId: `exp-${seq++}`,
+      approvedUntil: "2027-01-01T00:00:00Z",
+    });
+    return { instance: mission, successor };
+  };
+  /**
+   * A strict-subset Child Mission: the invoice reads alone, restating the
+   * per-payment bound, the vendor and the children grant, for an actor the
+   * grant admits.
+   */
+  const createReadChild = (parentId: string) =>
+    createChildMission(kernel, {
+      parentId,
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "read Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: "2027-01-01T00:00:00Z",
+        }),
+      ),
+      proposedAuthority: [
+        paymentEntry({ actions: ["payments:invoice.read"], delegation: CHILDREN_GRANT }),
+      ],
+      childActor: { sub: "subagent-extractor", sub_profile: "ai_agent" },
+    });
+
+  it("refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)", () => {
+    const { instance, successor } = grantingSuccessor();
+    expect(successor.intent.max_budget).toEqual({ amount: "1000.00", currency: "USD" });
+    expect(successor.authority_set.some((e) => e.delegation?.children !== undefined)).toBe(true);
+    expect(standingPaymentRootOf(kernel, successor)?.mission_id).toBe(instance.id);
+    const before = missionCount();
+    let caught: unknown;
+    try {
+      createReadChild(successor.id);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(ChildDelegationError);
+    expect((caught as ChildDelegationError).reason).toBe("delegation_not_permitted");
+    expect((caught as Error).message).toBe(
+      `mission ${successor.id} descends from standing-payment instance ${instance.id}; a Child Mission would not share its budget accounting, so it is refused (#813)`,
+    );
+    expect(missionCount()).toBe(before);
+    expect(kernel.findChildren(successor.id)).toEqual([]);
+  });
+
+  it("admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)", () => {
+    const { successor } = grantingSuccessor();
+    const parent = kernel.approve({
+      intent: kernel.validateIntent(
+        JSON.stringify({
+          goal: "pay and read Acme invoices",
+          target_resources: [RESOURCE],
+          expires_at: "2027-01-01T00:00:00Z",
+        }),
+      ),
+      proposedAuthority: grantingProposal(),
+      subject: { iss: ISS, sub: "alice" },
+      approver: { iss: ISS, sub: "human-approver" },
+      clientId: "worker",
+      approvalEventId: `ordinary-${seq++}`,
+    });
+    expect(parent.authority_set).toEqual(successor.authority_set);
+    expect(standingPaymentRootOf(kernel, parent)).toBeUndefined();
+    const before = missionCount();
+    const { child } = createReadChild(parent.id);
+    expect(child.state).toBe("active");
+    expect(child.parent?.id).toBe(parent.id);
+    expect(missionCount()).toBe(before + 1);
+    expect(kernel.findChildren(parent.id).map((c) => c.id)).toEqual([child.id]);
+  });
+
   it("admits an expansion successor of a standing-payment instance that keeps its max_budget, in the same standing-payment lineage (#813)", () => {
     const t = consentTo();
     const { mission } = dispatch(t.id);
@@ -837,6 +936,7 @@ describe("standing-payment derivations refused (@spec mission-template#prohibite
         aud: RESOURCE,
         clientId: "worker",
         cnfJwk,
+        operations: TEST_OPERATIONS,
         actor: { iss: "https://id.example", sub: "wl-worker" },
         mappingVersion: "map-1",
       }),

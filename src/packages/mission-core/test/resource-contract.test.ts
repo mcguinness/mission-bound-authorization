@@ -5,6 +5,7 @@
  * and their resolution, and the credential and scope-projection checks over
  * the same reference.
  */
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
@@ -203,6 +204,111 @@ describe("declared contract versions (@spec runtime#resource-contract, #249)", (
     expect(d.requiresReference(`${RS}/invoices/inv-1`, "payments:invoice.read")).toBe(false);
     expect(d.requiresReference("https://other.test/mcp", ACTION)).toBe(false);
     expect(ResourceContractDeclarations.NONE.requiresReference(RS, ACTION)).toBe(false);
+  });
+
+  // #1752 (D875): a value naming no served operation, or a family, would
+  // leave an operation unprotected while configuration appears to require a
+  // reference, so it is refused at load.
+  const versionWith = (
+    version: string,
+    state: string,
+    actions: readonly string[],
+    extra: Record<string, unknown> = {},
+  ) => {
+    const document = doc(version, actions);
+    return { version, state, digest: resourceContractDigest(document), document, ...extra };
+  };
+  const RETAINED = { retained_until: "2027-01-01T00:00:00Z" };
+
+  it("refuses at load a required operation that is an action family, outside the action grammar, or defined by no current or superseded version", () => {
+    const current = [versionDecl("v1", "current")];
+    const refuses = (versions: unknown[], requires: string[], message: RegExp) => {
+      expect(() => declarations(versions, requires)).toThrow(ResourceContractConfigError);
+      expect(() => declarations(versions, requires)).toThrow(message);
+    };
+    refuses(
+      current,
+      ["payments:payment.*"],
+      /requires_reference\[0\] "payments:payment\.\*" is an action family/,
+    );
+    refuses(
+      current,
+      [ACTION, "payments:payment.exceute"],
+      /requires_reference\[1\] "payments:payment\.exceute" is not an operation any current or superseded version defines/,
+    );
+    refuses(
+      current,
+      ["payments:payment execute"],
+      /requires_reference\[0\] "payments:payment execute" is not an action identifier/,
+    );
+    // A retired version's operations do not count, though it keeps its document.
+    refuses(
+      [
+        versionWith("v0", "retired", [ACTION, "payments:payment.hold"]),
+        versionDecl("v1", "current"),
+      ],
+      ["payments:payment.hold"],
+      /"payments:payment\.hold" is not an operation any current or superseded version defines/,
+    );
+    // Each form is refused even where a document names it as an operation's
+    // action, so the refusal never depends on the documents.
+    for (const [value, message] of [
+      ["payments:payment.*", /is an action family/],
+      ["payments:payment execute", /is not an action identifier/],
+    ] as const) {
+      refuses([versionWith("v1", "current", [ACTION, value])], [value], message);
+    }
+  });
+
+  it("accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree", () => {
+    const REVERSE = "payments:payment.reverse";
+    // Only the current version defines it; the superseded one predates it.
+    const d = declarations(
+      [
+        versionWith("v1", "superseded", [ACTION], RETAINED),
+        versionWith("v2", "current", [ACTION, REVERSE]),
+      ],
+      [ACTION, REVERSE],
+    );
+    expect(d.declarations[0]?.requires_reference).toEqual([ACTION, REVERSE]);
+    // Only a superseded version, still served within its retention, defines it.
+    expect(() =>
+      declarations(
+        [
+          versionWith("v1", "superseded", [ACTION, "payments:payment.hold"], RETAINED),
+          versionWith("v2", "current", [ACTION]),
+        ],
+        ["payments:payment.hold"],
+      ),
+    ).not.toThrow();
+    // An identifier means the same operation to the resolution-time and the
+    // approval-time reader.
+    expect(d.requiresReference(`${RS}/payments/p-1`, REVERSE)).toBe(true);
+    expect(d.forEntry({ ...entry, actions: [REVERSE] }).required).toBe(true);
+    expect(d.requiresReference(`${RS}/invoices/inv-1`, "payments:invoice.read")).toBe(false);
+    expect(d.forEntry({ ...entry, actions: ["payments:invoice.read"] }).required).toBe(false);
+  });
+
+  it("loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions", () => {
+    const shipped = (
+      JSON.parse(
+        readFileSync(new URL("../../../config/enforcement-scope.json", import.meta.url), "utf8"),
+      ) as {
+        extensions: { resource_contracts: Record<string, unknown>[] };
+      }
+    ).extensions.resource_contracts;
+    expect(() => new ResourceContractDeclarations(shipped)).not.toThrow();
+    const FIVE = [
+      "payments:payment.execute",
+      "payments:payment.reverse",
+      "payments:payment.schedule",
+      "payments:payment.schedule.cancel",
+      "payments:remittance.send",
+    ];
+    const cutover = new ResourceContractDeclarations(
+      shipped.map((d) => ({ ...d, requires_reference: FIVE })),
+    );
+    expect(cutover.declarations[0]?.requires_reference).toEqual(FIVE);
   });
 
   it("states, per entry at approval, the current reference and whether one is required", () => {

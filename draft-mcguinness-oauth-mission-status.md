@@ -276,10 +276,12 @@ The request is an HTTPS POST with an
   MUST reject a response whose `nonce` does not equal the one it sent.
 
 The request also carries the client authentication parameters of the
-method it uses ({{mission-status-authentication}}): `client_id`,
-REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}}),
-and `client_assertion_type` and `client_assertion`, REQUIRED with
-private-key-JWT client authentication {{RFC7523}}.
+method it uses ({{mission-status-authentication}}), for example
+`client_id`, REQUIRED with mTLS client authentication
+({{Section 2 of RFC8705}}), or `client_assertion_type` and
+`client_assertion`, REQUIRED with private-key-JWT client
+authentication {{RFC7523}}. A method that carries its credentials in
+HTTP header fields keeps them there.
 
 The Mission Issuer's configuration states which audiences each
 authenticated caller may request: a resource server is typically
@@ -2131,9 +2133,25 @@ Authorization Server Metadata" registry {{RFC8414}}:
 ## OAuth Extensions Error Registration {#iana-error-registration}
 
 IANA is requested to register the following in the "OAuth Extensions
-Error Registry" {{RFC6749}}. `not_found` is already registered for
-another usage location; its entry here adds the usage locations of
-this document.
+Error Registry" {{RFC6749}}. `invalid_request`, `invalid_client` and
+`not_found` are already registered for other usage locations; their
+entries here add the usage locations of this document.
+
+- Error Name: `invalid_request`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IETF
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `invalid_client`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IETF
+- Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `unauthorized`
 - Error Usage Location: Mission Status endpoint error response;
@@ -2234,6 +2252,15 @@ Mission Termination Reasons registry
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+-01
+
+- The Mission Status Request gives the client authentication
+  parameters of mTLS and private-key JWT as examples; a method that
+  carries its credentials in HTTP header fields keeps them there.
+- IANA Considerations adds the Mission Status and Mission Lifecycle
+  endpoints as usage locations for `invalid_request` and
+  `invalid_client`.
 
 -00
 
