@@ -19,7 +19,8 @@ import { describe, expect, it } from "vitest";
 import type { Fga } from "../src/fga.js";
 import { evaluate as evaluateRequest, type EvaluationRequest, type MissionView, relationForAction, stalenessBound } from "../src/index.js";
 import { withCredential } from "./with-credential.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -40,18 +41,18 @@ const view = (maxAmount: string): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
 });
 
-const request = (amount: string, currency = "USD"): EvaluationRequest => ({
+const request = (amount: string, currency = "USD"): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:payment.execute" },
@@ -75,7 +76,7 @@ const optsFor = (v: MissionView) => ({
 
 /** Same request shape as `request()`, but with no `context.amount` at all
  *  (never an empty/zero amount): the PEP simply did not supply one. */
-const requestWithoutAmount = (action = "payments:payment.execute"): EvaluationRequest => ({
+const requestWithoutAmount = (action = "payments:payment.execute"): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: action },
@@ -95,12 +96,12 @@ const viewCapOnNonAmountAction = (maxAmount: string): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:invoice.list"],
       constraints: { max_amount: { amount: maxAmount, currency: "USD" } },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -115,11 +116,11 @@ const viewNoCap: MissionView = {
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:payment.execute"],
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",

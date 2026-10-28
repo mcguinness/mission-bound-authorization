@@ -35,8 +35,9 @@ import {
   stalenessBound,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -55,14 +56,14 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
   ...over,
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
@@ -127,12 +128,12 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
     const gatedView: MissionView = {
       ...view(),
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: "mission_resource_access",
           resource: RESOURCE,
           actions: ["payments:invoice.read"],
           constraints: { requires_action_approval: true },
-        },
+        }),
       ],
     };
     const opts = {
@@ -145,7 +146,13 @@ describe("a valid action-bound approval does not expand authority (@spec runtime
       resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
       maxApprovalAgeSeconds: 300,
     };
-    const approval: ActionApproval = { id: "apr_1", approved_at: NOW.toISOString(), parameter_digest: "sha-256:pd" };
+    // Approved under the request's own contract reference (@spec authzen#context-approval, #249).
+    const approval: ActionApproval = {
+      id: "apr_1",
+      approved_at: NOW.toISOString(),
+      parameter_digest: "sha-256:pd",
+      resource: { properties: { resource_contract: req().resource.properties.resource_contract } },
+    };
     const withApproval = await evaluate(
       req({
         context: {
@@ -255,17 +262,17 @@ describe("the Mission's contextual check covers every vendor a bound bulk read r
     version: 1,
     authority_hash: "sha-256:testhash",
     authority_set: [
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: LIST_RESOURCE,
         actions: ["payments:invoice.list"],
         constraints: { vendors: ["acme", "globex"] },
-      },
+      }),
     ],
     subject: { iss: "https://as.test", sub: "alice" },
     client_id: "ap-agent",
   };
-  const listReq = (vendorIds: string[]): EvaluationRequest => ({
+  const listReq = (vendorIds: string[]): EvaluationRequest => withCurrentContractReference({
     subject: { id: "alice" },
     resource: { type: "vendor", id: vendorIds[0] as string, properties: { audience: LIST_RESOURCE, operation_target: LIST_RESOURCE, vendor_id: vendorIds[0], vendor_ids: vendorIds } },
     action: { name: "payments:invoice.list" },
@@ -299,12 +306,12 @@ describe("the Mission's contextual check covers every vendor a bound bulk read r
   });
 
   it("without vendor_ids (a single-object request), only the named representative is checked, unaffected by the collection check", async () => {
-    const req: EvaluationRequest = {
+    const req: EvaluationRequest = withCurrentContractReference({
       subject: { id: "alice" },
       resource: { type: "vendor", id: "acme", properties: { audience: LIST_RESOURCE, operation_target: LIST_RESOURCE, vendor_id: "acme" } },
       action: { name: "payments:invoice.list" },
       context: { mission: { id: "msn_test_1", issuer: "https://as.test", authority_hash: "sha-256:testhash" } },
-    };
+    });
     const denyGlobex = {
       checkWithContext: async (check: { object: string }) => check.object !== "vendor:globex",
     } as unknown as Fga;
@@ -323,12 +330,12 @@ describe("a permit expires no later than the state view it was decided against (
     version: 1,
     authority_hash: "sha-256:testhash",
     authority_set: [
-      { type: "mission_resource_access", resource: EXEC_RESOURCE, actions: ["payments:payment.execute"] },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: EXEC_RESOURCE, actions: ["payments:payment.execute"] }),
     ],
     subject: { iss: "https://as.test", sub: "alice" },
     client_id: "ap-agent",
   });
-  const execReq = (observedAt: string): EvaluationRequest => ({
+  const execReq = (observedAt: string): EvaluationRequest => withCurrentContractReference({
     subject: { id: "alice" },
     resource: { type: "invoice", id: "inv-1", properties: { audience: EXEC_RESOURCE, operation_target: EXEC_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
@@ -386,12 +393,12 @@ describe("compound-action phase carriers on the decision (@spec authzen#context-
     version: 1,
     authority_hash: "sha-256:testhash",
     authority_set: [
-      { type: "mission_resource_access", resource: PHASE_RESOURCE, actions: ["payments:payment.execute"] },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: PHASE_RESOURCE, actions: ["payments:payment.execute"] }),
     ],
     subject: { iss: "https://as.test", sub: "alice" },
     client_id: "ap-agent",
   });
-  const phaseReq = (actionPhase: string | undefined): EvaluationRequest => ({
+  const phaseReq = (actionPhase: string | undefined): EvaluationRequest => withCurrentContractReference({
     subject: { id: "alice" },
     resource: { type: "invoice", id: "inv-1", properties: { audience: PHASE_RESOURCE, operation_target: PHASE_RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute" },

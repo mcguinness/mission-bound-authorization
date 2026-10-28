@@ -5,6 +5,7 @@
  * Mission; containment requires zero unauthorized side effects across all.
  */
 
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import {
   CANONICAL_RESOURCE,
   credentialAuthorityFrom,
@@ -33,8 +34,14 @@ export const base = (over: Partial<MissionBoundTokenFacts> = {}): MissionBoundTo
   cnfJkt: "jkt-1",
   // @spec runtime#input-authority (#825) — a credential as broad as every
   // tool, so each case exercises the Mission bound it names.
+  // Approved against the intended contract, carrying the reference
+  // configuration names (#249, D865).
   credentialAuthority: credentialAuthorityFrom([
-    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map((t) => t.action))] },
+    pinnedToCurrentContract({
+      type: "mission_resource_access",
+      resource: CANONICAL_RESOURCE,
+      actions: [...new Set(TOOLS.map((t) => t.action))],
+    }),
   ]),
   ...over,
 });
@@ -62,18 +69,18 @@ export interface EvalCaseDef {
  * under the cap, which is not what `leg-read`/`adv-*` exercise.
  */
 export const EVAL_VIEW_AUTHORITY = [
-  {
+  pinnedToCurrentContract({
     type: "mission_resource_access" as const,
     resource: CANONICAL_RESOURCE,
     actions: ["payments:invoice.read"],
     constraints: { vendors: ["acme"] },
-  },
-  {
+  }),
+  pinnedToCurrentContract({
     type: "mission_resource_access" as const,
     resource: CANONICAL_RESOURCE,
     actions: ["payments:payment.execute"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-  },
+  }),
 ];
 
 export const adversarialSuite: EvalCaseDef[] = [

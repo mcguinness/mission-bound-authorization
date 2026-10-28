@@ -17,7 +17,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { IDEMPOTENCY_KEY_PATTERN } from "@mission/core";
-import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import { TRUSTED_TOOL_CATALOGS, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   type ClaimChannel,
   type ConsumptionStatusFn,
@@ -78,12 +78,12 @@ const view = (): MissionView => ({
   version: 1,
   authority_hash: "sha-256:m917",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",

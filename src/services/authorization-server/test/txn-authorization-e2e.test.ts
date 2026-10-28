@@ -19,7 +19,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { AccessRequestService } from "@mission/access-request";
-import { CANONICAL_RESOURCE } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, currentContractProfileVersion } from "@mission/demo-data";
 import { Fga, type MissionView } from "@mission/pdp";
 import {
   Connectors,
@@ -281,10 +281,12 @@ d("transaction authorization end to end (@spec txn-authorization#challenge-redem
         challengeIssuers,
         ars,
         // @spec txn-authorization#resource-challenge — the payments resource
-        // challenges with the family's own `mission_resource_access` entry.
+        // challenges with the family's own `mission_resource_access` entry,
+        // under the profile version its current contract names (#249), as the
+        // deployment registers it.
         operationProfiles: new OperationProfileRegistry().register(
           CANONICAL_RESOURCE,
-          missionResourceAccessProfile(),
+          missionResourceAccessProfile(currentContractProfileVersion(CANONICAL_RESOURCE)),
         ),
         workflowLifetimeSeconds: 600,
         maxTokenLifetimeSeconds: 300,

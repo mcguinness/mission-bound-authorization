@@ -42,6 +42,7 @@ import {
   Pep,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const ISSUER = "https://as.test";
@@ -59,11 +60,11 @@ const view = (id: string): MissionView => ({
   version: 1,
   authority_hash: `sha-256:${id}`,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list"],
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
@@ -177,7 +178,7 @@ async function stack(governed: boolean): Promise<Stack> {
           masJoin: {
             resolveOrdinaryAuthority: (token: { mission?: unknown; scope?: string }) =>
               !token.mission && token.scope === "payments.read"
-                ? [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]
+                ? [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] })]
                 : undefined,
           },
         }

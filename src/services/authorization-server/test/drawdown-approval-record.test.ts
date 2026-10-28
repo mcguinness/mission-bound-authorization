@@ -24,7 +24,12 @@ import {
   validateMissionIntent,
   verifyApprovalGovernanceRecord,
 } from "../src/index.js";
-import { createCeilingDrawdownInCallerTx, DrawdownRefusal, type ProgressiveDrawdownOptions } from "../src/kernel/progressive.js";
+import {
+  assembledCeilingOffer,
+  createCeilingDrawdownInCallerTx,
+  DrawdownRefusal,
+  type ProgressiveDrawdownOptions,
+} from "../src/kernel/progressive.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 /**
@@ -134,7 +139,11 @@ const predecessorOn = (kernel: MissionKernel, proposal: AuthorityEntry[] = reads
     approver: BOB,
     clientId: "parent-agent",
     approvalEventId: `pred-${seq++}`,
-    ceiling: { authority_ceiling: CEILING, drawdown_policy: { id: policyId, version: "1" } },
+    // The approval surface assembles the offer from configuration before it renders (#249, D875).
+    ceiling: assembledCeilingOffer(
+      { authority_ceiling: CEILING, drawdown_policy: { id: policyId, version: "1" } },
+      kernel.resourceContracts(),
+    ) as never,
   });
 
 /** The in-ceiling successor the predecessor's own agent requested, committed as the adapter commits it. */
@@ -290,7 +299,9 @@ describe("a recorded ceiling drawdown (@spec approval-governance#accountable-ass
     const second = drawdownOn(kernel, first);
     const consent = kernel.drawdownApprovalRecords.inputs(second.id)?.inputs.consent;
     expect(consent?.mission_id).toBe(pred.id);
-    expect(consent?.ceiling).toEqual(CEILING);
+    // The ceiling as consented: assembled from configuration at the consent (#249, D875).
+    expect(consent?.ceiling).toEqual(pred.authority_ceiling);
+    expect(pred.authority_ceiling?.map(({ resource_contract: _ref, ...e }) => e)).toEqual(CEILING);
     expect(recheck(kernel, second.id)).toEqual({ rechecked: true });
   });
 

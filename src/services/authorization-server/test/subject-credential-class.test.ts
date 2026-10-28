@@ -31,7 +31,13 @@ import { type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { AccessRequestService } from "@mission/access-request";
-import { CANONICAL_RESOURCE, demoReconciliationTemplate, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
+import {
+  CANONICAL_RESOURCE,
+  currentContractProfileVersion,
+  demoReconciliationTemplate,
+  DEV_SERVICE_TOKEN,
+  TOPOLOGY,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createLocalJWKSet,
@@ -489,7 +495,7 @@ beforeAll(async () => {
     transactionAuthorization: {
       challengeIssuers,
       ars,
-      operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+      operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE))),
       workflowLifetimeSeconds: 600,
       maxTokenLifetimeSeconds: 300,
       freshDecision: async () => ({ decision: "permit" }),

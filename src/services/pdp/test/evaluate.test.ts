@@ -12,8 +12,9 @@ import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/eval
 import { type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -59,18 +60,18 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:testhash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:invoice.read"],
       constraints: { vendors: ["acme"] },
-    },
-    {
+    }),
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -91,10 +92,15 @@ const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => {
     },
     ...over,
   };
-  return { ...built, action: { ...built.action, properties: { idempotency_key: freshKey(), ...built.action.properties } } };
+  return withCurrentContractReference({ ...built, action: { ...built.action, properties: { idempotency_key: freshKey(), ...built.action.properties } } });
 };
 
 const CLAIMS = openTestClaims({ now: () => NOW });
+
+/** An approval's Resource under the request's own contract reference (@spec authzen#context-approval, #249). */
+const approvedUnder = (action: string) => ({
+  properties: { resource_contract: currentContractRef({ resource: RESOURCE, actions: [action] }) },
+});
 
 const opts = (v: MissionView) => ({
   view: v,
@@ -396,6 +402,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
             approved_at: NOW.toISOString(), // fresh (within max age)
             approved_until: new Date(NOW.getTime() - 1000).toISOString(), // already past
             parameter_digest: "sha-256:pd",
+            resource: approvedUnder("payments:payment.execute"),
           },
         },
       }),
@@ -420,6 +427,7 @@ d("PDP decisions against OpenFGA (@spec authzen)", () => {
             approved_at: NOW.toISOString(),
             approved_until: new Date(NOW.getTime() + 60_000).toISOString(),
             parameter_digest: "sha-256:pd",
+            resource: approvedUnder("payments:payment.execute"),
           },
         },
       }),
@@ -444,7 +452,7 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
    *  block tests (@spec runtime#input-parameters). */
   const gatedView = view({
     authority_set: [
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:invoice.read", "payments:payment.execute"],
@@ -452,7 +460,7 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
           vendors: ["acme"],
           requires_action_approval: true,
         },
-      },
+      }),
     ],
   });
 
@@ -473,6 +481,7 @@ d("entry-driven action approval (@spec txn-authorization#applicability)", () => 
             id: "apr_1",
             approved_at: NOW.toISOString(),
             parameter_digest: "sha-256:gated-op",
+            resource: approvedUnder("payments:invoice.read"),
           },
         },
       }),
