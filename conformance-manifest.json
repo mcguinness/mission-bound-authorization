@@ -14368,8 +14368,8 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection-per-audience",
-   "text": "establishes the condition independently for each audience",
+   "anchor": "scope-projection-subset",
+   "text": "For every target audience, the AS MUST establish that the effective rights the target's enforcement path grants from the projected `scope`, together with every independently mandatory control on that path, are a subset of the rights the token's applicable `authorization_details` grant",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14394,7 +14394,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row."
+   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row. D971 (#1723 S2): the row quotes the MUST it relies on, the subset condition's \"For every target audience\", instead of Per-Audience Condition's keyword-free restatement; strength and coverage unchanged."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
