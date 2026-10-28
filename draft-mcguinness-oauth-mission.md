@@ -8075,6 +8075,20 @@ Cross-Domain:
 - Editorial, no requirement change: Declared Transformation
   Capabilities, Mission Lifecycle and Conformance drop restatements of
   rules their home sections state (#1793, D919).
+- Four rules already stated as obligations carry BCP 14 keywords, with
+  no new requirement: the current mapping does not stand in for an
+  entry's original approved audience that the AS cannot establish
+  (Declared Transformation Capabilities); the accountable principal is
+  not inferred from the token `sub` (Authority Sources); on a refresh,
+  the AS decides the Mission-governed resource refusal before it
+  consumes or rotates the refresh token (Authority Proposal); and the
+  issuer does not change a recorded `termination` (Mission
+  Termination). Editorial, no requirement change: Declared
+  Transformation Capabilities lists the rules for an entry's original
+  approved audience, the creation-replay rule joins the response list
+  of Mission Identifier and Expiry in Responses, and Self-Exchange
+  Down-Scoping points to its `mission_intent` exemption in Authority
+  Proposal (#1723, D971).
 
 -01
 
