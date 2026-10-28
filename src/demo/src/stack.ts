@@ -15,6 +15,7 @@ import {
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
+  type BudgetExposurePort,
   buildAuthorizationServer,
   evaluateApprovalFloor,
   MISSION_APPROVAL_SCOPE,
@@ -41,6 +42,7 @@ import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
   buildBoundaryEvidenceKeyResolver,
+  budgetCounterId,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
@@ -619,6 +621,24 @@ export async function composeStack(opts: {
   let paymentsServerRef: McpPaymentsServer | undefined;
   // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
   let rasContinuationKeys: IssuerKeys | undefined;
+  // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+  // (#813, #816, D830 ruling 7, D877): the AS's read port onto the budget
+  // counters in the co-resident PDP's claim domain, wired only where the
+  // standing-payment fixture is on. The AS is built before the claim domain
+  // opens, so the port reads through this reference and refuses (the
+  // approval with it) until the domain is open.
+  let budgetCounterDomain: IdempotencyClaimDomain | undefined;
+  const budgetExposure: BudgetExposurePort = {
+    read: (key) => {
+      if (!budgetCounterDomain) throw new Error("the PDP claim domain is not open");
+      const id =
+        key.counter_scope === "standing_consent"
+          ? budgetCounterId("standing_consent", { owner: key.owner, budget_id: key.budget_id })
+          : budgetCounterId("mission", { issuer: key.issuer, mission_id: key.mission_id });
+      const state = budgetCounterDomain.budgetCounter(id);
+      return state && { reserved: state.reserved, held: state.held, committed: state.committed };
+    },
+  };
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -725,7 +745,9 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
-      ...(opts.testStandingPaymentDispatch ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies } : {}),
+      ...(opts.testStandingPaymentDispatch
+        ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies, budgetExposure }
+        : {}),
       // @spec mission-template#standing-payment-exception (#813, #816): the
       // statement this stack's PDP meters under, which the AS reads under the
       // standing-payment capability alone.
@@ -1108,6 +1130,8 @@ export async function composeStack(opts: {
     // #813: and a held reservation later released resolves its alert.
     onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
   });
+  // #813, D877: the AS's budget exposure port reads this domain from here on.
+  budgetCounterDomain = pdpClaims;
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
   // each is provisioned for the version in force, the boundary is not
