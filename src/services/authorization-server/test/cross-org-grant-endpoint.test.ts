@@ -448,26 +448,44 @@ describe("leaf proof of possession (@spec cross-org-delegation#projection-exchan
 });
 
 describe("audience validation (@spec cross-org-delegation#projection-exchange)", () => {
+  /**
+   * Run `fn` with `audience` known to this destination's scope mapping as
+   * RESOURCE is, so only the chain's audience can refuse it.
+   */
+  async function withKnownAudience(audience: string, fn: () => Promise<void>): Promise<void> {
+    SCOPE_MAPPING.audiences[audience] = SCOPE_MAPPING.audiences[RESOURCE];
+    try {
+      await fn();
+    } finally {
+      delete SCOPE_MAPPING.audiences[audience];
+    }
+  }
+
   it("refuses an audience outside the leaf's aud (invalid_target)", async () => {
-    const { chain, leafKeys } = await buildChain();
-    const res = await exchange({ subjectToken: present(chain), leafKeys, audience: "https://not-the-resource.test" });
-    const body = (await res.json()) as { error: string };
-    expect(res.status).toBe(400);
-    expect(body.error).toBe("invalid_target");
+    const OUTSIDE = "https://not-the-resource.test";
+    await withKnownAudience(OUTSIDE, async () => {
+      const { chain, leafKeys } = await buildChain();
+      const res = await exchange({ subjectToken: present(chain), leafKeys, audience: OUTSIDE });
+      const body = (await res.json()) as { error: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_target");
+    });
   });
 
   // @spec cross-org-delegation#projection-exchange (#1759): the requested
   // audience is within the aud of every hop, not of the root alone.
   it("refuses an audience the root's aud names but a later hop's does not (invalid_target)", async () => {
     const OTHER = "https://api2.org3.test";
-    const { chain, leafKeys } = await buildChain({ rootAud: [RESOURCE, OTHER] });
-    const res = await exchange({ subjectToken: present(chain), leafKeys, audience: OTHER });
-    const body = (await res.json()) as { error: string };
-    expect(res.status).toBe(400);
-    expect(body.error).toBe("invalid_target");
-    // The same chain projects for the audience every hop names.
-    const ok = await exchange({ subjectToken: present(chain), leafKeys });
-    expect(ok.status).toBe(200);
+    await withKnownAudience(OTHER, async () => {
+      const { chain, leafKeys } = await buildChain({ rootAud: [RESOURCE, OTHER] });
+      const res = await exchange({ subjectToken: present(chain), leafKeys, audience: OTHER });
+      const body = (await res.json()) as { error: string };
+      expect(res.status).toBe(400);
+      expect(body.error).toBe("invalid_target");
+      // The same chain projects for the audience every hop names.
+      const ok = await exchange({ subjectToken: present(chain), leafKeys });
+      expect(ok.status).toBe(200);
+    });
   });
 });
 
