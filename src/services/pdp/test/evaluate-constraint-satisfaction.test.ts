@@ -248,7 +248,9 @@ describe("PDP Mission bound: applicable entries are alternative grants (#1375)",
 
   it("an entry carrying a key the PDP does not evaluate lends nothing, and a later entry authorizes on its own", async () => {
     const unknown = mEntry({ constraints: { x_unknown: true } });
-    expect(await decideOn(viewOf(unknown))).toMatchObject(REFUSED);
+    // @spec authzen#failure-condition-coverage (#1772, D907): refused alone as
+    // an unrecognized constraint, never as an evaluated violation.
+    expect(await decideOn(viewOf(unknown))).toMatchObject({ permit: false, reason: "constraint_unsupported" });
     expect((await decideOn(viewOf(unknown, plain))).permit).toBe(true);
   });
 
