@@ -2859,7 +2859,15 @@ export async function handleExpansionExchange(
   // never ambiguously be a non-successor; #486). Nothing is created or
   // reserved and the predecessor is untouched. Set on ctx directly (err_out
   // would strip mission_denial_reason).
-  const requested = opts.kernel.derive(intent, proposedAuthority);
+  // @spec resource-access#resource-contract (#249, D875): where a consented
+  // ceiling adjudicates first, every drawdown check below decides on the
+  // drawdown's preserved set, carrying the ceiling's reference, never one
+  // assembled afresh. Only a predecessor without one decides on the assembled
+  // derivation; the fresh-approval fallback assembles at its own decision.
+  const requested =
+    opts.progressive && active.authority_ceiling
+      ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
+      : opts.kernel.derive(intent, proposedAuthority);
   const effective = opts.kernel.effectiveAuthoritySet(active);
   if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
     ctx.status = 400;
@@ -2892,9 +2900,7 @@ export async function handleExpansionExchange(
     }
     const outcome = await completeCeilingDrawdown(opts, provider, ctx, {
       predecessorId: active.id,
-      // @spec resource-access#resource-contract (#249, D875): a drawdown carries
-      // the consented ceiling's reference, never one assembled afresh.
-      requested: drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling),
+      requested,
       intent,
       ...(proposedAuthority ? { proposedAuthority } : {}),
       ...(submissionEvidence?.length ? { submissionEvidence } : {}),

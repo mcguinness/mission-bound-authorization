@@ -1578,16 +1578,19 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   // expansion successor does.
   assertSuccessorMaxBudget(kernel, predecessor, input.intent);
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  // The successor's Authority Set is derived exactly as an ordinary
-  // expansion's, carrying the predecessor's recorded capability bindings.
+  // The successor's Authority Set is derived as an ordinary expansion's,
+  // carrying the predecessor's recorded capability bindings, but its
+  // references are preserved, never assembled (below).
   const derived = kernel.deriveWithProvenance(input.intent, proposal);
   // @spec resource-access#resource-contract (#249, D875): preservation-only,
-  // the consented ceiling's reference is carried ({@link drawdownRequested}),
-  // then checked as a carried one: a superseded version within its retention
-  // stands, a retired one refuses.
-  const authoritySet = inheritResourceContract(
-    kernel.resolveFreshCapabilities(inheritCapabilitySources(derived.entries, predecessor.authority_set)),
-    predecessor.authority_ceiling,
+  // the consented ceiling's reference is carried, then checked as a carried
+  // one: a superseded version within its retention stands, a retired one
+  // refuses. It is inherited onto the derivation BEFORE capability bindings
+  // are added, as {@link drawdownRequested} inherits it, so the bindings
+  // cannot block the whole-entry match and the wire decision and the creation
+  // pin alike.
+  const authoritySet = kernel.resolveFreshCapabilities(
+    inheritCapabilitySources(inheritResourceContract(derived.entries, predecessor.authority_ceiling), predecessor.authority_set),
   );
   assertCarriedContractsResolvable(authoritySet, kernel.resourceContracts(), kernel.nowDate());
   if (!isSubsetSetIgnoringCapabilitySources(authoritySet, predecessor.authority_ceiling)) {

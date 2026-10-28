@@ -652,6 +652,64 @@ describe("ceiling consent under a configuration requiring a contract reference (
     }
     expect(record.drawdown_policy?.id).toBe("drawdown-std");
   });
+
+  /**
+   * Consents the assembled ceiling, then draws down the read and list within
+   * it under `contracts`, returning the consented reference of the read and
+   * the drawdown's response.
+   */
+  async function pinnedDrawdown(contracts: () => ResourceContractDeclarations) {
+    const decided = assembledCeilingOffer(ceilingOf(), SHIPPED_REQUIRED) as CeilingDecision;
+    const m = await issueMission(READ, ceilingOf(), { client: apContract, issuer: CONTRACT_ISSUER, decided });
+    const consented = (asContract.kernel.get(m.missionId)?.authority_ceiling ?? []).find((e) =>
+      e.actions.includes("payments:invoice.read"),
+    )?.resource_contract;
+    expect(consented).toBeDefined();
+    const swapped = vi.spyOn(asContract.kernel, "resourceContracts").mockReturnValue(contracts());
+    try {
+      const res = await tokenRequest(expansionParams(m.accessToken, crypto.randomUUID(), READ_LIST), apContract, CONTRACT_ISSUER);
+      return { consented, res, body: (await res.json()) as Record<string, unknown> };
+    } finally {
+      swapped.mockRestore();
+    }
+  }
+
+  function expectSuccessorPinned(body: Record<string, unknown>, consented: unknown): void {
+    const successor = asContract.kernel.get(body.mission_id as string);
+    const reads = (successor?.authority_set ?? []).filter((e) => e.actions.includes("payments:invoice.read"));
+    expect(reads.length).toBeGreaterThan(0);
+    for (const entry of reads) expect(entry.resource_contract).toEqual(consented);
+  }
+
+  // The drawdown's creation resolves fresh capability bindings; the ceiling's
+  // reference is inherited before they are added, so they cannot block it.
+  it("an in-ceiling drawdown completes, its successor carrying the consented ceiling's reference", async () => {
+    const { consented, res, body } = await pinnedDrawdown(() => SHIPPED_REQUIRED);
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expectSuccessorPinned(body, consented);
+  });
+
+  // Preservation-only throughout: with no current version to assemble, the
+  // wire decision and the creation carry the consented reference.
+  it("an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version", async () => {
+    const retainedUntil = new Date(asContract.kernel.nowDate().getTime() + 365 * 86_400_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const { consented, res, body } = await pinnedDrawdown(
+      () =>
+        new ResourceContractDeclarations(
+          SHIPPED_REQUIRED.declarations.map((d) => ({
+            resource: d.resource,
+            resource_match: d.resource_match,
+            id: d.id,
+            requires_reference: ["payments:invoice.read"],
+            versions: d.versions
+              .filter((v) => v.document !== undefined)
+              .map((v) => ({ version: v.version, digest: v.digest, document: v.document, state: "superseded", retained_until: retainedUntil })),
+          })),
+        ),
+    );
+    expect(res.status, JSON.stringify(body)).toBe(200);
+    expectSuccessorPinned(body, consented);
+  });
 });
 
 describe("ceiling consent (@spec progressive#progressive-authorization)", () => {
