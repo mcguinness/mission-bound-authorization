@@ -1997,6 +1997,10 @@ The steps of this section define the `direct` approval basis
 (`approval_basis`, {{mission-record}}); a companion profile that
 relocates a direct approval keeps them unchanged ({{extensibility}}).
 
+{{grant-binding-resolution}} states the rule that keeps consent reuse,
+for an authorization request that carries no `mission_intent`, from
+selecting a grant bound to a Mission.
+
 Refusals follow {{error-mapping}}.
 
 ### Preparing the Approval {#approval-preparation}
