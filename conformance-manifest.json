@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "65aca267b53baaaf312334515596ead8bd4cd808",
-    "content_sha256": "a1efcd28a1983362f4a5d735728d54a887d1facab8944c52465906eb8fc277c0"
+    "revision": "bc6433eb5dd9df8f3ba416a1f84008bb22d56a89",
+    "content_sha256": "96312ec0af88b8058b8042a18ce8e0b6982990d3f7630836fb7904251aa3d26f"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -13612,6 +13612,34 @@
     }
    ],
    "notes": "#1720 item 1 (D845). The condition is in the quoted clause: an AS issuing only tokens presented back to itself, such as designations, has no publication duty; the reference also issues resource-server tokens, so that exemption has no witness. The witness fetches /jwks directly; no test reads the RFC 8414 jwks_uri member and verifies an access token there, and the binding names jwks_uri only as an example. Mutation-proved: dropping the access-token role's keys from the published set (publicJwks in src/index.ts) fails the witness with JWKSNoMatchingKey."
+  },
+  {
+   "id": "core.token-claims.companion-format-not-access-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-claims",
+   "text": "Access token validation is unchanged: a resource server validating an access token under this document requires `at+jwt` and refuses any other `typ`, so a companion-format token is never accepted as an access token.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server validating an access token refuses a token whose typ is not at+jwt, so a companion-format token such as an aat+jwt attenuation root is never accepted as an access token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1760 (D904, go in D932): the companion-format clarification in Token Claims. Mutation: dropping the access-token profile's typ check (mission-access-profile.ts) fails the witness."
   },
   {
    "id": "core.tokens.refresh-confidential-client-binding",
