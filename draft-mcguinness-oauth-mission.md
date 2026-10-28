@@ -2801,14 +2801,15 @@ returns them as follows:
 - Any other Mission-bound token response, including a refresh,
   designation ({{designation}}), or self-exchange ({{self-exchange}})
   response, SHOULD carry both.
+- A creation replay deduplicated under the applicable operation
+  identifier (`approval_event_id` for direct approval
+  ({{mission-record}}), or the identifier a Mission-creating profile
+  defines) returns the committed effective value unchanged.
 
-A creation replay deduplicated under the applicable operation
-identifier (`approval_event_id` for direct approval
-({{mission-record}}), or the identifier a Mission-creating profile
-defines) returns the committed effective value unchanged. On OAuth
-token responses `mission_expires_at` is additionally registered as a
-token-endpoint response parameter ({{oauth-parameters-registration}}).
-It is informational in the same way: presenting it authorizes nothing.
+On OAuth token responses `mission_expires_at` is additionally
+registered as a token-endpoint response parameter
+({{oauth-parameters-registration}}). It is informational in the same
+way: presenting it authorizes nothing.
 
 ## Issuance Gating {#issuance-gating}
 
