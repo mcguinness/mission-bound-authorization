@@ -24731,207 +24731,208 @@
    "notes": "#1759: witnessed by the exchange test that reads the derivation record (the kernel chain test it cited never read one). Proved by computing the digest over a different array and by recording the root's jti: the test fails each time."
   },
   {
-    "id": "cross-org.verification.mission-constraints",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "verification",
-    "text": "including the narrowing of its `mission_constraints` member ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section \"Mission Constraints Member\")",
-    "role": "verifier",
-    "strength": "MUST",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "verification",
-    "assertion": "refusal",
-    "observation": {
-     "normative": "a chain is refused when a hop omits `mission_constraints`, widens its parent's, changes its `resource_contract`, or carries a constraint or member the verifier does not understand"
-    },
-    "level": "endpoint",
-    "coverage": "tested",
-    "tests": [
-     {
-      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-      "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints member is missing",
-      "level": "endpoint",
-      "surface": "verification"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-      "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints widen the parent's",
-      "level": "endpoint",
-      "surface": "verification"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-      "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints carry a key the verifier does not understand",
-      "level": "endpoint",
-      "surface": "verification"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a hop whose resource_contract differs from its parent's (invalid_grant)",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     }
-    ],
-    "notes": "#1759 (D902, D932): step 5 of the destination verification list, whose lead-in carries the MUST; the member's rules are the attenuation profile's. Proved by running the Mission layer over the root alone: the three hop cases pass the chain."
+   "id": "cross-org.verification.mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "including the narrowing of its `mission_constraints` member ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section \"Mission Constraints Member\")",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain is refused when a hop omits `mission_constraints`, widens its parent's, changes its `resource_contract`, or carries a constraint or member the verifier does not understand"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints member is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints widen the parent's",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints carry a key the verifier does not understand",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a hop whose resource_contract differs from its parent's (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D902, D932): step 5 of the destination verification list, whose lead-in carries the MUST; the member's rules are the attenuation profile's. Proved by running the Mission layer over the root alone: the three hop cases pass the chain."
+  },
   {
-    "id": "cross-org.projection-exchange.dpop-checks",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "projection-exchange",
-    "text": "A DPoP proof passes the checks of {{Section 4.3 of RFC9449}}, including its method, URI, and creation-time window, and its `jti` is accepted once within that window ({{Section 11.1 of RFC9449}}).",
-    "role": "verifier",
-    "strength": "stated",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "token-endpoint",
-    "assertion": "refusal",
-    "observation": {
-     "normative": "a projection exchange is refused when its DPoP proof names another `htu` or `htm`, carries an `iat` outside the acceptance window, or repeats a `jti` already accepted within it"
-    },
-    "level": "endpoint",
-    "coverage": "tested",
-    "tests": [
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     }
-    ],
-    "notes": "#1759 (D932 direction 3): at the exchange the request's proof stands in for the substrate's proof-of-possession JWT, with its freshness, replay and request-binding checks, through the shared token-endpoint verifier (#1173). Proved by dropping the htu and then the htm comparison: the request-binding test fails each time."
+   "id": "cross-org.projection-exchange.dpop-checks",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "A DPoP proof passes the checks of {{Section 4.3 of RFC9449}}, including its method, URI, and creation-time window, and its `jti` is accepted once within that window ({{Section 11.1 of RFC9449}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange is refused when its DPoP proof names another `htu` or `htm`, carries an `iat` outside the acceptance window, or repeats a `jti` already accepted within it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932 direction 3): at the exchange the request's proof stands in for the substrate's proof-of-possession JWT, with its freshness, replay and request-binding checks, through the shared token-endpoint verifier (#1173). Proved by dropping the htu and then the htm comparison: the request-binding test fails each time."
+  },
   {
-    "id": "cross-org.projection-exchange.audience-every-hop",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "projection-exchange",
-    "text": "a requested audience outside a hop's `aud`, or a leaf argument constraint the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
-    "role": "verifier",
-    "strength": "stated",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "token-endpoint",
-    "assertion": "refusal",
-    "observation": {
-     "normative": "a projection exchange whose requested audience is outside some hop's `aud`, including one the root names but a later hop does not, is refused with `invalid_target`"
-    },
-    "level": "endpoint",
-    "coverage": "tested",
-    "tests": [
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience outside the leaf's aud (invalid_target)",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience the root's aud names but a later hop's does not (invalid_target)",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     }
-    ],
-    "notes": "#1759: the substrate's step 6c applied to the requested audience. The quoted sentence's second clause is cross-org.projection.both-layers. Both tests register the audience with the destination's scope mapping so only the hop audience check can refuse it. Proved by removing the check and by checking the root alone: the tests fail."
+   "id": "cross-org.projection-exchange.audience-every-hop",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "a requested audience outside a hop's `aud`, or a leaf argument constraint the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange whose requested audience is outside some hop's `aud`, including one the root names but a later hop does not, is refused with `invalid_target`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience outside the leaf's aud (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience the root's aud names but a later hop's does not (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759: the substrate's step 6c applied to the requested audience. The quoted sentence's second clause is cross-org.projection.both-layers. Both tests register the audience with the destination's scope mapping so only the hop audience check can refuse it. Proved by removing the check and by checking the root alone: the tests fail."
+  },
   {
-    "id": "cross-org.projection.both-layers",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "projection",
-    "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and an argument constraint the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
-    "role": "AS",
-    "strength": "MUST",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "token-endpoint",
-    "assertion": "output-bound",
-    "observation": {
-     "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`; a leaf argument constraint the local token cannot represent, or a constraint the destination's consumer does not establish, refuses the exchange with `invalid_target`"
-    },
-    "level": "endpoint",
-    "coverage": "tested",
-    "tests": [
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > carries the Mission entry's resource_contract and constraints into the local token",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     },
-     {
-      "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
-      "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
-      "level": "endpoint",
-      "surface": "token-endpoint"
-     }
-    ],
-    "notes": "#1759 (D932): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling); the error code is the projection exchange's. Proved by skipping the argument comparison, by dropping resource_contract, and by projecting an entry the destination does not map: each test fails."
+   "id": "cross-org.projection.both-layers",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection",
+   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and an argument constraint the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and a leaf argument constraint the local token cannot represent refuses the exchange with `invalid_target`",
+    "local": "the reference also refuses, with the same code, a leaf tool whose `mission_constraints` restrict a fact the destination's declared operations do not establish: it projects only what the root mapping (mapAuthorityToCeiling) would map at the destination; the draft's clause names argument constraints only"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > carries the Mission entry's resource_contract and constraints into the local token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling); the error code is the projection exchange's. Proved by skipping the argument comparison, by dropping resource_contract, and by projecting an entry the destination does not map: each test fails."
+  },
   {
-    "id": "cross-org.verification.direct-invocation",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "verification",
-    "text": "at direct invocation, under steps 6 and 7 of the substrate's algorithm, which bind the proof to the invoked tool and its arguments",
-    "role": "verifier",
-    "strength": "MUST",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "resource-operation",
-    "assertion": "refusal",
-    "observation": {
-     "normative": "a chain-verifying resource server refuses a direct invocation whose `aat_pop` does not verify under the leaf `cnf.jwk` for the invoked tool and its arguments (AAT -02 Section 8 steps 6 and 7)"
-    },
-    "level": "endpoint",
-    "coverage": "todo",
-    "tests": [],
-    "notes": "#1759 (D932 direction 3). The reference has no cross-org chain-verifying resource server; the projection exchange is its only cross-org surface, which is what #1759's acceptance requires."
+   "id": "cross-org.verification.direct-invocation",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "at direct invocation, under steps 6 and 7 of the substrate's algorithm, which bind the proof to the invoked tool and its arguments",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain-verifying resource server refuses a direct invocation whose `aat_pop` does not verify under the leaf `cnf.jwk` for the invoked tool and its arguments (AAT -02 Section 8 steps 6 and 7)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 3). The reference has no cross-org chain-verifying resource server; the projection exchange is its only cross-org surface, which is what #1759's acceptance requires."
+  },
   {
-    "id": "cross-org.chain.direct-presentation-actor-credentials",
-    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
-    "anchor": "chain-presentation",
-    "text": "a chain-verifying resource server recognizes `actor_credentials` and validates it ({{actor-identity}}), and ignores other members it does not recognize, as the substrate specifies",
-    "role": "verifier",
-    "strength": "stated",
-    "applicability": {
-     "kind": "capability",
-     "capability": "cross-org.delegation"
-    },
-    "profiles": [],
-    "surface": "resource-operation",
-    "assertion": "refusal",
-    "observation": {
-     "normative": "at direct invocation, a named hop without a valid aligned `actor_credentials` entry in the presentation object refuses the invocation, and an unrecognized member of that object does not"
-    },
-    "level": "endpoint",
-    "coverage": "todo",
-    "tests": [],
-    "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
+   "id": "cross-org.chain.direct-presentation-actor-credentials",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "chain-presentation",
+   "text": "a chain-verifying resource server recognizes `actor_credentials` and validates it ({{actor-identity}}), and ignores other members it does not recognize, as the substrate specifies",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
    },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at direct invocation, a named hop without a valid aligned `actor_credentials` entry in the presentation object refuses the invocation, and an unrecognized member of that object does not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
+  },
   {
    "id": "mas.reference.strict-dictionary",
    "spec": "draft-mcguinness-mission-authority-server.md",
