@@ -1881,9 +1881,7 @@ narrowing and needs `narrowing`, not `projection`. Without `narrowing`,
 the AS MUST NOT issue an entry to any audience other than its original
 approved audience, or, except as `scope` under a declared `projection`,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved. Without
-`narrowing`, a token for another audience does not carry the entry
-({{token-response}}).
+transformed copy is still a subset of what was approved.
 
 A type that declares `delegation` without `narrowing` is delegable only
 unchanged: the AS MUST NOT include an entry of such a type in a
