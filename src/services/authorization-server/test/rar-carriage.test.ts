@@ -27,7 +27,7 @@ import { computeAnchor, PROPOSED_AUTHORITY_TYP, proposalHash } from "@mission/co
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { buildInsufficientAuthorization } from "@mission/mcp-payments";
 import { exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ApprovalSessionStore,
   buildAuthorizationServer,
@@ -38,6 +38,8 @@ import {
   type AuthorityEntry,
   type BuiltAs,
 } from "../src/index.js";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
+import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const PORT = 14502;
@@ -283,6 +285,18 @@ async function pushPar(
 // The trusted browser login: an Approver authenticated in the user agent
 // itself, the only approval an ID Token can describe (#826).
 const SESSIONS = new ApprovalSessionStore();
+
+/**
+ * @spec mission#approval-preparation (#1802): the approval page renders only to
+ * an authenticated Approver who may approve it. Bob (mfa), approving for Alice
+ * through ap-agent, or for the organizational principal through
+ * governed-agent; the headers carry this user agent's cookies.
+ */
+function approverHeaders(uid: string, clientId = "ap-agent"): Record<string, string> {
+  return floorApprovalHeaders(SESSIONS, uid, cookieHeader(), {
+    subject: clientId === "governed-agent" ? "acme-accounts-payable" : "alice",
+  });
+}
 
 beforeAll(async () => {
   as = await buildAuthorizationServer({
@@ -622,14 +636,14 @@ describe("end-to-end issuance under the new carriage", () => {
 
     // The approval rendering distinguishes the submitted proposal from the
     // derived Authority Set (@spec mission#approval-event).
+    const decideHeaders = { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
     const page = await fetch(`${ISSUER}/interaction/${uid}`, {
-      headers: { cookie: cookieHeader() },
+      headers: { cookie: decideHeaders.cookie as string },
     });
     const html = await page.text();
     expect(html).toContain("Proposed authority (submitted, untrusted)");
     expect(html).toContain("Derived authority (what approval grants)");
 
-    const decideHeaders = { ...floorApprovalHeaders(SESSIONS, uid, cookieHeader()), "content-type": "application/json" };
     const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
@@ -761,7 +775,7 @@ describe("approval page per-action limit wording (D284, #1328)", () => {
     });
     storeCookies(auth);
     const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
-    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: approverHeaders(uid).cookie as string } });
     return { status: page.status, html: await page.text() };
   }
 
@@ -876,6 +890,15 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
   const READ_ONLY_PROPOSAL: AuthorityEntry[] = [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
   ];
+  /** The approval page the last approval rendered, before its decision. */
+  let lastRender: { status: number; html: string } = { status: 0, html: "" };
+  /** The page asked the login to sign in again and showed nothing of the request (#1802). */
+  const expectStepUp = () => {
+    expect(lastRender.status).toBe(401);
+    expect(lastRender.html).toContain('data-error="insufficient_user_authentication"');
+    expect(lastRender.html).not.toContain(TASK_INTENT.goal);
+    expect(lastRender.html).not.toContain("payments:invoice.read");
+  };
 
   // Every approval here is a trusted BROWSER approval: the Approver
   // authenticated in this user agent, with the achieved acr and time the
@@ -923,12 +946,18 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       cookieHeader(),
     );
     const decideHeaders = { ...approval, "content-type": "application/json" };
-    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
+    // @spec mission#approval-preparation (step 1, #1802): a login the
+    // requested strength refuses is asked to sign in again before anything
+    // renders, and mints no revision; the decision it then posts is refused
+    // by the decision's own check.
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: approval.cookie as string } });
+    lastRender = { status: page.status, html: await page.text() };
+    const render_revision = page.headers.get(RENDER_REVISION_HEADER) ?? undefined;
     res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
       headers: decideHeaders,
-      body: JSON.stringify({ decision: "approve", render_revision }),
+      body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}) }),
     });
     storeCookies(res);
     location = res.headers.get("location") as string;
@@ -1034,6 +1063,9 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       approver: "alice",
       authTime: Math.floor((Date.now() - 5000) / 1000),
     });
+    // Asked to sign in again before anything renders (#1802), and the decision
+    // the stale login then posts is refused by the decision's own check.
+    expectStepUp();
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 
@@ -1043,60 +1075,59 @@ describe("Approver Authentication Strength (@spec mission#approval-authenticatio
       approver: "alice",
       acr: "password",
     });
+    expectStepUp();
     expect(redirect.searchParams.get("error")).toBe("access_denied");
   });
 });
 
 
 /**
- * @spec mission#approval-event (steps 3 and 5), mission#authority-sources —
- * the wire contract: the approval rendering identifies the established source,
- * and an establishment refusal completes through the pending front-channel
- * authorization request as `access_denied`.
+ * @spec mission#approval-event (steps 3 and 5), mission#authority-sources,
+ * mission#approval-preparation (#1802) — the wire contract: the approval
+ * rendering identifies the source step 3 established, and nothing renders
+ * before it is established. An Approver who may not activate the source is
+ * refused at the rendering alone, leaving the request pending; any other
+ * establishment refusal holds for every Approver. The decision establishes
+ * the source again, so authority withdrawn after the rendering refuses
+ * there, completing through the pending front-channel authorization request
+ * as `access_denied`.
  */
 describe("authority source on the approval surface (@spec mission#authority-sources)", () => {
   const SOURCE_PROPOSAL: AuthorityEntry[] = [
     { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read"] },
   ];
+  /** The trusted headless approval service, its Approver approving for this Subject. */
+  const service = (approver: string, subject: string) => ({ ...trustedApprovalHeaders(approver, {}, subject), cookie: cookieHeader() });
+  const SOURCE_HEADING = "Authority source (whose authority this draws on)";
 
-  async function renderApproval(args: {
-    clientId: string;
-    kid: string;
-    key: () => CryptoKey;
-  }): Promise<{ uid: string; html: string }> {
-    const par = await pushPar(args.clientId, args.kid, args.key(), {
+  async function open(clientId: string, kid: string, key: () => CryptoKey): Promise<string> {
+    const par = await pushPar(clientId, kid, key(), {
       login_hint: "alice",
       mission_intent: JSON.stringify({ intent: TASK_INTENT }),
       authorization_details: JSON.stringify(SOURCE_PROPOSAL),
     });
     expect(par.status, await par.clone().text()).toBe(201);
     const { request_uri } = (await par.json()) as { request_uri: string };
-    const authUrl = `${ISSUER}/auth?${new URLSearchParams({
-      client_id: args.clientId,
-      request_uri,
-    })}`;
-    let res = await fetch(authUrl, { redirect: "manual" });
+    const res = await fetch(`${ISSUER}/auth?${new URLSearchParams({ client_id: clientId, request_uri })}`, { redirect: "manual" });
     storeCookies(res);
-    let location = res.headers.get("location") as string;
-    const uid = location.split("/interaction/")[1] as string;
+    return (res.headers.get("location") as string).split("/interaction/")[1] as string;
+  }
+  const openGoverned = () => open("governed-agent", "governed-agent-auth", () => governedKey);
 
-    const page = await fetch(`${ISSUER}/interaction/${uid}`, {
-      headers: { cookie: cookieHeader() },
-    });
-    return { uid, html: await page.text() };
+  async function renderAs(uid: string, headers: Record<string, string>) {
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { ...headers, cookie: cookieHeader() } });
+    return { status: page.status, revision: page.headers.get(RENDER_REVISION_HEADER), html: await page.text() };
   }
 
-  // The Subject is established by the AS from the pushed login_hint; only the
-  // resolving Approver is a fixture input.
-  async function decideAt(uid: string, approver: string): Promise<URL> {
-    const decideHeaders = { ...trustedApprovalHeaders(approver), "content-type": "application/json", cookie: cookieHeader() };
-    const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
+  /** Decide on the latest rendering made to this principal, and follow the completion. */
+  async function decideAs(uid: string, headers: Record<string, string>, render_revision?: string | null): Promise<{ status: number; redirect?: URL; error?: string }> {
     let res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
-      headers: decideHeaders,
-      body: JSON.stringify({ decision: "approve", render_revision }),
+      headers: { ...headers, cookie: cookieHeader(), "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}) }),
     });
+    if (res.status !== 303) return { status: res.status, error: ((await res.json()) as { error?: string }).error };
     storeCookies(res);
     let location = res.headers.get("location") as string;
     while (location?.startsWith(ISSUER)) {
@@ -1104,27 +1135,32 @@ describe("authority source on the approval surface (@spec mission#authority-sour
       storeCookies(res);
       location = res.headers.get("location") as string;
     }
-    return new URL(location);
+    return { status: 303, redirect: new URL(location) };
   }
 
+  /** Nothing of the request is on the page: no Intent, source, client or derived authority. */
+  const expectNothingRendered = (html: string) => {
+    expect(html).not.toContain(TASK_INTENT.goal);
+    expect(html).not.toContain(SOURCE_HEADING);
+    expect(html).not.toContain("payments:invoice.read");
+    expect(html).not.toContain("governed-agent");
+    expect(html).not.toContain("acme-accounts-payable");
+  };
+  const nothingCreated = (uid: string) => expect(as.kernel.findByApprovalEvent(`apev_${uid}`)).toBeUndefined();
+
   it("renders the user-delegated source and approves", async () => {
-    const { uid, html } = await renderApproval({
-      clientId: "ap-agent",
-      kid: "ap-agent-auth",
-      key: () => agentKey,
-    });
-    expect(html).toContain("Authority source (whose authority this draws on)");
-    expect(html).toContain("user_delegated");
-    const redirect = await decideAt(uid, "bob");
-    expect(redirect.searchParams.get("code")).toBeTruthy();
+    const uid = await open("ap-agent", "ap-agent-auth", () => agentKey);
+    const bob = service("bob", "alice");
+    const page = await renderAs(uid, bob);
+    expect(page.html).toContain(SOURCE_HEADING);
+    expect(page.html).toContain("user_delegated");
+    const decided = await decideAs(uid, bob, page.revision);
+    expect(decided.redirect?.searchParams.get("code")).toBeTruthy();
   });
 
   it("renders the organizational source with the governed policy it draws on", async () => {
-    const { html } = await renderApproval({
-      clientId: "governed-agent",
-      kid: "governed-agent-auth",
-      key: () => governedKey,
-    });
+    const uid = await openGoverned();
+    const { html } = await renderAs(uid, service("bob", "acme-accounts-payable"));
     expect(html).toContain("organizational");
     expect(html).toContain("acme-accounts-payable-controls");
     expect(html).toContain("2026-09-01");
@@ -1135,29 +1171,83 @@ describe("authority source on the approval surface (@spec mission#authority-sour
     expect(source).not.toContain("digest");
   });
 
-  it("refuses access_denied at the decision when the subject discipline fails", async () => {
+  it("refuses the subject discipline before anything renders, for every Approver, and the decision approves nothing", async () => {
     // An organizational Mission MUST NOT record a human principal as its
-    // Subject: the gate refuses before any anchor is computed, and the refusal
-    // completes through the pending authorization request.
-    const { uid } = await renderApproval({
-      clientId: "governed-agent",
-      kid: "governed-agent-auth",
-      key: () => governedKey,
-    });
-    const redirect = await decideAt(uid, "bob");
-    expect(redirect.searchParams.get("error")).toBe("access_denied");
-    expect(redirect.searchParams.get("code")).toBeNull();
+    // Subject: Bob, who may activate the source, selects Alice.
+    const uid = await openGoverned();
+    const bob = service("bob", "alice");
+    const page = await renderAs(uid, bob);
+    expect(page.status).toBe(400);
+    expect(page.revision).toBeNull();
+    expect(JSON.parse(page.html)).toMatchObject({ error: "access_denied" });
+    expect(JSON.parse(page.html).error_description).toMatch(/MUST NOT record the human principal 'alice'/);
+    const decided = await decideAs(uid, bob);
+    expect(decided.status).toBe(409);
+    expect(decided.error).toBe("rendering_required");
+    nothingCreated(uid);
+  });
+
+  it("refuses access_denied at the decision when the subject discipline fails", async () => {
+    const uid = await openGoverned();
+    const bob = service("bob", "acme-accounts-payable");
+    const page = await renderAs(uid, bob);
+    expect(page.status).toBe(200);
+    // The deployment now treats the organizational principal as a human.
+    const human = (as.kernel as unknown as { sourceCatalog: { humanPrincipals: string[] } }).sourceCatalog.humanPrincipals;
+    const includes = human.includes.bind(human);
+    const spy = vi.spyOn(human, "includes").mockImplementation((sub: string) => sub === "acme-accounts-payable" || includes(sub));
+    try {
+      const decided = await decideAs(uid, bob, page.revision);
+      expect(decided.redirect?.searchParams.get("error")).toBe("access_denied");
+      expect(decided.redirect?.searchParams.get("error_description")).toMatch(/MUST NOT record the human principal/);
+      expect(decided.redirect?.searchParams.get("code")).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
+    nothingCreated(uid);
+  });
+
+  it("refuses an Approver who may not activate the source before anything renders, leaving the request pending for one who may", async () => {
+    // `alice` holds no activation authority over the organizational source.
+    const uid = await openGoverned();
+    const alice = service("alice", "alice");
+    const page = await renderAs(uid, alice);
+    expect(page.status).toBe(403);
+    expect(page.revision).toBeNull();
+    expect(page.html).toContain('data-error="access_denied"');
+    expectNothingRendered(page.html);
+    const refused = await decideAs(uid, alice);
+    expect(refused.status).toBe(409);
+    nothingCreated(uid);
+    // The interaction is still pending: Bob, who may activate it, approves.
+    const bob = service("bob", "acme-accounts-payable");
+    const shown = await renderAs(uid, bob);
+    expect(shown.status).toBe(200);
+    expect((await decideAs(uid, bob, shown.revision)).redirect?.searchParams.get("code")).toBeTruthy();
   });
 
   it("refuses access_denied when the Approver may not activate the source", async () => {
-    // `alice` holds no activation authority over the organizational source.
-    const { uid } = await renderApproval({
-      clientId: "governed-agent",
-      kid: "governed-agent-auth",
-      key: () => governedKey,
-    });
-    const redirect = await decideAt(uid, "alice");
-    expect(redirect.searchParams.get("error")).toBe("access_denied");
+    const uid = await openGoverned();
+    const bob = service("bob", "acme-accounts-payable");
+    const page = await renderAs(uid, bob);
+    expect(page.status).toBe(200);
+    // The source now names another activator; nothing the rendering showed changed.
+    const resolver = (as.kernel as unknown as { sourceResolver: AuthoritySourceResolver }).sourceResolver;
+    const original = resolver.resolveForApproval.bind(resolver);
+    const spy = vi
+      .spyOn(resolver, "resolveForApproval")
+      .mockImplementation((input) => {
+        const r = original(input);
+        return { ...r, entry: { ...r.entry, activators: ["dana"] } };
+      });
+    try {
+      const decided = await decideAs(uid, bob, page.revision);
+      expect(decided.redirect?.searchParams.get("error")).toBe("access_denied");
+      expect(decided.redirect?.searchParams.get("error_description")).toMatch(/not authorized to activate/);
+    } finally {
+      spy.mockRestore();
+    }
+    nothingCreated(uid);
   });
 });
 
@@ -1191,7 +1281,7 @@ describe("receiving client on the approval surface (@spec mission#approval-event
     });
     storeCookies(auth);
     const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
-    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: approverHeaders(uid, args.clientId).cookie as string } });
     const html = await page.text();
     expect(page.status, html).toBe(200);
     const section = html.match(/<section class="receiving-client">([\s\S]*?)<\/section>/)?.[1] ?? "";
@@ -1270,7 +1360,7 @@ describe("client-supplied text attributed to the client (@spec mission#rendering
     });
     storeCookies(auth);
     const uid = (auth.headers.get("location") as string).split("/interaction/")[1] as string;
-    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+    const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: approverHeaders(uid, args.clientId).cookie as string } });
     const html = await page.text();
     expect(page.status, html).toBe(200);
     return html;

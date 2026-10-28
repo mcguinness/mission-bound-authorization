@@ -215,7 +215,7 @@ describe("derivation from an entry whose delegation carries an unsupported membe
     const par = await push(CEILING_ISSUER, ceilingAgentKey, [entry()]);
     expect(par.status, JSON.stringify(par.body)).toBe(201);
     const { uid, cookie } = await interaction(CEILING_ISSUER, par.body.request_uri as string);
-    const page = await fetch(`${CEILING_ISSUER}/interaction/${uid}`, { headers: { cookie } });
+    const page = await fetch(`${CEILING_ISSUER}/interaction/${uid}`, { headers: { ...trustedApprovalHeaders(), cookie } });
     const text = await page.text();
     expect(page.status, text.slice(0, 200)).toBe(400);
     const body = JSON.parse(text) as { error?: string; error_description?: string };

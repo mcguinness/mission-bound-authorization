@@ -1196,7 +1196,7 @@ describe("the Intent-only completion workaround is never a client proposal (@spe
     keep(res);
     const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
     const render = async () => {
-      const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookie() } });
+      const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { ...trustedApprovalHeaders(), cookie: cookie() } });
       return { status: page.status, html: await page.text() };
     };
     const decide = async () => {

@@ -335,7 +335,7 @@ async function renderAndApprove(): Promise<{ rendered: unknown; recordId: string
   });
   storeCookies(res);
   const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-  const page = await fetch(`${DERIVE_ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+  const page = await fetch(`${DERIVE_ISSUER}/interaction/${uid}`, { headers: { cookie: floorApprovalHeaders(SESSIONS, uid, cookieHeader()).cookie as string } });
   const html = await page.text();
   const block = (html.split("<h2>Derived authority (what approval grants)</h2><pre>")[1] as string).split("</pre>")[0] as string;
   const rendered: unknown = JSON.parse(block.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&"));

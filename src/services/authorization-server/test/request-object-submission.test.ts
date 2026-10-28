@@ -155,7 +155,7 @@ async function approve(requestUri: string) {
   let location = res.headers.get("location") ?? "";
   expect(location, await res.text()).toMatch(/\/interaction\/[^/]+$/);
   const uid = location.split("/interaction/")[1] as string;
-  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader() } });
+  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: floorApprovalHeaders(SESSIONS, uid, cookieHeader()).cookie as string } });
   const html = await page.text();
   expect(page.status, html.slice(0, 400)).toBe(200);
   expect(html).toContain(INTENT.goal);
