@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-28T05:16:12Z
-Source repository commit: ddd48a62308671acd88c3c6e661090a40e04b5cc
+Generated: 2026-10-28T05:24:27Z
+Source repository commit: d7b3631cfaa7f76008a4d7d916b7f46224f8700c
 Member count: 9
 
 Reading order:
@@ -17016,10 +17016,11 @@ Table of Contents
       it sent.
 
    The request also carries the client authentication parameters of the
-   method it uses (Section 3.2): client_id, REQUIRED with mTLS client
-   authentication (Section 2 of [RFC8705]), and client_assertion_type
-   and client_assertion, REQUIRED with private-key-JWT client
-   authentication [RFC7523].
+   method it uses (Section 3.2), for example client_id, REQUIRED with
+   mTLS client authentication (Section 2 of [RFC8705]), or
+   client_assertion_type and client_assertion, REQUIRED with private-
+   key-JWT client authentication [RFC7523].  A method that carries its
+   credentials in HTTP header fields keeps them there.
 
    The Mission Issuer's configuration states which audiences each
    authenticated caller may request: a resource server is typically
@@ -18896,9 +18897,33 @@ Table of Contents
 12.2.  OAuth Extensions Error Registration
 
    IANA is requested to register the following in the "OAuth Extensions
-   Error Registry" [RFC6749]. not_found is already registered for
-   another usage location; its entry here adds the usage locations of
-   this document.
+   Error Registry" [RFC6749]. invalid_request, invalid_client and
+   not_found are already registered for other usage locations; their
+   entries here add the usage locations of this document.
+
+   *  Error Name: invalid_request
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
+
+   *  Error Name: invalid_client
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: unauthorized
 
@@ -19224,6 +19249,16 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   -01
+
+   *  The Mission Status Request gives the client authentication
+      parameters of mTLS and private-key JWT as examples; a method that
+      carries its credentials in HTTP header fields keeps them there.
+
+   *  IANA Considerations adds the Mission Status and Mission Lifecycle
+      endpoints as usage locations for invalid_request and
+      invalid_client.
 
    -00
 
