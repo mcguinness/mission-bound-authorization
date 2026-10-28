@@ -429,6 +429,7 @@ import {
 import { bindingDisclosures, renderBindingDisclosures } from "./capability-disclosure.js";
 import {
   deciding,
+  type DeferralBudgetExposure,
   type DeferralContext,
   deferralContext,
   deferralNoticePage,
@@ -612,8 +613,17 @@ import {
   deploymentCrossDomain,
   type ProhibitedPredicateMapping,
   publishedProhibitedPredicateMapping,
+  standingPaymentRootOf,
   type TemplateConsentProvenance,
 } from "../kernel/standing-payment.js";
+import {
+  type BudgetExposurePort,
+  BudgetExposureUnavailableError,
+  instanceKey,
+  meteringUnitOf,
+  readCounterExposure,
+  standingConsentKey,
+} from "../kernel/budget-exposure.js";
 import type { TemplateStore } from "../kernel/template-store.js";
 import { TokenIssuanceStore } from "../kernel/token-issuance-store.js";
 import {
@@ -1068,6 +1078,14 @@ export interface AdapterOptions {
    */
   actionApprovalPolicy?: ActionApprovalPolicy;
   /**
+   * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+   * (#813, #816, D830 ruling 7, D877): the deployment's read port onto the
+   * co-resident PDP's budget counters, read by the standing-payment consent
+   * and successor approval pages. Required where the
+   * `standing-payment-dispatch` capability is on.
+   */
+  budgetExposure?: BudgetExposurePort;
+  /**
    * @spec mission-template#standing-payment-exception (#813, #816): the
    * deployment's Enforcement Scope Statement, as its runtime enforces it.
    * Read only under the `standing-payment-dispatch` capability, for its
@@ -1319,6 +1337,14 @@ export function buildProvider(opts: AdapterOptions): Provider {
     // every such policy's budget is metered under the Exact profile, as the
     // deployment's Enforcement Scope Statement declares.
     assertStandingPaymentExactProfile(opts.issuer, opts.dispatchPolicies, opts.enforcementScopeStatement);
+  }
+  // @spec mission-template#standing-payment-exception (#813, D830 ruling 7,
+  // D877): a standing-payment consent or successor approval discloses the
+  // budget's consumption and outstanding reservations, read from the
+  // co-resident claim domain, so a deployment that wires no read port could
+  // approve nothing it renders: construction is refused instead.
+  if (standingPaymentOn && !opts.budgetExposure) {
+    throw new Error("the standing-payment-dispatch capability needs a budget exposure port (budgetExposure)");
   }
   const grantEnabled = new Map<string, boolean>([
     // The deferred grant polls an AROP deferral, a Mission approval deferral
@@ -3924,6 +3950,12 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   const enabled = (c: ProviderCapability): boolean => capabilityEnabled(opts, c);
   /** @spec mission-template#prohibited-classes (#813): the opt-in standing-payment dispatch workflow is on. */
   const standingPaymentOn = enabled("standing-payment-dispatch");
+  /**
+   * @spec mission-template#standing-payment-exception (#813, D877): the unit
+   * the budget counters count in, as the Enforcement Scope Statement declares
+   * it; a reading is refused when it declares none.
+   */
+  const exposureUnit = meteringUnitOf(opts.enforcementScopeStatement);
   // @spec status#security-considerations (#1686): one window per client across
   // both Mission Status routes.
   const statusLimiter = new MissionStatusRateLimiter(
@@ -4107,6 +4139,27 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
   };
 
   /**
+   * @spec mission-template#instance-composition, metering#capacity-across-missions
+   * (#813, #816, D877): the budget exposure a deferral's successor continues,
+   * or `null` outside every standing-payment lineage: the dispatched
+   * instance's counter and the shared budget's, each read through the
+   * deployment's port. Throws {@link BudgetExposureUnavailableError} when a
+   * counter cannot be read.
+   */
+  const deferralBudgetExposure = (review: DeferralReview): DeferralBudgetExposure | null => {
+    const root = standingPaymentRootOf(kernel, review.predecessor);
+    if (!root) return null;
+    return {
+      instance: root.mission_id,
+      budget: root.budget,
+      counters: [
+        readCounterExposure(opts.budgetExposure, instanceKey(opts.issuer, root), exposureUnit),
+        readCounterExposure(opts.budgetExposure, standingConsentKey(root.budget), exposureUnit),
+      ],
+    };
+  };
+
+  /**
    * @spec expansion#completion-modes (#1558): who may decide an expansion
    * deferral. The successor's Subject is its predecessor's, so a Subject the
    * principal selected is that one, and the Approver is that Subject or holds
@@ -4137,8 +4190,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
 
   /** @spec mission-template#template-consent: template proposals and their decisions. */
   const templateProposals = new TemplateConsentProposals(() => kernel.nowDate().getTime());
-  /** A proposal's consent disclosure against this issuer's current Dispatch Policies and capability catalog. */
-  const templateDisclosure = (proposal: TemplateProposal) => {
+  /**
+   * A proposal's consent disclosure against this issuer's current Dispatch
+   * Policies and capability catalog. `authenticated` is true only once the
+   * viewer authenticated as an Approver: only then are the budget counters
+   * read and shown (#813, D877).
+   */
+  const templateDisclosure = (proposal: TemplateProposal, authenticated: boolean) => {
     const { capabilityResolver } = kernel.authoritySourceOptions();
     return templateConsentDisclosure(proposal, opts.dispatchPolicies, {
       issuer: opts.issuer,
@@ -4146,6 +4204,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       ...(capabilityResolver ? { capabilityResolver } : {}),
       ...(standingPaymentOn ? { standingPayment: true } : {}),
       ...(opts.actionApprovalPolicy ? { actionApprovalPolicy: opts.actionApprovalPolicy } : {}),
+      ...(authenticated ? { budgetExposure: { port: opts.budgetExposure, unit: exposureUnit } } : {}),
       resourceContracts: kernel.resourceContracts(),
     });
   };
@@ -6134,14 +6193,15 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // The user agent holding the Approver's login for this proposal gets
       // that login's CSRF secret in the form; any other is offered the login.
       const csrf = opts.approvalSessions?.csrfFor(ctx.get("cookie"), proposal.id);
-      const disclosed = templateDisclosure(proposal);
       // @spec mission#approval-context-changes, mission-template#template-consent
       // (#1446, D718; #813): under the `standing-payment-dispatch`
       // capability, a rendering to an authenticated principal retains its
       // own render revision committing what the page showed; the decision
-      // names it and approves exactly that.
+      // names it and approves exactly that. Only that rendering reads and
+      // shows the budget counters (D877).
       let revision: string | undefined;
       const viewer = standingPaymentOn && proposal.state === "pending" ? renderPrincipal(ctx, proposal.id) : undefined;
+      const disclosed = templateDisclosure(proposal, viewer !== undefined);
       const rendering = viewer ? templateConsentRendering(proposal, disclosed) : undefined;
       if (viewer && rendering) {
         revision = retainRenderRevision<TemplateConsentContext>(
@@ -6154,7 +6214,8 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.set(RENDER_REVISION_HEADER, revision);
       }
       ctx.set("content-type", "text/html; charset=utf-8");
-      ctx.status = 200;
+      // A page that cannot be decided until the counters can be read says so.
+      ctx.status = "unavailable" in disclosed ? 503 : 200;
       ctx.body = renderTemplateConsentPage(proposal, disclosed, {
         ...(opts.approverLogin && opts.approvalSessions
           ? { loginHref: `/templates/proposals/${encodeURIComponent(proposal.id)}/approver-login` }
@@ -6262,9 +6323,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // (#1119): no consent to a template whose disclosure cannot be
       // rendered, so a Dispatch Policy, or a trusted capability binding of
       // the ceiling, changed since the proposal refuses it.
-      const rendered = templateDisclosure(proposal);
+      const rendered = templateDisclosure(proposal, true);
       if ("refusal" in rendered) {
-        refuse(403, "access_denied", rendered.refusal);
+        // @spec mission-template#standing-payment-exception (#813, D830
+        // ruling 7): counters that cannot be read now decide nothing, and
+        // the proposal stays pending.
+        if (rendered.unavailable) refuse(503, "temporarily_unavailable", rendered.refusal);
+        else refuse(403, "access_denied", rendered.refusal);
         return;
       }
       // @spec mission#approval-context-changes, mission-template#template-consent
@@ -6392,7 +6457,21 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         ctx.body = deferralNoticePage(e.message);
         return;
       }
-      const rendered = deferralContext(review, shownExpiry(kernel, review));
+      // @spec mission-template#instance-composition (#813, #816, D877): a
+      // standing-payment successor's page shows the budget it continues, read
+      // now; a reading that cannot be made shows no decision at all.
+      let exposure: DeferralBudgetExposure | null;
+      try {
+        exposure = deferralBudgetExposure(review);
+      } catch (e) {
+        if (!(e instanceof BudgetExposureUnavailableError)) throw e;
+        ctx.status = 503;
+        ctx.body = deferralNoticePage(
+          `The standing-payment budget this successor continues cannot be read (${e.message}), so it cannot be approved now.`,
+        );
+        return;
+      }
+      const rendered = deferralContext(review, shownExpiry(kernel, review), exposure);
       const revision = retainRenderRevision<DeferralContext>(
         provider,
         code,
@@ -6522,7 +6601,18 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         refuse(409, "rendering_required", "approve the latest rendering of this request made to you; it was not rendered, or was rendered again");
         return;
       }
-      const current = deferralContext(review, deciding(kernel, review, rendered.context.expires_at));
+      // @spec mission-template#instance-composition (#813, #816, D877): the
+      // exposure is read again for the decision; one that cannot be read
+      // approves nothing, and one that moved since the rendering is a change.
+      let decidingExposure: DeferralBudgetExposure | null;
+      try {
+        decidingExposure = deferralBudgetExposure(review);
+      } catch (e) {
+        if (!(e instanceof BudgetExposureUnavailableError)) throw e;
+        refuse(503, "temporarily_unavailable", `the standing-payment budget this successor continues cannot be read (${e.message}); nothing is approved`);
+        return;
+      }
+      const current = deferralContext(review, deciding(kernel, review, rendered.context.expires_at), decidingExposure);
       if (current.commitment !== rendered.commitment) {
         retireRenderRevision(provider, code, principalKey as string, rendered.revision);
         if (form) {

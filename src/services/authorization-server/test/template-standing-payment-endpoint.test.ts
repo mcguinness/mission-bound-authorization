@@ -33,6 +33,7 @@ import {
   StandingPaymentConfigError,
 } from "../src/index.js";
 import { floorApprovalHeaders, TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
+import { FakeBudgetCounters } from "./budget-exposure.helper.js";
 
 const PORT = 14995;
 const OFF_PORT = 14996;
@@ -152,6 +153,8 @@ beforeAll(async () => {
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     dispatchPolicies: POLICIES,
     enforcementScopeStatement: meteringStatement(ISSUER),
+    // #813, D877: the counters the consent and successor pages read.
+    budgetExposure: new FakeBudgetCounters(),
   });
   server = as.provider.listen(PORT);
   off = await buildAuthorizationServer({ issuer: OFF_ISSUER, dispatchPolicies: POLICIES });
@@ -165,6 +168,7 @@ beforeAll(async () => {
     approvalSessions: SESSIONS,
     dispatchPolicies: POLICIES,
     enforcementScopeStatement: meteringStatement(ALT_ISSUER),
+    budgetExposure: new FakeBudgetCounters(),
     actionApprovalPolicy: ALT_ACTION_APPROVAL,
     resourceToAs: (resource) =>
       resource === RESOURCE ? "https://payments-as.other.test" : ALT_ISSUER,
@@ -500,10 +504,17 @@ describe("standing-payment startup checks (@spec template#prohibited-classes, #8
     // Control: the statement declaring all of it starts, and so does an
     // assembly with the capability off and no statement at all.
     await expect(
-      buildAuthorizationServer({ issuer, capabilities: ON, dispatchPolicies: POLICIES, enforcementScopeStatement: meteringStatement(issuer) }),
+      buildAuthorizationServer({
+        issuer,
+        capabilities: ON,
+        dispatchPolicies: POLICIES,
+        enforcementScopeStatement: meteringStatement(issuer),
+        budgetExposure: new FakeBudgetCounters(),
+      }),
     ).resolves.toBeDefined();
     await expect(buildAuthorizationServer({ issuer, dispatchPolicies: POLICIES })).resolves.toBeDefined();
-  });
+    // Thirteen assemblies built one after another: allow for a loaded machine.
+  }, 30_000);
 
   it("refuses startup when the standing-payment capability is on without templates (#813)", async () => {
     await expect(
