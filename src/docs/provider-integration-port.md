@@ -190,7 +190,14 @@ the store.
   (`insufficient_user_authentication`), with the login link keeping its
   selected Subject, and a headless registration never meets a browser-only
   floor. Authority the classification does not name is refused 400
-  `access_denied` for every Approver, as a derivation refusal is. A ceiling
+  `access_denied` for every Approver, as a derivation refusal is. Such a
+  refusal, and any other no Approver can lift (the request no longer
+  validates or derives, a source gate other than activation), names its
+  cause only to a principal who passes the Approver checks of steps 1 to 3
+  that can be evaluated for the request (the requested strength and
+  approve-for; with the derived set, the floor over its classified authority
+  and D37; with a resolved source, activation). Any other principal gets the
+  same status and error code and a generic description. A ceiling
   the page offers is classified with the derived set and offered only to a
   login that meets the floor over both; any other sees the page without it
   and can consent none (#1255). No refusal mints a render revision, and the
@@ -425,7 +432,8 @@ the store.
   `IntentError`) gets 403 with a notice carrying nothing of the request and
   no revision, and the interaction stays pending for one who may activate
   it; every other gate refusal holds for any Approver and keeps the render's
-  derivation-refusal mapping (400 with the gate's code). The decision runs
+  derivation-refusal mapping (400 with the gate's code, its description
+  shown only to a principal who passes the Approver checks, §3.1). The decision runs
   the gates again, so a source or activation withdrawn after the rendering
   refuses there.
 - **Per-principal resolution (#827).** Gate 1 selects one root for the
