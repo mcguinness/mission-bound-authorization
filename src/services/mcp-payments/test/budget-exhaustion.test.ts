@@ -298,3 +298,40 @@ describe("a budget-bound wire permit suppressed before redemption (@spec meterin
     }
   });
 });
+
+describe("execution reverification binds a standing-payment instance's payee (@spec mission-template#standing-payment-exception, runtime#execution-reverification, #813)", () => {
+  it("an approved vendor's bank account changed after the permit was decided on its committed account fails execution reverification at the wire: refused target_drift with nothing wired, the suppressed Execution Evidence carrying the permit's parameter and context digests beside unequal effective ones (@spec mission-template#standing-payment-exception, runtime#execution-reverification, #813, D830 ruling 4)", async () => {
+    let payments: PaymentsStore | undefined;
+    const h = await harness({
+      observe: ({ tool, decision }) => {
+        // The vendor stays approved; only its bank account changes, after the decision and before the wire.
+        if (tool === "execute_wire_transfer" && decision.decision) {
+          payments?.db.prepare("UPDATE invoices SET payee_account = ? WHERE id = ?").run("acct-other", "inv-1");
+        }
+      },
+    });
+    payments = h.payments;
+    expect(h.payments.getVendor("acme")?.status).toBe("approved");
+    const res = await h.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: key() }, TOKEN);
+    expect(res).toEqual({ ok: false, refusal_reason: "target_drift" });
+    expect(h.connectors.ledgerEntries()).toEqual([]);
+    expect(h.payments.getInvoice("inv-1")?.status).toBe("payable");
+    // The permit was decided on the committed destination: the PDP compared it and permitted.
+    const permit = h.evidence
+      .all()
+      .flatMap((e) => (e.kind === "decision" ? [e.content as DecisionEvidenceObject] : []))
+      .find((d) => d.decision === "permit");
+    expect(permit?.parameter_digest).toBeDefined();
+    const executions = h.evidence.all().flatMap((e) => (e.kind === "execution" ? [e.content as unknown as Record<string, unknown>] : []));
+    expect(executions).toHaveLength(1);
+    const [record] = executions;
+    expect(record).toMatchObject({ evaluation_id: permit?.evaluation_id, outcome: "suppressed", error: "target_drift" });
+    expect(record?.authorized_parameter_digest).toBe(permit?.parameter_digest);
+    expect(record?.effective_parameter_digest).toBeDefined();
+    expect(record?.effective_parameter_digest).not.toBe(record?.authorized_parameter_digest);
+    expect(record?.authorized_evaluation_context_digest).toBe(permit?.evaluation_context_digest);
+    expect(record?.effective_evaluation_context_digest).toBeDefined();
+    expect(record?.effective_evaluation_context_digest).not.toBe(record?.authorized_evaluation_context_digest);
+    await h.close();
+  });
+});

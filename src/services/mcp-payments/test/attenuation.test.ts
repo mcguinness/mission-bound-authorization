@@ -24,15 +24,14 @@
 import { randomUUID } from "node:crypto";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { aatSha256B64url, aatToolId, aatUuidV7, newDpopProofReplay } from "@mission/core";
+import { aatSha256B64url, aatToolId, aatUuidV7, missionToolEntry, newDpopProofReplay } from "@mission/core";
 import { decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type AttenuatedAuthority,
   deriveAttenuationRoot,
   isSubsetEntry,
-  mapAuthorityToTools,
-  mapToolsToAuthority,
+  mapAuthorityToCeiling,
   MissionKernel,
   mintChildOffline,
   validateMissionIntent,
@@ -318,23 +317,22 @@ beforeAll(async () => {
   facts = await present(server, chain);
 });
 
-describe("§root-mapping (Authority Set <-> AAT tools)", () => {
-  it("round-trips an entry back to a subset of itself, synthesizing USD", () => {
+describe("§root-mapping (Authority Set -> AAT tools and mission_constraints)", () => {
+  it("carries an entry's restrictions unchanged as mission_constraints, which read back as a subset of the entry", () => {
     const entry = {
       type: "mission_resource_access" as const,
       resource: CANONICAL_RESOURCE,
       actions: [SCHEDULE_ACTION],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
     };
-    const back = mapToolsToAuthority(mapAuthorityToTools([entry]));
-    expect(back).toHaveLength(1);
-    expect(back[0]?.constraints?.max_amount?.currency).toBe("USD");
-    expect(isSubsetEntry(back[0] as never, entry)).toBe(true);
-  });
-
-  it("is fail-closed: an unknown tool-argument name is rejected, not dropped", () => {
-    const tools = { [aatToolId(CANONICAL_RESOURCE, "x")]: { bogus_arg: { constraint_type: "exact" as const, value: "y" } } };
-    expect(() => mapToolsToAuthority(tools)).toThrow();
+    const { tools, missionConstraints } = mapAuthorityToCeiling([entry], paymentsAttenuationOperations());
+    const toolIds = Object.keys(tools);
+    expect(toolIds.length).toBeGreaterThan(0);
+    for (const toolId of toolIds) {
+      const value = missionConstraints[toolId];
+      expect(value?.constraints).toEqual(entry.constraints);
+      expect(isSubsetEntry(missionToolEntry(toolId, value as never) as never, entry)).toBe(true);
+    }
   });
 });
 

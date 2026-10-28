@@ -12,7 +12,10 @@
  * change between rendering and decision refuses the decision, and a reading
  * that cannot be made refuses the approval.
  */
+import { mkdtempSync } from "node:fs";
 import type { Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
 import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
@@ -91,8 +94,26 @@ const POLICY = {
 };
 const POLICIES = { "sp-exposure": POLICY };
 
-/** The statement metering the policy's budget under the Exact profile. */
-const meteringStatement = (issuer: string) => ({
+/**
+ * A later version of the sp-exposure Dispatch Policy, committing `terms`
+ * under the same budget identity, as a deployment holds it in place of
+ * version 1 (#813, D877).
+ */
+const policyVersion = (version: string, terms: typeof TERMS) => ({
+  version,
+  content_type: "application/json",
+  content: JSON.stringify({ id: "sp-exposure", derivation_limit_ceiling: 3, standing_payment: terms }),
+});
+
+/**
+ * The statement metering the policy's budget under the Exact profile, at
+ * `limit`, listing each of `versions` of the policy.
+ */
+const meteringStatement = (
+  issuer: string,
+  versions: ReadonlyArray<typeof POLICY> = [POLICY],
+  limit: string = TERMS.budget.limit,
+) => ({
   claims: ["budget_metering"],
   extensions: {
     budget_metering: {
@@ -108,10 +129,12 @@ const meteringStatement = (issuer: string) => ({
           budget_id: BUDGET_ID,
           counter_scope: "standing_consent",
           currency: "USD",
-          limit: TERMS.budget.limit,
-          policies: [
-            { id: "sp-exposure", version: "1", digest: activationPolicyDigest(issuer, POLICY) },
-          ],
+          limit,
+          policies: versions.map((held) => ({
+            id: "sp-exposure",
+            version: held.version,
+            digest: activationPolicyDigest(issuer, held),
+          })),
         },
       ],
     },
@@ -148,7 +171,7 @@ afterAll(() => {
  * instances' Subject is the consenting Approver, and Alice's instances are
  * the ones Bob may approve a write-bearing successor for.
  */
-const proposal = (subject: string) => ({
+const proposal = (subject: string, issuer = ISSUER) => ({
   template_version: `sp-exposure-${seq++}`,
   ceiling: [
     {
@@ -160,7 +183,7 @@ const proposal = (subject: string) => ({
   ],
   dispatch_policy: { id: "sp-exposure", version: "1" },
   dispatchers: ["ap-agent"],
-  recipients: { subjects: [{ iss: ISSUER, sub: subject }], agents: ["ap-agent"] },
+  recipients: { subjects: [{ iss: issuer, sub: subject }], agents: ["ap-agent"] },
   per_instance_lifetime_s: 900,
   max_active: 5,
   rate_per_min: 30,
@@ -168,11 +191,15 @@ const proposal = (subject: string) => ({
   expires_at: FAR_FUTURE,
 });
 
-async function propose(subject = "bob"): Promise<string> {
-  const res = await fetch(`${ISSUER}/templates/proposals`, {
+async function propose(
+  subject = "bob",
+  issuer = ISSUER,
+  over: Record<string, unknown> = {},
+): Promise<string> {
+  const res = await fetch(`${issuer}/templates/proposals`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-service-token": DEV_SERVICE_TOKEN },
-    body: JSON.stringify(proposal(subject)),
+    body: JSON.stringify({ ...proposal(subject, issuer), ...over }),
   });
   const out = (await res.json()) as { proposal_id: string };
   expect(res.status, JSON.stringify(out)).toBe(201);
@@ -184,8 +211,8 @@ const login = (key: string, sub: string) =>
   floorApprovalHeaders(SESSIONS, key, "", { sub, subject: null });
 const cookieOf = (headers: Record<string, string>) => ({ cookie: headers.cookie as string });
 
-async function consentPage(id: string, headers: Record<string, string>) {
-  const res = await fetch(`${ISSUER}/templates/proposals/${id}`, { headers: cookieOf(headers) });
+async function consentPage(id: string, headers: Record<string, string>, issuer = ISSUER) {
+  const res = await fetch(`${issuer}/templates/proposals/${id}`, { headers: cookieOf(headers) });
   return {
     status: res.status,
     html: await res.text(),
@@ -193,8 +220,13 @@ async function consentPage(id: string, headers: Record<string, string>) {
   };
 }
 
-async function decideConsent(id: string, headers: Record<string, string>, revision: string | null) {
-  const res = await fetch(`${ISSUER}/templates/proposals/${id}/decide`, {
+async function decideConsent(
+  id: string,
+  headers: Record<string, string>,
+  revision: string | null,
+  issuer = ISSUER,
+) {
+  const res = await fetch(`${issuer}/templates/proposals/${id}/decide`, {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify({ decision: "approve", render_revision: revision }),
@@ -454,6 +486,140 @@ describe("budget exposure on the standing-payment template consent (@spec templa
   });
 });
 
+/** One boot of a restartable deployment: the AS and its listener. */
+interface Boot {
+  as: BuiltAs;
+  server: Server;
+}
+
+/**
+ * Boot `issuer` on its port over `kernelFile` and the module's budget
+ * counters (the claim domain outlives the AS), holding `held` as the
+ * sp-exposure Dispatch Policy, under a statement listing `listed` at `limit`.
+ */
+async function bootAt(
+  issuer: string,
+  kernelFile: string,
+  held: typeof POLICY,
+  listed: ReadonlyArray<typeof POLICY>,
+  limit: string,
+): Promise<Boot> {
+  const built = await buildAuthorizationServer({
+    issuer,
+    capabilities: ON,
+    approvalSessions: SESSIONS,
+    dispatchPolicies: { "sp-exposure": held },
+    enforcementScopeStatement: meteringStatement(issuer, listed, limit),
+    budgetExposure: counters,
+    kernelStore: { file: kernelFile },
+  });
+  const listening = built.provider.listen(Number(new URL(issuer).port));
+  await new Promise<void>((resolve) => listening.once("listening", () => resolve()));
+  return { as: built, server: listening };
+}
+
+async function shutdown(boot: Boot): Promise<void> {
+  boot.server.closeAllConnections();
+  await new Promise<void>((resolve) => boot.server.close(() => resolve()));
+  boot.as.kernel.db.close();
+}
+
+/**
+ * @spec template#standing-payment-exception (#813, D877): a deployment whose
+ * Approver consented a template under version 1 of the sp-exposure Dispatch
+ * Policy restarts on the same kernel file and the same budget counters,
+ * holding `next` in its place. A new template_version proposed under `next`
+ * (with `ceiling` where the new terms need one) is rendered to the
+ * authenticated Approver while the shared counter reads `exposure`: the page
+ * shows the new terms (`shows`) and the shared budget's consumption to date
+ * and outstanding reservations. The rendering commits the figures, so a
+ * decision after the counter moved is refused, and the consent rendered
+ * again is approved under the budget version 1 pinned.
+ */
+async function consentAfterRaise(
+  port: number,
+  next: typeof POLICY,
+  limit: string,
+  shows: string,
+  exposure: { committed: string; reserved: string; held: string },
+  ceiling?: unknown[],
+): Promise<void> {
+  const issuer = `http://localhost:${port}`;
+  const kernelFile = join(mkdtempSync(join(tmpdir(), "sp-exposure-raise-")), "kernel.db");
+  const first = await bootAt(issuer, kernelFile, POLICY, [POLICY], TERMS.budget.limit);
+  try {
+    const v1 = await propose("bob", issuer);
+    const bob = login(v1, "bob");
+    const shown = await consentPage(v1, bob, issuer);
+    expect((await decideConsent(v1, bob, shown.revision, issuer)).status).toBe(201);
+  } finally {
+    await shutdown(first);
+  }
+  const restarted = await bootAt(issuer, kernelFile, next, [POLICY, next], limit);
+  try {
+    const v2 = await propose("bob", issuer, {
+      dispatch_policy: { id: "sp-exposure", version: next.version },
+      ...(ceiling ? { ceiling } : {}),
+    });
+    const bob = login(v2, "bob");
+    counters.set(SHARED, exposure);
+    const page = await consentPage(v2, bob, issuer);
+    expect(page.status, page.html).toBe(200);
+    expect(page.html).toContain(shows);
+    expect(page.html).toContain(
+      exposureLine(`Budget ${OWNER}/${BUDGET_ID} exposure`, exposure.committed, exposure.reserved, exposure.held),
+    );
+    counters.set(SHARED, { ...exposure, committed: "999.00" });
+    const refused = await decideConsent(v2, bob, page.revision, issuer);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error).toBe("approval_context_changed");
+    const again = await consentPage(v2, bob, issuer);
+    expect((await decideConsent(v2, bob, again.revision, issuer)).status).toBe(201);
+  } finally {
+    await shutdown(restarted);
+  }
+}
+
+describe("budget exposure on the consent of a standing-payment template's next version (@spec template#standing-payment-exception, metering#aggregate-bounds, mission#approval-context-changes, #813, D877)", () => {
+  it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the per-payment bound, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
+    await consentAfterRaise(
+      15012,
+      policyVersion("2", { ...TERMS, max_amount: { amount: "800.00", currency: "USD" } }),
+      TERMS.budget.limit,
+      "at most 800.00 USD per payment",
+      { committed: "612.00", reserved: "41.00", held: "17.00" },
+      [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: [STANDING_PAYMENT_OPERATION],
+          constraints: { max_amount: { amount: "800.00", currency: "USD" }, vendors: ["acme"] },
+        },
+      ],
+    );
+  });
+
+  it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that changes destinations, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
+    await consentAfterRaise(
+      15013,
+      policyVersion("2", { ...TERMS, destinations: { acme: "acct-acme-0002" } }),
+      TERMS.budget.limit,
+      "acme to account acct-acme-0002",
+      { committed: "733.00", reserved: "52.00", held: "28.00" },
+    );
+  });
+
+  it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the budget, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
+    await consentAfterRaise(
+      15014,
+      policyVersion("2", { ...TERMS, budget: { ...TERMS.budget, limit: "6000.00" } }),
+      "6000.00",
+      `Budget ${OWNER}/${BUDGET_ID}: at most 6000.00 USD in total`,
+      { committed: "844.00", reserved: "63.00", held: "39.00" },
+    );
+  });
+});
+
 describe("budget exposure on a standing-payment successor's approval (@spec template#instance-composition, metering#capacity-across-missions, #813, D877)", () => {
   it("renders the dispatched instance's and the shared budget's consumption to date and outstanding reservations on the successor's approval page (#813, D877)", async () => {
     const { code, instance } = await standingPaymentSuccessorDeferral();
@@ -467,6 +633,21 @@ describe("budget exposure on a standing-payment successor's approval (@spec temp
     expect(html).toContain(`continues the counter of the dispatched instance ${instance}`);
     expect(html).toContain(exposureLine(`Instance ${instance}`, "40.00", "10.00", "5.00"));
     expect(html).toContain(exposureLine(`Budget ${OWNER}/${BUDGET_ID}`, "300.00", "10.00", "5.00"));
+  });
+
+  it("renders the shared budget's line from the standing-consent counter every instance and successor draws on, not from the dispatched instance's counter (#813, D877)", async () => {
+    const { code, instance } = await standingPaymentSuccessorDeferral();
+    // Each of the shared counter's three totals differs from the instance
+    // counter's, so a shared line read from, or rendered with, the instance
+    // counter cannot match in any member.
+    counters.set(
+      { counter_scope: "mission", issuer: ISSUER, mission_id: instance },
+      { committed: "45.00", reserved: "11.00", held: "6.00" },
+    );
+    counters.set(SHARED, { committed: "345.00", reserved: "22.00", held: "13.00" });
+    const { status, html } = await deferralPage(code, login(code, "bob"));
+    expect(status, html).toBe(200);
+    expect(html).toContain(exposureLine(`Budget ${OWNER}/${BUDGET_ID}`, "345.00", "22.00", "13.00"));
   });
 
   it("refuses a successor approval when the budget's consumption changed between its rendering and the decision, naming the budget exposure, and approves the successor rendered again (@spec mission#approval-context-changes, #1586, #813, D877)", async () => {
