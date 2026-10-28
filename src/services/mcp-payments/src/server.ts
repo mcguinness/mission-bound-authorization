@@ -1326,19 +1326,22 @@ export class McpPaymentsServer {
    * arguments dispatched.
    *
    * 1. The substrate's verification (`verifyAatPresentation`): the chain,
-   *    the proof of possession under the leaf's `cnf.jwk`, the invoked tool
-   *    identifier (`aat_tool`, the operation's target and action) and its
-   *    arguments as written (`hta`), and the presentation audience. The trust
-   *    anchor is the key that verifies the root among this resource's keys
-   *    pinned to the attenuation-root role, bound to the Authorization
-   *    Server's issuer. The audiences are this enforcement boundary and its
-   *    aliases. A tool with side effects tracks the proof's `jti`, through
-   *    the DPoP replay cache's atomic admit; a full cache refuses retryably.
+   *    the proof of possession under the leaf's `cnf.jwk`, the tool the proof
+   *    names (`aat_tool`) and the arguments as written (`hta`) against that
+   *    tool's constraints, and the presentation audience. The trust anchor is
+   *    the key that verifies the root among this resource's keys pinned to
+   *    the attenuation-root role, bound to the Authorization Server's issuer.
+   *    The audiences are this enforcement boundary and its aliases. Every
+   *    class tracks the proof's `jti`, through the DPoP replay cache's atomic
+   *    admit; a full cache refuses retryably.
    * 2. The Mission layer (`verifyMissionAatChain`): the root's `mission`,
    *    with `iss` equal to `mission.issuer` and to the anchor's issuer, the
    *    same `mission` on every token, per-hop `aud` nesting, and
    *    `mission_constraints` on every token, exactly one value per tool,
    *    narrowed per hop, no key this resource does not understand.
+   * 3. The binding (D932): the proof's tool is held to the operation under
+   *    the contract its own `mission_constraints` names, and the credential
+   *    authority is that tool's alone, bound to this one invocation.
    *
    * A substrate PERMIT alone never authorizes: the leaf's authority becomes
    * the credential bound the PEP enforces against the facts it establishes,
