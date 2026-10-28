@@ -1510,7 +1510,9 @@ The AS processes a submission in the following order. Steps 1 to 6
 run when the submission arrives; step 7 can run provisionally then
 and is complete before the approval rendering
 ({{derivation-modes}}); step 8 belongs to the approval event, and
-step 9 to activation.
+step 9 to activation. {{commitment-mechanisms}} states how JSON destined
+for commitment is parsed, including the rejection of duplicate member
+names.
 
 1. Parse the Submission envelope, enforce both closed top levels and
    the size bounds ({{submission-via-par}}), and check that each
