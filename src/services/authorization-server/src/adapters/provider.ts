@@ -4413,13 +4413,14 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // approval is made on the verification user agent alone.
       // @spec mission#approval-context-changes (#1446, D583): the principal
       // this rendering is made to, whose revision a decision must name.
+      type Principal = NonNullable<ReturnType<typeof renderPrincipal>>;
+      const nowS = () => Math.floor(kernel.nowDate().getTime() / 1000);
+      const authenticated = (p: Principal | undefined): p is Principal =>
+        p !== undefined && !(deviceJti && !p.interactive) && p.auth_time <= nowS();
+      const unauthenticated = () => notice(401, "unauthorized", "Sign in as the Approver to review this request.", loginHref());
       const rendering = renderPrincipal(ctx, uid);
-      if (
-        !rendering ||
-        (deviceJti && !rendering.interactive) ||
-        rendering.auth_time > Math.floor(kernel.nowDate().getTime() / 1000)
-      ) {
-        notice(401, "unauthorized", "Sign in as the Approver to review this request.", loginHref());
+      if (!authenticated(rendering)) {
+        unauthenticated();
         return;
       }
       // @spec mission#approval-authentication (#826): the Subject is the one
@@ -4427,67 +4428,119 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // self-approval; never `login_hint`, which concerns the Approver.
       const approver = rendering.sub;
       const subject = rendering.subject;
-      // Step 1 in part: the client's requested `acr_values`, `max_age` and
-      // `prompt=login` need no derived set (@spec mission#approval-authentication).
-      const nowSeconds = Math.floor(kernel.nowDate().getTime() / 1000);
+      // The checks of steps 1 to 3 that concern the Approver, each the
+      // decision's own: the client's requested `acr_values`, `max_age` and
+      // `prompt=login`, the published floor, approve-for authority over the
+      // Subject, the distinct-Approver rule (D37) and source activation.
       const prompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
-      const strengthMet = approverAuthenticationSatisfies(
-        {
-          ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
-          ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
-          ...(params.max_age === undefined && prompts.includes("login") ? { forceFreshLogin: true } : {}),
-        },
-        { acr: rendering.acr, authTime: rendering.auth_time },
-        nowSeconds,
-      );
-      const achieved = { acr: rendering.acr, auth_time: rendering.auth_time };
-      const floorContext = { interactive: rendering.interactive, nowSeconds };
+      const strengthMet = (p: Principal) =>
+        approverAuthenticationSatisfies(
+          {
+            ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
+            ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
+            ...(params.max_age === undefined && prompts.includes("login") ? { forceFreshLogin: true } : {}),
+          },
+          { acr: p.acr, authTime: p.auth_time },
+          nowS(),
+        );
+      const floorFor = (p: Principal, entries: readonly AuthorityEntry[]) =>
+        evaluateApprovalFloor(opts.approvalFloor, entries, { acr: p.acr, auth_time: p.auth_time }, { interactive: p.interactive, nowSeconds: nowS() });
+      const approvesFor = (p: Principal) =>
+        opts.knownSubjects.has(p.subject) && (p.subject === p.sub || opts.approverApprovesFor.get(p.sub)?.has(p.subject) === true);
+      const distinct = (p: Principal, entries: readonly AuthorityEntry[]) =>
+        !entries.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a))) || (p.sub !== p.subject && opts.approverRoleSubs.has(p.sub));
+      const parties = (p: Principal) => ({
+        clientId: String(params.client_id),
+        subject: { iss: opts.issuer, sub: p.subject },
+        approver: { iss: opts.issuer, sub: p.sub },
+      });
       // @spec mission#approval-preparation (#1802): a refusal no Approver can
-      // lift (a request that no longer validates or derives, authority the
-      // floor's classification does not name, a source gate other than
-      // activation) can name what the request carries. It names its cause
-      // only to a principal who passes every check of steps 1 to 3 that
-      // concerns the Approver and can be evaluated for this request: the
-      // requested strength and approve-for; with the derived set, the floor
-      // over its classified authority and the distinct-Approver rule; with a
-      // resolved source, activation. Any other principal gets the status and
-      // the error code, which name the failure class, and nothing from the
-      // request.
-      const mayLearn = (derived?: readonly AuthorityEntry[]): boolean => {
-        if (!strengthMet) return false;
-        if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
-          return false;
-        }
-        if (derived) {
-          const classified = derived
-            .map((e) => ({ ...e, actions: e.actions.filter((a) => actionClassesAt(opts.approvalFloor, e, a) !== undefined) }))
-            .filter((e) => e.actions.length > 0);
-          if (evaluateApprovalFloor(opts.approvalFloor, classified, achieved, floorContext).outcome === "refused") return false;
-          const writes = derived.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
-          if (writes && (approver === subject || !opts.approverRoleSubs.has(approver))) return false;
-        }
-        const parties = {
-          clientId: String(params.client_id),
-          subject: { iss: opts.issuer, sub: subject },
-          approver: { iss: opts.issuer, sub: approver },
-        };
+      // lift (a request that no longer validates or derives, an unresolvable
+      // capability binding, authority the floor's classification does not
+      // name, a source gate other than activation) can name what the request
+      // carries. It names its cause only to a principal who passes every
+      // check above over the derived set: the requested strength, the floor
+      // over its classified authority, approve-for, D37, and, on a resolved
+      // source, activation. It fails closed: with no derived set, or a check
+      // that cannot run, the principal gets the status and the error code,
+      // which name the failure class, and nothing from the request.
+      const mayLearn = (p: Principal, derived?: readonly AuthorityEntry[]): boolean => {
+        if (!derived || !strengthMet(p) || !approvesFor(p) || !distinct(p, derived)) return false;
+        const classified = derived
+          .map((e) => ({ ...e, actions: e.actions.filter((a) => actionClassesAt(opts.approvalFloor, e, a) !== undefined) }))
+          .filter((e) => e.actions.length > 0);
+        if (floorFor(p, classified).outcome === "refused") return false;
         try {
-          kernel.resolveAuthoritySource(parties);
+          kernel.resolveAuthoritySource(parties(p));
         } catch {
           return false;
         }
         try {
-          kernel.establishAuthoritySource(parties);
+          kernel.establishAuthoritySource(parties(p));
         } catch (e) {
           // Gates 4 and 5 run after activation: their refusal leaves it passed.
           if (e instanceof ActivationRefusedError || !(e instanceof IntentError)) return false;
         }
         return true;
       };
-      const refuse = (e: IntentError, derived?: readonly AuthorityEntry[]) => {
+      const refuse = (p: Principal, e: IntentError, derived?: readonly AuthorityEntry[]) => {
         ctx.status = 400;
         ctx.set("cache-control", "no-store");
-        ctx.body = { error: e.code, error_description: mayLearn(derived) ? e.message : REFUSAL_WITHHELD };
+        ctx.body = { error: e.code, error_description: mayLearn(p, derived) ? e.message : REFUSAL_WITHHELD };
+      };
+      /**
+       * Steps 1 to 3 for principal `p` over the derived set, in the order the
+       * decision runs them; the established source on success. Otherwise the
+       * page has answered: a step-up notice (401) or a refusal of this
+       * Approver (403), each carrying nothing from the request and leaving the
+       * interaction pending, or a refusal no Approver can lift (400).
+       */
+      const steps1to3 = (p: Principal, derived: readonly AuthorityEntry[]) => {
+        // Step 1, continued (@spec mission#approval-authentication, #826,
+        // D425): the requested strength and the floor over the derived set,
+        // against the trusted surface's achieved context. A headless
+        // service's registration never meets a browser-only floor.
+        const floor = floorFor(p, derived);
+        if (floor.outcome === "refused" && floor.unclassified) {
+          refuse(p, new IntentError("access_denied", floor.reason), derived);
+          return undefined;
+        }
+        if (!strengthMet(p) || floor.outcome === "refused") {
+          notice(
+            401,
+            "insufficient_user_authentication",
+            "Sign in again, with the authentication this request requires, to review it.",
+            loginHref(p.selected),
+          );
+          return undefined;
+        }
+        // Step 2: approve-for authority over the Subject, then D37.
+        if (!approvesFor(p)) {
+          notice(403, "approval_forbidden", "This Approver may not approve for the Subject this approval selected.");
+          return undefined;
+        }
+        if (!distinct(p, derived)) {
+          notice(403, "approval_forbidden", "This Approver may not approve this request.");
+          return undefined;
+        }
+        // Step 3: the source, established from the trusted catalog for this
+        // Subject, Approver and client (gates 1, 2, 4 and 5), and the derived
+        // set within its authority (gate 3), on one resolution.
+        try {
+          const resolved = kernel.establishAuthoritySource(parties(p));
+          kernel.assertAuthorityWithinSource(resolved, derived);
+          return resolved;
+        } catch (e) {
+          if (e instanceof ActivationRefusedError) {
+            notice(403, "access_denied", "This Approver may not activate the authority this request draws on.");
+            return undefined;
+          }
+          if (e instanceof IntentError) {
+            refuse(p, e, derived);
+            return undefined;
+          }
+          throw e;
+        }
       };
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
@@ -4512,7 +4565,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             : undefined;
       } catch (e) {
         if (e instanceof IntentError) {
-          refuse(e);
+          refuse(rendering, e);
           return;
         }
         throw e;
@@ -4523,45 +4576,94 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // refusal at render time too, not only at decide(): surface it the same
       // way (400, the mapped error code) rather than let it propagate uncaught.
       // @spec capability-binding#capability-approval (#1447, D584): the
-      // candidate is bound from the trusted catalog before the rendering, so
-      // the Approver consents to the concrete tool each catalog-sourced action
-      // invokes, and the rendering presents what each binding means.
-      let authority: ReturnType<typeof kernel.derive>;
-      let bindings: string;
+      // candidate is then bound from the trusted catalog before the
+      // rendering, so the Approver consents to the concrete tool each
+      // catalog-sourced action invokes, and the rendering presents what each
+      // binding means. A binding that cannot be resolved is refused against
+      // the derived set it was binding (#1802), so the disclosure checks still
+      // see that set's authority.
+      let derived: AuthorityEntry[];
       try {
-        authority = kernel.resolveFreshCapabilities(kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent)));
-        bindings = renderBindingDisclosures(bindingDisclosures(authority));
+        derived = kernel.derive(intent, proposal, requestedScopeKey(opts.scopeProjection, params, intent));
       } catch (e) {
         if (e instanceof IntentError) {
-          refuse(e);
+          refuse(rendering, e);
           return;
         }
         throw e;
       }
-      // Step 1, continued (#1802; @spec mission#approval-authentication, #826,
-      // D425): the Approver's achieved authentication, from the trusted
-      // surface, meets the client's requested `acr_values` and `max_age` and
-      // the published approval-authentication floor over the derived set, the
-      // inputs the decision checks. A login that falls short is asked to sign
-      // in again with nothing from the request shown, and a headless
-      // service's registration never meets a browser-only floor. Authority
-      // the classification does not name is refused for every Approver, as a
-      // derivation refusal is. The decision checks both again, so a login
-      // that ages out after the rendering still refuses there.
-      const floor = evaluateApprovalFloor(opts.approvalFloor, authority, achieved, floorContext);
-      if (floor.outcome === "refused" && floor.unclassified) {
-        refuse(new IntentError("access_denied", floor.reason), authority);
+      let authority: ReturnType<typeof kernel.derive>;
+      let bindings: string;
+      try {
+        authority = kernel.resolveFreshCapabilities(derived);
+        bindings = renderBindingDisclosures(bindingDisclosures(authority));
+      } catch (e) {
+        if (e instanceof IntentError) {
+          refuse(rendering, e, derived);
+          return;
+        }
+        throw e;
+      }
+      if (!steps1to3(rendering, authority)) return;
+      // @spec mission#intent-submission-evidence — MATERIAL verified
+      // provenance is INPUT to the approval rendering: the Approver sees the
+      // normalized verified facts (never the raw artifacts), re-verified from
+      // the interaction's immutable pushed parameters. Evidence whose validity
+      // LAPSED since the push (freshness/status) refuses here, before render.
+      let provenance: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>> = [];
+      let evidenceRefusal: IntentError | undefined;
+      try {
+        provenance = await kernel.verifySubmissionEvidence({
+          intent,
+          ...(submission.evidence ? { evidence: submission.evidence } : {}),
+          presenter: { clientId: String(params.client_id ?? "") },
+          required: requiredEvidenceTypesFor(
+            opts,
+            opts.clients.find((c) => c.client_id === params.client_id),
+          ),
+          requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
+        });
+      } catch (e) {
+        if (!(e instanceof IntentError)) throw e;
+        evidenceRefusal = e;
+      }
+      // @spec mission#approval-event (step 5, #1503): the rendering identifies
+      // the OAuth client that receives the authority from this AS's
+      // registration of the interaction's client, the one the decision
+      // commits, never from a value the request supplies.
+      // @spec device-authorization#approval: the verification page names the
+      // same client from the same registration, with whether the AS
+      // authenticated it, the Subject, and the `user_code` to confirm.
+      const registeredClient = await provider.Client.find(String(params.client_id));
+      // @spec mission#direct-approval-steps (#1802): the checks above held
+      // before those awaits; the login, its achieved context and the
+      // Approver's authority can have changed during them. After the last
+      // await, and before any detail or revision, the same principal must
+      // still be authenticated and pass steps 1 to 3 again; otherwise the
+      // page answers as the first gate would, with nothing from the request.
+      const current = renderPrincipal(ctx, uid);
+      if (!authenticated(current) || current.key !== rendering.key || current.sub !== approver || current.subject !== subject) {
+        unauthenticated();
         return;
       }
-      if (!strengthMet || floor.outcome === "refused") {
-        notice(
-          401,
-          "insufficient_user_authentication",
-          "Sign in again, with the authentication this request requires, to review it.",
-          loginHref(rendering.selected),
-        );
+      const established = steps1to3(current, authority);
+      if (!established) return;
+      if (evidenceRefusal) {
+        ctx.status = 400;
+        ctx.body = { error: evidenceRefusal.code, error_description: evidenceRefusal.message };
         return;
       }
+      if (!registeredClient) {
+        ctx.status = 400;
+        ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
+        return;
+      }
+      // @spec mission#approval-event (step 5) — the rendering MUST identify the
+      // authority source and, for `organizational`, the governed policy it
+      // draws on: the source step 3 established. A catalog change before the
+      // decision re-establishes the source there, and refuses rather than
+      // committing what was never rendered.
+      const authoritySource: AuthoritySource = established.provenance;
       // @spec progressive#progressive-authorization (#1017, #1255, #1802): the
       // ceiling this deployment's approval surface offers, rendered for the
       // Approver; the decision consents only exactly this offer, and
@@ -4580,96 +4682,13 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           offered = consentedCeilingEntries(deploymentOffer);
         } catch (e) {
           if (e instanceof IntentError) {
-            refuse(e, authority);
+            ctx.status = 400;
+            ctx.body = { error: e.code, error_description: e.message };
             return;
           }
           throw e;
         }
-        const withCeiling = evaluateApprovalFloor(opts.approvalFloor, [...authority, ...offered], achieved, floorContext);
-        if (withCeiling.outcome !== "refused") ceilingOffer = deploymentOffer;
-      }
-      // Step 2 (#1802): the decision's own predicates for who may approve:
-      // the Subject is known, and the Approver is that Subject or holds
-      // approve-for authority over it under local policy; write-bearing
-      // authority needs a distinct Approver with the approver role (D37).
-      if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
-        notice(403, "approval_forbidden", "This Approver may not approve for the Subject this approval selected.");
-        return;
-      }
-      const writeBearing = authority.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
-      if (writeBearing && (approver === subject || !opts.approverRoleSubs.has(approver))) {
-        notice(403, "approval_forbidden", "This Approver may not approve this request.");
-        return;
-      }
-      // Step 3 (#1802): the source this approval draws on, established for
-      // this Subject, Approver and client from the trusted catalog (gates 1,
-      // 2, 4 and 5), and the derived set within its authority (gate 3), on one
-      // resolution, which the page and its revision both show. An Approver
-      // who may not activate the source is refused alone (403); every other
-      // refusal holds for any Approver and keeps the derivation refusal's
-      // mapping.
-      let established: ReturnType<typeof kernel.establishAuthoritySource>;
-      try {
-        established = kernel.establishAuthoritySource({
-          clientId: String(params.client_id),
-          subject: { iss: opts.issuer, sub: subject },
-          approver: { iss: opts.issuer, sub: approver },
-        });
-        kernel.assertAuthorityWithinSource(established, authority);
-      } catch (e) {
-        if (e instanceof ActivationRefusedError) {
-          notice(403, "access_denied", "This Approver may not activate the authority this request draws on.");
-          return;
-        }
-        if (e instanceof IntentError) {
-          refuse(e, authority);
-          return;
-        }
-        throw e;
-      }
-      // @spec mission#approval-event (step 5) — the rendering MUST identify the
-      // authority source and, for `organizational`, the governed policy it
-      // draws on: the source step 3 established. A catalog change before the
-      // decision re-establishes the source there, and refuses rather than
-      // committing what was never rendered.
-      const authoritySource: AuthoritySource = established.provenance;
-      // @spec mission#intent-submission-evidence — MATERIAL verified
-      // provenance is INPUT to the approval rendering: the Approver sees the
-      // normalized verified facts (never the raw artifacts), re-verified from
-      // the interaction's immutable pushed parameters. Evidence whose validity
-      // LAPSED since the push (freshness/status) refuses here, before render.
-      let provenance: Awaited<ReturnType<typeof kernel.verifySubmissionEvidence>>;
-      try {
-        provenance = await kernel.verifySubmissionEvidence({
-          intent,
-          ...(submission.evidence ? { evidence: submission.evidence } : {}),
-          presenter: { clientId: String(params.client_id ?? "") },
-          required: requiredEvidenceTypesFor(
-            opts,
-            opts.clients.find((c) => c.client_id === params.client_id),
-          ),
-          requestContext: { carrier: deviceJti ? "device-authorization" : "par" },
-        });
-      } catch (e) {
-        if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
-          return;
-        }
-        throw e;
-      }
-      // @spec mission#approval-event (step 5, #1503): the rendering identifies
-      // the OAuth client that receives the authority from this AS's
-      // registration of the interaction's client, the one the decision
-      // commits, never from a value the request supplies.
-      // @spec device-authorization#approval: the verification page names the
-      // same client from the same registration, with whether the AS
-      // authenticated it, the Subject, and the `user_code` to confirm.
-      const registeredClient = await provider.Client.find(String(params.client_id));
-      if (!registeredClient) {
-        ctx.status = 400;
-        ctx.body = { error: "invalid_client", error_description: "the requesting client is no longer registered" };
-        return;
+        if (floorFor(current, [...authority, ...offered]).outcome !== "refused") ceilingOffer = deploymentOffer;
       }
       // @spec derivation-limits#approval-rendering, child-delegation#subtree-rendering,
       // progressive#derivation-limits (#1119, D327): the established limit,
