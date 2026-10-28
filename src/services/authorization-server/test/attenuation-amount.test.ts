@@ -1,88 +1,62 @@
 /**
- * @spec mission#max-amount, attenuation#root-mapping
+ * @spec mission#max-amount, resource-access#initial-common-constraints (#1595,
+ * D727), attenuation#root-mapping, attenuation#mission-constraints (#1756)
  *
- * The AAT root-mapping (`mapAuthorityToTools`, via `argsFromConstraints`)
- * converts a Common Constraint `max_amount` decimal string into the AAT
- * `range` constraint's numeric `max`. A malformed amount MUST be rejected
- * before that conversion: `Number.parseFloat` on "NaN" yields `NaN`, and
- * `constraintSubset`'s `child.max > parent.max` check never fires against a
- * NaN ceiling (`NaN > x` and `x > NaN` are both false), so an unvalidated
- * malformed max_amount would mint a root whose ceiling is effectively
- * unbounded. Pure, in-memory, no network.
+ * An attenuation root carries an entry's `max_amount` in `mission_constraints`
+ * exactly as the Authority Set states it: a decimal string with its currency
+ * code, never converted to a number and never case-folded. A malformed amount
+ * or currency never reaches a root: the root mapping copies the entry, and
+ * the check every mint applies before signing (the consumer's own reading,
+ * `credentialEntriesFromMissionAat`) refuses it. Pure, in-memory, no network.
  */
 
+import { credentialEntriesFromMissionAat } from "@mission/core";
 import { describe, expect, it } from "vitest";
-import { type AuthorityEntry, mapAuthorityToTools, mapToolsToAuthority } from "../src/index.js";
+import { type AuthorityEntry, mapAuthorityToCeiling } from "../src/index.js";
+import { TEST_OPERATIONS } from "./attenuation.helper.js";
 
 const RESOURCE = "https://r.example/mcp";
+const TOOL = `${RESOURCE}#res.pay`;
 
-describe("mapAuthorityToTools rejects a malformed max_amount (@spec mission#max-amount)", () => {
-  it("throws rather than minting a tool constraint with an unbounded/NaN ceiling", () => {
-    const entry: AuthorityEntry = {
-      type: "mission_resource_access",
-      resource: RESOURCE,
-      actions: ["res.pay"],
-      constraints: { max_amount: { amount: "NaN", currency: "USD" } },
-    };
-    expect(() => mapAuthorityToTools([entry])).toThrow(/malformed max_amount/);
+const capped = (amount: string, currency = "USD"): AuthorityEntry => ({
+  type: "mission_resource_access",
+  resource: RESOURCE,
+  actions: ["res.pay"],
+  constraints: { max_amount: { amount, currency } },
+});
+
+/** The root mapping, and the check a mint applies to it before signing. */
+function carried(entry: AuthorityEntry) {
+  const { tools, missionConstraints } = mapAuthorityToCeiling([entry], TEST_OPERATIONS);
+  return { tools, missionConstraints, read: () => credentialEntriesFromMissionAat(tools, missionConstraints) };
+}
+
+describe("an attenuation root never carries a malformed max_amount (@spec mission#max-amount)", () => {
+  it("refuses a malformed amount before signing, rather than carrying it", () => {
+    for (const amount of ["NaN", "1e300"]) {
+      const { tools, read } = carried(capped(amount));
+      expect(Object.keys(tools), amount).toEqual([TOOL]);
+      expect(read, amount).toThrow(/max_amount/);
+    }
   });
 
-  it("also rejects other non-decimal forms (exponent notation)", () => {
-    const entry: AuthorityEntry = {
-      type: "mission_resource_access",
-      resource: RESOURCE,
-      actions: ["res.pay"],
-      constraints: { max_amount: { amount: "1e300", currency: "USD" } },
-    };
-    expect(() => mapAuthorityToTools([entry])).toThrow(/malformed max_amount/);
-  });
-
-  it("still maps a well-formed max_amount to a numeric range constraint (regression: unchanged behavior)", () => {
-    const entry: AuthorityEntry = {
-      type: "mission_resource_access",
-      resource: RESOURCE,
-      actions: ["res.pay"],
-      constraints: { max_amount: { amount: "500.00", currency: "USD" } },
-    };
-    const tools = mapAuthorityToTools([entry]);
-    const toolId = Object.keys(tools)[0] as string;
-    expect(tools[toolId]?.amount_usd).toEqual({ constraint_type: "range", max: 500 });
+  it("carries a well-formed max_amount unchanged, as a decimal string, and reads it back unchanged", () => {
+    const { missionConstraints, read } = carried(capped("500.00"));
+    expect(missionConstraints[TOOL]?.constraints).toEqual({ max_amount: { amount: "500.00", currency: "USD" } });
+    expect(read()[0]?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "USD" });
   });
 });
 
-// @spec resource-access#initial-common-constraints (#1595, D727): the AAT
-// argument name carries the code in lower case (`amount_usd`), so the mapping
-// names only a well-formed code and reads back only three lower-case letters.
-// Lower-casing a malformed `usd` and reading it back as `USD` would be the
-// case folding the draft forbids.
-describe("the AAT amount argument carries only a well-formed currency code (#1595, D727)", () => {
-  const capped = (currency: string): AuthorityEntry => ({
-    type: "mission_resource_access",
-    resource: RESOURCE,
-    actions: ["res.pay"],
-    constraints: { max_amount: { amount: "500.00", currency } },
-  });
-
-  it("mapAuthorityToTools refuses a malformed currency rather than naming an argument for it", () => {
+describe("an attenuation root carries only a well-formed currency code, never folded (#1595, D727)", () => {
+  it("refuses a malformed currency before signing, rather than carrying or folding it", () => {
     for (const currency of ["usd", "US", "USDX", "USD\n", "840", ""]) {
-      expect(() => mapAuthorityToTools([capped(currency)]), JSON.stringify(currency)).toThrow(
-        /malformed max_amount currency/,
-      );
+      expect(carried(capped("500.00", currency)).read, JSON.stringify(currency)).toThrow(/max_amount/);
     }
   });
 
-  it("mapToolsToAuthority refuses an amount suffix that is not three lower-case letters", () => {
-    for (const name of ["amount_USD", "amount_Usd", "amount_us", "amount_usdx", "amount_840", "amount_"]) {
-      expect(
-        () => mapToolsToAuthority({ [`${RESOURCE}#res.pay`]: { [name]: { constraint_type: "range", max: 5 } } }),
-        name,
-      ).toThrow(/amount_\*/);
-    }
-  });
-
-  it("round-trips a well-formed code ISO 4217 does not assign", () => {
-    const tools = mapAuthorityToTools([capped("XYZ")]);
-    expect(Object.values(tools)[0]).toHaveProperty("amount_xyz");
-    expect(mapToolsToAuthority(tools)[0]?.constraints?.max_amount).toEqual({ amount: "500", currency: "XYZ" });
+  it("carries a well-formed code ISO 4217 does not assign unchanged, and reads it back", () => {
+    const { missionConstraints, read } = carried(capped("500.00", "XYZ"));
+    expect(missionConstraints[TOOL]?.constraints).toEqual({ max_amount: { amount: "500.00", currency: "XYZ" } });
+    expect(read()[0]?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "XYZ" });
   });
 });
