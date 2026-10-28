@@ -4,6 +4,51 @@ Each file here is static deployment configuration, read once at boot by the
 typed, validating loaders in `packages/demo-data/src/index.ts`. A file that
 fails validation stops the boot with a `ConfigError` naming the file.
 
+## `aauth-ps.json`
+
+The AAuth Person Server's deployment configuration (#836 slice 2, the
+three-party route): its issuer, its signing key's `kid` and `alg`, token
+and mission lifetimes, the persons it represents, and the deterministic
+approver's inputs. `agents` is both the agent allowlist and the
+agent-person binding (AAuth -11 Section 13.14): an agent it does not name
+is refused at every endpoint, and `mission_governed` places an agent under
+mission governance, so its missionless requests are refused.
+`description_rules` are case-insensitive substrings evaluated in order
+against a proposal's description, the first match deciding, else
+`default_decision`. Read by its own strict loader (`loadPsConfig` in
+`@mission/aauth-ps`), not by `@mission/demo-data`; it refuses with a
+`PsConfigError`.
+
+- **Owner.** The PS operator.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, an issuer or agent that is not an AAuth identifier, an
+  agent named twice or bound to an unconfigured person, and a person or
+  auth token lifetime over AAuth's one-hour ceiling. The signing key is
+  generated at each boot and never configured.
+- **Updating.** Edit, review, and restart the PS. A change applies to the
+  next request; approved missions keep the blob they were approved with.
+
+## `aauth-resource.json`
+
+The AAuth Resource of the three-party route (#836 slice 2,
+`services/aauth-resource`, read by that package's own
+`loadResourceConfig`): its server identifier, the `kid` and `alg` of its
+resource-token signing key (the key is generated at boot), the
+resource-token lifetime (at most 300 seconds, aauth -11 Section 6.7.1),
+the signature window, the scope values it defines, and each protected
+operation with the one scope an auth token must grant for it. The scope
+check is the Resource's own policy on the PS-issued auth token (Section
+13.7); the Resource never evaluates a mission.
+
+- **Owner.** The Resource's operator.
+- **Integrity.** Repository review and the strict loader, which refuses
+  unknown members, an issuer that is not a server identifier, a lifetime
+  over 300 seconds, an unsupported algorithm, an operation at a reserved
+  path, an operation scope the file does not define, and a duplicate
+  operation.
+- **Updating.** Edit, review, and restart the Resource. Resource tokens
+  already issued keep their scope.
+
 ## `approval-floor.json`
 
 The published approval-authentication floor (`@spec
