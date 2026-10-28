@@ -121,8 +121,11 @@ export async function keysAdmin(
       const published = await initSigningKeyRing(ring, issuer, roles, undefined, bindings ? { bindings } : {});
       return [
         `initialized ${ring} for ${issuer}: ${published.length} keys (${kids})`,
-        ...(bindings ? [`recorded its kids in the key binding record ${bindings}`] : []),
-        `start the AS with MISSION_KEY_RING=${ring}`,
+        ...(bindings
+          ? [`recorded its kids in the key binding record ${bindings}`, `start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=${bindings}`]
+          : [
+              `record its kids once with \`pnpm keys bind --ring ${ring} --bindings <path>\` (outside the ring's directory), then start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=<path>`,
+            ]),
       ].join("\n");
     }
     case "bind": {
@@ -130,6 +133,7 @@ export async function keysAdmin(
       return [
         `recorded the ${n} kids of ${ring} in the key binding record ${bindings}`,
         "the AS given this record refuses a ring that holds a recorded kid under other key material",
+        `start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=${bindings}`,
       ].join("\n");
     }
     case "migrate": {

@@ -1133,7 +1133,10 @@ export type SigningKeySource = { ring: string; bindings?: string } | { ephemeral
  * `MISSION_KEY_RING` (an absolute path, since launchers do not run in the
  * directory they were started from), or ephemeral keys when
  * `MISSION_EPHEMERAL_KEYS=1`. Neither, or both, refuses: a deployment says
- * which it runs.
+ * which it runs. @spec #1815 (D945): a ring requires its key binding record,
+ * `MISSION_KEY_BINDINGS`, an absolute path outside the ring's directory tree,
+ * so a lost ring recreated under the same kids cannot replace the AS's keys
+ * silently.
  */
 export function signingKeysFromEnv(env: Readonly<Record<string, string | undefined>>): SigningKeySource {
   const ring = env.MISSION_KEY_RING?.trim();
@@ -1144,7 +1147,21 @@ export function signingKeysFromEnv(env: Readonly<Record<string, string | undefin
   if (ring && !isAbsolute(ring)) {
     throw new SigningKeyRingError(`MISSION_KEY_RING must be an absolute path, not ${ring}`);
   }
-  if (ring) return { ring };
+  if (ring) {
+    const bindings = env.MISSION_KEY_BINDINGS?.trim();
+    if (!bindings) {
+      throw new SigningKeyRingError(
+        "MISSION_KEY_RING requires MISSION_KEY_BINDINGS: without a key binding record kept apart from the ring, a lost ring recreated under the same kids would replace the AS's keys silently (create it once with `pnpm keys init --bindings` or `pnpm keys bind`)",
+      );
+    }
+    if (!isAbsolute(bindings)) throw new SigningKeyRingError(`MISSION_KEY_BINDINGS must be an absolute path, not ${bindings}`);
+    if (witnessSharesStoreTree(ring, bindings)) {
+      throw new SigningKeyRingError(
+        "MISSION_KEY_BINDINGS must be outside the ring's directory, and the ring outside the record's, so losing or restoring one does not take the other with it",
+      );
+    }
+    return { ring, bindings };
+  }
   if (ephemeral) return { ephemeral: true };
   throw new SigningKeyRingError(
     "choose the signing keys: MISSION_KEY_RING=<path> (initialize it once with `pnpm keys init`), or MISSION_EPHEMERAL_KEYS=1 for keys that change at every restart",

@@ -20,7 +20,7 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { initSigningKeyRing, loadSigningKeyRing } from "@mission/authorization-server";
+import { bindSigningKeyRing, initSigningKeyRing, loadSigningKeyRing } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAssertionSource } from "@mission/mcp-payments";
 import type { EvaluationRequest } from "@mission/pdp";
@@ -107,6 +107,8 @@ beforeAll(async () => {
   const keyRing = join(dir, "keys", "ring.json");
   const roles = { asToken, asStatus, asTxn, asContinuation };
   await initSigningKeyRing(keyRing, MAS_URL, roles);
+  const keyBindings = join(mkdtempSync(join(tmpdir(), "mas-bindings-")), "key-bindings.json");
+  await bindSigningKeyRing(keyRing, MAS_URL, roles, keyBindings);
   // The MAS's active Status generation, as the AS itself loads it from the ring (#831 B2).
   const { asStatus: status } = await loadSigningKeyRing(keyRing, MAS_URL, roles);
   statusKid = status.kid;
@@ -130,6 +132,7 @@ beforeAll(async () => {
     configPath,
     statusClients: [pdp.registration, pepOnly.registration, outsider.registration, delegatePep.registration],
     keyRing,
+    keyBindings,
     joinIntrospectionSecret,
     // Delegate edges are recorded only at the MAS's operator console (#1561).
     operatorConsole: true,

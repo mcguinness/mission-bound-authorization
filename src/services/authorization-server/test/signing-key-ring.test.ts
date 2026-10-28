@@ -299,7 +299,18 @@ describe("the signing key ring file (@spec #831 slice 1)", () => {
   });
 
   it("a deployment chooses its keys from its environment: a ring path or MISSION_EPHEMERAL_KEYS=1, never neither or both", () => {
-    expect(signingKeysFromEnv({ MISSION_KEY_RING: "/var/keys/ring.json" })).toEqual({ ring: "/var/keys/ring.json" });
+    expect(signingKeysFromEnv({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/bindings/key-bindings.json" })).toEqual({
+      ring: "/var/keys/ring.json",
+      bindings: "/var/bindings/key-bindings.json",
+    });
+    // @spec #1815 (D945): a ring requires its key binding record, absolute and outside the ring's directory.
+    expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "/var/keys/ring.json" })).toThrow(/MISSION_KEY_RING requires MISSION_KEY_BINDINGS/);
+    expect(() => signingKeysFromEnv({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "b.json" })).toThrow(
+      /MISSION_KEY_BINDINGS must be an absolute path, not b\.json$/,
+    );
+    expect(() =>
+      signingKeysFromEnv({ MISSION_KEY_RING: "/var/keys/ring.json", MISSION_KEY_BINDINGS: "/var/keys/sub/key-bindings.json" }),
+    ).toThrow(/MISSION_KEY_BINDINGS must be outside the ring's directory/);
     expect(signingKeysFromEnv({ MISSION_EPHEMERAL_KEYS: "1" })).toEqual({ ephemeral: true });
     expect(() => signingKeysFromEnv({})).toThrow(/choose the signing keys: MISSION_KEY_RING=<path>/);
     expect(() => signingKeysFromEnv({ MISSION_EPHEMERAL_KEYS: "true" })).toThrow(/choose the signing keys/);

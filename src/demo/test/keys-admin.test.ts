@@ -51,7 +51,7 @@ describe("pnpm keys init (@spec #831 slice 1)", () => {
     expect(out).toBe(
       [
         `initialized ${ring} for http://localhost:${TOPOLOGY.ports.as}: 4 keys (as-token, as-status, as-txn, as-continuation)`,
-        `start the AS with MISSION_KEY_RING=${ring}`,
+        `record its kids once with \`pnpm keys bind --ring ${ring} --bindings <path>\` (outside the ring's directory), then start the AS with MISSION_KEY_RING=${ring} MISSION_KEY_BINDINGS=<path>`,
       ].join("\n"),
     );
     expect(statSync(ring).mode & 0o777).toBe(0o600);

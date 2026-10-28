@@ -19,7 +19,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { initSigningKeyRing, reconcileKernelRecovery } from "@mission/authorization-server";
+import { bindSigningKeyRing, initSigningKeyRing, reconcileKernelRecovery } from "@mission/authorization-server";
 import { DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, type DecisionEvidence, type RefusalRecord } from "@mission/mcp-payments";
 import { type EvaluationRequest, type MissionView, policyViewId, privateKeyJwtClient } from "@mission/pdp";
@@ -191,6 +191,8 @@ beforeAll(async () => {
   const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
   const keyRing = join(dir, "keys", "ring.json");
   await initSigningKeyRing(keyRing, MAS_URL, { asToken, asStatus, asTxn, asContinuation });
+  const keyBindings = join(mkdtempSync(join(tmpdir(), "mas-bindings-")), "key-bindings.json");
+  await bindSigningKeyRing(keyRing, MAS_URL, { asToken, asStatus, asTxn, asContinuation }, keyBindings);
   const configPath = join(dir, "mas-pilot.json");
   const config = separatedConfig(ESTATE_PORT);
   writeFileSync(configPath, JSON.stringify(config));
@@ -205,6 +207,7 @@ beforeAll(async () => {
     configPath,
     statusClients: [pdp.registration, reader.registration],
     keyRing,
+    keyBindings,
     kernelStore,
     kernelWitness: kernelWitnessFor(kernelStore, join(dir, "witness", "kernel.witness")),
   };
