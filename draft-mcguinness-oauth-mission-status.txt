@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         27 October 2026
-Expires: 30 April 2027
+Intended status: Standards Track                         28 October 2026
+Expires: 1 May 2027
 
 
                Mission Status and Lifecycle for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 30 April 2027.
+   This Internet-Draft will expire on 1 May 2027.
 
 Copyright Notice
 
@@ -163,10 +163,9 @@ Table of Contents
       Mission state, and how to size token lifetimes to the propagation
       mechanisms in use.
 
-   *  *Authorization server metadata* members (Section 8) advertising
-      the endpoints above.
-
-   Each extension is independently optional (Section 9).
+   Each extension is independently optional (Section 9).  The
+   authorization server metadata an AS publishes (Section 8) follows
+   from the extensions and authentication paths it supports.
 
    This document does not restate the issuance profile: the Mission
    Intent, authority derivation, the mission claim, the integrity
@@ -1100,6 +1099,13 @@ Table of Contents
    before looking up the Mission, leaving the Mission unchanged, so the
    refusal discloses nothing about it.
 
+   The AS answers a successful base operation with the signed, state-
+   only Mission Status Response (Section 3.5), whose aud is the
+   authenticated client's client_id and whose nonce is the request's.  A
+   retransmit of an accepted request replays that original response
+   (Section 5.6).  An extension operation's outcome and result shape are
+   those its companion profile defines (below).
+
    A companion profile MAY register a further operation value on this
    endpoint that changes no Mission-level state, provided it defines the
    value's request members, authorization, anti-oracle behavior,
@@ -1359,11 +1365,16 @@ Table of Contents
      }
    }
 
+   The Mission's Status version is 4: a suspension and a resumption
+   between the Mission Status example (Section 3.5) and this revocation
+   each advanced it.
+
    The next two examples use another Mission.
 
-   Suspend request with a deadline, here also carrying the OPTIONAL
-   expected_version guard against deciding over stale state
-   (Section 5.6):
+   Suspend request with a deadline from admin-console, an administrator
+   client the deployment authorizes for suspend and the scheduled revoke
+   (Section 5.4), here also carrying the OPTIONAL expected_version guard
+   against deciding over stale state (Section 5.6):
 
    POST /as/mission/lifecycle HTTP/1.1
    Host: as.example.com
@@ -1385,8 +1396,8 @@ Table of Contents
 
    {
      "iss": "https://as.example.com",
-     "aud": "s6BhdRkqt3",
-     "sub": "s6BhdRkqt3",
+     "aud": "admin-console",
+     "sub": "admin-console",
      "nonce": "nonce_4Dq2mV8kX1sB7nR3tW",
      "iat": 1793607600,
      "exp": 1793607660,
@@ -1515,11 +1526,12 @@ Table of Contents
    the first step that fails:
 
    1.  Authenticate the caller (Section 3.2), parsing the request body
-       only as far as authentication needs.  A body that cannot be
-       parsed is refused invalid_request, whatever credential the
-       request presents; a client authentication parameter included more
-       than once fails authentication, and no occurrence of it is used.
-       Every authentication failure is answered as Section 3.3 assigns.
+       only as far as authentication and the nonce echo of Section 3.10
+       need.  A body that cannot be parsed is refused invalid_request,
+       whatever credential the request presents; a client authentication
+       parameter included more than once fails authentication, and no
+       occurrence of it is used.  Every authentication failure is
+       answered as Section 3.3 assigns.
 
    2.  Validate the request syntax and the operation (Section 5.1).  A
        malformed request, or an operation the AS does not serve, is
@@ -1618,10 +1630,11 @@ Table of Contents
    *  any further mechanism a companion profile defines, such as event-
       driven propagation, discovered from that profile's own metadata.
 
-   A deployment advertises mission_max_stale_seconds (Section 8), the
-   ceiling, in seconds, on reliance on an observation of Mission state:
-   the freshness cap of Section 3.6 applies it to a Mission Status
-   Response, and the issuer applies it to an introspection projection's
+   A deployment that claims revocation propagation (Section 9)
+   advertises mission_max_stale_seconds (Section 8), the ceiling, in
+   seconds, on reliance on an observation of Mission state: the
+   freshness cap of Section 3.6 applies it to a Mission Status Response,
+   and the issuer applies it to an introspection projection's
    fresh_until (Section 4).  It does not bound a self-contained token,
    which a consumer relies on for its lifetime unless that lifetime is
    sized to the bound (below).  When the member is absent, no such
@@ -1747,8 +1760,9 @@ Table of Contents
 
    mission_max_stale_seconds:
       OPTIONAL.  An integer.  The ceiling, in seconds, on reliance on an
-      observation of Mission state (Section 6).  When absent, no such
-      ceiling is declared.
+      observation of Mission state (Section 6).  A deployment claiming
+      revocation propagation (Section 9) advertises it.  When absent, no
+      such ceiling is declared.
 
    mission_historical_jwks_uri:
       CONDITIONAL.  A string containing an https URL.  The URL of the
