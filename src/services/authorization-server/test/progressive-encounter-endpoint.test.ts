@@ -232,8 +232,7 @@ async function issueMission(): Promise<{ missionId: string; accessToken: string 
   });
   storeCookies(res, jar);
   const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-  expect((await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } })).status).toBe(200);
-  // That anonymous view mints no revision (#1446): the Approver's session renders the page it decides on.
+  // The page renders only to the Approver's session (#1802), and that rendering is the one the decision names (#1446).
   const decideHeaders = { ...floorApprovalHeaders(approvalSessions, uid, cookieHeader(jar)), "content-type": "application/json" };
   const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {

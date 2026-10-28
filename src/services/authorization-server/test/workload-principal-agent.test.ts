@@ -22,10 +22,12 @@
 import { type Server } from "node:http";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT, type CryptoKey, type JWK } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { ALL_PROVIDER_CAPABILITIES, buildAuthorizationServer, type BuiltAs, MISSION_LIFECYCLE_SCOPE } from "../src/index.js";
-import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
+import { TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14194;
@@ -100,7 +102,16 @@ async function submitAndApprove(
   approver: string,
   subject: string,
   authorizationDetails: unknown[] = READ,
-): Promise<{ code?: string; error?: string; errorDescription?: string; decideStatus: number; cookies: string[] }> {
+  /** Runs between the rendering and the decision. */
+  beforeDecide?: () => void,
+): Promise<{
+  code?: string;
+  error?: string;
+  errorDescription?: string;
+  decideStatus: number;
+  cookies: string[];
+  rendered: { status: number; html: string };
+}> {
   const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
   const par = await fetch(`${ISSUER}/request`, {
     method: "POST",
@@ -141,12 +152,18 @@ async function submitAndApprove(
   let location = res.headers.get("location") ?? "";
   const uid = location.split("/interaction/")[1] as string;
   const decideHeaders = { ...trustedApprovalHeaders(approver, {}, subject), cookie: cookie(), "content-type": "application/json" };
-  const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
+  // The approval service reviews the page first; a principal the page refuses
+  // (#1802) is shown nothing and gets no revision, and its decision names none.
+  const { "content-type": _type, ...viewing } = decideHeaders;
+  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: viewing });
+  const rendered = { status: page.status, html: await page.text() };
+  const render_revision = page.headers.get(RENDER_REVISION_HEADER) ?? undefined;
+  beforeDecide?.();
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {
     method: "POST",
     redirect: "manual",
     headers: decideHeaders,
-    body: JSON.stringify({ decision: "approve", render_revision }),
+    body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}) }),
   });
   const decideStatus = res.status;
   keep(res);
@@ -160,6 +177,7 @@ async function submitAndApprove(
   return {
     decideStatus,
     cookies,
+    rendered,
     ...(q.get("code") ? { code: q.get("code") as string } : {}),
     ...(q.get("error") ? { error: q.get("error") as string } : {}),
     ...(q.get("error_description") ? { errorDescription: q.get("error_description") as string } : {}),
@@ -260,6 +278,13 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
     const before = as.kernel.allMissions().length;
     // bob approves for alice and the organizational principal, not for this workload.
     const r = await submitAndApprove("bob", WORKLOAD);
+    // Refused before anything renders (#1802): no Intent, client, Subject or authority.
+    expect(r.rendered.status).toBe(403);
+    expect(r.rendered.html).toContain('data-error="approval_forbidden"');
+    expect(r.rendered.html).not.toContain("Reconcile Acme invoices");
+    expect(r.rendered.html).not.toContain(WORKLOAD);
+    expect(r.rendered.html).not.toContain("payments:invoice.read");
+    // And at the decision, by the decision's own check.
     expect(r.decideStatus).toBe(403);
     expect(r.code).toBeUndefined();
     expect(as.kernel.allMissions()).toHaveLength(before);
@@ -268,8 +293,31 @@ describe("an agent acting for its own workload principal (@spec mission#authorit
   it("step 1b (source ceiling): a request beyond the service_owned source's own authority is refused access_denied, creating no Mission", async () => {
     const before = as.kernel.allMissions().length;
     // payment.schedule lies within the deployment ceiling but not within the
-    // agent's own provisioned authority.
+    // agent's own provisioned authority. No Approver can lift it, so the page
+    // refuses it before rendering, as a derivation refusal (#1802).
     const r = await submitAndApprove(ADMIN, WORKLOAD, SCHEDULE);
+    expect(r.rendered.status).toBe(400);
+    expect(JSON.parse(r.rendered.html)).toMatchObject({ error: "access_denied" });
+    expect(JSON.parse(r.rendered.html).error_description).toMatch(/exceeds the authority of the service_owned source 'ledger-reconciler'/);
+    // The decision names no rendering, so it approves nothing.
+    expect(r.decideStatus).toBe(409);
+    expect(r.code).toBeUndefined();
+    expect(as.kernel.allMissions()).toHaveLength(before);
+  });
+
+  it("step 1b at the decision: a source ceiling narrowed after the rendering is refused access_denied, creating no Mission (#1802)", async () => {
+    const before = as.kernel.allMissions().length;
+    const resolver = (as.kernel as unknown as { sourceResolver: AuthoritySourceResolver }).sourceResolver;
+    const original = resolver.resolveForApproval.bind(resolver);
+    const r = await submitAndApprove(ADMIN, WORKLOAD, READ, () => {
+      // The source's own authority no longer covers invoice reads; nothing the page showed changed.
+      vi.spyOn(resolver, "resolveForApproval").mockImplementation((input) => {
+        const resolved = original(input);
+        return { ...resolved, entry: { ...resolved.entry, ceiling: [] } };
+      });
+    });
+    vi.restoreAllMocks();
+    expect(r.rendered.status).toBe(200);
     expect(r.error).toBe("access_denied");
     expect(r.errorDescription).toMatch(/exceeds the authority of the service_owned source 'ledger-reconciler'/);
     expect(r.code).toBeUndefined();
