@@ -3834,9 +3834,7 @@ narrowing and needs <code>narrowing</code>, not <code>projection</code>. Without
 the AS <span class="bcp14">MUST NOT</span> issue an entry to any audience other than its original
 approved audience, or, except as <code>scope</code> under a declared <code>projection</code>,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved. Without
-<code>narrowing</code>, a token for another audience does not carry the entry
-(<a href="#token-response" class="auto internal xref">Section 8.5</a>).<a href="#section-5.5.1-7" class="pilcrow">¶</a></p>
+transformed copy is still a subset of what was approved.<a href="#section-5.5.1-7" class="pilcrow">¶</a></p>
 <p id="section-5.5.1-8">A type that declares <code>delegation</code> without <code>narrowing</code> is delegable only
 unchanged: the AS <span class="bcp14">MUST NOT</span> include an entry of such a type in a
 delegated token unless it is equal (<a href="#subset" class="auto internal xref">Section 5.4</a>) to an entry of the
@@ -4506,7 +4504,7 @@ when it was revoked (<a href="#revocation" class="auto internal xref">Section 7.
 holds these states, and the Mission Termination Reasons registry
 (<a href="#iana-termination-reasons" class="auto internal xref">Section 23.8</a>) holds the reasons. A companion profile
 <span class="bcp14">MAY</span> register an additional state for a lifecycle it introduces (for
-example, a paused state); only <code>active</code> permits issuance. A companion
+example, a paused state). A companion
 profile that defines a further way for a Mission to end registers a
 termination reason, not a state.<a href="#section-7-5" class="pilcrow">¶</a></p>
 <p id="section-7-6">Wherever a Mission state is reported, including the Mission Record
@@ -8534,9 +8532,7 @@ only that type's specification-defined vocabulary; and<a href="#section-19-2.2.1
           <p id="section-19-2.3.1">implements none of the optional capabilities.<a href="#section-19-2.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
-<p id="section-19-3">A scope-only resource server is served only where the AS established
-a safe scope projection for it (<a href="#scope-projection" class="auto internal xref">Section 8.8</a>). A Mission
-Issuer can instead start from configured-mapping mode
+<p id="section-19-3">A Mission Issuer can instead start from configured-mapping mode
 (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>), which is equally conforming. Neither
 starting point is a conformance class, and neither removes a surface:
 the Mission Issuer still implements every surface its role lists
@@ -12294,6 +12290,11 @@ idempotency (Principals and Approval Basis, Provenance and Expiry),
 duplicate member names (Commitment Mechanisms), and the
 resource-server rules of Mission Lifecycle, Mission Claim, Audience
 and Token Response, and Designation (#1723, D845).<a href="#appendix-G-3.32.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.33">
+          <p id="appendix-G-3.33.1">Editorial, no requirement change: Declared Transformation
+Capabilities, Mission Lifecycle and Conformance drop restatements of
+rules their home sections state (#1793, D919).<a href="#appendix-G-3.33.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>
