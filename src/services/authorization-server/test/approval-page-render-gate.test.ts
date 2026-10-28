@@ -20,7 +20,7 @@
  */
 
 import { type Server } from "node:http";
-import { DERIVATION_POLICY, USERS } from "@mission/demo-data";
+import { APPROVAL_FLOOR, type ApprovalFloorPolicy, DERIVATION_POLICY, USERS } from "@mission/demo-data";
 import { type CryptoKey, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -51,6 +51,21 @@ const REMIT = [
   },
 ];
 
+/** Vendor reads: admitted by the derivation policy, and left unclassified by this suite's floor policy. */
+const UNCLASSIFIED = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:vendor.read"] }];
+/** A proposal no ceiling admits: derivation refuses it. */
+const UNDERIVABLE = [{ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:not.a.real.action"] }];
+/** The shipped floor, except that it does not classify `payments:vendor.read`. */
+const FLOOR_POLICY: ApprovalFloorPolicy = {
+  ...APPROVAL_FLOOR,
+  classification: APPROVAL_FLOOR.classification.map((c) => {
+    if (c.resource !== RESOURCE) return c;
+    const actions = { ...c.actions };
+    delete actions["payments:vendor.read"];
+    return { ...c, actions };
+  }),
+};
+
 const SESSIONS = new ApprovalSessionStore();
 /** The deployment's approve-for policy (identity.json), held here so a test can withdraw an Approver's authority. */
 const APPROVES_FOR = new Map(USERS.map((u) => [u.sub, new Set(u.approves_for)]));
@@ -65,6 +80,7 @@ beforeAll(async () => {
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
     approverApprovesFor: APPROVES_FOR,
+    approvalFloor: FLOOR_POLICY,
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -376,6 +392,45 @@ describe("the approval page renders only after steps 1 to 3 (@spec mission#direc
     const own = await render(self.uid, alice);
     expect(own.status).toBe(200);
     expect(own.html).not.toContain("Subject (the authority is granted for)");
+  });
+
+  it("answers a refusal no Approver can lift with nothing of the request to a principal without approve-for authority: unclassified authority", async () => {
+    const flow = await open(UNCLASSIFIED);
+    // Alice may not approve for Bob; the request's own authority is also unclassified.
+    const alice = browserApprovalHeaders(SESSIONS, flow.uid, { sub: "alice", acr: "mfa", subject: "bob" }, flow.cookie);
+    const withheld = await render(flow.uid, alice);
+    expect(withheld.status).toBe(400);
+    expect(withheld.revision).toBeNull();
+    const body = JSON.parse(withheld.html) as { error: string; error_description: string };
+    expect(body.error).toBe("access_denied");
+    expect(body.error_description).toBe("this request cannot be approved; its details are shown only to an Approver who may approve it");
+    expect(withheld.html).not.toContain("vendor.read");
+    expect(withheld.html).not.toContain("payments:");
+    expect(withheld.html).not.toContain(RESOURCE);
+    expect(withheld.html).not.toContain(GOAL_MARK);
+    expect(withheld.html).not.toContain(BOUNDS_MARK);
+    // Bob, who may approve it, is told the cause.
+    const bob = await render(flow.uid, floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie));
+    expect(bob.status).toBe(400);
+    expect((JSON.parse(bob.html) as { error_description: string }).error_description).toMatch(/does not name payments:vendor\.read/);
+  });
+
+  it("answers a derivation refusal with nothing of the request to a principal who may not activate the source, and names its cause to one who may", async () => {
+    const flow = await open(UNDERIVABLE);
+    // Dana approves for herself, but may not activate the source ap-agent resolves.
+    const dana = await render(flow.uid, browserApprovalHeaders(SESSIONS, flow.uid, { sub: "dana", acr: "mfa" }, flow.cookie));
+    expect(dana.status).toBe(400);
+    const withheld = JSON.parse(dana.html) as { error: string; error_description: string };
+    expect(withheld.error).toBe("invalid_authorization_details");
+    expect(withheld.error_description).toBe("this request cannot be approved; its details are shown only to an Approver who may approve it");
+    expect(dana.html).not.toContain("payments:");
+    expect(dana.html).not.toContain(RESOURCE);
+    expect(dana.html).not.toContain(GOAL_MARK);
+    const bob = await render(flow.uid, floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie));
+    expect(bob.status).toBe(400);
+    const named = JSON.parse(bob.html) as { error: string; error_description: string };
+    expect(named.error).toBe("invalid_authorization_details");
+    expect(named.error_description).not.toBe(withheld.error_description);
   });
 
   it("control: an authenticated Approver who may approve and activate is shown the page and approves", async () => {

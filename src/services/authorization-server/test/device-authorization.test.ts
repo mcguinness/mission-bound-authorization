@@ -313,7 +313,7 @@ interface Session {
 /** A device session up to the Approver's authenticated approval page, before any decision. */
 async function pendingSession(
   client: string = PUBLIC,
-  approver: { sub: string; subject?: string; acr?: string } = ALICE_BY_BOB,
+  approver: { sub: string; subject?: string; acr?: string; auth_time?: number } = ALICE_BY_BOB,
   extra: Record<string, string> = {},
   how: "typed" | "complete" = "typed",
 ): Promise<Session> {
@@ -995,6 +995,18 @@ describe("the verification page renders only after steps 1 to 3 (@spec mission#a
     await stillPending(s);
     const strong = browserApprovalHeaders(SESSIONS, s.uid, { sub: "alice", acr: "mfa" }, cookieOf(s.jar));
     expect((await approvalPage(s.uid, strong)).status).toBe(200);
+  });
+
+  it("asks a login older than the client's requested max_age to sign in again, with nothing of the request", async () => {
+    const stale = Math.floor(Date.now() / 1000) - 120;
+    const s = await pendingSession(PUBLIC, { sub: "alice", acr: "mfa", auth_time: stale }, { scope: "openid", max_age: "60" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    const fresh = browserApprovalHeaders(SESSIONS, s.uid, { sub: "alice", acr: "mfa" }, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, fresh)).status).toBe(200);
   });
 
   it("asks a login the approval-authentication floor refuses to sign in again, with nothing of the request", async () => {
