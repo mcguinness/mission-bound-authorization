@@ -16,6 +16,7 @@ import {
   type JsonValue,
   type MissionConstraints,
   missionToolEntry,
+  type ResourceContractDeclarations,
   type EntitlementAuthorityEntry,
   type EntitlementResolver,
   type LocalMappingPolicy,
@@ -119,6 +120,13 @@ export interface CrossOrgDerivationRecord {
 interface HandlerOpts {
   issuer: string;
   crossOrg?: CrossOrgOptions;
+  /**
+   * @spec cross-org-delegation#projection (#1759, D941): this authorization
+   * server's configured resource-contract declarations, the ones its kernel
+   * reads. A leaf tool's `resource_contract` projects only where they
+   * resolve it ({@link projectLeafTool}).
+   */
+  resourceContracts: ResourceContractDeclarations;
   tokenKey: CryptoKey;
   tokenKid: string;
   /** @spec RFC 9449 Section 4.3 (#1173): the shared token-endpoint proof verifier (iat window, jti replay). */
@@ -137,28 +145,36 @@ interface HandlerOpts {
 }
 
 /**
- * @spec cross-org-delegation#projection (#1759): the local entry one leaf tool
- * projects to, or undefined when the local token cannot carry the tool's
- * restrictions. The entry is the one-action entry the tool's
- * `mission_constraints` value describes, so its `constraints` and
- * `resource_contract` carry over unchanged. The tool's argument constraints
- * must be exactly what this destination's operations map that entry to
- * (the root mapping, {@link mapAuthorityToCeiling}): every declared argument
- * admitted, and the facts of every constraint established. A local entry has
- * no argument constraints, so a narrower argument map is a restriction it
- * cannot represent, and an entry the declaration does not map (an
- * undeclared operation, or a constraint whose facts its consumer does not
- * establish) is one its consumer cannot enforce.
+ * @spec cross-org-delegation#projection (#1759, D941): the local entry one
+ * leaf tool projects to, or undefined when a restriction of either layer is
+ * one the local token cannot represent or its consumer cannot enforce. The
+ * entry is the one-action entry the tool's `mission_constraints` value
+ * describes, so its `constraints` and `resource_contract` carry over
+ * unchanged. The tool's argument constraints must be exactly what this
+ * destination's operations map that entry to (the root mapping,
+ * {@link mapAuthorityToCeiling}): every declared argument admitted, and the
+ * facts of every constraint established. A local entry has no argument
+ * constraints, so a narrower argument map is a restriction it cannot
+ * represent, and an entry the declaration does not map (an undeclared
+ * operation, or a constraint whose facts its consumer does not establish)
+ * is one its consumer cannot enforce. So is a `resource_contract` this
+ * destination's declarations do not resolve: an undeclared contract or
+ * version, a retired one, one superseded past its retention, or one that
+ * does not define the entry's action. A superseded version within its
+ * retention projects, as the kernel admits a carried reference.
  */
 function projectLeafTool(
   toolId: string,
   args: Record<string, unknown>,
   missionConstraints: MissionConstraints,
   operations: AttenuationOperations,
+  contracts: ResourceContractDeclarations,
+  now: Date,
 ): AuthorityEntry | undefined {
   const value = Object.hasOwn(missionConstraints, toolId) ? missionConstraints[toolId] : undefined;
   if (value === undefined) return undefined;
   const entry = missionToolEntry(toolId, value) as AuthorityEntry;
+  if (contracts.carriedViolation(entry, now) !== undefined) return undefined;
   const mapped = mapAuthorityToCeiling([entry], operations);
   const mappedArgs = Object.hasOwn(mapped.tools, toolId) ? mapped.tools[toolId] : undefined;
   if (mappedArgs === undefined) return undefined;
@@ -174,9 +190,10 @@ function fail(ctx: KoaContextWithOIDC, code: string, description: string): void 
 /**
  * @spec cross-org-delegation#projection-exchange — parameters, leaf PoP,
  * error mapping (invalid_request for structure/bounds; invalid_grant for any
- * verification failure with no partial detail; invalid_target for an audience
- * outside a hop's `aud`, or a leaf argument restriction the local token
- * cannot carry), and the local mint with a restarted `act`.
+ * verification failure with no partial detail, and for an empty
+ * intersection; invalid_target for an audience outside a hop's `aud`, or a
+ * leaf restriction of either layer the local token cannot carry or its
+ * consumer cannot enforce), and the local mint with a restarted `act`.
  */
 export async function handleCrossOrgChainExchange(
   opts: HandlerOpts,
@@ -270,13 +287,21 @@ export async function handleCrossOrgChainExchange(
     fail(ctx, "invalid_target", "requested audience is outside a hop's audience");
     return;
   }
-  // @spec cross-org-delegation#projection (#1759): both layers' restrictions
-  // carry into the local token, or the exchange is refused.
+  // @spec cross-org-delegation#projection (#1759, D941): both layers'
+  // restrictions carry into the local token, or the whole exchange is
+  // refused; ordinary local-policy narrowing comes after, separately.
   const inputAuthority: AuthorityEntry[] = [];
   for (const [toolId, args] of Object.entries(verified.leaf.tools)) {
-    const entry = projectLeafTool(toolId, args, verified.leaf.missionConstraints, crossOrg.operations);
+    const entry = projectLeafTool(
+      toolId,
+      args,
+      verified.leaf.missionConstraints,
+      crossOrg.operations,
+      opts.resourceContracts,
+      opts.now(),
+    );
     if (entry === undefined) {
-      fail(ctx, "invalid_target", "a leaf argument restriction cannot be carried by the local token");
+      fail(ctx, "invalid_target", "a leaf restriction cannot be carried or enforced by the local token");
       return;
     }
     inputAuthority.push(entry);
