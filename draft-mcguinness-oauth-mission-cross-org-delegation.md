@@ -514,6 +514,11 @@ When a Resource AS mints a conventional local token from a verified
 Chain, it MUST:
 
 * carry only the locally permitted subset;
+* preserve the restrictions of both layers of the leaf's capability
+  entry: each local entry carries the `constraints` and
+  `resource_contract` of its tool's `mission_constraints` value, and
+  an argument constraint the local token cannot represent, or its
+  consumer cannot enforce, refuses the exchange;
 * preserve the `mission` claim invariants, including `subject`;
 * restart the local `act` chain at the local delegate (the
   cross-domain rule;
@@ -560,8 +565,10 @@ A Presentation that is malformed, carries an unknown top-level
 member, or exceeds a declared bound refuses with `invalid_request`; a
 Chain failing any step of {{verification}} refuses with
 `invalid_grant`, disclosing no partial verification detail; a
-requested audience outside a hop's `aud` refuses with
-`invalid_target`.  On success the Resource AS mints the
+requested audience outside a hop's `aud`, or a leaf argument
+constraint the local token cannot represent or its consumer cannot
+enforce, refuses with `invalid_target`.  On success the Resource AS
+mints the
 audience-local token per the rules above.
 
 # Mission-Binding Profile {#binding-profile}
