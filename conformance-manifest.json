@@ -9740,9 +9740,9 @@
    "id": "core.approval-context-changes.proposal-swap",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-context-changes",
-   "text": "a proposal swapped between rendering and decision changes `proposal_hash` even where `intent_hash` is unchanged",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -9757,7 +9757,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446). D971 (#1723 S2, X2): the swap sentence explains a consequence, so the row points to the rules that produce it: it quotes the recomputation MUST, trigger included, applied to a changed proposal (core.approval-context-changes.recompute quotes the same duty, observed for the Authority Set, source and policy inputs), and cites Authority Proposal's commitment rule, \"The AS records the array on the Mission exactly as submitted and commits it by `proposal_hash` ..., separately from the task (`intent_hash`)\". The observation is unchanged; there were no tests to keep, and coverage stays todo for the #1446 reason stated first."
   },
   {
    "id": "core.mission-record.authority-source-required",
