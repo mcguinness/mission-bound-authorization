@@ -357,6 +357,23 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     return record;
   };
 
+  /**
+   * The release gate. A token is recorded before it is minted, and signing
+   * awaits, so the mission can terminate or reach `expires_at` while it
+   * signs. Immediately before the response is sent, with no await between
+   * this check and the send, the mission's state is read again, and a
+   * mission no longer active refuses the response with `mission_terminated`
+   * (an expiry found here is committed as at `expires_at`). The token's
+   * record stays: it was a Tracked Credential from the moment it was
+   * recorded, so the termination's revocation work covers it.
+   *
+   * @spec mission-aauth-management#token-consequences
+   * @spec mission-aauth-management#races-and-failures
+   */
+  const beforeRelease = (agent: string, s256: string, notFound: () => PsError): void => {
+    gateMission(agent, s256, Math.floor(now() / 1000), notFound);
+  };
+
   const pairwiseSub = (person: string, resource: string): string =>
     createHmac("sha256", store.pairwiseKey()).update(`${person}\n${resource}`).digest("base64url");
 
@@ -560,6 +577,9 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     }
     const personTokens: Record<string, string> = {};
     for (const t of built) personTokens[t.record.aud] = await mint("aa-person+jwt", t.claims);
+    if (built.length > 0) {
+      beforeRelease(agent, s256, () => serverError("the approved mission could not be read"));
+    }
     const body: Record<string, unknown> = { s256, mission: bytes.toString("base64url") };
     if (resources) body.person_tokens = personTokens;
     send(res, 200, body);
@@ -634,6 +654,9 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       : [];
     record([minted.record], log);
     const jwt = await mint("aa-person+jwt", minted.claims);
+    if (mission) {
+      beforeRelease(agent, mission.s256, () => invalidRequest(NOT_THIS_AGENTS_MISSION));
+    }
     send(res, 200, { person_token: jwt, expires_in: minted.expiresIn });
   };
 
@@ -780,6 +803,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     }
     record([issued], log);
     const jwt = await mint("aa-auth+jwt", claims);
+    if (mission) beforeRelease(agent, mission.s256, notFound);
     send(res, 200, { auth_token: jwt, expires_in: exp - at });
   };
 

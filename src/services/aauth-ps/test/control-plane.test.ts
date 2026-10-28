@@ -8,6 +8,7 @@
  * mission, its log, its revocation work and the issued tokens unchanged.
  */
 import { createHash, randomUUID } from "node:crypto";
+import * as wire from "@mission/aauth-wire";
 import { JwksResolver, signRequest } from "@mission/aauth-wire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rfc3339, SCHEDULER } from "../src/index.js";
@@ -28,6 +29,7 @@ import {
   personToken,
   prepare,
   prepareAdmin,
+  propose,
   type Reply,
   RS,
   requestAuthToken,
@@ -840,5 +842,149 @@ describe("control plane: local gating as termination commits", () => {
     expect(issuedCount(w)).toBe(issued);
     // The person token issued before the commit is a Tracked Credential the termination revoked.
     expect(w.rs.revoked.map((x) => x.jti)).toEqual([claims(presented).jti]);
+  });
+
+  /**
+   * Hold the signing of the first token of `typ` that names a mission until
+   * `release` runs. `signing` resolves, with that mission, once signing has
+   * begun: the token is already recorded.
+   */
+  function pauseSigning(typ: "aa-person+jwt" | "aa-auth+jwt") {
+    const original = wire.mintToken;
+    let release!: () => void;
+    let begun!: (s256: string) => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const signing = new Promise<string>((resolve) => {
+      begun = resolve;
+    });
+    let paused = false;
+    vi.spyOn(wire, "mintToken").mockImplementation(async (...args) => {
+      const [kind, claimed] = args;
+      if (kind === typ && typeof claimed.mission_s256 === "string" && !paused) {
+        paused = true;
+        begun(claimed.mission_s256);
+        await held;
+      }
+      return original(...args);
+    });
+    return { signing, release };
+  }
+
+  it("refuses to release a person token whose mission terminates while it is signed: mission_terminated, its record kept and revoked", async () => {
+    const { s256 } = await mission(assistant);
+    const issued = issuedCount(w);
+    const { signing, release } = pauseSigning("aa-person+jwt");
+    const pending = requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
+    await signing;
+    try {
+      const ended = await control(
+        w,
+        w.admins.alice,
+        s256,
+        terminateBody("administrative", { purpose: "stop during signing" }),
+      );
+      expect(ended.status).toBe(200);
+      expect(w.durable.findOwnedMission(ASSISTANT, s256)?.state).toBe("terminated");
+    } finally {
+      release();
+    }
+    const r = await pending;
+    expect([r.status, r.body.error, r.body.termination_reason]).toEqual([
+      403,
+      "mission_terminated",
+      "administrative",
+    ]);
+    expect(r.body.person_token).toBeUndefined();
+    // Recorded before it was signed, the token stays a Tracked Credential,
+    // and the termination revoked it.
+    expect(issuedCount(w)).toBe(issued + 1);
+    const tracked = w.durable.missionTokens(s256);
+    expect(tracked).toEqual([expect.objectContaining({ kind: "person", aud: RS })]);
+    expect(w.rs.revoked.map((x) => x.jti)).toEqual([tracked[0]?.jti]);
+  });
+
+  it("refuses to release an auth token whose mission terminates while it is signed: mission_terminated, its record kept and revoked", async () => {
+    const { s256 } = await mission(assistant);
+    const presented = await personToken(w, assistant, RS, s256);
+    const resourceToken = await resourceTokenFor(w, assistant, presented);
+    const issued = issuedCount(w);
+    const { signing, release } = pauseSigning("aa-auth+jwt");
+    const pending = requestAuthToken(w, assistant, {
+      resource_token: resourceToken,
+      presented_token: presented,
+    });
+    await signing;
+    try {
+      const ended = await control(
+        w,
+        w.admins.alice,
+        s256,
+        terminateBody("administrative", { purpose: "stop during signing" }),
+      );
+      expect(ended.status).toBe(200);
+      expect(w.durable.findOwnedMission(ASSISTANT, s256)?.state).toBe("terminated");
+    } finally {
+      release();
+    }
+    const r = await pending;
+    expect([r.status, r.body.error]).toEqual([403, "mission_terminated"]);
+    expect(r.body.auth_token).toBeUndefined();
+    expect(issuedCount(w)).toBe(issued + 1);
+    const auth = w.durable.missionTokens(s256).find((t) => t.kind === "auth");
+    expect(auth).toMatchObject({ aud: RS });
+    expect(w.rs.revoked.map((x) => x.jti).sort()).toEqual(
+      [claims(presented).jti as string, auth?.jti as string].sort(),
+    );
+  });
+
+  it("refuses to release a proposal's person tokens when the mission terminates while they are signed: mission_terminated, their records kept and revoked", async () => {
+    const { signing, release } = pauseSigning("aa-person+jwt");
+    const pending = propose(w, assistant, { description: "Summarize", resources: [RS] });
+    const s256 = await signing;
+    try {
+      const ended = await control(
+        w,
+        w.admins.alice,
+        s256,
+        terminateBody("administrative", { purpose: "stop during signing" }),
+      );
+      expect(ended.status).toBe(200);
+    } finally {
+      release();
+    }
+    const r = await pending;
+    expect([r.status, r.body.error]).toEqual([403, "mission_terminated"]);
+    expect(r.body.person_tokens).toBeUndefined();
+    expect(r.body.mission).toBeUndefined();
+    const tracked = w.durable.missionTokens(s256);
+    expect(tracked).toEqual([expect.objectContaining({ kind: "person", aud: RS })]);
+    expect(w.rs.revoked.map((x) => x.jti)).toEqual([tracked[0]?.jti]);
+  });
+
+  it("refuses to release a person token whose mission reaches expires_at while it is signed: mission_terminated, expired", async () => {
+    const expiresAt = w.clock.s + 100;
+    const { s256 } = await mission(assistant, {
+      description: "Summarize",
+      expires_at: rfc3339(expiresAt),
+    });
+    const { signing, release } = pauseSigning("aa-person+jwt");
+    const pending = requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
+    await signing;
+    w.clock.advance(100);
+    release();
+    const r = await pending;
+    expect([r.status, r.body.error, r.body.termination_reason]).toEqual([
+      403,
+      "mission_terminated",
+      "expired",
+    ]);
+    expect(r.body.person_token).toBeUndefined();
+    expect(w.durable.findOwnedMission(ASSISTANT, s256)).toMatchObject({
+      state: "terminated",
+      terminationReason: "expired",
+      terminatedAt: expiresAt,
+    });
   });
 });
