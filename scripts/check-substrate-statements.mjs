@@ -9,10 +9,11 @@
 // The registry covers two distinct kinds sharing one form (the substrate
 // requires a Mapping Assessment to use "the Statement's form"): a
 // Statement (kind "statement") is a conforming binding's own normative
-// conformance result; an Assessment (kind "assessment") is a non-claiming
-// specification's informative self-description, never a conformance
-// result, and never implies the assessed specification takes a normative
-// dependency on the substrate. The structural checks below apply
+// conformance result; an Assessment (kind "assessment") is another
+// document's informative assessment of a non-claiming specification (the
+// architecture document's Mapping Assessment of the OAuth binding, #1794),
+// never a conformance result, and never implies the assessed specification
+// takes a normative dependency on the substrate. The structural checks below apply
 // identically to both kinds, and to the substrate's own non-normative
 // skeleton (SKELETON, kept out of REGISTRY so the substrate never counts
 // as a binding); only the summary line and any future kind-specific rule
@@ -103,7 +104,7 @@ const CAPABILITIES = [
 // already fail CI the moment a capability entry appears anywhere in the
 // corpus outside a registered list.
 export const REGISTRY = [
-  { file: "draft-mcguinness-oauth-mission.md", anchor: "oauth-mission-binding-capabilities", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
+  { file: "draft-mcguinness-mission-architecture.md", anchor: "oauth-mission-binding-capabilities", slug: "draft-mcguinness-oauth-mission", kind: "assessment" },
   { file: "draft-mcguinness-mission-authority-server.md", anchor: "standalone-mas-mission-substrate-capabilities", slug: "draft-mcguinness-mission-authority-server", kind: "statement" },
   { file: "draft-mcguinness-mission-aauth.md", anchor: "aauth-mission-substrate-capabilities", slug: "draft-mcguinness-mission-aauth", kind: "statement" },
   { file: "draft-mcguinness-mission-uma.md", anchor: "uma-mission-substrate-capabilities", slug: "draft-mcguinness-mission-uma", kind: "statement" },

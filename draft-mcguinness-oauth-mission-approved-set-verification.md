@@ -38,6 +38,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -286,9 +294,10 @@ Mission-bound tokens under the OAuth binding alone.
 In the terms of the Mission Substrate contract
 ({{I-D.draft-mcguinness-mission-substrate}}), this capability
 exercises the Structured Authority and Monotonic Derivation claims of
-the OAuth binding's Mapping Assessment
-({{I-D.draft-mcguinness-oauth-mission}}, Section "OAuth Binding
-Mapping Assessment"). Both claims are supplied always; this document
+the Mapping Assessment of the OAuth binding that the architecture
+document publishes ({{I-D.draft-mcguinness-mission-architecture}}, Section
+"OAuth Binding Mapping Assessment"). Both claims are supplied always;
+this document
 adds an independent check of them and creates no claim.
 
 # Security Considerations {#security-considerations}
@@ -403,3 +412,5 @@ it alongside `authority_hash` at the approval event.
   retrieval surface and its disclosure gate, the rule that Mission
   Status is not a compatible retrieval surface, the capability's
   conformance entry, and the selective-inclusion future-work note.
+- Cites the Mapping Assessment of the OAuth binding where the
+  architecture document publishes it.

@@ -138,6 +138,14 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
 
 --- abstract
 
@@ -291,7 +299,7 @@ consumes:
 | Credential-Bound | not consumed | A Mandate binds no holder and is freely copyable ({{non-goals}}); a deriving rail MUST independently authenticate the presenter through its own channel ({{vertical-derivation}}) |
 | Authorized Context Correlation | not consumed | Presenter correlation is the deriving rail's own independent authentication, never a joining association this document establishes ({{vertical-derivation}}) |
 | Independently Verifiable | not consumed | The Mandate is itself the verification artifact: {{verification}} defines its canonical input, `kid` key discovery ({{mission-substrate}}), algorithm agility, and validity interval (`mandate_exp`, {{claims}}); the standalone and UMA bindings already supply this capability through their own mechanisms, independent of the Mandate |
-| Portable Evidence | not consumed | The Mandate is registrable Mission evidence ({{audit-evidence}}) that a binding's Mission Substrate Statement can name as its supply mechanism; the OAuth binding's own Mapping Assessment, the standalone binding's Statement, and the UMA binding's Statement already do ({{I-D.draft-mcguinness-oauth-mission}}, {{I-D.draft-mcguinness-mission-authority-server}}, {{I-D.draft-mcguinness-mission-uma}}); the AAuth binding's Statement does not yet |
+| Portable Evidence | not consumed | The Mandate is registrable Mission evidence ({{audit-evidence}}) that a binding's Mission Substrate Statement can name as its supply mechanism; the Mapping Assessment of the OAuth binding that the architecture document publishes, the standalone binding's Statement, and the UMA binding's Statement already do ({{I-D.draft-mcguinness-mission-architecture}}, Section "OAuth Binding Mapping Assessment"; {{I-D.draft-mcguinness-mission-authority-server}}; {{I-D.draft-mcguinness-mission-uma}}); the AAuth binding's Statement does not yet |
 {: title="Mandate capability consumption"}
 
 # Mission Mandate {#mandate}

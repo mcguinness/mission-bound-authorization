@@ -676,7 +676,7 @@ describe("approved context commitment (@spec mission-substrate#approved-context)
 
   // The Approved Context is the Mission Intent, the recorded authority
   // proposal WHERE ONE WAS SUBMITTED, and the derived Authority Set
-  // ({{mission-substrate#oauth-statement}} item 4) -- three components, not
+  // ({{mission-architecture#oauth-statement}} item 4) -- three components, not
   // one. This exercises a Mission approved WITH a submitted proposal (so all
   // three are present) and snapshots all three components and their three
   // typed anchors (intent_hash, proposal_hash, authority_hash) byte-for-byte
