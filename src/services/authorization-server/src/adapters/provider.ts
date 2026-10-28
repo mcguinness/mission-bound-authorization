@@ -518,7 +518,7 @@ import {
 } from "../kernel/derive.js";
 import type { IssuerEvidenceStore } from "../kernel/issuer-evidence.js";
 import { ExpiryPassedError, IntentError } from "../kernel/intent.js";
-import { evaluateApprovalFloor } from "../kernel/approval-floor.js";
+import { actionClassesAt, evaluateApprovalFloor } from "../kernel/approval-floor.js";
 import { ActivationRefusedError } from "../kernel/authority-source.js";
 import { audienceProjection, audienceReferences, unapprovedCarriage } from "../kernel/approved-audience.js";
 import {
@@ -4427,6 +4427,68 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // self-approval; never `login_hint`, which concerns the Approver.
       const approver = rendering.sub;
       const subject = rendering.subject;
+      // Step 1 in part: the client's requested `acr_values`, `max_age` and
+      // `prompt=login` need no derived set (@spec mission#approval-authentication).
+      const nowSeconds = Math.floor(kernel.nowDate().getTime() / 1000);
+      const prompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
+      const strengthMet = approverAuthenticationSatisfies(
+        {
+          ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
+          ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
+          ...(params.max_age === undefined && prompts.includes("login") ? { forceFreshLogin: true } : {}),
+        },
+        { acr: rendering.acr, authTime: rendering.auth_time },
+        nowSeconds,
+      );
+      const achieved = { acr: rendering.acr, auth_time: rendering.auth_time };
+      const floorContext = { interactive: rendering.interactive, nowSeconds };
+      // @spec mission#approval-preparation (#1802): a refusal no Approver can
+      // lift (a request that no longer validates or derives, authority the
+      // floor's classification does not name, a source gate other than
+      // activation) can name what the request carries. It names its cause
+      // only to a principal who passes every check of steps 1 to 3 that
+      // concerns the Approver and can be evaluated for this request: the
+      // requested strength and approve-for; with the derived set, the floor
+      // over its classified authority and the distinct-Approver rule; with a
+      // resolved source, activation. Any other principal gets the status and
+      // the error code, which name the failure class, and nothing from the
+      // request.
+      const mayLearn = (derived?: readonly AuthorityEntry[]): boolean => {
+        if (!strengthMet) return false;
+        if (!opts.knownSubjects.has(subject) || (subject !== approver && !opts.approverApprovesFor.get(approver)?.has(subject))) {
+          return false;
+        }
+        if (derived) {
+          const classified = derived
+            .map((e) => ({ ...e, actions: e.actions.filter((a) => actionClassesAt(opts.approvalFloor, e, a) !== undefined) }))
+            .filter((e) => e.actions.length > 0);
+          if (evaluateApprovalFloor(opts.approvalFloor, classified, achieved, floorContext).outcome === "refused") return false;
+          const writes = derived.some((e) => e.actions.some((a) => WRITE_ACTIONS.has(a)));
+          if (writes && (approver === subject || !opts.approverRoleSubs.has(approver))) return false;
+        }
+        const parties = {
+          clientId: String(params.client_id),
+          subject: { iss: opts.issuer, sub: subject },
+          approver: { iss: opts.issuer, sub: approver },
+        };
+        try {
+          kernel.resolveAuthoritySource(parties);
+        } catch {
+          return false;
+        }
+        try {
+          kernel.establishAuthoritySource(parties);
+        } catch (e) {
+          // Gates 4 and 5 run after activation: their refusal leaves it passed.
+          if (e instanceof ActivationRefusedError || !(e instanceof IntentError)) return false;
+        }
+        return true;
+      };
+      const refuse = (e: IntentError, derived?: readonly AuthorityEntry[]) => {
+        ctx.status = 400;
+        ctx.set("cache-control", "no-store");
+        ctx.body = { error: e.code, error_description: mayLearn(derived) ? e.message : REFUSAL_WITHHELD };
+      };
       // @spec mission#submission-via-par — the pushed parameter is the
       // Submission envelope; the approval renders the SEMANTIC intent (the
       // object intent_hash commits), never the envelope.
@@ -4450,8 +4512,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
             : undefined;
       } catch (e) {
         if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
+          refuse(e);
           return;
         }
         throw e;
@@ -4472,8 +4533,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         bindings = renderBindingDisclosures(bindingDisclosures(authority));
       } catch (e) {
         if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
+          refuse(e);
           return;
         }
         throw e;
@@ -4488,25 +4548,11 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
       // the classification does not name is refused for every Approver, as a
       // derivation refusal is. The decision checks both again, so a login
       // that ages out after the rendering still refuses there.
-      const nowSeconds = Math.floor(kernel.nowDate().getTime() / 1000);
-      const achieved = { acr: rendering.acr, auth_time: rendering.auth_time };
-      const floorContext = { interactive: rendering.interactive, nowSeconds };
       const floor = evaluateApprovalFloor(opts.approvalFloor, authority, achieved, floorContext);
       if (floor.outcome === "refused" && floor.unclassified) {
-        ctx.status = 400;
-        ctx.body = { error: "access_denied", error_description: floor.reason };
+        refuse(new IntentError("access_denied", floor.reason), authority);
         return;
       }
-      const prompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
-      const strengthMet = approverAuthenticationSatisfies(
-        {
-          ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
-          ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
-          ...(params.max_age === undefined && prompts.includes("login") ? { forceFreshLogin: true } : {}),
-        },
-        { acr: rendering.acr, authTime: rendering.auth_time },
-        nowSeconds,
-      );
       if (!strengthMet || floor.outcome === "refused") {
         notice(
           401,
@@ -4534,8 +4580,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           offered = consentedCeilingEntries(deploymentOffer);
         } catch (e) {
           if (e instanceof IntentError) {
-            ctx.status = 400;
-            ctx.body = { error: e.code, error_description: e.message };
+            refuse(e, authority);
             return;
           }
           throw e;
@@ -4577,8 +4622,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           return;
         }
         if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
+          refuse(e, authority);
           return;
         }
         throw e;
@@ -8279,6 +8323,13 @@ function renderRegisteredClient(client: { clientId: string; clientName?: string 
 function renderSuppliedBy(clientId: string): string {
   return `<p class="supplied-by">Supplied by the client <code class="supplied-by-client">${escapeHtml(clientId)}</code>, as this authorization server identifies it; it grants no authority.</p>`;
 }
+
+/**
+ * @spec mission#approval-preparation (#1802): the description a refusal of the
+ * approval page carries to a principal who has not passed steps 1 to 3 for the
+ * request: nothing from the request. The error code still names the class.
+ */
+const REFUSAL_WITHHELD = "this request cannot be approved; its details are shown only to an Approver who may approve it";
 
 /**
  * @spec mission#approval-preparation (#1802): the Mission approval page's
