@@ -2084,6 +2084,10 @@ Three questions sit between a proposed task and enforced authority:
   ({{derivation-boundary}}); and
 - what the approval event fixes ({{approval-fidelity}}).
 
+For the OAuth-derived Authority Set model,
+{{derivation-policy-authoring}} describes how a deployment authors the
+policy behind the second.
+
 ## The Ontology Contract {#ontology-contract}
 
 The capability envelope ({{capability-envelope}}) meets its hardest case
@@ -2261,9 +2265,12 @@ the retained derivation policy and its inputs. A deployment whose partners
 must reason about its derivations can publish a derivation policy
 identifier and test fixtures that pin Intent-to-Authority-Set
 outcomes, making the local policy reviewable even though it does not
-travel. The OAuth binding's informative Derivation Policy appendix
-({{I-D.draft-mcguinness-oauth-mission}}) illustrates that policy
-artifact: a worked narrowing rule, fixtures, and ownership.
+travel. {{derivation-policy-authoring}} describes that policy
+artifact, its fixtures ({{derivation-policy-fixtures}}), and its
+ownership ({{derivation-policy-ownership}}); the OAuth binding's
+informative Derivation Policy appendix works one narrowing rule
+through ({{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation
+Rule Example").
 
 The ceiling the derivation narrows against is a composition, not a
 single object. The derived Authority Set sits inside every bound on the
@@ -2300,6 +2307,126 @@ The derivation modes rank by how portable their result is:
 A deployment seeking interoperable authority uses narrowing; a
 model-assisted extension stays local policy unless a profile pins it
 with a published policy identifier, version, and test fixtures.
+
+## Derivation Policy Authoring {#derivation-policy-authoring}
+
+This section applies to the OAuth-derived Authority Set model: the
+derivation, under the OAuth binding's rules
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Authority"), that
+the authority-bearing bindings share. It is not a requirement for
+every binding. It is illustrative and adds no requirements: it
+describes an authoring artifact for that derivation contract, not a
+standardized policy language or an alternative subset relation. The
+OAuth binding's Derivation Policy appendix works one derivation rule
+through ({{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation Rule
+Example").
+
+### Policy Artifact {#derivation-policy-artifact}
+
+A deployment retains a versioned derivation policy with its ceiling,
+configured mappings, and issuance limits. Its inputs include:
+
+- a validated Mission Intent;
+- the client's authority proposal in narrowing mode, or configured
+  candidates when there is no proposal;
+- the applicable authority source ceiling;
+- the capability catalog's per-action properties; and
+- any recorded model output.
+
+The output is the Authority Set committed by `authority_hash`, and
+`policy_version` identifies the policy used.
+
+Reproducing an Authority Set derivation requires the same inputs and
+the retained policy and catalog versions, not just the identifier of
+a mutable configuration. Replay uses a model's retained output and
+never reruns the model. Authority Set derivation is mechanical: a
+model may suggest an Intent or a proposal, or contribute a recorded
+input that refuses or narrows, but does not make the approval-time
+narrowing decision.
+
+### Derivation Policy Properties {#derivation-policy-properties}
+
+The five properties below restate, for a policy author, what the
+OAuth binding's Mission Authority section and the rules it cites
+require; each property cites the section that governs it.
+
+- **Deterministic.** The same Intent, proposal, ceiling, catalog, and
+  recorded model output derive the same Authority Set, so
+  `policy_version` can serve as an audit correlator
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Authority").
+- **Narrowing only.** Every derived entry is a subset of some proposed
+  entry of the same type, under that type's own relation
+  ({{I-D.draft-mcguinness-oauth-mission}}, Sections "Authority Proposal" and
+  "Subset Rule"); in configured-mapping mode the
+  configured candidates supply that comparison input. Retaining fewer
+  JSON fields is not narrowing: dropping a restriction can grant more.
+  Where the relation cannot decide because two bounds are
+  incomparable, the result is conservative refusal
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Subset Rule"). For
+  `mission_resource_access`, two amount caps naming different
+  currencies have no intersection, with no implicit conversion and no
+  "ceiling wins" exception;
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}} defines the
+  Common Constraints and their intersection rules.
+- **Refusal over silent drop.** An entry of an unsupported type, an
+  entry that fails its schema, and an entry carrying a constraint the
+  engine cannot compare, whether registered or deployment-defined,
+  are refused ({{I-D.draft-mcguinness-oauth-mission}}, Sections "Authority
+  Proposal", "Subset Rule", and "Error and Challenge Mapping").
+  Authority Set derivation does not repair them by omitting the entry
+  or dropping the constraint. An entry the
+  engine compares but policy cannot accept differs: it is narrowed,
+  under a declared `narrowing` capability
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Declared Transformation
+  Capabilities"), or omitted, and the granted echo reflects that
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Authority Proposal").
+- **Issuer-established members are not client-supplied.** The issuer
+  establishes `policy_version` ({{I-D.draft-mcguinness-oauth-mission}},
+  Section "Mission Authority"), and `authority_source` and
+  `approval_basis` ({{I-D.draft-mcguinness-oauth-mission}}, Sections
+  "Authority Sources" and "Mission Record"), at the approval event; no
+  proposal member sets them.
+- **No member the ceiling never granted.** A grant-shaped member absent
+  from the ceiling, such as a per-entry `delegation` policy, stays
+  absent from the derived entry, so a proposal cannot introduce a
+  capability the policy did not confer. A restriction nested inside an
+  already-granted delegation, such as `allowed_delegates`, narrows in
+  the ordinary direction. Where the ceiling's eligibility defers to the
+  issuer's delegation policy (no `allowed_delegates`), a proposed list
+  only restricts that policy's decision and never replaces it
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+### Fixtures and Authoring Discipline {#derivation-policy-fixtures}
+
+Versioned Intent and proposal fixtures with expected Authority Sets
+make the optional publication in {{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Authority", concrete. Reviewing their diffs on every
+policy change exposes altered grants before approval.
+
+Fixtures cover normal template and narrowing outcomes, empty
+intersections, unknown constraints, incomparable values, and
+attempts to introduce delegation. They check each subset against
+both the proposal and the ceiling.
+
+A further check runs the shipped configuration through intake,
+Authority Set derivation, and a real decision path, since a
+configuration that loads does not thereby authorize its intended
+workload. Applying the same entry checks at configuration load and at
+client intake keeps those two surfaces from disagreeing.
+
+### Ownership and Operational Signals {#derivation-policy-ownership}
+
+| Artifact | Owner | Responsibility |
+|---|---|---|
+| Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time Authority Set derivation |
+| Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
+| Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
+{: title="Ownership and operational signals"}
+
+Templates amortize authoring across Missions and do not bypass the
+ceilings. The unmapped-resource rate, template-hit rate, and
+rule-exception rate show an operator where its policy authoring
+remains incomplete.
 
 ## Approval Fidelity {#approval-fidelity}
 

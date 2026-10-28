@@ -7148,79 +7148,10 @@ role. Where a profile or deployment does not populate `adjudication`
 
 # Derivation Policy {#derivation-policy}
 
-This appendix is illustrative and adds no requirements. It
-describes an authoring artifact for the contract in
-{{authorization-derivation}}, not a standardized policy language or an
-alternative subset relation.
-
-## Policy Artifact {#derivation-policy-artifact}
-
-A deployment retains a versioned derivation policy with its ceiling,
-configured mappings, and issuance limits. Its inputs include:
-
-- a validated Mission Intent;
-- the client's authority proposal in narrowing mode, or configured
-  candidates when there is no proposal;
-- the applicable authority source ceiling;
-- the capability catalog's per-action properties; and
-- any recorded model output.
-
-The output is the Authority Set committed by `authority_hash`, and
-`policy_version` identifies the policy used.
-
-Reproducing an Authority Set derivation requires the same inputs and
-the retained policy and catalog versions, not just the identifier of
-a mutable configuration. Replay uses a model's retained output and
-never reruns the model. Authority Set derivation is mechanical: a
-model may suggest an Intent or a proposal, or contribute a recorded
-input that refuses or narrows, but does not make the approval-time
-narrowing decision.
-
-## Derivation Policy Properties {#derivation-policy-properties}
-
-The five properties below restate, for a policy author, what
-{{authorization-derivation}} and the rules it cites require.
-
-- **Deterministic.** The same Intent, proposal, ceiling, catalog, and
-  recorded model output derive the same Authority Set, so
-  `policy_version` can serve as an audit correlator
-  ({{authorization-derivation}}).
-- **Narrowing only.** Every derived entry is a subset of some proposed
-  entry of the same type, under that type's own relation
-  ({{authority-proposal}}, {{subset}}); in configured-mapping mode the
-  configured candidates supply that comparison input. Retaining fewer
-  JSON fields is not narrowing: dropping a restriction can grant more.
-  Where the relation cannot decide because two bounds are
-  incomparable, the result is conservative refusal ({{subset}}). For
-  `mission_resource_access`, two amount caps naming different
-  currencies have no intersection, with no implicit conversion and no
-  "ceiling wins" exception;
-  {{I-D.draft-mcguinness-oauth-mission-resource-access}} defines the
-  Common Constraints and their intersection rules.
-- **Refusal over silent drop.** An entry of an unsupported type, an
-  entry that fails its schema, and an entry carrying a constraint the
-  engine cannot compare, whether registered or deployment-defined,
-  are refused ({{authority-proposal}}, {{subset}}, {{error-mapping}}).
-  Authority Set derivation does not repair them by omitting the entry
-  or dropping the constraint. An entry the
-  engine compares but policy cannot accept differs: it is narrowed,
-  under a declared `narrowing` capability
-  ({{transformation-capabilities}}), or omitted, and the granted echo
-  reflects that ({{authority-proposal}}).
-- **Issuer-established members are not client-supplied.** The issuer
-  establishes `policy_version` ({{authorization-derivation}}), and
-  `authority_source` and `approval_basis` ({{authority-sources}},
-  {{mission-record}}), at the approval event; no proposal member sets
-  them.
-- **No member the ceiling never granted.** A grant-shaped member absent
-  from the ceiling, such as a per-entry `delegation` policy, stays
-  absent from the derived entry, so a proposal cannot introduce a
-  capability the policy did not confer. A restriction nested inside an
-  already-granted delegation, such as `allowed_delegates`, narrows in
-  the ordinary direction. Where the ceiling's eligibility defers to the
-  issuer's delegation policy (no `allowed_delegates`), a proposed list
-  only restricts that policy's decision and never replaces it
-  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+This appendix is illustrative and adds no requirements. It works one
+derivation rule through the contract in {{authorization-derivation}};
+it is not a standardized policy language or an alternative subset
+relation.
 
 ## Derivation Rule Example {#derivation-rule-example}
 
@@ -7277,38 +7208,6 @@ case that relaxes the type's relation:
 - A proposal carrying a Common Constraint this deployment does not
   compare is refused with the `invalid_authorization_details` error
   code ({{error-mapping}}), not derived with the constraint dropped.
-
-## Fixtures and Authoring Discipline
-
-Versioned Intent and proposal fixtures with expected Authority Sets
-make the optional publication in {{authorization-derivation}}
-concrete. Reviewing their diffs on every policy change exposes
-altered grants before approval.
-
-Fixtures cover normal template and narrowing outcomes, empty
-intersections, unknown constraints, incomparable values, and
-attempts to introduce delegation. They check each subset against
-both the proposal and the ceiling.
-
-A further check runs the shipped configuration through intake,
-Authority Set derivation, and a real decision path, since a
-configuration that loads does not thereby authorize its intended
-workload. Applying the same entry checks at configuration load and at
-client intake keeps those two surfaces from disagreeing.
-
-## Ownership and Operational Signals
-
-| Artifact | Owner | Responsibility |
-|---|---|---|
-| Derivation policy, ceilings, versions and issuance limits | Mission Issuer operator | Outer bounds and reproducible approval-time Authority Set derivation |
-| Capability catalog and action properties | Resource owner or service team | Supported operations and the facts their constraints can evaluate |
-| Templates and configured mappings | Template author within issuer policy | Candidate authority for supported Intent shapes |
-{: title="Ownership and operational signals"}
-
-Templates amortize authoring across Missions and do not bypass the
-ceilings. The unmapped-resource rate, template-hit rate, and
-rule-exception rate show an operator where its policy authoring
-remains incomplete.
 
 # Integrity Anchor Test Vectors {#test-vectors}
 
