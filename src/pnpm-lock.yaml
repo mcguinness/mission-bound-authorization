@@ -149,6 +149,15 @@ importers:
         specifier: workspace:*
         version: link:../services/pdp
 
+  packages/aauth-testkit:
+    dependencies:
+      '@mission/aauth-wire':
+        specifier: workspace:*
+        version: link:../aauth-wire
+      structured-headers:
+        specifier: ^2.1.0
+        version: 2.1.0
+
   packages/aauth-wire:
     dependencies:
       jose:
@@ -232,6 +241,31 @@ importers:
       pino:
         specifier: ^10.3.1
         version: 10.3.1
+
+  services/aauth-ps:
+    dependencies:
+      '@mission/aauth-wire':
+        specifier: workspace:*
+        version: link:../../packages/aauth-wire
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../../packages/store
+
+  services/aauth-resource:
+    dependencies:
+      '@mission/aauth-wire':
+        specifier: workspace:*
+        version: link:../../packages/aauth-wire
+      structured-headers:
+        specifier: ^2.1.0
+        version: 2.1.0
+    devDependencies:
+      '@mission/aauth-ps':
+        specifier: workspace:*
+        version: link:../aauth-ps
+      '@mission/aauth-testkit':
+        specifier: workspace:*
+        version: link:../../packages/aauth-testkit
 
   services/access-request:
     dependencies:
