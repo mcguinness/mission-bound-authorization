@@ -147,6 +147,16 @@ describe("the PDP enforces the credential bound independently (@spec runtime#inp
     // (D324); the second never names the action.
     expect(reason(await evaluate(req(split), opts()))).toBe("parameter_violation");
   });
+
+  it("lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)", async () => {
+    const violated = entry(["payments:invoice.read"], { vendors: ["globex"] });
+    const satisfied = entry(["payments:invoice.read"], { vendors: ["acme"] });
+    const unevaluable = entry(["payments:invoice.read"], { office_hours: "9-5" });
+    expect(reason(await evaluate(req({ authority: [violated, satisfied] }), opts()))).toBe("permit");
+    expect(reason(await evaluate(req({ authority: [satisfied, violated] }), opts()))).toBe("permit");
+    expect(reason(await evaluate(req({ authority: [unevaluable, satisfied] }), opts()))).toBe("credential_invalid");
+    expect(reason(await evaluate(req({ authority: [satisfied, unevaluable] }), opts()))).toBe("credential_invalid");
+  });
 });
 
 describe("the credential's discharge and approval conditions are decided at the PDP (D312)", () => {

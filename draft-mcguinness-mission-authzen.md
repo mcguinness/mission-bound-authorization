@@ -845,8 +845,19 @@ Mission entry it matches:
   `authority_bound` names which bound decided either deny
   ({{evidence}}).
 - A request whose `authority` is absent, or carries an entry the PDP
-  cannot evaluate in full, is denied `credential_invalid`: the PDP MUST
-  NOT fall back to the Mission's authority.
+  cannot evaluate in full, is denied `credential_invalid`, and the PDP
+  MUST NOT fall back to the Mission's authority. This profile
+  deliberately requires the credential's entire authority description
+  to be evaluable, so an unevaluable credential entry invalidates the
+  request even when another entry could authorize it under Resource
+  Access's alternative-entry rule
+  ({{I-D.draft-mcguinness-oauth-mission-resource-access}}). That is this
+  profile's credential validation policy; the prohibition on falling
+  back to the Mission's authority does not by itself require it. An
+  entry the PDP evaluates and finds unsatisfied invalidates nothing:
+  another complete entry of `authority` still authorizes the action.
+  The policy has an interoperability cost: adding an entry a PDP cannot
+  evaluate makes the credential unusable at that PDP.
 
 ## Action Parameters and Parameter Digest {#parameter-digest}
 
@@ -3193,6 +3204,13 @@ Protocol (HTTP) Field Name" registry ({{RFC9110}}):
 
 \[\[ To be removed from the final specification ]]
 
+- Credential Decision Context: requiring a credential's whole authority
+  description to be evaluable is this profile's credential validation
+  policy, stricter than Resource Access's alternative-entry rule and
+  not a consequence of the prohibition on falling back to the Mission's
+  authority; an entry the PDP evaluates and finds unsatisfied still
+  lets another complete entry authorize; the interoperability cost is
+  stated (#1806).
 - Changes a requirement (#956, D814): where the runtime Enforcement
   Scope Statement declares action classes, the PDP refuses a mediated
   request with no action class established before evaluation, records
