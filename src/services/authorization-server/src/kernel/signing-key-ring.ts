@@ -196,15 +196,30 @@ function fsyncDir(dir: string): void {
   }
 }
 
-/** Write `content` 0600 to a fresh temporary file in `dir`, flushed; returns its path. */
+/**
+ * Write `content` 0600 to a fresh temporary file in `dir`, flushed; returns its
+ * path. A write or flush that fails removes the temporary file (#1815): it
+ * would otherwise hold a partial copy of the ring, private keys included.
+ */
 function writeTemp(dir: string, content: string): string {
   const tmp = join(dir, `.ring-${process.pid}-${randomBytes(6).toString("hex")}.tmp`);
   const fd = openSync(tmp, "wx", 0o600);
+  let flushed = false;
   try {
     writeSync(fd, content);
     fsyncSync(fd);
+    flushed = true;
+  } catch (e) {
+    throw new SigningKeyRingError(`cannot write a ring in ${dir}: ${(e as Error).message}`);
   } finally {
     closeSync(fd);
+    if (!flushed) {
+      try {
+        unlinkSync(tmp);
+      } catch {
+        // Already gone.
+      }
+    }
   }
   return tmp;
 }
