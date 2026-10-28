@@ -74,6 +74,38 @@ describe("loopback network", () => {
     expect(await admit("https://cdn.test/jwks.json", "jwks")).toBe(false);
   });
 
+  it("refuses connections to a host until it is restored, for requests and fetches alike", async () => {
+    net = new LoopbackNetwork();
+    let hits = 0;
+    await net.serve("https://rs.test", (_req, res) => {
+      hits += 1;
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end("{}");
+    });
+    await net.serve("https://ps.test", (_req, res) => res.end("{}"));
+    const port = net.portOf("https://rs.test");
+    await net.refuse("https://rs.test");
+    expect(net.portOf("https://rs.test")).not.toBe(port);
+    await expect(
+      net.request({ method: "POST", url: "https://rs.test/revoke" }),
+    ).rejects.toMatchObject({ code: "ECONNREFUSED" });
+    await expect(
+      net.fetchJson("https://rs.test/.well-known/aauth-resource.json"),
+    ).rejects.toThrow();
+    expect(hits).toBe(0);
+    // Other hosts are reachable meanwhile.
+    expect((await net.request({ method: "GET", url: "https://ps.test/" })).status).toBe(200);
+    net.restore("https://rs.test");
+    expect(net.portOf("https://rs.test")).toBe(port);
+    expect((await net.request({ method: "POST", url: "https://rs.test/revoke" })).status).toBe(200);
+    expect(hits).toBe(1);
+  });
+
+  it("refuses to refuse a host it does not know", async () => {
+    net = new LoopbackNetwork();
+    await expect(net.refuse("https://other.test")).rejects.toThrow(/not on this loopback/);
+  });
+
   it("resolves an issuer's key through a resolver that stays on the network", async () => {
     net = new LoopbackNetwork();
     const stub = createIssuerStub({
