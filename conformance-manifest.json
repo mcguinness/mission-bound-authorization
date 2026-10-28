@@ -25304,8 +25304,104 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential names another subject",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential from an untrusted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential naming an issuer that is not an accepted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential whose signature does not verify",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired actor credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential of an unknown type",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a listed actor-credential type the verifier does not implement",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. One witness per clause of Actor-Binding Credentials: type (unknown, and listed but not implemented), issuer trust (an unaccepted signing key, and an accepted key naming another issuer), validity (a signature that does not verify, an expired credential), subject, and bound key. Proved by skipping each check in turn (the subject comparison, the lifetime, the signature, the issuer binding, either type check): each witness fails."
+  },
+  {
+   "id": "cross-org.actor.credential-alignment",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "actor-identity",
+   "text": "A hop carrying `act` MUST have exactly one aligned entry in the `actor_credentials` presented with the Chain, at the projection exchange or at direct invocation, and its credential MUST validate under {{actor-evidence}}; a Chain naming an actor on a hop with a missing, misaligned, or invalid credential MUST be refused.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the projection exchange, a named hop with no aligned `actor_credentials` entry, an entry whose `hop` index is out of range or repeated, a credential aligned to a key-only hop, and a named hop whose credential fails validation (cross-org.actor.credential-validation) each refuse the Chain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose actor credential is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a misaligned hop index",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses duplicate hop entries",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential aligned to a key-only hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1821 (D941). The projection exchange's half of the sentence: its witnesses run the exchange's presentation parser and chain verifier. The direct-invocation half (`actor_credentials` in the substrate's presentation object) stays with the todo row cross-org.chain.direct-presentation-actor-credentials. The invalid-credential clause is witnessed clause by clause under cross-org.actor.credential-validation. Proved by treating a missing credential as key-only, skipping the key-only alignment check, and skipping the parser's range and repeat checks: each witness fails."
   },
   {
    "id": "cross-org.actor.root-resolution",
@@ -25379,7 +25475,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a revoked, expired, or staleness-exceeded Mission state prevents chain acceptance"
+    "normative": "a revoked, expired, staleness-exceeded, or unavailable Mission state prevents chain acceptance"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -25389,8 +25485,27 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on stale Mission state",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on unavailable Mission state",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a revoked Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired Mission",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. Each clause has its own witness: stale (the freshness bound), unavailable (no locally available state source, which the quoted text requires), revoked and expired (both `terminated`; the expired witness takes its record from the kernel's own expiry, so the verifier's clock stays inside the chain's lifetime, which the root caps at the Mission's expiry). Proved by reading an unavailable state as active, refusing only `suspended`, and skipping the freshness bound: each witness fails."
   },
   {
    "id": "cross-org.projection.provenance-recorded",
@@ -45587,8 +45702,8 @@
    "coverage": "partial",
    "tests": [
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "toolsSubset (capability monotonicity) > adding a tool the parent lacks is NOT a subset (widen)",
+     "file": "src/packages/mission-core/test/aat-verify.test.ts",
+     "name": "verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 steps 1 to 5 and 6c, #1756) > refuses a child that names a tool its parent lacks, or widens a tool it keeps (I4, step 4p)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -45599,7 +45714,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain runs the same verifier since #1759 (#1818), and the earlier toolsSubset rule is retired (#1819). The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -62550,7 +62665,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
-    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; an attenuation root carries max_amount unchanged in mission_constraints, and a mint refuses a malformed currency before signing (the consumer's own reading); the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
    },
    "level": "unit",
    "coverage": "tested",
@@ -62575,18 +62690,18 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > refuses a malformed currency before signing, rather than carrying or folding it",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "name": "an attenuation root never carries a malformed max_amount (@spec mission#max-amount) > carries a well-formed max_amount unchanged, as a decimal string, and reads it back unchanged",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); admitting a malformed currency at the mint's carriable check (the consumer's own reading) fails its attenuation witness."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
@@ -62625,7 +62740,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > carries a well-formed code ISO 4217 does not assign unchanged, and reads it back",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64942,7 +65057,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the consumer recovers the same exact target for every action, whatever the audience",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64971,18 +65086,18 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an action whose tool identifier would read back as another target, rather than minting it",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
