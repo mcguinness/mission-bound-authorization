@@ -4,7 +4,7 @@ import { mintResourceToken } from "../src/index.js";
 import { M, M2, PS, RESOURCE, type World, world } from "./helpers.js";
 
 let w: World;
-afterEach(() => w.net.close());
+afterEach(() => w?.close());
 
 const refusal = async (promise: Promise<unknown>): Promise<AgentError> => {
   const err = await promise.then(

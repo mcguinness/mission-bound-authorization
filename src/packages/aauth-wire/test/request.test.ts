@@ -563,6 +563,25 @@ describe("servers signing under jwks_uri (@spec aauth#section-11.3.2)", () => {
     );
   });
 
+  it("accepts a deployment-chosen dwk only where acceptedDocuments names it, and then only it", async () => {
+    const ps = net.issuer(PS, "mission-admin.json");
+    const signed = await psSigned("mission-admin.json", ps);
+    const verified = await verifyRequest(
+      signed,
+      options({ acceptedSchemes: ["jwks_uri"], acceptedDocuments: ["mission-admin.json"] }),
+    );
+    expect(verified.signer).toEqual({ id: PS, dwk: "mission-admin.json", kid: ps.kid });
+    const aauth = net.issuer(PS, "aauth-person.json");
+    await rejects(
+      verifyRequest(
+        await psSigned("aauth-person.json", aauth),
+        options({ acceptedSchemes: ["jwks_uri"], acceptedDocuments: ["mission-admin.json"] }),
+      ),
+      "invalid_key",
+      /not a metadata document accepted here/,
+    );
+  });
+
   it("refreshes a server key that fails once (re-keyed under the same kid)", async () => {
     let now = NOW_MS;
     const resolver = net.resolver(() => now);
