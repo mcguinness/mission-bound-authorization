@@ -1435,8 +1435,8 @@ a Mission that is not `active` keeps the refusal of
 would carry, including one the AS infers or applies by default when the
 request names no `resource`: the AS refuses the request if any of them
 is Mission-governed, and does not issue the token for the others. On a
-refresh, the AS decides this refusal before it consumes or rotates the
-refresh token.
+refresh, the AS MUST decide this refusal before it consumes or rotates
+the refresh token.
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange

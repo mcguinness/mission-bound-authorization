@@ -6319,9 +6319,9 @@
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "On a refresh, the AS decides this refusal before it consumes or rotates the refresh token",
+   "text": "On a refresh, the AS MUST decide this refusal before it consumes or rotates the refresh token",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6356,7 +6356,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant. D971 (#1723 S2, K3): the sentence carries its MUST, an observable ordering it already stated; coverage unchanged."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
