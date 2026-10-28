@@ -14,18 +14,20 @@
  * token, an administrator with the key the world enrolled for it.
  */
 import { createHash } from "node:crypto";
-import { rfc3339 } from "@mission/aauth-ps";
+import { parsePsConfig, rfc3339 } from "@mission/aauth-ps";
 import {
   type AgentClient,
   createIssuerStub,
   decodeClaims,
+  ManagementClient,
   type ManagementResult,
   newRequestId,
   parseRequirement,
 } from "@mission/aauth-testkit";
-import { JwksResolver } from "@mission/aauth-wire";
+import { generateSigningKey, JwksResolver } from "@mission/aauth-wire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ADMIN,
   expectRefused,
   observable,
   PS,
@@ -129,14 +131,32 @@ describe("termination through the control plane, with revocation at the Resource
     const { agent, s256, person, auth } = await liveTokens();
     const owner = w.manager(agent);
 
+    const committed = w.seconds();
     const ended = await owner.terminate(s256, { reason: "revoked" });
 
+    // 200 with the full status representation, whose token_residual is the
+    // revocation summary: here both revocations were confirmed in the wait.
     expect(ended.status).toBe(200);
-    expect(ended.body).toMatchObject({
+    const receipt = ended.body as Record<string, unknown>;
+    expect(receipt).toEqual({
       mission_s256: s256,
       mission_status: "terminated",
+      ...approvedTimes(agent),
+      terminated_at: rfc3339(committed),
       termination_reason: "revoked",
+      observed_at: expect.any(String),
+      fresh_until: expect.any(String),
+      accepted_updates: 0,
+      token_residual: {
+        tracked: 2,
+        revocation_attempted: 2,
+        revocation_confirmed: 2,
+        complete: true,
+      },
     });
+    const observed = Date.parse(receipt.observed_at as string) / 1000;
+    expect(observed).toBeGreaterThanOrEqual(committed);
+    expect(receipt.fresh_until).toBe(rfc3339(observed + 30));
     // The PS signed one revocation per Tracked Credential at the Resource in
     // its aud; the Resource verified the PS and holds each {jti, exp} under
     // the PS's identity until the token's own exp.
@@ -288,18 +308,24 @@ describe("unavailable revocation (@spec mission-aauth-management#residuals, aaut
     await expectRevokedAtResource(agent, person);
   });
 
-  it("unavailable revocation: while the network refuses the Resource nothing is confirmed, and once it is reachable the retry confirms both tokens", async () => {
+  it("unavailable revocation: while the network refuses the Resource nothing is confirmed and residual_until is the latest unconfirmed exp, the person token's; once reachable, the retry confirms what is unexpired", async () => {
+    // Auth tokens live shorter than person tokens here, so the two exps differ.
+    const doc = w.psConfigDoc();
+    (doc.lifetimes as Record<string, number>).auth_token_seconds = 600;
+    await w.restartPs(parsePsConfig(doc));
     const { agent, s256, person, auth } = await liveTokens();
+    const personExp = decodeClaims(person).exp as number;
+    const authExp = decodeClaims(auth).exp as number;
+    expect(authExp).toBeLessThan(personExp);
     await w.net.refuse(RESOURCE);
 
     const ended = await w.manager(agent).terminate(s256, { reason: "revoked" });
 
-    const latest = Math.max(decodeClaims(person).exp as number, decodeClaims(auth).exp as number);
     expect((ended.body as Record<string, unknown>).token_residual).toEqual({
       tracked: 2,
       revocation_attempted: 2,
       revocation_confirmed: 0,
-      residual_until: rfc3339(latest),
+      residual_until: rfc3339(personExp),
       complete: false,
     });
     expect(
@@ -313,13 +339,31 @@ describe("unavailable revocation (@spec mission-aauth-management#residuals, aaut
     ]);
     expect(w.revocationSwitch.attempts).toEqual([]);
 
+    // Past the auth token's exp, the unconfirmed person token alone keeps the residual open.
+    w.clock.advance((authExp - w.seconds()) * 1000);
+    const admin = w.manager(w.admins.alice);
+    expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
+      tracked: 2,
+      revocation_attempted: 2,
+      revocation_confirmed: 0,
+      residual_until: rfc3339(personExp),
+      complete: false,
+    });
+
+    // Reachable again: the retry revokes the person token, and the expired
+    // auth token is not attempted again; its own expiry closed its residual.
     w.net.restore(RESOURCE);
-    w.clock.advance(30_000);
     await w.ps.revocations?.runDue();
-    expect(revokedAtResource()).toEqual(expect.arrayContaining([pair(person), pair(auth)]));
+    expect(revokedAtResource()).toEqual([pair(person)]);
     expect(revocationStates(s256)).toEqual({
       [decodeClaims(person).jti as string]: "confirmed",
-      [decodeClaims(auth).jti as string]: "confirmed",
+      [decodeClaims(auth).jti as string]: "pending",
+    });
+    expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
+      tracked: 2,
+      revocation_attempted: 2,
+      revocation_confirmed: 1,
+      complete: true,
     });
   });
 
@@ -481,6 +525,15 @@ describe("local gating from the termination commit (@spec mission-aauth-manageme
       termination_reason: "administrative",
     });
     nothingHappened(before as PsRecords, 0);
+    // The administrator's request is recorded with its principal, role,
+    // decision, policy and declared purpose.
+    expect(w.store.missionLog(s256).find((e) => e.event === "terminated")?.detail).toMatchObject({
+      reason: "administrative",
+      actor: { id: ADMIN, role: "administrator" },
+      decision: "permit",
+      policy: `administrator:${ADMIN}`,
+      purpose: "Stop the work",
+    });
     agent.misbehavior = {};
     agent.forget(RESOURCE);
     const again = w.records();
@@ -618,37 +671,88 @@ describe("P2 at mission_control_endpoint: an unauthorized caller learns nothing 
   });
 });
 
+describe("authentication before anything else (@spec mission-aauth-management#authorization)", () => {
+  it("an unauthenticated control-plane request is refused 401 before any disclosure or change: unsigned, and signed by a key no administrator enrolled", async () => {
+    const agent = await w.agent();
+    const s256 = await w.approve(agent);
+    const { endpoint } = await w.manager(agent).controlPlane();
+    const unsigned = (reference: string, body: Record<string, unknown>) =>
+      w.net.request({
+        method: "POST",
+        url: `${endpoint}/${reference}`,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const impostor = ManagementClient.forAdministrator({
+      transport: w.net,
+      ps: PS,
+      key: generateSigningKey("Ed25519", "admin-1"),
+      signatureKey: { scheme: "jwks_uri", id: ADMIN, dwk: "mission-admin.json", kid: "admin-1" },
+      now: w.clock.now,
+      sleep: w.clock.sleep,
+    });
+    const before = w.records();
+
+    const status = { action: "status" };
+    const terminate = { action: "terminate", reason: "revoked", request_id: newRequestId() };
+    const unsignedStatus = await unsigned(s256, status);
+    const answers = [
+      unsignedStatus,
+      await unsigned(s256, terminate),
+      (await impostor.status(s256)).response,
+      (await impostor.terminate(s256, { reason: "administrative", purpose: "Probe" })).response,
+    ];
+
+    for (const res of answers) {
+      expect(res.status).toBe(401);
+      expect(res.headers["signature-error"]).toBeDefined();
+      const body = res.json() as Record<string, unknown>;
+      expect(body.error).not.toBe("mission_not_found");
+      for (const member of ["mission_s256", "mission_status", "terminated_at", "token_residual"]) {
+        expect(body).not.toHaveProperty(member);
+      }
+    }
+    // Nor does the refusal differ for an absent mission.
+    expect(observable(await unsigned(ABSENT, status))).toEqual(observable(unsignedStatus));
+    nothingHappened(before, 0);
+    expect((await w.manager(agent).status(s256)).body).toMatchObject({ mission_status: "active" });
+  });
+});
+
 describe("idempotent and concurrent terminate (@spec mission-aauth-management#idempotency)", () => {
-  it("idempotent terminate: a repeat replays the committed receipt, with no second event and no second revocation", async () => {
-    const { agent, s256 } = await liveTokens();
-    const owner = w.manager(agent);
-    const request = { reason: "revoked", requestId: newRequestId() };
-    const first = await owner.terminate(s256, request);
+  it("idempotent terminate: a repeat replays the committed receipt, with no second event and no second revocation, a day later included", async () => {
+    const { s256 } = await liveTokens();
+    const admin = w.manager(w.admins.alice);
+    const request = { reason: "administrative", requestId: newRequestId(), purpose: "Stop" };
+    const first = await admin.terminate(s256, request);
     const receipt = first.body as Record<string, unknown>;
     const revocations = w.store.inner.revocations(s256);
     const attempts = w.revocationSwitch.attempts.length;
     expect(attempts).toBe(2);
-    w.clock.advance(5000);
 
-    const replay = await owner.terminate(s256, request);
+    // Five seconds later, and again 24 hours after the first request.
+    for (const wait of [5000, 24 * 3600 * 1000]) {
+      w.clock.advance(wait);
+      const replay = await admin.terminate(s256, request);
 
-    expect(replay.status).toBe(200);
-    const again = replay.body as Record<string, unknown>;
-    for (const member of [
-      "mission_s256",
-      "mission_status",
-      "terminated_at",
-      "termination_reason",
-    ]) {
-      expect(again[member]).toBe(receipt[member]);
+      expect(replay.status).toBe(200);
+      const again = replay.body as Record<string, unknown>;
+      for (const member of [
+        "mission_s256",
+        "mission_status",
+        "terminated_at",
+        "termination_reason",
+      ]) {
+        expect(again[member]).toBe(receipt[member]);
+      }
+      // The rest is observed at the replay.
+      expect(again.observed_at).toBe(rfc3339(w.seconds()));
+      expect(again.observed_at).not.toBe(receipt.observed_at);
+      expect(events(s256).filter((e) => e === "terminated")).toHaveLength(1);
+      expect(events(s256).at(-1)).toBe("terminate_replayed");
+      expect(w.store.inner.revocations(s256)).toEqual(revocations);
+      expect(w.revocationSwitch.attempts).toHaveLength(attempts);
     }
-    // The rest is observed at the replay.
-    expect(again.observed_at).toBe(rfc3339(w.seconds()));
-    expect(again.observed_at).not.toBe(receipt.observed_at);
-    expect(events(s256).filter((e) => e === "terminated")).toHaveLength(1);
-    expect(events(s256).at(-1)).toBe("terminate_replayed");
-    expect(w.store.inner.revocations(s256)).toEqual(revocations);
-    expect(w.revocationSwitch.attempts).toHaveLength(attempts);
   });
 
   it("idempotent terminate: a request_id reused with a changed request or for another mission is refused 409 idempotency_conflict, and nothing changes", async () => {
