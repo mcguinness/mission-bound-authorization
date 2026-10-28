@@ -123,7 +123,6 @@ informative:
     date: 2026-09-25
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-11
-  I-D.draft-ietf-oauth-transaction-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
   I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-attenuation:
@@ -6938,7 +6937,7 @@ layer's concern ({{runtime-boundary}}).
 How a client produces the Intent (for example, a "Mission Shaper"
 deriving it from a natural-language instruction) is out of scope.
 
-## Scope and Future Work {#scope-and-future-work}
+## Scope {#scope-and-future-work}
 
 This document is self-contained: it binds Missions to OAuth 2.0 and
 depends normatively only on the specifications listed as its
@@ -6958,32 +6957,6 @@ identity-chaining and Identity Assertion JWT Authorization Grant
 (ID-JAG) dependencies. The Cross-Domain
 capability's conformance bar is self-contained in this document
 ({{conformance}}), so that companion is not a normative dependency.
-
-Optional companion profiles, not required to implement this
-document, specify:
-
-- an additional integrity anchor over a structured consent
-  disclosure (`consent_rendering_hash`, {{consent-binding}}), defined
-  by Mission Consent Evidence
-  {{I-D.draft-mcguinness-oauth-mission-consent-evidence}};
-- mission expansion, defined by Mission Expansion
-  {{I-D.draft-mcguinness-oauth-mission-expansion}}; and
-- a cross-domain status or event-distribution mechanism for tighter
-  revocation, defined by Mission Status
-  {{I-D.draft-mcguinness-oauth-mission-status}} and Mission Lifecycle
-  Signals {{I-D.draft-mcguinness-oauth-mission-signals}}.
-
-Future work includes:
-
-- the normative carriage of Mission context in Transaction Tokens
-  ({{I-D.draft-ietf-oauth-transaction-tokens}}), shown only
-  illustratively in the companion's end-to-end example; and
-- an optional Authority Set derivation profile for a vertical that
-  wants cross-vendor agreement on what a task authorizes: a registry
-  of standard task types mapped to authority templates, so that two
-  vendors in that profile derive comparable Authority Sets. This
-  document does not standardize the Authority Set derivation
-  algorithm ({{authorization-derivation}}).
 
 This document defines no mechanism that pins a Mission to an
 approved agent deployment class or version, and reserves no Intent

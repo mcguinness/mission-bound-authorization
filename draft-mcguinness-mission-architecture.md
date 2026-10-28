@@ -49,6 +49,7 @@ informative:
   RFC9449:
   RFC9635:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+  I-D.draft-ietf-oauth-transaction-tokens:
   FAPI.GrantManagement:
     title: "Grant Management for OAuth 2.0"
     target: https://openid.net/specs/oauth-v2-grant-management.html
@@ -3882,6 +3883,24 @@ every binding implements every one.
   authority (oauth-mission; oauth-mission-child-delegation;
   oauth-mission-expansion; oauth-mission-attenuation;
   oauth-mission-cross-domain).
+
+## Open Work {#open-work}
+
+Open work includes the two items below. Neither is a requirement the
+family answers or a capability that any document of the family
+defines:
+
+- the normative carriage of Mission context in Transaction Tokens
+  ({{I-D.draft-ietf-oauth-transaction-tokens}}), shown only
+  illustratively in the end-to-end example of Mission Cross-Domain
+  Projection ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}); and
+- an optional Authority Set derivation profile for a vertical that
+  wants cross-vendor agreement on what a task authorizes: a registry
+  of standard task types mapped to authority templates, so that two
+  vendors in that profile derive comparable Authority Sets. The OAuth
+  binding does not standardize the Authority Set derivation algorithm
+  ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission
+  Authority").
 
 # Comparison to a Conventional Stack {#standardization-crossovers}
 
