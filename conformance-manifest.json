@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "65aca267b53baaaf312334515596ead8bd4cd808",
-    "content_sha256": "a1efcd28a1983362f4a5d735728d54a887d1facab8944c52465906eb8fc277c0"
+    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
+    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -328,7 +328,8 @@
    "metering.exact-budget",
    "metering.child-accounting",
    "metering.escrow-allocation",
-   "consent-evidence.recording"
+   "consent-evidence.recording",
+   "core.cross-domain"
   ]
  },
  "profiles": [
@@ -6938,6 +6939,94 @@
    "notes": "#1482 (D620). The reference AS ships with an empty evidence registry (the unit test), the configuration this sentence describes, and rar-carriage registers no type, so its wire tests run that configuration. Applicability is that configuration, which the applicability model cannot express; an AS supporting a type follows the same dispatch rules for every type it does not support. Proved by swapping either code (the matching rar-carriage test fails)."
   },
   {
+   "id": "core.cross-domain.reference-and-hash-intact",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "the Mission reference (`mission.id`, `mission.issuer`) and the `authority_hash` the projection carries, intact",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission projection carries `mission.id` and `mission.issuer` equal to the Mission's and `authority_hash` equal to the Mission Record's, and no step across the hop alters them: the values the authorization server in the other trust domain receives and relies on are the Mission's own"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.authority-only-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "authority that only narrows ({{subset}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every entry a projection conveys is a subset, under its type's relation, of a Mission Authority Set entry, and no credential issued from the projection in the other trust domain carries authority broader than the projection conveyed: authority narrows or stays equal at each step across the hop and never widens"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.issuer-authorized-while-active",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projection performed only by, or under the authorization of, the Mission `issuer`, gated on the Mission's `active` state ({{lifecycle}}, {{issuance-gating}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission is projected only by its `issuer`, or by a party acting under that issuer's authorization, and only while the Mission is `active`: a request to project a Mission that is not `active` is refused with no projection issued, and an authorization server that is neither the Mission's `issuer` nor authorized by it issues no projection of that Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.lifetime-capped-by-expiry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projected credential lifetimes capped by the Mission's `expires_at` ({{token-authentication-lifetime}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every credential a projection yields has an `exp` no later than the Mission's `expires_at`, including when the Mission's remaining lifetime is shorter than the credential's default lifetime, and the cap holds for credentials issued from the projection in the other trust domain"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
    "id": "core.derivation.configured-mapping-scope-key",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
@@ -12006,6 +12095,29 @@
     }
    ],
    "notes": "#1721 item 1 (D845). Proved by mutation: making the decision's refusal mapping return the error's own code (invalid_request) fails both browser tests on the error parameter; removing the commit guard (created_at < expires_at) fails the race test, which then completes with a code; throwing an untyped invalid_request from the decision's re-validation fails the late-decision test alone; making the device decision record invalid_request for a refusal fails the device test. The device test passes whatever the browser mapping returns, so it witnesses only the back-channel arm. The approval render of an expired request still answers 400 invalid_request to the Approver's user agent: a render completes nothing."
+  },
+  {
+   "id": "core.approval-event.ordered-procedure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "direct-approval-steps",
+   "text": "At a direct approval event the AS MUST perform steps 1 to 7, in order, as one procedure",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the order is observed at its boundaries, not as the sequence of internal computations: an Approver whose authentication fails (step 1), or who is not authorized to activate the established authority source (step 3), is refused before the derived Authority Set is rendered for consent (step 5), and nothing step 5 renders is disclosed to that party; an effective-expiry failure, where step 4 cannot establish an effective expiry within the bounds `expires_at` requires or the commit's strictly-later recheck fails (step 7), prevents the commit, so no Mission is created; and a commit that fails leaves no active Mission and no usable Mission-bound grant, neither an authorization code nor a profile-defined grant activated for redemption. A back-channel carriage profile can issue a profile-defined grant, such as a device code, while the request is pending, so the invariant is that nothing is activated, and no grant is redeemed with Mission authority, before the commit, not that no earlier artifact exists"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. No witness yet: failure injection at each boundary with an event trace in the reference AS. The row is partial while only some boundaries are proven."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -83392,6 +83504,1067 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-copies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A resource that verifies a presented token (a person token or an auth token) carrying `mission_s256` MUST copy it into the resource token it issues, which names that presented token in `presented_jti`",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resource token the Resource issues for a verified presented token carrying `mission_s256` (a person token at a protected operation or at the authorization endpoint, and an auth token on a step-up) carries that `mission_s256` and names the presented token's `jti` in `presented_jti`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > answers a person token with requirement=auth-token and a resource token naming it, never running the operation (@spec aauth#section-13.11)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > copies mission_s256 unchanged from the person token (@spec aauth#section-6.7.1)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "step-up on a presented auth token (V5; @spec aauth#section-6.5) > challenges an auth token whose scope falls short with a resource token naming it",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: an honest step-up on a presented auth token carries the mission into the new auth token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The Resource copies `mission_s256` unchanged from the presented token it verified (AAuth -11 Section 6.7.1). Mutations: dropping the copy (R8), copying it only from a person token (R9), a fresh `presented_jti` (R11) and dropping it at the authorization endpoint (X06) each fail a cited test. The paired MUST NOT (\"a resource MUST NOT omit `mission_s256`\") restates this duty and is witnessed by the same tests."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-preserves-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Each copying party MUST preserve `mission_s256` exactly.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the `mission_s256` in a resource token the Resource issues is byte-identical to the presented token's, for the agent's own mission and for a reference naming no mission or another agent's mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > copies mission_s256 unchanged from the person token (@spec aauth#section-6.7.1)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the auth token endpoint's mission check: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The Resource holder of the duty; the PS holder is aauth.ref-propagation.ps-preserves-reference. The Resource copies the value without validating it, so a reference naming no mission reaches the PS unchanged (P1 at the auth token endpoint). Mutations R8 and R9 fail the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-preserves-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Each copying party MUST preserve `mission_s256` exactly.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the `mission_s256` in a person token the PS issues is byte-identical to the request's `mission_s256`, and in an auth token the PS issues to the resource token's"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: issuance > issues a Mission-bound person token a resource can verify",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > issues an auth token bound to the agent's key, with mission_s256 copied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder of the duty; the Resource holder is aauth.ref-propagation.resource-preserves-reference. Mutations: dropping the person token's `mission_s256` (P11) or the auth token's (T30) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.auth-token-copies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "When an auth token is issued in the mission context, its issuer (the PS, or the AS in four-party access) copies the same flat `mission_s256` claim onward from the resource token",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an auth token the PS issues in three-party access for a resource token carrying `mission_s256` carries the same `mission_s256`, whether the resource token answered a person token or a presented auth token (a step-up)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > issues an auth token bound to the agent's key, with mission_s256 copied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > V5 positive: accepts a step-up on a presented auth token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: an honest step-up on a presented auth token carries the mission into the new auth token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The AS holder (four-party access) is outside the slice. Mutation: dropping the auth token's `mission_s256` (T30) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-self-before-state",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A PS receiving a resource token with a mission reference MUST verify that `ps` identifies itself before using local mission state.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose resource token carries `mission_s256` and names another PS in `ps` is refused with no token issued and no mission state read, even when that `mission_s256` equals a mission of the requesting agent at this PS"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the PS's own checks before mission state (@spec mission-aauth#ref-propagation) > refuses a resource token whose ps names another PS before reading any mission state, even when it names this agent's own mission",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 steps 1 and 2: the resource token > refuses a resource token whose ps names another person server: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The integration test counts the PS store's mission reads: a person token from another PS names the agent's own `mission_s256`, and a faulty Resource addresses the resulting resource token to this PS. Mutation: removing the `ps` check (T23) issues an auth token under the agent's own mission and fails the test. The endpoint test carries no mission reference, so it witnesses the refusal only."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-verifies-presented-token",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a PS MUST verify the `presented_token` the agent forwards against the resource token, its `jti` against `presented_jti` and its `mission_s256` against the resource token's, and reject any mismatch or omission",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request is refused, with no token issued, when the forwarded `presented_token`'s `jti` is not the resource token's `presented_jti`, or when the resource token omits the presented token's `mission_s256`, names a different one, or carries one the presented token lacks, for a presented person token and a presented auth token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V4: refuses a presented token other than the one presented_jti names: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V2: refuses a resource token stripped of the presented token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V3: refuses a different mission on the resource token, and surfaces it to operators",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > refuses a mission_s256 the presented token does not carry: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V5: refuses a step-up resource token stripped of the auth token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V4: a person token other than the one presented_jti names is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. AAuth -11 Section 6.7.2 step 3 as #836's Analysis reads it. Mutations: no `jti` check (T15), no `mission_s256` check (T19) and an omission treated as a match (T21) each fail cited tests at the endpoint and through the integration suite."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-token-mismatch-code",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a resource token that omits or mismatches its presented token's `mission_s256` receives `invalid_resource_token`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose resource token omits, or names a different, `mission_s256` than its presented token (a person token, or an auth token on a step-up) is refused `invalid_resource_token`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V2: refuses a resource token stripped of the presented token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V3: refuses a different mission on the resource token, and surfaces it to operators",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V5: refuses a step-up resource token stripped of the auth token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The binding names the code (restating AAuth -11 Section 6.7.2). Mutations T19 and T21 fail the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.agent-verifies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "An agent operating under a mission MUST verify that a returned resource token carries the exact `mission_s256`, and MUST NOT continue that authorization under the mission when it is absent or different.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent operating under a mission that receives a resource token whose `mission_s256` is absent or names another mission refuses it: it sends no auth token request for it, and nothing runs at the resource"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "challenge verification (@spec aauth#section-6.7.3) > the binding's mission check (@spec mission-aauth#ref-propagation) > refuses a resource token whose mission_s256 was stripped",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "challenge verification (@spec aauth#section-6.7.3) > the binding's mission check (@spec mission-aauth#ref-propagation) > refuses a resource token naming another mission",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/flow.test.ts",
+     "name": "a resource token without the agent's mission (@spec mission-aauth#ref-propagation) > is refused by the agent when stripped (V2): nothing reaches the token endpoint, nothing runs",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/flow.test.ts",
+     "name": "a resource token without the agent's mission (@spec mission-aauth#ref-propagation) > is refused by the agent when it names another mission (V3)",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the agent's mission check (@spec mission-aauth#ref-propagation) > V2 at the agent: a resource token stripped of its mission is never carried to the PS",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the agent's mission check (@spec mission-aauth#ref-propagation) > V3 at the agent: a resource token naming another of its missions is never carried to the PS",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutation: disabling its mission check (A6) fails the cited tests, including on a step-up resource token (V5)."
+  },
+  {
+   "id": "aauth.ref-propagation.governed-missionless-rejected",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A PS whose policy places an agent under mission governance MUST reject a missionless token request from that agent.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request with no `mission_s256`, or an auth token request whose resource token and presented token carry none, from an agent the PS's policy places under mission governance is rejected with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V9: refuses a missionless request from an agent under mission governance: denied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V9: refuses a missionless token request from an agent under mission governance: denied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: a missionless person token request from an agent under mission governance is refused",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: after a restart places an agent under governance, its missionless requests are refused at both token endpoints",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The governance mode is static configuration (`mission_governed` per agent in src/config/aauth-ps.json). The binding names no error; the reference answers `denied`, an implementation choice the observation does not pin. Mutations: removing the rule at the person token endpoint (P05) or the auth token endpoint (T25) fails the cited tests; the integration test reaches the auth token endpoint through a restart that places a missionless agent under governance."
+  },
+  {
+   "id": "aauth.ref-propagation.person-token-reference-checks",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a malformed `mission_s256` in a person token request receives `invalid_request`, and one naming a mission that does not exist or belongs to another agent is rejected",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request whose `mission_s256` is malformed is refused `invalid_request`, and one whose well-formed `mission_s256` names no mission or a mission of another agent is rejected; neither issues a token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V7: refuses a malformed mission_s256: invalid_request",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8: refuses a well-formed mission_s256 that names no mission: invalid_request",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8 and P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The binding pins `invalid_request` only for a malformed value; the reference also answers an unknown or foreign reference `invalid_request` (identical, for P1), which the observation does not pin. Mutations: no well-formedness check (P03) or a lookup by `s256` alone (M14) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.presented-token-failure-codes",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a presented token that fails verification receives `invalid_presented_token`, or `expired_presented_token` when only its `exp` fails, which is how a Mission-bound token fails once `expires_at` passes",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose presented token fails verification is refused `invalid_presented_token`, or `expired_presented_token` when only its `exp` fails, and a Mission-bound person token presented after the mission's `expires_at`, which capped its `exp`, is refused `expired_presented_token`; none issues a token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > refuses a presented token whose signature fails: invalid_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > answers a presented token that fails only on exp: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > answers an expired presented token that also fails another check: invalid_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V11: a mission past expires_at fails at presented-token verification: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V11: once the mission's expires_at passes, its person token fails presented-token verification: expired_presented_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a presented token that expires while a key is resolved: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Mutations: no presented-token verification (T12), no `expired_presented_token` (T13) and `expired_presented_token` for any expired token (T14) each fail cited tests. #1805 P2 2 (D934): the auth token endpoint rechecks the presented token's `exp` at the current time immediately before the record is written, so a token that expires while a key is resolved is still `expired_presented_token`, including a Mission-bound person token capped at `expires_at`. Mutations: no final recheck (RC1) and a recheck at the time captured before the awaits (RC2) fail both recheck witnesses."
+  },
+  {
+   "id": "aauth.ref-propagation.terminated-at-state-check",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a request that reaches the mission-state check under a mission that is no longer active receives `mission_terminated`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request, or an auth token request whose presented token still verifies, naming the requesting agent's own mission after it terminated is refused `mission_terminated` with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission terminated while a key is resolved: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Termination here is a direct store transition: the PS has no termination surface until slice 3. Mutation: no terminated-state check (M15) fails the cited tests. #1805 P2 2 (D934): the mission gate runs again at the current time immediately before the record is written, so a mission whose `expires_at` passes while a key is resolved is `mission_terminated` (reason `expired`) even under a presented token still valid; a termination during the key fetch is seen because no await follows the gate. Mutations: no regate (RC3), no final recheck (RC1) and the captured time (RC2) fail the `expires_at` witness."
+  },
+  {
+   "id": "aauth.ref-propagation.failed-not-missionless",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "The PS, or the AS in four-party access, MUST NOT evaluate a failed request as missionless authorization",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a request whose required Mission association fails (a malformed, unknown or foreign reference; a stripped, mismatched or misnamed presented token; a terminated or expired mission; unavailable mission state) yields no token, missionless or otherwise, no record and no effect, and an agent the policy admits missionless whose request names a failing reference is refused rather than served missionless"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V4: a person token other than the one presented_jti names is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V11: once the mission's expires_at passes, its person token fails presented-token verification: expired_presented_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V12: when the mission's state cannot be established, the PS refuses: server_error",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V14: an agent admitted missionless from the outset is served without a mission, and a failed reference is never served missionless",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder; the agent holder is aauth.ref-propagation.agent-no-retry. Each cited test compares the PS's issued-token records and mission logs, and the Resource's effect log, before and after the refused request. Mutations: a failing reference served missionless to an agent admitted missionless (X02) fails V14, and each check's own mutation (T19, T15, P03, M14, M15, T13, M19) fails its vector. #1805 P2 2 (D934): an expiry reached while a key is resolved yields no token, missionless or otherwise, because the PS rechecks at the current time before the record is written (mutations RC1, RC2)."
+  },
+  {
+   "id": "aauth.ref-propagation.agent-no-retry",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "the agent MUST NOT retry it without the reference",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after the PS refuses a request whose Mission association failed, the agent sends no further request for that authorization: no person token request without `mission_s256` and no other token request"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutations: a client that retries a refused person token request without the reference (X04) fails V7 and V8, and one that answers a refused auth token request with a missionless person token request (X05) fails V2 and V3."
+  },
+  {
+   "id": "aauth.ref-propagation.missionless-by-policy-only",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Intentionally missionless authorization is a separate path, admitted by explicit deployment policy from the outset for requests with no required or inherited Mission association. It is never a fallback after Mission validation fails.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PS issues missionless person and auth tokens only to an agent its configuration admits missionless, for requests carrying no `mission_s256`, and refuses a governed agent's missionless request; the admitted agent's request whose `mission_s256` is malformed or names no mission of its own is refused, never served missionless"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V14: an agent admitted missionless from the outset is served without a mission, and a failed reference is never served missionless",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: a missionless person token request from an agent under mission governance is refused",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: after a restart places an agent under governance, its missionless requests are refused at both token endpoints",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: issuance > V14: issues a missionless person token to an agent admitted missionless",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > V14: issues a missionless auth token to an agent admitted missionless",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Missionless admission is the static `mission_governed: false` of src/config/aauth-ps.json. Mutations: governance applied to every agent (X01) and a failing reference served missionless (X02) fail V14."
+  },
+  {
+   "id": "aauth.reference.ownership-before-state",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "at a PS endpoint that takes a `mission_s256` parameter, a PS MUST establish that the mission belongs to the requesting agent before reporting its state",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "at the person token endpoint and at `{mission_endpoint}/{mission_s256}`, a reference to another agent's mission, active or terminated, is never answered `mission_terminated` or with any other report of its state, while the owning agent is told that its mission terminated"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > tells the owner its mission terminated, with the reason",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the person token endpoint: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at {mission_endpoint}/{mission_s256}: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS looks a mission up by owning agent and `s256` together, so another agent's mission misses as an absent one does. `{mission_endpoint}/{mission_s256}` is AAuth -11 Section 8.7's surface; the PS answers GET there as a local read for the owner. Mutations: a lookup by `s256` alone (M14), or one that finds another agent's terminated mission (X03), fails the cited tests."
+  },
+  {
+   "id": "aauth.reference.absent-foreign-same-response",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an absent mission and a mission belonging to another agent, the PS MUST return the same status, error, body, and header set, with observably equivalent timing.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "for a well-formed reference naming no mission and one naming another agent's mission, active or terminated, the person token endpoint, `{mission_endpoint}/{mission_s256}` and the auth token endpoint's mission check each return the same status, error, body and header set"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8 and P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the person token endpoint: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at {mission_endpoint}/{mission_s256}: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the auth token endpoint's mission check: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Status, error, body and header set; the integration tests also compare the body bytes and every header value except `Date`. The auth token endpoint's probe re-signs the agent's real person token with the PS key with only `mission_s256` changed, since no honest PS issues one naming a mission the agent does not own. Timing is the separate row aauth.reference.absent-foreign-same-timing. Mutations M14 and X03 fail the cited tests."
+  },
+  {
+   "id": "aauth.reference.absent-foreign-same-timing",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an absent mission and a mission belonging to another agent, the PS MUST return the same status, error, body, and header set, with observably equivalent timing.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the PS's response for an absent mission and for another agent's mission is observably equivalent in timing at each endpoint that takes a mission reference"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. No test measures timing. Both cases take the same path (one lookup by owning agent and `s256`, then the same refusal), which is a design argument, not a witness."
+  },
+  {
+   "id": "aauth.reference.agent-verifies-s256",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "a Mission Context Agent MUST verify it before any governed use",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent receiving an approval whose `s256` is not the SHA-256 digest of the exact bytes `mission` decodes to, or whose `mission` is not unpadded base64url, refuses it and does not operate under that mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an approval whose s256 is not the digest of the mission bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses a mission that is not unpadded base64url",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > verifies s256 over the exact decoded bytes, and keeps those bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent, against a stand-in mission endpoint that returns a chosen approval. Mutations: no digest check (A12) and no unpadded base64url check (A13) fail the cited tests."
+  },
+  {
+   "id": "aauth.reference.agent-preserves-blob",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "MUST preserve the decoded bytes exactly",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the agent keeps the exact bytes `mission` decodes to, whitespace and member order included, equal byte for byte to the blob the PS persisted and returns to its owner"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > verifies s256 over the exact decoded bytes, and keeps those bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutation: keeping a reserialization of the decoded bytes (X07) fails the approval test, whose blob has unusual whitespace and member order; the PS's compact encoding round-trips, so V1 shows equality with the persisted bytes but cannot catch a reserialization alone."
+  },
+  {
+   "id": "aauth.approval.agent-verifies-blob-agent",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "approval",
+   "text": "verify that the blob's `agent` member identifies the requesting agent",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent receiving an approval envelope whose `s256` verifies but whose blob's `agent` member names another agent, or whose blob is not a JSON object, refuses it before any use: it does not operate under the mission and keeps no person token the envelope carried"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an intact approval whose blob names another agent, before adopting the mission or its person tokens (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an approval whose blob is not a JSON object, adopting nothing (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934): the testkit agent client parses the decoded bytes only to read `agent`, after the digest check and before it changes the mission or caches any person token; the bytes it keeps are the decoded ones (aauth.reference.agent-preserves-blob). The approving-PS half of step 4 has no separate witness: the client records its own configured PS. Mutation: removing the `agent` comparison (AG1) fails the first cited test and the owner's probe."
   },
   {
    "id": "mandate.claims.approver-from-consent-principal",
