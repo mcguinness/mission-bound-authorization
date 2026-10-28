@@ -84056,9 +84056,15 @@
      "name": "termination through the control plane, with revocation at the Resource (@spec mission-aauth-management#terminate, aauth#section-11.12) > terminate with a live person token and auth token: the PS commits, revokes both at the Resource, which refuses them, and the agent's next request is refused at the PS",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/revocation.test.ts",
+     "name": "revocation timing > never sends a revocation at or after the credential's exp, though discovery and the same-second wait take time: it is recorded expired, not failed",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#834 half 1 specification slice (#1077 review). #836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Each unexpired Person Token and Auth Token is revoked at the Resource in its aud; an already expired one is tracked and not attempted. Mutations kick, revocations-insert and live-filter (builder A); kick and revocations-insert (phase 2, through the integration path; builder A's own revocations-insert run reported no tests)."
+   "notes": "#834 half 1 specification slice (#1077 review). #836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Each unexpired Person Token and Auth Token is revoked at the Resource in its aud; an already expired one is tracked and not attempted. Mutations kick, revocations-insert and live-filter (builder A); kick and revocations-insert (phase 2, through the integration path; builder A's own revocations-insert run reported no tests). #1837 round 2 (D964): expiry is checked again after discovery and the same-second wait, immediately before signing: a credential that reached its exp meanwhile is not sent and is recorded expired. Mutation R2:expiry-recheck fails the test."
   },
   {
    "id": "aauth-management.conformance.publish-retention-and-lifetimes",
@@ -84120,7 +84126,7 @@
     "normative": "every status and terminate response from a PS supporting the update position carries `accepted_updates`, a non-negative integer equal to the number of updates accepted for the mission"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/aauth-ps/test/control-plane.test.ts",
@@ -84147,7 +84153,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs. #836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. This PS accepts no update, so every status and terminate response carries accepted_updates 0, the number accepted. Mutation P:accepted-updates-nonzero (phase 2, through the integration path). Counting accepted updates is unexercised until updates are built."
+   "notes": "#965 (D356). The examples are validated by scripts/check-aauth-management-examples.mjs. #836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. This PS accepts no update, so every status and terminate response carries accepted_updates 0, the number accepted. Mutation P:accepted-updates-nonzero (phase 2, through the integration path). Counting accepted updates is unexercised until updates are built. #1837 round 2 (D964): back to partial on the owner's ruling: the zero is correct and witnessed by the cited tests, but counting accepted updates is unexercised until update is built."
   },
   {
    "id": "aauth-management.status.latest-update-iff-nonzero",
@@ -85927,9 +85933,27 @@
      "name": "restart mid-revocation (@spec mission-aauth-management#races-and-failures) > a restart mid-revocation: terminal state, gating and receipts hold, the restarted PS's own loop revokes both tokens, and a restarted Resource keeps its revoked set",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a person token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release an auth token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a proposal's person tokens when the mission terminates while they are signed: mission_terminated, their records kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Partial: the person token endpoint, the auth token endpoint (a resource token and presented token carrying the reference) and the owner's GET of {mission_endpoint}/{mission_s256} answer mission_terminated. update and completion are not built: a POST to {mission_endpoint}/{mission_s256} answers 405 for any mission, not mission_terminated, and an upstream token is refused invalid_request before any mission check (no chaining). Mutation gate-terminated (builder A; phase 2, through the integration path)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Partial: the person token endpoint, the auth token endpoint (a resource token and presented token carrying the reference) and the owner's GET of {mission_endpoint}/{mission_s256} answer mission_terminated. update and completion are not built: a POST to {mission_endpoint}/{mission_s256} answers 405 for any mission, not mission_terminated, and an upstream token is refused invalid_request before any mission check (no chaining). Mutation gate-terminated (builder A; phase 2, through the integration path). #1837 round 2 (D964): the release recheck after signing closes the window between the record and the response on every issuance path. Still partial for update and completion."
   },
   {
    "id": "aauth-management.security.racing-request-not-issued",
@@ -85973,9 +85997,33 @@
      "name": "local gating from the termination commit (@spec mission-aauth-management#token-consequences) > new issuance is refused once termination commits: an auth token request racing termination is refused mission_terminated",
      "level": "concurrency",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a person token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release an auth token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a proposal's person tokens when the mission terminates while they are signed: mission_terminated, their records kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a person token whose mission reaches expires_at while it is signed: mission_terminated, expired",
+     "level": "concurrency",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Termination commits while the request's keys resolve, after authentication and before the mission gate. Mutation gate-terminated (builder A; phase 2, through the integration path)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Termination commits while the request's keys resolve, after authentication and before the mission gate. Mutation gate-terminated (builder A; phase 2, through the integration path). #1837 round 2 (D964): a request whose mission terminates, or reaches expires_at, while its token is signed is refused at release (the person token endpoint, the auth token endpoint and an approval's person tokens), its record kept and revoked. Mutations R2:release-person, R2:release-auth and R2:release-proposal each fail their test."
   },
   {
    "id": "aauth-management.security.revocation-retries-durable",
@@ -86007,9 +86055,15 @@
      "name": "restart mid-revocation (@spec mission-aauth-management#races-and-failures) > a restart mid-revocation: terminal state, gating and receipts hold, the restarted PS's own loop revokes both tokens, and a restarted Resource keeps its revoked set",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/revocation.test.ts",
+     "name": "restart recovery > sends nothing more after a final attempt cut short by a restart: the credential stays unconfirmed, exhausted at the bound",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. A restart here reopens the same SQLite file; restoring an older backup is not exercised. Mutations: worker-start (builder A; phase 2, through the integration path); P:revocations-not-durable (phase 2, through the integration path)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. A restart here reopens the same SQLite file; restoring an older backup is not exercised. Mutations: worker-start (builder A; phase 2, through the integration path); P:revocations-not-durable (phase 2, through the integration path). #1837 round 2 (D964): recovery honors the attempts already spent, an interrupted final attempt included."
   },
   {
    "id": "aauth-management.revocation.signed-jti-exp",
@@ -86168,9 +86222,21 @@
      "name": "unavailable revocation (@spec mission-aauth-management#residuals, aauth#section-11.12.3) > unavailable revocation: while the endpoint answers 5xx, drops the connection or answers a malformed 200, the person token stays unconfirmed and complete false, and when it returns the retry confirms it",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/revocation.test.ts",
+     "name": "restart recovery > sends nothing for a pending revocation whose attempts already reach the bound when the PS restarts",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/revocation.test.ts",
+     "name": "restart recovery > sends nothing more after a final attempt cut short by a restart: the credential stays unconfirmed, exhausted at the bound",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Mutations max-attempts, backoff, retry-after and log-before-send (builder A)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Mutations max-attempts, backoff, retry-after and log-before-send (builder A). #1837 round 2 (D964): the bound is enforced before an attempt is counted or sent, so a final attempt cut short by a crash is not sent again on recovery: the credential is exhausted, last outcome interrupted. Mutation R2:budget-after-send fails both tests."
   },
   {
    "id": "aauth-management.revocation.auth-token-confirmation",
@@ -86326,9 +86392,15 @@
      "name": "unavailable revocation (@spec mission-aauth-management#residuals, aauth#section-11.12.3) > a person token at a Resource that advertises no revocation endpoint keeps complete false until its exp, though every other token is confirmed (D299)",
      "level": "cross-component",
      "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/revocation.test.ts",
+     "name": "revocation timing > sends nothing for an attempt its time limit has already ended, even once discovery completes",
+     "level": "endpoint",
+     "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Mutations attempt-timeout, confirm-only-200, garbage-body and no-endpoint (builder A); garbage-body and residual-confirmed (phase 2, through the integration path)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. Mutations attempt-timeout, confirm-only-200, garbage-body and no-endpoint (builder A); garbage-body and residual-confirmed (phase 2, through the integration path). #1837 round 2 (D964): an attempt its time limit ended sends nothing afterwards. Mutation R2:abort-recheck fails the test."
   },
   {
    "id": "aauth-management.revocation.rate-limited-retry-after",
@@ -88160,9 +88232,27 @@
      "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
      "level": "cross-component",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a person token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release an auth token whose mission terminates while it is signed: mission_terminated, its record kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/aauth-ps/test/control-plane.test.ts",
+     "name": "control plane: local gating as termination commits > refuses to release a proposal's person tokens when the mission terminates while they are signed: mission_terminated, their records kept and revoked",
+     "level": "concurrency",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. The mission is terminated through the companion's control plane (and directly in V10). Mutation gate-terminated (builder A; phase 2, through the integration path)."
+   "notes": "#836 slice 3 (D303 Sketch steps 7-8): `@mission/aauth-ps` serves the control plane (status and terminate) to the owning agent and statically configured administrators, with revocation at `@mission/aauth-resource`; three-party access only. The mission is terminated through the companion's control plane (and directly in V10). Mutation gate-terminated (builder A; phase 2, through the integration path). #1837 round 2 (D964): also at release, after the token is signed."
   },
   {
    "id": "aauth.lifecycle.companion-returns-terminal-state",
