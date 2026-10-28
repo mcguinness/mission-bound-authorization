@@ -8414,6 +8414,12 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > runs gate 4 at dispatch on the recipient's own root, refusing a human Subject of a workload source",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses the subject discipline before anything renders, for every Approver, and the decision approves nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ]
   },
@@ -8574,6 +8580,12 @@
      "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers the interaction cookie alone, with no Approver session, 401 and nothing of the request; an authorized Approver then renders and approves the same interaction",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
     }
    ],
    "notes": "#759: enabled-path identity tests pass, including identity-body refusal, scoped-service and independent-browser resolution, achieved authentication strength, Subject authorization, and agent/console separation. #761's normative core sentence was already landed; no duplicate core edit."
@@ -8594,8 +8606,8 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused at the approval decision, and no Mission is created",
-    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden at the decision, before derivation, the source gates or any record"
+    "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused before the approval rendering shows anything of the request, and refused at the approval decision, and no Mission is created",
+    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden: on the approval page (browser, device and headless) after derivation and the authentication checks and before the source gates and any rendering, with a notice carrying nothing of the request, no render revision, and the interaction left pending (#1802); and at the decision, before derivation, the source gates or any record, including for authority withdrawn after an authorized rendering"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8605,9 +8617,33 @@
      "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 1a (approval authorization): an Approver not authorized to approve for the workload principal is refused before any Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering: Alice for Bob, and Dana for Alice",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses a headless approval service naming a Subject its Approver may not approve for 403 before rendering",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses at the decision an Approver whose approve-for authority is withdrawn after the rendering, creating nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1194. Proved by disabling the approves_for check at the decision (provider.ts): bob's approval for the workload principal then proceeds past the decision and the 403 assertion fails."
+   "notes": "#1194. Proved by disabling the approves_for check at the decision (provider.ts): bob's approval for the workload principal then proceeds past the decision and the 403 assertion fails. #1802: step 1a now asserts the render-time refusal (403, nothing of the request) and the decision's own 403. Proved by disabling the render-time predicate (the four render witnesses rendered 200, the device one fell through to the activation refusal) and the decision-time predicate (the withdrawn-authority decision approved, 303, and the step 1a and Alice-for-Bob decisions answered 409 instead of 403)."
   },
   {
    "id": "core.approval-event.authority-source-trusted-establishment",
@@ -8690,7 +8726,8 @@
    "surface": "authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approver outside the established source's declared activators is refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver"
+    "normative": "an Approver outside the established source's declared activators is refused before the approval rendering shows anything of the request, and refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver",
+    "local": "#1802: the approval page establishes the source for its principal (establishAuthoritySource, gates 1, 2, 4 and 5, and assertAuthorityWithinSource, gate 3, on one resolution) after derivation and before rendering; an Approver outside the activators gets 403 with a notice carrying nothing of the request and no render revision, and the interaction, or the device session, stays pending for an Approver who may activate it. The decision establishes the source again, so activation authority withdrawn after an authorized rendering refuses there and completes the request access_denied."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8802,8 +8839,27 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver who may not activate the established source 403 before rendering, leaving the interaction pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses an Approver who may not activate the source before anything renders, leaving the request pending for one who may",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver who may not activate the source 403 before rendering, leaving the session pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
-   ]
+   ],
+   "notes": "#1802: the rar-carriage decision witness (\"refuses access_denied when the Approver may not activate the source\") now withdraws Bob's activation after an authorized rendering; the three render-time witnesses were proved by replacing establishAuthoritySource with gate 1 alone at the render (each rendered 200), and the decision witness and the device commit refusal by dropping assertApproverMayActivate from establishAuthoritySource."
   },
   {
    "id": "core.approval-event.authority-source-ceiling",
@@ -9043,6 +9099,37 @@
    "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
   },
   {
+   "id": "core.approval-event.subject-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "When the Approver is not the Subject, the rendering MUST identify the Subject the authority is granted for",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval rendering made to an Approver who is not the Subject names the Subject the authority is granted for, as the authenticated approval surface established it, never from text the client supplies",
+    "local": "the authorization-code page renders a Subject section beside the receiving client (the Subject the approval session's trusted login selected, or the headless service named) only when it differs from the Approver; a self-approval renders none; login_hint, which concerns the Approver, never appears. The device verification page names the Subject in its own section, self-approval included (device-authorization rows)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > names the Subject the authority is granted for when the Approver is not the Subject, from the authenticated approval surface's selection",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1802 (owner ruling 3). The clause's condition (the Approver is not the Subject) has no applicability kind, so the row stays unconditional; the witness renders both an approval on Alice's behalf, which names her, and a self-approval, which names no separate Subject. Proved by disabling the Subject section (the witness failed)."
+  },
+  {
    "id": "core.rendering-safeguards.client-text-attributed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
@@ -9251,7 +9338,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous rendering, approves nothing",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous request for the page, approves nothing",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -12587,7 +12674,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age. Where the deployment selects Progressive authorization, the authority ceiling the approval decision consents is validated and classified with the derived set before any write (#1255): a later drawdown grants the ceiling's authority under this consent's consent_principal and approved_at with no Approver authenticating, so a ceiling that admits high-risk authority needs the same floor-meeting Approver, and a refusal leaves no Mission, Grant or code."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age. Where the deployment selects Progressive authorization, the authority ceiling the approval decision consents is validated and classified with the derived set before any write (#1255): a later drawdown grants the ceiling's authority under this consent's consent_principal and approved_at with no Approver authenticating, so a ceiling that admits high-risk authority needs the same floor-meeting Approver, and a refusal leaves no Mission, Grant or code. #1802: step 1 runs before the approval page renders anything: after derivation the page checks the requested acr_values and max_age and the floor over the derived set against the same trusted context, and a login that falls short gets a 401 step-up notice (insufficient_user_authentication) carrying nothing of the request and no render revision; a ceiling the page offers is classified with the derived set and offered only to a login that meets the floor over both. The decision checks both again, so a login that ages out after the rendering is refused there."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -12744,7 +12831,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-floor.test.ts",
-     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > offers a ceiling admitting floor-class authority only to a login that meets the floor over it: a password Approver sees the page without it and can consent none (#1802)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority at the decision when the login ages past the floor after the rendering: access_denied, with no Mission, Grant or code (#1255, #1802)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12753,9 +12846,45 @@
      "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > the age bound at the decision: a login inside the bound at the rendering and past it at the decision is refused, with nothing created (#1802)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request and no revision",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login that fails the client's requested acr_values or max_age to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses a headless rendering of authority behind a browser-only floor, whatever acr its registration claims",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses at the decision a login that ages past the client's requested max_age after the rendering, creating nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
