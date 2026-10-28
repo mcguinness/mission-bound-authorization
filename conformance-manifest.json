@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
-    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
+    "revision": "05499ae43217ce7d528485c06622df662331aeed",
+    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -14034,7 +14034,7 @@
   {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "MUST refuse issuance to a target that is `scope`-only when no safe projection exists for the applicable entries",
    "role": "AS",
    "strength": "MUST",
@@ -14156,7 +14156,7 @@
   {
    "id": "core.scope-projection.semantic-subset-condition",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "together with every independently mandatory control on that path",
    "role": "AS",
    "strength": "MUST",
@@ -14205,7 +14205,7 @@
   {
    "id": "core.scope-projection.action-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "aggregates a broader action",
    "role": "AS",
    "strength": "stated",
@@ -14241,7 +14241,7 @@
   {
    "id": "core.scope-projection.resource-path-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "spans more resource instances or paths than the entry",
    "role": "AS",
    "strength": "stated",
@@ -14278,7 +14278,7 @@
   {
    "id": "core.scope-projection.union-widening-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "arises from the union of several entries",
    "role": "AS",
    "strength": "stated",
@@ -14314,7 +14314,7 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-per-audience",
    "text": "establishes the condition independently for each audience",
    "role": "AS",
    "strength": "MUST",
@@ -14345,7 +14345,7 @@
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "fail closed under step 5",
    "role": "AS",
    "strength": "MUST",
@@ -14424,7 +14424,7 @@
   {
    "id": "core.scope-projection.derived-token-issuance-paths",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "initial issuance, refresh, Token Exchange, and any other derived-token path",
    "role": "AS",
    "strength": "stated",
@@ -14515,7 +14515,7 @@
   {
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-requested",
    "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
    "role": "AS",
    "strength": "MUST",
@@ -14588,7 +14588,7 @@
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
    "role": "AS",
    "strength": "stated",
@@ -14632,7 +14632,7 @@
   {
    "id": "core.scope-projection.requested-scope-unnamed-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
    "role": "AS",
    "strength": "stated",
@@ -14663,7 +14663,7 @@
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-refresh",
    "text": "A refusal caused solely by failure to establish a safe scope projection MUST NOT invalidate an otherwise-valid refresh token or its authorization grant",
    "role": "AS",
    "strength": "MUST NOT",
