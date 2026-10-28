@@ -2443,6 +2443,110 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
     });
 
+    it("after a completed payment, a retry under its key, a reversal carrying the payment's amount refused constraint_unsupported, a compensation request missing its metering projection followed by synthetic completed evidence for it, a non-execution record for the payment, and a retry after each leave the payment's claim completed and its 300.00 committed on both counters (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, v, { key, amount: "300.00" });
+      const executed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, executed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const stillCommitted = (label: string) => {
+        expect(claims.reservationsFor(a).map((r) => r.state), label).toEqual(["committed", "committed"]);
+        expect(claims.budgetCounter(SHARED), label).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+        expect(claims.budgetCounter(instanceCounter("msn_a")), label).toMatchObject({
+          reserved: { amount: "0.00" },
+          held: { amount: "0.00" },
+          committed: { amount: "300.00" },
+        });
+      };
+      const retry = async (label: string) => {
+        const d = await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v));
+        expect(d.decision, label).toBe(false);
+        expect(d.context.denial_reason, label).toBe("duplicate_suppressed");
+        stillCommitted(label);
+      };
+      // A retry is safe, not a voiding of the first attempt: suppressed, it reserves and releases nothing.
+      await retry("retry after completion");
+      // The reversal the reference PEP decides carries the wire's amount, as the metered action's own compensate phase would: both are refused (decision h), claiming and reserving nothing.
+      const reversal: RequestOptions = { action: REVERSE, phase: "compensate", compensates: a, amount: "300.00" };
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      expectDenied(await evaluate(request(c, { ...reversal, action: EXECUTE }), options(claims, c, v)), "constraint_unsupported");
+      stillCommitted("refused reversal");
+      await retry("retry after the refused reversal");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      stillCommitted("repeated reversal");
+      // A compensation request missing its metering projection: context.amount is deleted while the normalized parameters still carry
+      // the amount. It is permitted, linked to the payment, claimed under its own key and charged nothing. It is not a zero-cost or
+      // executable payment reversal (D991); the reference PEP's priced reversal stays refused above.
+      const unpriced = request(c, { action: REVERSE, phase: "compensate", compensates: a });
+      delete (unpriced.context as { amount?: unknown }).amount;
+      const compensation = await evaluate(unpriced, options(claims, c, v));
+      expectPermit(compensation);
+      const r = compensation.context.evaluation_id as string;
+      const compensationEvidence = compensation.context.decision_evidence as DecisionEvidenceObject;
+      expect(compensationEvidence.compensates_evaluation_id).toBe(a);
+      expect(compensationEvidence.metering).toBeUndefined();
+      // Synthetic completed evidence for that request settles its own claim, never the payment's.
+      expect(await claims.settle(REQUESTER, await executionRecord(r, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(r)).toEqual([]);
+      stillCommitted("compensation request missing its metering projection");
+      await retry("retry after the compensation request");
+      // A record presenting the reversed payment as not executed is a conflicting settlement: refused, and nothing is released.
+      const notExecuted = await executionRecord(a, "suppressed");
+      expect((await claims.settle(REQUESTER, notExecuted, () => String(notExecuted.execution_id))).accepted).toBe(false);
+      stillCommitted("non-execution record");
+      claims.close();
+      // The payment's claim keeps its own completed settlement: neither the reversal nor any retry is taken as its non-execution.
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", outcome: "completed", execution_id: executed.execution_id });
+      expect(claimRowOf(file, r)).toMatchObject({ state: "completed", outcome: "completed" });
+      expect(countsOf(file)).toEqual({ claims: 2, reservations: 2, counters: 2 });
+    });
+
+    it("while a payment's outcome is unknown, a retry under its key and a reversal carrying its amount reserve and release nothing, its lease elapsing holds it, and a retry under a new key that completes commits its own 300.00 while the first attempt's 300.00 stays held (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, v, { key, amount: "300.00" });
+      const reversal: RequestOptions = { action: REVERSE, phase: "compensate", compensates: a, amount: "300.00" };
+      const charged = (label: string, state: "reserved" | "held") => {
+        expect(claims.reservationsFor(a).map((r) => r.state), label).toEqual([state, state]);
+        for (const counter of [SHARED, instanceCounter("msn_a")]) {
+          expect(claims.budgetCounter(counter), label).toMatchObject({
+            reserved: { amount: state === "reserved" ? "300.00" : "0.00" },
+            held: { amount: state === "held" ? "300.00" : "0.00" },
+            committed: { amount: "0.00" },
+          });
+        }
+      };
+      // Open: the retry and the reversal leave the reservation reserved.
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v)), "duplicate_suppressed");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      charged("open", "reserved");
+      // No evidence within the lease: held, never released.
+      c.set(c.now().getTime() + PAST_LEASE_MS);
+      claims.sweep();
+      charged("lease elapsed", "held");
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v)), "duplicate_suppressed");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      charged("held", "held");
+      // The retry as a new operation under a new key is permitted, charged afresh, and completes.
+      const b = await permitted(claims, c, v, { amount: "300.00" });
+      expect(await claims.settle(REQUESTER, await executionRecord(b, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
+      // Its success voids nothing: the first attempt stays held beside it.
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      for (const counter of [SHARED, instanceCounter("msn_a")]) {
+        expect(claims.budgetCounter(counter)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "300.00" } });
+      }
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "unresolved", execution_id: null, outcome: null });
+      expect(countsOf(file)).toEqual({ claims: 2, reservations: 4, counters: 2 });
+    });
+
     it("containing a Mission that holds an open reservation settles nothing: the contained request is refused authority_contained, no counter moves, and the permit's later completed settlement still commits (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
