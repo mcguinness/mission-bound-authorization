@@ -13,7 +13,15 @@
  *   next recreated ring cannot reuse it either. A failed append refuses, since
  *   an unrecorded `kid` is the hole the record exists to close.
  * - **Never creates itself.** A missing record refuses; `pnpm keys init
- *   --bindings` or `pnpm keys bind` creates it once.
+ *   --bindings` or `pnpm keys bind` creates it once, by linking a flushed
+ *   temporary file into place, so of two creators one is refused.
+ *
+ * Appends are serialized (#1833). A recorded binding never changes, so a check
+ * that finds nothing to append is complete without a lock. One that finds a
+ * `kid` to append takes an exclusive lock on `<record>.lock`, then re-reads,
+ * re-checks and writes the record without yielding, so two loads, in one
+ * process or two, never each replace the record with their own append. A load
+ * that finds another process holding the lock is refused.
  *
  * The record and the ring are separate restore units: a record inside the
  * ring's directory tree, or the ring inside the record's, is refused, so
@@ -23,7 +31,13 @@
 
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { witnessSharesStoreTree, writeDurableFile } from "@mission/store";
+import {
+  createDurableFile,
+  type Database,
+  holdFileLock,
+  witnessSharesStoreTree,
+  writeDurableFile,
+} from "@mission/store";
 import { calculateJwkThumbprint, type JWK } from "jose";
 
 export const KEY_BINDINGS_FORMAT = "mission-as-key-bindings/1";
@@ -96,6 +110,8 @@ function read(file: string, issuer: string): KeyBindingRecord {
   return r as KeyBindingRecord;
 }
 
+const createdOnce = (file: string) => new KeyBindingError(`${file} already exists; a key binding record is created once`);
+
 /** Create the record at `file` from the keys a ring holds now; an existing file is refused. */
 export async function initKeyBindings(
   file: string,
@@ -105,7 +121,7 @@ export async function initKeyBindings(
   now: () => Date = () => new Date(),
 ): Promise<KeyBindingRecord> {
   placement(ring, file);
-  if (existsSync(file)) throw new KeyBindingError(`${file} already exists; a key binding record is created once`);
+  if (existsSync(file)) throw createdOnce(file);
   const at = now().toISOString();
   const record: KeyBindingRecord = {
     format: KEY_BINDINGS_FORMAT,
@@ -116,7 +132,12 @@ export async function initKeyBindings(
     replacements: [],
   };
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
-  writeDurableFile(file, serialize(record));
+  try {
+    createDurableFile(file, serialize(record));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST") throw createdOnce(file);
+    throw new KeyBindingError(`cannot write ${file}: ${(e as Error).message}`);
+  }
   return record;
 }
 
@@ -125,26 +146,24 @@ export function recordedKids(file: string, issuer: string): Set<string> {
   return new Set(read(file, issuer).bindings.map((b) => b.kid));
 }
 
+const kidsOf = (added: readonly KeyBinding[]) => added.map((a) => a.kid).join(", ");
+
 /**
- * Check the keys a ring holds against the record at `file`, appending any it
- * has not seen. Refuses a recorded `kid` under other material, a missing or
- * foreign record, a record sharing the ring's directory tree, and an append
- * that cannot be written. Idempotent: a second pass changes nothing.
+ * The record with the ring's unrecorded keys appended, and the bindings
+ * added; undefined when every key is recorded. Refuses a recorded `kid` under
+ * other material. `jkts` holds each key's thumbprint, in order.
  */
-export async function checkKeyBindings(
+function appended(
+  record: KeyBindingRecord,
   file: string,
-  ring: string,
-  issuer: string,
   keys: readonly RingKey[],
-  now: () => Date = () => new Date(),
-): Promise<void> {
-  placement(ring, file);
-  const record = read(file, issuer);
+  jkts: readonly string[],
+  at: string,
+): { next: KeyBindingRecord; added: KeyBinding[] } | undefined {
   const known = new Map(record.bindings.map((b) => [b.kid, b]));
-  const at = now().toISOString();
   const added: KeyBinding[] = [];
-  for (const k of keys) {
-    const jkt = await calculateJwkThumbprint(k.publicJwk as JWK);
+  keys.forEach((k, i) => {
+    const jkt = jkts[i] as string;
     const prior = known.get(k.kid);
     if (prior) {
       if (prior.jkt !== jkt) {
@@ -152,11 +171,11 @@ export async function checkKeyBindings(
           `the ring holds ${k.kid} with key material other than ${file} records for it: a recreated ring under recorded identifiers. Restore the original ring, or replace it under new configured kids (initial-runtime-deployment.md, §12); recorded kids are never reused`,
         );
       }
-      continue;
+      return;
     }
     if (!added.some((a) => a.kid === k.kid)) added.push({ role: k.role, kid: k.kid, jkt, recorded_at: at });
-  }
-  if (added.length === 0) return;
+  });
+  if (added.length === 0) return undefined;
   const replacements: KeyBindingReplacement[] = [];
   for (const role of [...new Set(added.map((a) => a.role))]) {
     const baseKid = keys.find((k) => k.role === role)?.baseKid as string;
@@ -166,14 +185,59 @@ export async function checkKeyBindings(
       replacements.push({ at, role, from, to: baseKid });
     }
   }
-  const next: KeyBindingRecord = {
-    ...record,
-    bindings: [...record.bindings, ...added],
-    replacements: [...record.replacements, ...replacements],
+  return {
+    next: {
+      ...record,
+      bindings: [...record.bindings, ...added],
+      replacements: [...record.replacements, ...replacements],
+    },
+    added,
   };
+}
+
+/** The record's append lock; another holder, in this process or another, refuses. */
+function lockRecord(file: string, added: readonly KeyBinding[]): Database {
   try {
-    writeDurableFile(file, serialize(next));
+    return holdFileLock(`${file}.lock`);
   } catch (e) {
-    throw new KeyBindingError(`cannot record ${added.map((a) => a.kid).join(", ")} in ${file}: ${(e as Error).message}`);
+    const why =
+      (e as { code?: string }).code === "SQLITE_BUSY"
+        ? `another writer holds ${file}.lock; retry once it finishes`
+        : (e as Error).message;
+    throw new KeyBindingError(`cannot record ${kidsOf(added)} in ${file}: ${why}`);
+  }
+}
+
+/**
+ * Check the keys a ring holds against the record at `file`, appending any it
+ * has not seen. Refuses a recorded `kid` under other material, a missing or
+ * foreign record, a record sharing the ring's directory tree, and an append
+ * that cannot be written or whose lock another writer holds. Idempotent: a
+ * second pass changes nothing.
+ */
+export async function checkKeyBindings(
+  file: string,
+  ring: string,
+  issuer: string,
+  keys: readonly RingKey[],
+  now: () => Date = () => new Date(),
+): Promise<void> {
+  placement(ring, file);
+  const jkts = await Promise.all(keys.map((k) => calculateJwkThumbprint(k.publicJwk as JWK)));
+  const at = now().toISOString();
+  // Nothing below yields: the record read under the lock is the one replaced.
+  const pending = appended(read(file, issuer), file, keys, jkts, at);
+  if (!pending) return;
+  const lock = lockRecord(file, pending.added);
+  try {
+    const current = appended(read(file, issuer), file, keys, jkts, at);
+    if (!current) return;
+    try {
+      writeDurableFile(file, serialize(current.next));
+    } catch (e) {
+      throw new KeyBindingError(`cannot record ${kidsOf(current.added)} in ${file}: ${(e as Error).message}`);
+    }
+  } finally {
+    lock.close();
   }
 }
