@@ -1505,8 +1505,8 @@ Table of Contents
    the AS infers or applies by default when the request names no
    resource: the AS refuses the request if any of them is Mission-
    governed, and does not issue the token for the others.  On a refresh,
-   the AS decides this refusal before it consumes or rotates the refresh
-   token.
+   the AS MUST decide this refusal before it consumes or rotates the
+   refresh token.
 
    A token request under an existing Mission-bound grant, such as a
    narrowing refresh, a self-exchange (Section 12.4) or an exchange for
@@ -1933,25 +1933,30 @@ Table of Contents
    modifies the entry under a claimed subset relation.  A malformed
    entry is refused as Section 4.3 states.
 
-   The AS relates each entry to the audiences that consume it through a
-   trusted entry-to-audience mapping, such as authenticated
-   configuration or protected resource metadata ([RFC9728]).  An entry's
-   original approved audience is the audience or audiences that mapping
-   assigned the entry when the Mission was approved.  An entry's
-   resource value is not by itself an audience (Section 8.5).  The AS
-   MUST retain that association with the Mission; a later change to the
-   mapping does not redefine it.
+   The following rules govern an entry's original approved audience:
 
-   A Mission created from earlier authority, such as a Child Mission
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]), a successor
-   ([I-D.draft-mcguinness-oauth-mission-expansion]), or an instance of a
-   standing consent (Section 13), does not reassign the original
-   approved audience of an entry it inherits: the entry keeps that of
-   the authority it derives from.  Only a fresh approval of the entry,
-   or a transformation under a declared capability, establishes a
-   different one.  Where the AS cannot establish an entry's original
-   approved audience, the entry has none; the current mapping does not
-   stand in for it.
+   *  The AS relates each entry to the audiences that consume it through
+      a trusted entry-to-audience mapping, such as authenticated
+      configuration or protected resource metadata ([RFC9728]).  An
+      entry's original approved audience is the audience or audiences
+      that mapping assigned the entry when the Mission was approved.  An
+      entry's resource value is not by itself an audience (Section 8.5).
+
+   *  The AS MUST retain that association with the Mission; a later
+      change to the mapping does not redefine it.
+
+   *  A Mission created from earlier authority, such as a Child Mission
+      ([I-D.draft-mcguinness-oauth-mission-child-delegation]), a
+      successor ([I-D.draft-mcguinness-oauth-mission-expansion]), or an
+      instance of a standing consent (Section 13), does not reassign the
+      original approved audience of an entry it inherits: the entry
+      keeps that of the authority it derives from.  Only a fresh
+      approval of the entry, or a transformation under a declared
+      capability, establishes a different one.
+
+   *  Where the AS cannot establish an entry's original approved
+      audience, the entry has none; the current mapping MUST NOT stand
+      in for it.
 
    Issuing an entry to an audience other than its original approved
    audience, including audience projection to a Resource AS
@@ -2337,7 +2342,7 @@ Table of Contents
    The subject-representation discipline is the same in every source:
 
    *  The accountable principal is the record's
-      approval_basis.consent_principal in every source; it is never
+      approval_basis.consent_principal in every source; it MUST NOT be
       inferred from the token sub.
 
    *  sub carries a delegating person only in the user-delegated source.
@@ -2528,8 +2533,9 @@ Table of Contents
    termination as its audit reference.
 
    The issuer writes termination once, atomically with the transition to
-   terminated, and never changes it: an expiry, or any later event, does
-   not replace the reason or references of a Mission already terminated.
+   terminated, and MUST NOT change it: an expiry, or any later event,
+   does not replace the reason or references of a Mission already
+   terminated.
 
    A termination carries every member its reason requires, except as
    follows.
@@ -2905,13 +2911,14 @@ Table of Contents
       designation (Section 12.1), or self-exchange (Section 12.4)
       response, SHOULD carry both.
 
-   A creation replay deduplicated under the applicable operation
-   identifier (approval_event_id for direct approval (Section 14), or
-   the identifier a Mission-creating profile defines) returns the
-   committed effective value unchanged.  On OAuth token responses
-   mission_expires_at is additionally registered as a token-endpoint
-   response parameter (Section 23.1).  It is informational in the same
-   way: presenting it authorizes nothing.
+   *  A creation replay deduplicated under the applicable operation
+      identifier (approval_event_id for direct approval (Section 14), or
+      the identifier a Mission-creating profile defines) returns the
+      committed effective value unchanged.
+
+   On OAuth token responses mission_expires_at is additionally
+   registered as a token-endpoint response parameter (Section 23.1).  It
+   is informational in the same way: presenting it authorizes nothing.
 
 8.3.  Issuance Gating
 
@@ -4677,8 +4684,10 @@ Table of Contents
    these rules do not apply to it.  An exchange whose subject_token is a
    designation is a delegated exchange (Section 12.2), not a no-actor
    exchange, even when it carries no actor_token.  Issuance applies the
-   checks of Section 8.1 as that list states for a self-exchange.  A no-
-   actor exchange is subject to the following:
+   checks of Section 8.1 as that list states for a self-exchange.
+   Section 4.3 states a self-exchange request's exemption from
+   mission_intent and the checks that still apply to it.  A no-actor
+   exchange is subject to the following:
 
    1.  The AS MUST refuse a no-actor exchange with the invalid_request
        error code (Section 2.2.2 of [RFC8693]) unless the authenticated
@@ -9019,6 +9028,21 @@ Appendix G.  Document History
    *  Editorial, no requirement change: Declared Transformation
       Capabilities, Mission Lifecycle and Conformance drop restatements
       of rules their home sections state (#1793, D919).
+
+   *  Four rules already stated as obligations carry BCP 14 keywords,
+      with no new requirement: the current mapping does not stand in for
+      an entry's original approved audience that the AS cannot establish
+      (Declared Transformation Capabilities); the accountable principal
+      is not inferred from the token sub (Authority Sources); on a
+      refresh, the AS decides the Mission-governed resource refusal
+      before it consumes or rotates the refresh token (Authority
+      Proposal); and the issuer does not change a recorded termination
+      (Mission Termination).  Editorial, no requirement change: Declared
+      Transformation Capabilities lists the rules for an entry's
+      original approved audience, the creation-replay rule joins the
+      response list of Mission Identifier and Expiry in Responses, and
+      Self-Exchange Down-Scoping points to its mission_intent exemption
+      in Authority Proposal (#1723, D971).
 
    -01
 
