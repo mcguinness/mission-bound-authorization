@@ -18,6 +18,7 @@
  * approves nothing.
  */
 import { authorityHash, intentHash, type JsonValue, proposalHash } from "@mission/core";
+import type { CounterExposure } from "../kernel/budget-exposure.js";
 import type { CarryoverManifest } from "../kernel/carryover.js";
 import type { DeferralReview, ExpansionDisclosure } from "../kernel/deferred.js";
 import type { MissionKernel } from "../kernel/kernel.js";
@@ -41,6 +42,23 @@ export interface DeferralContext {
   review: string | null;
   /** The Carryover Manifest the approval commits, fixed while the deferral is pending. */
   carryover: string | null;
+  /**
+   * @spec mission-template#instance-composition, metering#capacity-across-missions
+   * (#813, #816, D877): for a successor in a standing-payment lineage, the
+   * counters it continues (the dispatched instance's and the shared budget's)
+   * with their consumption and outstanding reservations as read at this
+   * rendering; absent for any other Mission, whose commitment is unchanged.
+   */
+  budget_exposure?: DeferralBudgetExposure;
+}
+
+/** The budget exposure a standing-payment successor's approval renders and commits. */
+export interface DeferralBudgetExposure {
+  /** The dispatched instance whose counter the successor continues. */
+  instance: string;
+  budget: { owner: string; id: string };
+  /** The instance counter, then the shared standing-consent counter. */
+  counters: CounterExposure[];
 }
 
 /** The URL path of a deferral's approval page. */
@@ -71,7 +89,11 @@ export function deciding(kernel: MissionKernel, review: DeferralReview, rendered
 }
 
 /** The context a deferral's rendering shows, and its commitment. */
-export function deferralContext(review: DeferralReview, expiresAt: string): { context: DeferralContext; commitment: string } {
+export function deferralContext(
+  review: DeferralReview,
+  expiresAt: string,
+  budgetExposure: DeferralBudgetExposure | null = null,
+): { context: DeferralContext; commitment: string } {
   const issuer = review.predecessor.issuer;
   const { disclosure } = review;
   const review_ = disclosure.ceiling?.review;
@@ -99,6 +121,7 @@ export function deferralContext(review: DeferralReview, expiresAt: string): { co
         })
       : null,
     carryover: review.carryover ? contentDigest(review.carryover) : null,
+    ...(budgetExposure ? { budget_exposure: budgetExposure } : {}),
   };
   return { context, commitment: contentDigest(context) };
 }
@@ -219,6 +242,26 @@ ${list("review-discharged", "Entries discharged", r.discharged, (d) => `<code>${
 </section>`;
 }
 
+/**
+ * @spec mission-template#instance-composition (#813, #816, D877): the budget a
+ * standing-payment successor continues, with each counter's consumption to
+ * date and outstanding reservations as read at this rendering.
+ */
+function budgetExposureSection(context: DeferralContext): string {
+  const exposure = context.budget_exposure;
+  if (!exposure) return "";
+  const line = (label: string, e: CounterExposure) =>
+    `<li class="budget-exposure-${escapeHtml(e.counter_scope)}">${escapeHtml(
+      `${label}: consumption to date ${e.committed.amount} ${e.committed.currency} committed; outstanding reservations ${e.reserved.amount} ${e.reserved.currency} reserved and ${e.held.amount} ${e.held.currency} held pending reconciliation, as read at this rendering.`,
+    )}</li>`;
+  const [instance, shared] = exposure.counters as [CounterExposure, CounterExposure];
+  return `<section class="budget-exposure"><h2>Standing-payment budget this successor continues</h2>
+<p>${escapeHtml(`This successor keeps the budget identity ${exposure.budget.owner}/${exposure.budget.id} and continues the counter of the dispatched instance ${exposure.instance}; its payments draw on both.`)}</p>
+<ul>${line(`Instance ${exposure.instance}`, instance)}${line(`Budget ${exposure.budget.owner}/${exposure.budget.id}`, shared)}</ul>
+</section>
+`;
+}
+
 /** The approval page for a pending deferral, rendered to an eligible, authenticated Approver. */
 export function renderDeferralPage(
   review: DeferralReview,
@@ -244,7 +287,7 @@ ${view.bindings ? `${view.bindings}\n` : ""}<h2>Expiry (when the approved author
 ${encounterSection(disclosure)}
 ${restrictionsSection(disclosure)}
 ${carryoverSection(review.carryover)}
-${ceilingSection(disclosure)}
+${budgetExposureSection(context)}${ceilingSection(disclosure)}
 ${view.changed ? `<p class="deferral-changed"><strong>The request changed since you last reviewed it. Review it again before deciding.</strong></p>\n` : ""}<form method="post" action="${deferralPagePath(review.deferralCode)}/decide">
 ${view.revision ? `<input type="hidden" name="render_revision" value="${escapeHtml(view.revision)}">\n` : ""}${view.csrf ? `<input type="hidden" name="csrf_token" value="${escapeHtml(view.csrf)}">\n` : ""}${reconsent}<button name="decision" value="approve">Approve</button>
 <button name="decision" value="deny">Deny</button></form>`;

@@ -80,7 +80,7 @@ One operator edits a ring at a time; nothing locks it.
 | `as-status` | AS kernel | Status responses, the Status List token, discharge receipts, and the records signed through the kernel's status signer (carryover evidence, governed-policy consents, approval-governance records) | key ring or per boot |
 | `as-txn` | AS | transaction tokens | key ring or per boot |
 | `as-continuation` | AS | the continuation ID-JAG | key ring or per boot |
-| `as-crossdomain` | demo stack, not on the AS JWKS | the cross-domain ID-JAG (`demo/src/stack.ts`, `xdKeys`) | per boot: with the RAS's single-use table in memory, this protects a coordinated restart of the whole stack, not an independent RAS restart (#1767) |
+| `as-crossdomain` | demo stack, not on the AS JWKS | the cross-domain ID-JAG (`demo/src/stack.ts`, `xdKeys`) | per boot: with the RAS's single-use claims in memory, this protects a coordinated restart of the whole stack only; a durable redemption store keeps them across an independent RAS restart too (#1767) |
 | `rs-txn` | MCP payments PEP | Transaction Authorization Challenges, published at `txn_challenge_jwks_uri` (`stack.ts`, `rsTxnKeys`) | per boot: its challenges and the resource's pending store live in memory, so a restart fails closed |
 | `ras-token` | RAS | SaaS-domain local tokens (`stack.ts`, `rasKeys`) | per boot: nothing it signs is persisted |
 | `pdp-decision-evidence` | PDP | Decision Evidence and PDP Refusal Records (`stack.ts`, `decisionEvidenceKeys`) | evidence key file (`MISSION_PDP_EVIDENCE_KEYS`) or per boot |
@@ -112,14 +112,29 @@ a no-op, and a regenerated file is refused at publication
 old key signed. Without them, the evidence keys stay per boot, their key
 sets in memory, and a restart leaves the records an earlier boot signed
 unverifiable. The other per-boot keys sign nothing that is persisted, or,
-like `as-crossdomain`, stay per boot under D366. That protects only a
-coordinated restart of the whole stack: the RAS's single-use table lives in
-memory, so an independent RAS restart lets a base or continuation ID-JAG it
-already redeemed redeem again while its signing key still verifies. #1767
-gives the RAS durable redemption records (D887).
+like `as-crossdomain`, stay per boot under D366. With the RAS's single-use
+claims in memory, that protects only a coordinated restart of the whole
+stack: an independent RAS restart lets a base or continuation ID-JAG it
+already redeemed redeem again while its signing key still verifies. A
+durable redemption store closes that (#1767): the RAS claims each grant's
+issuer and `jti` atomically before it mints, and keeps the claim until the
+grant's `exp` plus 300 s, so a grant redeemed before a restart is refused
+after it, whichever key signed it. A restored older copy of the store loses
+the claims made after it was taken, and nothing detects that (D901).
 
 Post-D26 note: there is no AS->PDP materialization artifact to
 authenticate; `policy_view_id` is a content commitment, not a credential.
+
+### Durable or per boot: what the library supports and what each launcher chooses
+
+The library supports both forms of each; the launchers differ in which they
+require.
+
+| Material | Library support | Launcher wiring |
+|---|---|---|
+| AS role keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring (`signingKeys: { ring }`, created by `pnpm keys init`), or keys generated per boot | `pnpm as-native`, `pnpm issuance-only` and the MAS pilot's launchers require `MISSION_KEY_RING` or `MISSION_EPHEMERAL_KEYS=1`; `pnpm demo:serve` and the other demos run per boot |
+| Evidence keys (`ephemeral-pep`, `ephemeral-executor`, `ephemeral-receipt_issuer`, `pdp-decision-evidence`) | evidence key files (`composeStack`'s `evidenceKeys`, created by `pnpm evidence-keys init`, loaded before anything listens), or keys generated per boot | `pnpm as-native` requires `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`; `pnpm demo:serve` takes the two files optionally, per boot without them; `pnpm measure:evidence` runs per boot |
+| The RAS's single-use ID-JAG claims (not a key: what keeps a key that survives a restart from redeeming a grant twice) | a durable redemption store (`RasConfig.redemptions`, `composeStack`'s `rasRedemptions`, created by `pnpm ras-redemptions init`), or in memory | `pnpm as-native` requires `MISSION_RAS_REDEMPTIONS` whenever `MISSION_KEY_RING` is set, and refuses a missing or uninitialized store; every other composition that runs the RAS keeps its claims in memory, under per-boot keys |
 
 ## Trusted-base statement (D40)
 

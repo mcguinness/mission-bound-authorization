@@ -15,6 +15,7 @@ import {
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
+  type BudgetExposurePort,
   buildAuthorizationServer,
   evaluateApprovalFloor,
   MISSION_APPROVAL_SCOPE,
@@ -41,6 +42,7 @@ import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
   buildBoundaryEvidenceKeyResolver,
+  budgetCounterId,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
@@ -97,6 +99,7 @@ import {
   redemptionStatusFor,
   releasedReservationNotice,
   type ResourceMetadataServer,
+  settlementConflictAlert,
   startResourceMetadataServer,
   stderrAlertSink,
   type TokenFacts,
@@ -531,6 +534,12 @@ export async function composeStack(opts: {
   if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
     throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
   }
+  // @spec #831 (D901): durable evidence key files load first, each as its own
+  // holder's, so a missing, mismatched or unreadable file refuses before
+  // anything listens or connects, and nothing is left open to release.
+  const durableEvidence = opts.evidenceKeys
+    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
+    : undefined;
   const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -613,6 +622,24 @@ export async function composeStack(opts: {
   let paymentsServerRef: McpPaymentsServer | undefined;
   // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
   let rasContinuationKeys: IssuerKeys | undefined;
+  // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+  // (#813, #816, D830 ruling 7, D877): the AS's read port onto the budget
+  // counters in the co-resident PDP's claim domain, wired only where the
+  // standing-payment fixture is on. The AS is built before the claim domain
+  // opens, so the port reads through this reference and refuses (the
+  // approval with it) until the domain is open.
+  let budgetCounterDomain: IdempotencyClaimDomain | undefined;
+  const budgetExposure: BudgetExposurePort = {
+    read: (key) => {
+      if (!budgetCounterDomain) throw new Error("the PDP claim domain is not open");
+      const id =
+        key.counter_scope === "standing_consent"
+          ? budgetCounterId("standing_consent", { owner: key.owner, budget_id: key.budget_id })
+          : budgetCounterId("mission", { issuer: key.issuer, mission_id: key.mission_id });
+      const state = budgetCounterDomain.budgetCounter(id);
+      return state && { reserved: state.reserved, held: state.held, committed: state.committed };
+    },
+  };
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -719,7 +746,9 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
-      ...(opts.testStandingPaymentDispatch ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies } : {}),
+      ...(opts.testStandingPaymentDispatch
+        ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies, budgetExposure }
+        : {}),
       // @spec mission-template#standing-payment-exception (#813, #816): the
       // statement this stack's PDP meters under, which the AS reads under the
       // standing-payment capability alone.
@@ -1026,11 +1055,9 @@ export async function composeStack(opts: {
   // key-to-audience binding is checked against what the records actually
   // carry rather than a placeholder.
   const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
-  // @spec #831 (scope inventory): with durable evidence key files, each
-  // holder's keys are the same at every boot; without them, generated now.
-  const durableEvidence = opts.evidenceKeys
-    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
-    : undefined;
+  // @spec #831 (scope inventory): with durable evidence key files (loaded
+  // first, above), each holder's keys are the same at every boot; without
+  // them, generated now.
   const decisionEvidenceKeys = durableEvidence
     ? (durableEvidence.pdp[0] as DurableEvidenceKey)
     : await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
@@ -1103,7 +1130,13 @@ export async function composeStack(opts: {
     onBudgetOverspend: (overspend) => operatorAlerts.alert(budgetOverspendAlert(overspend)),
     // #813: and a held reservation later released resolves its alert.
     onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
+    // @spec metering#settlement-contract "Conflicting redelivery" (#816,
+    // D877): a settlement that conflicts with the applied one is retained by
+    // the domain and surfaced on the same alarm path.
+    onSettlementConflict: (conflict) => operatorAlerts.alert(settlementConflictAlert(conflict)),
   });
+  // #813, D877: the AS's budget exposure port reads this domain from here on.
+  budgetCounterDomain = pdpClaims;
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
   // each is provisioned for the version in force, the boundary is not
