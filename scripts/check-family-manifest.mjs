@@ -453,19 +453,30 @@ function extractSection(markdown, matchFn) {
 //     live file, so the marker must move in the same change that moves
 //     the substrate. A coupling device, not proof the re-read happened.
 //   - `assessed-binding-snapshot`: the full commit and the 64-hex content
-//     sha256 of the assessed OAuth binding snapshot. It is validated
-//     against the pinned source (`git show <commit>:<binding>`), never the
-//     current binding file, so a later binding edit leaves the Assessment
-//     pinned to the revision it assessed (later revisions are unassessed).
-//     The appendix prose must state the same commit and digest, and every
-//     `{{I-D.draft-mcguinness-oauth-mission}}, Section "<title>"` citation
-//     in it must name a heading that exists at that commit.
+//     sha256 of the assessed OAuth binding snapshot. It is the single
+//     source of truth for that pin and is validated against the pinned
+//     source (`git show <commit>:<binding>`), never the current binding
+//     file, so a later binding edit leaves the Assessment pinned to the
+//     revision it assessed (later revisions are unassessed).
+//
+// Everything else that names the snapshot must agree with that marker:
+// the appendix prose states the same commit and digest; the architecture
+// carries the snapshot reference (ASSESSMENT_SNAPSHOT_REF), whose target
+// is the binding file at exactly that commit (never the moving editor's
+// copy, a branch, or a URL without the full commit) and which names no
+// other commit; every citation inside the appendix uses that reference,
+// never the ordinary `{{I-D.draft-mcguinness-oauth-mission}}`, whose
+// target is the latest Editor's Draft (#1860 review); and every
+// `Section "<title>"` it cites names a heading that exists at the commit.
 //
 // A failure is an editorial finding, never a conformance one.
 export const ASSESSMENT_FILE = "draft-mcguinness-mission-architecture.md";
 export const ASSESSMENT_TITLE = "OAuth Binding Mapping Assessment";
 export const ASSESSED_BINDING_FILE = "draft-mcguinness-oauth-mission.md";
 export const ASSESSED_SUBSTRATE_FILE = "draft-mcguinness-mission-substrate.md";
+export const ASSESSMENT_SNAPSHOT_REF = "OAUTH-BINDING-SNAPSHOT";
+export const ASSESSED_BINDING_REF = "I-D.draft-mcguinness-oauth-mission";
+const SNAPSHOT_REPO = "https://github.com/mcguinness/mission-bound-authorization";
 
 // Heading titles of a kramdown draft, anchors stripped, fenced blocks skipped.
 export function headingTitles(markdown) {
@@ -485,17 +496,52 @@ export function headingTitles(markdown) {
   return titles;
 }
 
-// Every title a `{{I-D.draft-mcguinness-oauth-mission}}, Section(s) "..."`
-// citation names, read with line wraps joined.
-export function citedBindingTitles(text) {
+// Every title a `{{<key>}}, Section(s) "..."` citation names, read with
+// line wraps joined. `key` defaults to the snapshot reference.
+export function citedBindingTitles(text, key = ASSESSMENT_SNAPSHOT_REF) {
   const flat = text.replace(/\s+/g, " ");
-  const re = /\{\{I-D\.draft-mcguinness-oauth-mission\}\},? Sections? ((?:"[^"]+"(?:,? (?:and )?)?)+)/g;
+  const esc = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`\\{\\{${esc}\\}\\},? Sections? ((?:"[^"]+"(?:,? (?:and )?)?)+)`, "g");
   const out = [];
   let m;
   while ((m = re.exec(flat))) {
     for (const q of m[1].matchAll(/"([^"]+)"/g)) out.push(q[1]);
   }
   return out;
+}
+
+// The raw YAML lines of one front-matter reference entry (`  <key>:` and
+// its deeper-indented lines), or null when the front matter has none.
+export function frontMatterReference(markdown, key) {
+  const lines = markdown.split("\n");
+  if (lines[0] !== "---") return null;
+  const close = lines.findIndex((l, i) => i > 0 && /^--- (abstract|middle)\b/.test(l));
+  const end = close === -1 ? lines.length : close;
+  const start = lines.findIndex((l, i) => i < end && l === `  ${key}:`);
+  if (start === -1) return null;
+  const entry = [lines[start]];
+  for (let i = start + 1; i < end && /^ {4,}\S/.test(lines[i]); i++) entry.push(lines[i]);
+  return entry.join("\n");
+}
+
+// Findings for the snapshot reference's target against the pinned commit.
+export function snapshotTargetFindings(target, commit) {
+  const where = `${ASSESSMENT_FILE}: ${ASSESSMENT_SNAPSHOT_REF}`;
+  if (!target) return [`${where} has no target`];
+  const findings = [];
+  if (/mcguinness\.github\.io/.test(target)) {
+    findings.push(`${where} target ${target} is the moving editor's copy, not the pinned snapshot`);
+  }
+  if (!/[0-9a-f]{40}/.test(target)) {
+    findings.push(`${where} target ${target} carries no full 40-hex commit (a branch name or latest copy is not the pinned snapshot)`);
+  } else if (!target.includes(commit)) {
+    findings.push(`${where} target ${target} does not name the pinned commit ${commit.slice(0, 12)}`);
+  }
+  const canonical = `${SNAPSHOT_REPO}/blob/${commit}/${ASSESSED_BINDING_FILE}`;
+  if (findings.length === 0 && target !== canonical) {
+    findings.push(`${where} target ${target} is not the binding file at the pinned commit (${canonical})`);
+  }
+  return findings;
 }
 
 // `assessmentText` is the architecture draft, `substrateBytes` the live
@@ -526,6 +572,30 @@ export function validateAssessmentPin({ assessmentText, substrateBytes, showAtCo
   if (!prose.includes(commit) || !prose.includes(digest)) {
     findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment's text must state the pinned snapshot commit ${commit.slice(0, 12)} and content digest ${digest.slice(0, 12)} that its assessed-binding-snapshot marker records`);
   }
+
+  // The snapshot reference: present, pinned to exactly this commit.
+  const entry = frontMatterReference(assessmentText, ASSESSMENT_SNAPSHOT_REF);
+  if (entry === null) {
+    findings.push(`${ASSESSMENT_FILE}: the front matter has no ${ASSESSMENT_SNAPSHOT_REF} reference for the assessed snapshot`);
+  } else {
+    const tm = entry.match(/^ {4}target:\s*(\S+)\s*$/m);
+    findings.push(...snapshotTargetFindings(tm ? tm[1] : null, commit));
+    for (const other of new Set(entry.match(/[0-9a-f]{40}/g) ?? [])) {
+      if (other !== commit) {
+        findings.push(`${ASSESSMENT_FILE}: ${ASSESSMENT_SNAPSHOT_REF} names commit ${other.slice(0, 12)}, not the pinned ${commit.slice(0, 12)}`);
+      }
+    }
+  }
+
+  // Citations inside the appendix: the snapshot reference only.
+  if (prose.includes(`{{${ASSESSED_BINDING_REF}}}`)) {
+    findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites {{${ASSESSED_BINDING_REF}}}, the moving Editor's Draft; cite {{${ASSESSMENT_SNAPSHOT_REF}}} instead`);
+  }
+  const cited = citedBindingTitles(section);
+  if (cited.length === 0) {
+    findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites no section of the assessed snapshot ({{${ASSESSMENT_SNAPSHOT_REF}}}, Section "...")`);
+  }
+
   const bytes = showAtCommit(commit, ASSESSED_BINDING_FILE);
   if (bytes === null) {
     findings.push(`assessed-binding-snapshot: ${ASSESSED_BINDING_FILE} is not resolvable at ${commit.slice(0, 12)} in local git history (a shallow clone? fetch full history)`);
@@ -537,10 +607,6 @@ export function validateAssessmentPin({ assessmentText, substrateBytes, showAtCo
     return findings;
   }
   const titles = headingTitles(bytes.toString("utf8"));
-  const cited = citedBindingTitles(section);
-  if (cited.length === 0) {
-    findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites no section of the assessed OAuth binding`);
-  }
   for (const title of cited) {
     if (!titles.has(title)) {
       findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites Section "${title}" of the OAuth binding, which has no such section at the pinned snapshot ${commit.slice(0, 12)}`);
