@@ -1097,7 +1097,7 @@ export class MissionSignalReceiver {
   }
 
   /**
-   * @spec harness#mission-binding — the last established state as the
+   * @spec harness#mission-binding: the last established state as the
    * shared `MissionStatusLease` shape (`@mission/core`) the harness consumes,
    * tagged with the surface that established it (`signal`, or `status` after
    * a Mission Status refresh). This is the receiver's reliance surface;
