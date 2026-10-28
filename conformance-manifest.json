@@ -83889,9 +83889,21 @@
      "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V11: once the mission's expires_at passes, its person token fails presented-token verification: expired_presented_token",
      "level": "cross-component",
      "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a presented token that expires while a key is resolved: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
     }
    ],
-   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Mutations: no presented-token verification (T12), no `expired_presented_token` (T13) and `expired_presented_token` for any expired token (T14) each fail cited tests."
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Mutations: no presented-token verification (T12), no `expired_presented_token` (T13) and `expired_presented_token` for any expired token (T14) each fail cited tests. #1805 P2 2 (D934): the auth token endpoint rechecks the presented token's `exp` at the current time immediately before the record is written, so a token that expires while a key is resolved is still `expired_presented_token`, including a Mission-bound person token capped at `expires_at`. Mutations: no final recheck (RC1) and a recheck at the time captured before the awaits (RC2) fail both recheck witnesses."
   },
   {
    "id": "aauth.ref-propagation.terminated-at-state-check",
@@ -83929,9 +83941,21 @@
      "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
      "level": "cross-component",
      "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission terminated while a key is resolved: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
     }
    ],
-   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Termination here is a direct store transition: the PS has no termination surface until slice 3. Mutation: no terminated-state check (M15) fails the cited tests."
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Termination here is a direct store transition: the PS has no termination surface until slice 3. Mutation: no terminated-state check (M15) fails the cited tests. #1805 P2 2 (D934): the mission gate runs again at the current time immediately before the record is written, so a mission whose `expires_at` passes while a key is resolved is `mission_terminated` (reason `expired`) even under a presented token still valid; a termination during the key fetch is seen because no await follows the gate. Mutations: no regate (RC3), no final recheck (RC1) and the captured time (RC2) fail the `expires_at` witness."
   },
   {
    "id": "aauth.ref-propagation.failed-not-missionless",
@@ -84005,9 +84029,21 @@
      "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V14: an agent admitted missionless from the outset is served without a mission, and a failed reference is never served missionless",
      "level": "cross-component",
      "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
     }
    ],
-   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder; the agent holder is aauth.ref-propagation.agent-no-retry. Each cited test compares the PS's issued-token records and mission logs, and the Resource's effect log, before and after the refused request. Mutations: a failing reference served missionless to an agent admitted missionless (X02) fails V14, and each check's own mutation (T19, T15, P03, M14, M15, T13, M19) fails its vector."
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder; the agent holder is aauth.ref-propagation.agent-no-retry. Each cited test compares the PS's issued-token records and mission logs, and the Resource's effect log, before and after the refused request. Mutations: a failing reference served missionless to an agent admitted missionless (X02) fails V14, and each check's own mutation (T19, T15, P03, M14, M15, T13, M19) fails its vector. #1805 P2 2 (D934): an expiry reached while a key is resolved yields no token, missionless or otherwise, because the PS rechecks at the current time before the record is written (mutations RC1, RC2)."
   },
   {
    "id": "aauth.ref-propagation.agent-no-retry",
@@ -84341,9 +84377,22 @@
     "normative": "an agent receiving an approval envelope whose `s256` verifies but whose blob's `agent` member names another agent, or whose blob is not a JSON object, refuses it before any use: it does not operate under the mission and keeps no person token the envelope carried"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934). Born todo; the witness is cited in the next commit."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an intact approval whose blob names another agent, before adopting the mission or its person tokens (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an approval whose blob is not a JSON object, adopting nothing (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934): the testkit agent client parses the decoded bytes only to read `agent`, after the digest check and before it changes the mission or caches any person token; the bytes it keeps are the decoded ones (aauth.reference.agent-preserves-blob). The approving-PS half of step 4 has no separate witness: the client records its own configured PS. Mutation: removing the `agent` comparison (AG1) fails the first cited test and the owner's probe."
   },
   {
    "id": "mandate.claims.approver-from-consent-principal",
