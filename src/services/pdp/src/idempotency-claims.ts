@@ -396,6 +396,13 @@ interface ClaimRow {
   retain_until_ms: number | null;
   /** The statement generation the claim was made under (`generationAt`); `null` on a row from before the column. */
   statement_version: string | null;
+  /**
+   * The enforcement boundary the claim's permit is decided at, byte for byte:
+   * the holding evaluation's `resource.properties.audience`, which its
+   * Decision Evidence signs as `audience`. `null` on a row from before the
+   * column whose stored permit did not record one; such a row settles nothing.
+   */
+  audience: string | null;
 }
 
 export interface ClaimInput {
@@ -477,8 +484,8 @@ export type SettlementResult =
       duplicate: boolean;
       /**
        * @spec metering#settlement-states (#816, owner review of #1713): the
-       * claim did not take this `completed` record (its window closed, it was
-       * purged, or it was settled otherwise), but the budget did: the
+       * claim did not take this `completed` record (its window closed, or it
+       * was settled otherwise), but the budget did: the
        * evaluation's released reservations were committed (or already were).
        * The claim itself is unchanged.
        */
@@ -621,6 +628,18 @@ const MIGRATIONS = [
     received_at_ms INTEGER NOT NULL,
     UNIQUE (evaluation_id, execution_id, outcome, error)
   ) STRICT;`,
+  // @spec runtime-evidence#execution-evidence-object (#1841, D974): the
+  // boundary each claim's permit is decided at, which settlement compares
+  // with the record's `audience` byte for byte. Written at the claim and at
+  // its adoption; the scope cannot serve, since an adopted claim keeps the
+  // scope it was claimed under (a replaced identifier's, after a declared
+  // change). A row from before this column takes the audience its stored
+  // permit's signed Decision Evidence recorded. A row without one (no permit
+  // persisted, or a decision tombstoned past the window) keeps NULL, and a
+  // NULL row settles nothing: fail closed, never read from the scope.
+  `ALTER TABLE claims ADD COLUMN audience TEXT;
+  UPDATE claims SET audience = json_extract(decision_json, '$.context.decision_evidence.audience')
+    WHERE decision_json IS NOT NULL AND json_type(decision_json, '$.context.decision_evidence.audience') = 'text';`,
 ];
 
 /**
@@ -1368,7 +1387,8 @@ export class IdempotencyClaimDomain {
    * 2026-10-02): accept the redeeming attempt's PEP-signed Execution
    * Evidence as the outcome of the claim its `evaluation_id` names.
    * Authenticated (it verifies under the PEP's published key), bound (only
-   * the PEP the permit was issued to settles it), and idempotent on
+   * the PEP the permit was issued to settles it, and only a record whose
+   * `audience` is the permit's boundary, #1841), and idempotent on
    * `execution_id`: a resent record is acknowledged, never applied twice.
    */
   async settle(
@@ -1392,6 +1412,27 @@ export class IdempotencyClaimDomain {
     else if (outcome === "failed") next = "failed";
     else if (outcome === "suppressed" && !NON_REDEEMING_ERRORS.has(String(content.error))) next = "failed";
     else return { accepted: false, reason: "not_a_settling_outcome" };
+    // @spec runtime-evidence#execution-evidence-object `audience` (#1841,
+    // D974): "The boundary identifier the linked Decision Evidence recorded,
+    // byte for byte". Verification above binds the signing key to the
+    // audience the record claims; this binds that audience to the boundary
+    // of the permit being settled, so a record validly signed for another
+    // boundary settles nothing here. One gate before every effect a record
+    // can have: the claim's settlement, a conflicting record's retention,
+    // alarm and commit, the late budget correction, and the redemption
+    // owner's query. Refused, nothing is retained and no counter moves. The
+    // comparison is code unit for code unit (JSON strings on both sides), and
+    // an absent `audience` never matches. A claim row's boundary never
+    // changes under its `evaluation_id` (adoption replaces both), so reading
+    // it here, outside the settling transaction, cannot race a change. No row
+    // is no retained boundary: a reservation whose claim is gone is not
+    // corrected from a record (the operator's `executed` answer remains).
+    const row = this.tx(
+      () => this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined,
+    );
+    if (!row) return { accepted: false, reason: "unknown_evaluation" };
+    if (row.audience === null) return { accepted: false, reason: "boundary_unretained" };
+    if (content.audience !== row.audience) return { accepted: false, reason: "audience_mismatch" };
     // #1016 review round 2: a completed record proves an effect whatever
     // attempt wrote it. A failed or suppressed one proves no effect only for
     // the attempt that held the single use: a replay of the same permit that
@@ -1401,10 +1442,6 @@ export class IdempotencyClaimDomain {
     // own record names its `execution_id` as the redeeming attempt. The
     // record's members are never taken as that proof.
     if (next === "failed") {
-      const row = this.tx(
-        () => this.db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as ClaimRow | undefined,
-      );
-      if (!row) return { accepted: false, reason: "unknown_evaluation" };
       if (row.pep_id !== requester.pep_id) return { accepted: false, reason: "not_the_permit_holder" };
       // @spec metering#settlement-contract "Conflicting redelivery" (#816,
       // D877 review F1): once a settlement is applied, a non-completed record
@@ -1426,10 +1463,11 @@ export class IdempotencyClaimDomain {
     // any, is already applied (a conflicting `completed` commits).
     if (settled.accepted || next !== "completed" || settled.reason === CONFLICTING_SETTLEMENT) return settled;
     // @spec metering#settlement-states (#816, owner review of #1713): the
-    // claim refused the record (its window closed, it was purged, or it was
-    // settled otherwise), but the budget's accounting does not depend on the
-    // claim's window. The verified record establishes execution, so a
-    // released reservation of the permit it names commits.
+    // claim refused the record (its window closed, or it was settled
+    // otherwise), but the budget's accounting does not depend on the claim's
+    // window. The verified record establishes execution, so a released
+    // reservation of the permit it names commits. A claim row that is gone
+    // never reaches here (#1841): its boundary is not retained.
     const corrected = this.tx(() =>
       this.correctReleasedReservations(requester, evaluationId, `corrected_completed:${outcomeRef}`, this.now().getTime()),
     );
@@ -1440,7 +1478,10 @@ export class IdempotencyClaimDomain {
    * @spec metering#settlement-states (#816, owner review of #1713): the
    * budget correction from the executing PEP's verified `completed` record,
    * on the reservation rather than the claim, so it holds whatever the
-   * claim's state or window. Only the PEP and epoch the reserving permit was
+   * claim's state or window. It is reached only while the claim row exists,
+   * since `settle` binds the record to the boundary retained there (#1841); a
+   * reservation whose claim row is gone is corrected only by the operator's
+   * `executed` answer. Only the PEP and epoch the reserving permit was
    * issued to may correct it. A released reservation commits (an excess is
    * reported through `onBudgetOverspend`); one already committed is a
    * duplicate; one released because no permit ever left the PDP is refused,
@@ -2000,8 +2041,8 @@ export class IdempotencyClaimDomain {
     this.db
       .prepare(
         `INSERT INTO claims (scope_digest, idempotency_key, scope_json, action_class, operation_identity, cache_key,
-           evaluation_id, pdp_boot, pep_id, pep_epoch, state, valid_until_ms, claimed_at_ms, statement_version)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claimed', ?, ?, ?)`,
+           evaluation_id, pdp_boot, pep_id, pep_epoch, state, valid_until_ms, claimed_at_ms, statement_version, audience)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'claimed', ?, ?, ?, ?)`,
       )
       .run(
         input.scopeDigest,
@@ -2017,16 +2058,21 @@ export class IdempotencyClaimDomain {
         input.validUntilMs,
         nowMs,
         this.generationAt(nowMs),
+        input.scope.audience,
       );
     this.inFlight.add(input.evaluationId);
     this.logKeys(input.scopeDigest, input.key, input.evaluationId, null, "claimed", "claimed", nowMs);
   }
 
   private adopt(row: ClaimRow, input: ClaimInput, nowMs: number): void {
+    // The adopting evaluation decides its permit at its own request's
+    // boundary, which a row found through a replaced identifier's scope
+    // ({@link heldRow}) does not name: the boundary moves with the
+    // evaluation, while the row stays under the scope it was claimed in.
     this.db
       .prepare(
         `UPDATE claims SET evaluation_id = ?, cache_key = ?, pdp_boot = ?, pep_id = ?, pep_epoch = ?, valid_until_ms = ?, claimed_at_ms = ?,
-           statement_version = ?
+           statement_version = ?, audience = ?
          WHERE scope_digest = ? AND idempotency_key = ? AND state = 'claimed' AND decision_json IS NULL`,
       )
       .run(
@@ -2038,6 +2084,7 @@ export class IdempotencyClaimDomain {
         input.validUntilMs,
         nowMs,
         this.generationAt(nowMs),
+        input.scope.audience,
         row.scope_digest,
         row.idempotency_key,
       );
