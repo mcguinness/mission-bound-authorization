@@ -65412,9 +65412,21 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > the consent commits the assembled ceiling, and refuses a ceiling configuration would now assemble differently, never substituting one",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned. A ceiling consent (#249 B.4, D875): consentCeiling, at the initial consent and at an Expansion's re-consent, refuses a ceiling configuration would now assemble differently (a reference newly required, or the rendered version superseded), never re-pinning. Proved by mutation: removing the recheck fails the witnesses."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -65483,9 +65495,27 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > the consented ceiling's entries carry the configured current reference, and the drawdown policy is kept",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > assembles the offer's references before it renders, and an offer configuration cannot assemble is not offered",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses. A progressive ceiling consent (#249 B.4, D875) is a new approval: the offer is assembled before the authorization page and an Expansion's review render it, and the consent commits the assembled ceiling. Proved by mutation, each alone: the page's offer, the review's offer or assembledCeilingOffer not assembling, or a consent commit not handed the declarations, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -65540,7 +65570,7 @@
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover and drawdown (an Expansion is a new approval, so it assembles; #249 B.3) are not yet witnessed here (the #249 cutover, D875)"
+    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); token derivation, refresh, token exchange and carryover are not yet witnessed here (the #249 cutover, D875). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
    },
    "tests": [
     {
@@ -65584,9 +65614,33 @@
      "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling carrying a reference carries it into the activation, and refuses a proposal naming another",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a superseded ceiling reference within its retention survives a drawdown, and a retired one refuses",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes, its successor carrying the consented ceiling's reference",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -65606,7 +65660,7 @@
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation, and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
    },
    "tests": [
     {
@@ -65618,6 +65672,12 @@
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
      "level": "unit",
      "surface": "derivation"
     }
