@@ -370,9 +370,8 @@ records, and no effect.
 11. Time is whole seconds with no tolerance on `exp` ("no tolerance for
     clock skew on exp") or on `expires_at`: a mission is past `expires_at`
     once the clock reaches it.
-12. Every issued-token record under a mission is a Tracked Credential, and
-    termination revokes it only at its `aud`; a missionless token is
-    never revoked by a termination.
+12. Every issued-token record under a mission is a Tracked Credential; a
+    missionless token is never revoked by a termination.
 13. The mission log records approvals and issuance, not refusals; a
     presented-token mismatch and a missed reference become security events.
 14. The PS verifies its own person and auth tokens, when presented back to
@@ -419,73 +418,88 @@ records, and no effect.
 28. An agent token that expires after authentication but before an
     issuance commits is 401 `expired_jwt` with Signature-Error, since the
     Signature-Key token "has no codes in this table".
-29. An administrator authenticates under Signature-Key `jwks_uri` with a
-    key enrolled in the PS's configuration, under a deployment-chosen
-    `dwk`, and the PS never fetches it. The companion asks for "a
-    phishing-resistant, sender-constrained mechanism appropriate to the
-    deployment" and gives the `jwks_uri` scheme to a management service.
-30. A sub-agent, an agent off the allowlist, and an owning agent where the
-    PS does not admit owning agents are authenticated callers without
-    authorization: each gets `mission_not_found`, not a 401 or 403.
-31. The request and terminate-member checks run before the lookup, so a
-    malformed request is answered the same for an existing and an absent
-    mission. A reason the caller's class may not give is
-    `invalid_termination_reason` before the lookup.
-32. Idempotency is evaluated after authorization and expiry: a reused
-    `request_id` against an absent mission is `mission_not_found`, not
-    `idempotency_conflict`.
-33. `request_id` must be 22 to 255 visible ASCII characters, 22 base64url
-    characters being 128 bits; the companion's "at least 128 bits of
-    unpredictable or collision-resistant entropy" cannot be measured.
-34. Two requests are equivalent when their bodies are equal as canonical
-    JSON (members sorted), so member order does not matter and an
-    unrecognized member counts; the caller is its class and identifier.
-35. `replacement_s256` is accepted only with `superseded`, only from an
-    administrator, and only naming another mission in its scope; every
-    failure is the same `invalid_request`.
-36. `purpose` is 1 to 1024 characters, optional for the owning agent and
-    required of an administrator.
-37. A terminate after termination by a new `request_id` answers 200 with
-    the first outcome, and that answer is itself a retained receipt.
-38. `accepted_updates` is 0 and `latest_update_s256` absent: this PS
-    accepts no `update`.
-39. Expiry found by `status`, `terminate` or an issuance endpoint is
-    committed at the `expires_at` instant and attributed to the PS
-    scheduler (`ps-scheduler`).
-40. `complete` is false while any Tracked Credential is live and
-    unconfirmed, Person Token or Auth Token alike, and whenever
-    `untracked_access` is configured; a credential counts as attempted
-    once one attempt is recorded.
-41. A `200` with an empty body or a JSON object confirms; a `202` is
-    retried later, not polled; a `400` ends the attempts as rejected; a
-    `401` is retried.
-42. The revocation endpoint comes from the Resource's metadata at each
-    first attempt and is kept for later ones; a document whose `issuer`
-    is not the `aud`, or an endpoint that is not https, establishes none.
-43. Any PS whose signature verifies under `jwks_uri` with `dwk`
+29. An administrator authenticates with a key pinned in the PS's
+    configuration, under Signature-Key `jwks_uri` with a deployment-chosen
+    `dwk`. The companion leaves the mechanism to "the PS's own
+    administrative channel ... appropriate to the deployment".
+30. A sub-agent, an agent off the allowlist, and an owning agent the PS
+    does not admit get `mission_not_found` at the control plane, not slice
+    2's `denied` or `user_unreachable`: such an agent "is an authenticated
+    caller without authorization for the mission", and "A sub-agent MUST
+    NOT call this endpoint".
+31. An administrator lacking the action is unauthorized for the mission:
+    `mission_not_found`.
+32. The body and reason checks, which depend only on the caller's class,
+    run before the lookup; the companion requires authorization "before
+    existence is disclosed".
+33. Idempotency is checked after the authorization lookup: a reused
+    `request_id` against an absent or unauthorized mission is
+    `mission_not_found`, not `idempotency_conflict`, although a reuse
+    "addressed to another mission, fails with `idempotency_conflict`".
+34. `request_id` must be 22 to 255 visible ASCII characters, a necessary
+    condition for "at least 128 bits of ... entropy".
+35. `replacement_s256` with a reason other than `superseded` is refused,
+    not ignored.
+36. A replacement may be in any state, must not be the target, and must
+    lie in the administrator's person scope ("an already approved mission
+    that the caller is authorized to reference").
+37. A replay is logged as `terminate_replayed`, not as a lifecycle event.
+    This reconciles "creates no second lifecycle event" with logging
+    "every authorized termination request received after termination".
+38. Duplicate member names are compared after decoding escapes.
+39. `approved_at` and `expires_at` echo the blob's own strings
+    (`approved_at` to the millisecond); `terminated_at` and `observed_at`
+    are whole seconds.
+40. Expiry is committed at `expires_at`, not at the moment it is detected,
+    and attributed to `ps-scheduler`.
+41. `tracked` includes credentials that expired before termination, and
+    those get no revocation row: the companion says "SHOULD revoke every
+    unexpired Tracked Credential".
+42. `revocation_attempted` counts a credential whose discovery found no
+    endpoint.
+43. `residual_until` covers only live unconfirmed credentials; under
+    `untracked_access` it can be present beside `complete: false`.
+44. `complete` is true for a mission with no Tracked Credentials.
+45. `untracked_access` is a deployment declaration in the configuration,
+    shipped false: this Resource serves only auth-token access.
+46. The revocation endpoint is retained at the first attempt, not at
+    issuance (the companion: "retain ... the revocation endpoint of the
+    Resource in `aud`, when advertised"). A metadata document without a
+    usable https endpoint is terminal and never read again.
+47. A `401` is retried and a `400` is not; a `202` is retried by POSTing
+    again, never polled, since "A recipient with nothing downstream MUST
+    NOT answer 202".
+48. "Rate limited" retries are realized as sequential passes, backoff and
+    spacing; there is no per-recipient limiter.
+49. The restart tests reuse the signing key, since keys are generated per
+    boot; a new key under the same `kid` fails once at the recipient's key
+    cache, until it refreshes.
+50. Three-party only: there are no presented-to-AS recipients, and every
+    credential is PS-issued, none federated.
+51. Any PS whose signature verifies under `jwks_uri` with `dwk`
     `aauth-person.json` may revoke at the Resource, bounded per issuer in
     rate and in entries; there is no PS allowlist, since the revoked set is
     keyed by the verified issuer and a PS can revoke only its own tokens.
-44. The Resource checks the revoked set after the request's signature
+52. The Resource checks the revoked set after the request's signature
     verifies, so a revoked token in a request that fails verification gets
     that failure first. An agent token is never looked up: agent tokens
     are revoked at the PS only.
-45. `requirement=person-token` accompanies `revoked_jwt` for a revoked auth
+53. `requirement=person-token` accompanies `revoked_jwt` for a revoked auth
     token only; a revoked person token gets no requirement.
-46. A repeat revocation keeps the first `exp`; a far-future `exp` is not
+54. A repeat revocation keeps the first `exp`; a far-future `exp` is not
     capped beyond the entries bound; an entry applies while the current
     second is before its `exp`; a revocation whose `exp` has passed is
     answered `200` and holds nothing.
-47. A failure to read or write the revoked set fails closed: 500, and
+55. A failure to read or write the revoked set fails closed: 500, and
     nothing runs or is recorded.
-48. The Resource's check order at `/revoke`: the signature (with the
+56. The Resource's check order at `/revoke`: the signature (with the
     `jwks_uri` scheme and both body components), the signer's document
     (`unsupported_iss`), the issuer's rate, the body (`invalid_request` for
     a body that is not a JSON object, a missing or empty `jti`, or an `exp`
     that is not a positive integer), then the entries bound.
-49. The testkit's switch reads -11's "did not respond, timed out, or
+57. The testkit's switch reads -11's "did not respond, timed out, or
     returned a 5xx or a malformed response" as three modes: a 503 with a
     problem body, a closed connection, and a 200 whose body is not JSON.
-50. The management client's `request_id` is `t-` and 32 hex characters
+58. The management client's `request_id` is `t-` and 32 hex characters
     (128 random bits), and it refuses to send an administrator's terminate
     without a `purpose` or an action the PS does not list.
