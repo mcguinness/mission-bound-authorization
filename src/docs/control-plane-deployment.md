@@ -263,7 +263,7 @@ Mission loader.
 
 | Mutable seam | Key | Isolation | Witness |
 |---|---|---|---|
-| **AS kernel database:** every table in the [transaction inventory](#transaction-inventory) (Mission state and version, counters, child accounting, deferrals, approval records, lifecycle events and deliveries, carryover, schedules, standing payments) | Each table's own key, several the bare Mission identifier | One issuer owns the database: its first open records the issuer (`kernel_issuer`), an open under another issuer is refused, and so is another issuer's record | `kernel-issuer-binding.test.ts`; `control-plane-faults.test.ts` ("one-issuer stores refuse foreign records and independent issuers can retain the same local id") |
+| **AS kernel database:** every table in the [transaction inventory](#transaction-inventory) (Mission state and version, counters, child accounting, deferrals, approval records, lifecycle events and deliveries, carryover, schedules, standing payments) | Each table's own key, several the bare Mission identifier | One issuer owns the database, recorded in `kernel_issuer`: an open under another issuer is refused, and so is another issuer's record. A store written before the record binds only to the one issuer its state names ([upgrade](#upgrading-a-kernel-written-before-1748)) | `kernel-issuer-binding.test.ts`, its upgrade cases included; `control-plane-faults.test.ts` ("one-issuer stores refuse foreign records and independent issuers can retain the same local id") |
 | Terminal tombstones | (issuer, Mission) | Key, in the one-issuer database | `control-plane-fanout.test.ts` ("isolates tombstones per issuer, so one issuer's terminal id does not refuse another's") |
 | Carryover reservations and replacement evidence, derivation reservations, activation policy snapshots, approval rule records | (issuer, Mission); (issuer, replacement); unique (issuer, Mission, operation); (issuer, policy id, version, digest) | Key, in the one-issuer database | The kernel database's witnesses |
 | **AS, per AS:** token issuance index (actor depth) | (`iss`, `jti`) | Key, per AS | None |
@@ -275,7 +275,7 @@ Mission loader.
 | **PDP** (one per deployment, shared by every PEP and issuer it serves): idempotency claims | (scope digest, idempotency key); the scope carries the Mission issuer | Key | `idempotency-claim.test.ts` ("gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's") |
 | Decision Evidence sequences | (issuer, Mission, emitter, role) | Key | `decision-evidence-sequence.test.ts` ("keeps a distinct counter for each Mission and each emitter, across a restart") |
 | `mission` budget counters | (issuer, root Mission) | Key | `budget-reservations.test.ts` ("keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares") |
-| `standing_consent` budget counters | (owner, budget id) | The budget's accounting domain, not the issuer: one standing consent spans every Mission whose committed policy commits that budget, under any issuer whose policy the PDP's budget declaration lists | The same `budget-reservations.test.ts` case |
+| `standing_consent` budget counters | (owner, budget id) | The budget's accounting domain, not the issuer: one standing consent spans every Mission whose committed policy commits that budget, under any issuer whose policy the PDP's budget declaration lists. It is charged only through the trusted budget source (the kernel's committed policy snapshot, never the request) and the declared policy references, so a matching owner and budget id alone charge nothing | The same `budget-reservations.test.ts` case; `budget-reservations.test.ts` ("currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported ..."; "createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding ...") |
 | Claim and budget transitions, budget reservations, settlement conflicts, claims in flight, duration leases | Evaluation identifier, counter or activity; a renewal's scope digest carries the Mission issuer | PDP-minted identifiers, or key | None |
 | Mission Status resolver cache | Mission identifier | One resolver per issuer and scope; a reference or response naming another issuer is refused, and a cached read answers nothing for one | `mission-status-resolver.test.ts` ("never reads a reference naming another issuer"; "returns what an earlier resolve established, never reads the source, and returns nothing once a bound has passed") |
 | **PEP, per composition:** operations, permit redemptions, the connector ledger, reversals and outbox, outcome alerts | `op:<Mission>:...`, the bare Mission identifier | Declared: one Mission issuer per composition (below) | `kernel-mission-view-issuer.test.ts`; `token-profile.test.ts` ("answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token ...") |
@@ -307,7 +307,10 @@ Mission Issuer; the gateway's estate issuer mints only ordinary credentials.
 The operation keys and Execution Evidence sequences therefore key on the bare
 Mission identifier inside that one namespace. Qualifying them would restart
 every Execution Evidence sequence and orphan an operation in flight, so they
-are declared instead.
+are declared instead. The separation holds for a persistent store's whole
+lifetime, restarts included: a PEP's durable stores are never reopened by a
+composition serving another Mission issuer, and nothing in the PEP refuses
+such a reopen.
 
 The Signals outbox migrates legacy raw event keys transactionally, preserving
 stored SET bytes and retry state. The kernel migrates the retired
@@ -503,7 +506,7 @@ a check at the next guarded transaction, after that write committed.
 | `mission_approval_deferrals` | `mission-approval-deferral.ts` | managed (open, completion, direct approval); statement (resolve, cancel, polls, delivery claims) |
 | `mission_deferred_authorization_codes` | `adapters/deferred-mission-approval.ts` | managed (`openOnce`); statement (`stage`) |
 | `recovery_marker` | `recovery-witness.ts` | managed (every guarded transaction; reconciliation) |
-| `kernel_issuer` | `kernel.ts` | boot (the first open records the issuer; on a witnessed store that write is a guarded transaction, so the first open after an upgrade advances the marker and the witness once) |
+| `kernel_issuer` | `kernel.ts` | boot (a store with no record records the issuer its state allows: an empty store's opener, or the one issuer a populated store names; on a witnessed store that write is a guarded transaction, advancing the marker and the witness once) |
 
 Not supported: a way back from an older store by invalidating its authority under
 a new generation (deferred, D820), more than one writer, and more than one host
@@ -605,18 +608,23 @@ observation whose commit point advanced is an optional policy
 
 ### Tenant isolation
 
-Each kernel database belongs to one issuer: its first open records the issuer,
-and it refuses an open under another issuer and another issuer's record. Every
-mutable seam is keyed on the canonical issuer and Mission identity, owned by
-one issuer's store, or under a declared separation (the namespace inventory
+Each kernel database belongs to one issuer, recorded in the database: it
+refuses an open under another issuer and another issuer's record, and a store
+written before the record binds only to the one issuer its state names
+([Upgrading a kernel written before #1748](#upgrading-a-kernel-written-before-1748)).
+Every mutable seam is keyed on the canonical issuer and Mission identity, owned
+by one issuer's store, or under a declared separation (the namespace inventory
 under
 [Control-plane implementation boundary](#control-plane-implementation-boundary)).
 The declared separations are one AS per process, for the provider's memory
 adapter and the device decisions in progress, and one Mission issuer per PEP
-composition, for its operation keys and Execution Evidence sequences. A
-standing consent's shared counter keys on the budget's accounting domain
-(owner and budget id), not on the issuer. A Lifecycle client's grant can be scoped to a tenant's Subjects, or to Subjects
-and requesting clients, and any other Mission answers that client as unknown.
+composition for each persistent store's whole lifetime, for its operation keys
+and Execution Evidence sequences. A standing consent's shared counter keys on
+the budget's accounting domain (owner and budget id), not on the issuer, and
+is charged only through the trusted budget source and the declared policy
+references. A Lifecycle client's grant can be scoped to a tenant's Subjects, or
+to Subjects and requesting clients, and any other Mission answers that client
+as unknown.
 Shared services bind each operation to its issuer: the PDP's idempotency
 claims, Decision Evidence sequences and Mission budget counters, the Signals
 receiver and outbox, and the RAS's redemptions key on the issuer, and each AS
@@ -667,11 +675,18 @@ makes no claim:
 - `control-plane.consistency.emergency-authority`: the refusal of positive
   emergency configuration is witnessed; excluding actions that rely on it has no
   subject, an accepted declared limitation (D874).
-- `control-plane.consistency.isolation`: two separations are declared, not
-  enforced: one AS per process (the provider's memory adapter and the device
-  decisions in progress are process-global), and one Mission issuer per PEP
-  composition (its operation keys and Execution Evidence sequences key on the
-  bare Mission identifier).
+- `control-plane.consistency.isolation`: one AS per process is declared, not
+  enforced: the provider's memory adapter and the device decisions in progress
+  are process-global.
+- `control-plane.consistency.isolation-retaining-consumer`: the Signals
+  receiver's seen jti values are issuer-keyed but not witnessed across issuers.
+- `control-plane.consistency.isolation-retaining-consumer-pdp`: the Decision
+  Evidence key's binding to the qualified identity is stated, not witnessed
+  across issuers.
+- `control-plane.consistency.isolation-retaining-consumer-pep`: one Mission
+  issuer per PEP composition is declared, not enforced, for each persistent
+  store's whole lifetime: the operation keys and Execution Evidence sequences
+  key on the bare Mission identifier.
 - `control-plane.consistency.claim`: the reference makes no claim.
 
 Outside those rows: the provider's Grants and refresh tokens do not survive a
@@ -760,3 +775,22 @@ Residuals:
 An operator with authoritative backups or audit records of creation requests
 can identify a specific affected Mission and revoke it through the Lifecycle
 endpoint. Without them, an empty report does not prove the deployment clean.
+
+## Upgrading a kernel written before #1748
+
+A kernel database written before #1748 has no `kernel_issuer` record. Its
+first open under a later build records one only as the store's own state
+allows:
+
+- A store with no state, empty or opened but never written, is bound to the
+  issuer that opens it.
+- A populated store is bound only to the one issuer its state names: every
+  `issuer` column and the `deployment` of its authority source bindings.
+  Opened under that issuer, it is recorded and serves as before.
+- State naming another issuer, several issuers or none refuses the open with
+  `KernelIssuerMismatchError` and leaves the store unchanged, with no record
+  written; on a witnessed store the witness does not advance.
+
+A store refused for naming another issuer opens under that issuer. No offline
+action records an owner for a store whose state names several issuers or none,
+so such a store stays refused.
