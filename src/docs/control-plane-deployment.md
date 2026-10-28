@@ -602,9 +602,13 @@ makes no claim:
   serialization (#641).
 - `control-plane.consistency.fresh-observation`: the other signed state
   observations are not yet inventoried and witnessed (#1750).
-- `control-plane.consistency.state-surfaces`: the consumer-side reconciliation
-  clauses are not witnessed (#1747); the absence of a parallel snapshot protocol
-  is a documented inventory conclusion (D874).
+- `control-plane.consistency.state-surfaces`: the surfaces are read in the
+  kernel, not over HTTP; the absence of a parallel snapshot protocol is a
+  documented inventory conclusion (D874).
+- `control-plane.consistency.state-surfaces-consumer`: the Signals receiver
+  anchors freshness to each observation, the issuer's time plus
+  `mission_max_stale_seconds`, a stricter stand-in for stream liveness, which
+  it does not read (#1747).
 - `control-plane.consistency.rollback`: one writer on one host only, and no way
   back from an older store but restoring the witnessed one (D820).
 - `control-plane.consistency.rollback-retaining-consumer`: a restore of the
