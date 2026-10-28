@@ -8607,7 +8607,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused before the approval rendering shows anything of the request, and refused at the approval decision, and no Mission is created",
-    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden: on the approval page (browser, device and headless) after derivation and the authentication checks and before the source gates and any rendering, with a notice carrying nothing of the request, no render revision, and the interaction left pending (#1802); and at the decision, before derivation, the source gates or any record, including for authority withdrawn after an authorized rendering"
+    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden: on the approval page (browser, device and headless) after derivation and the authentication checks and before the source gates and any rendering, with a notice carrying nothing of the request, no render revision, and the interaction left pending (#1802); and at the decision, before derivation, the source gates or any record, including for authority withdrawn after an authorized rendering; a refusal no Approver can lift (derivation, unclassified authority, a source gate other than activation) carries its detailed description only to a principal who passes the Approver checks that can be evaluated, and a generic one, with the same status and error code, to any other"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8639,6 +8639,12 @@
     {
      "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
      "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses at the decision an Approver whose approve-for authority is withdrawn after the rendering, creating nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers a refusal no Approver can lift with nothing of the request to a principal without approve-for authority: unclassified authority",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -8727,7 +8733,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an Approver outside the established source's declared activators is refused before the approval rendering shows anything of the request, and refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver",
-    "local": "#1802: the approval page establishes the source for its principal (establishAuthoritySource, gates 1, 2, 4 and 5, and assertAuthorityWithinSource, gate 3, on one resolution) after derivation and before rendering; an Approver outside the activators gets 403 with a notice carrying nothing of the request and no render revision, and the interaction, or the device session, stays pending for an Approver who may activate it. The decision establishes the source again, so activation authority withdrawn after an authorized rendering refuses there and completes the request access_denied."
+    "local": "#1802: the approval page establishes the source for its principal (establishAuthoritySource, gates 1, 2, 4 and 5, and assertAuthorityWithinSource, gate 3, on one resolution) after derivation and before rendering; an Approver outside the activators gets 403 with a notice carrying nothing of the request and no render revision, and the interaction, or the device session, stays pending for an Approver who may activate it. The decision establishes the source again, so activation authority withdrawn after an authorized rendering refuses there and completes the request access_denied. A refusal no Approver can lift that the page reaches first names its cause only to a principal who may activate the source and passes the other Approver checks; any other gets the status, the error code and a generic description."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8855,6 +8861,12 @@
     {
      "file": "src/services/authorization-server/test/device-authorization.test.ts",
      "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver who may not activate the source 403 before rendering, leaving the session pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers a derivation refusal with nothing of the request to a principal who may not activate the source, and names its cause to one who may",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     }
@@ -12886,6 +12898,12 @@
     {
      "file": "src/services/authorization-server/test/device-authorization.test.ts",
      "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login that fails the client's requested acr_values to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login older than the client's requested max_age to sign in again, with nothing of the request",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
