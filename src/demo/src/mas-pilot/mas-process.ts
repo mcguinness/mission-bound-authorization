@@ -21,6 +21,8 @@ export interface MasProcessOptions {
   statusClients: StatusClientRegistration[];
   /** The signing keys: a key ring path (with `kernelStore`, Missions survive a restart), or ephemeral keys. */
   keyRing?: string;
+  /** The key ring's key binding record (#1815), required with `keyRing`. */
+  keyBindings?: string;
   kernelStore?: string;
   /** The kernel store's recovery witness (#250 step 3), required with `kernelStore`. */
   kernelWitness?: string;
@@ -48,6 +50,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
   for (const name of [
     "NODE_OPTIONS",
     "MISSION_KEY_RING",
+    "MISSION_KEY_BINDINGS",
     "MISSION_EPHEMERAL_KEYS",
     "MISSION_KERNEL_STORE",
     "MISSION_KERNEL_WITNESS",
@@ -62,6 +65,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     MAS_PILOT_CONFIG: opts.configPath,
     MAS_PILOT_STATUS_CLIENTS: JSON.stringify(opts.statusClients),
     ...(opts.keyRing ? { MISSION_KEY_RING: opts.keyRing } : { MISSION_EPHEMERAL_KEYS: "1" }),
+    ...(opts.keyBindings ? { MISSION_KEY_BINDINGS: opts.keyBindings } : {}),
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
     ...(opts.kernelWitness ? { MISSION_KERNEL_WITNESS: opts.kernelWitness } : {}),
     ...(opts.joinIntrospectionSecret ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: opts.joinIntrospectionSecret } : {}),

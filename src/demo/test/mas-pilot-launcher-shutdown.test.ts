@@ -85,7 +85,7 @@ async function refusingStore(): Promise<{ url: string; close: () => Promise<void
 
 function launcherEnv(config: string, storeUrl: string): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_OPTIONS: "" };
-  for (const name of ["OPENFGA_CA_CERT", "OPENFGA_STORE_ID", "OPENFGA_MODEL_ID", "MAS_PILOT_MAS_URL", "MAS_PILOT_PDP_KEY", "MISSION_KEY_RING"]) {
+  for (const name of ["OPENFGA_CA_CERT", "OPENFGA_STORE_ID", "OPENFGA_MODEL_ID", "MAS_PILOT_MAS_URL", "MAS_PILOT_PDP_KEY", "MISSION_KEY_RING", "MISSION_KEY_BINDINGS"]) {
     delete env[name];
   }
   return {

@@ -52,7 +52,8 @@ adds its own stores (the deployment contract's §7).
 
 The AS's four signing keys (`as-token`, `as-status`, `as-txn`,
 `as-continuation`) come from a key ring file, created once by
-`pnpm keys init` and named by `MISSION_KEY_RING`, or are generated at each
+`pnpm keys init` and named by `MISSION_KEY_RING` (with its key binding record,
+`MISSION_KEY_BINDINGS`, #1815), or are generated at each
 boot under `MISSION_EPHEMERAL_KEYS=1`. `server.ts`, `pnpm issuance-only` and
 `pnpm as-native` each refuse to start with neither or both
 (`signingKeysFromEnv`, #831 slice 1); a composition that names no source, as

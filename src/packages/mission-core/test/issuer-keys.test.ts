@@ -33,11 +33,14 @@ type Answer =
 function issuer(...answers: Answer[]): {
   fetch: IssuerKeysFetch;
   requests: Record<string, string>[];
+  urls: string[];
 } {
   const requests: Record<string, string>[] = [];
+  const urls: string[] = [];
   let i = 0;
-  const fetch: IssuerKeysFetch = (_url, init) => {
+  const fetch: IssuerKeysFetch = (url, init) => {
     requests.push(init.headers);
+    urls.push(url);
     const answer = answers[Math.min(i++, answers.length - 1)] as Answer;
     if (answer instanceof Error) return Promise.reject(answer);
     if (answer === "hang") {
@@ -53,7 +56,7 @@ function issuer(...answers: Answer[]): {
       }),
     );
   };
-  return { fetch, requests };
+  return { fetch, requests, urls };
 }
 
 const fresh = (seconds: number, etag?: string) => ({
@@ -127,6 +130,38 @@ describe("an issuer's keys under a consumer's trusted roles (@spec #831 C1)", ()
     accessToken: { kids: ["as-token", "as-token-2"], algs: ["ES256"] },
     status: { kids: ["as-status"], algs: ["ES256"] },
   };
+
+  it("never follows a header's jku or x5u: the only URL it fetches is the configured jwks_uri (#1815)", async () => {
+    const t1 = key("as-token");
+    // The issuer publishes only its token key: a trusted Status kid is unknown, so resolving it refreshes.
+    const { fetch, urls } = issuer({ keys: [t1], headers: fresh(300) });
+    const keys = new IssuerKeys({
+      jwksUri: JWKS_URI,
+      roles,
+      fetch,
+      now: clock().now,
+      minRefreshIntervalMs: 0,
+    });
+    const access = keys.resolver("accessToken");
+    for (const pointer of [
+      { jku: "https://attacker.example/jwks" },
+      { x5u: "https://attacker.example/cert.pem" },
+    ]) {
+      expect(material(await access({ kid: "as-token", alg: "ES256", ...pointer } as never))).toBe(
+        publicOf(t1),
+      );
+    }
+    // A trusted kid the set does not publish refreshes the configured set, never the pointer.
+    await expect(
+      keys.resolver("status")({
+        kid: "as-status",
+        alg: "ES256",
+        jku: "https://attacker.example/jwks",
+      } as never),
+    ).rejects.toEqual(refusal("unknown_kid"));
+    expect(urls.length).toBeGreaterThan(0);
+    expect(new Set(urls)).toEqual(new Set([JWKS_URI]));
+  });
 
   it("resolves a trusted kid to its key, and refuses an untrusted kid, no kid or another algorithm without fetching", async () => {
     const t1 = key("as-token");

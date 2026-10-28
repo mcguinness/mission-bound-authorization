@@ -17,7 +17,8 @@
  *   array of `{ "client_id", "jwks" }`, each the PUBLIC half of a key generated
  *   where that client runs; registered here with the `mission_status` grant
  *   only (#1407). The PDP's (`separated_mas.pdp_client_id`) is one of them.
- * - `MISSION_KEY_RING` or `MISSION_EPHEMERAL_KEYS=1`, and optionally
+ * - `MISSION_KEY_RING` (with its key binding record, `MISSION_KEY_BINDINGS`,
+ *   #1815) or `MISSION_EPHEMERAL_KEYS=1`, and optionally
  *   `MISSION_KERNEL_STORE`, as for the standalone authorization server
  *   (`signingKeysFromEnv`, `kernelStoreFromEnv`): a key ring and a kernel
  *   store keep the keys, the Missions and the join evidence events (#1560)
