@@ -260,7 +260,7 @@ describe("declared contract versions (@spec runtime#resource-contract, #249)", (
     }
   });
 
-  it("accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree", () => {
+  it("accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree on every required operation", () => {
     const REVERSE = "payments:payment.reverse";
     // Only the current version defines it; the superseded one predates it.
     const d = declarations(
@@ -285,8 +285,10 @@ describe("declared contract versions (@spec runtime#resource-contract, #249)", (
     // approval-time reader.
     expect(d.requiresReference(`${RS}/payments/p-1`, REVERSE)).toBe(true);
     expect(d.forEntry({ ...entry, actions: [REVERSE] }).required).toBe(true);
+    // An operation outside the list needs no reference at enforcement, while
+    // approval records one for every entry on the resource (#1847, D989).
     expect(d.requiresReference(`${RS}/invoices/inv-1`, "payments:invoice.read")).toBe(false);
-    expect(d.forEntry({ ...entry, actions: ["payments:invoice.read"] }).required).toBe(false);
+    expect(d.forEntry({ ...entry, actions: ["payments:invoice.read"] }).required).toBe(true);
   });
 
   it("loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions", () => {
@@ -322,9 +324,16 @@ describe("declared contract versions (@spec runtime#resource-contract, #249)", (
     expect(d.forEntry(entry)).toEqual({ current: [V2], required: true });
     expect(d.isCurrentFor(entry, V2)).toBe(true);
     expect(d.isCurrentFor(entry, V1)).toBe(false);
+    // Approval is per resource (#1847, D989): a read-only entry on it records
+    // the current reference, and one listing an action no current version
+    // defines is required with nothing current to record, so it is refused.
+    expect(d.forEntry({ ...entry, actions: ["payments:invoice.read"] })).toEqual({
+      current: [V2],
+      required: true,
+    });
     expect(d.forEntry({ ...entry, actions: ["payments:unlisted"] })).toEqual({
       current: [],
-      required: false,
+      required: true,
     });
     expect(d.forEntry({ ...entry, resource: "https://other.test/mcp" })).toEqual({
       current: [],

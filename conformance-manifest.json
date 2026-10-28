@@ -31814,7 +31814,7 @@
     },
     {
      "file": "src/packages/mission-core/test/resource-contract.test.ts",
-     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree on every required operation",
      "level": "unit",
      "surface": "deployment-documentation"
     },

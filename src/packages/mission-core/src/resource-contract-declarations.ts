@@ -338,15 +338,6 @@ function parseDeclaration(raw: unknown, path: string): ResourceContractDeclarati
   };
 }
 
-/**
- * Whether an entry's action value names `operation`: the same identifier, or
- * an action family whose name `operation` extends at a segment boundary.
- */
-function actionNames(value: string, operation: string): boolean {
-  if (value === operation) return true;
-  return value.endsWith(".*") && operation.startsWith(value.slice(0, -1));
-}
-
 /** The reference of one declared version. */
 function refOf(
   declaration: ResourceContractDeclaration,
@@ -363,7 +354,11 @@ export interface EntryContractConfiguration {
    * action family the entry lists.
    */
   current: ResourceContractRef[];
-  /** Whether configuration requires a reference for the entry's `resource`. */
+  /**
+   * Whether configuration requires a reference for the entry's `resource`:
+   * some declaration whose resource set contains the entry's requires one
+   * for any operation (#1847, D989).
+   */
   required: boolean;
 }
 
@@ -464,9 +459,12 @@ export class ResourceContractDeclarations {
     actions: readonly string[];
   }): EntryContractConfiguration {
     const applicable = this.declarations.filter((d) => resourceWithin(entry, d));
-    const required = applicable.some((d) =>
-      entry.actions.some((a) => d.requires_reference.some((op) => actionNames(a, op))),
-    );
+    // @spec resource-access#resource-contract (#1847, D989): the approval
+    // rule is per resource: configuration "states whether an entry's
+    // `resource` requires a reference", so an entry on a resource that
+    // requires one for any operation records it, a read-only entry
+    // included. Enforcement stays per operation ({@link requiresReference}).
+    const required = applicable.some((d) => d.requires_reference.length > 0);
     const current: ResourceContractRef[] = [];
     for (const d of applicable) {
       const v = d.versions.find((x) => x.state === "current");
