@@ -4254,12 +4254,11 @@ and whether instance attribution is required.
   {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}},
   establish its trusted association with the separately authenticated
   delegate, and bind the output token to an instance-unique key whose
-  possession it verified in that exchange.
-- Context is mapped from that validated instance into the output
-  audience's Consumer Scope under
-  {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}.
-- The AS MUST NOT use context copied or remapped from an input token as
-  a substitute for the presenting instance's evidence. For example, when
+  possession it verified in that exchange. Context is mapped from that
+  validated instance into the output audience's Consumer Scope under
+  {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The
+  AS MUST NOT use context copied or remapped from an input token as a
+  substitute for the presenting instance's evidence. For example, when
   instance B is authorized to continue work from instance A, output
   context names B; A's context does not become B's identity by remapping
   it.
