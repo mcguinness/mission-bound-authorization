@@ -1,6 +1,7 @@
 /**
  * @spec cross-org-delegation#chain-presentation — the Chain Presentation
  * parser (closure, bounds, hop alignment) and the chain digest determinism.
+ * The envelope's chain member is the substrate's `aat_chain` (#1759).
  */
 import { describe, expect, it } from "vitest";
 import { ChainPresentationError, chainDigest, parseChainPresentation } from "../src/index.js";
@@ -15,18 +16,27 @@ describe("Chain Presentation parsing (@spec cross-org-delegation#chain-presentat
   it("parses a well-formed presentation with aligned actor credentials", () => {
     const p = parseChainPresentation(
       enc({
-        chain: [JWS, JWS],
+        aat_chain: [JWS, JWS],
         actor_credentials: [{ hop: 1, type: "workload-attestation+jwt", credential: "x.y.z" }],
       }),
       BOUNDS,
     );
-    expect(p.chain.length).toBe(2);
+    expect(p.aat_chain.length).toBe(2);
     expect(p.actor_credentials?.[0]?.hop).toBe(1);
   });
 
   it("refuses an unknown top-level member (closed envelope)", () => {
-    expect(() => parseChainPresentation(enc({ chain: [JWS], extra: 1 }), BOUNDS)).toThrow(
+    expect(() => parseChainPresentation(enc({ aat_chain: [JWS], extra: 1 }), BOUNDS)).toThrow(
       /unknown top-level member/,
+    );
+  });
+
+  it("refuses the -01 chain member as an unknown top-level member (#1759)", () => {
+    expect(() => parseChainPresentation(enc({ chain: [JWS] }), BOUNDS)).toThrow(
+      /unknown top-level member: chain/,
+    );
+    expect(() => parseChainPresentation(enc({ aat_chain: [JWS], chain: [JWS] }), BOUNDS)).toThrow(
+      /unknown top-level member: chain/,
     );
   });
 
@@ -34,7 +44,7 @@ describe("Chain Presentation parsing (@spec cross-org-delegation#chain-presentat
     expect(() =>
       parseChainPresentation(
         enc({
-          chain: [JWS],
+          aat_chain: [JWS],
           actor_credentials: [{ hop: 0, type: "t", credential: "c", who: "x" }],
         }),
         BOUNDS,
@@ -45,7 +55,7 @@ describe("Chain Presentation parsing (@spec cross-org-delegation#chain-presentat
   it("refuses a misaligned hop index", () => {
     expect(() =>
       parseChainPresentation(
-        enc({ chain: [JWS], actor_credentials: [{ hop: 5, type: "t", credential: "c" }] }),
+        enc({ aat_chain: [JWS], actor_credentials: [{ hop: 5, type: "t", credential: "c" }] }),
         BOUNDS,
       ),
     ).toThrow(/misaligned/);
@@ -54,39 +64,39 @@ describe("Chain Presentation parsing (@spec cross-org-delegation#chain-presentat
   it("refuses a typeless actor credential", () => {
     expect(() =>
       parseChainPresentation(
-        enc({ chain: [JWS], actor_credentials: [{ hop: 0, credential: "c" }] }),
+        enc({ aat_chain: [JWS], actor_credentials: [{ hop: 0, credential: "c" }] }),
         BOUNDS,
       ),
     ).toThrow(/require a type/);
   });
 
   it("refuses a chain over the hop bound before parsing further", () => {
-    expect(() => parseChainPresentation(enc({ chain: [JWS, JWS, JWS, JWS, JWS] }), BOUNDS)).toThrow(
-      /hop bound/,
-    );
+    expect(() =>
+      parseChainPresentation(enc({ aat_chain: [JWS, JWS, JWS, JWS, JWS] }), BOUNDS),
+    ).toThrow(/hop bound/);
   });
 
   it("refuses a presentation over the size bound", () => {
     expect(() =>
-      parseChainPresentation(enc({ chain: [JWS] }), { maxHops: 4, maxBytes: 10 }),
+      parseChainPresentation(enc({ aat_chain: [JWS] }), { maxHops: 4, maxBytes: 10 }),
     ).toThrow(/size bound/);
   });
 
   it("refuses a non-compact-JWS chain element", () => {
-    expect(() => parseChainPresentation(enc({ chain: ["not-a-jws"] }), BOUNDS)).toThrow(
+    expect(() => parseChainPresentation(enc({ aat_chain: ["not-a-jws"] }), BOUNDS)).toThrow(
       /compact JWS/,
     );
   });
 
   it("refuses an empty chain", () => {
-    expect(() => parseChainPresentation(enc({ chain: [] }), BOUNDS)).toThrow(/non-empty/);
+    expect(() => parseChainPresentation(enc({ aat_chain: [] }), BOUNDS)).toThrow(/non-empty/);
   });
 
   it("refuses duplicate hop entries", () => {
     expect(() =>
       parseChainPresentation(
         enc({
-          chain: [JWS],
+          aat_chain: [JWS],
           actor_credentials: [
             { hop: 0, type: "t", credential: "a" },
             { hop: 0, type: "t", credential: "b" },

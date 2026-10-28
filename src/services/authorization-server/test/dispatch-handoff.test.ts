@@ -1733,3 +1733,139 @@ describe("Dispatch Handoff: the exchange is one counted derivation (@spec deriva
     expect(countOf(instance.missionId)).toBe(c0 + 1);
   });
 });
+
+/**
+ * @spec derivation-limits#counted-operations (#935, D942): a derivation that
+ * fails in process before its artifact is delivered is not counted. Each
+ * Dispatch Handoff leg settles its FRESH reservation with the response: a 200
+ * releases it as accepted, and a request that fails after the handler (here a
+ * request-path drain that throws, which answers 500 with no token) settles it
+ * as not accepted, returning the count exactly once. A held reservation a
+ * retry replays, a fence refusal after a 200 and an ambiguous delivery keep
+ * their counts (D771, D772, D874).
+ */
+describe("the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942)", () => {
+  /** The next request-path drain throws, once. */
+  const drainThrowsOnce = () => {
+    const drain = as.kernel.drainLifecycleOutbox.bind(as.kernel);
+    let thrown = false;
+    const spy = vi.spyOn(as.kernel, "drainLifecycleOutbox").mockImplementation(async () => {
+      if (!thrown) {
+        thrown = true;
+        throw new Error("injected: the request-path drain failed");
+      }
+      return drain();
+    });
+    return { thrown: () => thrown, disarm: () => spy.mockRestore() };
+  };
+  /** The derivation reservations a Mission holds under an operation prefix, in creation order. */
+  const reservations = (missionId: string, prefix: string) =>
+    as.kernel.db
+      .prepare(
+        "SELECT state, settled_by FROM derivation_reservations WHERE mission_id = ? AND operation_id LIKE ? ORDER BY rowid",
+      )
+      .all(missionId, `${prefix}%`) as Array<{ state: string; settled_by: string | null }>;
+  const consumed = (grant: string) =>
+    as.kernel.dispatchHandoffs.db
+      .prepare("SELECT state FROM dispatch_handoff_consumed WHERE jti = ?")
+      .get(decodeJwt(grant).jti as string) as { state: string } | undefined;
+  /** The post-handler failure: Koa's own 500, which carries no token. */
+  const expectNoTokenFailure = async (res: Response) => {
+    const text = await res.text();
+    expect(res.status, text).toBe(500);
+    expect(text).toBe("Internal Server Error");
+  };
+
+  it("Dispatch Handoff exchange: a 200 releases its reservation and counts once; a drain failure after the handler answers 500 with no grant and settles the reservation as not accepted, returning the count once", async () => {
+    const instance = await dispatchInstance();
+    const before = as.kernel.get(instance.missionId)?.derivation_count ?? 0;
+    // Control: a successful exchange counts once and its reservation is released.
+    const ok = await handoff(instance.token);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    expect(reservations(instance.missionId, "dispatch-handoff-exchange:")).toEqual([
+      { state: "released", settled_by: null },
+    ]);
+
+    const drain = drainThrowsOnce();
+    try {
+      await expectNoTokenFailure(await handoff(instance.token));
+    } finally {
+      drain.disarm();
+    }
+    expect(drain.thrown()).toBe(true);
+    // The failed exchange returned its count, exactly once.
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    expect(reservations(instance.missionId, "dispatch-handoff-exchange:")).toEqual([
+      { state: "released", settled_by: null },
+      { state: "refunded", settled_by: "as:in-process-failure" },
+    ]);
+  });
+
+  it("Dispatch Handoff redemption: a drain failure after the handler answers 500 with no token and settles its fresh reservation as not accepted, returning the count once; the grant stays consumed, so a retry is refused as already redeemed", async () => {
+    const instance = await dispatchInstance();
+    const grant = await grantFor(instance);
+    const before = as.kernel.get(instance.missionId)?.derivation_count ?? 0;
+    const drain = drainThrowsOnce();
+    try {
+      await expectNoTokenFailure(await redeem(grant));
+    } finally {
+      drain.disarm();
+    }
+    expect(drain.thrown()).toBe(true);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+    expect(reservations(instance.missionId, "dispatch-handoff:")).toEqual([
+      { state: "refunded", settled_by: "as:in-process-failure" },
+    ]);
+    expect(consumed(grant)?.state).toBe("consumed");
+    const retry = await err(await redeem(grant));
+    expect(retry.status).toBe(400);
+    expect(retry.error_description).toBe("dispatch handoff grant was already redeemed");
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before);
+  });
+
+  it("Dispatch Handoff redemption: a 200 releases its fresh reservation and counts once; a held reservation a retry replays keeps its count though that retry's drain fails", async () => {
+    // Control: a successful redemption.
+    const first = await dispatchInstance();
+    const firstGrant = await grantFor(first);
+    const firstBefore = as.kernel.get(first.missionId)?.derivation_count ?? 0;
+    const ok = await redeem(firstGrant);
+    expect(ok.status, JSON.stringify(await ok.clone().json())).toBe(200);
+    expect(as.kernel.get(first.missionId)?.derivation_count).toBe(firstBefore + 1);
+    expect(reservations(first.missionId, "dispatch-handoff:")).toEqual([{ state: "released", settled_by: null }]);
+
+    // A held reservation: the first attempt fails inside the handler after
+    // reserving, which keeps the reservation pending for the retry.
+    const instance = await dispatchInstance();
+    const grant = await grantFor(instance);
+    const before = as.kernel.get(instance.missionId)?.derivation_count ?? 0;
+    const real = as.kernel.gateActive.bind(as.kernel);
+    let injected = false;
+    const gate = vi.spyOn(as.kernel, "gateActive").mockImplementation((id: string) => {
+      if (!injected && (as.kernel.get(id)?.derivation_count ?? 0) > before) {
+        injected = true;
+        throw new GateError("mission_not_active", "injected issuance failure");
+      }
+      return real(id);
+    });
+    try {
+      expect((await err(await redeem(grant))).status).toBe(400);
+    } finally {
+      gate.mockRestore();
+    }
+    expect(injected).toBe(true);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    // The retry replays the held reservation, and its drain then fails. The
+    // count an earlier attempt took stays: a replayed reservation is not
+    // settled with this response.
+    const drain = drainThrowsOnce();
+    try {
+      await expectNoTokenFailure(await redeem(grant));
+    } finally {
+      drain.disarm();
+    }
+    expect(drain.thrown()).toBe(true);
+    expect(as.kernel.get(instance.missionId)?.derivation_count).toBe(before + 1);
+    expect(reservations(instance.missionId, "dispatch-handoff:")).toEqual([{ state: "released", settled_by: null }]);
+  });
+});
