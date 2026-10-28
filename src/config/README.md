@@ -263,7 +263,13 @@ composition's authorization server and the `at+jwt` token profile, and the
 dev ordinary-token route mints for it; the delegate policy (`delegates`, each client with
 its depth ceiling); the scope mapping, which is the credential-authority
 adapter (`scope_actions`, each `scope` value to the actions it carries at the
-payments resource; a value it does not cover maps to nothing); and the
+payments resource; a value it does not cover maps to nothing). A value is an
+action array, or `{actions, resource_contract}` stating the payments contract
+it grants those actions under (#1847, D989): the credential's authority is
+one entry per stated contract, the values stating none in an entry of their
+own, never combined. A value's contract is never changed, so a new
+contract takes a new scope value; the loader sees one version, so repository
+review holds this; and the
 mapping contract the join applies (`mapping_contract`). The contract states,
 in a closed vocabulary that names the one behavior this join implements:
 the subject mapping (`identity`: the credential's issuer-qualified subject
@@ -287,7 +293,8 @@ failure semantics (`mission_binding_failed`). Read by `@mission/demo-data`
   the scope mapping.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown and missing members, any mapping value this join does not
-  implement, a client instance, a non-positive version, and a
+  implement, a scope value stating a contract the declarations do not
+  support for its actions, a client instance, a non-positive version, and a
   `join_resource` that is not an absolute URI or names a governed resource. A composition
   that would mount the join route refuses to start when no contract is
   declared, before it connects to anything.

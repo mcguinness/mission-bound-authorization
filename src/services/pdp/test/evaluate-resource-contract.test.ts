@@ -208,13 +208,13 @@ describe("the request's reference must equal an authorizing entry's (@spec authz
  * nothing, so only the match decides, whichever of the two references the
  request presents.
  */
-describe("a joined credential and the Mission entry agree only on the same contract, absence included (@spec runtime#resource-contract, #1847, D989)", () => {
+describe("a joined credential and the Mission entry agree only on the same contract, absence included (@spec runtime#resource-contract, authzen#context-resource-contract, #1847, D989)", () => {
   it.each([
     ["a legacy unpinned entry with a legacy unpinned bound may read (subject to the other checks)", null, null, "permit"],
     ["a newly pinned entry with a legacy unpinned bound refuses: a credential under the matching mapping is needed", V2, null, "resource_contract_drift"],
     ["a legacy unpinned entry with a newly pinned bound refuses: a fresh approval establishes the pin", null, V2, "resource_contract_drift"],
     ["an entry pinned to one version with a bound pinned to another refuses, though both remain supported", V1, V2, "resource_contract_drift"],
-  ] as const)("%s", async (_case, entry, bound, outcome) => {
+  ] as const)("whichever reference the request presents, %s", async (_case, entry, bound, outcome) => {
     // Presenting the credential's reference, then the Mission entry's.
     expect(await reason(request(bound, bound), options(BOTH, view(entry)))).toBe(outcome);
     expect(await reason(request(entry, bound), options(BOTH, view(entry)))).toBe(outcome);

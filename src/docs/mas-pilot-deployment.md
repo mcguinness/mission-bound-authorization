@@ -112,6 +112,15 @@ resolution (`MappingContractCache`):
   authority: the PEP refuses it `out_of_authority` before any decision.
 - The scope mapping is part of the contract, so the credential-authority
   mapping has the same freshness.
+- A scope value is an action array, or `{actions, resource_contract}`
+  stating the contract it grants those actions under, validated against the
+  payments contract declarations when the document is parsed (#1847, D989).
+  The credential's authority is one entry per stated contract, the values
+  stating none in an entry of their own, never combined. A value's contract
+  never changes: an install whose newer version gives an existing value
+  another contract, one where it stated none, or none where it stated one is
+  refused, so a credential issued under an earlier mapping never gains a
+  contract. A new contract takes a new scope value.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§9).
