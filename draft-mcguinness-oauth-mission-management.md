@@ -628,8 +628,10 @@ returns a signed response carrying:
 : REQUIRED. A string. An opaque, single-use token binding the caller,
   the `operation`, the `filter` (with `suspend_until` and `on_expiry`
   when present), and the evaluated membership itself: the exact set
-  of `mission_id` values matched at dry-run time
-  ({{bulk-token-security}}).
+  of `mission_id` values matched at dry-run time, each with the
+  Mission's state version read in that same evaluation
+  ({{I-D.draft-mcguinness-oauth-mission-status}},
+  {{bulk-token-security}}).
 
 `bulk_token_expires_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} date-time. The bulk token's
