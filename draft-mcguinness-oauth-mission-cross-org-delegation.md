@@ -662,8 +662,12 @@ size; a chain whose hops carry thumbprint-only confirmations; a named
 hop whose credential subject differs from its `act`, whose bound key
 differs from the hop `cnf.jwk`, or whose credential issuer is
 untrusted, expired, or revoked; an unmapped authorization-details
-entry beyond the mapped capability entry; and valid delegated
-authority denied by local entitlement or local policy.
+entry beyond the mapped capability entry; a `mission_constraints`
+member missing, widened, or carrying an unknown key at either hop; a
+direct invocation whose proof names another tool, and a replayed
+exchange proof; a leaf argument constraint the local token cannot
+represent; and valid delegated authority denied by local entitlement
+or local policy.
 
 # End-to-End Example (Non-Normative) {#example}
 
