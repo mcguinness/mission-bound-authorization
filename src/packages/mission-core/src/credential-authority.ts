@@ -12,8 +12,6 @@
  * enforcement point never permits.
  */
 
-import type { AATConstraint, AATTools } from "./attenuation-chain.js";
-import { parseAatToolId } from "./attenuation-chain.js";
 import type { AuthorityEntry, TerminalWhenCondition } from "./authority-entry.js";
 import { conditionCanonicalBytes } from "./authority-subset.js";
 import {
@@ -251,71 +249,6 @@ export function parseCredentialAuthority(value: unknown): readonly CredentialAut
         actions: [...raw.actions],
         ...(resourceContract !== undefined ? { resource_contract: resourceContract } : {}),
         ...(constraints !== undefined ? { constraints } : {}),
-      };
-      return Object.freeze(entry);
-    }),
-  );
-}
-
-function amountCapFromRange(
-  name: string,
-  c: AATConstraint,
-  at: string,
-): { amount: string; currency: string } {
-  if (c.constraint_type !== "range" || typeof c.max !== "number" || c.min !== undefined) {
-    throw new CredentialAuthorityError(`${at}.${name} must be a range carrying only max`);
-  }
-  const amount = String(c.max);
-  // The deployment's argument naming (`amount_` and the currency in lower
-  // case, attenuation#root-mapping "under the deployment's rules"): exactly
-  // three lower-case ASCII letters, mapped to the upper-case code; any other
-  // suffix is malformed, never folded (#1595, D727).
-  const suffix = name.slice("amount_".length);
-  const currency = /^[a-z]{3}$/.test(suffix) ? suffix.toUpperCase() : "";
-  if (!isCurrencyCode(currency) || !isValidAmount(amount))
-    throw new CredentialAuthorityError(`${at}.${name} is malformed`);
-  return { amount, currency };
-}
-
-/**
- * @spec attenuation#root-mapping — an attenuation token's `tools` map as
- * credential authority entries, one per tool. Strict: a tool argument this
- * enforcement point cannot evaluate (an unknown argument, a `min` bound, an
- * `exact` constraint) refuses, so a narrowing never disappears in mapping.
- */
-export function credentialEntriesFromAatTools(
-  tools: AATTools,
-): readonly CredentialAuthorityEntry[] {
-  return Object.freeze(
-    Object.entries(tools).map(([toolId, args]) => {
-      const at = `tools[${JSON.stringify(toolId)}]`;
-      const { resource, action } = parseAatToolId(toolId);
-      const constraints: NonNullable<CredentialAuthorityEntry["constraints"]> = {};
-      for (const [name, c] of Object.entries(args)) {
-        if (name === "vendor") {
-          if (
-            c.constraint_type !== "enum" ||
-            !Array.isArray(c.values) ||
-            !c.values.every(nonEmptyString)
-          ) {
-            throw new CredentialAuthorityError(
-              `${at}.vendor must be an enum of vendor identifiers`,
-            );
-          }
-          constraints.vendors = [...c.values];
-        } else if (name.startsWith("amount_")) {
-          if (constraints.max_amount)
-            throw new CredentialAuthorityError(`${at} carries more than one amount bound`);
-          constraints.max_amount = amountCapFromRange(name, c, at);
-        } else {
-          throw new CredentialAuthorityError(`${at}.${name} is not enforceable here`);
-        }
-      }
-      const entry: CredentialAuthorityEntry = {
-        type: "mission_resource_access",
-        resource,
-        actions: [action],
-        ...(Object.keys(constraints).length > 0 ? { constraints } : {}),
       };
       return Object.freeze(entry);
     }),

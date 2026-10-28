@@ -53,6 +53,7 @@ import {
   verifyStatusListToken,
 } from "../src/index.js";
 import { aiAgents } from "./actor-profiles.helper.js";
+import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.containment.test";
@@ -466,7 +467,8 @@ describe("delegation surfaces bound to the effective set", () => {
       missionId: m.id,
       aud: RES_PAY,
       clientId: "ap-agent",
-      cnfJkt: "test-jkt",
+      cnfJwk: HOLDER_JWK,
+      operations: TEST_OPERATIONS,
       delMaxDepth: 0,
     });
     expect(Object.keys(tools)).toEqual([`${RES_PAY}#payments:invoice.read`]);

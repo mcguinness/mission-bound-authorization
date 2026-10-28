@@ -26,6 +26,8 @@ import {
   type DpopKeys,
   dpopFetch,
   dpopProofFor,
+  paymentsAatToolId,
+  signAatPop,
   EVIDENCE_UNAVAILABLE_ERROR,
   EvidenceStore,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
@@ -298,9 +300,11 @@ describe("the Mission access-token profile is met before any claim is trusted (@
   it("refuses an at+jwt presented as an attenuation root", async () => {
     // Signed under the root role's key, so the profile's type check is what refuses it.
     const token = await mint({}, { kid: "as-attenuation" }, rootSignKey);
-    await expect(
-      server.validateAttenuationChain([token], await dpopProofFor(holder, HTU, HTM, token), HTU, HTM),
-    ).rejects.toThrow(/typ must be aat\+jwt/);
+    const args = JSON.stringify({ invoice_id: "inv-1" });
+    const pop = await signAatPop({ leaf: token, holderKey: holder.privateKey, tool: paymentsAatToolId("get_invoice"), argumentsJson: args });
+    await expect(server.validateAatPresentation({ aat_chain: [token], aat_pop: pop }, "get_invoice", args)).rejects.toThrow(
+      /unexpected "typ" JWT header value/,
+    );
   });
 
   it("never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route", async () => {
