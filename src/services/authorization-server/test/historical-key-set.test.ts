@@ -17,10 +17,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildAuthorizationServer,
   compromiseSigningKeyGeneration,
-  HISTORICAL_KEY_SET_MEDIA_TYPE,
   historicalKeys,
   initSigningKeyRing,
-  JWKS_MAX_AGE_SECONDS,
   signHistoricalKeySet,
 } from "../src/index.js";
 
@@ -132,8 +130,11 @@ describe("an AS across a Status key compromise (@spec status#historical-key-set,
       expect(meta.mission_historical_jwks_uri).toBe(`${ISSUER}/historical-jwks`);
       const res = await fetch(meta.mission_historical_jwks_uri as string);
       expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toBe(HISTORICAL_KEY_SET_MEDIA_TYPE);
-      expect(res.headers.get("cache-control")).toBe(`max-age=${JWKS_MAX_AGE_SECONDS}`);
+      // Literals, not the server's own constants, so a wrong value the server
+      // serves cannot pass (#1813 review): the registered media type, and an
+      // explicit freshness lifetime of the AS's choosing.
+      expect(res.headers.get("content-type")).toBe("application/jwk-set+jwt");
+      expect(res.headers.get("cache-control")).toMatch(/^max-age=[1-9][0-9]*$/);
       const jwksRes = await fetch(`${ISSUER}/jwks`);
       expect(res.headers.get("etag")).toBe(jwksRes.headers.get("etag"));
       const jws = await res.text();
