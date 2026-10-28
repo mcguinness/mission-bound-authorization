@@ -24,6 +24,7 @@ import {
 } from "@mission/mcp-payments";
 import { AccessRequestService } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -56,12 +57,12 @@ const VIEW: MissionView = {
   version: 1,
   authority_hash: "sha-256:m6hash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -168,6 +169,9 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       approved_at: approval?.approved_at as string,
       approved_until: approval?.approved_until as string,
       parameter_digest: approval?.parameter_digest as string,
+      // The approved Resource the ARS bound, with the denied request's contract
+      // reference (#249, D865).
+      ...(approval?.resource ? { resource: approval.resource } : {}),
     });
     expect(permitted.permitted, JSON.stringify(permitted)).toBe(true);
     expect(permitted.decision?.decision).toBe(true);
@@ -181,6 +185,9 @@ d("M6 ARAP reevaluate (scenario 5)", () => {
       id: "apr_forged",
       approved_at: new Date().toISOString(),
       parameter_digest: "sha-256:WRONG",
+      // Bound to the right Resource, contract reference included (#249, D865),
+      // so only the digest is wrong.
+      resource: { properties: { resource_contract: VIEW.authority_set[0]?.resource_contract } },
     });
     expect(denied.denial_reason).toBe("action_approval_required");
     expect(badApproval.permitted).toBe(false);

@@ -33,7 +33,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 
 import { type Server } from "node:http";
-import { APPROVAL_FLOOR, CANONICAL_RESOURCE } from "@mission/demo-data";
+import { APPROVAL_FLOOR, CANONICAL_RESOURCE, contractsRequiring } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   compactVerify,
@@ -47,7 +47,7 @@ import {
   jwtVerify,
   SignJWT,
 } from "jose";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   asTokenSigningKeyPair,
   BARE_REFUSAL_MEMBERS,
@@ -1566,6 +1566,47 @@ describe("carryover completion and result retrieval (@spec child-delegation#carr
     const newChild = as.kernel.get(replacement?.mission_id as string);
     expect(newChild?.parent?.id).toBe(body.mission_id);
     expect(newChild?.approval_basis.type).toBe("direct");
+  });
+
+  // @spec resource-access#resource-contract, child-delegation#carryover-manifest
+  // (#249, #1845, D875): an Expansion is a new approval, so where configuration
+  // requires a reference for the successor's actions the successor carries an
+  // assembled one. The manifest commits that same construction, so completion's
+  // unchanged mismatch check (the created successor's authority_hash equals the
+  // manifest's successor_authority_hash) passes and the child is carried.
+  it("completes a carryover under a configuration requiring a reference for the successor's actions: the manifest commits the assembled successor the approval creates (#1845)", async () => {
+    const requiring = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(
+      contractsRequiring([
+        "payments:payment.schedule",
+        "payments:payment.schedule.cancel",
+        "payments:payment.execute",
+        "payments:payment.reverse",
+        "payments:remittance.send",
+      ]),
+    );
+    try {
+      const pred = await predecessorWithChild();
+      const opened = await expandViaExchange(pred.accessToken, "Widen to add remittance", [
+        "payments:invoice.read",
+        "payments:remittance.send",
+      ]);
+      const openedBody = (await opened.json()) as { deferral_code?: string; error?: string };
+      expect(opened.status, JSON.stringify(openedBody)).toBe(400);
+      approveDeferral(openedBody.deferral_code as string);
+      const done = await pollExpansion(openedBody.deferral_code as string);
+      const body = (await done.json()) as {
+        mission_id?: string;
+        carryover_replacements?: Array<{ mission_id: string; related_to?: string }>;
+      };
+      expect(done.status, JSON.stringify(body)).toBe(200);
+      const successor = as.kernel.get(body.mission_id as string);
+      const remit = successor?.authority_set.find((e) => e.actions.includes("payments:remittance.send"));
+      expect(remit?.resource_contract).toBeDefined();
+      expect(body.carryover_replacements).toEqual([expect.objectContaining({ related_to: pred.childId })]);
+      expect(as.kernel.get(pred.childId)?.termination?.carried_to).toBe(body.carryover_replacements?.[0]?.mission_id);
+    } finally {
+      requiring.mockRestore();
+    }
   });
 
   // @spec RFC 9449 Section 4.3 (#1173): the retriever's proof is complete and fresh.

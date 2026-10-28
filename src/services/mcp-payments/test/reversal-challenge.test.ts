@@ -25,7 +25,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, type JWTPayload, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { EvaluationContextBindingDeclarations } from "@mission/core";
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type EvaluationRequest,
@@ -97,14 +97,14 @@ const view = (): MissionView => ({
   version: 1,
   authority_hash: MISSION_CLAIM.authority_hash,
   authority_set: [
-    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"], constraints: ENTRY_CONSTRAINTS },
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"], constraints: ENTRY_CONSTRAINTS }),
     // The reversal is bounded to the paid vendor's tenant.
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.reverse"],
       constraints: { ...ENTRY_CONSTRAINTS, tenant: "tenant-a" },
-    },
+    }),
   ] as MissionView["authority_set"],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

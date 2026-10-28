@@ -11,5 +11,6 @@
   "operations": [
     { "method": "GET", "path": "/api/documents", "scope": "documents.read" },
     { "method": "POST", "path": "/api/documents", "scope": "documents.write" }
-  ]
+  ],
+  "revocation_limits": { "entries_per_issuer": 10000, "requests_per_issuer_per_minute": 600 }
 }

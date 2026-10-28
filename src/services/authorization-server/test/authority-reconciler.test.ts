@@ -189,10 +189,17 @@ const allowAll = { checkWithContext: async () => true } as unknown as Fga;
 /** A PDP decision for `action` under the Mission, given the dependency enforcement (the AS's own by default). */
 async function decide(id: string, action = READ, dependency: AuthorityDependencyEnforcement = enforcement(), target: BuiltAs = as) {
   const view = viewFor(target, id);
+  // The reference an enforcement point sends: the one the Mission entry
+  // covering the action carries, if any (#249, D865).
+  const ref = view.authority_set.find((e) => e.actions.includes(action))?.resource_contract;
   return evaluate(
     {
       subject: { id: view.subject.sub, properties: { iss: ISSUER } },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
+      resource: {
+        type: "invoice",
+        id: "inv-1",
+        properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme", ...(ref ? { resource_contract: ref } : {}) },
+      },
       action: { name: action },
       context: {
         ...capabilityPresentationFor(action),

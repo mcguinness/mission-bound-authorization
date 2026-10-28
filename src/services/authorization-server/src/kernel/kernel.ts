@@ -283,6 +283,10 @@ const STATUS_INDEX_MAX_ATTEMPTS = 16;
 const DEFAULT_STATUS_FRESHNESS_SECONDS = 60;
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS kernel_issuer (
+  k INTEGER PRIMARY KEY CHECK (k = 1),
+  issuer TEXT NOT NULL
+) STRICT;
 CREATE TABLE IF NOT EXISTS missions (
   id TEXT PRIMARY KEY,
   issuer TEXT NOT NULL,
@@ -339,6 +343,68 @@ CREATE TABLE IF NOT EXISTS approval_reservations (
   created_at TEXT NOT NULL
 ) STRICT;
 `;
+
+/** Tables that hold no Mission state: the issuer record itself and the recovery marker. */
+const OWNERSHIP_UNSCANNED = new Set(["kernel_issuer", "recovery_marker"]);
+
+/**
+ * @spec control-plane#isolation (#1748): one issuer owns a kernel database,
+ * recorded in `kernel_issuer`, and an open under any other issuer is refused
+ * before anything is written. A store with no record is bound only as its own
+ * state allows: an empty store to the issuer that opens it; a populated store
+ * (one written before the record existed) only to the one issuer its state
+ * names, in every `issuer` column and the source bindings' `deployment`. State
+ * naming another issuer, several issuers or none is refused, and the store is
+ * left as it was.
+ */
+function bindKernelIssuer(db: Database, issuer: string): void {
+  const bound = db.prepare("SELECT issuer FROM kernel_issuer WHERE k = 1").get() as { issuer: string } | undefined;
+  if (bound !== undefined) {
+    if (bound.issuer !== issuer) {
+      throw new KernelIssuerMismatchError(`the kernel store belongs to ${bound.issuer}, not ${issuer}`);
+    }
+    return;
+  }
+  const { populated, issuers } = recordedOwnership(db);
+  if (populated && !(issuers.size === 1 && issuers.has(issuer))) {
+    throw new KernelIssuerMismatchError(
+      issuers.size === 0
+        ? `the kernel store has no issuer record and holds state naming no issuer, so it opens under no issuer, ${issuer} included`
+        : `the kernel store has no issuer record and holds state naming ${[...issuers].sort().join(", ")}, so it cannot be bound to ${issuer}`,
+    );
+  }
+  db.prepare("INSERT INTO kernel_issuer (k, issuer) VALUES (1, ?)").run(issuer);
+}
+
+/**
+ * Whether any table other than the issuer record and the marker holds a row,
+ * and every issuer those rows name. Reads only.
+ */
+function recordedOwnership(db: Database): { populated: boolean; issuers: Set<string> } {
+  const tables = (
+    db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all() as Array<{
+      name: string;
+    }>
+  )
+    .map((t) => t.name)
+    .filter((name) => !OWNERSHIP_UNSCANNED.has(name));
+  let populated = false;
+  const issuers = new Set<string>();
+  for (const table of tables) {
+    const quoted = `"${table.replaceAll('"', '""')}"`;
+    if (db.prepare(`SELECT 1 FROM ${quoted} LIMIT 1`).get() === undefined) continue;
+    populated = true;
+    const columns = new Set(
+      (db.prepare("SELECT name FROM pragma_table_info(?)").all(table) as Array<{ name: string }>).map((c) => c.name),
+    );
+    const column = columns.has("issuer") ? "issuer" : table === "authority_source_bindings" ? "deployment" : undefined;
+    if (column === undefined) continue;
+    for (const row of db.prepare(`SELECT DISTINCT ${column} AS issuer FROM ${quoted}`).all() as Array<{ issuer: unknown }>) {
+      issuers.add(String(row.issuer));
+    }
+  }
+  return { populated, issuers };
+}
 
 /**
  * The Child Mission Carryover correlation columns are additive, and `openStore`
@@ -420,6 +486,9 @@ export class MissionNotFoundError extends Error {}
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
+
+/** A kernel store opened under an issuer other than the one that owns it (#1748). */
+export class KernelIssuerMismatchError extends Error {}
 /** An `expected_version` for a stale-version message: a canonical numeral beyond any state version is carried as Infinity (#1724 C6). */
 function staleVersionLabel(expected: number): string {
   return Number.isFinite(expected) ? String(expected) : "beyond any state version";
@@ -1127,7 +1196,9 @@ export class MissionKernel {
       if (opts.recoveryWitness && opts.store?.file) {
         this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
       } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+      bindKernelIssuer(this.db, opts.issuer);
     } catch (e) {
+      this.recovery?.release();
       this.db.close();
       throw e;
     }

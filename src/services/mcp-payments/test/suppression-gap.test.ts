@@ -18,7 +18,7 @@ import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import { TRUSTED_TOOL_CATALOGS, pinnedToCurrentContract } from "@mission/demo-data";
 import type { Decision, Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it, vi } from "vitest";
@@ -68,18 +68,18 @@ const VIEW: MissionView = {
   version: 1,
   authority_hash: `sha-256:${MISSION}`,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list"],
       constraints: { vendors: ["acme"] },
-    },
-    {
+    }),
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute", "payments:payment.schedule", "payments:payment.schedule.cancel"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

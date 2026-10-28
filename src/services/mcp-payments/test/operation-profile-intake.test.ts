@@ -16,7 +16,7 @@
 
 import { randomUUID } from "node:crypto";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
-import { TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
+import { TRUSTED_TOOL_CATALOGS, pinnedToCurrentContract } from "@mission/demo-data";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { describe, expect, it, vi } from "vitest";
@@ -57,12 +57,12 @@ const VIEW: MissionView = {
   version: 1,
   authority_hash: "sha-256:intake",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute", "payments:payment.schedule"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

@@ -68,6 +68,7 @@ import {
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const BASE_MS = Date.parse("2026-10-08T12:00:00.000Z");
 /** irreversible_action: the 30 s staleness bound caps the permit; the published lease is 30 s more. */
@@ -96,12 +97,12 @@ const view = (state = "active"): MissionView => ({
   version: 1,
   authority_hash: "sha-256:m1103",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",

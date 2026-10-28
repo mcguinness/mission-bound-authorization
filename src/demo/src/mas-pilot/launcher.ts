@@ -67,13 +67,13 @@ export interface MasPilotLaunchOptions {
    * whose public half that MAS registered, instead of starting one.
    */
   mas?: { url: string; pdpKey: JWK };
-  /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`, `MISSION_KERNEL_WITNESS`). */
+  /** The MAS process's key environment (`MISSION_KEY_RING`, `MISSION_KEY_BINDINGS`, `MISSION_EPHEMERAL_KEYS`, `MISSION_KERNEL_STORE`, `MISSION_KERNEL_WITNESS`). */
   masKeyEnv?: Record<string, string>;
   /** A running MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
 }
 
-const KEY_ENV = ["MISSION_KEY_RING", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE", "MISSION_KERNEL_WITNESS"] as const;
+const KEY_ENV = ["MISSION_KEY_RING", "MISSION_KEY_BINDINGS", "MISSION_EPHEMERAL_KEYS", "MISSION_KERNEL_STORE", "MISSION_KERNEL_WITNESS"] as const;
 
 /**
  * The launcher's options, from its environment. Each value that is set but

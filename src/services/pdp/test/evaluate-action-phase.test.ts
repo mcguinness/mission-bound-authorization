@@ -36,8 +36,10 @@ import {
   EVALUATION_CONTEXT_UNCLAIMED_FIXTURE,
   RESOURCE_POLICY_PERMITS_ALL_FIXTURE,
   resourcePolicyFixture,
+  withCurrentContractReference,
 } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const AUDIENCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-23T12:00:00Z");
@@ -66,7 +68,7 @@ const view = (): MissionView => ({
   state: "active",
   version: 1,
   authority_hash: "sha-256:h1629",
-  authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions: [PAY, READ] }],
+  authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions: [PAY, READ] })],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
 });
@@ -77,7 +79,7 @@ const view = (): MissionView => ({
  * (#252), so the phase alone decides each case here.
  */
 const request = (phase: unknown, action = PAY): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: AUDIENCE, operation_target: AUDIENCE, vendor_id: "acme" } },
     action: { name: action },
@@ -88,7 +90,7 @@ const request = (phase: unknown, action = PAY): EvaluationRequest =>
       ...(phase !== undefined ? { action_phase: phase } : {}),
       ...(phase === "compensate" ? { compensates_evaluation_id: "dec_committed_1629" } : {}),
     },
-  } as EvaluationRequest);
+  } as EvaluationRequest));
 
 const decisionOptions = (fga: Fga): DecisionOptions => ({
   view: view(),

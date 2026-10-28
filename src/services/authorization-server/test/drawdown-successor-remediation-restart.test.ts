@@ -25,7 +25,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "../src/index.js";
-import { createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
+import { assembledCeilingOffer, createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 
 const ISSUER = "http://localhost:14851";
@@ -70,7 +70,11 @@ function seeding(as: BuiltAs) {
       approver: { iss: ISSUER, sub: "bob" },
       clientId: OWN,
       approvalEventId: `pred-${crypto.randomUUID()}`,
-      ceiling: { authority_ceiling: CEILING, drawdown_policy: { id: "drawdown-std", version: "1" } },
+      // The approval surface assembles the offer from configuration before it renders (#249, D875).
+      ceiling: assembledCeilingOffer(
+        { authority_ceiling: CEILING, drawdown_policy: { id: "drawdown-std", version: "1" } },
+        as.kernel.resourceContracts(),
+      ) as never,
     });
   /** The in-ceiling successor `requester` requested of `predecessorId`. */
   const drawdown = (predecessorId: string, requester: { iss: string; sub: string }, expiresAt?: string): string => {
