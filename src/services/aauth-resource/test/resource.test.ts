@@ -2,7 +2,11 @@ import { request as httpRequest } from "node:http";
 import { createIssuerStub, decodeClaims } from "@mission/aauth-testkit";
 import { BASE_COMPONENTS, generateSigningKey, signRequest } from "@mission/aauth-wire";
 import { afterEach, describe, expect, it } from "vitest";
-import { buildResourceTokenClaims, parseResourceConfig } from "../src/index.js";
+import {
+  buildResourceTokenClaims,
+  DEFAULT_REVOCATION_LIMITS,
+  parseResourceConfig,
+} from "../src/index.js";
 import {
   anotherPs,
   M,
@@ -10,6 +14,7 @@ import {
   RESOURCE,
   requirementOf,
   sendMessage,
+  shippedConfig,
   signedMessage,
   verifiedResourceToken,
   type World,
@@ -17,7 +22,7 @@ import {
 } from "./helpers.js";
 
 let w: World;
-afterEach(() => w.net.close());
+afterEach(() => w?.close());
 
 const DOCS = `${RESOURCE}/api/documents`;
 const nothingRan = () => {
@@ -36,6 +41,7 @@ describe("metadata and keys (@spec aauth#section-11.2.4)", () => {
         name: "AAuth document service",
         access_mode: "auth-token",
         authorization_endpoint: `${RESOURCE}/authorize`,
+        revocation_endpoint: `${RESOURCE}/revoke`,
         scope_descriptions: {
           "documents.read": "Read your documents",
           "documents.write": "Create documents for you",
@@ -489,6 +495,13 @@ describe("configuration", () => {
       "an operation at a reserved path",
       { operations: [{ method: "POST", path: "/authorize", scope: "a.read" }] },
     ],
+    [
+      "an operation at the revocation endpoint's path",
+      { operations: [{ method: "POST", path: "/revoke", scope: "a.read" }] },
+    ],
+    ["an unknown revocation_limits member", { revocation_limits: { per_day: 1 } }],
+    ["revocation_limits that bound nothing", { revocation_limits: { entries_per_issuer: 0 } }],
+    ["a fractional request rate", { revocation_limits: { requests_per_issuer_per_minute: 1.5 } }],
     ["a symmetric key algorithm", { signing_key: { kid: "k", alg: "HS256" } }],
     [
       "an operation named twice",
@@ -507,5 +520,19 @@ describe("configuration", () => {
     expect(parseResourceConfig(valid()).operations).toEqual([
       { method: "GET", path: "/a", scope: "a.read" },
     ]);
+  });
+
+  it("bounds revocations per issuer by default, and as configured (@spec aauth#section-11.12.3)", () => {
+    expect(parseResourceConfig(valid()).revocationLimits).toEqual(DEFAULT_REVOCATION_LIMITS);
+    expect(
+      parseResourceConfig({
+        ...valid(),
+        revocation_limits: { entries_per_issuer: 5, requests_per_issuer_per_minute: 7 },
+      }).revocationLimits,
+    ).toEqual({ entriesPerIssuer: 5, requestsPerIssuerPerMinute: 7 });
+    expect(shippedConfig().revocationLimits).toEqual({
+      entriesPerIssuer: 10000,
+      requestsPerIssuerPerMinute: 600,
+    });
   });
 });

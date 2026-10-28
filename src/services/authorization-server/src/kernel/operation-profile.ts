@@ -33,7 +33,12 @@
  * registry.
  */
 
-import { type JsonValue, type ResourceContractDeclarations, resourceContractViolation } from "@mission/core";
+import {
+  entryMatchesTarget,
+  type JsonValue,
+  type ResourceContractDeclarations,
+  resourceContractViolation,
+} from "@mission/core";
 import { RESOURCE_CONTRACTS } from "@mission/demo-data";
 import type { AuthorityEntry } from "./types.js";
 
@@ -292,4 +297,32 @@ export function missionResourceAccessProfile(version = "mission-resource-access-
       };
     },
   };
+}
+
+/**
+ * @spec txn-authorization#resource-challenge, runtime#resource-contract (#249,
+ * #1846): the Operation Profiles for `resource`, one under each version every
+ * contract `contracts` declares for it names (its document's
+ * `operation_profile`). The current contract version's profile is
+ * registered, the one an unpinned challenge is admitted under. Every other
+ * declared version's is retained, so a reference resolves to the profile its
+ * own version names, never the current one, and resolution, not a missing
+ * profile, refuses a retired or out-of-retention reference. A retired version
+ * that keeps no document names no profile. Derived from the declarations,
+ * never a hardcoded version.
+ */
+export function contractOperationProfiles(
+  resource: string,
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+  profileOf: (version: string) => OperationProfile = missionResourceAccessProfile,
+): OperationProfileRegistry {
+  const registry = new OperationProfileRegistry(contracts);
+  for (const declaration of contracts.declarations.filter((d) => entryMatchesTarget(d, resource))) {
+    for (const version of declaration.versions) {
+      if (version.operation_profile === undefined) continue;
+      if (version.state === "current") registry.register(resource, profileOf(version.operation_profile));
+      else registry.retain(resource, profileOf(version.operation_profile));
+    }
+  }
+  return registry;
 }
