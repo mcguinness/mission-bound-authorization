@@ -4090,7 +4090,9 @@ and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
 Issuing a designation applies the checks of {{issuance-checks}} as
-that list states for a designation.
+that list states for a designation. {{authority-proposal}} states a
+designation request's exemption from `mission_intent` and the checks
+that still apply to it.
 
 A designation the AS issues:
 
