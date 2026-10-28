@@ -284,7 +284,7 @@ async function renderParentApproval(limit?: number): Promise<string> {
   });
   storeCookies(res, jar);
   const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  const page = await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)).cookie as string } });
   expect(page.status).toBe(200);
   return page.text();
 }
@@ -353,7 +353,7 @@ async function approveParent(): Promise<{ html: string; location: URL }> {
   storeCookies(res, jar);
   let location = res.headers.get("location") as string;
   const uid = location.split("/interaction/")[1] as string;
-  const html = await (await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } })).text();
+  const html = await (await fetch(`${ISSUER}/interaction/${uid}`, { headers: { cookie: floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)).cookie as string } })).text();
   const decideHeaders = { ...floorApprovalHeaders(FLOOR_SESSIONS, uid, cookieHeader(jar)), "content-type": "application/json" };
   const render_revision = await renderedRevision(ISSUER, uid, decideHeaders);
   res = await fetch(`${ISSUER}/interaction/${uid}/decide`, {

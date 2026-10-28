@@ -209,10 +209,14 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expectAnchorsOverApproved(record);
   });
 
-  it("a decision with no rendering, or after only an anonymous rendering, approves nothing", async () => {
+  it("a decision with no rendering, or after only an anonymous request for the page, approves nothing", async () => {
     const flow = await open();
-    // An anonymous rendering (the interaction cookie, no approval session) is a preview: no revision.
-    expect((await render(flow.uid, { cookie: flow.cookie })).revision).toBeNull();
+    // The interaction cookie alone, with no approval session, is answered with
+    // a sign-in notice that shows nothing of the request and mints no revision (#1802).
+    const anonymous = await render(flow.uid, { cookie: flow.cookie });
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.revision).toBeNull();
+    expect(anonymous.html).not.toContain(INTENT.goal);
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     for (const body of [approve(), approve("not-a-revision")]) {
       const decided = await decide(flow.uid, headers, body);

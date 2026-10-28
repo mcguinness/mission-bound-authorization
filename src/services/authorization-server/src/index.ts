@@ -1180,6 +1180,13 @@ export async function buildAuthorizationServer(opts: {
    */
   approvalFloor?: ApprovalFloorPolicy;
   /**
+   * @spec mission#subject-establishment (#1802): override the config-shipped
+   * approve-for policy (each identity's `approves_for`, `config/identity.json`)
+   * that the approval page and the decision both read. A test that withdraws
+   * an Approver's authority between rendering and decision supplies it here.
+   */
+  approverApprovesFor?: Map<string, Set<string>>;
+  /**
    * @spec approval-governance#triggers (#1470, D597): record a voluntary
    * Approval Governance Record for every `direct` approval, under the direct
    * approval rule built from the approval surface's own floor and
@@ -1748,7 +1755,7 @@ export async function buildAuthorizationServer(opts: {
   let suspensionScheduler: SuspensionScheduler | undefined;
   // The approval surface's eligibility and floor: given to the adapter and,
   // where direct approvals are recorded, the rule each record names (#1470).
-  const approverApprovesFor = new Map(USERS.map((u) => [u.sub, new Set(u.approves_for)]));
+  const approverApprovesFor = opts.approverApprovesFor ?? new Map(USERS.map((u) => [u.sub, new Set(u.approves_for)]));
   const knownSubjects = new Set([...USERS.map((u) => u.sub), ...AUTHORITY_SOURCES.entries.flatMap((e) => e.principals ?? [])]);
   const approverRoleSubs = new Set(USERS.filter((u) => u.roles.includes("approver")).map((u) => u.sub));
   const approvalFloor = opts.approvalFloor ?? APPROVAL_FLOOR;

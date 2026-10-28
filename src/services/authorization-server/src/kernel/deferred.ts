@@ -42,6 +42,7 @@ import {
 import { conditionDigest, entryDigest, terminalWhenOf } from "./discharge.js";
 import { IntentError } from "./intent.js";
 import {
+  assembledCeilingOffer,
   type CeilingConsent,
   type EncounterDisclosure,
   type EncounterFacts,
@@ -895,6 +896,7 @@ export class ExpansionDeferralStore {
           approval.ceiling,
           this.now().toISOString(),
           approval.approver,
+          this.kernel.resourceContracts(),
         );
         // @spec mission#transformation-capabilities (D733 ruling 2): a
         // re-consent is a fresh approval of the ceiling, so its entries take
@@ -1029,7 +1031,8 @@ export class ExpansionDeferralStore {
           .all(ids, sinceMs) as Array<{ refused_at: number }>
       ).map((r) => ({ at: new Date(r.refused_at).toISOString() }));
       const recorded = JSON.parse(row.intent_json) as { i: MissionIntent };
-      const offer = this.ceilingOffer?.({ clientId: row.client_id, intent: recorded.i });
+      // @spec resource-access#resource-contract (#249, D875): assembled before it renders.
+      const offer = assembledCeilingOffer(this.ceilingOffer?.({ clientId: row.client_id, intent: recorded.i }), this.kernel.resourceContracts());
       // @spec progressive#ceiling-reconsent (#1480 review): retained as
       // rendered; an approval re-consents only this. A rendering with no offer
       // withdraws an earlier one.
