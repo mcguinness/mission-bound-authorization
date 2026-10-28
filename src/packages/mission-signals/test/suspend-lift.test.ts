@@ -146,10 +146,12 @@ describe("suspend->resume lift accepted by the Signal receiver (@spec child-dele
     await emitter.drain();
 
     // The wired receiver ACCEPTED the suspended->active lift: its view is active/v3,
-    // not stuck at suspended/v2 (which a rejected lift would leave). v3 applying
-    // last also clears any transient gap from concurrent v1/v2 signing.
+    // not stuck at suspended/v2 (which a rejected lift would leave). A gap left
+    // by concurrent v1/v2 delivery is not cleared by v3 (D950): it holds until
+    // Mission Status covers it, and withholds the lease meanwhile.
     expect(receiver.viewState(child.id)).toMatchObject({ state: "active", version: 3 });
-    expect(receiver.hasGap(child.id)).toBe(false);
+    if (receiver.hasGap(child.id))
+      expect(receiver.lease(child.id, NOW.toISOString())).toBeUndefined();
 
     // The Status List reads back the RESTORED state.
     const resumedTok = await verifyStatusListToken(

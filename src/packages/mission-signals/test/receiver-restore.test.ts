@@ -217,6 +217,13 @@ describe("Signals receiver restore admission (@spec control-plane#rollback, #174
       });
       expect(restored.recovering("msn_a")).toBe(false);
       expect(restored.viewState("msn_a")).toMatchObject({ state: "terminated", version: 3 });
+      // Released, but latched at the released version (D950): the restore lost
+      // events that may have narrowed authority, so no lease until the
+      // consumer acknowledges it rematerialized; a stale acknowledgement fails.
+      expect(restored.needsRematerialization("msn_a")).toBe(true);
+      expect(restored.lease("msn_a", "2026-10-02T00:00:00Z")).toBeUndefined();
+      expect(restored.markRematerialized("msn_a", { version: 2 })).toBe(false);
+      expect(restored.markRematerialized("msn_a", { version: 3 })).toBe(true);
       expect(restored.lease("msn_a", "2026-10-02T00:00:00Z")).toMatchObject({
         state: "terminated",
         version: 3,

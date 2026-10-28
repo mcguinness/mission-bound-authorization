@@ -539,8 +539,11 @@ export class MissionSignalReceiver {
    * holds:
    *  - the cached observation and its version high-water (anti-revival);
    *  - the gap flag: a detected `version` gap, not safe to honor until
-   *    refetched (detect only; automatic Status refetch is deferred), cleared
-   *    by the next in-order event;
+   *    refetched. It holds across later events, contiguous ones included,
+   *    and clears only when a verified Mission Status response re-establishes
+   *    the Mission at or above the stored version (D950). A gap also raises
+   *    the rematerialization latch: the missing event may have narrowed
+   *    authority, which a state refresh does not re-establish;
    *  - @spec signals#consumer-behavior — the rematerialization latch: set by
    *    an applied or gapped event carrying `authority_changed` true, or by a
    *    containment-aware `containment_version` advance past the value this
@@ -996,7 +999,9 @@ export class MissionSignalReceiver {
       priorContainmentVersion !== undefined &&
       containment_version !== undefined &&
       containment_version > priorContainmentVersion;
-    const rematerialize = authority_changed === true || containmentAdvanced;
+    // @spec signals#consumer-behavior (D950): a version gap also requires
+    // rematerialization, since the missing event may have narrowed authority.
+    const rematerialize = authority_changed === true || containmentAdvanced || isGap;
 
     // Carry the last-observed `containment_version` forward when this event
     // does not itself repeat it (defensive: the wire invariant is that it
@@ -1041,7 +1046,8 @@ export class MissionSignalReceiver {
         version,
         expires_at,
         nextContainmentVersion ?? null,
-        isGap ? 1 : 0,
+        // An unresolved gap holds across later events until Status covers it (D950).
+        isGap || stored?.gapped === 1 ? 1 : 0,
         remat.needed,
         remat.version,
         remat.containment,
@@ -1240,8 +1246,9 @@ export class MissionSignalReceiver {
    * Conflicts are reconciled by version, never by severity: a response below
    * the stored version is refused (`behind`), whatever states the two report;
    * one at the stored version refreshes the observation time and bound and
-   * clears the gap and a latch it covers; one above it replaces the state, a
-   * higher-version `active` over a stored `suspended` included.
+   * clears the gap; one above it replaces the state, a higher-version
+   * `active` over a stored `suspended` included. The rematerialization latch
+   * is never cleared here (D950).
    *
    * The response must pass the Mission Status consumer checks (the shared
    * verifier for the signature, `iss`, `aud`, `mission.id` and
@@ -1307,14 +1314,13 @@ export class MissionSignalReceiver {
         const stored = this.row(missionId);
         if (stored !== undefined && (version as number) < stored.version)
           return { status: "refused", reason: "behind" };
-        // The Status read rematerializes the authority view at its own
-        // version: an outstanding latch it covers clears, as through
-        // markRematerialized.
-        const covers =
-          stored?.remat_needed !== 1 ||
-          ((version as number) >= (stored.remat_version as number) &&
-            (stored.remat_containment_version === null ||
-              (containment !== undefined && containment >= stored.remat_containment_version)));
+        // @spec signals#consumer-behavior (D950): a Mission Status read
+        // re-establishes state, not effective authority, so it never clears
+        // the rematerialization latch; the consumer acknowledges that through
+        // markRematerialized once it has refreshed its audience-scoped
+        // effective authority. A Mission released after a restore is latched
+        // at the released version: the events the restore lost are unknown,
+        // and any of them may have narrowed authority.
         // The containment cursor never moves back; at the stored version the
         // artifact that established the state is kept.
         const containmentVersion =
@@ -1347,9 +1353,9 @@ export class MissionSignalReceiver {
             version,
             m.expires_at,
             containmentVersion,
-            covers ? 0 : 1,
-            covers ? null : (stored?.remat_version ?? null),
-            covers ? null : (stored?.remat_containment_version ?? null),
+            recovering ? 1 : (stored?.remat_needed ?? 0),
+            recovering ? version : (stored?.remat_version ?? null),
+            recovering ? containmentVersion : (stored?.remat_containment_version ?? null),
             sameVersion ? (stored as ReceiverMissionRow).retained_set : statusResponse,
             // The Status observation point and the response's own reliance bound.
             new Date((verified.payload.iat as number) * 1000).toISOString(),

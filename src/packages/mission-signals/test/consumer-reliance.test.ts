@@ -139,42 +139,68 @@ const plus = (iso: string, seconds: number) =>
   new Date(Date.parse(iso) + seconds * 1000).toISOString();
 
 describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747)", () => {
-  it("gives no lease while the rematerialization latch or a version gap is open, until a Mission Status refresh covers it", async () => {
+  it("gives no lease while the rematerialization latch is set; a state-only Mission Status refresh does not clear it, only the consumer's acknowledgement does (D950)", async () => {
     const r = receiver();
     try {
       await r.verifyAndApply(await set("msn_a", 1, "active", nowIso()));
       expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 1 });
       // A narrowing on the stream: the latch is set, so no lease.
-      expect(
-        (
-          await r.verifyAndApply(
-            await set("msn_a", 2, "active", nowIso(), { authority_changed: true }),
-          )
-        ).status,
-      ).toBe("applied");
-      expect(r.needsRematerialization("msn_a")).toBe(true);
+      const narrowed = await r.verifyAndApply(
+        await set("msn_a", 2, "active", nowIso(), { authority_changed: true }),
+      );
+      expect(narrowed).toMatchObject({ status: "applied", rematerialize: true });
       expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // The review's probe: a state-only Status response at the narrowed
+      // version re-establishes state, and carries no authority, so the latch
+      // stays and there is still no lease.
       expect(await refresh(r, "msn_a", 2, "active")).toMatchObject({
         status: "resynchronized",
         version: 2,
       });
-      expect(r.needsRematerialization("msn_a")).toBe(false);
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // The consumer acknowledges once it refreshed its effective authority; a
+      // stale acknowledgement does not clear the latch.
+      expect(r.markRematerialized("msn_a", { version: 1 })).toBe(false);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(true);
       expect(r.lease("msn_a", nowIso())).toMatchObject({
         state: "active",
         version: 2,
         state_source: "status",
       });
-      // A version gap: no lease until Status fills it.
+    } finally {
+      r.close();
+    }
+  });
+
+  it("keeps a version gap across later contiguous events until a Mission Status refresh covers it, and latches rematerialization for the missing event (D950)", async () => {
+    const r = receiver();
+    try {
+      await r.verifyAndApply(await set("msn_a", 1, "active", nowIso()));
+      // The review's probe: versions 1, 3, 4.
+      expect(await r.verifyAndApply(await set("msn_a", 3, "active", nowIso()))).toMatchObject({
+        status: "gap",
+        rematerialize: true,
+      });
+      expect(r.hasGap("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
       expect((await r.verifyAndApply(await set("msn_a", 4, "active", nowIso()))).status).toBe(
-        "gap",
+        "applied",
       );
       expect(r.hasGap("msn_a")).toBe(true);
       expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // Status covers the gap; the missing event may have narrowed authority,
+      // so the latch stays until the consumer acknowledges.
       expect(await refresh(r, "msn_a", 4, "active")).toMatchObject({
         status: "resynchronized",
         version: 4,
       });
       expect(r.hasGap("msn_a")).toBe(false);
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(false);
+      expect(r.markRematerialized("msn_a", { version: 4 })).toBe(true);
       expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 4 });
     } finally {
       r.close();
