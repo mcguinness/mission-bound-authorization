@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
-    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
+    "revision": "7fb899a89a52b917a2711977ed0aef449e874836",
+    "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -21174,6 +21174,27 @@
     }
    ],
    "notes": "#1535 finding 12 (D649); #1407: the advertised Mission Status endpoint shares the Lifecycle endpoint's authenticator (status.lifecycle.private-key-jwt-params)."
+  },
+  {
+   "id": "status.request.header-credentials-stay",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the Mission Status endpoint, and at the Mission Lifecycle endpoint, whose request carries the parameters \"as at the Mission Status endpoint\"; its credentials are not carried as form parameters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1780 N4 (D914): the twin of `mas.submission.header-credentials-stay`. Todo: the reference Mission Status and Lifecycle endpoints accept only private_key_jwt, whose parameters are form parameters; no header-carried method is served."
   },
   {
    "id": "status.request.form-post",
