@@ -9,6 +9,7 @@
     { "path": "packages/mission-signals" },
     { "path": "packages/orchestration" },
     { "path": "packages/aauth-wire" },
+    { "path": "packages/aauth-testkit" },
     { "path": "packages/resource-access-subset-consumer" },
     { "path": "services/authorization-server" },
     { "path": "services/pdp" },
@@ -21,6 +22,8 @@
     { "path": "evals" },
     { "path": "demo" },
     { "path": "services/ras" },
-    { "path": "services/plain-rs" }
+    { "path": "services/plain-rs" },
+    { "path": "services/aauth-ps" },
+    { "path": "services/aauth-resource" }
   ]
 }
