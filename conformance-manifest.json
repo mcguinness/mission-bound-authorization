@@ -25090,8 +25090,104 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential names another subject",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential from an untrusted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential naming an issuer that is not an accepted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential whose signature does not verify",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired actor credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential of an unknown type",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a listed actor-credential type the verifier does not implement",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. One witness per clause of Actor-Binding Credentials: type (unknown, and listed but not implemented), issuer trust (an unaccepted signing key, and an accepted key naming another issuer), validity (a signature that does not verify, an expired credential), subject, and bound key. Proved by skipping each check in turn (the subject comparison, the lifetime, the signature, the issuer binding, either type check): each witness fails."
+  },
+  {
+   "id": "cross-org.actor.credential-alignment",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "actor-identity",
+   "text": "A hop carrying `act` MUST have exactly one aligned entry in the `actor_credentials` presented with the Chain, at the projection exchange or at direct invocation, and its credential MUST validate under {{actor-evidence}}; a Chain naming an actor on a hop with a missing, misaligned, or invalid credential MUST be refused.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the projection exchange, a named hop with no aligned `actor_credentials` entry, an entry whose `hop` index is out of range or repeated, a credential aligned to a key-only hop, and a named hop whose credential fails validation (cross-org.actor.credential-validation) each refuse the Chain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose actor credential is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a misaligned hop index",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses duplicate hop entries",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential aligned to a key-only hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1821 (D941). The projection exchange's half of the sentence: its witnesses run the exchange's presentation parser and chain verifier. The direct-invocation half (`actor_credentials` in the substrate's presentation object) stays with the todo row cross-org.chain.direct-presentation-actor-credentials. The invalid-credential clause is witnessed clause by clause under cross-org.actor.credential-validation. Proved by treating a missing credential as key-only, skipping the key-only alignment check, and skipping the parser's range and repeat checks: each witness fails."
   },
   {
    "id": "cross-org.actor.root-resolution",
@@ -25165,7 +25261,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a revoked, expired, or staleness-exceeded Mission state prevents chain acceptance"
+    "normative": "a revoked, expired, staleness-exceeded, or unavailable Mission state prevents chain acceptance"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -25175,8 +25271,27 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on stale Mission state",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on unavailable Mission state",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a revoked Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired Mission",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. Each clause has its own witness: stale (the freshness bound), unavailable (no locally available state source, which the quoted text requires), revoked and expired (both `terminated`; the expired witness takes its record from the kernel's own expiry, so the verifier's clock stays inside the chain's lifetime, which the root caps at the Mission's expiry). Proved by reading an unavailable state as active, refusing only `suspended`, and skipping the freshness bound: each witness fails."
   },
   {
    "id": "cross-org.projection.provenance-recorded",
