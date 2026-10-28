@@ -102,8 +102,9 @@ const policy = (id: string, t: unknown) => ({
 
 /**
  * The batch's Dispatch Policies, each with its own budget: the ordinary one,
- * one with no class-named exception for the consumption bound, and one an
- * operator edits in place under its version.
+ * one with no class-named exception for the consumption bound, one with none
+ * for the irreversible class, and one an operator edits in place under its
+ * version.
  */
 const POLICIES: Record<string, { version: string; content_type: string; content: string }> = {
   "sp-batch": policy("sp-batch", terms("ap-batch")),
@@ -111,6 +112,12 @@ const POLICIES: Record<string, { version: string; content_type: string; content:
     "sp-batch-no-cb",
     terms("ap-batch-no-cb", {
       approval_governance: recency({ irreversible_action: { max_age_s: 3600 } }),
+    }),
+  ),
+  "sp-batch-no-ia": policy(
+    "sp-batch-no-ia",
+    terms("ap-batch-no-ia", {
+      approval_governance: recency({ consumption_bound: { max_age_s: 3600 } }),
     }),
   ),
   "sp-batch-editable": policy("sp-batch-editable", terms("ap-batch-editable")),
@@ -441,6 +448,16 @@ describe("standing-payment template defects refused at the token endpoint, creat
     await refusedAtToken(id, { max_budget: USD_1000 }, PROHIBITED);
   });
 
+  it("refuses dispatch_prohibited_class at /token an instance under a Dispatch Policy that commits no class-named exception for the irreversible class, creating nothing (@spec approval-governance#recency-high-risk, #813)", async () => {
+    const id = await consented(proposal({ policy: "sp-batch-no-ia" }));
+    await refusedAtToken(id, { max_budget: USD_1000 }, PROHIBITED);
+  });
+
+  it("refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)", async () => {
+    const id = await consented(proposal());
+    await refusedAtToken(id, { max_budget: { amount: "100.00", currency: "EUR" } }, PROHIBITED);
+  });
+
   it("refuses dispatch_policy_changed at /token once the Dispatch Policy is changed in place under its version, so a raise needs a new version and consent, creating nothing (#813)", async () => {
     const id = await consented(proposal({ policy: "sp-batch-editable" }));
     const held = POLICIES["sp-batch-editable"] as { content: string };
@@ -469,6 +486,22 @@ describe("standing-payment template defects refused at the token endpoint, creat
       await refusedAtToken(
         id,
         { max_budget: { amount, currency: "USD" } },
+        {
+          status: 400,
+          error: "invalid_request",
+          description:
+            "max_budget must be {amount, currency} with a decimal amount and a currency code",
+        },
+      );
+    }
+  });
+
+  it("refuses invalid_request at /token a max_budget with no amount, alone or beside another member, creating nothing (@spec metering#bounds, #813)", async () => {
+    const id = await consented(proposal());
+    for (const maxBudget of [{ currency: "USD" }, { currency: "USD", value: "100.00" }]) {
+      await refusedAtToken(
+        id,
+        { max_budget: maxBudget },
         {
           status: 400,
           error: "invalid_request",
@@ -535,12 +568,13 @@ describe("standing-payment template defects refused at the token endpoint, creat
     expect(created()).toEqual(before);
   });
 
-  it("commits max_budget in the instance's intent_hash: the dispatched instance's hash recomputes over its Intent, and another max_budget yields another hash (@spec metering#bounds, #813)", async () => {
+  it("records max_budget on the dispatched instance and commits it in its intent_hash: the stored Intent carries it, the hash recomputes over that Intent, and another max_budget yields another hash (@spec metering#bounds, #813)", async () => {
     const id = await consented(proposal());
     const { status, body } = await dispatch(id);
     expect(status, JSON.stringify(body)).toBe(200);
     const [missionId] = as.kernel.standingPayments.dispatchedInstances(id);
     const instance = as.kernel.get(missionId as string);
+    expect(instance?.intent.max_budget).toEqual(USD_1000);
     expect(instance?.intent_hash).toBe(intentHash(ISSUER, instance?.intent as never));
     expect(
       intentHash(ISSUER, {
