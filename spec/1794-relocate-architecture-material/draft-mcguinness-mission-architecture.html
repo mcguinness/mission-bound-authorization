@@ -6635,6 +6635,10 @@ where the binding's minimization and retention duties apply.<a href="#section-14
       <dd>
 <span class="refAuthor">Zhu, L.</span> and <span class="refAuthor">Z. Berg</span>, <span class="refTitle">"Delegated Refresh Tokens for OAuth 2.0 Token Exchange"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-zhu-oauth-async-delegation-05</span>, <time datetime="2026-08-03" class="refDate">3 August 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05">https://datatracker.ietf.org/doc/html/draft-zhu-oauth-async-delegation-05</a>&gt;</span>. </dd>
 <dd class="break"></dd>
+<dt id="OAUTH-BINDING-SNAPSHOT">[OAUTH-BINDING-SNAPSHOT]</dt>
+      <dd>
+<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission-Bound Authorization for OAuth 2.0, Editor's Draft Snapshot"</span>, <span class="refContent">Editor's Draft at commit 5da6d7822aefd1bfd360209c74846d586e53b817</span>, <time datetime="2026-10-28" class="refDate">28 October 2026</time>, <span>&lt;<a href="https://github.com/mcguinness/mission-bound-authorization/blob/5da6d7822aefd1bfd360209c74846d586e53b817/draft-mcguinness-oauth-mission.md">https://github.com/mcguinness/mission-bound-authorization/blob/5da6d7822aefd1bfd360209c74846d586e53b817/draft-mcguinness-oauth-mission.md</a>&gt;</span>. </dd>
+<dd class="break"></dd>
 <dt id="RFC6749">[RFC6749]</dt>
       <dd>
 <span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
@@ -7058,28 +7062,29 @@ it that has not already left the issuer's reach
 <a href="#appendix-D" class="section-number selfRef">Appendix D. </a><a href="#name-oauth-binding-mapping-asses" class="section-name selfRef">OAuth Binding Mapping Assessment</a>
       </h2>
 <p id="appendix-D-1">This appendix is a Mapping Assessment of the OAuth binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>) against the kernel and capabilities of
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>) against the kernel and capabilities of
 the Mission Substrate contract (the "Mission Substrate Statement"
 section of <span>[<a href="#I-D.draft-mcguinness-mission-substrate" class="cite xref">I-D.draft-mcguinness-mission-substrate</a>]</span>). It describes,
 in the Statement's form, how the surfaces the OAuth binding defines
 realize that vocabulary.<a href="#appendix-D-1" class="pilcrow">¶</a></p>
 <p id="appendix-D-2">The assessment is informative and adds no requirement: the OAuth
 binding's Conformance section alone defines conformance to that
-binding (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Conformance"). The
+binding (<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Conformance"). The
 OAuth binding publishes no Mission Substrate Statement, makes no
 substrate-conformance claim, and takes no requirement from the
 substrate or from this assessment; the OAuth binding and the
 substrate reference each other informatively.<a href="#appendix-D-2" class="pilcrow">¶</a></p>
-<p id="appendix-D-3">The assessed OAuth binding is an immutable Editor's Draft snapshot:
-the file <code>draft-mcguinness-oauth-mission.md</code> at commit
-<code>5da6d7822aefd1bfd360209c74846d586e53b817</code> of the repository that
-holds this document's source, whose content has the SHA-256 digest
+<p id="appendix-D-3">The assessed OAuth binding is the immutable Editor's Draft snapshot
+<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>: the file <code>draft-mcguinness-oauth-mission.md</code>
+at commit <code>5da6d7822aefd1bfd360209c74846d586e53b817</code> of the
+repository that holds this document's source, whose content has the
+SHA-256 digest
 <code>8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a</code>.
-Every citation of a section of <span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span> in
-this appendix names a section of that snapshot, not of a later
-Editor's Draft. A later revision of the OAuth binding is unassessed,
-and moving this assessment to a published revision requires checking
-it against that release.<a href="#appendix-D-3" class="pilcrow">¶</a></p>
+Every citation in this appendix is of that snapshot, not of the
+current Editor's Draft that this document cites elsewhere. A later
+revision of the OAuth binding is unassessed, and moving this
+assessment to a published revision requires checking it against that
+release.<a href="#appendix-D-3" class="pilcrow">¶</a></p>
 <p id="appendix-D-4">The assessment applies to the substrate revision current with this
 revision of this document, and to the OAuth binding's base
 single-domain mode, with the optional capabilities active as the
@@ -7116,14 +7121,14 @@ change obtains a new approval through an expansion successor.<a href="#appendix-
 </li>
         <li id="appendix-D-6.5">
           <p id="appendix-D-6.5.1">The approval ceremony is the OAuth binding's approval event
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Approval"). Its
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Mission Approval"). Its
 direct realization, interactive or
 deferred, authenticates the Approver, establishes the Subject and
 authority source, renders the derived Authority Set and the
 effective expiry, and commits the record atomically. Under a
 standing-consent basis, such as a dispatch, the authorized policy
 ceremony decides the instance, and <code>consent_principal</code> remains the
-accountable owner (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+accountable owner (<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section
 "Standing-Consent Bases").<a href="#appendix-D-6.5.1" class="pilcrow">¶</a></p>
 </li>
         <li id="appendix-D-6.6">
@@ -7140,7 +7145,7 @@ derivation.<a href="#appendix-D-6.6.1" class="pilcrow">¶</a></p>
 later than the requested ceiling), which caps every derived
 credential's <code>exp</code>; the maximum residual after a Mission becomes
 non-active is the outstanding credential lifetime
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Revocation").<a href="#appendix-D-6.7.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Revocation").<a href="#appendix-D-6.7.1" class="pilcrow">¶</a></p>
 </li>
         <li id="appendix-D-6.8">
           <p id="appendix-D-6.8.1">The propagation and join surfaces are: the <code>mission</code> claim
@@ -7185,7 +7190,7 @@ residual is bounded, not zero<a href="#appendix-D-8.2.4" class="pilcrow">¶</a><
           <p id="appendix-D-8.6.1">Claim: supplied<a href="#appendix-D-8.6.1" class="pilcrow">¶</a></p>
 <p id="appendix-D-8.6.2">Activation: always<a href="#appendix-D-8.6.2" class="pilcrow">¶</a></p>
 <p id="appendix-D-8.6.3">Scope and defining sections: <code>authorization_details</code> of AS-supported
-types (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Authorization
+types (<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Authorization
 Details Types"), each type's own specification defining
 semantics (for <code>mission_resource_access</code>, the Mission Resource Access
 Profile's Common Constraints,
@@ -7217,7 +7222,7 @@ State-Observable surfaces<a href="#appendix-D-8.10.4" class="pilcrow">¶</a></p>
         <dd style="margin-left: 1.5em" id="appendix-D-8.12">
           <p id="appendix-D-8.12.1">Claim: supplied<a href="#appendix-D-8.12.1" class="pilcrow">¶</a></p>
 <p id="appendix-D-8.12.2">Activation: the Delegation capability active
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation Within a
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Delegation Within a
 Mission")<a href="#appendix-D-8.12.2" class="pilcrow">¶</a></p>
 <p id="appendix-D-8.12.3">Scope and defining sections: The Token Exchange join at delegated
 issuance: the AS, as joining authority, joins the Mission and Subject
@@ -7258,7 +7263,7 @@ unresolvable reference, a failed anchor verification, and an unknown
 condition does not hold, the property is not supplied, and a consumer
 cannot rely on it.<a href="#appendix-D-9" class="pilcrow">¶</a></p>
 <p id="appendix-D-10">The OAuth binding's three optional capabilities
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Conformance") are surfaces
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Conformance") are surfaces
 an implementation may or may not offer, each independent of the
 others. The capability list above states scoped guarantee claims:
 properties the OAuth binding supplies and the conditions under
@@ -7277,14 +7282,14 @@ activates that otherwise-conditional claim.<a href="#appendix-D-11.2.1" class="p
         <dd style="margin-left: 1.5em" id="appendix-D-11.4">
           <p id="appendix-D-11.4.1">Exercises Lifecycle-Gated Authorization, Structured Authority,
 Monotonic Derivation, Credential-Bound, and Authorized Context
-Correlation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Delegation
+Correlation (<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Delegation
 Within a Mission"). The first four are supplied always,
 and Delegation exercises them rather than creating them. Authorized
 Context Correlation is activated by this capability; its supplier
 is the Token Exchange join, which binds the Mission and Subject of
 the <code>subject_token</code> and the delegate's identity to the delegated
 credential without creating a new grant binding
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Binding the Mission to
+(<span>[<a href="#OAUTH-BINDING-SNAPSHOT" class="cite xref">OAUTH-BINDING-SNAPSHOT</a>]</span>, Section "Binding the Mission to
 the Grant"). The <code>act</code> chain itself supplies none of these
 claims: it is attribution, never authority.<a href="#appendix-D-11.4.1" class="pilcrow">¶</a></p>
 </dd>
@@ -8293,8 +8298,8 @@ with no <code>suspended</code> state and its own termination reasons, served by
 <ul class="normal">
 <li class="normal" id="appendix-J-2.1">
           <p id="appendix-J-2.1.1">Gains, from the OAuth binding, the OAuth Binding Mapping Assessment,
-pinned to an Editor's Draft snapshot of that binding with later
-revisions unassessed; Relationship to Adjacent Work; Open Work in
+pinned to and citing a commit-pinned Editor's Draft snapshot of that
+binding, with later revisions unassessed; Relationship to Adjacent Work; Open Work in
 Mission Requirements; and Derivation Policy Authoring under Meaning
 and Derivation, which applies to the OAuth-derived Authority Set
 model. The Authority Derivation Boundary, the conventional-stack
