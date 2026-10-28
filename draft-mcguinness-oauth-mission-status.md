@@ -2119,9 +2119,25 @@ Authorization Server Metadata" registry {{RFC8414}}:
 ## OAuth Extensions Error Registration {#iana-error-registration}
 
 IANA is requested to register the following in the "OAuth Extensions
-Error Registry" {{RFC6749}}. `not_found` is already registered for
-another usage location; its entry here adds the usage locations of
-this document.
+Error Registry" {{RFC6749}}. `invalid_request`, `invalid_client` and
+`not_found` are already registered for other usage locations; their
+entries here add the usage locations of this document.
+
+- Error Name: `invalid_request`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IETF
+- Specification Document(s): this document, {{mission-status-errors}}
+
+- Error Name: `invalid_client`
+- Error Usage Location: Mission Status endpoint error response;
+  Mission Lifecycle endpoint error response
+- Related Protocol Extension: Mission Status and Lifecycle for OAuth
+  2.0
+- Change Controller: IETF
+- Specification Document(s): this document, {{mission-status-errors}}
 
 - Error Name: `unauthorized`
 - Error Usage Location: Mission Status endpoint error response;
