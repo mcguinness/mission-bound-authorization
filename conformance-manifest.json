@@ -10003,7 +10003,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625)."
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625). D971 (#1723 S2, X9): this row carries the reproducibility witnesses of the retired consumer row core.mission-record.authority-source-policy-digest-reproducible (\"a consumer holding the policy can reproduce it\", an ability the construction rule yields, not a duty). Both tests it cited are cited here: each recomputes the digest independently, the vector from a hand-written JCS string and the shipped pin from the policy file alone, and obtains the committed value."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-producer",
@@ -10040,42 +10040,6 @@
     }
    ],
    "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
-  },
-  {
-   "id": "core.mission-record.authority-source-policy-digest-reproducible",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "a consumer holding the policy can reproduce it",
-   "role": "verifier",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance"
-   ],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a party holding the governed policy recomputes `policy.digest` from the input and construction the policy format names and obtains the committed value"
-   },
-   "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
-     "level": "unit",
-     "surface": "commitment"
-    },
-    {
-     "file": "src/services/authorization-server/test/shipped-config.test.ts",
-     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
-     "level": "unit",
-     "surface": "commitment"
-    }
-   ],
-   "notes": "#1503 finding 2 (D620). Reproducibility is shown by independent recomputation in the tests: the vector from a hand-written JCS string, the shipped pin from the policy file alone. No reference component other than the AS's own loader holds a governed policy, so no verifier implementation is witnessed."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-opaque",
