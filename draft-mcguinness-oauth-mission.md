@@ -8014,6 +8014,14 @@ Cross-Domain:
   Identity, and Authority Materialized Before Containment point to the
   home of a rule they restated, keeping each operation's own condition
   (#1793, D919).
+- Editorial, no requirement change: Scope Projection is divided into
+  subsections for the subset condition, the per-audience condition, the
+  projection steps, requested scope values, `scope`-only targets,
+  refresh-token protection, and its example; Intent Members lists each
+  member's rules, the AS refusals included, under its definition;
+  Principals and Approval Basis lists the rules that follow its member
+  definitions; and Instance Context in Delegated Tokens lists its rules
+  (#1723, D845).
 
 -01
 
