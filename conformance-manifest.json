@@ -66959,11 +66959,11 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989)"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); the delegated exchange without a handle, the designation exchange, a child-creation exchange and carryover of a grant approved without a reference are not yet witnessed"
    },
    "tests": [
     {
@@ -66997,7 +66997,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness."
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. Partial until the other derivations are witnessed: re-assembling at the delegated exchange without a handle, at a child-creation derivation, or at mintMissionAccessToken is caught by no witness, and carryover of an unpinned grant is untested."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",
