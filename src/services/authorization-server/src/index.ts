@@ -193,6 +193,8 @@ export {
   generationKid,
   initSigningKeyRing,
   JWKS_MAX_AGE_SECONDS,
+  bindSigningKeyRing,
+  type KeyBindingOptions,
   type KernelStoreConfig,
   kernelStoreFromEnv,
   loadSigningKeyRing,
@@ -213,6 +215,16 @@ export {
   verifySigningKeyRing,
   type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
+export {
+  checkKeyBindings,
+  initKeyBindings,
+  KEY_BINDINGS_FORMAT,
+  type KeyBinding,
+  KeyBindingError,
+  type KeyBindingRecord,
+  type KeyBindingReplacement,
+  recordedKids,
+} from "./kernel/key-bindings.js";
 export {
   HISTORICAL_JWKS_PATH,
   HISTORICAL_KEY_SET_MEDIA_TYPE,
@@ -1590,7 +1602,7 @@ export async function buildAuthorizationServer(opts: {
   }
   const ringState =
     "ring" in keySource
-      ? await loadSigningKeyRingState(keySource.ring, opts.issuer, roleConfig)
+      ? await loadSigningKeyRingState(keySource.ring, opts.issuer, roleConfig, keySource.bindings ? { bindings: keySource.bindings } : {})
       : { keys: await generateEphemeralSigningKeys(roleConfig) };
   const signing = ringState.keys;
   // @spec #831 B2: each role signs under its active generation's `kid`; the
