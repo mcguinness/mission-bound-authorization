@@ -398,6 +398,7 @@ const KERNEL_TABLE_INVENTORY = [
   "governed_policy_consents",
   "governed_policy_roots",
   "join_assertion_events",
+  "kernel_issuer",
   "lifecycle_deliveries",
   "lifecycle_events",
   "lifecycle_responses",

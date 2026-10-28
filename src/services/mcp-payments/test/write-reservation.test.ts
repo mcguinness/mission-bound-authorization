@@ -49,6 +49,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 const BASE_MS = Date.parse("2026-10-02T12:00:00.000Z");
@@ -79,12 +80,12 @@ const viewFor = (missionId: string): MissionView => ({
   version: 1,
   authority_hash: `sha-256:${missionId}`,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.schedule", "payments:payment.schedule.cancel", "payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

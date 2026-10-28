@@ -43,6 +43,7 @@ import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { MissionState } from "../src/harness.js";
 import { type HarnessWorkItem, MediatedHarness, type MediatedToolChannel } from "../src/mediated-harness.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 const HARNESS = "https://harness.example.com";
@@ -149,12 +150,12 @@ const view = (id: string): MissionView => ({
   version: 1,
   authority_hash: `sha-256:${id}`,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

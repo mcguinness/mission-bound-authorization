@@ -46,10 +46,11 @@ import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-vi
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { decisionCacheKey } from "../src/projections.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { readWorkItemAttribution, WORK_ITEM_ATTRIBUTION_EXTENSION } from "../src/work-item.js";
 import { CLAIM_OWNER, freshKey } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const evaluate = (req: EvaluationRequest, opts: EvaluateOptions) => evaluateRequest(withCredential(req), opts);
 
@@ -75,11 +76,11 @@ const view: MissionView = {
   version: 1,
   authority_hash: "sha-256:h815",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: MISSION_RESOURCE_ACCESS_TYPE,
       resource: RESOURCE,
       actions: ["payments:invoice.read", "payments:payment.execute"],
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
@@ -87,7 +88,7 @@ const view: MissionView = {
 
 /** A consequential read by default; `execute` makes it an irreversible, keyed one. */
 function request(o: { workItem?: unknown; execute?: boolean; key?: string } = {}): EvaluationRequest {
-  return {
+  return withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: {
@@ -102,7 +103,7 @@ function request(o: { workItem?: unknown; execute?: boolean; key?: string } = {}
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: NOW.toISOString() },
       ...(o.workItem !== undefined ? { work_item: o.workItem } : {}),
     },
-  };
+  });
 }
 
 function options(over: Partial<EvaluateOptions> = {}): EvaluateOptions {

@@ -54,6 +54,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 const MODES = ["co-resident", "remote"] as const;
@@ -65,12 +66,12 @@ const defaultView: MissionView = {
   version: 1,
   authority_hash: "sha-256:rp-pep",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:payment.schedule"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
@@ -236,7 +237,7 @@ const listView: MissionView = {
   ...defaultView,
   id: "msn_rp_list",
   authority_hash: "sha-256:rp-list",
-  authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }],
+  authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] })],
 };
 const LIST_TOKEN: TokenFacts = {
   ...TOKEN,

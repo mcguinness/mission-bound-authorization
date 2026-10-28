@@ -78,9 +78,10 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const evaluate = (req: EvaluationRequest, opts: EvaluateOptions) => evaluateRequest(withCredential(req), opts);
 
@@ -262,14 +263,14 @@ function binding(root: string, o: Partial<MissionBudgetBinding> & { maxBudget?: 
   };
 }
 
-function view(id: string, budget?: MissionBudgetBinding): MissionView {
+function view(id: string, budget?: MissionBudgetBinding, issuer = ISSUER): MissionView {
   return {
     id,
-    issuer: ISSUER,
+    issuer,
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] }],
+    authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [EXECUTE, SCHEDULE, REVERSE, READ, REMIT] })],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
     ...(budget ? { budget } : {}),
@@ -278,6 +279,8 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
 
 interface RequestOptions {
   action?: string;
+  /** The Mission's issuer; defaults to the AS the fixture's principals belong to. */
+  issuer?: string;
   /** The deployment class; `null` sends an unclassified request. */
   actionClass?: string | null;
   missionId?: string;
@@ -315,7 +318,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
     resource: RESOURCE,
     ...(o.parameters ?? {}),
   };
-  return {
+  return withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { vendor_id: vendor, audience: RESOURCE, operation_target: RESOURCE } },
     action: {
@@ -323,7 +326,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       properties: { idempotency_key: o.key ?? freshKey(), ...(o.parameters === null ? {} : { parameters }) },
     },
     context: {
-      mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
+      mission: { id: o.missionId ?? "msn_a", issuer: o.issuer ?? ISSUER },
       actor: o.actor ?? { client_id: "ap-agent" },
       ...(o.actionClass === null ? {} : { action_class: o.actionClass ?? "irreversible_action" }),
       ...(o.digest === null ? {} : { parameter_digest: o.digest ?? canonicalDigest(parameters) }),
@@ -332,7 +335,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
       ...(o.compensates !== undefined ? { compensates_evaluation_id: o.compensates } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-816-a" };
@@ -359,7 +362,7 @@ function options(claims: IdempotencyClaimDomain, c: Clock, v: MissionView, over:
   };
 }
 
-const instanceCounter = (root: string) => budgetCounterId("mission", { issuer: ISSUER, mission_id: root });
+const instanceCounter = (root: string, issuer = ISSUER) => budgetCounterId("mission", { issuer, mission_id: root });
 const SHARED = budgetCounterId("standing_consent", { owner: OWNER, budget_id: BUDGET_ID });
 
 function meteringOf(d: Decision): DecisionMeteringEntry[] {
@@ -466,6 +469,31 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       // At the boundary: a request for exactly the remaining 100.00 is permitted.
       expectPermit(await evaluate(request(c, { missionId: "msn_a", amount: "100.00" }), options(claims, c, v)));
       expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
+      claims.close();
+    });
+
+    it("keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares (@spec control-plane#isolation, #1748)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const OTHER_ISSUER = "https://as-other.test";
+      const atIssuer = view("msn_a", binding("msn_a", { maxBudget: "300.00" }));
+      const atOther = view("msn_a", binding("msn_a", { maxBudget: "300.00" }), OTHER_ISSUER);
+      await permitted(claims, c, atIssuer, { amount: "300.00" });
+      expectDenied(await evaluate(request(c, { missionId: "msn_a", amount: "100.00" }), options(claims, c, atIssuer)), "quota_exceeded");
+      // The same local identifier under another issuer is another Mission: its instance counter is its own.
+      const other = await evaluate(
+        request(c, { missionId: "msn_a", issuer: OTHER_ISSUER, amount: "300.00" }),
+        options(claims, c, atOther),
+      );
+      expectPermit(other);
+      expect(instanceCounter("msn_a", OTHER_ISSUER)).not.toBe(instanceCounter("msn_a"));
+      expect(entry(other, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a", OTHER_ISSUER) });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a", OTHER_ISSUER))?.reserved.amount).toBe("300.00");
+      // The standing consent is keyed on its declared accounting domain, so both charges draw on it.
+      expect(entry(other, "standing_consent")).toMatchObject({ counter_id: SHARED });
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("600.00");
       claims.close();
     });
 
@@ -1640,12 +1668,12 @@ describe("the PDP-side budget binding and the committed destinations (@spec mete
     const capped: MissionView = {
       ...view("msn_a", binding("msn_a")),
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: MISSION_RESOURCE_ACCESS_TYPE,
           resource: RESOURCE,
           actions: [EXECUTE],
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
+        }),
       ],
     };
     // withCredential gives the request a credential with no constraints, so

@@ -17,7 +17,7 @@ import {
   TemplateStore,
   validateMissionIntent,
 } from "../src/index.js";
-import { createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
+import { assembledCeilingOffer, createCeilingDrawdownInCallerTx } from "../src/kernel/progressive.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
@@ -261,7 +261,11 @@ describe("a child's approved_at follows the root its authority traces to (@spec 
       approver: { iss: ISS, sub: "bob" },
       clientId: "parent-agent",
       approvalEventId: `pred-${seq++}`,
-      ceiling: { authority_ceiling: ceiling, drawdown_policy: { id: "drawdown-std", version: "1" } },
+      // The approval surface assembles the offer from configuration before it renders (#249, D875).
+      ceiling: assembledCeilingOffer(
+        { authority_ceiling: ceiling, drawdown_policy: { id: "drawdown-std", version: "1" } },
+        kernel.resourceContracts(),
+      ) as never,
     });
     expect(predecessor.ceiling_consented_at).toBe(iso(T0));
     at(1);

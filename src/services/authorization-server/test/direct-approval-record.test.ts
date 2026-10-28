@@ -1,3 +1,4 @@
+import { assembledCeilingOffer } from "../src/kernel/progressive.js";
 import { approvalPolicyDigest } from "@mission/core";
 import { APPROVAL_FLOOR, DERIVATION_POLICY, WRITE_ACTIONS } from "@mission/demo-data";
 import { type CryptoKey, generateKeyPair } from "jose";
@@ -153,6 +154,16 @@ const committedAt = (kernel: MissionKernel, missionId: string, at: string, edit:
   });
 };
 
+/**
+ * @spec resource-access#resource-contract (#249, D875): the ceiling as the
+ * approval surface renders it, assembled from the kernel's configuration.
+ */
+function rendered(kernel: MissionKernel, ceiling: AuthorityEntry[]): { authority_ceiling: AuthorityEntry[] } {
+  return (assembledCeilingOffer({ authority_ceiling: ceiling } as never, kernel.resourceContracts()) ?? {
+    authority_ceiling: ceiling,
+  }) as { authority_ceiling: AuthorityEntry[] };
+}
+
 describe("a voluntary direct approval record (@spec approval-governance#triggers, approval-governance#atomic-commitment)", () => {
   it("records nothing by default: a direct approval carries no adjudication and commits no record", () => {
     const kernel = makeKernel(false);
@@ -288,7 +299,7 @@ describe("a voluntary direct approval record (@spec approval-governance#triggers
     const kernel = makeKernel();
     const READ_ONLY = [{ ...(EXECUTE[0] as AuthorityEntry), actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }];
     const carol = { approver: { iss: ISS, sub: "carol" }, proposedAuthority: READ_ONLY };
-    expect(outcome(() => approve(kernel, { ...carol, ceiling: { authority_ceiling: EXECUTE } }))).toBe("intent:access_denied");
+    expect(outcome(() => approve(kernel, { ...carol, ceiling: rendered(kernel, EXECUTE) }))).toBe("intent:access_denied");
     expect(kernel.allMissions()).toHaveLength(0);
     const mission = approve(kernel, carol);
     expect(kernel.directApprovalRecords.inputs(mission.id)?.inputs).not.toHaveProperty("ceiling");
@@ -555,11 +566,11 @@ describe("re-checking a direct record (@spec approval-governance#re-check)", () 
     const withCeiling = () => {
       const kernel = makeKernel();
       clockMs = T0 + 30_000;
-      return { kernel, mission: approve(kernel, { proposedAuthority: READ_ONLY, ceiling: { authority_ceiling: EXECUTE } }) };
+      return { kernel, mission: approve(kernel, { proposedAuthority: READ_ONLY, ceiling: rendered(kernel, EXECUTE) }) };
     };
     const { kernel, mission } = withCeiling();
-    expect(mission.authority_ceiling).toEqual(EXECUTE);
-    expect(kernel.directApprovalRecords.inputs(mission.id)?.inputs.ceiling).toEqual(EXECUTE);
+    expect(mission.authority_ceiling).toEqual(rendered(kernel, EXECUTE).authority_ceiling);
+    expect(kernel.directApprovalRecords.inputs(mission.id)?.inputs.ceiling).toEqual(rendered(kernel, EXECUTE).authority_ceiling);
     expect(recheck(kernel, mission.id)).toEqual({ rechecked: true });
     const pwd = (k: MissionKernel, id: string) => {
       k.db.prepare("UPDATE direct_approval_inputs SET inputs_json = json_set(inputs_json, '$.authentication.acr', 'pwd')").run();

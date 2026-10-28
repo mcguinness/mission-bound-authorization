@@ -26,6 +26,7 @@ import { TOOL_ACTIONS } from "@mission/mcp-payments";
 import { importJWK, SignJWT, type CryptoKey } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, recheckApprovalGovernanceRecord } from "../src/index.js";
+import { assembledCeilingOffer } from "../src/kernel/progressive.js";
 import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -255,7 +256,15 @@ async function authorize(
       method: "POST",
       redirect: "manual",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}), ...(args.ceiling ?? {}) }),
+      // The decision posts the ceiling as the page rendered it: assembled from
+      // the assembly's configuration (#249, D875).
+      body: JSON.stringify({
+        decision: "approve",
+        ...(render_revision ? { render_revision } : {}),
+        ...((args.ceiling && (assembledCeilingOffer(args.ceiling as never, s.as.kernel.resourceContracts()) as Record<string, unknown> | undefined)) ??
+          args.ceiling ??
+          {}),
+      }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
     keep(jar, res);
@@ -490,7 +499,10 @@ describe("the floor over a consented authority ceiling (@spec mission#approval-a
     expect(r.code, r.description).toBeTruthy();
     expect(r.missions).toBe(1);
     const created = progressive.as.kernel.allMissions().at(-1);
-    expect(created?.authority_ceiling).toEqual(PAYMENTS_CEILING);
+    expect(created?.authority_ceiling?.map(({ resource_contract: _ref, ...e }) => e)).toEqual(PAYMENTS_CEILING);
+    expect(created?.authority_ceiling).toEqual(
+      (assembledCeilingOffer(CEILING_CONSENT as never, progressive.as.kernel.resourceContracts()) as { authority_ceiling: AuthorityEntry[] }).authority_ceiling,
+    );
     expect(created?.drawdown_policy?.id).toBe("drawdown-std");
     expect(typeof created?.ceiling_hash).toBe("string");
   });

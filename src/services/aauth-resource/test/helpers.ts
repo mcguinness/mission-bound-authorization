@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import type { Server } from "node:http";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -8,6 +11,7 @@ import {
   createAgentProvider,
   createIssuerStub,
   decodeClaims,
+  EndpointSwitch,
   type IssuerStub,
   LoopbackNetwork,
   type LoopbackResponse,
@@ -17,11 +21,21 @@ import {
 } from "@mission/aauth-testkit";
 import {
   type HttpRequestMessage,
+  type SignatureKeyMember,
   signRequest,
   verifyRequest,
   verifyResourceToken,
 } from "@mission/aauth-wire";
-import { createResource, listen, loadResourceConfig, type Resource } from "../src/index.js";
+import {
+  createResource,
+  listen,
+  loadResourceConfig,
+  REVOCATION_PATH,
+  type Resource,
+  type ResourceConfig,
+  type RevocationStore,
+  SqliteRevocationStore,
+} from "../src/index.js";
 
 export const AP = "https://ap.test";
 export const PS = "https://ps.test";
@@ -44,6 +58,27 @@ export interface FakePs extends IssuerStub {
   tokenPolicy: { grant?: (scope: string) => string; refuse?: string };
   personToken(agent: AgentClient, claims?: Record<string, unknown>): Promise<string>;
   authToken(agent: AgentClient, claims?: Record<string, unknown>): Promise<string>;
+  /**
+   * Revoke at the Resource as this PS: a POST of `body` to its revocation
+   * endpoint, signed as a server under the `jwks_uri` scheme with this
+   * PS's key (aauth#section-11.12.1). This is a minimal signer, not the
+   * PS's revocation logic.
+   */
+  revoke(body: unknown, options?: RevokeOptions): Promise<LoopbackResponse>;
+}
+
+export interface RevokeOptions {
+  /** Sign as this server instead, under its own identifier, document and key. */
+  as?: IssuerStub;
+  /** Default: the signer's identifier, its document and its key id. */
+  signatureKey?: SignatureKeyMember;
+  /** Default: base and body components. */
+  components?: readonly string[];
+  contentType?: string;
+  /** Default: the current second. */
+  created?: number;
+  /** The exact bytes sent; default `JSON.stringify(body)`. */
+  raw?: string;
 }
 
 export interface World {
@@ -52,8 +87,42 @@ export interface World {
   provider: AgentProvider;
   ps: FakePs;
   resource: Resource;
+  /** The switch in front of the Resource's revocation endpoint. */
+  revocationSwitch: EndpointSwitch;
+  /** The Resource's durable revoked set, on a temporary file. */
+  storeFile: string;
   agent: AgentClient;
   seconds(): number;
+  /** Stop the Resource and start another on the same store file and key. */
+  restartResource(): Promise<void>;
+  close(): Promise<void>;
+}
+
+/** A revoked set whose reads and writes can be made to fail. */
+export class SwitchableStore implements RevocationStore {
+  failReads = false;
+  failWrites = false;
+
+  constructor(readonly inner: RevocationStore) {}
+
+  admit(...args: Parameters<RevocationStore["admit"]>) {
+    if (this.failWrites) throw new Error("the revoked set is unavailable");
+    return this.inner.admit(...args);
+  }
+  isRevoked(...args: Parameters<RevocationStore["isRevoked"]>) {
+    if (this.failReads) throw new Error("the revoked set is unavailable");
+    return this.inner.isRevoked(...args);
+  }
+  purge(...args: Parameters<RevocationStore["purge"]>) {
+    if (this.failWrites) throw new Error("the revoked set is unavailable");
+    return this.inner.purge(...args);
+  }
+  entries() {
+    return this.inner.entries();
+  }
+  close() {
+    this.inner.close();
+  }
 }
 
 function fakePs(net: LoopbackNetwork, clock: ManualClock, issuer = PS): FakePs {
@@ -70,10 +139,35 @@ function fakePs(net: LoopbackNetwork, clock: ManualClock, issuer = PS): FakePs {
       auth_token_endpoint: `${issuer}/token`,
     },
   });
+  const revoke: FakePs["revoke"] = (body, options = {}) => {
+    const url = `${RESOURCE}${REVOCATION_PATH}`;
+    const bytes = options.raw ?? JSON.stringify(body);
+    const headers: Record<string, string> = {
+      "content-type": options.contentType ?? "application/json",
+    };
+    const signer = options.as ?? stub;
+    const added = signRequest(
+      { method: "POST", url, headers, body: bytes },
+      {
+        alg: signer.key.alg,
+        privateKey: signer.key.privateKey,
+        signatureKey: options.signatureKey ?? {
+          scheme: "jwks_uri",
+          id: signer.issuer,
+          dwk: signer.dwk,
+          kid: signer.key.kid,
+        },
+        created: options.created ?? seconds(),
+        ...(options.components ? { components: options.components } : {}),
+      },
+    );
+    return net.request({ method: "POST", url, headers: { ...headers, ...added }, body: bytes });
+  };
   const ps: FakePs = {
     ...stub,
     requests,
     tokenPolicy,
+    revoke,
     personToken: (agent, claims = {}) => {
       const iat = seconds();
       return stub.mint("aa-person+jwt", {
@@ -165,24 +259,46 @@ function fakePs(net: LoopbackNetwork, clock: ManualClock, issuer = PS): FakePs {
   return ps;
 }
 
+/** The shipped Resource configuration. */
+export const shippedConfig = (): ResourceConfig => loadResourceConfig(CONFIG_DIR);
+
+export interface WorldOptions {
+  /** Default: the shipped configuration. */
+  config?: ResourceConfig;
+  /** Wrap the Resource's durable store, for a failing-store test. */
+  wrapStore?: (store: RevocationStore) => RevocationStore;
+}
+
 /**
  * The agent-provider stub, a stand-in PS and the Resource (from the
- * shipped configuration, through its own `listen`) on one loopback
- * network, with an agent of the provider whose PS is the stand-in.
+ * shipped configuration, through its own `listen`, its revoked set durable
+ * on a temporary file and its revocation endpoint behind a switch) on one
+ * loopback network, with an agent of the provider whose PS is the
+ * stand-in.
  */
-export async function world(misbehavior?: Misbehavior): Promise<World> {
+export async function world(misbehavior?: Misbehavior, opts: WorldOptions = {}): Promise<World> {
   const net = new LoopbackNetwork();
   const clock = new ManualClock();
   const provider = createAgentProvider({ issuer: AP, now: clock.now });
   const ps = fakePs(net, clock);
-  const resource = createResource({
-    config: loadResourceConfig(CONFIG_DIR),
+  const config = opts.config ?? shippedConfig();
+  const dir = mkdtempSync(join(tmpdir(), "aauth-resource-"));
+  const storeFile = join(dir, "resource.db");
+  const open = () => {
+    const store = new SqliteRevocationStore(storeFile);
+    return opts.wrapStore ? opts.wrapStore(store) : store;
+  };
+  const revocationSwitch = new EndpointSwitch({ path: REVOCATION_PATH });
+  let resource = createResource({
+    config,
     resolver: net.resolver({ now: clock.now }),
     now: clock.now,
+    revocations: open(),
   });
   await net.serve(AP, provider.handler);
   await net.serve(PS, ps.handler);
-  net.attach(RESOURCE, await listen(resource.handler));
+  let server: Server = await listen(revocationSwitch.wrap(resource.handler));
+  net.attach(RESOURCE, server);
   const agent = await createAgent({
     provider,
     transport: net,
@@ -191,15 +307,46 @@ export async function world(misbehavior?: Misbehavior): Promise<World> {
     sleep: clock.sleep,
     ...(misbehavior ? { misbehavior } : {}),
   });
-  return {
+  let closed = false;
+  const stop = (s: Server) =>
+    new Promise<void>((resolve) => {
+      s.closeAllConnections();
+      s.close(() => resolve());
+    });
+  const w: World = {
     net,
     clock,
     provider,
     ps,
-    resource,
+    get resource() {
+      return resource;
+    },
+    revocationSwitch,
+    storeFile,
     agent,
     seconds: () => Math.floor(clock.now() / 1000),
+    restartResource: async () => {
+      await stop(server);
+      resource.revocations.close();
+      resource = createResource({
+        config,
+        resolver: net.resolver({ now: clock.now }),
+        now: clock.now,
+        key: resource.key,
+        revocations: open(),
+      });
+      server = await listen(revocationSwitch.wrap(resource.handler));
+      net.attach(RESOURCE, server);
+    },
+    close: async () => {
+      if (closed) return;
+      closed = true;
+      await net.close();
+      resource.revocations.close();
+      rmSync(dir, { recursive: true, force: true });
+    },
   };
+  return w;
 }
 
 /** Serve another stand-in PS at `issuer` on the world's network. */

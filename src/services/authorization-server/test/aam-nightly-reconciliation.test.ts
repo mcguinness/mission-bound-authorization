@@ -79,13 +79,14 @@ import {
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { capabilityPresentationFor } from "./capability-presentation.helper.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withMissionContractReference } from "@mission/pdp/test-support";
 import { withCredential } from "../../pdp/test/with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
-// fixture adds a neutral one where a test does not name it.
+// fixture adds a neutral one where a test does not name it, with the contract
+// reference the Mission's entry carries (#249, D865).
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) =>
-  evaluateRequest(withCredential(req), opts);
+  evaluateRequest(withCredential(withMissionContractReference(req, opts.view)), opts);
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
