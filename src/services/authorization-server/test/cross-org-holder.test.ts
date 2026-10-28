@@ -303,6 +303,16 @@ describe("checked cross-org child mint (@spec cross-org-delegation#derivation, #
       deriveCrossOrgChild(root.root, agentA.privateKey, root, { cnfJwk: undefined as never }),
       "no key",
     ).rejects.toThrow(/the recipient's own cnf.jwk/);
+    // A null or non-object key is refused, never replaced by the parent's key
+    // the shared check falls back to (#1840 review): no child is signed.
+    await expect(
+      deriveCrossOrgChild(root.root, agentA.privateKey, root, { cnfJwk: null as never }),
+      "a null key",
+    ).rejects.toThrow(/the recipient's own cnf.jwk/);
+    await expect(
+      deriveCrossOrgChild(root.root, agentA.privateKey, root, { cnfJwk: "not-a-jwk" as never }),
+      "a non-object key",
+    ).rejects.toThrow(/the recipient's own cnf.jwk/);
     await expect(
       deriveCrossOrgChild(root.root, agentA.privateKey, root, { cnfJwk: privateJwk as JWK }),
       "a private key",

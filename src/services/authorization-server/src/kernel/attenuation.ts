@@ -1003,7 +1003,12 @@ export async function deriveCrossOrgChild(
   narrowed: AttenuatedAuthority,
   opts: CrossOrgChildOptions & { expCeiling?: number },
 ): Promise<string> {
-  if (opts.cnfJwk === undefined) throw new Error("cross-org: the child needs the recipient's own cnf.jwk");
+  // Rule 9, before the shared check: that check falls back to the parent's
+  // key for a missing child key (the in-organization holder narrowing for
+  // itself), so a null or non-object key is refused here, never replaced.
+  if (opts.cnfJwk === null || typeof opts.cnfJwk !== "object") {
+    throw new Error("cross-org: the child needs the recipient's own cnf.jwk");
+  }
   const ceiling = opts.expCeiling;
   const parentExp = Number((decodeJwt(parentToken) as Record<string, unknown>).exp);
   const exp = opts.exp ?? (ceiling === undefined ? undefined : Math.min(parentExp, ceiling));
@@ -1036,7 +1041,13 @@ export async function deriveCrossOrgChild(
       throw new Error("cross-org: a hop's act names this hop's actor only, never a nested history");
     }
   }
-  return signCrossOrgChild(parentToken, checked.parent, parentKey, narrowed, { ...opts, exp: checked.exp });
+  // Sign exactly what was checked: the validated key, audience and expiry.
+  return signCrossOrgChild(parentToken, checked.parent, parentKey, narrowed, {
+    ...opts,
+    cnfJwk: checked.cnfJwk,
+    aud: checked.aud,
+    exp: checked.exp,
+  });
 }
 
 /**
