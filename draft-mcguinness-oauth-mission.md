@@ -134,6 +134,14 @@ informative:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
   I-D.draft-mcguinness-oauth-client-attesters:
+  I-D.draft-mcguinness-oauth-mission-attenuation:
+    title: "Mission Offline Attenuation for OAuth 2.0"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-attenuation.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   I-D.draft-mcguinness-oauth-mission-status:
     title: "Mission Status and Lifecycle for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-status.html
@@ -2899,8 +2907,14 @@ short-lived.
 {{RFC9068}} fixes the JWT's required claims (including `jti`), the `typ`
 header parameter value `at+jwt`, and resource server validation
 ({{Section 2.1 of RFC9068}}, {{Section 2.2 of RFC9068}},
-{{Section 4 of RFC9068}}). In addition to what that profile requires, a
-derived token:
+{{Section 4 of RFC9068}}). A token whose format a companion profile
+explicitly defines, with its own `typ` and verification rules, follows
+that profile instead, as the Mission Offline Attenuation root does
+({{I-D.draft-mcguinness-oauth-mission-attenuation}}). JWT access-token
+validation remains governed by {{Section 4 of RFC9068}}, including
+acceptance of `at+jwt` or `application/at+jwt`. A companion-format
+token is consumed only under that companion's verification rules. In
+addition to what {{RFC9068}} requires, a derived token:
 
 - carries the token's Mission-derived authority as
   `authorization_details` ({{RFC9396}}); this MAY be the full Authority
@@ -7834,6 +7848,11 @@ Cross-Domain:
 
 -02
 
+- Token Claims: a token whose format a companion profile explicitly
+  defines, with its own `typ` and verification rules (the Mission
+  Offline Attenuation root), follows that profile; JWT access-token
+  validation stays under Section 4 of RFC 9068, accepting `at+jwt` or
+  `application/at+jwt` (#1760).
 - Configured-mapping mode can key on the requested `scope` values for
   a `scope`-only target, through that target's trusted scope-projection
   mapping, which also relates a requested value back to authority

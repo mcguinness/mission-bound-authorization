@@ -30,6 +30,7 @@ import type { ApprovalFloorPolicy, ProgressiveProfile } from "@mission/demo-data
 import {
   type ActivationPolicyRef,
   authorityHash,
+  canonicalize,
   catalogDigest,
   compareAmounts,
   computeAnchor,
@@ -41,6 +42,7 @@ import {
   type JsonValue,
   parseRfc3339Instant,
   proposalHash,
+  ResourceContractDeclarations,
   selectorOverlapsEntry,
 } from "@mission/core";
 import {
@@ -58,6 +60,7 @@ import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { IntentError, validateAuthorityProposal } from "./intent.js";
 import type { MissionKernel } from "./kernel.js";
 import { newMissionId } from "./mission-id.js";
+import { assembleResourceContracts, assertCarriedContractsResolvable, inheritResourceContract } from "./resource-contract.js";
 import { assertSuccessorMaxBudget } from "./standing-payment.js";
 import {
   type ApprovalBasis,
@@ -232,8 +235,21 @@ export function consentCeiling(
   consent: CeilingConsent,
   consentedAt: string,
   consentPrincipal?: { iss: string; sub: string },
+  contracts: ResourceContractDeclarations = ResourceContractDeclarations.NONE,
 ): MissionCeiling {
   const ceiling = consentedCeilingEntries(consent);
+  // @spec resource-access#resource-contract (#249, D875): a ceiling consent is
+  // a new approval whose offer was assembled before it rendered
+  // ({@link assembledCeilingOffer}); rechecked at the commit, the consented
+  // ceiling must be the one configuration assembles now, so no reference is
+  // substituted after the Approver saw it. Absent declarations, a carried
+  // reference refuses.
+  if (canonicalize(assembleResourceContracts(ceiling, contracts) as never) !== canonicalize(ceiling as never)) {
+    throw new IntentError(
+      "invalid_authorization_details",
+      "the consented ceiling's contract references are not the ones configuration names now; the ceiling needs a new consent",
+    );
+  }
   const drawdownPolicy = consentedDrawdownPolicy(iss, registry, consent);
   const hash = ceilingHash(iss, ceiling, drawdownPolicy);
   return {
@@ -247,6 +263,43 @@ export function consentCeiling(
     ...(consentPrincipal ? { ceiling_consent_principal: consentPrincipal } : {}),
     drawdown_count: 0,
   };
+}
+
+/**
+ * @spec resource-access#resource-contract (#249, D875): a ceiling offer with
+ * its references assembled from configuration, as the approval page renders
+ * it and the consent commits it. An offer configuration cannot assemble (a
+ * carried reference no longer current, or a requirement no single current
+ * contract meets) is not offered: no ceiling is consented.
+ */
+export function assembledCeilingOffer(
+  offer: CeilingConsent | undefined,
+  contracts: ResourceContractDeclarations,
+): CeilingConsent | undefined {
+  if (!offer) return undefined;
+  try {
+    return { ...offer, authority_ceiling: assembleResourceContracts(offer.authority_ceiling as AuthorityEntry[], contracts) };
+  } catch (e) {
+    if (e instanceof IntentError) return undefined;
+    throw e;
+  }
+}
+
+/**
+ * @spec resource-access#resource-contract (#249, D875): a drawdown's
+ * requested authority. A drawdown is preservation-only: derived as an
+ * ordinary successor, it carries the consented ceiling's reference
+ * ({@link inheritResourceContract}), never one assembled afresh, so a
+ * ceiling consented without a reference yields drawdowns without one and a
+ * superseded ceiling reference stands while supported.
+ */
+export function drawdownRequested(
+  kernel: MissionKernel,
+  intent: MissionIntent,
+  proposal: AuthorityEntry[] | undefined,
+  ceiling: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  return inheritResourceContract(kernel.deriveWithProvenance(intent, proposal?.length ? proposal : undefined).entries, ceiling);
 }
 
 /** A ceiling re-consented at a fresh human approval: committed, with that approval's consent instant. */
@@ -1525,12 +1578,21 @@ export function createCeilingDrawdownInCallerTx(kernel: MissionKernel, input: Ce
   // expansion successor does.
   assertSuccessorMaxBudget(kernel, predecessor, input.intent);
   const proposal = input.proposedAuthority?.length ? input.proposedAuthority : undefined;
-  // The successor's Authority Set is derived exactly as an ordinary
-  // expansion's, carrying the predecessor's recorded capability bindings.
+  // The successor's Authority Set is derived as an ordinary expansion's,
+  // carrying the predecessor's recorded capability bindings, but its
+  // references are preserved, never assembled (below).
   const derived = kernel.deriveWithProvenance(input.intent, proposal);
+  // @spec resource-access#resource-contract (#249, D875): preservation-only,
+  // the consented ceiling's reference is carried, then checked as a carried
+  // one: a superseded version within its retention stands, a retired one
+  // refuses. It is inherited onto the derivation BEFORE capability bindings
+  // are added, as {@link drawdownRequested} inherits it, so the bindings
+  // cannot block the whole-entry match and the wire decision and the creation
+  // pin alike.
   const authoritySet = kernel.resolveFreshCapabilities(
-    inheritCapabilitySources(derived.entries, predecessor.authority_set),
+    inheritCapabilitySources(inheritResourceContract(derived.entries, predecessor.authority_ceiling), predecessor.authority_set),
   );
+  assertCarriedContractsResolvable(authoritySet, kernel.resourceContracts(), kernel.nowDate());
   if (!isSubsetSetIgnoringCapabilitySources(authoritySet, predecessor.authority_ceiling)) {
     throw new Error("ceiling drawdown successor is not within the consented ceiling");
   }
