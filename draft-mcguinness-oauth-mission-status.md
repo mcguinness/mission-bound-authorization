@@ -2239,6 +2239,15 @@ Mission Termination Reasons registry
 
 \[\[ To be removed from the final specification ]]
 
+-01
+
+- The Mission Status Request gives the client authentication
+  parameters of mTLS and private-key JWT as examples; a method that
+  carries its credentials in HTTP header fields keeps them there.
+- IANA Considerations adds the Mission Status and Mission Lifecycle
+  endpoints as usage locations for `invalid_request` and
+  `invalid_client`.
+
 -00
 
 - Initial individual draft.
