@@ -3336,27 +3336,9 @@ for this request.<a href="#section-4.4-3.2.1" class="pilcrow">¶</a></p>
 AS that supports none still applies them and refuses every presented
 entry (<a href="#conformance-roles" class="auto internal xref">Section 19.1</a>).<a href="#section-4.4-4" class="pilcrow">¶</a></p>
 <p id="section-4.4-5">Mission Intent Submission Evidence for OAuth 2.0
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>) specifies:<a href="#section-4.4-5" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-4.4-6.1">
-            <p id="section-4.4-6.1.1">the entry convention;<a href="#section-4.4-6.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.4-6.2">
-            <p id="section-4.4-6.2.1">required-evidence resolution;<a href="#section-4.4-6.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.4-6.3">
-            <p id="section-4.4-6.3.1">the binding of evidence to one Intent and to the presenter;<a href="#section-4.4-6.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.4-6.4">
-            <p id="section-4.4-6.4.1">the verification-cost bound;<a href="#section-4.4-6.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.4-6.5">
-            <p id="section-4.4-6.5.1">where the error is returned; and<a href="#section-4.4-6.5.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-4.4-6.6">
-            <p id="section-4.4-6.6.1">evidence on idempotent creation surfaces.<a href="#section-4.4-6.6.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-submission-evidence" class="cite xref">I-D.draft-mcguinness-oauth-mission-submission-evidence</a>]</span>) specifies
+the evidence framework, including required-evidence resolution and the
+binding of evidence to one Intent and its presenter.<a href="#section-4.4-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="submission-processing">
@@ -4564,9 +4546,7 @@ deployment's enforcement mechanism.<a href="#section-7.2-2" class="pilcrow">¶</
 <p id="section-7.2-3">The wire shape of that operation is out of scope for this document. A
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)
-defines an interoperable <code>revoke</code> operation, authorized under its own
-lifecycle authorization policy, which a deployment can serve alone
-under that document's revoke-only conformance class.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
+defines an interoperable <code>revoke</code> operation.<a href="#section-7.2-3" class="pilcrow">¶</a></p>
 <p id="section-7.2-4">As <span><a href="https://rfc-editor.org/rfc/rfc7009#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> permits, a deployment's revocation
 policy can treat revoking a Mission's refresh token as revoking the
 Mission; a deployment that couples token revocation to Mission
@@ -5052,11 +5032,11 @@ header parameter value <code>at+jwt</code>, and resource server validation
 <span><a href="https://rfc-editor.org/rfc/rfc9068#section-4" class="relref">Section 4</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>). A token whose format a companion profile
 explicitly defines, with its own <code>typ</code> and verification rules, follows
 that profile instead, as the Mission Offline Attenuation root does
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>). Access token
-validation is unchanged: a resource server validating an access token
-under this document requires <code>at+jwt</code> and refuses any other <code>typ</code>, so a
-companion-format token is never accepted as an access token. In
-addition to what that profile requires, a derived token:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-attenuation" class="cite xref">I-D.draft-mcguinness-oauth-mission-attenuation</a>]</span>). JWT access-token
+validation remains governed by <span><a href="https://rfc-editor.org/rfc/rfc9068#section-4" class="relref">Section 4</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>, including
+acceptance of <code>at+jwt</code> or <code>application/at+jwt</code>. A companion-format
+token is consumed only under that companion's verification rules. In
+addition to what <span>[<a href="#RFC9068" class="cite xref">RFC9068</a>]</span> requires, a derived token:<a href="#section-8.4-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-8.4-2.1">
             <p id="section-8.4-2.1.1">carries the token's Mission-derived authority as
@@ -5111,8 +5091,6 @@ rotation retires a key from signing, never from resolvability while
 tokens signed under it remain valid. A token the AS issues only for
 presentation back to itself, such as a designation (<a href="#designation" class="auto internal xref">Section 12.1</a>),
 creates no publication duty by itself.<a href="#section-8.4-5" class="pilcrow">¶</a></p>
-<p id="section-8.4-6">Every emitted <code>authorization_details</code> entry is a subset of a Mission
-Authority Set entry (<a href="#subset" class="auto internal xref">Section 5.4</a>).<a href="#section-8.4-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="token-response">
@@ -6710,11 +6688,9 @@ admits one; deployment policy alone does not.<a href="#section-12.2-2.2.1" class
 delegate is an actor, not the Subject.<a href="#section-12.2-2.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.4">
-            <p id="section-12.2-2.4.1"><strong><code>client_id</code> keeps its ordinary meaning.</strong> A delegated token's
-<code>client_id</code> is the OAuth client that requested it
-(<span><a href="https://rfc-editor.org/rfc/rfc8693#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>, <span><a href="https://rfc-editor.org/rfc/rfc9068#section-2.2" class="relref">Section 2.2</a> of [<a href="#RFC9068" class="cite xref">RFC9068</a>]</span>). The
-originally-approved agent remains recorded in the Mission Record
-(<a href="#mission-record" class="auto internal xref">Section 14</a>, <a href="#client-id-rebinding" class="auto internal xref">Appendix B.6</a>).<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
+            <p id="section-12.2-2.4.1"><strong><code>client_id</code> keeps its ordinary meaning.</strong> It names the client that
+requested the token (<a href="#token-claims" class="auto internal xref">Section 8.4</a>); the originally-approved agent
+stays in the Mission Record (<a href="#client-id-rebinding" class="auto internal xref">Appendix B.6</a>).<a href="#section-12.2-2.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.5">
             <p id="section-12.2-2.5.1"><strong>The <code>act</code> chain identifies the delegates.</strong> The delegated token
@@ -6727,9 +6703,8 @@ members that profile defines (for example, <code>sub</code>, <code>iss</code>, a
 </li>
           <li class="normal" id="section-12.2-2.6">
             <p id="section-12.2-2.6.1"><strong>The audience processes the chain.</strong> The AS issues the delegated
-token only for an audience it has established as a Mission-aware
-Resource Server that also processes the <code>act</code> chain, and refuses
-any other with <code>invalid_target</code> (<a href="#rs-mission-unaware" class="auto internal xref">Section 9.2</a>).<a href="#section-12.2-2.6.1" class="pilcrow">¶</a></p>
+token only for an audience that meets the issuance rule of
+<a href="#rs-mission-unaware" class="auto internal xref">Section 9.2</a>, and refuses any other with <code>invalid_target</code>.<a href="#section-12.2-2.6.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.2-2.7">
             <p id="section-12.2-2.7.1"><strong>Authority only narrows.</strong> The delegated token's
@@ -9042,10 +9017,8 @@ same derived authority) share it while differing in <code>intent_hash</code>,
 therefore forbids its use as a Mission Identifier or as a replay or
 idempotency key.<a href="#section-20.5.2-1" class="pilcrow">¶</a></p>
 <p id="section-20.5.2-2">A consumer that needs to bind to or correlate a specific Mission uses
-the Mission Identifier. Where a deployment discloses <code>authority_hash</code>
-to a resource server, it is an audit correlator, not an enforcement
-input, and not proof that the carried entries are a subset of the
-approved set.<a href="#section-20.5.2-2" class="pilcrow">¶</a></p>
+the Mission Identifier. A disclosed <code>authority_hash</code> is only an audit
+correlator (<a href="#rs-carried-authority" class="auto internal xref">Section 9.3</a>).<a href="#section-20.5.2-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="composition-and-the-effective-ceiling">
@@ -9078,14 +9051,11 @@ of a Mission and its descendants) is the metering profile's role
           <h4 id="name-authority-materialized-befo">
 <a href="#section-20.5.4" class="section-number selfRef">20.5.4. </a><a href="#name-authority-materialized-befo" class="section-name selfRef">Authority Materialized Before Containment</a>
           </h4>
-<p id="section-20.5.4-1">Where a deployment runs the Mission Containment profile
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>), a contain
-transition does not reach authority materialized before it, such as a
-cross-domain grant already redeemed at a Resource AS or an offline
-attenuation root already minted. That authority operates for its own
-remaining lifetime, the same residual bound that revocation carries
-(<a href="#revocation" class="auto internal xref">Section 7.2</a>); the containment profile states the residual and how
-short lifetimes bound it
+<p id="section-20.5.4-1">Under the Mission Containment profile, a contain transition does not
+reach authority materialized before it, such as a redeemed
+cross-domain grant or a minted attenuation root, which operates for its
+own remaining lifetime, as after revocation (<a href="#revocation" class="auto internal xref">Section 7.2</a>); that
+profile states the residual and how short lifetimes bound it
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>, Section "The
 Materialized-Capability Residual").<a href="#section-20.5.4-1" class="pilcrow">¶</a></p>
 </section>
@@ -11859,8 +11829,9 @@ audit companion is active, and Cross-Domain is not among them.<a href="#appendix
 <li class="normal" id="appendix-G-3.1">
           <p id="appendix-G-3.1.1">Token Claims: a token whose format a companion profile explicitly
 defines, with its own <code>typ</code> and verification rules (the Mission
-Offline Attenuation root), follows that profile; access-token
-validation, including <code>at+jwt</code>, is unchanged (#1760).<a href="#appendix-G-3.1.1" class="pilcrow">¶</a></p>
+Offline Attenuation root), follows that profile; JWT access-token
+validation stays under Section 4 of RFC 9068, accepting <code>at+jwt</code> or
+<code>application/at+jwt</code> (#1760).<a href="#appendix-G-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-G-3.2">
           <p id="appendix-G-3.2.1">Configured-mapping mode can key on the requested <code>scope</code> values for
@@ -12111,6 +12082,13 @@ both limitations; Approval Comprehension condenses its practices; and
 the Enforcement Responsibilities table is removed, with Rendering
 Safeguards pointing to Enforcement Requirements and Scope Projection
 (#1793, D919).<a href="#appendix-G-3.29.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-G-3.30">
+          <p id="appendix-G-3.30.1">Editorial, no requirement change: Token Claims, Delegated Exchange,
+Intent Submission Evidence, Revocation, Authority Hash and Mission
+Identity, and Authority Materialized Before Containment point to the
+home of a rule they restated, keeping each operation's own condition
+(#1793, D919).<a href="#appendix-G-3.30.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-G-4">-01<a href="#appendix-G-4" class="pilcrow">¶</a></p>
