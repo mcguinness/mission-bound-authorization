@@ -4873,6 +4873,15 @@ with no `suspended` state and its own termination reasons, served by
 
 \[\[ To be removed from the final specification ]]
 
+- Gains, from the OAuth binding, the OAuth Binding Mapping Assessment,
+  pinned to an Editor's Draft snapshot of that binding with later
+  revisions unassessed; Relationship to Adjacent Work; Open Work in
+  Mission Requirements; and Derivation Policy Authoring under Meaning
+  and Derivation, which applies to the OAuth-derived Authority Set
+  model. The Authority Derivation Boundary, the conventional-stack
+  table, and the substrate discussion point to the local text. No
+  requirement changed (#1794, D973).
+
 - Mission Binding Properties: the `work-item-attributed` composition
   is `work-item-bound` plus `action-bound` plus the verified cross-link
   that binds the harness's qualified work-item identifier into the

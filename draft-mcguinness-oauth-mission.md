@@ -7427,6 +7427,17 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: the back matter that describes
+  the family rather than the protocol moves to the Architecture: the
+  Mapping Assessment of this document against the Mission Substrate
+  contract, Relationship to Adjacent Work, the two future-work items,
+  and the Derivation Policy appendix's policy artifact, properties,
+  fixtures, and ownership guidance. Claiming Conformance states only
+  that this document makes no substrate conformance claim; the
+  `mission` claim's distinction from similarly named claims follows
+  its JSON Web Token Claims registration; Scope and Future Work
+  becomes Scope, keeping its boundary statements; and the Derivation
+  Policy appendix keeps its worked example (#1794, D973).
 - Token Claims: a token whose format a companion profile explicitly
   defines, with its own `typ` and verification rules (the Mission
   Offline Attenuation root), follows that profile; JWT access-token
