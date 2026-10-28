@@ -611,9 +611,9 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       throw governedMissionless();
     }
 
-    // A resource token carrying `interaction` needs the resource's own
-    // user-facing flow completed before any auth token (AAuth -11 Section
-    // 7.2.3). This PS has no interaction surface and no channel to the
+    // @spec aauth#section-7.2.3: a resource token carrying `interaction`
+    // needs the resource's own user-facing flow completed before any auth
+    // token. This PS has no interaction surface and no channel to the
     // person, so it refuses, whatever the claim holds.
     if (rt.interaction !== undefined) {
       throw new PsError(

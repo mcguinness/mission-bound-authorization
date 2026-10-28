@@ -46,10 +46,10 @@ with no access server. The Resource accepts an auth token only when its
 | Party | Endpoint | Behavior |
 |---|---|---|
 | PS | `GET /.well-known/aauth-person.json`, `GET /.well-known/jwks.json` | metadata and JWKS, `cache-control: max-age=300` |
-| PS | `POST /mission` (`mission_endpoint`) | propose and decide; an approval returns `s256`, the exact blob bytes as `mission`, and a person token per proposed resource |
+| PS | `POST /mission` (`mission_endpoint`) | propose and decide; an approval returns `s256`, the exact blob bytes as `mission`, and a person token per proposed resource; the agent client accepts it only when the blob's `agent` is its own identifier |
 | PS | `GET /mission/{mission_s256}` | the owner's read of the persisted bytes; a local surface (AAuth defines only POST at this URL, which answers 405 here) |
 | PS | `POST /person` (`person_token_endpoint`) | person tokens, with or without `mission_s256` |
-| PS | `POST /token` (`auth_token_endpoint`) | Section 6.7.2 steps 1 to 4, then a direct auth token |
+| PS | `POST /token` (`auth_token_endpoint`) | Section 6.7.2 steps 1 to 4, then a direct auth token; a resource token carrying `interaction` is refused |
 | Resource | `GET /.well-known/aauth-resource.json`, `GET /.well-known/jwks.json` | metadata and JWKS |
 | Resource | `POST /authorize` (`authorization_endpoint`) | a resource token for a person token and a defined scope |
 | Resource | `GET /api/documents`, `POST /api/documents` | protected operations (`documents.read`, `documents.write`), challenged with `AAuth-Requirement` |
@@ -66,13 +66,36 @@ with no access server. The Resource accepts an auth token only when its
   tokens, the replay cache, the operations' data and the signing key.
 - Restart and recovery are slice 3.
 
+## Issuance commit
+
+Key resolution and token verification await, and time passes while they
+do. Each issuance therefore reads the clock again and checks, with no
+await before its record is written:
+
+- at the auth token endpoint, after step 4: the resource token's `exp`
+  (`expired_resource_token`), the presented token's `exp`
+  (`expired_presented_token`), the mission's state and `expires_at`
+  (`mission_terminated`), and the issued token's `exp` cap;
+- at the person token endpoint (the mission gate and the `exp` cap) and the
+  approval (the requested `expires_at` and each person token's `exp` cap),
+  which read the time after authentication.
+
+The record is written first and the token is minted after, from claims
+already fixed, so no token is issued already expired. When the cap fails
+because the agent token that authenticated the request expired meanwhile,
+the answer is 401 with `Signature-Error: error=expired_jwt`, as for any
+failure of the Signature-Key token. Tests drive these paths by advancing
+the clock while a key is resolved.
+
 ## Exclusions
 
 - No access server: four-party access, V6 and V15 are out.
 - No call chaining (V13): `upstream_token` is refused `invalid_request`.
 - No sub-agents: a sub-agent calling the PS directly is refused.
-- No 202 deferral and no interaction: the approver decides at once, and the
-  agent client reports a 202 as unsupported.
+- No 202 deferral and no interaction: the approver decides at once, the
+  agent client reports a 202 as unsupported, and the PS refuses a resource
+  token carrying `interaction` (AAuth -11 Section 7.2.3) with 403
+  `user_unreachable`, issuing and recording nothing.
 - No status or termination surface, and no P2 (the management control
   plane): slice 3. Tests terminate a mission by a direct store transition.
 - No revocation: the issued-token records exist, and nothing consults them.
@@ -180,3 +203,13 @@ another PS in `ps` before reading any mission state.
     `mission_s256`.
 26. The Resource copies `mission_s256` unchanged even when it is malformed;
     validating it is the PS's job.
+27. A resource token carrying `interaction` is refused 403
+    `user_unreachable`, after the mission check. -11 defines no code for a
+    PS that cannot conduct the resource's flow; Table 16 gives
+    `user_unreachable` for "The PS has no channel to reach the user and the
+    agent did not declare the interaction capability". This PS has no
+    interaction surface at all, so the agent's capability cannot help, and
+    the reference reads the first condition alone as sufficient.
+28. An agent token that expires after authentication but before an
+    issuance commits is 401 `expired_jwt` with Signature-Error, since the
+    Signature-Key token "has no codes in this table".
