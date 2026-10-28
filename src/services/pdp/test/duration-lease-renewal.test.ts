@@ -36,9 +36,10 @@ import {
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { operationIdentity } from "../src/projections.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const AUDIENCE = "http://localhost:4403/mcp";
 const OTHER_AUDIENCE = "http://localhost:4403/mcp-reports";
@@ -64,7 +65,7 @@ const view = (id = "msn_lease_a", over: Partial<MissionView> = {}): MissionView 
   version: 1,
   authority_hash: `sha-256:${id}`,
   authority_set: [
-    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: INVOICES, resource_match: "prefix", actions: [READ, LIST, PAY] },
+    pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: INVOICES, resource_match: "prefix", actions: [READ, LIST, PAY] }),
   ] as MissionView["authority_set"],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -82,7 +83,7 @@ interface Over {
 
 /** A read of an invoice, renewing `prior` when it is given. */
 const request = (at: number, over: Over = {}): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: over.subject ?? "alice", properties: { iss: "https://as.test" } },
     resource: {
       type: "invoice",
@@ -97,7 +98,7 @@ const request = (at: number, over: Over = {}): EvaluationRequest =>
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: new Date(at).toISOString() },
       ...(over.prior !== undefined ? { prior_evaluation_id: over.prior } : {}),
     },
-  } as EvaluationRequest);
+  } as EvaluationRequest));
 
 function harness() {
   const ledger: DurationLeaseDomain = createDurationLeaseLedger({ [READ]: LEASE_S, [LIST]: LEASE_S });
@@ -275,7 +276,7 @@ const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoc
 
 /** A keyed, irreversible payment at INV1 under `key`, renewing `prior` when it is given. */
 const keyedRequest = (at: number, key: string | undefined, over: { prior?: string; digest?: string } = {}): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
     resource: {
       type: "invoice",
@@ -291,7 +292,7 @@ const keyedRequest = (at: number, key: string | undefined, over: { prior?: strin
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: new Date(at).toISOString() },
       ...(over.prior !== undefined ? { prior_evaluation_id: over.prior } : {}),
     },
-  } as EvaluationRequest);
+  } as EvaluationRequest));
 
 /**
  * A decision point leasing the keyed payment, with a real Exact claim domain
