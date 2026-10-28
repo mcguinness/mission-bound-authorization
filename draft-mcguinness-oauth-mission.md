@@ -3483,6 +3483,11 @@ A resource server:
    server relies on, and the same checks apply to that response's
    `mission` member ({{introspected-consumption}}).
 
+Other sections state how a resource server treats a reported Mission
+state ({{lifecycle}}), `mission` claim members ({{mission-claim}}), an
+entry's `resource` against a request's target ({{token-response}}), and
+a designation presented to it ({{designation}}).
+
 A resource server can also:
 
 - require that a token carry an `act` chain and record it, while
