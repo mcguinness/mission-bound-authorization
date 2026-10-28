@@ -145,6 +145,16 @@ export interface VerifyRequestOptions extends Omit<TokenVerificationOptions, "re
   resolver: JwksResolver;
   /** Signature-Key schemes accepted. Default `["jwt"]`, what AAuth requires of agents. */
   acceptedSchemes?: readonly SignatureKeyScheme[];
+  /**
+   * The `dwk` values accepted under `jwks_uri`. Default
+   * {@link AAUTH_SERVER_DOCUMENTS}, the AAuth servers' own documents. A
+   * verifier that registers a signer publishing under a deployment-chosen
+   * name, such as a management identity at a mission control plane, names
+   * exactly the documents it registered.
+   *
+   * @spec signature-key#section-3.6
+   */
+  acceptedDocuments?: readonly string[];
   /** Token types accepted under the `jwt` scheme. Default `["aa-agent+jwt"]`. */
   acceptedTokenTypes?: readonly PresentedTokenType[];
   /** This server's identifier: the `aud` a person or auth token must name. */
@@ -317,8 +327,14 @@ export async function verifyRequest(
       throw fail("invalid_key", "jwks_uri needs id, dwk and kid");
     }
     if (!isServerIdentifier(id)) throw fail("invalid_key", "id is not a server identifier");
-    if (!(AAUTH_SERVER_DOCUMENTS as readonly string[]).includes(dwk)) {
-      throw fail("invalid_key", `dwk ${dwk} is not an AAuth metadata document`);
+    const documents = options.acceptedDocuments ?? AAUTH_SERVER_DOCUMENTS;
+    if (!(documents as readonly string[]).includes(dwk)) {
+      throw fail(
+        "invalid_key",
+        options.acceptedDocuments
+          ? `dwk ${dwk} is not a metadata document accepted here`
+          : `dwk ${dwk} is not an AAuth metadata document`,
+      );
     }
     jwk = await options.resolver.resolveKey(id, dwk, kid);
     signer = { id, dwk, kid };
