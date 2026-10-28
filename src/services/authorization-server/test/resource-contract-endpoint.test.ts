@@ -288,7 +288,15 @@ describe("a reference-requiring resource pins new read-only approvals and leaves
   });
 
   it("a Mission approved without a reference before the requirement keeps none through a refresh and a Token Exchange after it", async () => {
-    const earlier = await issue(read());
+    // Approved while configuration requires no reference for the resource,
+    // whatever the shipped declarations require.
+    const unrequired = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+    let earlier: Awaited<ReturnType<typeof issue>>;
+    try {
+      earlier = await issue(read());
+    } finally {
+      unrequired.mockRestore();
+    }
     const before = as.kernel.get(earlier.missionId);
     expect(contractsOf(before?.authority_set)).toEqual([undefined]);
     const swap = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(requiring());
