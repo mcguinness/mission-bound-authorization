@@ -256,10 +256,10 @@ function binding(root: string, o: Partial<MissionBudgetBinding> & { maxBudget?: 
   };
 }
 
-function view(id: string, budget?: MissionBudgetBinding): MissionView {
+function view(id: string, budget?: MissionBudgetBinding, issuer = ISSUER): MissionView {
   return {
     id,
-    issuer: ISSUER,
+    issuer,
     state: "active",
     version: 1,
     authority_hash: `sha-256:h-${id}`,
@@ -272,6 +272,8 @@ function view(id: string, budget?: MissionBudgetBinding): MissionView {
 
 interface RequestOptions {
   action?: string;
+  /** The Mission's issuer; defaults to the AS the fixture's principals belong to. */
+  issuer?: string;
   /** The deployment class; `null` sends an unclassified request. */
   actionClass?: string | null;
   missionId?: string;
@@ -317,7 +319,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       properties: { idempotency_key: o.key ?? freshKey(), ...(o.parameters === null ? {} : { parameters }) },
     },
     context: {
-      mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
+      mission: { id: o.missionId ?? "msn_a", issuer: o.issuer ?? ISSUER },
       actor: o.actor ?? { client_id: "ap-agent" },
       ...(o.actionClass === null ? {} : { action_class: o.actionClass ?? "irreversible_action" }),
       ...(o.digest === null ? {} : { parameter_digest: o.digest ?? canonicalDigest(parameters) }),
@@ -353,7 +355,7 @@ function options(claims: IdempotencyClaimDomain, c: Clock, v: MissionView, over:
   };
 }
 
-const instanceCounter = (root: string) => budgetCounterId("mission", { issuer: ISSUER, mission_id: root });
+const instanceCounter = (root: string, issuer = ISSUER) => budgetCounterId("mission", { issuer, mission_id: root });
 const SHARED = budgetCounterId("standing_consent", { owner: OWNER, budget_id: BUDGET_ID });
 
 function meteringOf(d: Decision): DecisionMeteringEntry[] {
@@ -460,6 +462,31 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       // At the boundary: a request for exactly the remaining 100.00 is permitted.
       expectPermit(await evaluate(request(c, { missionId: "msn_a", amount: "100.00" }), options(claims, c, v)));
       expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
+      claims.close();
+    });
+
+    it("keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares (@spec control-plane#isolation, #1748)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const OTHER_ISSUER = "https://as-other.test";
+      const atIssuer = view("msn_a", binding("msn_a", { maxBudget: "300.00" }));
+      const atOther = view("msn_a", binding("msn_a", { maxBudget: "300.00" }), OTHER_ISSUER);
+      await permitted(claims, c, atIssuer, { amount: "300.00" });
+      expectDenied(await evaluate(request(c, { missionId: "msn_a", amount: "100.00" }), options(claims, c, atIssuer)), "quota_exceeded");
+      // The same local identifier under another issuer is another Mission: its instance counter is its own.
+      const other = await evaluate(
+        request(c, { missionId: "msn_a", issuer: OTHER_ISSUER, amount: "300.00" }),
+        options(claims, c, atOther),
+      );
+      expectPermit(other);
+      expect(instanceCounter("msn_a", OTHER_ISSUER)).not.toBe(instanceCounter("msn_a"));
+      expect(entry(other, "mission")).toMatchObject({ counter_id: instanceCounter("msn_a", OTHER_ISSUER) });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("300.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a", OTHER_ISSUER))?.reserved.amount).toBe("300.00");
+      // The standing consent is keyed on its declared accounting domain, so both charges draw on it.
+      expect(entry(other, "standing_consent")).toMatchObject({ counter_id: SHARED });
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("600.00");
       claims.close();
     });
 

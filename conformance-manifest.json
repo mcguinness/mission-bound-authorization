@@ -5534,19 +5534,199 @@
      "surface": "lifecycle-endpoint"
     },
     {
-     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
-     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
-     "level": "cross-component",
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses to reopen an ordinary file-backed store under another issuer, and its owner reopens it with its Mission intact",
+     "level": "unit",
      "surface": "lifecycle-endpoint"
     },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store belongs to one issuer (@spec control-plane#isolation, #1748) > refuses a witnessed store under another issuer without advancing its witness, and releases the witness's lock so its owner reopens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses another issuer over a populated store without recording anything, then binds it to the issuer its Missions name",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses another issuer over a populated witnessed store without advancing the witness or recording anything, then its owner reopens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > binds an empty store to the issuer that opens it",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > binds a store whose only state is a tombstone to that tombstone's issuer, and refuses any other",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses every issuer over state naming two issuers, though one of them holds every Mission",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel-issuer-binding.test.ts",
+     "name": "a kernel store written before the issuer record binds only as its own state allows (@spec control-plane#isolation, #1748) > refuses every issuer over state that names no issuer",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "One issuer owns each kernel database, recorded in kernel_issuer: an open under another issuer is refused, ordinary or witnessed, releasing the witness's lock, and foreign record insertion is refused. A store written before the record binds only as its own state allows: an empty store to the issuer that opens it, a populated one only to the one issuer its state names (every issuer column and the source bindings' deployment); state naming another issuer, several issuers or none is refused and the store left unchanged (#1748, #1836 review). The shared emitter outbox keys on issuer and event identity plus audience, tested with equal Mission and event IDs at two issuers, and its migration preserves signed bytes. Retaining consumers' state is witnessed on the -retaining-consumer rows (RS, PDP, PEP), split by acting role. The namespace inventory in src/docs/control-plane-deployment.md names every mutable seam in the reference with its key and its witness or declared separation. Partial: one AS per process is declared, not enforced (oidc-provider's memory adapter and the device decisions in progress are process-global)."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the Signals receiver, a retaining consumer at the resource: its version high-water marks, observations, gap and rematerialization markers, retained SETs, sequences, seen jti values and recovery and resynchronization nonces are keyed by (issuer, audience, Mission) and the value they track, finer than the tuple. Witnessed: receivers for two issuers sharing one file keep one Mission identifier's state and sequence apart, and a SET whose embedded Mission issuer is not the receiver's own is refused. Keyed but not witnessed across issuers: the seen jti values (witnessed across audiences). Its signing authorization is the one issuer's Status keys it trusts; deny caches, queues, quotas and replication authority have no subject in the receiver"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
     {
      "file": "src/packages/mission-signals/test/receiver-durability.test.ts",
      "name": "Signals receiver state in the consumer's store (#250) > keeps receivers for different issuers and audiences apart in one shared file",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "durable per-consumer delivery (@spec signals#delivery, #641) > refuses a SET whose embedded mission issuer is not the receiver's own",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "One issuer owns each kernel database and foreign record insertion is refused. Signals receiver caches/replay state and the shared emitter outbox use unambiguous issuer-qualified keys, tested with equal Mission/event IDs at two issuers, with a SET whose embedded Mission issuer is not the receiver's own, and with migration preserving signed bytes. The receiver's durable state (#250: version high-water, observation, gap and rematerialization markers, retained SET and seen jti values, in the consumer's own store) is keyed by (issuer, audience, Mission), tested with receivers for two issuers and two audiences sharing one file. The complete cross-issuer seam/resource-isolation inventory remains incomplete (#1748)."
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review): the receiver acts, so its citations moved here from the AS row. Partial: the seen jti values are issuer-keyed but not witnessed across issuers, and four of the clause's seams have no subject in the receiver."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer-pdp",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "PDP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the PDP, one per deployment and shared by every PEP and issuer it serves. Idempotency records: a claim keys on a scope digest that carries the Mission issuer; the same key and operation under one local Mission identifier at two issuers are two claims. Counters: Decision Evidence sequences key on (issuer, Mission, emitter, role), witnessed across a restart. Quotas: the mission budget counter keys on (issuer, root Mission), each issuer's instance counter witnessed apart; the standing_consent counter keys on (owner, budget_id), an explicitly shared accounting domain that deliberately combines Missions and issuers, while the mission counters and the charge claims keep the qualified Mission identity; it charges only through the trusted budget source (the kernel's committed policy snapshot, never the request) and the declared policy references, so matching identifiers alone charge nothing. Version observations: one Mission Status resolver per issuer and scope refuses a reference or response naming another issuer, its cached read included. Claim and budget transitions, reservations, settlement conflicts and leases key on PDP-minted identifiers. Signing authorization: one Decision Evidence key per PDP, each record naming the Mission's issuer and identifier. Deny caches, queues and replication authority have no subject in the PDP"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "PDP idempotency claim (@spec runtime#idempotency, #917) > the claim scope carries the canonical Mission identity (@spec control-plane#isolation, #1748) > gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/decision-evidence-sequence.test.ts",
+     "name": "the PDP's Decision Evidence sequence is durable and producer-owned (@spec runtime-evidence#decision-evidence-object, runtime#record-integrity, #821) > keeps a distinct counter for each Mission and each emitter, across a restart",
+     "level": "unit",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > both counters are debited in the claim's own transaction > keeps each issuer's instance counter apart for one local Mission identifier, while both draw on the standing consent their accounting domain declares (@spec control-plane#isolation, #1748)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "PDP exact budget reservations (@spec metering#retry, metering#aggregate-bounds, metering#settlement-states, metering#metering-evidence, #816) > a budget this PDP cannot meter is refused (decision b) > currency mismatch, an undeclared budget, another owner, and a limit or a Dispatch Policy id, version or digest that disagrees with the declaration each deny constraint_unsupported and reserve and claim nothing (@spec authzen#failure-condition-coverage, metering#metering, #816)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "the PDP-side budget binding and the committed destinations (@spec metering#metering, mission-template#standing-payment-exception, #813, #816) > createDecisionPoint over a claim domain that meters budgets refuses construction without a budget source, and a decision point over one that meters none denies constraint_unsupported a caller's view that carries a binding and reserves and claims nothing (@spec metering#metering, #816, #813, decision d)",
+     "level": "unit",
+     "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a verified answer (@spec authority-server#mission-join rule 2) > never reads a reference naming another issuer",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/mission-status-resolver.test.ts",
+     "name": "MissionStatusResolver: a synchronous peek answers only from a read still within its bounds (#818, D560) > returns what an earlier resolve established, never reads the source, and returns nothing once a bound has passed",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review). The standing_consent key is the owner's ruling on #1836: an explicitly shared accounting domain, admitted only through the trusted budget source and the declared policy references. Partial: the Decision Evidence key's binding to the qualified identity is stated, not witnessed across issuers, and three of the clause's seams have no subject in the PDP."
+  },
+  {
+   "id": "control-plane.consistency.isolation-retaining-consumer-pep",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "isolation",
+   "text": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities.",
+   "role": "PEP",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "Issuers and retaining consumers MUST isolate mutable Mission state by the canonical (issuer, mission_id) tuple, or a tenant-qualified equivalent that unambiguously preserves both identities. This applies to version high-water marks, idempotency records, deny caches, counters, queues, signing authorization, quotas, and replication authority. Tenant-wide services such as signing keys or queues bind each operation to that qualified identity; this does not require one key or queue per Mission. Shared infrastructure declares its tenant separation and resource isolation so one tenant cannot silently consume another's state-propagation guarantee.",
+    "local": "the PEP composition, an McpPaymentsServer with its Mission loader. Tested issuer-qualified storage and admission: actor-depth records key on (issuer, Mission, client), and a same-identifier record from another issuer is ignored; the kernel Mission loader resolves a reference only under its own issuer, so the same local identifier under another issuer resolves nothing; a Mission-bound credential whose mission.issuer is not its verified iss, the PEP's configured issuer, is answered 401 before the PEP. Keyed on the Mission issuer but not witnessed across issuers: write reservations (a scope digest carrying it) and payment schedules (unique Mission issuer, Mission, invoice). Declared, not enforced: the operation keys (op:<Mission>:..., used by permit redemptions, operations, the connector ledger, reversals and outbox, and outcome alerts) and the Execution Evidence sequences key on the bare Mission identifier, so a composition and every persistent store it opens serve one Mission issuer for that store's whole lifetime, restarts included: a PEP store is never reopened by a composition serving another Mission issuer"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/actor-records.test.ts",
+     "name": "ActorRecords: depth resolution (@spec authority-server#mission-join rule 5) > ignores a same-id record from another issuer: records are keyed on the canonical (issuer, id) pair",
+     "level": "unit",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/demo/test/kernel-mission-view-issuer.test.ts",
+     "name": "the kernel Mission loader resolves a reference only under its own issuer (@spec control-plane#isolation, #1748) > resolves the Mission under its issuer, and nothing for the same local identifier under another issuer",
+     "level": "unit",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "a mission claim is accepted only when it names the token's own trusted issuer (@spec mission#rs-requirements, #1503) > answers an at+jwt from the trusted issuer whose mission.issuer names another issuer 401 invalid_token on the holder's open MCP session, before the PEP: no evidence and no decision",
+     "level": "endpoint",
+     "surface": "resource-operation"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.isolation by acting role (#1836 review). Partial: the one-Mission-issuer separation of the operation keys and Execution Evidence sequences is declared, not enforced, and holds across restarts only by deployment; the write reservations and payment schedules are issuer-keyed without a two-issuer witness."
   },
   {
    "id": "control-plane.consistency.fanout",
