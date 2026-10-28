@@ -505,9 +505,9 @@ Table of Contents
 
    *  preserve the restrictions of both layers of the leaf's capability
       entry: each local entry carries the constraints and
-      resource_contract of its tool's mission_constraints value, and an
-      argument constraint the local token cannot represent, or its
-      consumer cannot enforce, refuses the exchange;
+      resource_contract of its tool's mission_constraints value, and a
+      restriction of either layer that the local token cannot represent,
+      or its consumer cannot enforce, refuses the exchange;
 
    *  preserve the mission claim invariants, including subject;
 
@@ -563,10 +563,10 @@ Table of Contents
    member, or exceeds a declared bound refuses with invalid_request; a
    Chain failing any step of Section 7 refuses with invalid_grant,
    disclosing no partial verification detail; a requested audience
-   outside a hop's aud, or a leaf argument constraint the local token
-   cannot represent or its consumer cannot enforce, refuses with
-   invalid_target.  On success the Resource AS mints the audience-local
-   token per the rules above.
+   outside a hop's aud, or a restriction of either layer of the leaf's
+   capability entry that the local token cannot represent or its
+   consumer cannot enforce, refuses with invalid_target.  On success the
+   Resource AS mints the audience-local token per the rules above.
 
 9.  Mission-Binding Profile
 
@@ -664,9 +664,10 @@ Table of Contents
    authorization-details entry beyond the mapped capability entry; a
    mission_constraints member missing, widened, or carrying an unknown
    key at either hop; a direct invocation whose proof names another
-   tool, and a replayed exchange proof; a leaf argument constraint the
-   local token cannot represent; and valid delegated authority denied by
-   local entitlement or local policy.
+   tool, and a replayed exchange proof; a leaf restriction of either
+   layer the local token cannot represent or its consumer cannot
+   enforce; and valid delegated authority denied by local entitlement or
+   local policy.
 
 13.  End-to-End Example (Non-Normative)
 
