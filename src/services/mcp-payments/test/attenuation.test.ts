@@ -192,6 +192,9 @@ async function presentationFor(
   return { presentation: { aat_chain: links, aat_pop }, argumentsJson: JSON.stringify(args) };
 }
 
+/** The request signals a transport hands the server path: the invocation's original arguments text. */
+const invocationOf = (args: Record<string, unknown>) => ({ invocation: { argumentsJson: JSON.stringify(args) } });
+
 /** Validate a presentation of `links` for one invocation at `s`. */
 async function present(
   s: McpPaymentsServer,
@@ -442,6 +445,14 @@ describe("attenuation chain: proof of possession binds the leaf, fresh and once 
     await expect(server.validateAatPresentation(presentation, "schedule_payment", argumentsJson)).rejects.toThrow(/step 7i/);
   });
 
+  it("tracks the proof's jti for a read as well: the same get_invoice presentation is refused the second time (D932)", async () => {
+    const { presentation, argumentsJson } = await presentationFor(chain, "get_invoice", { invoice_id: "inv-1" });
+    await expect(server.validateAatPresentation(presentation, "get_invoice", argumentsJson)).resolves.toMatchObject({
+      mission: { id: view.id },
+    });
+    await expect(server.validateAatPresentation(presentation, "get_invoice", argumentsJson)).rejects.toThrow(/step 7i/);
+  });
+
   it("refuses retryably, rather than admitting, when the proof replay state is at capacity", async () => {
     const full = serverOver(new PaymentsStore(), new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver), {}, {
       dpopReplay: newDpopProofReplay(300, Date.now, 0),
@@ -453,7 +464,7 @@ describe("attenuation chain: proof of possession binds the leaf, fresh and once 
   it.each([
     ["no jti", (c: Record<string, unknown>) => ({ ...c, jti: undefined }), /step 7c/],
     ["a stale iat", (c: Record<string, unknown>) => ({ ...c, iat: Math.floor(Date.now() / 1000) - 3600 }), /step 7g/],
-    ["another tool", (c: Record<string, unknown>) => ({ ...c, aat_tool: SCHEDULE_TOOL_ID }), /step 7e/],
+    ["a tool the leaf does not grant", (c: Record<string, unknown>) => ({ ...c, aat_tool: SCHEDULE_TOOL_ID }), /step 6b/],
     ["arguments other than the invocation's", (c: Record<string, unknown>) => ({ ...c, hta: { invoice_id: "inv-2" } }), /step 7f/],
     ["an audience naming another resource", (c: Record<string, unknown>) => ({ ...c, aat_aud: "https://other-rs.example" }), /step 7d/],
     ["another leaf's jti", (c: Record<string, unknown>) => ({ ...c, aat_id: aatUuidV7() }), /step 7c/],
@@ -577,7 +588,7 @@ describe("attenuation chain: every token's audience, and the subject from the ro
     const forgedFacts = await present(writer, [root, forged], "schedule_payment", args);
     expect(forgedFacts.sub).toBe(rootSub);
     expect(forgedFacts.clientId).toBe(rootClient);
-    const scheduled = await writer.callWriteTool("schedule_payment", args, forgedFacts);
+    const scheduled = await writer.callWriteTool("schedule_payment", args, forgedFacts, undefined, invocationOf(args));
     expect(scheduled.ok, JSON.stringify(scheduled)).toBe(true);
     expect(decidedSubjects.length).toBeGreaterThan(0);
     expect(new Set(decidedSubjects)).toEqual(new Set([rootSub]));
@@ -718,11 +729,20 @@ describe("attenuation chain: the mission_constraints member at the consumer (@sp
     const before = { invoice_id: "inv-small", idempotency_key: randomUUID() };
     const beforeFacts = await present(s, [root], "schedule_payment", before, holderKeys);
     payments.bumpInvoiceAmount("inv-small", "600.00");
-    expect(await s.callWriteTool("schedule_payment", before, beforeFacts)).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
+    expect(await s.callWriteTool("schedule_payment", before, beforeFacts, undefined, invocationOf(before))).toMatchObject({
+      ok: false,
+      denial_reason: "out_of_authority",
+    });
     // Decided at 125 USD; the amount changes before execution.
     const during = { invoice_id: "inv-1", idempotency_key: randomUUID() };
     const duringFacts = await present(s, [root], "schedule_payment", during, holderKeys);
-    const res = await s.callWriteTool("schedule_payment", during, duringFacts, () => payments.bumpInvoiceAmount("inv-1", "600.00"));
+    const res = await s.callWriteTool(
+      "schedule_payment",
+      during,
+      duringFacts,
+      () => payments.bumpInvoiceAmount("inv-1", "600.00"),
+      invocationOf(during),
+    );
     expect(res.ok).toBe(false);
     expect(res.refusal_reason).toBe("parameter_mismatch");
     expect(writeReservations.schedules()).toEqual([]);

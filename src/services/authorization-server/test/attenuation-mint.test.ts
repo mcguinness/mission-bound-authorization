@@ -64,6 +64,7 @@ const OPERATIONS: AttenuationOperations = (resource, action) => {
   if (action === "report.read") {
     return [{ name: "read_report", arguments: { period: { required: false } }, establishes: ["vendors", "max_amount"] }];
   }
+  if (action === "status.read") return [{ name: "read_status", arguments: {}, establishes: ["vendors", "max_amount"] }];
   return undefined;
 };
 
@@ -90,6 +91,16 @@ describe("the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904)
     expect(payments.tools).toEqual({
       [aatToolId(CANONICAL_RESOURCE, "payments:payment.execute")]: { idempotency_key: optional, invoice_id: wildcard },
     });
+  });
+
+  it("leaves out a tool whose operations declare no argument, so an empty argument map never stands for none (D932 ruling 2)", () => {
+    const ops: AttenuationOperations = (_r, action) =>
+      action === "status.read"
+        ? [{ name: "status", arguments: {}, establishes: [] }]
+        : [{ name: "a", arguments: { id: { required: false } }, establishes: [] }];
+    const { tools, missionConstraints } = mapAuthorityToCeiling([entry(["status.read", "a.read"])], ops);
+    expect(tools).toEqual({ [aatToolId(RES, "a.read")]: { id: optional } });
+    expect(Object.keys(missionConstraints)).toEqual([aatToolId(RES, "a.read")]);
   });
 
   it("carries each entry's constraints and resource_contract unchanged as the tool's mission_constraints value", () => {
@@ -256,7 +267,7 @@ describe("the issued root (@spec attenuation#request-discovery, attenuation#root
   });
 
   it("refuses a request beyond the ceiling rather than issuing a root for the rest", async () => {
-    const m = mission([entry(["pay.schedule", "report.read"], { constraints: CAP_500 })]);
+    const m = mission([entry(["pay.schedule", "report.read", "status.read"], { constraints: CAP_500 })]);
     const scheduleArgs = { idempotency_key: wildcard, invoice_id: wildcard };
     const beyond: [string, Record<string, unknown>][] = [
       ["a tool the ceiling does not map", { tools: { [aatToolId(RES, "pay.refund")]: {} } }],
@@ -273,6 +284,7 @@ describe("the issued root (@spec attenuation#request-discovery, attenuation#root
         "an added resource_contract",
         { tools: { [SCHEDULE]: scheduleArgs }, missionConstraints: { [SCHEDULE]: { constraints: CAP_500, resource_contract: CONTRACT } } },
       ],
+      ["a tool whose operations declare no argument", { tools: { [aatToolId(RES, "status.read")]: {} } }],
       ["a value for a tool not requested", { tools: { [REPORT]: { period: optional } }, missionConstraints: { [SCHEDULE]: { constraints: CAP_500 } } }],
       ["an unknown member of a value", { tools: { [REPORT]: { period: optional } }, missionConstraints: { [REPORT]: { constraints: CAP_500, x: 1 } } }],
     ];

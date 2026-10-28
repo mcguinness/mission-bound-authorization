@@ -140,6 +140,30 @@ describe("verifyMissionAatChain: the Mission layer over a verified chain (@spec 
   });
 });
 
+describe("the invoked tool's authority alone (@spec attenuation#mission-binding-check, #1756, D932)", () => {
+  it("with the invoked tool, the credential authority is that one leaf tool's, and a tool the leaf does not carry refuses", () => {
+    const both = verifyMissionAatChain([root(ROOT_MC)], ISS);
+    expect(both.credentialAuthority.map((e) => e.actions[0])).toEqual([
+      "payments:invoice.read",
+      "payments:payment.schedule",
+    ]);
+    const one = verifyMissionAatChain([root(ROOT_MC)], ISS, SCHEDULE);
+    expect(one.credentialAuthority).toEqual([
+      {
+        type: "mission_resource_access",
+        resource: RES,
+        actions: ["payments:payment.schedule"],
+        resource_contract: CONTRACT,
+        constraints: CAPPED,
+      },
+    ]);
+    expect(one.missionConstraints).toEqual(ROOT_MC);
+    expect(() =>
+      verifyMissionAatChain([root(ROOT_MC), child(READ_ONLY_MC)], ISS, SCHEDULE),
+    ).toThrow(/does not carry the invoked tool/);
+  });
+});
+
 describe("the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902)", () => {
   it("refuses a token without the member, without a value for one of its tools, or with a value for a tool it does not carry", () => {
     // The root and the child, each without the member.
