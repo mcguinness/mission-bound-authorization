@@ -101,6 +101,17 @@ describe("loopback network", () => {
     expect(hits).toBe(1);
   });
 
+  it("restores the original port after a host is refused twice", async () => {
+    net = new LoopbackNetwork();
+    await net.serve("https://rs.test", (_req, res) => res.end("{}"));
+    const port = net.portOf("https://rs.test");
+    await net.refuse("https://rs.test");
+    await net.refuse("https://rs.test");
+    net.restore("https://rs.test");
+    expect(net.portOf("https://rs.test")).toBe(port);
+    expect((await net.request({ method: "GET", url: "https://rs.test/" })).status).toBe(200);
+  });
+
   it("refuses to refuse a host it does not know", async () => {
     net = new LoopbackNetwork();
     await expect(net.refuse("https://other.test")).rejects.toThrow(/not on this loopback/);

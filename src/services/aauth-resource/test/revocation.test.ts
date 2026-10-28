@@ -123,6 +123,23 @@ describe("the revocation endpoint (@spec aauth#section-11.12.1, aauth#section-11
     expect(w.resource.revocations.entries()).toEqual([]);
   });
 
+  it("requires them even on a request with no body", async () => {
+    w = await world();
+    const added = signRequest(
+      { method: "POST", url: REVOKE, headers: {} },
+      {
+        alg: w.ps.key.alg,
+        privateKey: w.ps.key.privateKey,
+        signatureKey: { scheme: "jwks_uri", id: PS, dwk: "aauth-person.json", kid: "ps-key-1" },
+        created: w.seconds(),
+      },
+    );
+    const res = await w.net.request({ method: "POST", url: REVOKE, headers: added });
+    expect(res.status).toBe(401);
+    expect(res.headers["signature-error"]).toMatch(/^error=invalid_input, required_input=/);
+    expect(w.resource.revocations.entries()).toEqual([]);
+  });
+
   it("refuses a key the PS does not publish, and a signature by another key", async () => {
     w = await world();
     const exp = w.seconds() + 600;
@@ -254,14 +271,22 @@ describe("the revocation endpoint (@spec aauth#section-11.12.1, aauth#section-11
     expect(full.status).toBe(429);
     expect(full.json()).toMatchObject({ error: "rate_limited" });
     expect(full.headers["retry-after"]).toBe("100");
+    // The bound is per issuer: another PS still records.
+    const ps2 = await anotherPs(w, "https://ps2.test");
+    expect((await ps2.revoke({ jti: "c", exp: now + 300 })).status).toBe(200);
     // A repeat of a held entry is not a new entry. (Signed a second later:
     // the same bytes in the same second are a replay.)
     w.clock.advance(1000);
     expect((await w.ps.revoke({ jti: "a", exp: now + 100 })).status).toBe(200);
-    expect(w.resource.revocations.entries().map((e) => e.jti)).toEqual(["a", "b"]);
+    const mine = () =>
+      w.resource.revocations
+        .entries()
+        .filter((e) => e.iss === PS)
+        .map((e) => e.jti);
+    expect(mine()).toEqual(["a", "b"]);
     w.clock.advance(99_000);
     expect((await w.ps.revoke({ jti: "c", exp: now + 300 })).status).toBe(200);
-    expect(w.resource.revocations.entries().map((e) => e.jti)).toEqual(["b", "c"]);
+    expect(mine()).toEqual(["b", "c"]);
   });
 
   it("fails closed when the revoked set cannot record: 500, never 200", async () => {

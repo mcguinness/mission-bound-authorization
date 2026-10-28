@@ -419,7 +419,7 @@ export function createResource(options: ResourceOptions): Resource {
       {
         resolver,
         acceptedSchemes: ["jwks_uri"],
-        requireBodyComponents: true,
+        // Covered on every revocation request, whether or not it carries a body.
         additionalComponents: BODY_COMPONENTS,
         replayCache: {
           checkAndRecord: (key, expiresAtMs, nowMs) =>
