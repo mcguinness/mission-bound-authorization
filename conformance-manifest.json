@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "40ac6b41a3e304895fcaebef77e2f27aa1e83456",
-    "content_sha256": "3c7f4dece32d70804ddc6a4b30532d1fee09345bc785c3d659fb949ab0d22dc8"
+    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
+    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -24816,7 +24816,7 @@
    "id": "cross-org.projection-exchange.audience-every-hop",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "projection-exchange",
-   "text": "a requested audience outside a hop's `aud`, or a leaf argument constraint the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
+   "text": "a requested audience outside a hop's `aud`, or a restriction of either layer of the leaf's capability entry that the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -24851,7 +24851,7 @@
    "id": "cross-org.projection.both-layers",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "projection",
-   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and an argument constraint the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
+   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and a restriction of either layer that the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -24862,8 +24862,7 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and a leaf argument constraint the local token cannot represent refuses the exchange with `invalid_target`",
-    "local": "the reference also refuses, with the same code, a leaf tool whose `mission_constraints` restrict a fact the destination's declared operations do not establish: it projects only what the root mapping (mapAuthorityToCeiling) would map at the destination; the draft's clause names argument constraints only"
+    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and the whole exchange is refused with `invalid_target` when any leaf tool carries a restriction of either layer the local token cannot represent or its consumer cannot enforce: an argument constraint narrower than the destination maps the tool to, a constraint whose fact the destination does not establish, or a `resource_contract` the destination does not declare, has retired, or holds superseded past its retention; a contract the destination holds superseded within retention projects"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24885,9 +24884,21 @@
      "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf resource_contract the destination does not declare, has retired, or holds superseded past retention (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > projects a leaf resource_contract the destination holds superseded within retention",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1759 (D932): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling); the error code is the projection exchange's. Proved by skipping the argument comparison, by dropping resource_contract, and by projecting an entry the destination does not map: each test fails."
+   "notes": "#1759 (D932, D941 rulings 1 to 3): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling) and the destination's own resource-contract declarations, the ones its kernel reads, resolve its resource_contract (carriedViolation); any other leaf tool refuses the whole exchange with the projection exchange's invalid_target. Ordinary local-policy narrowing is separate, and an empty intersection after it stays invalid_grant (cross-org-grant-endpoint.test.ts: refuses a chain whose authority does not intersect the local ceiling). Proved by skipping the argument comparison, by dropping resource_contract, by projecting an entry the destination does not map, and by skipping the contract check: each test fails."
   },
   {
    "id": "cross-org.verification.direct-invocation",
