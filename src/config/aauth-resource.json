@@ -1,0 +1,15 @@
+{
+  "issuer": "https://resource.test",
+  "name": "AAuth document service",
+  "signing_key": { "kid": "resource-key-1", "alg": "Ed25519" },
+  "resource_token_lifetime_seconds": 300,
+  "signature_window_seconds": 60,
+  "scope_descriptions": {
+    "documents.read": "Read your documents",
+    "documents.write": "Create documents for you"
+  },
+  "operations": [
+    { "method": "GET", "path": "/api/documents", "scope": "documents.read" },
+    { "method": "POST", "path": "/api/documents", "scope": "documents.write" }
+  ]
+}
