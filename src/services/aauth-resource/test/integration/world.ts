@@ -215,7 +215,8 @@ export interface World {
   /**
    * The control-plane client of `caller`: the owning agent signing with
    * its agent token, or an administrator with its enrolled key. One client
-   * per caller, on the shared clock, so that two of its requests to one
+   * per caller object (a second AgentClient for the same agent gets its
+   * own), on the shared clock, so that two of its requests to one
    * mission URL are signed in different seconds (the PS's replay key
    * keeps the library default).
    */
@@ -278,7 +279,7 @@ export async function world(): Promise<World> {
   let resourceServer = await listen(revocationSwitch.wrap(resource.handler));
   net.attach(RESOURCE, resourceServer);
   const missions = new Set<string>();
-  const managers = new Map<string, ManagementClient>();
+  const managers = new WeakMap<AgentClient | Administrator, ManagementClient>();
 
   const w: World = {
     net,
@@ -325,7 +326,7 @@ export async function world(): Promise<World> {
     },
     psConfigDoc: () => structuredClone(configDoc),
     manager: (caller) => {
-      let client = managers.get(caller.id);
+      let client = managers.get(caller);
       if (!client) {
         const options = { now: clock.now, sleep: clock.sleep };
         client =
@@ -343,7 +344,7 @@ export async function world(): Promise<World> {
                 },
                 ...options,
               });
-        managers.set(caller.id, client);
+        managers.set(caller, client);
       }
       return client;
     },
