@@ -276,10 +276,12 @@ The request is an HTTPS POST with an
   MUST reject a response whose `nonce` does not equal the one it sent.
 
 The request also carries the client authentication parameters of the
-method it uses ({{mission-status-authentication}}): `client_id`,
-REQUIRED with mTLS client authentication ({{Section 2 of RFC8705}}),
-and `client_assertion_type` and `client_assertion`, REQUIRED with
-private-key-JWT client authentication {{RFC7523}}.
+method it uses ({{mission-status-authentication}}), for example
+`client_id`, REQUIRED with mTLS client authentication
+({{Section 2 of RFC8705}}), or `client_assertion_type` and
+`client_assertion`, REQUIRED with private-key-JWT client
+authentication {{RFC7523}}. A method that carries its credentials in
+HTTP header fields keeps them there.
 
 The Mission Issuer's configuration states which audiences each
 authenticated caller may request: a resource server is typically
