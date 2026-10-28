@@ -643,7 +643,7 @@ describe("attenuation chain: the mission_constraints member at the consumer (@sp
     }
   });
 
-  it("refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract", async () => {
+  it("refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or a changed resource_contract", async () => {
     const widen = (constraints: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
       childWithEntry((entry) => ({
         ...entry,

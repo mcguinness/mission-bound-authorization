@@ -64917,7 +64917,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
+   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, a changed resource_contract (the parent carries one, #249 C.1), an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
   },
   {
    "id": "attenuation.discovery.lists-aat-type",
@@ -65072,7 +65072,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/attenuation.test.ts",
-     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or a changed resource_contract",
      "level": "cross-component",
      "surface": "verification"
     }
