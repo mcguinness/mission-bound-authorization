@@ -13,7 +13,13 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { AccessRequestService, txnTaskId } from "@mission/access-request";
-import { CANONICAL_RESOURCE, contractsRequiring, currentContractProfileVersion, SCOPE_PROJECTION } from "@mission/demo-data";
+import {
+  CANONICAL_RESOURCE,
+  contractsRequiring,
+  currentContractProfileVersion,
+  RESOURCE_CONTRACTS,
+  SCOPE_PROJECTION,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -47,6 +53,7 @@ vi.mock("../src/kernel/transaction-token.js", async (importOriginal) => {
   };
 });
 import {
+  ResourceContractDeclarations,
   TXN_TOKEN_PROHIBITED_CLAIMS,
   txnApprovalBindingDigest,
   type TxnApprovalBinding,
@@ -3320,5 +3327,140 @@ describe("a workflow store file created before Operation Profile versions were r
     } finally {
       second.db.close();
     }
+  });
+});
+
+/**
+ * @spec txn-authorization#resource-challenge, runtime#resource-contract (#249,
+ * #1846): every contract version a resource declares as supported resolves at
+ * the Transaction Authorization Server to the Operation Profile its own
+ * document names. A Mission approved while the payments contract's 2026-10-26
+ * version was current carries that reference. Once 2026-10-27 supersedes it,
+ * within its retention, a transaction-authorized operation under that Mission
+ * is still admitted, and completes under the profile 2026-10-26 names, never
+ * the current one.
+ */
+describe("an older supported contract reference at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846)", () => {
+  const OLDER = "2026-10-26";
+  const CUTOVER = [
+    "payments:payment.schedule",
+    "payments:payment.schedule.cancel",
+    "payments:payment.execute",
+    "payments:payment.reverse",
+    "payments:remittance.send",
+  ];
+
+  /** The shipped TAS's registry, as `demo/src/stack.ts` builds it. */
+  const shipped = (): OperationProfileRegistry =>
+    new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE)));
+
+  /**
+   * The shipped declarations as they stood while `version` was current: it
+   * current, every newer version absent, the cutover's actions required.
+   */
+  function asOf(version: string): ResourceContractDeclarations {
+    return new ResourceContractDeclarations(
+      RESOURCE_CONTRACTS.declarations.map((d) => {
+        const versions = d.versions.filter((v) => v.version <= version);
+        const served = new Set(versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations));
+        return {
+          resource: d.resource,
+          ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+          id: d.id,
+          requires_reference: CUTOVER.filter((a) => served.has(a)),
+          versions: versions.map((v) => ({
+            version: v.version,
+            state: v.version === version ? "current" : v.state,
+            digest: v.digest,
+            ...(v.version !== version && v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+            ...(v.document !== undefined ? { document: v.document } : {}),
+          })),
+        };
+      }),
+    );
+  }
+
+  /** A Mission approved while `version` was current: its payments entries carry that version's reference. */
+  async function approvedWhileCurrent(version: string): ReturnType<typeof freshMission> {
+    const then = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(asOf(version));
+    try {
+      return await freshMission();
+    } finally {
+      then.mockRestore();
+    }
+  }
+
+  async function depsWith(registry: OperationProfileRegistry) {
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const decided: string[] = [];
+    return {
+      decided,
+      deps: {
+        issuer: ISSUER,
+        kernel: as.kernel,
+        clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+        accessTokenJwks: asJwks,
+        dpopProofReplay: newDpopProofReplay(),
+        subjectTokenLive: async () => true,
+        now: () => new Date(),
+        scopeProjection: SCOPE_PROJECTION,
+        txn: {
+          challengeIssuers: new Map([
+            [RESOURCE, { jwks: createLocalJWKSet({ keys: [{ ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK] }), algs: ["ES256"] }],
+          ]) as ChallengeIssuers,
+          ars,
+          operationProfiles: registry,
+          tokenKey: txnKeys.privateKey,
+          tokenKid: "older-txn",
+          workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+          maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+          freshDecision: async (input: { profileVersion: string }) => {
+            decided.push(input.profileVersion);
+            return { decision: "permit" as const };
+          },
+        },
+      } as unknown as TxnAuthorizationDeps,
+    };
+  }
+
+  /** Challenge, admit, approve and complete one remittance under `m` through `registry`. */
+  async function remitThrough(registry: OperationProfileRegistry, m: Awaited<ReturnType<typeof freshMission>>, txn: string) {
+    const { deps, decided } = await depsWith(registry);
+    const workflows = newTxnWorkflows();
+    const admitted = await callTransactionEndpoint(deps, workflows, {
+      transaction_challenge: await signChallenge(
+        {
+          txn,
+          authorization_details: remittanceEntry(m.missionId),
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: `sha-256:${txn}`,
+          mission: m.mission,
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      ),
+      subject_token: m.token,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    if (admitted.status !== 200) return { admitted, decided };
+    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const issued = await callTransactionEndpoint(deps, workflows, { transaction_authorization_id: handle });
+    return { admitted, issued, decided };
+  }
+
+  it("admits a transaction-authorized operation under a superseded version within its retention, and completes it under that version's own Operation Profile", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const pinned = RESOURCE_CONTRACTS.versionOf(remittanceEntry(m.missionId)[0]?.resource_contract);
+    expect(pinned?.version.version).toBe(OLDER);
+    expect(pinned?.version.state).toBe("superseded");
+    const { admitted, issued, decided } = await remitThrough(shipped(), m, "txn_older_supported");
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(issued?.status, JSON.stringify(issued?.body)).toBe(200);
+    expect(decided).toEqual([pinned?.version.operation_profile]);
+    expect(decided[0]).not.toBe(currentContractProfileVersion(RESOURCE));
   });
 });
