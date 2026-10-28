@@ -3128,6 +3128,8 @@ Mission-bound token or whose request names a `scope` value, and to
 issuance for a target that consumes only `scope`: such a target
 receives a safe projection or a refusal (step 5 below).
 
+### Subset Condition {#scope-projection-subset}
+
 For every target audience, the AS MUST establish that the effective
 rights the target's enforcement path grants from the projected
 `scope`, together with every independently mandatory control on that
@@ -3144,6 +3146,14 @@ entry whose `scope`:
   or
 - arises from the union of several entries.
 
+### Per-Audience Condition {#scope-projection-per-audience}
+
+For a multi-audience token, the AS establishes the condition
+independently for each audience; a single-audience token
+({{token-response}}) remains preferred.
+
+### Projection Steps {#scope-projection-steps}
+
 To emit `scope` for an entry, the AS:
 
 1. determines the target resource server or audience for the token;
@@ -3155,14 +3165,10 @@ To emit `scope` for an entry, the AS:
    effective authorization the projected `scope` grants at that
    target is no broader than the applicable carried entries;
 4. omits `scope` for an entry where the target's enforcement path
-   consumes `authorization_details` instead;
+   consumes `authorization_details` instead; and
 5. MUST refuse issuance to a target that is `scope`-only when no safe
    projection exists for the applicable entries: an issued token no
-   enforcement path can safely evaluate is not a usable credential;
-   and
-6. for a multi-audience token, establishes the condition
-   independently for each audience; a single-audience token
-   ({{token-response}}) remains preferred.
+   enforcement path can safely evaluate is not a usable credential.
 
 Unknown `scope` semantics, unknown resource server enforcement
 behavior, or an ambiguous or stale mapping all fail closed under step
@@ -3173,6 +3179,18 @@ cannot establish that it is the current trusted mapping for that
 target. This rule applies to every issuance path that can emit
 `scope` on a Mission-bound token: initial issuance, refresh, Token
 Exchange, and any other derived-token path.
+
+This is the type-agnostic form of the rule; a type's own
+specification states when the mapping in step 3 is safe for that
+type's entries (for `mission_resource_access`,
+{{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+
+The runtime profile's enforcement-scope declarations
+({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
+mapping for the paths it covers; this rule does not depend on that
+profile.
+
+### Requested Scope Values {#scope-projection-requested}
 
 Scope projection does not change OAuth response semantics and does not
 make access-token inspection a client requirement.
@@ -3202,18 +3220,23 @@ values with their own semantics, such as `openid` ({{OpenID.Core}}),
 are unaffected and combine with `authorization_details` as
 {{Section 3.1 of RFC9396}} permits.
 
-For a `scope`-only target, the trusted mapping also relates a
-requested `scope` value back to authority, so a deployment's existing
-`scope` values can request a Mission in configured-mapping mode
+### Scope-Only Targets {#scope-projection-scope-only}
+
+For a `scope`-only target, the trusted mapping also relates a requested
+`scope` value back to authority, so a deployment's existing `scope`
+values can request a Mission in configured-mapping mode
 ({{derivation-modes}}), combining `scope` with the Mission's
-`authorization_details` as {{Section 3.1 of RFC9396}} leaves to the
-AS. Each requested value stands for the entries that the type's
-specification derives from the mapping (for `mission_resource_access`,
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}). The
-Authority Set is those entries narrowed to policy, and the token for
-that target carries their projection under the steps above. A
-requested value the target's trusted mapping does not name cannot be
-granted, and is refused with `invalid_scope` ({{error-mapping}}).
+`authorization_details` as {{Section 3.1 of RFC9396}} leaves to the AS.
+
+- Each requested value stands for the entries that the type's
+  specification derives from the mapping (for `mission_resource_access`,
+  {{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+- The Authority Set is those entries narrowed to policy, and the token
+  for that target carries their projection under the steps above.
+- A requested value the target's trusted mapping does not name cannot be
+  granted, and is refused with `invalid_scope` ({{error-mapping}}).
+
+### Refresh Token Protection {#scope-projection-refresh}
 
 A refusal caused solely by failure to establish a safe scope
 projection MUST NOT invalidate an otherwise-valid refresh token or its
@@ -3223,10 +3246,7 @@ establishing the projection before it consumes or rotates the refresh
 token, or within the same atomic issuance, not by disabling rotation
 or restoring a consumed token.
 
-This is the type-agnostic form of the rule; a type's own
-specification states when the mapping in step 3 is safe for that
-type's entries (for `mission_resource_access`,
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}).
+### Projection Example {#scope-projection-example}
 
 For example, a payments API at `https://pay.example.com` consumes only
 `scope`. Its trusted mapping states that `payments.small` stands for
@@ -3252,11 +3272,6 @@ step 5 with `invalid_target`, or, where the request names
 explicitly requested value above ({{error-mapping}}). The Mission
 Resource Access Profile gives the same pair
 ({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
-
-The runtime profile's enforcement-scope declarations
-({{I-D.draft-mcguinness-mission-runtime}}) can reference the same
-mapping for the paths it covers; this rule does not depend on that
-profile.
 
 ## Mission Claim {#mission-claim}
 
