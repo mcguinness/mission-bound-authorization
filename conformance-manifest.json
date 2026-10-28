@@ -25751,6 +25751,341 @@
    "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
   },
   {
+   "id": "cross-org.holder.sign-with-parent-key",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "sign the child with the key bound by the parent's `cnf`",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a holder signs a child only under the key its parent's `cnf.jwk` binds, and names that key by its JWK Thumbprint URI as the child's `iss`; a child under any other key is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses to sign with any key but the one the parent's cnf.jwk binds (rule 1)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The checked holder mint (deriveCrossOrgChild) shares the in-organization holder's key check (checkChildWithinParent). Proved by mutation: skipping the signing-key comparison fails the rule 1 witness."
+  },
+  {
+   "id": "cross-org.holder.par-hash-exact-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "bind the child to the exact parent through `par_hash`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `par_hash` is computed over its exact parent token"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > mints a chain the destination verifies: a named hop with its credential, then a narrowed key-only hop",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). A construction property of the shared signing path (signCrossOrgChild). Proved by mutation: hashing another token fails both witnesses (the destination refuses the link)."
+  },
+  {
+   "id": "cross-org.holder.narrow-capability-entry",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "narrow or preserve the mapped capability entry under the attenuation substrate's tool and constraint subset model, and its `mission_constraints` member under the attenuation profile's narrowing rule; no other authorization-details entry is added",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a holder mints no child naming a tool its parent lacks, an argument map broader than its parent's, or `mission_constraints` broader than its parent's, and a minted child carries exactly one authorization-details entry, the narrowed capability entry"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a child broader than its parent in tools, argument maps or mission_constraints (rule 3)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The in-organization holder's attenuation checks, shared (checkChildWithinParent); the single entry is a construction property of signCrossOrgChild. The destination's own refusal is cross-org.verification.mission-constraints and cross-org.authority.mapped-subset-only. Proved by mutation: skipping the tool-presence check, the argument-map attenuation, or the mission_constraints narrowing each fails the rule 3 witness."
+  },
+  {
+   "id": "cross-org.holder.aud-within-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "keep `aud` equal to or narrower than the parent's",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child whose `aud` is wider than its parent's is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an aud wider than its parent's (rule 4)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). Proved by mutation: skipping the aud nesting check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.exp-within-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "set `exp` no later than the parent's",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child whose `exp` is after its parent's is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an exp after the parent's or after the destination trust policy's ceiling, and defaults within both (rule 5)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The parent half of rule 5; the destination half is cross-org.holder.exp-within-destination-policy. Proved by mutation: skipping the parent exp check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.exp-within-destination-policy",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "no later than the destination trust policy permits",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child's `exp` is no later than the destination trust policy permits",
+    "local": "the reference holder takes that policy's ceiling as an explicit input (expCeiling): it refuses a later `exp` and defaults the child's `exp` to the earlier of the parent's and the ceiling. Nothing in the reference supplies a holder with a destination's trust policy, so a caller that passes no ceiling is bounded by the parent's `exp` only"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an exp after the parent's or after the destination trust policy's ceiling, and defaults within both (rule 5)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). partial: the mint enforces the ceiling it is given, and the witness asserts that; it cannot establish the destination's policy itself, which a holder learns from its federation agreement (cross-org-delegation#trust-model) and the reference does not configure for a holder. Proved by mutation: skipping the ceiling check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.depth",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "increment `del_depth` without resetting it at any organizational boundary, and preserve `del_max_depth`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `del_depth` is its parent's plus one at every hop, across organizational boundaries, and its `del_max_depth` is its parent's; no child is minted past its parent's `del_max_depth`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a hop past the parent's del_max_depth (rule 6)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The witness's hops cross from organization 1 to 2 and on to 3 with depth 1 then 2. Proved by mutation: resetting del_depth, changing del_max_depth, or skipping the depth bound each fails a witness."
+  },
+  {
+   "id": "cross-org.holder.mission-invariant",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "keep the `mission` claim value-invariant, including `subject`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `mission` claim equals its parent's, including `subject`",
+    "local": "the reference holder refuses a parent whose `mission` claim lacks `id`, `issuer`, `authority_hash` or `subject`, since such a parent is not a conforming cross-organizational hop (cross-org-delegation#hop-members)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a parent whose mission claim lacks the origin principal subject (rule 7)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). Proved by mutation: dropping subject from the copied claim, or skipping the parent claim check, each fails a witness."
+  },
+  {
+   "id": "cross-org.holder.act-names-recipient",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "set this hop's `act` to the actor receiving the delegation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a named child's `act` names the actor receiving the delegation, as one object with `iss` and `sub` and no nested history; a key-only child carries none",
+    "local": "the reference holder places the actor its caller names, refusing one without both `iss` and `sub` or carrying a nested `act`"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an act without both iss and sub, or carrying a nested history (rule 8)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). partial: the witnesses assert the act's shape and placement, not that it names the actor actually receiving the delegation, which no holder-side check can establish. The destination binds a named actor to the hop's key through the aligned actor-binding credential (cross-org.actor.credential-alignment, cross-org.actor.credential-validation). Proved by mutation: skipping the iss-and-sub check, or the nested-act check, each fails the rule 8 witness."
+  },
+  {
+   "id": "cross-org.holder.recipient-cnf-jwk",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "bind the child to the recipient workload's own proof-of-possession key, carried as the child's public `cnf.jwk`",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child carries the recipient's key as a full public `cnf.jwk`; a child with no key, a private key, or a thumbprint-only confirmation is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a child without the recipient's own full public cnf.jwk (rule 9)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). That the key is the recipient's own is proven by the recipient's possession at use (cross-org.verification.leaf-proof-of-possession), not by the holder. Proved by mutation: skipping the child public-key check, or the required-key check, each fails the rule 9 witness."
+  },
+  {
    "id": "mas.reference.strict-dictionary",
    "spec": "draft-mcguinness-mission-authority-server.md",
    "anchor": "mission-reference-field",
