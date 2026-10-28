@@ -2,5 +2,9 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../services/mcp-payments" }, { "path": "../services/pdp" }]
+  "references": [
+    { "path": "../packages/demo-data" },
+    { "path": "../services/mcp-payments" },
+    { "path": "../services/pdp" }
+  ]
 }
