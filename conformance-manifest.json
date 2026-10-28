@@ -27213,9 +27213,21 @@
      "name": "a workflow store file created before Operation Profile versions were recorded (@spec txn-authorization#resource-challenge, #249) > an earlier pending workflow keeps no recorded version, and with no binding declared for its resource and type its completion is refused terminally, never read under the current version",
      "level": "endpoint",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/demo/test/tas-operation-profiles-stack.test.ts",
+     "name": "the composed stack's TAS resolves each declared contract version to its own Operation Profile (@spec txn-authorization#resource-challenge, #249, #1846) > admits a reference to every declared version under that version's profile",
+     "level": "cross-component",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/operation-profile-retention.test.ts",
+     "name": "the TAS registry holds every declared contract version's Operation Profile (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > resolves each declared version's reference to the profile its own document names, never the current one",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "#249 store upgrade: a workflow store file created before Operation Profile versions were recorded is migrated in place (the nullable profile_version column, added once, never backfilled). A workflow admitted before the upgrade keeps no recorded version and completes only under the retained version the deployment declares for its (iss, type) (OperationProfileRegistry.bindLegacyType), never under the current one; with none declared its completion is refused terminally. Proved by reading such a workflow under the current version, and by not marking the refusal terminal. Coverage stays partial as before: the retention bound across a deployment's retirement of a version is not witnessed."
+   "notes": "#249 store upgrade: a workflow store file created before Operation Profile versions were recorded is migrated in place (the nullable profile_version column, added once, never backfilled). A workflow admitted before the upgrade keeps no recorded version and completes only under the retained version the deployment declares for its (iss, type) (OperationProfileRegistry.bindLegacyType), never under the current one; with none declared its completion is refused terminally. Proved by reading such a workflow under the current version, and by not marking the refusal terminal. Coverage stays partial as before: the retention bound across a deployment's retirement of a version is not witnessed. #1846 (#249 C.2, D967): the shipped stack's TAS retains the Operation Profile of every contract version the payments resource declares, derived from the declarations, so a superseded version stays recognized while supported; the composed stack exposes its registry and the wiring is witnessed there. Proved by mutation: the stack building its registry with the current profile alone fails the stack witness. Coverage unchanged."
   },
   {
    "id": "txn-authorization.challenge.contract-reference-names-version",
@@ -27242,9 +27254,39 @@
      "name": "the Transaction Authorization Server resolves the Operation Profile version from the reference, never from type (@spec txn-authorization#resource-challenge, #249) > admits an entry carrying a reference under the version its contract names, refuses one that does not resolve at admission, and refuses completion once it stops resolving",
      "level": "unit",
      "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "an older supported contract reference at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > admits a transaction-authorized operation under a superseded version within its retention, and completes it under that version's own Operation Profile",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/txn-endpoint.test.ts",
+     "name": "an older supported contract reference at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > a registry holding only the current version's profile refuses the same reference at admission, creating no workflow",
+     "level": "endpoint",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/operation-profile-retention.test.ts",
+     "name": "the TAS registry holds every declared contract version's Operation Profile (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > resolves each declared version's reference to the profile its own document names, never the current one",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/operation-profile-retention.test.ts",
+     "name": "the TAS registry holds every declared contract version's Operation Profile (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > refuses a retired version, and one outside its retention, by resolution rather than by a missing profile",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/operation-profile-retention.test.ts",
+     "name": "the TAS registry holds every declared contract version's Operation Profile (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846) > refuses an operation the referenced version does not cover, though a later version does",
+     "level": "unit",
+     "surface": "transaction-authorization-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Operation Profile registry (kernel/operation-profile.ts) reads the version a carried reference names from its contract document, resolves the reference under the declared contract versions at admission and again at completion, and returns a refusal the transaction endpoint answers invalid_grant. Partial: witnessed at the registry only (unit); no transaction-endpoint test carries a challenge whose entry has a reference. Proved by admitting under the current version while ignoring the reference."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Operation Profile registry (kernel/operation-profile.ts) reads the version a carried reference names from its contract document, resolves the reference under the declared contract versions at admission and again at completion, and returns a refusal the transaction endpoint answers invalid_grant. Its refusals are witnessed at the registry (unit). Proved by admitting under the current version while ignoring the reference. #1846 (#249 C.2, D967): the registry is built from the declarations (contractOperationProfiles), the current version's profile registered and every other declared version's retained, so a resolving reference selects its own version's profile at the transaction endpoint: a Mission approved while 2026-10-26 was current is admitted and completes under payments-runtime-profile-v15, not v16. The registry holding only the current profile, as the shipped stack built it, refuses that reference at admission (the reproduction, kept as the control). A retired, out-of-retention or uncovered reference is refused by resolution, witnessed at the registry. Still partial: refusal of a non-resolving reference at admission and at completion is witnessed at the registry, not through the endpoint. Proved by mutation, each alone: retaining no older version, skipping retired versions, or registering every version as current fails a witness."
   },
   {
    "id": "txn-authorization.challenge.version-recorded-at-admission",
@@ -74012,9 +74054,15 @@
      "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > the expansion approval page shows the Carryover Manifest it commits, and the decision on it carries exactly the child shown (@spec child-delegation#carryover-manifest, expansion#completion-modes, #1558)",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
+     "name": "carryover completion and result retrieval (@spec child-delegation#carryover-commit) > completes a carryover under a configuration requiring a reference for the successor's actions: the manifest commits the assembled successor the approval creates (#1845)",
+     "level": "cross-component",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown."
+   "notes": "Preparation renders the manifest and reserves the proposed successor and replacement identifiers; the approval event fills the deterministic per-child approval identifiers and commits `manifest_hash` over the JCS canonical manifest, `exclusion_policy` included. The retained manifest recomputes to its commitment, a tampered commitment refuses the whole completion, an idempotent retry re-mints no identifier, a cancelled plan's identifiers stay held, and an oversized plan is refused at intake before any approval names it. #1558: the AS's expansion deferral page renders the manifest to the Approver (the exclusion policy, and each child carried with the replacement's facts or terminated with the reason), and the approval on it carries exactly the child shown. #1845 (#249 C.2, D967): the manifest's prospective successor is the construction the successor is created by (successorAuthority), so where configuration requires a reference for the successor's actions the manifest commits the assembled successor and completion's unchanged mismatch check passes. Proved by mutation: the unassembled construction fails the witness with manifest_mismatch."
   },
   {
    "id": "child-delegation.carryover.completion-cas",
