@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4fb27a6639069f2597b6b94ccc346c1903886d7e",
-    "content_sha256": "abd8413e55e54f0c77855d0777e1136912efc5e1fe9b64c325fe18b41c5912ce"
+    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
+    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -15906,92 +15906,6 @@
     }
    ],
    "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. D733: the template dispatch witness in scope-projection.test.ts recovers an instance created while the target was unmapped and issues for it once the mapping is back, because the instance inherits the association its template retained at consent. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
-  },
-  {
-   "id": "core.other-types.original-audience-refusal",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "Without `narrowing`, a token for another audience does not carry the entry",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "token-endpoint",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
-    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
-   },
-   "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
-     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/device-authorization.test.ts",
-     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
-     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    }
-   ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.other-types.capability-carrier-first-false-governs",
@@ -77745,7 +77659,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
-    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -77811,7 +77725,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Absorbs core.other-types.original-audience-refusal (#1793, D919): its Declared Transformation Capabilities sentence restated this rule, on the same tests, and was removed. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.tokens.multi-audience-refusal",

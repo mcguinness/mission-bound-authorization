@@ -1883,9 +1883,7 @@ narrowing and needs `narrowing`, not `projection`. Without `narrowing`,
 the AS MUST NOT issue an entry to any audience other than its original
 approved audience, or, except as `scope` under a declared `projection`,
 in any form other than exactly as approved, since it cannot prove that a
-transformed copy is still a subset of what was approved. Without
-`narrowing`, a token for another audience does not carry the entry
-({{token-response}}).
+transformed copy is still a subset of what was approved.
 
 A type that declares `delegation` without `narrowing` is delegable only
 unchanged: the AS MUST NOT include an entry of such a type in a
@@ -2387,7 +2385,7 @@ The Mission Lifecycle States registry ({{iana-lifecycle-states}})
 holds these states, and the Mission Termination Reasons registry
 ({{iana-termination-reasons}}) holds the reasons. A companion profile
 MAY register an additional state for a lifecycle it introduces (for
-example, a paused state); only `active` permits issuance. A companion
+example, a paused state). A companion
 profile that defines a further way for a Mission to end registers a
 termination reason, not a state.
 
@@ -5520,9 +5518,7 @@ The smallest useful conforming deployment is a Mission Issuer that:
   only that type's specification-defined vocabulary; and
 - implements none of the optional capabilities.
 
-A scope-only resource server is served only where the AS established
-a safe scope projection for it ({{scope-projection}}). A Mission
-Issuer can instead start from configured-mapping mode
+A Mission Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class, and neither removes a surface:
 the Mission Issuer still implements every surface its role lists
@@ -8072,6 +8068,9 @@ Cross-Domain:
   duplicate member names (Commitment Mechanisms), and the
   resource-server rules of Mission Lifecycle, Mission Claim, Audience
   and Token Response, and Designation (#1723, D845).
+- Editorial, no requirement change: Declared Transformation
+  Capabilities, Mission Lifecycle and Conformance drop restatements of
+  rules their home sections state (#1793, D919).
 
 -01
 
