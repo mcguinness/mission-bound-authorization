@@ -15,6 +15,7 @@ import {
   APPROVER_LOGIN_CALLBACK_PATH,
   ApprovalSessionStore,
   type AuthorityEntry,
+  type BudgetExposurePort,
   buildAuthorizationServer,
   evaluateApprovalFloor,
   MISSION_APPROVAL_SCOPE,
@@ -41,6 +42,7 @@ import {
   type AuthorityEntry as PdpAuthorityEntry,
   type BoundaryEvidenceKey,
   buildBoundaryEvidenceKeyResolver,
+  budgetCounterId,
   createDecisionPoint,
   createDecisionChannel,
   createPdpRefusalRecorder,
@@ -464,6 +466,17 @@ export async function composeStack(opts: {
    */
   kernelStore?: KernelStoreConfig;
   /**
+   * @spec #1767 (D901): the RAS's durable redemption store, kept across
+   * restarts. Absent: its single-use claims are in memory. `pnpm as-native`
+   * sets it from `MISSION_RAS_REDEMPTIONS` (`rasRedemptionsFromEnv`), which a
+   * key ring requires, and refuses a missing or uninitialized store before
+   * anything connects. The file is created once by `pnpm ras-redemptions
+   * init`, never here: a store the RAS cannot open refuses composition,
+   * releasing what it opened. Whoever composed the stack closes it
+   * (`DemoStack.authServer.ras.close()`).
+   */
+  rasRedemptions?: { file: string };
+  /**
    * @spec runtime#boundary-identifier-change (#853 review): the Enforcement
    * Scope Statement this stack runs under, validated by `loadRuntimePosture`.
    * Absent: the published one (`config/enforcement-scope.json`). One value
@@ -521,6 +534,12 @@ export async function composeStack(opts: {
   if (opts.testStandingPaymentDispatch && (asNative || !opts.withAuthServer)) {
     throw new Error("testStandingPaymentDispatch needs withAuthServer, and the as-native target refuses it");
   }
+  // @spec #831 (D901): durable evidence key files load first, each as its own
+  // holder's, so a missing, mismatched or unreadable file refuses before
+  // anything listens or connects, and nothing is left open to release.
+  const durableEvidence = opts.evidenceKeys
+    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
+    : undefined;
   const masJoin = opts.masJoinPolicy ?? MAS_JOIN;
   const masGovernedResources =
     opts.masGovernedResources ??
@@ -603,6 +622,24 @@ export async function composeStack(opts: {
   let paymentsServerRef: McpPaymentsServer | undefined;
   // @spec #831 C2: the RAS's hold on the AS's continuation keys, reloadable.
   let rasContinuationKeys: IssuerKeys | undefined;
+  // @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+  // (#813, #816, D830 ruling 7, D877): the AS's read port onto the budget
+  // counters in the co-resident PDP's claim domain, wired only where the
+  // standing-payment fixture is on. The AS is built before the claim domain
+  // opens, so the port reads through this reference and refuses (the
+  // approval with it) until the domain is open.
+  let budgetCounterDomain: IdempotencyClaimDomain | undefined;
+  const budgetExposure: BudgetExposurePort = {
+    read: (key) => {
+      if (!budgetCounterDomain) throw new Error("the PDP claim domain is not open");
+      const id =
+        key.counter_scope === "standing_consent"
+          ? budgetCounterId("standing_consent", { owner: key.owner, budget_id: key.budget_id })
+          : budgetCounterId("mission", { issuer: key.issuer, mission_id: key.mission_id });
+      const state = budgetCounterDomain.budgetCounter(id);
+      return state && { reserved: state.reserved, held: state.held, committed: state.committed };
+    },
+  };
 
   if (opts.withAuthServer || asNative) {
     const asPort = opts.asPort ?? TOPOLOGY.ports.as;
@@ -709,7 +746,9 @@ export async function composeStack(opts: {
           approver: { sub: "bob", acr: "mfa", auth_time: Math.floor(Date.now() / 1000) } },
       },
       ...(capabilities ? { capabilities } : {}),
-      ...(opts.testStandingPaymentDispatch ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies } : {}),
+      ...(opts.testStandingPaymentDispatch
+        ? { dispatchPolicies: opts.testStandingPaymentDispatch.dispatchPolicies, budgetExposure }
+        : {}),
       // @spec mission-template#standing-payment-exception (#813, #816): the
       // statement this stack's PDP meters under, which the AS reads under the
       // standing-payment capability alone.
@@ -860,56 +899,68 @@ export async function composeStack(opts: {
     if (!Array.isArray(saasConstraints) || !saasConstraints.every((k) => typeof k === "string")) {
       throw new Error("SaaS protected resource metadata is missing mission_constraints_supported");
     }
-    const ras = new ResourceAuthorizationServer({
-      localCeiling: RAS_LOCAL_POLICY.ceiling,
-      localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
-      issuer: RAS_ISS,
-      trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
-      signKey: rasKeys.privateKey,
-      signKid: rasTokenKey.kid,
-      localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
-      localTokenAudience: saasResource,
-      // @spec cross-domain#validation-at-resource-as (S-12): no client is
-      // known at boot (the demo agent's DPoP key is generated per session,
-      // exhibit.ts); it is onboarded via ras.registerClient() once that key
-      // exists, before any cross-domain redemption is attempted.
-      registeredClients: {},
-      // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): the
-      // demo's ID-JAG grants are all base grants over the mission subject
-      // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
-      // grant's own (iss, sub) and mission.subject co-resolve via this one
-      // entry). Entitlement is this deployment's own local source (the demo
-      // runs no separate entitlement service).
-      mapping: {
-        id: "demo-ras-mapping",
-        version: "v1",
-        entries: [
-          {
-            origin: { iss: ISS, sub: "alice" },
-            local_sub: "alice-ledgercloud",
-            observed_at: "2020-01-01T00:00:00Z",
-            valid_until: "2099-01-01T00:00:00Z",
-          },
-        ],
-      },
-      // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
-      // grain of the same observation. Alice is a currently entitled
-      // LedgerCloud account, entitled to read vendors but NOT to write the
-      // journal, mirroring the draft's own worked example (invoices.read
-      // entitled, journal-entries.write not). The delegated grant carries
-      // both actions, so redemption narrows to the entitled subset rather
-      // than refusing: the minted local token carries ledger:vendor.read
-      // alone, and the SaaS PEP refuses a journal write presented with it.
-      entitlement: {
-        resolve: async () => ({
-          entitled: true,
-          observed_at: new Date().toISOString(),
-          authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
-        }),
-      },
-      entitlementStalenessBoundSeconds: 86_400,
-      resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
-    });
+    // A RAS that cannot open its redemption store (missing, uninitialized or
+    // held) releases the AS listener and what construction opened, as a
+    // failed listen does.
+    let ras: ResourceAuthorizationServer;
+    try {
+      ras = new ResourceAuthorizationServer({
+        localCeiling: RAS_LOCAL_POLICY.ceiling,
+        localPolicyVersion: RAS_LOCAL_POLICY.policy_version,
+        issuer: RAS_ISS,
+        trustedIssuers: { [asUrl]: { resolveKey: rasAnchorKey } },
+        signKey: rasKeys.privateKey,
+        signKid: rasTokenKey.kid,
+        localTokenTtlSeconds: TOPOLOGY.ttls.rasLocalTokenSeconds,
+        localTokenAudience: saasResource,
+        // @spec cross-domain#validation-at-resource-as (S-12): no client is
+        // known at boot (the demo agent's DPoP key is generated per session,
+        // exhibit.ts); it is onboarded via ras.registerClient() once that key
+        // exists, before any cross-domain redemption is attempted.
+        registeredClients: {},
+        // @spec cross-domain#origin-principal-mapping, #dual-axis (#539): the
+        // demo's ID-JAG grants are all base grants over the mission subject
+        // { iss: ISS, sub: "alice" } (this AS is its own issuer, so the
+        // grant's own (iss, sub) and mission.subject co-resolve via this one
+        // entry). Entitlement is this deployment's own local source (the demo
+        // runs no separate entitlement service).
+        mapping: {
+          id: "demo-ras-mapping",
+          version: "v1",
+          entries: [
+            {
+              origin: { iss: ISS, sub: "alice" },
+              local_sub: "alice-ledgercloud",
+              observed_at: "2020-01-01T00:00:00Z",
+              valid_until: "2099-01-01T00:00:00Z",
+            },
+          ],
+        },
+        // @spec cross-domain#dual-axis (#744): the action- and resource-scoped
+        // grain of the same observation. Alice is a currently entitled
+        // LedgerCloud account, entitled to read vendors but NOT to write the
+        // journal, mirroring the draft's own worked example (invoices.read
+        // entitled, journal-entries.write not). The delegated grant carries
+        // both actions, so redemption narrows to the entitled subset rather
+        // than refusing: the minted local token carries ledger:vendor.read
+        // alone, and the SaaS PEP refuses a journal write presented with it.
+        entitlement: {
+          resolve: async () => ({
+            entitled: true,
+            observed_at: new Date().toISOString(),
+            authority: [{ resource: saasResource, actions: ["ledger:vendor.read"] }],
+          }),
+        },
+        entitlementStalenessBoundSeconds: 86_400,
+        resourceConstraintsSupported: { [saasResource]: saasConstraints as string[] },
+      ...(opts.rasRedemptions ? { redemptions: opts.rasRedemptions } : {}),
+      });
+    } catch (err) {
+      asServer.closeAllConnections();
+      await new Promise<void>((resolve) => asServer.close(() => resolve()));
+      await releaseConstruction(as);
+      throw err;
+    }
     const resourceToAs = (r: string) => (r === saasResource ? RAS_ISS : asUrl);
     authServer = {
       asUrl,
@@ -1004,11 +1055,9 @@ export async function composeStack(opts: {
   // key-to-audience binding is checked against what the records actually
   // carry rather than a placeholder.
   const decisionEvidenceKey = TOPOLOGY.keys.pdpDecisionEvidence;
-  // @spec #831 (scope inventory): with durable evidence key files, each
-  // holder's keys are the same at every boot; without them, generated now.
-  const durableEvidence = opts.evidenceKeys
-    ? { pep: loadEvidenceKeyFile(opts.evidenceKeys.pep, "pep"), pdp: loadEvidenceKeyFile(opts.evidenceKeys.pdp, "pdp") }
-    : undefined;
+  // @spec #831 (scope inventory): with durable evidence key files (loaded
+  // first, above), each holder's keys are the same at every boot; without
+  // them, generated now.
   const decisionEvidenceKeys = durableEvidence
     ? (durableEvidence.pdp[0] as DurableEvidenceKey)
     : await generateKeyPair(decisionEvidenceKey.alg, { extractable: true });
@@ -1086,6 +1135,8 @@ export async function composeStack(opts: {
     // the domain and surfaced on the same alarm path.
     onSettlementConflict: (conflict) => operatorAlerts.alert(settlementConflictAlert(conflict)),
   });
+  // #813, D877: the AS's budget exposure port reads this domain from here on.
+  budgetCounterDomain = pdpClaims;
   // @spec runtime#boundary-identifier-change step 1 (#853 review): the
   // consumers whose bindings are provisioned outside the statement. Until
   // each is provisioned for the version in force, the boundary is not
@@ -1503,6 +1554,7 @@ export async function composeStack(opts: {
       writeReservations.close();
       evidenceRetention.close();
       evidenceKeySets.close();
+      if (opts.rasRedemptions) authServer?.ras.close();
       if (opts.kernelStore) kernel.close();
     };
     try {

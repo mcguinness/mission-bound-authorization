@@ -93,13 +93,14 @@ import {
   normalizedParameters,
   parameterDigest,
 } from "./effective-params.js";
-import type {
-  DecisionEvidence,
-  EvidenceStore,
-  ExecutionEvidence,
-  ExecutionEvidenceObject,
-  PepRefusalDenialReason,
-  RuntimeHopReference,
+import {
+  type DecisionEvidence,
+  type EvidenceStore,
+  type ExecutionEvidence,
+  type ExecutionEvidenceObject,
+  ExecutionRedispositionError,
+  type PepRefusalDenialReason,
+  type RuntimeHopReference,
 } from "./evidence.js";
 import type { CommittedEffectSource, CommittedWire } from "./connectors.js";
 import {
@@ -118,6 +119,7 @@ import { signChallenge } from "./txn-challenge.js";
 import type { PendingOperation } from "./txn-store.js";
 import { PaymentsToolCatalog, type CapabilityCatalog, type CapabilitySnapshot } from "./tool-catalog.js";
 import { admitArguments } from "./intake.js";
+import { originalArgumentsMatch } from "./invocation-arguments.js";
 import { absenceMeansNeverGranted, type MissionViewSource, prepareRequestView, viewMissRefusal } from "./view-source.js";
 import { accessTokenHash } from "./dpop.js";
 import type { JoinAssertionSource } from "./join-assertion-client.js";
@@ -1327,6 +1329,25 @@ export interface RequestSignals {
    * placed on a decision request or in evidence.
    */
   accessToken?: string;
+  /**
+   * @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the invocation's
+   * original arguments as the transport received them, before intake
+   * normalizes them ({@link Pep.intake}).
+   */
+  invocation?: InvocationArguments;
+}
+
+/**
+ * @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): a tool invocation's
+ * original arguments, as JSON text from the transport's validated parse. The
+ * HTTP channel derives it from the request body read once and parsed
+ * losslessly (duplicate members refused, numbers in their source spelling).
+ * The in-memory channel's object API carries the one JSON snapshot its client
+ * serialized; it cannot see members or spellings a parser upstream of it
+ * already discarded, and does not claim to.
+ */
+export interface InvocationArguments {
+  argumentsJson: string;
 }
 
 export interface ActionApprovalInput {
@@ -1409,6 +1430,15 @@ export interface EnforceResult {
    * never assembles a record of its own.
    */
   attempt?: ExecutionAttempt;
+  /**
+   * @spec runtime-evidence#execution-evidence-object (#786, #1715): present on
+   * a refusal this PEP made inside enforcement after the permit (an
+   * unrecognized condition, a dependency not established, an obligation not
+   * fulfilled). The permit's attempt and the outcome of its suppressed
+   * disposition, so the caller surfaces a record that could not be written
+   * rather than dropping it.
+   */
+  suppressed?: { attempt: ExecutionAttempt; disposition: SuppressOutcome };
   /**
    * @spec runtime#idempotency (#918): present on a permit for a keyed
    * reversible write. The (idempotency scope, `idempotency_key`) pair this
@@ -1707,9 +1737,14 @@ export interface AttemptEvaluationContext {
  * whose context-bound permit's effective context digest could not be (#773).
  * A suppression never reports either: it emits without the effective digest,
  * "comparison unavailable" (#786).
+ *
+ * `prior: true` (#1715) marks a suppression of an attempt whose one
+ * disposition is already retained under its execution identity (an attempt
+ * replayed into the effect step): this refusal records nothing further, and
+ * no record is missing.
  */
 export type SuppressOutcome =
-  | { recorded: true }
+  | { recorded: true; prior?: true }
   | {
       recorded: false;
       gap: "effective_parameter_digest_unobservable" | "effective_evaluation_context_digest_unobservable" | "emission_failed";
@@ -2293,6 +2328,7 @@ export class Pep {
     tool: string,
     args: Record<string, unknown>,
     token: TokenFacts,
+    invocation?: InvocationArguments,
   ): Promise<{ ok: true; args: Record<string, unknown> } | { ok: false; refusal_reason: string }> {
     const mapping = this.toolAction(tool);
     if (!mapping) return { ok: true, args };
@@ -2301,6 +2337,15 @@ export class Pep {
     const established = await this.requestBoundary(token, mapping.action);
     if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
     const boundary = established.boundary;
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the seam where the
+    // invocation's original arguments are checked before normalization. The
+    // transport's original text must describe exactly the arguments it
+    // dispatched; a presentation's `hta` is verified against this same text
+    // here, before `admitArguments` normalizes anything (#1756 slice B3).
+    if (invocation !== undefined && !originalArgumentsMatch(invocation, args)) {
+      await this.recordRefusal(boundary, token, "invalid_request", mapping.action);
+      return { ok: false, refusal_reason: "invalid_request" };
+    }
     let inputSchema: unknown;
     try {
       inputSchema = (this.capabilityCatalog.toolDefinitions([tool])[0] as { inputSchema?: unknown } | undefined)?.inputSchema;
@@ -3595,8 +3640,8 @@ export class Pep {
       // Post-permit: a permit was obtained and is unusable, so this is a
       // suppressed disposition of that permit, never a Refusal Record
       // (@spec runtime-evidence#pre-decision-refusal boundary rule).
-      await this.suppressExecution(attempt, "condition_unrecognized");
-      return { permitted: false, refusal_reason: "unrecognized_condition" };
+      const disposition = await this.suppressExecution(attempt, "condition_unrecognized");
+      return { permitted: false, refusal_reason: "unrecognized_condition", suppressed: { attempt, disposition } };
     }
 
     // @spec runtime#input-authority-dependency (#830, D798): the composed
@@ -3611,8 +3656,8 @@ export class Pep {
         action: mapping.action,
       });
       if (!checked.ok) {
-        await this.suppressExecution(attempt, "resource_policy");
-        return { permitted: false, decision, denial_reason: "resource_policy" };
+        const disposition = await this.suppressExecution(attempt, "resource_policy");
+        return { permitted: false, decision, denial_reason: "resource_policy", suppressed: { attempt, disposition } };
       }
       // The ceiling travels with the permit into execution admission and is
       // enforced at release (the `authority_dependency` use check).
@@ -3648,10 +3693,10 @@ export class Pep {
         // ("one object per attached obligation, in the order the decision
         // returned them"): every attached obligation has its entry, a malformed
         // one included, with no `id` or `type` invented for it (#786).
-        await this.suppressExecution(attempt, "obligation_unfulfilled", {
+        const disposition = await this.suppressExecution(attempt, "obligation_unfulfilled", {
           ...(processed.outcomes ? { obligationOutcomes: processed.outcomes } : {}),
         });
-        return { permitted: false, refusal_reason: "unfulfillable_obligation" };
+        return { permitted: false, refusal_reason: "unfulfillable_obligation", suppressed: { attempt, disposition } };
       }
       // Fulfilled: every obligation identified itself and was performed.
       attempt.obligationOutcomes = processed.outcomes;
@@ -4015,6 +4060,7 @@ export class Pep {
       // "recorded as the executing PEP attributed it".
       ...(attempt.workItem ? { work_item: attempt.workItem } : {}),
     };
+    let disposedEarlier = false;
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         const recorded = await this.deps.evidence.recordExecution(CANONICAL_RESOURCE, "pep", input);
@@ -4030,11 +4076,18 @@ export class Pep {
         // reservation stays charged until the permit and its lease elapse.
         if (attempt.redeemed) await this.settleClaim(recorded.content);
         return { recorded: true };
-      } catch {
+      } catch (e) {
         /* one retry, on the SAME execution identity: a retained record is
            returned rather than duplicated, so this cannot double-emit. */
+        disposedEarlier = e instanceof ExecutionRedispositionError && e.held === "retained";
       }
     }
+    // @spec runtime-evidence#execution-evidence-object (#786, #1715): one
+    // execution identity, one disposition. A refusal of an attempt whose
+    // disposition is already retained records nothing further, and nothing is
+    // missing. A completed disposition refused that way stays a gap: its
+    // effect stands and its identity's record says otherwise.
+    if (disposedEarlier && disposition.outcome === "suppressed") return { recorded: true, prior: true };
     return { recorded: false, gap: "emission_failed" };
   }
 

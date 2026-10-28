@@ -42,6 +42,7 @@ import {
   evaluateAuthorityDependency,
 } from "@mission/core";
 import { exportJWK, generateKeyPair, importJWK, type CryptoKey, type JWK } from "jose";
+import { signHistoricalKeySet } from "./kernel/historical-key-set.js";
 import {
   generateEphemeralSigningKeys,
   loadSigningKeyRingState,
@@ -52,6 +53,7 @@ import type Provider from "oidc-provider";
 import type { ApprovalSessionStore } from "./adapters/approval-resolution.js";
 import { AuthorityReconciler } from "./adapters/authority-reconciler.js";
 import { capabilityEnabled, type ProviderCapability } from "./adapters/capabilities.js";
+import type { BudgetExposurePort } from "./kernel/budget-exposure.js";
 export { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, type ApprovalPrincipal } from "./adapters/approval-resolution.js";
 export { RENDER_REVISION_HEADER } from "./adapters/approval-render-revision.js";
 export { AuthorityReconciler, type ReconcileOutcome } from "./adapters/authority-reconciler.js";
@@ -211,6 +213,13 @@ export {
   verifySigningKeyRing,
   type WithdrawnSigningKey,
 } from "./kernel/signing-key-ring.js";
+export {
+  HISTORICAL_JWKS_PATH,
+  HISTORICAL_KEY_SET_MEDIA_TYPE,
+  HISTORICAL_KEY_SET_TYP,
+  historicalKeys,
+  signHistoricalKeySet,
+} from "./kernel/historical-key-set.js";
 export {
   attachCapabilitySources,
   type CapabilitySourceResolution,
@@ -759,6 +768,13 @@ export {
 } from "./kernel/template.js";
 export { prohibitedPredicateMappingOf } from "./adapters/provider.js";
 export {
+  type BudgetCounterKey,
+  type BudgetCounterTotals,
+  type BudgetExposurePort,
+  BudgetExposureUnavailableError,
+  type CounterExposure,
+} from "./kernel/budget-exposure.js";
+export {
   ALL_PROHIBITED_PREDICATES,
   assertDispatchProhibitedCoverage,
   assertNotStandingPaymentLineage,
@@ -1090,6 +1106,14 @@ export async function buildAuthorizationServer(opts: {
    * declaration the runtime decision policy also reads.
    */
   actionApprovalPolicy?: ActionApprovalPolicy;
+  /**
+   * @spec mission-template#standing-payment-exception, metering#aggregate-bounds
+   * (#813, #816, D830 ruling 7, D877): the read port onto the co-resident
+   * PDP's budget counters (`BudgetCounterState`), which the standing-payment
+   * consent and successor approval pages render. Required where the
+   * `standing-payment-dispatch` capability is on; the deployment wires it.
+   */
+  budgetExposure?: BudgetExposurePort;
   /**
    * @spec mission-template#standing-payment-exception (#813, #816): the
    * deployment's Enforcement Scope Statement, the one its PDP meters under.
@@ -1577,6 +1601,15 @@ export async function buildAuthorizationServer(opts: {
     tokenVerification = tokenPublished;
   }
   const statusKeys = { privateKey: signing.asStatus.privateKey, kid: signing.asStatus.kid };
+  // @spec status#historical-key-set (#831 B3): the Status role's generations
+  // withdrawn as compromised, signed once here, at boot, under the active
+  // Status key (after a Status compromise, its replacement).
+  const historicalKeySet = await signHistoricalKeySet({
+    issuer: opts.issuer,
+    withdrawn: signing.asStatus.withdrawn,
+    signer: { key: signing.asStatus.privateKey, kid: signing.asStatus.kid, publicJwk: signing.asStatus.publicJwk },
+    now: new Date(),
+  });
   const txnKeys = { privateKey: signing.asTxn.privateKey, kid: signing.asTxn.kid };
   const continuationKeys = { privateKey: signing.asContinuation.privateKey, kid: signing.asContinuation.kid };
 
@@ -2098,6 +2131,7 @@ export async function buildAuthorizationServer(opts: {
     },
     publicJwks,
     ...(ringState.revision !== undefined ? { jwksRevision: ringState.revision } : {}),
+    ...(historicalKeySet !== undefined ? { historicalKeySet } : {}),
     accessTokenJwks: { keys: tokenVerification },
     allowHeadlessAdjudication: opts.allowHeadlessAdjudication ?? false,
     ...(opts.approvalSessions ? { approvalSessions: opts.approvalSessions } : {}),
@@ -2187,6 +2221,7 @@ export async function buildAuthorizationServer(opts: {
     templateStore,
     dispatchPolicies,
     actionApprovalPolicy: opts.actionApprovalPolicy ?? ACTION_APPROVAL_POLICY,
+    ...(opts.budgetExposure ? { budgetExposure: opts.budgetExposure } : {}),
     ...(opts.enforcementScopeStatement !== undefined ? { enforcementScopeStatement: opts.enforcementScopeStatement } : {}),
     protectedEventSources,
     issuerEvidence,
