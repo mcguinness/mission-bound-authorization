@@ -314,6 +314,13 @@ describe("credential facts the PDP cannot use refuse credential_invalid (@spec a
   it.each([
     ["an entry type it does not understand", [{ type: "other", resource: RESOURCE, actions: ["payments:invoice.read"] }]],
     ["a constraint it cannot enforce", [entry(["payments:invoice.read"], { office_hours: "9-5" })]],
+    // @spec authzen#context-credential: "A request whose `authority` ...
+    // carries an entry the PDP cannot evaluate in full, is denied
+    // `credential_invalid`", whatever another entry carries (#1772).
+    [
+      "a constraint it cannot enforce beside an entry it can",
+      [entry(["payments:invoice.read"], { office_hours: "9-5" }), entry(["payments:invoice.read"])],
+    ],
     ["a malformed amount cap", [entry(["payments:invoice.read"], { max_amount: { amount: "ten", currency: "USD" } })]],
     ["a non-array value", { type: "mission_resource_access" }],
     ["an empty discharge condition list", [entry(["payments:invoice.read"], { terminal_when: [] })]],
