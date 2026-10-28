@@ -12,12 +12,12 @@
  * change between rendering and decision refuses the decision, and a reading
  * that cannot be made refuses the approval.
  */
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { activationPolicyDigest, authorityHash, intentHash } from "@mission/core";
-import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, DEV_SERVICE_TOKEN, TOPOLOGY } from "@mission/demo-data";
 import { decodeJwt, exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { contentDigest, RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
@@ -42,6 +42,7 @@ import {
   ApprovalSessionStore,
   type BuiltAs,
   buildAuthorizationServer,
+  initSigningKeyRing,
   STANDING_PAYMENT_OPERATION,
 } from "../src/index.js";
 import { floorApprovalHeaders } from "./approval-fixture.js";
@@ -492,18 +493,26 @@ interface Boot {
   server: Server;
 }
 
+/** The restartable deployment's issuer, on the one port every restart test rebinds. */
+const RESTART_ISSUER = "http://localhost:15012";
+/** The temporary directories the restart tests create: the key ring's and each kernel file's. */
+const restartDirs: string[] = [];
+
 /**
- * Boot `issuer` on its port over `kernelFile` and the module's budget
- * counters (the claim domain outlives the AS), holding `held` as the
- * sp-exposure Dispatch Policy, under a statement listing `listed` at `limit`.
+ * Boot RESTART_ISSUER on its port over `kernelFile`, the signing key `ring`
+ * and the module's budget counters (the claim domain outlives the AS),
+ * holding `held` as the sp-exposure Dispatch Policy, under a statement
+ * listing `listed` at `limit`. A restart keeps its signing keys, as a
+ * deployment's does, so no boot generates one.
  */
 async function bootAt(
-  issuer: string,
+  ring: string,
   kernelFile: string,
   held: typeof POLICY,
   listed: ReadonlyArray<typeof POLICY>,
   limit: string,
 ): Promise<Boot> {
+  const issuer = RESTART_ISSUER;
   const built = await buildAuthorizationServer({
     issuer,
     capabilities: ON,
@@ -512,6 +521,7 @@ async function bootAt(
     enforcementScopeStatement: meteringStatement(issuer, listed, limit),
     budgetExposure: counters,
     kernelStore: { file: kernelFile },
+    signingKeys: { ring },
   });
   const listening = built.provider.listen(Number(new URL(issuer).port));
   await new Promise<void>((resolve) => listening.once("listening", () => resolve()));
@@ -527,8 +537,8 @@ async function shutdown(boot: Boot): Promise<void> {
 /**
  * @spec template#standing-payment-exception (#813, D877): a deployment whose
  * Approver consented a template under version 1 of the sp-exposure Dispatch
- * Policy restarts on the same kernel file and the same budget counters,
- * holding `next` in its place. A new template_version proposed under `next`
+ * Policy restarts on the same kernel file, signing key `ring` and budget
+ * counters, holding `next` in its place. A new template_version proposed under `next`
  * (with `ceiling` where the new terms need one) is rendered to the
  * authenticated Approver while the shared counter reads `exposure`: the page
  * shows the new terms (`shows`) and the shared budget's consumption to date
@@ -537,16 +547,18 @@ async function shutdown(boot: Boot): Promise<void> {
  * again is approved under the budget version 1 pinned.
  */
 async function consentAfterRaise(
-  port: number,
+  ring: string,
   next: typeof POLICY,
   limit: string,
   shows: string,
   exposure: { committed: string; reserved: string; held: string },
   ceiling?: unknown[],
 ): Promise<void> {
-  const issuer = `http://localhost:${port}`;
-  const kernelFile = join(mkdtempSync(join(tmpdir(), "sp-exposure-raise-")), "kernel.db");
-  const first = await bootAt(issuer, kernelFile, POLICY, [POLICY], TERMS.budget.limit);
+  const issuer = RESTART_ISSUER;
+  const dir = mkdtempSync(join(tmpdir(), "sp-exposure-raise-"));
+  restartDirs.push(dir);
+  const kernelFile = join(dir, "kernel.db");
+  const first = await bootAt(ring, kernelFile, POLICY, [POLICY], TERMS.budget.limit);
   try {
     const v1 = await propose("bob", issuer);
     const bob = login(v1, "bob");
@@ -555,7 +567,7 @@ async function consentAfterRaise(
   } finally {
     await shutdown(first);
   }
-  const restarted = await bootAt(issuer, kernelFile, next, [POLICY, next], limit);
+  const restarted = await bootAt(ring, kernelFile, next, [POLICY, next], limit);
   try {
     const v2 = await propose("bob", issuer, {
       dispatch_policy: { id: "sp-exposure", version: next.version },
@@ -581,9 +593,24 @@ async function consentAfterRaise(
 }
 
 describe("budget exposure on the consent of a standing-payment template's next version (@spec template#standing-payment-exception, metering#aggregate-bounds, mission#approval-context-changes, #813, D877)", () => {
+  // One ring for the three tests: an ephemeral boot generates an RS256 token
+  // key, measured at 0.2 to 1.2 s under load, and each test boots twice.
+  let ring: string;
+  beforeAll(async () => {
+    const dir = mkdtempSync(join(tmpdir(), "sp-exposure-ring-"));
+    restartDirs.push(dir);
+    ring = join(dir, "keys", "ring.json");
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    await initSigningKeyRing(ring, RESTART_ISSUER, { asToken, asStatus, asTxn, asContinuation });
+  });
+
+  afterAll(() => {
+    for (const dir of restartDirs) rmSync(dir, { recursive: true, force: true });
+  });
+
   it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the per-payment bound, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
     await consentAfterRaise(
-      15012,
+      ring,
       policyVersion("2", { ...TERMS, max_amount: { amount: "800.00", currency: "USD" } }),
       TERMS.budget.limit,
       "at most 800.00 USD per payment",
@@ -601,7 +628,7 @@ describe("budget exposure on the consent of a standing-payment template's next v
 
   it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that changes destinations, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
     await consentAfterRaise(
-      15013,
+      ring,
       policyVersion("2", { ...TERMS, destinations: { acme: "acct-acme-0002" } }),
       TERMS.budget.limit,
       "acme to account acct-acme-0002",
@@ -611,7 +638,7 @@ describe("budget exposure on the consent of a standing-payment template's next v
 
   it("renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the budget, after a consent to the previous version, and refuses its decision once they moved (#813, D877)", async () => {
     await consentAfterRaise(
-      15014,
+      ring,
       policyVersion("2", { ...TERMS, budget: { ...TERMS.budget, limit: "6000.00" } }),
       "6000.00",
       `Budget ${OWNER}/${BUDGET_ID}: at most 6000.00 USD in total`,

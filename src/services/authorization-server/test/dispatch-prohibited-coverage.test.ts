@@ -24,6 +24,7 @@ import {
   type ProhibitedPredicate,
   prohibitedPredicatesOf,
   publishedProhibitedPredicateMapping,
+  STANDING_PAYMENT_OPERATION,
 } from "../src/index.js";
 
 const PAYMENTS = "http://localhost:4403/mcp";
@@ -201,5 +202,21 @@ describe("dispatch-prohibited coverage (@spec template#prohibited-classes, #813)
     );
     expect(paymentsRemote.isCrossDomain(PAYMENTS, at(PAYMENTS))).toBe(true);
     expect(paymentsRemote.isCrossDomain(REPORTS, at(REPORTS))).toBe(false);
+  });
+});
+
+describe("the designated standing payment under the published mapping (@spec template#standing-payment-exception, #813)", () => {
+  it("classifies the designated payment under the shipped published mapping as irreversible and as no other prohibited class: not external-commitment, privileged-administration, external-communication or cross-domain (@spec template#standing-payment-exception, #813)", () => {
+    const predicates = prohibitedPredicatesOf(
+      published(),
+      at(PAYMENTS, [STANDING_PAYMENT_OPERATION]),
+      STANDING_PAYMENT_OPERATION,
+    );
+    // One line per predicate, so each mapping defect fails its own line.
+    expect(predicates, "irreversible").toContain("irreversible_action");
+    expect(predicates, "external commitment").not.toContain("external_commitment");
+    expect(predicates, "privileged administration").not.toContain("privileged_administration");
+    expect(predicates, "external communication").not.toContain("external_communication");
+    expect(predicates, "cross-domain").not.toContain("cross_domain");
   });
 });
