@@ -37,6 +37,15 @@ function rawTarget(url: string): string {
   return target.startsWith("?") || target === "" ? `/${target}` : target;
 }
 
+/** A loopback port nothing listens on: bound ephemerally, then released. */
+async function closedPort(): Promise<number> {
+  const server = createServer();
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return port;
+}
+
 /**
  * The parties of one test on loopback, each a real HTTP server on an
  * ephemeral port of 127.0.0.1, addressed by its AAuth server identifier.
@@ -58,6 +67,8 @@ function rawTarget(url: string): string {
 export class LoopbackNetwork {
   private readonly ports = new Map<string, number>();
   private readonly owned: Server[] = [];
+  /** Hosts refused by {@link refuse}, with the port each is restored to. */
+  private readonly refused = new Map<string, number>();
 
   /** Resolves a registered host to 127.0.0.1 and refuses any other name. */
   readonly lookup: HostLookup = async (hostname) => {
@@ -103,6 +114,30 @@ export class LoopbackNetwork {
 
   portOf(identifier: string): number | undefined {
     return this.ports.get(new URL(identifier).hostname);
+  }
+
+  /**
+   * Refuse connections to `identifier` until {@link restore}: its host maps
+   * to a loopback port nothing listens on, so every request and fetch to
+   * it, from any party, fails to connect (ECONNREFUSED). The whole host is
+   * down, its metadata and JWKS included; to switch off one endpoint, use
+   * an {@link EndpointSwitch}.
+   */
+  async refuse(identifier: string): Promise<void> {
+    const host = new URL(identifier).hostname;
+    const port = this.ports.get(host);
+    if (port === undefined) throw new Error(`${host} is not on this loopback network`);
+    if (!this.refused.has(host)) this.refused.set(host, port);
+    this.ports.set(host, await closedPort());
+  }
+
+  /** Accept connections to `identifier` again, at the port it had before {@link refuse}. */
+  restore(identifier: string): void {
+    const host = new URL(identifier).hostname;
+    const port = this.refused.get(host);
+    if (port === undefined) return;
+    this.ports.set(host, port);
+    this.refused.delete(host);
   }
 
   /** A key resolver whose fetches stay on this network. */
