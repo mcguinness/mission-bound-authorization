@@ -99,6 +99,7 @@ import {
   redemptionStatusFor,
   releasedReservationNotice,
   type ResourceMetadataServer,
+  settlementConflictAlert,
   startResourceMetadataServer,
   stderrAlertSink,
   type TokenFacts,
@@ -1129,6 +1130,10 @@ export async function composeStack(opts: {
     onBudgetOverspend: (overspend) => operatorAlerts.alert(budgetOverspendAlert(overspend)),
     // #813: and a held reservation later released resolves its alert.
     onReservationReleased: (released) => operatorAlerts.alert(releasedReservationNotice(released)),
+    // @spec metering#settlement-contract "Conflicting redelivery" (#816,
+    // D877): a settlement that conflicts with the applied one is retained by
+    // the domain and surfaced on the same alarm path.
+    onSettlementConflict: (conflict) => operatorAlerts.alert(settlementConflictAlert(conflict)),
   });
   // #813, D877: the AS's budget exposure port reads this domain from here on.
   budgetCounterDomain = pdpClaims;
