@@ -33,6 +33,7 @@ export {
   openRasRedemptionStore,
   RAS_REDEMPTION_STORE_OWNER,
   RasRedemptionStoreError,
+  rasRedemptionsFromEnv,
   REDEMPTION_RETENTION_MARGIN_S,
 } from "./redemption-store.js";
 import type { KeyObject } from "node:crypto";

@@ -161,6 +161,10 @@ const REGISTRY: DispatchPolicies = {
     }),
   ),
   "sp-no-destinations": spPolicy("sp-no-destinations", { ...TERMS, destinations: {} }),
+  "sp-budget-no-limit": spPolicy("sp-budget-no-limit", {
+    ...TERMS,
+    budget: { owner: TERMS.budget.owner, id: "ap-no-limit", currency: "USD", per_instance_max: "1000.00" },
+  }),
 };
 
 /** The published classification the admission reads, per action. */
@@ -1044,6 +1048,44 @@ describe("standing-payment dispatch-time re-checks (@spec mission-template#prohi
     expect(r.message).toBe(
       `template ${t.id} dispatch policy sp-no-destinations states unusable standing-payment terms: standing_payment: destinations commits no beneficiary: it is a non-empty object of vendor_id to payee_account`,
     );
+  });
+
+  it("refuses dispatch_prohibited_class at dispatch a template whose committed Dispatch Policy's budget omits its limit, created before the capability (#813, D877)", () => {
+    const t = createTemplate(store, body({ dispatch_policy: { id: "sp-budget-no-limit", version: "1" } }), {
+      ...kernel.authoritySourceOptions(),
+      dispatchPolicies: REGISTRY,
+    });
+    tamper(t.id, { consent_provenance_json: JSON.stringify(humanConsent()) });
+    const r = refusal(() => dispatch(t.id));
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe(
+      `template ${t.id} dispatch policy sp-budget-no-limit states unusable standing-payment terms: standing_payment: budget is not {owner, id, currency, limit, per_instance_max}`,
+    );
+  });
+
+  it("refuses dispatch_prohibited_class a standing payment whose authority would also carry payments:payment.reverse, an irreversible operation the exception does not designate (#813, D877)", () => {
+    // A derivation policy that grants the reversal beside the payment, so the
+    // instance keeps it through the double intersection.
+    const withReverse = structuredClone(DERIVATION_POLICY) as { ceiling: Array<{ actions: string[] }> };
+    for (const entry of withReverse.ceiling) {
+      if (entry.actions.includes(STANDING_PAYMENT_OPERATION)) entry.actions.push("payments:payment.reverse");
+    }
+    kernel = new MissionKernel({
+      issuer: ISS,
+      policy: withReverse as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(withReverse.ceiling, CLIENTS, ["human-approver", "worker", "orchestrator"]),
+      statusKey: key,
+      statusKid: "as-status",
+      now,
+    });
+    const t = consentTo({ ceiling: [paymentEntry({ actions: [STANDING_PAYMENT_OPERATION, "payments:payment.reverse"] })] });
+    const before = missionCount();
+    const r = refusal(() =>
+      dispatch(t.id, {}, mappingOf({ classes: { ...CLASSES, "payments:payment.reverse": ["irreversible_action"] } })),
+    );
+    expect(r.reason).toBe("dispatch_prohibited_class");
+    expect(r.message).toBe("payments:payment.reverse is a dispatch-prohibited action no standing payment waives");
+    expect(missionCount()).toBe(before);
   });
 
   it("refuses dispatch_prohibited_class at dispatch a template whose stored approver of record is its Dispatcher (#813)", () => {
