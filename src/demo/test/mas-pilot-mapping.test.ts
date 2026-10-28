@@ -10,6 +10,7 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { loadMasPilotConfig, parseMasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
@@ -343,5 +344,97 @@ describe("pilot configuration: relocating the Mission issuer (#818 slice 5B, #14
   it("returns the configuration unchanged when it already names the URL", () => {
     const config = loadMasPilotConfig();
     expect(relocateMissionIssuer(config, config.mission_issuer)).toBe(config);
+  });
+});
+
+const [PAYMENTS_DECLARED] = RESOURCE_CONTRACTS.declarations;
+/** The reference of the payments contract's declared `version`. */
+const contractAt = (version: string) => {
+  const v = PAYMENTS_DECLARED?.versions.find((x) => x.version === version);
+  return { id: PAYMENTS_DECLARED?.id as string, version, digest: v?.digest as string };
+};
+const CURRENT_VERSION = PAYMENTS_DECLARED?.versions.find((v) => v.state === "current")?.version as string;
+const OLDER_VERSION = PAYMENTS_DECLARED?.versions.find((v) => v.state === "superseded")?.version as string;
+const LACKING_REVERSE = PAYMENTS_DECLARED?.versions.find(
+  (v) => v.state !== "retired" && !v.operations.includes("payments:payment.reverse"),
+)?.version as string;
+
+/**
+ * @spec authority-server#mapping-contract, resource-access#resource-contract
+ * (#1847, D989): the MAS pilot's versioned mapping contract may state the
+ * contract a scope value grants its actions under. The bound is one entry per
+ * distinct contract; a newer version never repoints an existing value's
+ * contract, so a credential issued under an earlier mapping never gains one,
+ * and a new contract takes a new value.
+ */
+describe("mapping contract cache: a scope value's stated contract (@spec authority-server#mapping-contract, resource-access#resource-contract, #1847, D989)", () => {
+  const now = new Date("2026-10-19T12:00:00Z");
+  const READ = ["payments:invoice.read"];
+  const withScopes = (values: Record<string, unknown>, version = 1) =>
+    doc({ version, scopes: { resource: RESOURCE, issuers: { [ESTATE]: values } } as never });
+
+  it("confers an entry carrying a value's stated contract, a legacy value's entry without one, never combining contracts", () => {
+    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const current = contractAt(CURRENT_VERSION);
+    const older = contractAt(OLDER_VERSION);
+    expect(
+      cache.install(
+        withScopes({
+          "invoices.read": READ,
+          "invoices.read.contract-current": { actions: READ, resource_contract: current },
+          "invoices.read.contract-older": { actions: READ, resource_contract: older },
+        }),
+      ),
+    ).toMatchObject({ ok: true });
+    expect(
+      cache.current().credentialAuthority({
+        issuer: ESTATE,
+        scope: "invoices.read invoices.read.contract-current invoices.read.contract-older",
+        resource: RESOURCE,
+        now,
+      }),
+    ).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: READ },
+      { type: "mission_resource_access", resource: RESOURCE, actions: READ, resource_contract: current },
+      { type: "mission_resource_access", resource: RESOURCE, actions: READ, resource_contract: older },
+    ]);
+  });
+
+  it("refuses at load a value stating a reference the declarations do not support for the action", () => {
+    expect(() => parseMappingContract(withScopes({ "invoices.read.bad": { actions: READ, resource_contract: contractAt("1999-01-01") } }))).toThrow(
+      /resource_contract/,
+    );
+    expect(() =>
+      parseMappingContract(withScopes({ "reverse.bad": { actions: ["payments:payment.reverse"], resource_contract: contractAt(LACKING_REVERSE) } })),
+    ).toThrow(/every action/);
+  });
+
+  it("refuses a newer version that repoints an existing value's contract, and accepts one that adds a new value", () => {
+    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const current = contractAt(CURRENT_VERSION);
+    const older = contractAt(OLDER_VERSION);
+    expect(cache.install(withScopes({ "invoices.read": READ, "invoices.read.contract-older": { actions: READ, resource_contract: older } }, 1))).toMatchObject({ ok: true });
+    // A legacy value given a contract, and a stated value given another: both refused.
+    for (const repointed of [
+      { "invoices.read": { actions: READ, resource_contract: current }, "invoices.read.contract-older": { actions: READ, resource_contract: older } },
+      { "invoices.read": READ, "invoices.read.contract-older": { actions: READ, resource_contract: current } },
+    ]) {
+      const refused = cache.install(withScopes(repointed, 2));
+      expect(refused.ok).toBe(false);
+      expect(!refused.ok && refused.reason).toMatch(/repoints scope/);
+    }
+    // A new value for the newer contract: accepted, the earlier values unchanged.
+    expect(
+      cache.install(
+        withScopes(
+          {
+            "invoices.read": READ,
+            "invoices.read.contract-older": { actions: READ, resource_contract: older },
+            "invoices.read.contract-current": { actions: READ, resource_contract: current },
+          },
+          2,
+        ),
+      ),
+    ).toMatchObject({ ok: true, version: 2 });
   });
 });

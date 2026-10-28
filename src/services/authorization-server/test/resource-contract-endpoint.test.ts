@@ -11,7 +11,7 @@
 
 import type { Server } from "node:http";
 import { authorityHash, type JsonValue, type ResourceContractRef } from "@mission/core";
-import { DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { contractsRequiring, DERIVATION_POLICY, RESOURCE_CONTRACTS } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -262,6 +262,48 @@ describe("the resource contract reference survives every issuance path exactly (
     const res = await exchange(unpinned.at, unpinned.keys, read(SHIPPED));
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_authorization_details");
+  });
+});
+
+/**
+ * @spec resource-access#resource-contract (#1847, D989): once configuration
+ * requires a reference for any operation of the payments resource, a new
+ * approval records the current reference in a read-only entry too, while a
+ * Mission approved before that, without one, is preserved: its refresh and
+ * its Token Exchange carry none, and its record is unchanged.
+ */
+describe("a reference-requiring resource pins new read-only approvals and leaves earlier ones unpinned through refresh and exchange (@spec resource-access#resource-contract, #1847, D989)", () => {
+  const requiring = () => contractsRequiring(["payments:payment.execute"]);
+
+  it("a new read-only approval records the current reference, the read itself not being required", async () => {
+    const swap = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(requiring());
+    try {
+      expect(requiring().requiresReference(RESOURCE, "payments:invoice.read")).toBe(false);
+      const pinned = await issue(read());
+      expect(contractsOf(as.kernel.get(pinned.missionId)?.authority_set)).toEqual([SHIPPED]);
+      expect(contractsOf(claims(pinned.at).authorization_details)).toEqual([SHIPPED]);
+    } finally {
+      swap.mockRestore();
+    }
+  });
+
+  it("a Mission approved without a reference before the requirement keeps none through a refresh and a Token Exchange after it", async () => {
+    const earlier = await issue(read());
+    const before = as.kernel.get(earlier.missionId);
+    expect(contractsOf(before?.authority_set)).toEqual([undefined]);
+    const swap = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(requiring());
+    try {
+      const refreshed = await token({ grant_type: "refresh_token", refresh_token: earlier.rt, resource: RESOURCE }, earlier.keys);
+      expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+      expect(contractsOf(claims(refreshed.body.access_token as string).authorization_details)).toEqual([undefined]);
+      const exchanged = await exchange(earlier.at, earlier.keys);
+      expect(exchanged.status, JSON.stringify(exchanged.body)).toBe(200);
+      expect(contractsOf(claims(exchanged.body.access_token as string).authorization_details)).toEqual([undefined]);
+      expect(as.kernel.get(earlier.missionId)?.authority_hash).toBe(before?.authority_hash);
+      expect(contractsOf(as.kernel.get(earlier.missionId)?.authority_set)).toEqual([undefined]);
+    } finally {
+      swap.mockRestore();
+    }
   });
 });
 
