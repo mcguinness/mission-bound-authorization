@@ -801,6 +801,7 @@ describe("standing-payment lineage (@spec mission-template#instance-composition,
 
   it("refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)", () => {
     const { instance, successor } = grantingSuccessor();
+    expect(successor.intent.max_budget).toEqual({ amount: "1000.00", currency: "USD" });
     expect(successor.authority_set.some((e) => e.delegation?.children !== undefined)).toBe(true);
     expect(standingPaymentRootOf(kernel, successor)?.mission_id).toBe(instance.id);
     const before = missionCount();

@@ -918,6 +918,7 @@ describe("standing-payment lineage at the token endpoint (@spec template#instanc
     ).mission.id;
     const successor = as.kernel.get(successorId);
     expect(successor?.predecessor).toBe(missionId);
+    expect(successor?.intent.max_budget).toEqual(USD_1000);
     expect(standingPaymentBudgetBindingOf(as.kernel, successor as never).kind).toBe("bound");
     const reads = successor?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
     expect(reads?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "USD" });
