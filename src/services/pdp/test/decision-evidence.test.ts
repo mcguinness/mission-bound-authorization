@@ -35,6 +35,7 @@ import {
   relationForAction,
   RUNTIME_EVIDENCE_JWS_TYP,
   stalenessBound,
+  UNDERIVABLE_BUDGET,
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
@@ -107,6 +108,25 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
     const unsupported = await recorded(req(), v);
     expect(unsupported.record.denial_reason).toBe("unsupported_authorization_type");
     expect(unsupported.record.contributing_constraints).toEqual(["future-entry"]);
+  });
+
+  // @spec authzen#failure-condition-coverage "Unrecognized or unmetered
+  // constraint | PDP denial | `constraint_unsupported`" (#1772, D907): an
+  // evaluated deny whose signed record carries the reason, never
+  // parameter_violation, and names no authority_bound, which is recorded only
+  // on an out_of_authority or parameter_violation deny (@spec authzen#evidence).
+  it("an unrecognized constraint key and a budget the PDP cannot meter each sign denial_reason constraint_unsupported with no authority_bound (@spec authzen#failure-condition-coverage, #1772)", async () => {
+    const unrecognized = view();
+    unrecognized.authority_set[0]!.constraints = { x_region: "eu" } as never;
+    const unmetered = view({ budget: UNDERIVABLE_BUDGET });
+    for (const [label, v] of [["unrecognized", unrecognized], ["unmetered", unmetered]] as const) {
+      const { record, decision } = await recorded(req(), v);
+      expect(decision.decision, label).toBe(false);
+      expect(decision.context.reason, label).toBe("constraint_unsupported");
+      expect(record.decision, label).toBe("deny");
+      expect(record.denial_reason, label).toBe("constraint_unsupported");
+      expect(record, label).not.toHaveProperty("authority_bound");
+    }
   });
 
   it("a credential-bound deny lists the credential entry's type and constraint keys (@spec runtime-evidence#decision-evidence-object, #825 PR 2b)", async () => {
@@ -217,6 +237,19 @@ describe("Decision Evidence records the entries a decision turned on (@spec runt
       const r = req();
       r.context.credential = credentialOf({ vendors: ["globex"] }) as never;
       expect(await named(r, v)).toEqual({ reason: "parameter_violation", bound: "credential" });
+    });
+
+    // Reference precedence (#1772, D929): the credential bound's constraint
+    // stage runs before the Mission entry's unrecognized-key stage, so it
+    // eliminates the final candidate first.
+    it("a violated credential entry beside an unsupported Mission entry is the credential's parameter_violation, never constraint_unsupported (#1772)", async () => {
+      const v = view();
+      v.authority_set[0]!.constraints = { x_region: "eu" } as never;
+      const r = req();
+      r.context.credential = credentialOf({ vendors: ["globex"] }) as never;
+      expect(await named(r, v)).toEqual({ reason: "parameter_violation", bound: "credential" });
+      // Control: with a satisfied credential, the Mission entry's unrecognized key decides.
+      expect(await named(req(), v)).toEqual({ reason: "constraint_unsupported", bound: undefined });
     });
 
     it("names no bound on any other decision: Resource policy, a missing relation mapping, a request fault, a lifecycle deny, a permit", async () => {

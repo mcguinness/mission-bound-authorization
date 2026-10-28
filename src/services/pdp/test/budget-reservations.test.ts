@@ -64,6 +64,7 @@ import {
   type IdempotencyClaimDomain,
   type ReleasedReservation,
   openIdempotencyClaimDomain,
+  type SettlementConflict,
 } from "../src/idempotency-claims.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
@@ -136,6 +137,7 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
+  o: { error?: string | null; signer?: CryptoKeyLike } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
@@ -146,14 +148,17 @@ async function executionRecord(
     outcome_at: new Date(T0).toISOString(),
     sequence: 1,
     emitter: { id: RESOURCE, role: outcome === "completed" ? "executor" : "pep" },
-    ...(outcome === "suppressed" ? { error: "kill_switch" } : {}),
+    ...(outcome === "suppressed" ? { error: o.error ?? "kill_switch" } : o.error !== undefined ? { error: o.error } : {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(content, EXECUTION_EVIDENCE_MEDIA_TYPE, {
     kid: "pep-exec-816",
-    key: executionKey.privateKey,
+    key: o.signer ?? executionKey.privateKey,
   });
   return { ...content, evidence_envelope };
 }
+
+/** The private-key type `generateKeyPairSync` returns, for a record signed under another key. */
+type CryptoKeyLike = ReturnType<typeof generateKeyPairSync>["privateKey"];
 
 function declaration(o: { limit?: string; policies?: DispatchPolicyRef[] } = {}): BudgetMeteringDeclaration {
   return {
@@ -190,7 +195,7 @@ function budgetStatement(decl: unknown = declaration(), claimed = true): Enforce
 /** A claim domain on its own file; `open` again is a PDP restart against the same file. */
 function domainOnFile(
   c: Clock,
-  hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[]; released?: ReleasedReservation[] } = {},
+  hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[]; released?: ReleasedReservation[]; conflicts?: SettlementConflict[] } = {},
 ) {
   const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
   const open = (statement: EnforcementScopeStatement = budgetStatement()) =>
@@ -203,8 +208,24 @@ function domainOnFile(
       ...(hooks.held ? { onReservationHeld: (r: HeldReservation) => hooks.held?.push(r) } : {}),
       ...(hooks.overspent ? { onBudgetOverspend: (o: BudgetOverspend) => hooks.overspent?.push(o) } : {}),
       ...(hooks.released ? { onReservationReleased: (r: ReleasedReservation) => hooks.released?.push(r) } : {}),
+      ...(hooks.conflicts ? { onSettlementConflict: (s: SettlementConflict) => hooks.conflicts?.push(s) } : {}),
     });
   return { file, open };
+}
+
+/** One claim row straight from the file, after the domain released it. */
+function claimRowOf(
+  file: string,
+  evaluationId: string,
+): { state: string; execution_id: string | null; outcome: string | null; error: string | null; decision_json: string | null } | undefined {
+  const db = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
+  try {
+    return db
+      .prepare("SELECT state, execution_id, outcome, error, decision_json FROM claims WHERE evaluation_id = ?")
+      .get(evaluationId) as { state: string; execution_id: string | null; outcome: string | null; error: string | null; decision_json: string | null } | undefined;
+  } finally {
+    db.close();
+  }
 }
 
 /** Row counts straight from the file, after the domain released it. */
@@ -258,7 +279,10 @@ interface RequestOptions {
   phase?: string | null;
   /** `context.compensates_evaluation_id`, for a compensate-phase request. */
   compensates?: string;
-  digest?: string;
+  /** The request's `parameter_digest`; `null` sends none. */
+  digest?: string | null;
+  /** `context.actor`; defaults to the approved client. */
+  actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
   /** The request's vendor (`resource.properties.vendor_id`). */
   vendor?: string;
   /**
@@ -292,9 +316,9 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
     },
     context: {
       mission: { id: o.missionId ?? "msn_a", issuer: ISSUER },
-      actor: { client_id: "ap-agent" },
+      actor: o.actor ?? { client_id: "ap-agent" },
       ...(o.actionClass === null ? {} : { action_class: o.actionClass ?? "irreversible_action" }),
-      parameter_digest: o.digest ?? canonicalDigest(parameters),
+      ...(o.digest === null ? {} : { parameter_digest: o.digest ?? canonicalDigest(parameters) }),
       amount: { amount, currency: o.currency ?? "USD" },
       mission_state_observation: { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase === null ? {} : { action_phase: o.phase ?? "commit" }),
@@ -744,7 +768,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       claims.close();
     });
 
-    it("lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and a purged claim keeps its committed spend (@spec metering#settlement-states, #816)", async () => {
+    it("lease expiry, the reconciliation window and the claim's horizon never release a held reservation, and committed spend persists past the class horizon (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
       const claims = open();
@@ -757,7 +781,7 @@ describe("PDP exact budget reservations (@spec metering#retry, metering#aggregat
       c.set(T0 + PAST_WINDOW_MS);
       claims.sweep();
       expect(claims.reservationsFor(leased).map((r) => r.state)).toEqual(["held", "held"]);
-      // Past the horizon the completed claim is purged; its reservations are not.
+      // Past the class horizon: a metered claim is not purged, and its reservations never are.
       c.set(T0 + PAST_WINDOW_MS + HORIZON_MS);
       claims.sweep();
       expect(claims.reservationsFor(leased).map((r) => r.state)).toEqual(["held", "held"]);
@@ -1606,5 +1630,707 @@ describe("a budget-bound permit suppressed before redemption stays charged (@spe
     ]);
     expect(released).toHaveLength(1);
     claims.close();
+  });
+});
+
+describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-contract, metering#retry, metering#aggregate-bounds, metering#metering-evidence, metering#settlement-states, #816, D877)", () => {
+  describe("a conflicting settlement fails closed (@spec metering#settlement-contract)", () => {
+    it("a completed record arriving after an applied suppressed settlement commits the budget, leaves the applied claim settlement unchanged, is retained, and raises the conflict alarm once (@spec metering#settlement-contract, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const suppressed = await executionRecord(a, "suppressed");
+      expect(await claims.settle(REQUESTER, suppressed, () => String(suppressed.execution_id))).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      // The wire did move after all: a completed record from another attempt.
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.settlementConflicts(a)).toEqual([
+        { execution_id: completed.execution_id, outcome: "completed", applied_execution_id: suppressed.execution_id, applied_outcome: "suppressed", record: completed },
+      ]);
+      expect(conflicts).toEqual([
+        expect.objectContaining({ evaluation_id: a, mission_id: "msn_a", execution_id: completed.execution_id, outcome: "completed", applied_outcome: "suppressed" }),
+      ]);
+      // A redelivery of the conflicting record retains nothing new, alarms nothing new and commits nothing twice.
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.settlementConflicts(a)).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      claims.close();
+      // The applied claim settlement is unchanged.
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: suppressed.execution_id, outcome: "suppressed" });
+    });
+
+    it("a record from the applied attempt with another outcome is retained and alarmed, never acknowledged as a duplicate, and leaves the applied settlement and both counters unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const completed = await executionRecord(a, "completed", executionId);
+      expect((await claims.settle(REQUESTER, completed)).accepted).toBe(true);
+      // The same attempt now reports suppression: a conflict, not a duplicate.
+      const suppressed = await executionRecord(a, "suppressed", executionId);
+      expect(await claims.settle(REQUESTER, suppressed, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.settlementConflicts(a)).toEqual([
+        { execution_id: executionId, outcome: "suppressed", applied_execution_id: executionId, applied_outcome: "completed", record: suppressed },
+      ]);
+      expect(conflicts).toEqual([expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "suppressed", applied_outcome: "completed" })]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      // Control: the applied record itself, redelivered, is the duplicate.
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", execution_id: executionId, outcome: "completed" });
+    });
+
+    it("once a settlement is applied, a non-completed record goes to the conflict check whatever the redemption owner can answer: the applied attempt's suppressed record with no answer and a second attempt's failed record are each retained and alarmed, and neither moves a counter (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const completed = await executionRecord(a, "completed", executionId);
+      expect((await claims.settle(REQUESTER, completed)).accepted).toBe(true);
+      // The PEP lost its redemption record (a restart, a timeout, another epoch): no answer names the redeeming attempt.
+      const suppressed = await executionRecord(a, "suppressed", executionId);
+      expect(await claims.settle(REQUESTER, suppressed, () => undefined)).toEqual({ accepted: false, reason: "already_settled" });
+      // A second attempt's failed record, which the redemption owner says did not redeem.
+      const failed = await executionRecord(a, "failed");
+      expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.outcome, r.applied_execution_id])).toEqual([
+        [executionId, "suppressed", executionId],
+        [failed.execution_id, "failed", executionId],
+      ]);
+      expect(conflicts.map((r) => [r.execution_id, r.outcome])).toEqual([
+        [executionId, "suppressed"],
+        [failed.execution_id, "failed"],
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("a completed record from another attempt commits a reservation an applied failed record holds, and is retained and alarmed (@spec metering#settlement-contract, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const failed = await executionRecord(a, "failed");
+      expect(await claims.settle(REQUESTER, failed, () => String(failed.execution_id))).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => [r.state, r.cause])).toEqual([
+        ["committed", `conflict_completed:${String(completed.execution_id)}`],
+        ["committed", `conflict_completed:${String(completed.execution_id)}`],
+      ]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.applied_outcome])).toEqual([[completed.execution_id, "failed"]]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("an applied failed record holds the reservation, and the same attempt's later suppressed record is a conflict that leaves it held, retained and alarmed, while the failed record redelivered without a redemption answer is the duplicate (@spec metering#settlement-contract, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const failed = await executionRecord(a, "failed", executionId);
+      expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(await claims.settle(REQUESTER, failed, () => undefined)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      const suppressed = await executionRecord(a, "suppressed", executionId);
+      expect(await claims.settle(REQUESTER, suppressed, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a).map((r) => [r.execution_id, r.outcome, r.applied_outcome])).toEqual([[executionId, "suppressed", "failed"]]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("a conflicting completed record from another redemption-store epoch of the permit's PEP is retained and alarmed but commits nothing, as the correction path refuses it, and the same record from the permit's own epoch commits (@spec metering#settlement-states, metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const failed = await executionRecord(a, "failed");
+      expect((await claims.settle(REQUESTER, failed, () => String(failed.execution_id))).accepted).toBe(true);
+      const completed = await executionRecord(a, "completed");
+      expect(await claims.settle({ ...REQUESTER, pep_epoch: "epoch-816-b" }, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ held: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a)).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+      // Control: from the epoch the permit was issued to, the record commits (already retained, so not alarmed again).
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("a conflicting completed record never commits a reservation released because no permit left the PDP, a state written into the file here since no path produces it on a settled claim (@spec metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      let claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const suppressed = await executionRecord(a, "suppressed");
+      expect((await claims.settle(REQUESTER, suppressed, () => String(suppressed.execution_id))).accepted).toBe(true);
+      claims.close();
+      const db = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
+      db.prepare("UPDATE budget_reservations SET cause = 'not_persisted' WHERE evaluation_id = ?").run(a);
+      db.close();
+      claims = open();
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toEqual({ accepted: false, reason: "already_settled" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expect(claims.settlementConflicts(a)).toHaveLength(1);
+      expect(conflicts).toHaveLength(1);
+      claims.close();
+    });
+
+    it("two conflicting records of one attempt that differ only in their error are each retained and alarmed once, and a redelivery of either retains nothing new (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed", executionId))).accepted).toBe(true);
+      const killSwitch = await executionRecord(a, "suppressed", executionId, { error: "kill_switch" });
+      const drift = await executionRecord(a, "suppressed", executionId, { error: "target_drift" });
+      for (const record of [killSwitch, drift, killSwitch, drift]) {
+        expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a).map((r) => (r.record as { error?: string }).error)).toEqual(["kill_switch", "target_drift"]);
+      expect(conflicts).toHaveLength(2);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("a record from the applied suppressed attempt with the same outcome and another error is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement, its error and both counters are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const executionId = `exe_${randomUUID()}`;
+      const first = await executionRecord(a, "suppressed", executionId, { error: "kill_switch" });
+      const changed = await executionRecord(a, "suppressed", executionId, { error: "target_drift" });
+      expect(await claims.settle(REQUESTER, first, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      // The changed record, delivered twice: retained and alarmed once, never the duplicate.
+      for (const record of [changed, changed]) {
+        expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+      }
+      expect(claims.settlementConflicts(a)).toEqual([
+        { execution_id: executionId, outcome: "suppressed", applied_execution_id: executionId, applied_outcome: "suppressed", record: changed },
+      ]);
+      expect(conflicts).toEqual([
+        expect.objectContaining({ evaluation_id: a, execution_id: executionId, outcome: "suppressed", applied_execution_id: executionId, applied_outcome: "suppressed" }),
+      ]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "0.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", execution_id: executionId, outcome: "suppressed", error: "kill_switch" });
+    });
+
+    it("a record from the applied failed attempt with the same outcome and a changed error, one added where the applied record carried none or one replacing the error it carried, is a conflict: refused already_settled, never acknowledged as the duplicate, retained and alarmed once, and the applied settlement and the held reservations are unchanged (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const cases = [
+        { amount: "300.00", applied: undefined, changed: "connector_timeout" },
+        { amount: "200.00", applied: "connector_timeout", changed: "connector_refused" },
+      ];
+      const settled: Array<{ id: string; executionId: string; applied: string | undefined }> = [];
+      for (const k of cases) {
+        const id = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: k.amount });
+        const executionId = `exe_${randomUUID()}`;
+        const failed = await executionRecord(id, "failed", executionId, k.applied === undefined ? {} : { error: k.applied });
+        const changed = await executionRecord(id, "failed", executionId, { error: k.changed });
+        expect(await claims.settle(REQUESTER, failed, () => executionId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+        for (const record of [changed, changed]) {
+          expect(await claims.settle(REQUESTER, record, () => executionId)).toEqual({ accepted: false, reason: "already_settled" });
+        }
+        expect(claims.settlementConflicts(id)).toEqual([
+          { execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed", record: changed },
+        ]);
+        expect(conflicts.filter((r) => r.evaluation_id === id)).toEqual([
+          expect.objectContaining({ evaluation_id: id, execution_id: executionId, outcome: "failed", applied_execution_id: executionId, applied_outcome: "failed" }),
+        ]);
+        expect(claims.reservationsFor(id).map((r) => r.state)).toEqual(["held", "held"]);
+        settled.push({ id, executionId, applied: k.applied });
+      }
+      expect(conflicts).toHaveLength(2);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "500.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "500.00" }, committed: { amount: "0.00" } });
+      claims.close();
+      for (const s of settled) {
+        expect(claimRowOf(file, s.id)).toMatchObject({ state: "failed", execution_id: s.executionId, outcome: "failed", error: s.applied ?? null });
+      }
+    });
+
+    it("a redelivery identical to the applied record, its attempt, outcome and non-empty error alike, is acknowledged as the duplicate and retains and alarms nothing, for an applied suppressed record and an applied failed one (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const b = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      const suppressed = await executionRecord(a, "suppressed", `exe_${randomUUID()}`, { error: "target_drift" });
+      const failed = await executionRecord(b, "failed", `exe_${randomUUID()}`, { error: "connector_timeout" });
+      for (const record of [suppressed, failed]) {
+        const redeemer = () => String(record.execution_id);
+        expect(await claims.settle(REQUESTER, record, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: false });
+        expect(await claims.settle(REQUESTER, record, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: true });
+        expect(await claims.settle(REQUESTER, record, () => undefined)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      }
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(claims.settlementConflicts(b)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "200.00" }, committed: { amount: "0.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", outcome: "suppressed", error: "target_drift" });
+      expect(claimRowOf(file, b)).toMatchObject({ state: "failed", outcome: "failed", error: "connector_timeout" });
+    });
+
+    it("a redelivery of an applied record that carried no error, now carrying error null, is acknowledged as the duplicate and retains and alarms nothing, for an applied failed record and an applied completed one (@spec metering#settlement-contract, #816, D877)", async () => {
+      const c = clock();
+      const conflicts: SettlementConflict[] = [];
+      const { file, open } = domainOnFile(c, { conflicts });
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const b = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      const failedId = `exe_${randomUUID()}`;
+      const completedId = `exe_${randomUUID()}`;
+      const failed = await executionRecord(a, "failed", failedId);
+      const completed = await executionRecord(b, "completed", completedId);
+      expect(failed).not.toHaveProperty("error");
+      expect(completed).not.toHaveProperty("error");
+      expect(await claims.settle(REQUESTER, failed, () => failedId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(await claims.settle(REQUESTER, completed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const failedNull = await executionRecord(a, "failed", failedId, { error: null });
+      const completedNull = await executionRecord(b, "completed", completedId, { error: null });
+      expect(failedNull).toHaveProperty("error", null);
+      expect(completedNull).toHaveProperty("error", null);
+      expect(await claims.settle(REQUESTER, failedNull, () => failedId)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      expect(await claims.settle(REQUESTER, completedNull)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(claims.settlementConflicts(a)).toEqual([]);
+      expect(claims.settlementConflicts(b)).toEqual([]);
+      expect(conflicts).toEqual([]);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "200.00" } });
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "failed", outcome: "failed", error: null });
+      expect(claimRowOf(file, b)).toMatchObject({ state: "completed", outcome: "completed", error: null });
+    });
+  });
+
+  describe("a metered claim is retained while its Mission can present it (@spec metering#retry)", () => {
+    it("a metered claim outlives the class idempotency horizon: while the Mission is active a duplicate, from its own credential or another client instance, resolves against it duplicate_suppressed and draws nothing; once the Mission is terminal every presentation is refused mission_inactive with no fresh claim or reservation, and a stale active view still meets the retained claim (@spec metering#retry, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const active = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, active, { key, amount: "300.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      const presentations: RequestOptions[] = [
+        { key, amount: "300.00" },
+        { key, amount: "300.00", actor: { client_id: "ap-agent", client_instance_id: "instance-2" } },
+      ];
+      // Past the class horizon (604,800 s after settlement), the Mission still active: the last moment it can present.
+      c.set(T0 + HORIZON_MS + 60_000);
+      claims.sweep();
+      for (const presented of presentations) {
+        expectDenied(await evaluate(request(c, presented), options(claims, c, active)), "duplicate_suppressed");
+      }
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      // The Mission is terminal: no presentation reaches the claim step.
+      const terminal: MissionView = { ...active, state: "revoked" };
+      for (const presented of presentations) {
+        expectDenied(await evaluate(request(c, presented), options(claims, c, terminal)), "mission_inactive");
+      }
+      // A view still reporting it active (a stale observation) meets the retained claim, never a fresh one.
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, active)), "duplicate_suppressed");
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
+    });
+
+    it("the sweep alone tombstones a settled metered claim's stored decision past the reconciliation window, and past the class horizon keeps the claim and its reservations (@spec metering#retry, metering#settlement-states, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      c.set(T0 + PAST_WINDOW_MS + 60_000);
+      claims.sweep();
+      c.set(T0 + HORIZON_MS + 60_000);
+      claims.sweep();
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", decision_json: null });
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
+    });
+  });
+
+  describe("the PDP witness batch (@spec metering#metering, metering#aggregate-bounds, metering#settlement-contract, metering#settlement-states)", () => {
+    it("a metered action presented under a class the claim domain does not claim is denied constraint_unsupported and reserves and claims nothing (@spec metering#metering, #816)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const d = await evaluate(request(c, { actionClass: "consequential_write", amount: "300.00" }), options(claims, c, view("msn_a", binding("msn_a"))));
+      expectDenied(d, "constraint_unsupported");
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    });
+
+    it("a key reused for the same amount to another payee is refused idempotency_conflict and leaves both counters unchanged (@spec metering#retry, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a", { destinations: { acme: PAYEE, globex: "acct-globex-001" } }));
+      const key = freshKey();
+      await permitted(claims, c, v, { key, amount: "250.00" });
+      const reused = await evaluate(
+        request(c, { key, amount: "250.00", vendor: "globex", parameters: { payee_account: "acct-globex-001" } }),
+        options(claims, c, v),
+      );
+      expectDenied(reused, "idempotency_conflict");
+      expect(claims.reservationsFor(reused.context.evaluation_id as string)).toEqual([]);
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("250.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("250.00");
+      claims.close();
+    });
+
+    it("a suppressed record from a replay refused permit_consumed settles nothing: the reservation stays charged and is held once the lease elapses (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const replay = await executionRecord(a, "suppressed", undefined, { error: "permit_consumed" });
+      expect(await claims.settle(REQUESTER, replay, () => String(replay.execution_id))).toEqual({ accepted: false, reason: "not_a_settling_outcome" });
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("two budgets with one budget id under different owners draw on separate standing_consent counters, each held to its own declared limit (@spec metering#aggregate-bounds, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const acme = declaration().budgets[0] as BudgetMeteringDeclaration["budgets"][number];
+      const globexBudget = { ...acme, owner: "globex-treasury", limit: "500.00" };
+      const claims = open(budgetStatement({ ...declaration(), budgets: [acme, globexBudget] }));
+      const globex = (id: string) => view(id, binding(id, { owner: "globex-treasury", limit: "500.00" }));
+      const a = await evaluate(request(c, { missionId: "msn_a", amount: "300.00" }), options(claims, c, view("msn_a", binding("msn_a"))));
+      const b = await evaluate(request(c, { missionId: "msn_b", amount: "300.00" }), options(claims, c, globex("msn_b")));
+      expectPermit(a);
+      expectPermit(b);
+      const globexShared = budgetCounterId("standing_consent", { owner: "globex-treasury", budget_id: BUDGET_ID });
+      expect(entry(a, "standing_consent")?.counter_id).toBe(SHARED);
+      expect(entry(b, "standing_consent")?.counter_id).toBe(globexShared);
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("300.00");
+      expect(claims.budgetCounter(globexShared)?.reserved.amount).toBe("300.00");
+      // The globex budget is held to its own 500.00, while the acme budget still has headroom.
+      const refused = await evaluate(request(c, { missionId: "msn_c", amount: "300.00" }), options(claims, c, globex("msn_c")));
+      expectDenied(refused, "quota_exceeded");
+      expect(entry(refused, "standing_consent")).toMatchObject({ counter_id: globexShared, remaining: { amount: "200.00" } });
+      claims.close();
+    });
+
+    it("the loader refuses a budget declared by its identifier alone and a policy reference without its id (@spec metering#aggregate-bounds, #816)", () => {
+      const acme = declaration().budgets[0] as BudgetMeteringDeclaration["budgets"][number];
+      const cases: Array<[string, unknown]> = [
+        ["budget by identifier alone", { ...declaration(), budgets: [{ owner: OWNER, budget_id: BUDGET_ID }] }],
+        ["policy reference without its id", { ...declaration(), budgets: [{ ...acme, policies: [{ version: "1", digest: POLICY_V1.digest }] }] }],
+      ];
+      for (const [label, decl] of cases) {
+        for (const claimed of [true, false]) {
+          const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
+          expect(() => openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement: budgetStatement(decl, claimed) }), `${label} (claimed: ${claimed})`).toThrow(
+            ClaimDomainConfigError,
+          );
+        }
+      }
+    });
+
+    it("committed spend and the remaining headroom on both counters are unchanged across a restart (@spec metering#aggregate-bounds, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      let claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const a = await permitted(claims, c, v, { amount: "300.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      claims.close();
+      claims = open();
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.committed.amount).toBe("300.00");
+      const next = await evaluate(request(c, { amount: "100.00" }), options(claims, c, v));
+      expectPermit(next);
+      expect(entry(next, "standing_consent")?.remaining.amount).toBe("600.00");
+      expect(entry(next, "mission")?.remaining.amount).toBe("600.00");
+      claims.close();
+    });
+
+    it("a new policy version with committed, reserved and held quantities present at the change keeps every one of them charged on the same counter and measures the raised limit against that whole exposure (@spec metering#aggregate-bounds, #816, D830 ruling 7)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      let claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "200.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "300.00" });
+      c.set(T0 + PAST_LEASE_MS);
+      claims.sweep();
+      await permitted(claims, c, view("msn_c", binding("msn_c")), { amount: "100.00" });
+      // At the version change: 200.00 committed, 300.00 held, 100.00 reserved.
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ committed: { amount: "200.00" }, held: { amount: "300.00" }, reserved: { amount: "100.00" } });
+      claims.close();
+      // Re-consent: version 2 raises the limit to 1200.00. The restart holds the open reservation; nothing is released.
+      claims = open(budgetStatement(declaration({ limit: "1200.00", policies: [POLICY_V2] })));
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ committed: { amount: "200.00" }, held: { amount: "400.00" }, reserved: { amount: "0.00" } });
+      const v2 = view("msn_d", binding("msn_d", { limit: "1200.00", policy: POLICY_V2 }));
+      const over = await evaluate(request(c, { missionId: "msn_d", amount: "601.00" }), options(claims, c, v2));
+      expectDenied(over, "quota_exceeded");
+      expect(entry(over, "standing_consent")).toMatchObject({ counter_id: SHARED, remaining: { amount: "600.00" } });
+      expectPermit(await evaluate(request(c, { missionId: "msn_d", amount: "600.00" }), options(claims, c, v2)));
+      claims.close();
+    });
+
+    it("at the parked point of eight concurrent requests, each permitted instance has debited its own counter and the shared one together, and no refused instance has debited either (@spec metering#aggregate-bounds, metering#topology, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const held = heldEmitter();
+      const ids = Array.from({ length: 8 }, (_, i) => `msn_p${i}`);
+      const pending = ids.map((id) =>
+        evaluate(request(c, { missionId: id, amount: "300.00" }), options(claims, c, view(id, binding(id)), { evidence: held.emitter })),
+      );
+      await until(() => held.arrived() === 8);
+      const debited = ids.filter((id) => claims.budgetCounter(instanceCounter(id)) !== undefined);
+      expect(debited).toHaveLength(3);
+      for (const id of debited) expect(claims.budgetCounter(instanceCounter(id))?.reserved.amount).toBe("300.00");
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("900.00");
+      held.release();
+      const decisions = await Promise.all(pending);
+      expect(ids.filter((_, i) => decisions[i]?.decision)).toEqual(debited);
+      claims.close();
+    });
+
+    it("a counter's committed identifier is the same across a restart (@spec metering#metering-evidence, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      let claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const before = await evaluate(request(c, { amount: "100.00" }), options(claims, c, v));
+      expectPermit(before);
+      claims.close();
+      claims = open();
+      const after = await evaluate(request(c, { amount: "100.00" }), options(claims, c, v));
+      expectPermit(after);
+      expect(meteringOf(after).map((e) => [e.counter_scope, e.counter_id])).toEqual(meteringOf(before).map((e) => [e.counter_scope, e.counter_id]));
+      expect(meteringOf(after).map((e) => e.counter_id)).toEqual([instanceCounter("msn_a"), SHARED]);
+      claims.close();
+    });
+
+    it("the stored decision's Decision Evidence keeps settlement_state reserved, byte for byte, after its reservation commits, is released or is held (@spec metering#metering-evidence, #816)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const decide = async (id: string) => {
+        const d = await evaluate(request(c, { missionId: id, amount: "100.00" }), options(claims, c, view(id, binding(id))));
+        expectPermit(d);
+        return { id: d.context.evaluation_id as string, evidence: JSON.stringify(d.context.decision_evidence) };
+      };
+      const committed = await decide("msn_a");
+      const released = await decide("msn_b");
+      const held = await decide("msn_c");
+      expect((await claims.settle(REQUESTER, await executionRecord(committed.id, "completed"))).accepted).toBe(true);
+      const suppressed = await executionRecord(released.id, "suppressed");
+      expect((await claims.settle(REQUESTER, suppressed, () => String(suppressed.execution_id))).accepted).toBe(true);
+      const failed = await executionRecord(held.id, "failed");
+      expect((await claims.settle(REQUESTER, failed, () => String(failed.execution_id))).accepted).toBe(true);
+      expect(claims.reservationsFor(committed.id)[0]?.state).toBe("committed");
+      expect(claims.reservationsFor(released.id)[0]?.state).toBe("released");
+      expect(claims.reservationsFor(held.id)[0]?.state).toBe("held");
+      claims.close();
+      for (const decision of [committed, released, held]) {
+        const stored = JSON.parse(claimRowOf(file, decision.id)?.decision_json ?? "null") as { context: { decision_evidence: DecisionEvidenceObject } };
+        expect(JSON.stringify(stored.context.decision_evidence)).toBe(decision.evidence);
+        expect(stored.context.decision_evidence.metering?.map((e) => e.settlement_state)).toEqual(["reserved", "reserved"]);
+      }
+    });
+
+    it("forged, wrongly signed and wrong-PEP settlements for a budget-bound claim are refused and leave both counters unchanged (@spec metering#settlement-contract, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      const forged = { ...(await executionRecord(a, "completed")), mission_id: "msn_other" };
+      const otherKey = generateKeyPairSync("ec", { namedCurve: "P-256" });
+      const wronglySigned = await executionRecord(a, "completed", undefined, { signer: otherKey.privateKey });
+      expect((await claims.settle(REQUESTER, forged)).accepted).toBe(false);
+      expect((await claims.settle(REQUESTER, wronglySigned)).accepted).toBe(false);
+      expect((await claims.settle({ pep_id: "another-pep", pep_epoch: REQUESTER.pep_epoch }, await executionRecord(a, "completed"))).accepted).toBe(false);
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect(claims.budgetCounter(instanceCounter("msn_a"))).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
+      claims.close();
+    });
+
+    it("a settlement is acknowledged only once it is durably applied: an acknowledged one survives a restart, and one whose transaction fails is not acknowledged and applies once when redelivered (@spec metering#settlement-contract, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      let claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      expect(await claims.settle(REQUESTER, await executionRecord(a, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      // The process stops after the acknowledgement: the settlement is in the file.
+      claims.close();
+      claims = open();
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      // Fault injection: the next settlement's transaction fails at commit.
+      let failing = true;
+      setCommitGuard((claims as unknown as { db: Database }).db, {
+        begin: () => {},
+        beforeCommit: () => {
+          if (failing) throw new Error("store failing at commit");
+        },
+        settled: () => {},
+        afterCommit: () => {},
+      });
+      failing = false;
+      const b = await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
+      const record = await executionRecord(b, "completed");
+      failing = true;
+      await expect(claims.settle(REQUESTER, record)).rejects.toThrow(/unavailable/);
+      failing = false;
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("300.00");
+      // The PEP redelivers: applied once, then acknowledged as the duplicate.
+      expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(await claims.settle(REQUESTER, record)).toEqual({ accepted: true, state: "completed", duplicate: true });
+      expect(claims.budgetCounter(SHARED)?.committed.amount).toBe("500.00");
+      claims.close();
+    });
+
+    it("a redelivered suppressed settlement is acknowledged as a duplicate and releases nothing a second time (@spec metering#settlement-contract, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+      await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
+      const suppressed = await executionRecord(a, "suppressed");
+      const redeemer = () => String(suppressed.execution_id);
+      expect(await claims.settle(REQUESTER, suppressed, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: false });
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("200.00");
+      expect(await claims.settle(REQUESTER, suppressed, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: true });
+      expect(claims.budgetCounter(SHARED)?.reserved.amount).toBe("200.00");
+      expect(claims.budgetCounter(instanceCounter("msn_a"))?.reserved.amount).toBe("0.00");
+      claims.close();
+    });
+
+    it("after a completed payment, a retry under its key and a refused compensate request leave the committed amount committed (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, v, { key, amount: "300.00" });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v)), "duplicate_suppressed");
+      expectDenied(await evaluate(request(c, { phase: "compensate", compensates: a, amount: "300.00" }), options(claims, c, v)), "constraint_unsupported");
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("containing a Mission that holds an open reservation settles nothing: the contained request is refused authority_contained, no counter moves, and the permit's later completed settlement still commits (@spec metering#settlement-states, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const a = await permitted(claims, c, v, { amount: "300.00" });
+      const contained: MissionView = { ...v, version: 2, containment: { version: 1, contained: [{ resource: RESOURCE, actions: [EXECUTE] }] } };
+      expectDenied(await evaluate(request(c, { amount: "100.00" }), options(claims, c, contained)), "authority_contained");
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["reserved", "reserved"]);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "300.00" }, committed: { amount: "0.00" } });
+      expect((await claims.settle(REQUESTER, await executionRecord(a, "completed"))).accepted).toBe(true);
+      expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+      claims.close();
+    });
+
+    it("an admitted instance's payment still takes a fresh runtime decision: one requiring an action-bound approval is refused without it, and one with no parameter_digest is refused, each reserving nothing (@spec mission-template#standing-payment-exception, metering#metering, #813)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      expectDenied(
+        await evaluate(request(c, { amount: "100.00" }), options(claims, c, v, { requiresActionApproval: () => true })),
+        "action_approval_required",
+      );
+      expectDenied(await evaluate(request(c, { amount: "100.00", digest: null }), options(claims, c, v)), "parameter_violation");
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    });
+
+    it("a constraint_unsupported denial records denial_reason constraint_unsupported in its signed Decision Evidence (@spec authzen#failure-condition-coverage, #816)", async () => {
+      const c = clock();
+      const { open } = domainOnFile(c);
+      const claims = open();
+      const d = await evaluate(request(c, { amount: "100.00" }), options(claims, c, view("msn_a", binding("msn_a", { budget_id: "undeclared-budget" }))));
+      expectDenied(d, "constraint_unsupported");
+      const record = d.context.decision_evidence as DecisionEvidenceObject;
+      expect(record.decision).toBe("deny");
+      expect(record.denial_reason).toBe("constraint_unsupported");
+      const verified = await verifyEvidenceEnvelope(record, DECISION_EVIDENCE_MEDIA_TYPE, (p) => (p.kid === "pdp-816" ? { key: evidenceKey.publicKey } : undefined));
+      expect(verified.valid).toBe(true);
+      claims.close();
+    });
+
+    it("a request or binding whose currency differs from the budget's only in case is denied constraint_unsupported and reserves nothing (@spec metering#bounds, metering#metering, #816)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      expectDenied(await evaluate(request(c, { amount: "100.00", currency: "usd" }), options(claims, c, view("msn_a", binding("msn_a")))), "constraint_unsupported");
+      const lowerCase = binding("msn_b", { currency: "usd", instance: { max_budget: { amount: "1000.00", currency: "usd" }, root_mission_id: "msn_b" } });
+      expectDenied(await evaluate(request(c, { missionId: "msn_b", amount: "100.00" }), options(claims, c, view("msn_b", lowerCase))), "constraint_unsupported");
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 0, reservations: 0, counters: 0 });
+    });
+
+    it("a well-formed binding whose currency, or whose instance max_budget currency, is not the budget's declared currency is denied constraint_unsupported and reserves nothing (@spec metering#bounds, metering#metering, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      // Each binding passes the currency-code shape check, so only the comparison with the declared currency refuses it.
+      const bindingInEuros = binding("msn_b", { currency: "EUR" });
+      expectDenied(await evaluate(request(c, { missionId: "msn_b", amount: "100.00" }), options(claims, c, view("msn_b", bindingInEuros))), "constraint_unsupported");
+      const instanceInEuros = binding("msn_c", { instance: { max_budget: { amount: "1000.00", currency: "EUR" }, root_mission_id: "msn_c" } });
+      expectDenied(await evaluate(request(c, { missionId: "msn_c", amount: "100.00" }), options(claims, c, view("msn_c", instanceInEuros))), "constraint_unsupported");
+      // Control: the same binding in the declared currency is charged.
+      expectPermit(await evaluate(request(c, { missionId: "msn_d", amount: "100.00" }), options(claims, c, view("msn_d", binding("msn_d")))));
+      claims.close();
+      expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
+    });
   });
 });

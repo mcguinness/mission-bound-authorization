@@ -6,7 +6,9 @@
  * Mission bound (the matched Authority Set entry, step 7a) and the credential
  * bound (step 5c), against the authoritative facts the PEP establishes. An
  * absent or malformed fact refuses, never permits open, and a Mission entry
- * carrying a `constraints` key this PDP does not evaluate refuses whole.
+ * carrying a `constraints` key this PDP does not evaluate provides no
+ * authority: alone it is refused `constraint_unsupported` (#1772, D907),
+ * while another complete entry the PDP can evaluate still authorizes.
  *
  * Unit level: a stub `Fga` satisfies the one method evaluate() calls, so this
  * file never skips. The resource-server witnesses through the payments PEP
@@ -437,6 +439,84 @@ describe("PDP evaluates each member of a collection against the member-fact boun
 describe("PDP fails closed on a Mission entry constraint it does not evaluate (@spec resource-access#rs-enforcement)", () => {
   it("refuses an entry carrying an unrecognized constraints key rather than ignoring it", async () => {
     expect(await decide(view({ x_region: "eu" }), { issued_at: "2026-08-15T00:00:00Z" })).toMatchObject({
+      permit: false,
+      reason: "constraint_unsupported",
+    });
+  });
+});
+
+// @spec authzen#failure-condition-coverage "Unrecognized or unmetered
+// constraint", authzen#runtime-denial-classification (#1772, D907):
+// `constraint_unsupported` is "distinct from `parameter_violation`, which is a
+// constraint the PDP evaluated and found violated". Resource Access keeps
+// entries alternative grants: an entry the PDP cannot fully evaluate provides
+// no authority, and another applicable entry it can still authorizes alone.
+describe("PDP denies an unrecognized Mission constraint constraint_unsupported and an evaluated violation parameter_violation (@spec authzen#failure-condition-coverage, #1772)", () => {
+  const TENANT = { tenant: "payments-demo" };
+  type Entry = MissionView["authority_set"][number];
+  const entry = (constraints: Record<string, unknown>) =>
+    ({ type: "mission_resource_access", resource: RESOURCE, actions: [ACTION], constraints }) as Entry;
+  const viewOf = (...entries: Entry[]): MissionView => ({ ...view(), authority_set: entries });
+  const unsupported = entry({ x_region: "eu" });
+  const supported = entry(TENANT);
+  async function decideWithDigest(v: MissionView, properties: Record<string, unknown>) {
+    const d = await evaluate(request(properties), opts(v));
+    return { permit: d.decision, reason: d.context.denial_reason, digest: d.context.entry_digest };
+  }
+
+  it("an entry carrying an unrecognized key is denied constraint_unsupported whatever the facts, and a supported key the facts violate is denied parameter_violation", async () => {
+    for (const facts of [{}, { tenant: "payments-demo" }, { tenant: "other-tenant" }]) {
+      expect(await decide(viewOf(unsupported), facts), JSON.stringify(facts)).toMatchObject({
+        permit: false,
+        reason: "constraint_unsupported",
+      });
+    }
+    expect(await decide(viewOf(supported), { tenant: "other-tenant" })).toMatchObject({
+      permit: false,
+      reason: "parameter_violation",
+    });
+    expect((await decide(viewOf(supported), { tenant: "payments-demo" })).permit).toBe(true);
+  });
+
+  it("an entry carrying an unrecognized key does not stop another complete, supported entry from authorizing, in either order, and the permit relies on the supported entry", async () => {
+    const facts = { tenant: "payments-demo" };
+    const alone = await decideWithDigest(viewOf(supported), facts);
+    expect(alone.permit).toBe(true);
+    for (const [label, v] of [
+      ["unsupported first", viewOf(unsupported, supported)],
+      ["supported first", viewOf(supported, unsupported)],
+    ] as const) {
+      const d = await decideWithDigest(v, facts);
+      expect(d.permit, label).toBe(true);
+      expect(d.digest, label).toBe(alone.digest);
+    }
+    expect(await decide(viewOf(unsupported), facts)).toMatchObject({ permit: false, reason: "constraint_unsupported" });
+  });
+
+  // Reference precedence (D929): when every candidate fails, the reason is
+  // that of the stage that eliminates the final surviving candidate, never
+  // of the last entry in array order.
+  it("an unsupported entry beside a violated entry, in either order, is denied parameter_violation: the constraint stage eliminates the final surviving candidate", async () => {
+    const violated = { tenant: "other-tenant" };
+    const vendorsViolated = entry({ vendors: ["globex"] });
+    for (const [label, v] of [
+      ["unsupported then tenant-violated", viewOf(unsupported, supported)],
+      ["tenant-violated then unsupported", viewOf(supported, unsupported)],
+      ["unsupported then vendors-violated", viewOf(unsupported, vendorsViolated)],
+      ["vendors-violated then unsupported", viewOf(vendorsViolated, unsupported)],
+    ] as const) {
+      expect(await decide(v, violated), label).toMatchObject({ permit: false, reason: "parameter_violation" });
+    }
+  });
+
+  it("one entry carrying both an unrecognized key and a violated constraint is denied constraint_unsupported: the unrecognized-key stage eliminates it before its constraints are evaluated", async () => {
+    const both = entry({ x_region: "eu", ...TENANT });
+    expect(await decide(viewOf(both), { tenant: "other-tenant" })).toMatchObject({
+      permit: false,
+      reason: "constraint_unsupported",
+    });
+    // Control: the same tenant bound alone, on the same facts, is the evaluated violation.
+    expect(await decide(viewOf(supported), { tenant: "other-tenant" })).toMatchObject({
       permit: false,
       reason: "parameter_violation",
     });
