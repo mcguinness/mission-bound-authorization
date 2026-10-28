@@ -12,6 +12,7 @@ import {
   openSync,
   realpathSync,
   renameSync,
+  unlinkSync,
   writeSync,
 } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
@@ -45,18 +46,31 @@ export function witnessSharesStoreTree(storeFile: string, witnessFile: string): 
 /**
  * Replace a file durably: write a sibling temporary file, flush it, rename it
  * over the file, and flush the directory, so a crash leaves the old contents
- * or the new, never a torn file.
+ * or the new, never a torn file. A write, flush or rename that fails removes
+ * the temporary file (#1815) and leaves the file as it was.
  */
 export function writeDurableFile(file: string, contents: string): void {
   const tmp = join(dirname(file), `.${randomBytes(6).toString("hex")}.witness.tmp`);
-  const fd = openSync(tmp, "w", 0o600);
+  let placed = false;
   try {
-    writeSync(fd, contents);
-    fsyncSync(fd);
+    const fd = openSync(tmp, "w", 0o600);
+    try {
+      writeSync(fd, contents);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    renameSync(tmp, file);
+    placed = true;
   } finally {
-    closeSync(fd);
+    if (!placed) {
+      try {
+        unlinkSync(tmp);
+      } catch {
+        // Never created, or already gone.
+      }
+    }
   }
-  renameSync(tmp, file);
   const dir = openSync(dirname(file), "r");
   try {
     fsyncSync(dir);
