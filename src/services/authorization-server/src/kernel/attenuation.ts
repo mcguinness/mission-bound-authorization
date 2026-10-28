@@ -522,24 +522,35 @@ function holderAlg(jwk: JWK): "Ed25519" | "ES256" {
   throw new Error(`attenuation: unsupported holder key ${JSON.stringify(jwk.kty)}/${JSON.stringify(jwk.crv)}`);
 }
 
+/** What {@link checkChildWithinParent} established about a child it admits. */
+interface CheckedChild {
+  parent: Record<string, unknown>;
+  alg: "Ed25519" | "ES256";
+  iss: string;
+  cnfJwk: JWK;
+  aud: string | string[];
+  exp: number;
+  delDepth: number;
+}
+
 /**
- * @spec attenuation#attenuation — holder-side, offline child mint. This is a
- * convenience helper, NOT the security boundary: a compromised holder never
- * calls it, so the consumer's verifier (`verifyAatPresentation` and the
- * Mission layer) is what actually bounds a child. It signs under the key
- * the PARENT's `cnf.jwk` binds (`parentKey`), with `alg` chosen by that
- * key's type and no header `jwk`: the consumer verifies the child under the
- * parent's `cnf.jwk`. `iss` is that key's JWK Thumbprint URI. The `mission`
- * claim rides through unchanged, and the child carries no `sub` or
- * `client_id`. It refuses a child its consumer would refuse as broader than
- * its parent.
+ * @spec attenuation#attenuation, attenuation#mission-constraints: the checks
+ * a holder applies before signing a child, shared by the in-organization
+ * mint ({@link mintChildOffline}) and the checked cross-organizational mint
+ * ({@link deriveCrossOrgChild}). The parent's `cnf.jwk` is a public key; the
+ * signing key is the one it binds; the child's `cnf.jwk` is a public key;
+ * each kept tool's argument map attenuates its parent's; the authority is
+ * one a consumer can carry; the `mission_constraints` narrow the parent's;
+ * `aud` is within the parent's; `exp` is no later than the parent's; and
+ * the parent's `del_max_depth` permits one more hop. It refuses a child its
+ * consumer would refuse as broader than its parent.
  */
-export async function mintChildOffline(
+async function checkChildWithinParent(
   parentToken: string,
   parentKey: CryptoKey,
   narrowed: AttenuatedAuthority,
-  opts: MintChildOptions = {},
-): Promise<string> {
+  opts: MintChildOptions,
+): Promise<CheckedChild> {
   const parent = decodeJwt(parentToken) as Record<string, unknown>;
   const parentCnf = (parent.cnf as { jwk?: JWK } | undefined)?.jwk;
   const parentProblem = aatPublicJwkProblem(parentCnf);
@@ -587,6 +598,33 @@ export async function mintChildOffline(
   if (delDepth > Number(parent.del_max_depth)) {
     throw new Error("attenuation: the parent's del_max_depth permits no further derivation");
   }
+  return { parent, alg, iss, cnfJwk, aud, exp, delDepth };
+}
+
+/**
+ * @spec attenuation#attenuation — holder-side, offline child mint. This is a
+ * convenience helper, NOT the security boundary: a compromised holder never
+ * calls it, so the consumer's verifier (`verifyAatPresentation` and the
+ * Mission layer) is what actually bounds a child. It signs under the key
+ * the PARENT's `cnf.jwk` binds (`parentKey`), with `alg` chosen by that
+ * key's type and no header `jwk`: the consumer verifies the child under the
+ * parent's `cnf.jwk`. `iss` is that key's JWK Thumbprint URI. The `mission`
+ * claim rides through unchanged, and the child carries no `sub` or
+ * `client_id`. It refuses a child its consumer would refuse as broader than
+ * its parent.
+ */
+export async function mintChildOffline(
+  parentToken: string,
+  parentKey: CryptoKey,
+  narrowed: AttenuatedAuthority,
+  opts: MintChildOptions = {},
+): Promise<string> {
+  const { parent, alg, iss, cnfJwk, aud, exp, delDepth } = await checkChildWithinParent(
+    parentToken,
+    parentKey,
+    narrowed,
+    opts,
+  );
   const nowS = Math.floor(Date.now() / 1000);
 
   return new SignJWT({
@@ -725,35 +763,45 @@ async function mintCrossOrgRoot(
   return minted;
 }
 
+/** A cross-organizational hop's actor: one profile-conformant object, never a nested history. */
+export interface CrossOrgHopActor {
+  iss: string;
+  sub: string;
+  sub_profile?: string;
+}
+
+/** The hop-specific inputs of a cross-organizational child mint. */
+export interface CrossOrgChildOptions {
+  /** The recipient workload's PUBLIC key, carried as the child's `cnf.jwk`. */
+  cnfJwk: JWK;
+  /** This hop's actor, the one receiving the delegation; omitted, the hop is key-only. */
+  actor?: CrossOrgHopActor;
+  /** Narrower audience (a subset of the parent's). Defaults to the parent's. */
+  aud?: string | string[];
+  /** Child `exp`. Defaults to the parent's (capped by `expCeiling` on the checked mint). */
+  exp?: number;
+}
+
 /**
- * @spec cross-org-delegation#derivation — holder-side cross-organizational
- * child mint on the substrate's wire: signs under the PARENT's key, with
- * `alg` chosen by that key's type and `iss` its JWK Thumbprint URI; binds
- * the exact parent through `par_hash`; carries the recipient's PUBLIC key as
- * `cnf.jwk`, the narrowed `tools` and `mission_constraints`, and the
- * `mission` claim (including `subject`) unchanged; and names this hop's
- * actor only when `actor` is supplied (a named hop needs an aligned
- * actor-binding credential presented with the Chain; a key-only hop omits
- * `act`). Like {@link mintChildOffline} it is a convenience, not the
- * security boundary; unlike it, it does not refuse a broader child, because
- * the destination's verification does ({@link verifyCrossOrgChain}), and a
- * suite builds the chains that verification must refuse through it.
+ * @spec cross-org-delegation#derivation: the one signing path of a
+ * cross-organizational child, checked ({@link deriveCrossOrgChild}) or not
+ * ({@link mintCrossOrgChild}). It signs under the PARENT's key, with `alg`
+ * chosen by that key's type and `iss` its JWK Thumbprint URI; binds the
+ * exact parent through `par_hash`; increments `del_depth` and preserves
+ * `del_max_depth`; carries the recipient's key as `cnf.jwk`, exactly one
+ * `attenuating_agent_token` entry (the narrowed `tools` and
+ * `mission_constraints`), and the `mission` claim (including `subject`)
+ * unchanged; and names this hop's actor only when `actor` is supplied.
  */
-export async function mintCrossOrgChild(
+async function signCrossOrgChild(
   parentToken: string,
+  parent: Record<string, unknown>,
   parentKey: CryptoKey,
   narrowed: AttenuatedAuthority,
-  opts: {
-    cnfJwk: JWK;
-    actor?: { iss: string; sub: string; sub_profile?: string };
-    aud?: string | string[];
-    exp?: number;
-  },
+  opts: CrossOrgChildOptions & { exp: number },
 ): Promise<string> {
-  const parent = decodeJwt(parentToken) as Record<string, unknown>;
   const { d: _d, ...parentPub } = await exportJWK(parentKey);
   const nowS = Math.floor(Date.now() / 1000);
-  const exp = opts.exp ?? Number(parent.exp);
   return new SignJWT({
     mission: parent.mission as Record<string, unknown>,
     cnf: { jwk: opts.cnfJwk },
@@ -769,7 +817,111 @@ export async function mintCrossOrgChild(
     .setIssuer(aatJwkThumbprintUri(parentPub as Record<string, unknown>))
     .setAudience(opts.aud ?? (parent.aud as string | string[]))
     .setIssuedAt(nowS)
-    .setExpirationTime(exp)
+    .setExpirationTime(opts.exp)
     .setJti(aatUuidV7())
     .sign(parentKey);
+}
+
+/**
+ * @spec cross-org-delegation#derivation: the checked holder-side
+ * cross-organizational child mint. It applies every Per-Hop Derivation rule
+ * a holder can check before it signs, refusing a child the destination's
+ * verification would refuse.
+ *
+ * - Rules 1, 3, 4 and 6 and the parent half of rule 5: the
+ *   in-organization holder's checks ({@link checkChildWithinParent}), so
+ *   the child is signed under the key the parent's `cnf.jwk` binds, narrows
+ *   its tools, argument maps and `mission_constraints`, keeps `aud` and
+ *   `exp` within the parent's, and stays within `del_max_depth`.
+ * - Rule 5, the destination half: `expCeiling`, the latest `exp` the
+ *   destination trust policy permits, as the caller knows it. The child's
+ *   `exp` defaults to the earlier of the parent's and the ceiling, and a
+ *   later one is refused. With no ceiling, only the parent's bounds it.
+ * - Rule 7: the parent's `mission` claim is carried unchanged, and a parent
+ *   whose claim lacks `id`, `issuer`, `authority_hash` or `subject` is
+ *   refused.
+ * - Rule 8: a supplied actor carries both `iss` and `sub` and no nested
+ *   `act`; omitted, the hop is key-only. That it names the actor actually
+ *   receiving the delegation is the caller's to supply: the binding to that
+ *   actor's key is the aligned actor-binding credential the destination
+ *   validates (@spec cross-org-delegation#actor-identity).
+ * - Rule 9: the recipient's key is required and must be a full public
+ *   `cnf.jwk`.
+ * - Rules 2 and 6 by construction ({@link signCrossOrgChild}): `par_hash`
+ *   over the exact parent, `del_depth` the parent's plus one,
+ *   `del_max_depth` the parent's, and exactly one authorization-details
+ *   entry.
+ *
+ * Like {@link mintChildOffline} it is a convenience, not the security
+ * boundary: the destination's verification is ({@link verifyCrossOrgChain}).
+ */
+export async function deriveCrossOrgChild(
+  parentToken: string,
+  parentKey: CryptoKey,
+  narrowed: AttenuatedAuthority,
+  opts: CrossOrgChildOptions & { expCeiling?: number },
+): Promise<string> {
+  // Rule 9, before the shared check: that check falls back to the parent's
+  // key for a missing child key (the in-organization holder narrowing for
+  // itself), so a null or non-object key is refused here, never replaced.
+  if (opts.cnfJwk === null || typeof opts.cnfJwk !== "object") {
+    throw new Error("cross-org: the child needs the recipient's own cnf.jwk");
+  }
+  const ceiling = opts.expCeiling;
+  const parentExp = Number((decodeJwt(parentToken) as Record<string, unknown>).exp);
+  const exp = opts.exp ?? (ceiling === undefined ? undefined : Math.min(parentExp, ceiling));
+  const checked = await checkChildWithinParent(parentToken, parentKey, narrowed, {
+    cnfJwk: opts.cnfJwk,
+    ...(opts.aud !== undefined ? { aud: opts.aud } : {}),
+    ...(exp !== undefined ? { exp } : {}),
+  });
+  if (ceiling !== undefined && checked.exp > ceiling) {
+    throw new Error("cross-org: the child exp is after the destination trust policy permits");
+  }
+  const mission = checked.parent.mission as
+    | { id?: unknown; issuer?: unknown; authority_hash?: unknown; subject?: { iss?: unknown; sub?: unknown } }
+    | undefined;
+  if (
+    typeof mission?.id !== "string" ||
+    typeof mission.issuer !== "string" ||
+    typeof mission.authority_hash !== "string" ||
+    typeof mission.subject?.iss !== "string" ||
+    typeof mission.subject.sub !== "string"
+  ) {
+    throw new Error("cross-org: the parent's mission claim lacks id, issuer, authority_hash or subject");
+  }
+  const actor = opts.actor;
+  if (actor !== undefined) {
+    if (typeof actor.iss !== "string" || actor.iss === "" || typeof actor.sub !== "string" || actor.sub === "") {
+      throw new Error("cross-org: a named hop's act needs both iss and sub");
+    }
+    if (Object.hasOwn(actor, "act")) {
+      throw new Error("cross-org: a hop's act names this hop's actor only, never a nested history");
+    }
+  }
+  // Sign exactly what was checked: the validated key, audience and expiry.
+  return signCrossOrgChild(parentToken, checked.parent, parentKey, narrowed, {
+    ...opts,
+    cnfJwk: checked.cnfJwk,
+    aud: checked.aud,
+    exp: checked.exp,
+  });
+}
+
+/**
+ * @spec cross-org-delegation#derivation: the UNCHECKED cross-organizational
+ * child mint, on the same signing path as {@link deriveCrossOrgChild}. It
+ * applies none of the holder checks, by design: a suite builds through it
+ * the chains the destination's verification must refuse
+ * ({@link verifyCrossOrgChain}). A conforming holder uses
+ * {@link deriveCrossOrgChild}.
+ */
+export async function mintCrossOrgChild(
+  parentToken: string,
+  parentKey: CryptoKey,
+  narrowed: AttenuatedAuthority,
+  opts: CrossOrgChildOptions,
+): Promise<string> {
+  const parent = decodeJwt(parentToken) as Record<string, unknown>;
+  return signCrossOrgChild(parentToken, parent, parentKey, narrowed, { ...opts, exp: opts.exp ?? Number(parent.exp) });
 }

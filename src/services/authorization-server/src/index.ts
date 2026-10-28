@@ -451,6 +451,7 @@ export {
   deriveAttenuationRoot,
   mintChildOffline,
   deriveCrossOrgRoot,
+  deriveCrossOrgChild,
   mintCrossOrgChild,
   mapAuthorityToCeiling,
   AAT_TYP,
@@ -462,6 +463,8 @@ export {
   type MintedRoot,
   type RequestedAuthority,
   type CrossOrgRootInput,
+  type CrossOrgChildOptions,
+  type CrossOrgHopActor,
 } from "./kernel/attenuation.js";
 export {
   verifyCrossOrgChain,

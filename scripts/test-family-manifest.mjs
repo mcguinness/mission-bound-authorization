@@ -22,7 +22,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
-import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
+import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT, validateAssessmentPin, citedBindingTitles, headingTitles, frontMatterReference, snapshotTargetFindings, ASSESSMENT_FILE, ASSESSED_SUBSTRATE_FILE } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -859,4 +859,190 @@ test("wire names: the real repository is clean, and every grandfathered entry is
   const drafts = files.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(REPO_ROOT, f), "utf8") }));
   assert.deepEqual(validateWireNames(drafts), []);
   assert.equal(validateWireNames(drafts, NONE).length, GRANDFATHERED_WIRE_NAMES.size);
+});
+
+// ---------------------------------------------------------------------
+// validateAssessmentPin(): check (t), the Mapping Assessment's pins (#1794,
+// D973; the snapshot reference per the #1860 review)
+// ---------------------------------------------------------------------
+
+const PIN_SUBSTRATE = Buffer.from("substrate bytes\n");
+const PIN_BINDING = Buffer.from("---\ntitle: x\n---\n\n# Conformance {#conformance}\n\n~~~\n# Not A Heading\n~~~\n\n## Binding the Mission to the Grant {#grant-binding}\n");
+const PIN_COMMIT = "a".repeat(40);
+const PIN_TARGET = `https://github.com/mcguinness/mission-bound-authorization/blob/${PIN_COMMIT}/draft-mcguinness-oauth-mission.md`;
+const EDITORS_COPY = "https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission.html";
+const sha256hex = (b) => crypto.createHash("sha256").update(b).digest("hex");
+
+function assessmentFixture({
+  substrateDigest = sha256hex(PIN_SUBSTRATE).slice(0, 16),
+  commit = PIN_COMMIT,
+  digest = sha256hex(PIN_BINDING),
+  prose = true,
+  cite = 'Section "Binding the Mission to\n  the Grant"',
+  citeKey = "OAUTH-BINDING-SNAPSHOT",
+  snapshotRef = true,
+  target = PIN_TARGET,
+  refcontent = `Editor's Draft at commit ${PIN_COMMIT}`,
+} = {}) {
+  const ref = snapshotRef
+    ? ["  OAUTH-BINDING-SNAPSHOT:", '    title: "Mission-Bound Authorization for OAuth 2.0, Editor\'s Draft Snapshot"', `    target: ${target}`, "    author:", "      -", "        ins: K. McGuinness", `    refcontent: "${refcontent}"`]
+    : [];
+  return [
+    "---",
+    'title: "An Architecture for Mission-Bound Authorization"',
+    "",
+    "informative:",
+    "  I-D.draft-mcguinness-oauth-mission:",
+    '    title: "Mission-Bound Authorization for OAuth 2.0"',
+    `    target: ${EDITORS_COPY}`,
+    ...ref,
+    "",
+    "--- abstract",
+    "",
+    "Abstract.",
+    "",
+    "--- middle",
+    "",
+    "# Comparison {#c}",
+    "",
+    "Elsewhere the document cites {{I-D.draft-mcguinness-oauth-mission}}.",
+    "",
+    "# OAuth Binding Mapping Assessment {#oauth-statement}",
+    "",
+    `<!-- assessed-substrate-digest: ${substrateDigest} -->`,
+    `<!-- assessed-binding-snapshot: ${commit} ${digest} -->`,
+    "",
+    prose ? `The snapshot {{OAUTH-BINDING-SNAPSHOT}} is commit \`${commit}\` with digest\n\`${digest}\`.` : "No snapshot named.",
+    "",
+    `See ({{OAUTH-BINDING-SNAPSHOT}}, Section "Conformance") and ({{${citeKey}}}, ${cite}).`,
+    "",
+    "# A Worked Composition {#w}",
+    "",
+  ].join("\n");
+}
+
+const pinShow = (bytes) => (commit, file) => (commit === PIN_COMMIT && file === "draft-mcguinness-oauth-mission.md" ? bytes : null);
+const pin = (opts = {}, { substrate = PIN_SUBSTRATE, show = pinShow(PIN_BINDING) } = {}) =>
+  validateAssessmentPin({ assessmentText: assessmentFixture(opts), substrateBytes: substrate, showAtCommit: show });
+
+test("assessment pin: a correct fixture passes, and the ordinary binding reference outside the appendix is allowed", () => {
+  assert.deepEqual(pin(), []);
+});
+
+test("assessment pin: a changed substrate fails the substrate digest", () => {
+  const f = pin({}, { substrate: Buffer.from("edited\n") });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /assessed-substrate-digest .* the substrate changed/);
+});
+
+test("assessment pin: a missing snapshot marker fails", () => {
+  const text = assessmentFixture().replace(/<!-- assessed-binding-snapshot:[^>]*-->\n/, "");
+  const f = validateAssessmentPin({ assessmentText: text, substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /assessed-binding-snapshot marker .* missing/);
+});
+
+test("assessment pin: a digest that is not the binding's bytes at the pinned commit fails", () => {
+  const f = pin({ digest: "b".repeat(64) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /sha256\(draft-mcguinness-oauth-mission\.md at a{12}\) .* != pinned b{16}/);
+});
+
+test("assessment pin: the pin is checked against the pinned source, not the current binding", () => {
+  // showAtCommit serves the snapshot bytes; nothing here reads a working-tree
+  // binding, so a later binding edit cannot fail or satisfy the pin.
+  const edited = Buffer.concat([PIN_BINDING, Buffer.from("\n## Later Section {#later}\n")]);
+  const f = pin({}, { show: pinShow(edited) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /!= pinned/);
+});
+
+test("assessment pin: an unresolvable commit fails", () => {
+  const f = pin({}, { show: () => null });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /not resolvable at a{12}/);
+});
+
+test("assessment pin: prose that does not state the pinned commit and digest fails", () => {
+  const f = pin({ prose: false });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /must state the pinned snapshot commit/);
+});
+
+test("assessment pin: a cited title absent at the pinned commit fails, a fenced '#' line is no heading", () => {
+  const f = pin({ cite: 'Section "Not A Heading"' });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /cites Section "Not A Heading" of the OAuth binding, which has no such section/);
+});
+
+test("assessment pin: a missing snapshot reference fails", () => {
+  const f = pin({ snapshotRef: false });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /front matter has no OAUTH-BINDING-SNAPSHOT reference/);
+});
+
+test("assessment pin: a snapshot reference redirected to the moving editor's copy fails", () => {
+  const f = pin({ target: EDITORS_COPY });
+  assert.equal(f.length, 2);
+  assert.match(f[0], /is the moving editor's copy, not the pinned snapshot/);
+  assert.match(f[1], /carries no full 40-hex commit/);
+});
+
+test("assessment pin: a snapshot reference on a branch name fails", () => {
+  const f = pin({ target: "https://github.com/mcguinness/mission-bound-authorization/blob/main/draft-mcguinness-oauth-mission.md" });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /carries no full 40-hex commit/);
+});
+
+test("assessment pin: a snapshot reference at another commit fails", () => {
+  const other = "c".repeat(40);
+  const f = pin({ target: PIN_TARGET.replace(PIN_COMMIT, other) });
+  assert.equal(f.length, 2);
+  assert.match(f[0], /does not name the pinned commit a{12}/);
+  assert.match(f[1], /names commit c{12}, not the pinned a{12}/);
+});
+
+test("assessment pin: a branch URL that only mentions the pinned commit fails", () => {
+  const f = pin({ target: `https://github.com/mcguinness/mission-bound-authorization/blob/main/draft-mcguinness-oauth-mission.md?at=${PIN_COMMIT}` });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /is not the binding file at the pinned commit/);
+});
+
+test("assessment pin: a snapshot reference whose refcontent names another commit fails", () => {
+  const f = pin({ refcontent: `Editor's Draft at commit ${"b".repeat(40)}` });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /names commit b{12}, not the pinned a{12}/);
+});
+
+test("assessment pin: a citation of the ordinary binding reference inside the appendix fails", () => {
+  const f = pin({ citeKey: "I-D.draft-mcguinness-oauth-mission" });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /cites \{\{I-D\.draft-mcguinness-oauth-mission\}\}, the moving Editor's Draft/);
+});
+
+test("assessment pin: helpers read wrapped Section lists, front-matter entries and canonical targets", () => {
+  assert.deepEqual(
+    citedBindingTitles('({{OAUTH-BINDING-SNAPSHOT}},\n Sections "A B" and\n "C") and {{OAUTH-BINDING-SNAPSHOT-2}}, Section "D"'),
+    ["A B", "C"],
+  );
+  assert.deepEqual(citedBindingTitles('{{I-D.draft-mcguinness-oauth-mission}}, Section "E"', "I-D.draft-mcguinness-oauth-mission"), ["E"]);
+  assert.deepEqual([...headingTitles("# One {#one}\n## Two\n```\n# Three\n```\n")], ["One", "Two"]);
+  assert.match(frontMatterReference(assessmentFixture(), "OAUTH-BINDING-SNAPSHOT"), /target: https:\/\/github\.com\//);
+  assert.equal(frontMatterReference(assessmentFixture({ snapshotRef: false }), "OAUTH-BINDING-SNAPSHOT"), null);
+  assert.deepEqual(snapshotTargetFindings(PIN_TARGET, PIN_COMMIT), []);
+});
+
+test("assessment pin: the real repository's Mapping Assessment is pinned and its citations resolve at the snapshot", () => {
+  const findings = validateAssessmentPin({
+    assessmentText: fs.readFileSync(path.join(REPO_ROOT, ASSESSMENT_FILE), "utf8"),
+    substrateBytes: fs.readFileSync(path.join(REPO_ROOT, ASSESSED_SUBSTRATE_FILE)),
+    showAtCommit: (commit, file) => {
+      try {
+        return execFileSync("git", ["show", `${commit}:${file}`], { cwd: REPO_ROOT, maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
+      } catch {
+        return null;
+      }
+    },
+  });
+  assert.deepEqual(findings, []);
 });

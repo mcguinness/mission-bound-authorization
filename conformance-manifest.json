@@ -31,8 +31,8 @@
     "content_sha256": "cc8617aaf61a34d8f501734344cafbdfaac8baee97f27c45af59af553c676b1a"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "3aef11fcc1181547adee092649aed883762fa3a2",
-    "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
+    "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
+    "content_sha256": "fad30b610b02d6830f5476fac4532af4f1bbfa8ff135fcc542ec054c6015d3b1"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
-    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
+    "revision": "c64512ff61df5fc5875a26eef068ceb60d700612",
+    "content_sha256": "4be63385aec0dd7355fe3e1450f1c4deaf28eba8a44491fe8179fa4805d6d732"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -119,8 +119,8 @@
     "content_sha256": "6d69c4cbcdff9c4eb7aca3f81ff0d1dd9c247ad097beabb300c6fbc85e9da6ec"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
-    "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
-    "content_sha256": "ee397db8cc220f7cfd6995e4d701cf05235a63744f58954173723cdbaeb54132"
+    "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
+    "content_sha256": "0cf8e2d58c15528519fac2be96750514bd07b045ac6a19549dfefbedd5443133"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
     "revision": "9bbb9ad70478a4492c343a55b0017e58d9eb573a",
@@ -139,8 +139,8 @@
     "content_sha256": "3c1d883d71a887cc0643d40a023ecea1b16e272778ce9851353a3b6807b14927"
    },
    "draft-mcguinness-mission-mandate.md": {
-    "revision": "75b38619250295f84e2a1fb5277b5bfd3ae3eb7e",
-    "content_sha256": "61b1e27b9925e99586a57b23e299a7d5080c8b6fe10e67bd920c0e1b933ecf3e"
+    "revision": "80573531f97dc8f048f60fef8cd1583ba148ec46",
+    "content_sha256": "fc7d706b125479308170ab71672eaa8297ca93200405bef658d10eb2d41928c9"
    },
    "draft-mcguinness-oauth-mission-approval.md": {
     "revision": "609f3995db75ea17c53f26ef3a133aa779c0631c",
@@ -6499,9 +6499,9 @@
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "On a refresh, the AS decides this refusal before it consumes or rotates the refresh token",
+   "text": "On a refresh, the AS MUST decide this refusal before it consumes or rotates the refresh token",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6536,7 +6536,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant. D971 (#1723 S2, K3): the sentence carries its MUST, an observable ordering it already stated; coverage unchanged."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
@@ -8602,9 +8602,9 @@
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
-   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it is never inferred from the token `sub`.",
+   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it MUST NOT be inferred from the token `sub`.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -8631,7 +8631,8 @@
      "level": "cross-component",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K2): the sentence carries its MUST NOT, an obligation it already stated, in the passive voice it had; coverage unchanged."
   },
   {
    "id": "core.authority-sources.subject-discipline",
@@ -9919,9 +9920,9 @@
    "id": "core.approval-context-changes.proposal-swap",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-context-changes",
-   "text": "a proposal swapped between rendering and decision changes `proposal_hash` even where `intent_hash` is unchanged",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -9936,7 +9937,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446). D971 (#1723 S2, X2): the swap sentence explains a consequence, so the row points to the rules that produce it: it quotes the recomputation MUST, trigger included, applied to a changed proposal (core.approval-context-changes.recompute quotes the same duty, observed for the Authority Set, source and policy inputs), and cites Authority Proposal's commitment rule, \"The AS records the array on the Mission exactly as submitted and commits it by `proposal_hash` ..., separately from the task (`intent_hash`)\". The observation is unchanged; there were no tests to keep, and coverage stays todo for the #1446 reason stated first."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -10182,7 +10183,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625)."
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625). D971 (#1723 S2, X9): this row carries the reproducibility witnesses of the retired consumer row core.mission-record.authority-source-policy-digest-reproducible (\"a consumer holding the policy can reproduce it\", an ability the construction rule yields, not a duty). Both tests it cited are cited here: each recomputes the digest independently, the vector from a hand-written JCS string and the shipped pin from the policy file alone, and obtains the committed value."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-producer",
@@ -10219,42 +10220,6 @@
     }
    ],
    "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
-  },
-  {
-   "id": "core.mission-record.authority-source-policy-digest-reproducible",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "a consumer holding the policy can reproduce it",
-   "role": "verifier",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance"
-   ],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a party holding the governed policy recomputes `policy.digest` from the input and construction the policy format names and obtains the committed value"
-   },
-   "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
-     "level": "unit",
-     "surface": "commitment"
-    },
-    {
-     "file": "src/services/authorization-server/test/shipped-config.test.ts",
-     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
-     "level": "unit",
-     "surface": "commitment"
-    }
-   ],
-   "notes": "#1503 finding 2 (D620). Reproducibility is shown by independent recomputation in the tests: the vector from a hand-written JCS string, the shipped pin from the policy file alone. No reference component other than the AS's own loader holds a governed policy, so no verifier implementation is witnessed."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-opaque",
@@ -11707,9 +11672,9 @@
    "id": "core.termination.written-once-cause-preserved",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "termination",
-   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and never changes it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
+   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and MUST NOT change it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -11749,7 +11714,8 @@
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K4): the prohibition carries its MUST NOT, an obligation it already stated; the write-once clause stays declarative (narrow wording), and write-once atomicity stays a requirement this row's witnesses do not assert. Coverage unchanged."
   },
   {
    "id": "core.termination.retained-facts-only",
@@ -14546,8 +14512,8 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection-per-audience",
-   "text": "establishes the condition independently for each audience",
+   "anchor": "scope-projection-subset",
+   "text": "For every target audience, the AS MUST establish that the effective rights the target's enforcement path grants from the projected `scope`, together with every independently mandatory control on that path, are a subset of the rights the token's applicable `authorization_details` grant",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14572,7 +14538,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row."
+   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row. D971 (#1723 S2): the row quotes the MUST it relies on, the subset condition's \"For every target audience\", instead of Per-Audience Condition's keyword-free restatement; strength and coverage unchanged."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
@@ -25749,6 +25715,341 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
+  },
+  {
+   "id": "cross-org.holder.sign-with-parent-key",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "sign the child with the key bound by the parent's `cnf`",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a holder signs a child only under the key its parent's `cnf.jwk` binds, and names that key by its JWK Thumbprint URI as the child's `iss`; a child under any other key is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses to sign with any key but the one the parent's cnf.jwk binds (rule 1)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The checked holder mint (deriveCrossOrgChild) shares the in-organization holder's key check (checkChildWithinParent). Proved by mutation: skipping the signing-key comparison fails the rule 1 witness."
+  },
+  {
+   "id": "cross-org.holder.par-hash-exact-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "bind the child to the exact parent through `par_hash`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `par_hash` is computed over its exact parent token"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > mints a chain the destination verifies: a named hop with its credential, then a narrowed key-only hop",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). A construction property of the shared signing path (signCrossOrgChild). Proved by mutation: hashing another token fails both witnesses (the destination refuses the link)."
+  },
+  {
+   "id": "cross-org.holder.narrow-capability-entry",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "narrow or preserve the mapped capability entry under the attenuation substrate's tool and constraint subset model, and its `mission_constraints` member under the attenuation profile's narrowing rule; no other authorization-details entry is added",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a holder mints no child naming a tool its parent lacks, an argument map broader than its parent's, or `mission_constraints` broader than its parent's, and a minted child carries exactly one authorization-details entry, the narrowed capability entry"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a child broader than its parent in tools, argument maps or mission_constraints (rule 3)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The in-organization holder's attenuation checks, shared (checkChildWithinParent); the single entry is a construction property of signCrossOrgChild. The destination's own refusal is cross-org.verification.mission-constraints and cross-org.authority.mapped-subset-only. Proved by mutation: skipping the tool-presence check, the argument-map attenuation, or the mission_constraints narrowing each fails the rule 3 witness."
+  },
+  {
+   "id": "cross-org.holder.aud-within-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "keep `aud` equal to or narrower than the parent's",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child whose `aud` is wider than its parent's is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an aud wider than its parent's (rule 4)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). Proved by mutation: skipping the aud nesting check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.exp-within-parent",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "set `exp` no later than the parent's",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child whose `exp` is after its parent's is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an exp after the parent's or after the destination trust policy's ceiling, and defaults within both (rule 5)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The parent half of rule 5; the destination half is cross-org.holder.exp-within-destination-policy. Proved by mutation: skipping the parent exp check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.exp-within-destination-policy",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "no later than the destination trust policy permits",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child's `exp` is no later than the destination trust policy permits",
+    "local": "the reference holder takes that policy's ceiling as an explicit input (expCeiling): it refuses a later `exp` and defaults the child's `exp` to the earlier of the parent's and the ceiling. Nothing in the reference supplies a holder with a destination's trust policy, so a caller that passes no ceiling is bounded by the parent's `exp` only"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an exp after the parent's or after the destination trust policy's ceiling, and defaults within both (rule 5)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). partial: the mint enforces the ceiling it is given, and the witness asserts that; it cannot establish the destination's policy itself, which a holder learns from its federation agreement (cross-org-delegation#trust-model) and the reference does not configure for a holder. Proved by mutation: skipping the ceiling check fails the witness."
+  },
+  {
+   "id": "cross-org.holder.depth",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "increment `del_depth` without resetting it at any organizational boundary, and preserve `del_max_depth`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `del_depth` is its parent's plus one at every hop, across organizational boundaries, and its `del_max_depth` is its parent's; no child is minted past its parent's `del_max_depth`"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a hop past the parent's del_max_depth (rule 6)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). The witness's hops cross from organization 1 to 2 and on to 3 with depth 1 then 2. Proved by mutation: resetting del_depth, changing del_max_depth, or skipping the depth bound each fails a witness."
+  },
+  {
+   "id": "cross-org.holder.mission-invariant",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "keep the `mission` claim value-invariant, including `subject`",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a child's `mission` claim equals its parent's, including `subject`",
+    "local": "the reference holder refuses a parent whose `mission` claim lacks `id`, `issuer`, `authority_hash` or `subject`, since such a parent is not a conforming cross-organizational hop (cross-org-delegation#hop-members)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a parent whose mission claim lacks the origin principal subject (rule 7)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). Proved by mutation: dropping subject from the copied claim, or skipping the parent claim check, each fails a witness."
+  },
+  {
+   "id": "cross-org.holder.act-names-recipient",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "set this hop's `act` to the actor receiving the delegation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a named child's `act` names the actor receiving the delegation, as one object with `iss` and `sub` and no nested history; a key-only child carries none",
+    "local": "the reference holder places the actor its caller names, refusing one without both `iss` and `sub` or carrying a nested `act`"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses an act without both iss and sub, or carrying a nested history (rule 8)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). partial: the witnesses assert the act's shape and placement, not that it names the actor actually receiving the delegation, which no holder-side check can establish. The destination binds a named actor to the hop's key through the aligned actor-binding credential (cross-org.actor.credential-alignment, cross-org.actor.credential-validation). Proved by mutation: skipping the iss-and-sub check, or the nested-act check, each fails the rule 8 witness."
+  },
+  {
+   "id": "cross-org.holder.recipient-cnf-jwk",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "derivation",
+   "role": "client",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "text": "bind the child to the recipient workload's own proof-of-possession key, carried as the child's public `cnf.jwk`",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a child carries the recipient's key as a full public `cnf.jwk`; a child with no key, a private key, or a thumbprint-only confirmation is not minted"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > binds the exact parent, counts depth, keeps the mission claim and carries one entry, the recipient's key and this hop's actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-holder.test.ts",
+     "name": "checked cross-org child mint (@spec cross-org-delegation#derivation, #1822) > refuses a child without the recipient's own full public cnf.jwk (rule 9)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1822 (D941). That the key is the recipient's own is proven by the recipient's possession at use (cross-org.verification.leaf-proof-of-possession), not by the holder. Proved by mutation: skipping the child public-key check, or the required-key check, each fails the rule 9 witness."
   },
   {
    "id": "mas.reference.strict-dictionary",
@@ -44781,7 +45082,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "The Approved Context is the Mission Intent, the recorded authority proposal where one was submitted, and the derived Authority Set ({{oauth-mission#oauth-statement}} item 4), not the Authority Set alone. The kernel's missions table (kernel.ts insertRecord) persists all three components (intent_json, proposed_authority_json, authority_set_json) and all three typed anchors (intent_hash, proposal_hash, authority_hash) together at creation; no UPDATE statement anywhere in kernel.ts ever touches any of those six columns (grep-verified: the only UPDATEs touch state/version/successor/grant_id/status_list_idx/containment_json/derivation_count/projected_from). The cited test approves a Mission WITH a submitted proposal (so all three components and all three anchors are actually present, not template-mode nulls), snapshots each by content, and re-verifies all six byte-for-byte across two successive transitions (suspend then resume) while state and version visibly advance."
+   "notes": "The Approved Context is the Mission Intent, the recorded authority proposal where one was submitted, and the derived Authority Set ({{mission-architecture#oauth-statement}} item 4), not the Authority Set alone. The kernel's missions table (kernel.ts insertRecord) persists all three components (intent_json, proposed_authority_json, authority_set_json) and all three typed anchors (intent_hash, proposal_hash, authority_hash) together at creation; no UPDATE statement anywhere in kernel.ts ever touches any of those six columns (grep-verified: the only UPDATEs touch state/version/successor/grant_id/status_list_idx/containment_json/derivation_count/projected_from). The cited test approves a Mission WITH a submitted proposal (so all three components and all three anchors are actually present, not template-mode nulls), snapshots each by content, and re-verifies all six byte-for-byte across two successive transitions (suspend then resume) while state and version visibly advance."
   },
   {
    "id": "substrate.approved-context.immutability",
@@ -45113,7 +45414,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "The Controller is the Mission Issuer/AS ({{oauth-mission#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-id-and-issuer-equal), not this Controller-role row."
+   "notes": "The Controller is the Mission Issuer/AS ({{mission-architecture#oauth-statement}} item 2), not the resource-side PDP: the Basic Governance Gate is realized by src/services/authorization-server/src/kernel/kernel.ts's gateActiveLineage, shared by gateActive (state-gated issuance/continuation) and gateDerivation (state-gated derivation, layering the max_derivations cap on top). The active predicate is `record.state === \"active\"` exactly; the non-active outcome is a thrown GateError, refusing both issuance and derivation. Both cited tests run unconditionally against the kernel's in-memory sqlite store, so this coverage never sandbox-skips. The PDP's evaluate.ts implements the analogous RESOURCE-side decision gate (a different Controller-vs-PDP role per the substrate's binding statement); its four basic-gate-shaped unit tests now back the runtime/authzen decision-request rows they genuinely prove (see runtime.decision-inputs.active-state-required and runtime.decision-inputs.authority-entry-and-subset-required and authzen.pdp-request.consistency-id-and-issuer-equal), not this Controller-role row."
   },
   {
    "id": "substrate.basic-gate.decision-only-while-active",
@@ -45358,7 +45659,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The Controller MUST maintain this record ({{oauth-mission#oauth-statement}} item 9: the governance record is the Mission Record with its approval evidence and lifecycle history), not the resource-side PEP. mcp-payments's EvidenceStore (src/services/mcp-payments/src/evidence.ts) is a PEP-side, in-memory, unsigned array of per-request decision/refusal evidence; it satisfies no arm of a Controller-maintained record and its test does not establish Controller-role coverage, so it is not cited here. No Controller-owned governance record exists in src/ yet: the Mission Kernel's approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback and are never journaled into any persisted, queryable, integrity-protected record. The mcp-payments evidence tests remain cited, correctly, on the runtime-evidence rows they do prove (see evidence.refusal.per-attempt-immutable-append-only and the M4 enforcement-tier rows)."
+   "notes": "The Controller MUST maintain this record ({{mission-architecture#oauth-statement}} item 9: the governance record is the Mission Record with its approval evidence and lifecycle history), not the resource-side PEP. mcp-payments's EvidenceStore (src/services/mcp-payments/src/evidence.ts) is a PEP-side, in-memory, unsigned array of per-request decision/refusal evidence; it satisfies no arm of a Controller-maintained record and its test does not establish Controller-role coverage, so it is not cited here. No Controller-owned governance record exists in src/ yet: the Mission Kernel's approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback and are never journaled into any persisted, queryable, integrity-protected record. The mcp-payments evidence tests remain cited, correctly, on the runtime-evidence rows they do prove (see evidence.refusal.per-attempt-immutable-append-only and the M4 enforcement-tier rows)."
   },
   {
    "id": "substrate.governance-record.minimum-coverage-and-attribution",
@@ -45381,7 +45682,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "The Controller MUST maintain this record ({{oauth-mission#oauth-statement}} item 9), not the resource-side PEP; mcp-payments's EvidenceStore records are PEP-side per-request decision evidence, not the Mission Record's approval evidence and lifecycle history, so they satisfy no arm of this row's minimum coverage (approval, positive/negative Controller decisions, and the non-active transition) and are not cited here. No Controller-owned record exists in src/ today: Mission Kernel approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback, never journaled into any persisted, queryable record. The mcp-payments decision-evidence tests remain cited, correctly, on the runtime-evidence Decision Evidence rows they do prove (the M4 enforcement-tier rows)."
+   "notes": "The Controller MUST maintain this record ({{mission-architecture#oauth-statement}} item 9), not the resource-side PEP; mcp-payments's EvidenceStore records are PEP-side per-request decision evidence, not the Mission Record's approval evidence and lifecycle history, so they satisfy no arm of this row's minimum coverage (approval, positive/negative Controller decisions, and the non-active transition) and are not cited here. No Controller-owned record exists in src/ today: Mission Kernel approval and lifecycle-transition events (kernel.ts approve()/setState()) fan out only through the ephemeral onLifecycleCommit callback, never journaled into any persisted, queryable record. The mcp-payments decision-evidence tests remain cited, correctly, on the runtime-evidence Decision Evidence rows they do prove (the M4 enforcement-tier rows)."
   },
   {
    "id": "substrate.governance-record.ordering-and-retention-statement",
@@ -78608,9 +78909,9 @@
    "id": "core.other-types.unestablished-audience-none",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping does not stand in for it",
+   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping MUST NOT stand in for it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -78664,7 +78965,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back. D971 (#1723 S2, K1): the sentence carries its MUST NOT, an obligation it already stated; coverage unchanged."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
