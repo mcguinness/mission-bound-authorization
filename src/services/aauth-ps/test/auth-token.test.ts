@@ -605,6 +605,44 @@ describe("6.7.2 step 4 and governance", () => {
   });
 });
 
+describe("resource-initiated interaction (Section 7.2.3)", () => {
+  const interaction = { url: `${RS}/interaction`, code: "required-resource-consent" };
+
+  it("refuses a resource token carrying interaction, which this PS cannot conduct: user_unreachable, nothing issued or recorded", async () => {
+    const { s256, pt } = await grant();
+    const rt = await resourceTokenFor(w, assistant, pt, { interaction });
+    const before = issuedCount(w);
+    const log = w.ps.store.missionLog(s256);
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(
+      r,
+      403,
+      "user_unreachable",
+      before,
+      "the resource requires an interaction this person server cannot conduct",
+    );
+    expect(w.ps.store.missionLog(s256)).toEqual(log);
+  });
+
+  it("checks the mission first: interaction on a resource token naming another agent's mission is invalid_resource_token", async () => {
+    const planner = await makeAgent(w.ap, w.clock, PLANNER);
+    const theirs = await approve(w, planner);
+    const pt = await w.psMint(
+      "aa-person+jwt",
+      personClaims(w, assistant, { mission_s256: theirs.s256 }),
+    );
+    const rt = await resourceTokenFor(w, assistant, pt, { interaction });
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(
+      r,
+      400,
+      "invalid_resource_token",
+      0,
+      "mission_s256 does not name a mission of this agent",
+    );
+  });
+});
+
 describe("the issuance commit: time and mission state rechecked at the current time", () => {
   /** Move the shared clock to the start of second `s`. */
   const reach = (s: number) => () => {

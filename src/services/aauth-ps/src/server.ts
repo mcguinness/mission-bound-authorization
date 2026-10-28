@@ -611,6 +611,18 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       throw governedMissionless();
     }
 
+    // A resource token carrying `interaction` needs the resource's own
+    // user-facing flow completed before any auth token (AAuth -11 Section
+    // 7.2.3). This PS has no interaction surface and no channel to the
+    // person, so it refuses, whatever the claim holds.
+    if (rt.interaction !== undefined) {
+      throw new PsError(
+        403,
+        "user_unreachable",
+        "the resource requires an interaction this person server cannot conduct",
+      );
+    }
+
     // The issuance commit. Key resolution and verification above awaited,
     // and time passed: the clock is read again, and every time- and
     // state-dependent check runs again at that time, with no await before
