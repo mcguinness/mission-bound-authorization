@@ -4249,44 +4249,43 @@ Consumer validation; this section supplies the Mission-specific
 authorization and context selection. Deployments configure its use
 and whether instance attribution is required.
 
-When issuing context under this composition, the AS MUST use the
-presenting instance validated under
-{{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}},
-establish its trusted association with the separately authenticated
-delegate, and bind the output token to an instance-unique key whose
-possession it verified in that exchange. Context is mapped from that
-validated instance into the output audience's Consumer Scope under
-{{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}. The
-AS MUST NOT use context copied or remapped from an input token as a
-substitute for the presenting instance's evidence. For example, when
-instance B is authorized to continue work from instance A, output
-context names B; A's context does not become B's identity by
-remapping it.
-
-The actor authentication, delegation eligibility, subset, and lifecycle
-checks of {{delegated-exchange}} and {{delegation-constraints}}
-still authorize the exchange; instance evidence satisfies none of them
-by itself. Where deployment policy requires instance attribution, the
-AS MUST refuse the exchange if the required instance evidence or its
-association with the delegate and output key cannot be established.
-{{error-mapping}} gives the error codes for these refusals.
-
-If the exchange issues a refresh token, the grant-continuity rules of
-{{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}}
-apply alongside {{grant-binding}}; instance continuity alone does not
-authorize replacement of the recorded instance or key rebinding.
-
-Consumers establish presenter attribution under Sections 7.3 and 7.5
-of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer
-requiring attribution rejects unestablished associations under
-{{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}.
-
-This composition does not add provenance to `client_instance`: a
-consumer can use the direct-attestation trust configuration only when
-the issuer meets that configuration's restriction against upstream
-context. An issuer also conveying upstream context needs a separately
-specified, authenticated provenance mechanism before its context can
-support presenter attribution.
+- When issuing context under this composition, the AS MUST use the
+  presenting instance validated under
+  {{Section 5 of I-D.draft-mcguinness-oauth-client-instance-id}},
+  establish its trusted association with the separately authenticated
+  delegate, and bind the output token to an instance-unique key whose
+  possession it verified in that exchange.
+- Context is mapped from that validated instance into the output
+  audience's Consumer Scope under
+  {{Section 7.1 of I-D.draft-mcguinness-oauth-client-instance-id}}.
+- The AS MUST NOT use context copied or remapped from an input token as
+  a substitute for the presenting instance's evidence. For example, when
+  instance B is authorized to continue work from instance A, output
+  context names B; A's context does not become B's identity by remapping
+  it.
+- The actor authentication, delegation eligibility, subset, and
+  lifecycle checks of {{delegated-exchange}} and
+  {{delegation-constraints}} still authorize the exchange; instance
+  evidence satisfies none of them by itself.
+- Where deployment policy requires instance attribution, the AS MUST
+  refuse the exchange if the required instance evidence or its
+  association with the delegate and output key cannot be established.
+  {{error-mapping}} gives the error codes for these refusals.
+- If the exchange issues a refresh token, the grant-continuity rules of
+  {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply
+  alongside {{grant-binding}}; instance continuity alone does not
+  authorize replacement of the recorded instance or key rebinding.
+- Consumers establish presenter attribution under Sections 7.3 and 7.5
+  of {{I-D.draft-mcguinness-oauth-client-instance-id}}. A consumer
+  requiring attribution rejects unestablished associations under
+  {{Section 7.6 of I-D.draft-mcguinness-oauth-client-instance-id}}.
+- This composition does not add provenance to `client_instance`: a
+  consumer can use the direct-attestation trust configuration only when
+  the issuer meets that configuration's restriction against upstream
+  context.
+- An issuer also conveying upstream context needs a separately
+  specified, authenticated provenance mechanism before its context can
+  support presenter attribution.
 
 ## Self-Exchange Down-Scoping {#self-exchange}
 
