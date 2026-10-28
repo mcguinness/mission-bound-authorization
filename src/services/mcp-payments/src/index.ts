@@ -119,6 +119,7 @@ export {
   MISSION_TOKEN_META_KEY,
 } from "./mcp-transport.js";
 export {
+  callToolWithPresentation,
   canonicalHtu,
   createHttpMcpChannel,
   createHttpMediatedClient,
@@ -127,7 +128,17 @@ export {
   type DpopKeys,
   type HttpMcpChannel,
   type HttpMediatedClient,
+  type PresentedCallResult,
 } from "./mcp-http-transport.js";
+export {
+  AAT_PRESENTATION_META_KEY,
+  type AatPopInput,
+  type AatPresentation,
+  AatPresentationRefused,
+  readAatPresentation,
+  signAatPop,
+} from "./aat-presentation.js";
+export { paymentsAatToolId, paymentsAttenuationOperations } from "./attenuation-operations.js";
 export {
   INVOCATION_ARGUMENTS_META_KEY,
   originalArgumentsMatch,
@@ -296,6 +307,7 @@ export {
 } from "./resource-metadata.js";
 export { ActorRecords, type ActorRecord, type MissionRef } from "./actor-records.js";
 export {
+  aatKeyThumbprint,
   credentialAuthorityFrom,
   ISSUED_AT_SKEW_S,
   MISSION_ACCESS_TOKEN_TYP,
