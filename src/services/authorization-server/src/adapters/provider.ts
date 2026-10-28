@@ -4639,7 +4639,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           : undefined,
         derivation,
         ceilingOffer,
-        { revision, changed: ctx.query.changed === "1", expiresAt, bindings },
+        { revision, changed: ctx.query.changed === "1", expiresAt, bindings, ...(subject !== approver ? { subject } : {}) },
       );
       return;
     }
@@ -8211,9 +8211,10 @@ function renderApprovalPage(
   /**
    * @spec mission#approval-context-changes (#1446): this rendering's revision,
    * whether the request changed since the last, and the effective `expires_at`
-   * an approval on it commits.
+   * an approval on it commits. `subject` is the Subject step 2 established,
+   * given when it is not the Approver (#1802).
    */
-  render: { revision?: string; changed?: boolean; expiresAt?: string; bindings?: string } = {},
+  render: { revision?: string; changed?: boolean; expiresAt?: string; bindings?: string; subject?: string } = {},
 ): string {
   // @spec mission#approval-event — the rendering distinguishes the submitted
   // proposal (untrusted client input) from the derived Authority Set (what
@@ -8262,7 +8263,15 @@ function renderApprovalPage(
   // @spec mission#approval-event (step 5, #1503): every other approval page
   // names the receiving client from the AS's registration; the device page's
   // own client section above names it from that same registration.
-  const clientSection = device ? "" : renderRegisteredClient(client);
+  // @spec mission#approval-preparation (step 5, #1802): when the Approver is
+  // not the Subject, the page names the Subject the authority is granted for:
+  // the one the authenticated approval surface selected (step 2), never text
+  // the client supplied. The device page names it in its own section above.
+  const subjectSection =
+    !device && render.subject !== undefined
+      ? `<h2>Subject (the authority is granted for)</h2><p class="subject"><code>${escapeHtml(render.subject)}</code></p>\n`
+      : "";
+  const clientSection = device ? "" : `${renderRegisteredClient(client)}${subjectSection}`;
   const deviceConfirmations = device
     ? `<label><input type="checkbox" name="confirm_user_code" value="true" required> This code matches the code the requesting client displays.</label>
 <label><input type="checkbox" name="confirm_started" value="true" required> I started this request.</label>
