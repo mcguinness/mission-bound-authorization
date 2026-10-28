@@ -734,11 +734,13 @@ The outcomes:
 | `applied` | The operation succeeded: the transition was committed, or the Mission already stood in the operation's resulting non-terminal state (the status profile's idempotent case). |
 | `already_terminal` | The Mission was already `terminated`, whatever its termination reason, and is unchanged; when that reason is the operation's own (`revoked` for `revoke`, `completed` for `complete`), this is the status profile's idempotent case, reported distinctly for operator clarity, and otherwise it is the status profile's conflict, reported here because the bulk objective is met. |
 | `illegal_transition` | The operation is not legal from the Mission's current non-terminal state; the Mission is unchanged. |
+| `stale_version` | The Mission's current state version differs from the version the dry run pinned for it ({{execution}}); the operation was not applied and the Mission is unchanged. The symbol is the status profile's. |
 | `error` | The AS failed to process this Mission; its state is unverified. |
 
 A `terminated` Mission, whatever its termination reason, reports
-`already_terminal`, taking precedence over the idempotent reading of
-`applied`; it is reported distinctly from `error` because, for a
+`already_terminal`, taking precedence over `stale_version` and over
+the idempotent reading of `applied`; it is reported distinctly from
+`error` because, for a
 terminating operation, an already-terminal member is a satisfied
 objective, not a failure. `already_terminal` never reports a
 committed transition: a `revoke` member already terminated with
@@ -747,7 +749,8 @@ unchanged. After
 a partial failure the spent bulk token is not reusable; the caller
 remediates with a fresh dry run over the same filter and a new
 execute: members already transitioned then report `already_terminal`,
-and only `error` members are retried.
+`error` members are retried, and `stale_version` members are reviewed
+again at their current versions.
 
 ## Worked Example {#bulk-example}
 
