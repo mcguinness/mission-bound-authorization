@@ -1873,8 +1873,8 @@ original approved audience of an entry it inherits: the entry keeps that
 of the authority it derives from. Only a fresh approval of the entry, or
 a transformation under a declared capability, establishes a different
 one. Where the AS cannot establish an entry's original approved
-audience, the entry has none; the current mapping does not stand in for
-it.
+audience, the entry has none; the current mapping MUST NOT stand in
+for it.
 
 Issuing an entry to an audience other than its original approved
 audience, including audience projection to a Resource AS

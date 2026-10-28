@@ -78155,9 +78155,9 @@
    "id": "core.other-types.unestablished-audience-none",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping does not stand in for it",
+   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping MUST NOT stand in for it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -78211,7 +78211,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back. D971 (#1723 S2, K1): the sentence carries its MUST NOT, an obligation it already stated; coverage unchanged."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
