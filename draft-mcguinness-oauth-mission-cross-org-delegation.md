@@ -542,6 +542,10 @@ endpoint as an {{RFC8693}} token exchange:
 * `requested_token_type`:
   `urn:ietf:params:oauth:token-type:access_token`;
 * `resource` or `audience`: the requested local audience, within the
+  `aud` of every hop, as the substrate requires of an enforcement
+  point at direct invocation
+  ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}},
+  step 6c); with the nesting of {{verification}} step 5, this is the
   leaf's `aud`;
 * client authentication as the Resource AS's policy requires; and
 * proof of possession of exactly the leaf `cnf.jwk` key on the
@@ -555,7 +559,7 @@ A Presentation that is malformed, carries an unknown top-level
 member, or exceeds a declared bound refuses with `invalid_request`; a
 Chain failing any step of {{verification}} refuses with
 `invalid_grant`, disclosing no partial verification detail; a
-requested audience outside the leaf's `aud` refuses with
+requested audience outside a hop's `aud` refuses with
 `invalid_target`.  On success the Resource AS mints the
 audience-local token per the rules above.
 
