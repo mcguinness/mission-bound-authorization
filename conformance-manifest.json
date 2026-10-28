@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5257c35b038c4d3dbea79a1abeffe9bb1b61366c",
-    "content_sha256": "a270d0a4a4ce798051b32fc4bedfa6fee5c7e300864e92bb0b5083ed4634cc8d"
+    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
+    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
-    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
+    "revision": "05499ae43217ce7d528485c06622df662331aeed",
+    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -14100,7 +14100,7 @@
   {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "MUST refuse issuance to a target that is `scope`-only when no safe projection exists for the applicable entries",
    "role": "AS",
    "strength": "MUST",
@@ -14222,7 +14222,7 @@
   {
    "id": "core.scope-projection.semantic-subset-condition",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "together with every independently mandatory control on that path",
    "role": "AS",
    "strength": "MUST",
@@ -14271,7 +14271,7 @@
   {
    "id": "core.scope-projection.action-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "aggregates a broader action",
    "role": "AS",
    "strength": "stated",
@@ -14307,7 +14307,7 @@
   {
    "id": "core.scope-projection.resource-path-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "spans more resource instances or paths than the entry",
    "role": "AS",
    "strength": "stated",
@@ -14344,7 +14344,7 @@
   {
    "id": "core.scope-projection.union-widening-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "arises from the union of several entries",
    "role": "AS",
    "strength": "stated",
@@ -14380,7 +14380,7 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-per-audience",
    "text": "establishes the condition independently for each audience",
    "role": "AS",
    "strength": "MUST",
@@ -14411,7 +14411,7 @@
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "fail closed under step 5",
    "role": "AS",
    "strength": "MUST",
@@ -14490,7 +14490,7 @@
   {
    "id": "core.scope-projection.derived-token-issuance-paths",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "initial issuance, refresh, Token Exchange, and any other derived-token path",
    "role": "AS",
    "strength": "stated",
@@ -14581,7 +14581,7 @@
   {
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-requested",
    "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
    "role": "AS",
    "strength": "MUST",
@@ -14654,7 +14654,7 @@
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
    "role": "AS",
    "strength": "stated",
@@ -14698,7 +14698,7 @@
   {
    "id": "core.scope-projection.requested-scope-unnamed-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
    "role": "AS",
    "strength": "stated",
@@ -14729,7 +14729,7 @@
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-refresh",
    "text": "A refusal caused solely by failure to establish a safe scope projection MUST NOT invalidate an otherwise-valid refresh token or its authorization grant",
    "role": "AS",
    "strength": "MUST NOT",
@@ -23758,7 +23758,7 @@
     "local": "The AS lists its Status role's generations withdrawn as compromised in the historical key set it serves at mission_historical_jwks_uri (kernel/historical-key-set.ts)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23767,7 +23767,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. History: specified but not implemented (D405) until the ring's compromise operation (#831 B2 (#1681, D809)) and the historical key set (#831 B3 (#1766)). #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. D931 per-row review: tested. Obligation: a key known or suspected compromised is published as revoked in the historical key set. Witness: the endpoint test compromises the Status key across AS boots and finds the withdrawn key listed under its original kid and material, revoked. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). Only the Status role signs Status and Lifecycle responses, and a compromise takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
@@ -23814,7 +23814,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder now keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -23839,7 +23839,7 @@
     "local": "A retired Status generation stays in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime (#831 B2); a compromised one stays resolvable in the historical key set (#831 B3)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23854,7 +23854,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842). #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774). #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; #831 B3 (#1766) retains a compromised key in the historical key set. #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. D931 per-row review: tested. Obligation: every kid that signed a Status or Lifecycle response stays resolvable for at least the Mission's audit horizon, a retired key in the jwks_uri and a compromised key in the historical key set. Witnesses: the unit test holds a retirement to its deadline (the confirmed stop plus the longer of the audit horizon and the longest Mission lifetime) and refuses one it cannot establish; the endpoint test finds a compromised Status key resolvable in the historical key set after its withdrawal. The set keeps every listed key; nothing removes one. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.signing-keys.compromised-withdrawn",
@@ -23879,7 +23879,7 @@
     "local": "Compromising a generation withdraws it from the jwks_uri and stops signing under it, activating a replacement in the same write (#831 B2)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23894,7 +23894,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842). #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. D931 per-row review: tested. Obligation: a compromised key signs nothing further and is absent from the jwks_uri. Witnesses: the unit test withdraws the generation at once and activates a replacement in the same write; the endpoint test finds it absent from /jwks and the kernel signing under the replacement. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). The withdrawal takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.no-historical-fallback",
@@ -23914,7 +23914,7 @@
     "local": "The current-reliance keys never resolve a key from the historical key set; auditKeys alone reads one, to verify an archived response."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -23923,7 +23923,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833) and #831 B3 (#1766). #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. D931 per-row review: tested. Obligation: no consumer verifies a response for current reliance under a key found only in the historical key set. Witness: the PDP's current-reliance keys never resolve a listed key once the jwks_uri drops it, and only `auditKeys` reads the set. The reference's other Status and Lifecycle consumers (the Lifecycle client, the Signals receiver) never read the set at all."
   },
   {
    "id": "status.signing-keys.bounded-jwks-cache",
@@ -23943,7 +23943,7 @@
     "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23952,7 +23952,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -23972,7 +23972,7 @@
     "local": "A jwks_uri response without explicit freshness is stale when received, so the Status consumer revalidates it at every verification."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23981,7 +23981,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a jwks_uri response without valid explicit freshness is stale when received and revalidated before reuse, never given a heuristic lifetime. Witness: every verification refetches such a response. The Lifecycle client reuses no response."
   },
   {
    "id": "status.signing-keys.failed-revalidation-refuses",
@@ -24010,7 +24010,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a stale jwks_uri that cannot be revalidated refuses the Status response, with no stale fallback, until a revalidation succeeds. Gap: the sentence names Status or Lifecycle responses. The reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it."
   },
   {
    "id": "status.historical-key-set.signed",
@@ -24035,7 +24035,7 @@
     "local": "signHistoricalKeySet signs once at boot under the active Status key, the replacement after a Status compromise, and refuses a signer whose kid or key material the set lists."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -24050,7 +24050,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. D931 per-row review: tested. Obligation: the set is signed under the active Mission Status key, never a listed key or another role's, and after that key's compromise under its replacement. Witnesses: the endpoint test verifies the served set under the replacement Status key alone, the key the kernel now signs Status responses under; the unit test refuses a listed signer by kid and by key material. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.historical-key-set.consumer-validates-signer",
@@ -24070,7 +24070,7 @@
     "local": "verifyHistoricalKeySet accepts a set only with typ jwk-set+jwt, the expected iss, and a signature under the consumer's configured Status keys; a replacement Status key signs only once the configuration names it."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -24085,7 +24085,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); #831 C (#1697, #1705, D833) gave the Status consumers role-bound trusted kids, and #831 B3 (#1766) the historical key set they validate. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. D931 per-row review: tested. Obligation: a consumer accepts a set only under the Mission Status key its trusted configuration authorizes. Witnesses: the PDP's holder refuses a set under another role's published key, an unconfigured replacement (until configured), a wrong typ, and a learned-compromised key. It is the reference's only reader of the set."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -24110,7 +24110,7 @@
     "local": "historicalKeys converts the ring's ISO times to NumericDates and adds compromised_at only when the compromise recorded one."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -24125,7 +24125,169 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. D931 per-row review: tested. Obligation: each listed JWK carries revoked with reason compromised, revoked_at, and compromised_at only when established, as NumericDates. Witnesses: the unit test covers presence and absence of compromised_at and the NumericDate conversion; the endpoint test finds the full member on the served key. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
+  },
+  {
+   "id": "status.historical-key-set.media-type",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS serves the set with the media type `application/jwk-set+jwt` ({{OpenID.Federation}}, Section 15.6).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with the HTTP Content-Type application/jwk-set+jwt"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type against the literal application/jwk-set+jwt, the media type OpenID Federation registers for a signed JWK Set (Section 15.6), not against the server's own constant. Mutation-proved (#1813 review, D945): the server serving application/jwk-set+json fails it; the earlier assertion against the shared constant let that pass."
+  },
+  {
+   "id": "status.historical-key-set.explicit-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS declares a freshness lifetime for the set with explicit freshness information ({{Section 4.2.1 of RFC9111}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with explicit freshness information, a freshness lifetime of its choosing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control is a max-age with a positive delta-seconds, not the server's own constant: the draft fixes no lifetime (the reference declares 300 s, as /jwks does). Mutation-proved (#1813 review): a lifetime that is not a valid delta-seconds fails it."
+  },
+  {
+   "id": "status.historical-key-set.consumer-refetches",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer refetches the set, or revalidates its copy ({{Section 4.3 of RFC9111}}), once that lifetime ends; a response without valid explicit freshness information is stale when received ({{Section 4.2.2 of RFC9111}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a historical key set fetches it again once the freshness lifetime the set declared ends, so it learns a key a later set lists, and treats a set served without explicit freshness as stale on receipt, fetching it again at each use"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > refetches the set once the lifetime it declares ends, learning a key a later set lists, and treats a set without explicit freshness as stale when received",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). Witnessed at the PDP's holder, the reference's only reader of the set: a key a later set lists is learned once the declared 300 s end, and a set served without Cache-Control is fetched at each use. Mutation-proved: never refetching a held set fails the learning assertion; giving a set without explicit freshness a heuristic lifetime fails the fetch count."
+  },
+  {
+   "id": "status.historical-key-set.compromise-not-cleared",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "a consumer MUST NOT treat it as no longer compromised because a later set omits it, an earlier set is presented again, or a fetch of the set fails.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a key a historical key set the consumer verified has listed stays refused for current reliance: a later set that omits it, an earlier valid set replayed, a set that does not verify, or a failed fetch of the set leaves it refused"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), the D887 consumer rule made normative. Witnessed at the PDP's holder, the reference's only reader of the set: a failed fetch and a set that does not verify keep the learned key refused; a replayed empty set the current key signed does not remove it; a set signed under a learned-compromised key is refused whole. Mutation-proved in #1766 (D887): replacing the held list on each set, and dropping the learned-signer check, each fail their witness."
+  },
+  {
+   "id": "status.historical-key-set.no-jwks-extension",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "the set's freshness never extends that of the consumer's cached `jwks_uri`, which {{signing-key-retention}} governs.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a fresh historical key set still refuses current reliance once its cached jwks_uri is stale and cannot be revalidated: the set extends nothing about the live keys"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > never lets a held set extend the cached jwks_uri's freshness: a stale jwks_uri that cannot be revalidated refuses, though the set is fresh",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), from D887's outage ruling: keeping verified compromise information during an outage does not extend the current JWKS's freshness. Witnessed at the PDP's consumer: with the set fresh for an hour and the jwks_uri's 60 s passed and unrevalidatable, a Status response under the current key is refused. Mutation-proved: a stale-if-error fallback on the live keys while a set is held fails it."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
@@ -24159,7 +24321,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3. #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. D931 per-row review: stays partial. Witnessed: no member and no set before a compromise, and both after it. Gap: the member is an https URL; the reference AS serves on http localhost (a development limitation, D887), so no witness shows the https form."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
@@ -65400,9 +65562,21 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > the consent commits the assembled ceiling, and refuses a ceiling configuration would now assemble differently, never substituting one",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned. A ceiling consent (#249 B.4, D875): consentCeiling, at the initial consent and at an Expansion's re-consent, refuses a ceiling configuration would now assemble differently (a reference newly required, or the rendered version superseded), never re-pinning. Proved by mutation: removing the recheck fails the witnesses."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -65471,9 +65645,27 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > the consented ceiling's entries carry the configured current reference, and the drawdown policy is kept",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > assembles the offer's references before it renders, and an offer configuration cannot assemble is not offered",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses. A progressive ceiling consent (#249 B.4, D875) is a new approval: the offer is assembled before the authorization page and an Expansion's review render it, and the consent commits the assembled ceiling. Proved by mutation, each alone: the page's offer, the review's offer or assembledCeilingOffer not assembling, or a consent commit not handed the declarations, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -65528,7 +65720,7 @@
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover and drawdown (an Expansion is a new approval, so it assembles; #249 B.3) are not yet witnessed here (the #249 cutover, D875)"
+    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); token derivation, refresh, token exchange and carryover are not yet witnessed here (the #249 cutover, D875). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
    },
    "tests": [
     {
@@ -65572,9 +65764,33 @@
      "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling carrying a reference carries it into the activation, and refuses a proposal naming another",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a superseded ceiling reference within its retention survives a drawdown, and a retired one refuses",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes, its successor carrying the consented ceiling's reference",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -65594,7 +65810,7 @@
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation, and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
    },
    "tests": [
     {
@@ -65606,6 +65822,12 @@
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
      "level": "unit",
      "surface": "derivation"
     }
