@@ -2436,7 +2436,7 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
     });
 
-    it("after a completed payment, a retry under its key, a reversal carrying the payment's amount refused constraint_unsupported, an executed reversal decided without an amount, a non-execution record for the payment, and a retry after each leave the payment's claim completed and its 300.00 committed on both counters (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
+    it("after a completed payment, a retry under its key, a reversal carrying the payment's amount refused constraint_unsupported, a compensation request missing its metering projection followed by synthetic completed evidence for it, a non-execution record for the payment, and a retry after each leave the payment's claim completed and its 300.00 committed on both counters (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
       const c = clock();
       const { file, open } = domainOnFile(c);
       const claims = open();
@@ -2470,7 +2470,9 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       await retry("retry after the refused reversal");
       expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
       stillCommitted("repeated reversal");
-      // A compensate decision carrying no amount is a spend this PDP does not see: permitted, linked to the payment, claimed under its own key and charged nothing.
+      // A compensation request missing its metering projection: context.amount is deleted while the normalized parameters still carry
+      // the amount. It is permitted, linked to the payment, claimed under its own key and charged nothing. It is not a zero-cost or
+      // executable payment reversal (D991); the reference PEP's priced reversal stays refused above.
       const unpriced = request(c, { action: REVERSE, phase: "compensate", compensates: a });
       delete (unpriced.context as { amount?: unknown }).amount;
       const compensation = await evaluate(unpriced, options(claims, c, v));
@@ -2479,11 +2481,11 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       const compensationEvidence = compensation.context.decision_evidence as DecisionEvidenceObject;
       expect(compensationEvidence.compensates_evaluation_id).toBe(a);
       expect(compensationEvidence.metering).toBeUndefined();
-      // The executed reversal settles its own claim, never the payment's.
+      // Synthetic completed evidence for that request settles its own claim, never the payment's.
       expect(await claims.settle(REQUESTER, await executionRecord(r, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
       expect(claims.reservationsFor(r)).toEqual([]);
-      stillCommitted("executed reversal");
-      await retry("retry after the executed reversal");
+      stillCommitted("compensation request missing its metering projection");
+      await retry("retry after the compensation request");
       // A record presenting the reversed payment as not executed is a conflicting settlement: refused, and nothing is released.
       const notExecuted = await executionRecord(a, "suppressed");
       expect((await claims.settle(REQUESTER, notExecuted, () => String(notExecuted.execution_id))).accepted).toBe(false);
