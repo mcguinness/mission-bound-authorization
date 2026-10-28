@@ -2026,7 +2026,8 @@ Refusals follow {{error-mapping}}.
    distinct checks: an organizational owner may be authorized to
    activate policy without personally holding every operational
    permission. The AS MUST refuse when either relationship cannot be
-   established.
+   established. {{record-principal-members}} states the refusal to
+   approve a Mission whose authority source the AS does not recognize.
 4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
    any ceiling an applicable Mission-creating profile defines. The
@@ -2098,6 +2099,9 @@ Authority Set, and the integrity anchors over them); the principals
 the issuer's provenance (the policy version and the approval event's
 identifier); and the Mission's expiry and lifecycle state.
 {{mission-record}} defines each member and when it is present.
+{{record-provenance-members}} states how the AS deduplicates a retried
+or duplicate delivery of the same approval decision on
+`approval_event_id`.
 
 ## Subject Establishment {#subject-establishment}
 
