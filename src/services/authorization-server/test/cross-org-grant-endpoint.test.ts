@@ -27,6 +27,7 @@ import {
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   type AttenuationOperations,
+  chainDigest,
   ResourceContractDeclarations,
   type ResourceContractRef,
   resourceContractDigest,
@@ -651,12 +652,16 @@ describe("the minted token and derivation evidence (@spec cross-org-delegation#p
     expect(payload.authorization_details).toEqual(body.authorization_details);
 
     // exp never outlives the leaf's own exp nor the configured local TTL.
-    const leafPayload = JSON.parse(Buffer.from(chain[1]!.split(".")[1] as string, "base64url").toString()) as { exp: number };
+    const leafPayload = JSON.parse(Buffer.from(chain[1]!.split(".")[1] as string, "base64url").toString()) as { exp: number; jti: string };
     const iat = payload.iat as number;
     expect(payload.exp).toBe(Math.min(iat + crossOrgOptions.accessTokenTTL, leafPayload.exp));
 
     expect(evidence.length).toBe(before + 1);
     const record = evidence[evidence.length - 1] as CrossOrgDerivationRecord;
+    // @spec cross-org-delegation#projection: the chain digest over the
+    // presented aat_chain, and the leaf's jti.
+    expect(record.chain_digest).toBe(chainDigest(chain));
+    expect(record.leaf_jti).toBe(leafPayload.jti);
     expect(record.output_authority).toEqual(body.authorization_details);
     // FULL_CEILING covers everything the origin granted, so this call narrows
     // nothing (the narrowing case is covered separately, below).

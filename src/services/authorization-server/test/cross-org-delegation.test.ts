@@ -10,7 +10,7 @@
  * wire with `mission_constraints` (#1759).
  */
 import { aatJwkThumbprintUri, aatToolId, aatUuidV7, chainDigest, parHash, parseChainPresentation } from "@mission/core";
-import { decodeJwt, exportJWK, generateKeyPair, SignJWT, type JWK } from "jose";
+import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT, type JWK } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   deriveCrossOrgRoot,
@@ -285,6 +285,15 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
     await expect(
       verifyCrossOrgChain({ federation: fed, presentation: present(swapped, creds), nowS, stateSource: activeState }),
     ).rejects.toThrow();
+  });
+
+  it("refuses a hop whose cnf carries a thumbprint-only confirmation", async () => {
+    const derived = await rootFor();
+    const jkt = await calculateJwkThumbprint(await pub(agentB));
+    const hop1 = await rawChild(derived.root, agentA, { cnf: { jkt } });
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present([derived.root, hop1]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/substrate step 4b/);
   });
 
   it("refuses a missing middle hop", async () => {
