@@ -22,6 +22,9 @@ import {
 /** The diagnostics the PEP's `refuse` and `recordRefusal` call sites pass. */
 const REFUSAL_RECORD_DIAGNOSTICS = [
   "unknown_tool",
+  // #1756: an attenuation presentation the Mission layer refuses after the substrate permits it.
+  "invalid_credential",
+  "mission_claim_missing",
   "invalid_request",
   "unknown_mission",
   "unknown_invoice",
@@ -93,7 +96,7 @@ describe("the evidence store refuses a denial_reason outside the emitting role's
       await expect(evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput(bad)), bad).rejects.toThrow(/not in the closed set/);
     }
     expect(evidence.all()).toHaveLength(0);
-    // Every closed value signs, including the two this PEP never produces.
+    // Every closed value signs.
     for (const value of REFUSAL_DENIAL_REASONS.pep) {
       const record = await evidence.recordRefusal(CANONICAL_RESOURCE, "pep", refusalInput(value));
       expect(record.content.denial_reason, value).toBe(value);
