@@ -43,8 +43,24 @@ informative:
     date: 2026
   RFC6749:
   RFC8628:
+  RFC9068:
   RFC9126:
   RFC9396:
+  RFC9449:
+  RFC9635:
+  I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
+  FAPI.GrantManagement:
+    title: "Grant Management for OAuth 2.0"
+    target: https://openid.net/specs/oauth-v2-grant-management.html
+    author:
+      - org: OpenID Foundation
+    date: 2023
+  AuthZEN.ARAP:
+    title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
+    target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
+    author:
+      - org: OpenID Foundation
+    date: 2026
   RFC9943:
   RFC8693:
   I-D.draft-mcguinness-oauth-client-instance-id:
@@ -544,8 +560,9 @@ The body reads in four parts, followed by appendices:
   ({{deployment-profile}}).
 - **The appendices** hold the requirements the family answers
   ({{requirements}}), a comparison with a conventional stack
-  ({{standardization-crossovers}}), the Mapping Assessment of the
-  OAuth binding ({{oauth-statement}}), a worked composition
+  ({{standardization-crossovers}}), the relationship to adjacent
+  work ({{adjacent-work}}), the Mapping Assessment of the OAuth
+  binding ({{oauth-statement}}), a worked composition
   ({{worked-composition}}), the error surfaces ({{error-surfaces}}),
   illustrative verification guidance ({{verification-guidance}}), the
   Deployment Profile shapes ({{deployment-profile-examples}}), and the
@@ -3892,7 +3909,7 @@ standardizes:
 
 | Requirement | Conventional OAuth+PDP realization | Mission standardization | Illustrative added Mission cost |
 |---|---|---|---|
-| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible ({{I-D.draft-mcguinness-oauth-mission}}, Sections "Relationship to Existing OAuth Objects" and "Relationship to Adjacent Work") | Durable-object and lifecycle storage |
+| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible ({{I-D.draft-mcguinness-oauth-mission}}, Section "Relationship to Existing OAuth Objects"; {{adjacent-work}}) | Durable-object and lifecycle storage |
 | Multi-credential, multi-actor join | A deployment-invented transaction, grant, or workflow identifier shared across credentials | Stable approved-task semantics for that join, bound to authority and carried through delegation and fan-out outside one private PDP schema ({{swarm-execution}}) | New claims and endpoints |
 | A second trust domain | The partner calls the origin PDP, shares state, or federates policy, trading synchronous coupling, availability, and disclosure | Bounded local credentials and common anchors carried by Cross-Domain Projection, accepting local-token revocation latency (the Project verb): a portability choice, not the only possible design | State consistency and distribution; privacy and correlation surface |
 | Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite ({{I-D.draft-mcguinness-oauth-mission}}, Section "Relationship to Existing OAuth Objects"; the Prove verb) | Evidence operations |
@@ -3905,6 +3922,53 @@ stable join key, lifecycle checks, narrowing rules, and audit
 correlations. Mission standardizes that recurring shape across bindings
 and trust domains; it does not claim local policy systems cannot
 implement equivalent outcomes.
+
+# Relationship to Adjacent Work {#adjacent-work}
+
+This appendix relates the Mission, as the OAuth binding defines it,
+to adjacent specifications and capability systems;
+{{standardization-crossovers}} compares it with a conventional stack.
+
+A grant, in the sense of FAPI Grant Management {{FAPI.GrantManagement}},
+is a durable, queryable, revocable container of consented
+authorization data, with no task, integrity commitment, or
+derivation gating. A deployment can
+surface Mission revocation through a grant-management-style API
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation").
+
+Decision-layer access-request and approval workflows, such as the
+OpenID AuthZEN Access Request and Approval Profile {{AuthZEN.ARAP}},
+manage approval tasks but do not tie an approval to token issuance.
+The OAuth binding supplies the issuance-bound object such workflows
+complete into.
+
+The Grant Negotiation and Authorization Protocol {{RFC9635}} covers
+much of the same design space: a continuable authorization request,
+richer client instance identification, and native delegation. Rather
+than a new grant protocol, endpoints, and client machinery, the OAuth
+binding uses deployed OAuth 2.0 surfaces: Pushed Authorization
+Requests ({{RFC9126}}), Rich Authorization Requests ({{RFC9396}}),
+DPoP ({{RFC9449}}), and {{RFC9068}} access tokens. A deployment that
+runs PAR, RAR, and sender-constrained tokens adopts the Mission model
+without a GNAP grant endpoint or migrating its clients to GNAP.
+
+The Authority Set's subset rule ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Subset Rule") follows capability systems in which a holder narrows
+what it passes on without contacting an issuer: macaroons' caveat
+narrowing, Biscuit's offline attenuation blocks, UCAN's delegation
+chains, SPKI/SDSI's local-name reduction, and object-capability
+designs generally. For OAuth, attenuating agent tokens
+({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) carry the same
+offline narrowing, but do not combine it with the durable approved
+object, state-gated issuance, and integrity anchors the OAuth binding
+defines.
+
+In the OAuth binding, narrowing applies to a durable,
+approval-anchored object that its issuer can revoke for the Mission's
+full lifetime, not a bearer credential bounded only by its caveats.
+Revoking the Mission therefore still reaches everything derived from
+it that has not already left the issuer's reach
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation").
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 

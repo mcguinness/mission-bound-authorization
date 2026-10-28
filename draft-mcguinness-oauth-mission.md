@@ -73,7 +73,6 @@ informative:
   RFC7009:
   RFC8935:
   RFC9493:
-  RFC9635:
   RFC8628:
   RFC8792:
   I-D.draft-mcguinness-oauth-mission-child-delegation:
@@ -108,12 +107,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  FAPI.GrantManagement:
-    title: "Grant Management for OAuth 2.0"
-    target: https://openid.net/specs/oauth-v2-grant-management.html
-    author:
-      - org: OpenID Foundation
-    date: 2023
   AuthZEN.ARAP:
     title: "OpenID AuthZEN Access Request and Approval Profile 1.0"
     target: https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html
@@ -131,7 +124,6 @@ informative:
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-11
   I-D.draft-ietf-oauth-transaction-tokens:
-  I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
   I-D.draft-cecchetti-oauth-rar-cedar:
   I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-attenuation:
@@ -6321,8 +6313,13 @@ Token Claims" registry:
 - Change Controller: IETF
 - Specification Document(s): this document, {{mission-claim}}
 
-{{adjacent-work}} distinguishes this claim from similarly named claims
-and concepts of adjacent work.
+The `mission` claim ({{mission-claim}}) references a Mission, the
+authorization object this document defines. It is distinct from
+AAuth's `mission_s256` claim ({{I-D.draft-hardt-oauth-aauth-protocol}}),
+the SHA-256 digest that identifies an AAuth mission, and from the
+agent's mission that {{I-D.draft-ietf-wimse-aims}} names, the purpose
+this document translates into authorization. The two claim names do
+not collide in that registry.
 
 ## OAuth Token Introspection Response Registration {#oauth-token-introspection-response-registration}
 
@@ -6917,75 +6914,6 @@ refers back to. It is not another `authorization_details` type, since
 Rich Authorization Requests already express authority; it is the
 approved task with a lifecycle, which an Authority Set is derived for
 and gated by.
-
-## Relationship to Adjacent Work {#adjacent-work}
-
-A grant, in the sense of FAPI Grant Management {{FAPI.GrantManagement}},
-is a durable, queryable, revocable container of consented
-authorization data, with no task, integrity commitment, or
-derivation gating. A deployment can
-surface Mission revocation through a grant-management-style API
-({{revocation}}).
-
-This document specifies the issuance and governance layer that
-agent-identity work for OAuth leaves unspecified.
-{{I-D.draft-ietf-wimse-aims}} names the agent's mission and leaves its
-translation into authorization requirements out of scope. This
-document specifies that translation and reuses its assignments
-unchanged: the agent is the client, and the delegating principal is
-the token `sub` ({{principal-model}}). An agent authenticated and
-delegated per that document uses these mechanisms to obtain
-Mission-bound tokens.
-
-The `mission` claim ({{mission-claim}}) references a Mission, the
-authorization object this document defines. It is distinct from
-AAuth's `mission_s256` claim ({{I-D.draft-hardt-oauth-aauth-protocol}}),
-the SHA-256 digest that identifies an AAuth mission, and from the
-agent's mission that {{I-D.draft-ietf-wimse-aims}} names, the purpose
-this document translates into authorization. The two claim names do
-not collide in the JSON Web Token Claims registry
-({{json-web-token-claims-registration}}).
-
-Decision-layer access-request and approval workflows, such as the
-OpenID AuthZEN Access Request and Approval Profile {{AuthZEN.ARAP}},
-manage approval tasks but do not tie an approval to token issuance.
-This document supplies the issuance-bound object such workflows
-complete into.
-
-Nearby individual proposals each carry one Mission property without
-the others:
-
-- task-linked Rich Authorization Requests with revocation webhooks
-  carry a task link;
-- intent-digest admission assertions carry an intent commitment; and
-- offline capability attenuation
-  ({{I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}) carries
-  offline narrowing.
-
-None combines the durable approved object, state-gated issuance, and
-integrity anchors this document defines.
-
-The Grant Negotiation and Authorization Protocol {{RFC9635}} covers
-much of the same design space: a continuable authorization request,
-richer client instance identification, and native delegation. Rather
-than a new grant protocol, endpoints, and client machinery, this
-document uses deployed OAuth 2.0 surfaces: Pushed Authorization
-Requests ({{RFC9126}}), Rich Authorization Requests ({{RFC9396}}),
-DPoP ({{RFC9449}}), and {{RFC9068}} access tokens. A deployment that
-runs PAR, RAR, and sender-constrained tokens adopts the Mission model
-without a GNAP grant endpoint or migrating its clients to GNAP.
-
-The Authority Set's subset rule ({{subset}}) follows capability
-systems in which a holder narrows what it passes on without
-contacting an issuer: macaroons' caveat narrowing, Biscuit's
-offline attenuation blocks, UCAN's delegation chains, SPKI/SDSI's
-local-name reduction, and object-capability designs generally.
-
-In this document, narrowing applies to a durable,
-approval-anchored object that its issuer can revoke for the Mission's
-full lifetime, not a bearer credential bounded only by its caveats.
-Revoking the Mission therefore still reaches everything derived from
-it that has not already left the issuer's reach ({{revocation}}).
 
 ## Missions, Plans, and Execution {#the-mission-the-plan-and-execution}
 
