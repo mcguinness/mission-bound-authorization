@@ -40,6 +40,22 @@ export function kernelBudgetBinding(
 }
 
 /**
+ * @spec control-plane#isolation (#1748): the view a Mission reference names,
+ * only when this kernel holds that Mission under the reference's own issuer.
+ * A reference naming another issuer resolves nothing, even where this kernel
+ * holds a Mission with the same local identifier, so a foreign Mission never
+ * reaches the PEP state keyed by the bare identifier (its operation keys and
+ * Execution Evidence sequences).
+ */
+export function kernelMissionViewFor(
+  kernel: MissionKernel,
+  ref: { id: string; issuer: string },
+): MissionView | undefined {
+  const view = kernelMissionView(kernel, ref.id);
+  return view && view.issuer === ref.issuer ? view : undefined;
+}
+
+/**
  * The committed view of `missionId`, with expiry applied, or `undefined` when
  * the kernel holds no such Mission or its durable state is uncertain.
  */

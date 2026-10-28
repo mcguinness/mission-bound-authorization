@@ -283,6 +283,10 @@ const STATUS_INDEX_MAX_ATTEMPTS = 16;
 const DEFAULT_STATUS_FRESHNESS_SECONDS = 60;
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS kernel_issuer (
+  k INTEGER PRIMARY KEY CHECK (k = 1),
+  issuer TEXT NOT NULL
+) STRICT;
 CREATE TABLE IF NOT EXISTS missions (
   id TEXT PRIMARY KEY,
   issuer TEXT NOT NULL,
@@ -350,6 +354,24 @@ CREATE TABLE IF NOT EXISTS approval_reservations (
  * the Mission Signals outbox key migration, and the lifecycle-response
  * retention columns.
  */
+/**
+ * @spec control-plane#isolation (#1748): one issuer owns a kernel database.
+ * Its first open records that issuer; an open under any other issuer is
+ * refused before anything else is written, so a file-backed store cannot be
+ * reopened in another issuer's namespace. A store written before this record
+ * existed is bound to the issuer that first opens it after the upgrade.
+ */
+function bindKernelIssuer(db: Database, issuer: string): void {
+  const bound = db.prepare("SELECT issuer FROM kernel_issuer WHERE k = 1").get() as { issuer: string } | undefined;
+  if (bound === undefined) {
+    db.prepare("INSERT INTO kernel_issuer (k, issuer) VALUES (1, ?)").run(issuer);
+    return;
+  }
+  if (bound.issuer !== issuer) {
+    throw new KernelIssuerMismatchError(`the kernel store belongs to ${bound.issuer}, not ${issuer}`);
+  }
+}
+
 function migrateMissions(db: Database): void {
   const columns = new Set(
     (db.prepare("PRAGMA table_info(missions)").all() as Array<{ name: string }>).map((c) => c.name),
@@ -420,6 +442,9 @@ export class MissionNotFoundError extends Error {}
  * from the Mission's current state version (`stale_version`, HTTP 409).
  */
 export class StaleVersionError extends Error {}
+
+/** A kernel store opened under an issuer other than the one that owns it (#1748). */
+export class KernelIssuerMismatchError extends Error {}
 /** An `expected_version` for a stale-version message: a canonical numeral beyond any state version is carried as Infinity (#1724 C6). */
 function staleVersionLabel(expected: number): string {
   return Number.isFinite(expected) ? String(expected) : "beyond any state version";
@@ -1127,7 +1152,9 @@ export class MissionKernel {
       if (opts.recoveryWitness && opts.store?.file) {
         this.recovery = guardKernelStore(this.db, opts.store.file, opts.recoveryWitness.file);
       } else if (opts.store?.file) refuseUnwitnessedOpen(this.db);
+      bindKernelIssuer(this.db, opts.issuer);
     } catch (e) {
+      this.recovery?.release();
       this.db.close();
       throw e;
     }

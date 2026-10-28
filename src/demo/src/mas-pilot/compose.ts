@@ -66,7 +66,7 @@ import {
   RUNTIME_POSTURE,
   type StateSourcePlacement,
 } from "@mission/pdp";
-import { kernelMissionView } from "../kernel-mission-view.js";
+import { kernelMissionViewFor } from "../kernel-mission-view.js";
 import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResourcePolicy } from "../resource-policy-store.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "./config.js";
 import {
@@ -185,8 +185,8 @@ export interface MissionStateWiring {
  */
 function missionLoader(kernel: MissionKernel): (ref: MissionReference) => LoadedView | undefined {
   return (ref) => {
-    const view = kernelMissionView(kernel, ref.id);
-    if (!view || view.issuer !== ref.issuer) return undefined;
+    const view = kernelMissionViewFor(kernel, ref);
+    if (!view) return undefined;
     return {
       view,
       observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() },

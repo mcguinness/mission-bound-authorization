@@ -161,6 +161,7 @@ export {
   MissionStateUnavailableError,
   ObservationWatermarkError,
   StaleVersionError,
+  KernelIssuerMismatchError,
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
