@@ -484,8 +484,8 @@ export type SettlementResult =
       duplicate: boolean;
       /**
        * @spec metering#settlement-states (#816, owner review of #1713): the
-       * claim did not take this `completed` record (its window closed, it was
-       * purged, or it was settled otherwise), but the budget did: the
+       * claim did not take this `completed` record (its window closed, or it
+       * was settled otherwise), but the budget did: the
        * evaluation's released reservations were committed (or already were).
        * The claim itself is unchanged.
        */
@@ -1463,10 +1463,11 @@ export class IdempotencyClaimDomain {
     // any, is already applied (a conflicting `completed` commits).
     if (settled.accepted || next !== "completed" || settled.reason === CONFLICTING_SETTLEMENT) return settled;
     // @spec metering#settlement-states (#816, owner review of #1713): the
-    // claim refused the record (its window closed, it was purged, or it was
-    // settled otherwise), but the budget's accounting does not depend on the
-    // claim's window. The verified record establishes execution, so a
-    // released reservation of the permit it names commits.
+    // claim refused the record (its window closed, or it was settled
+    // otherwise), but the budget's accounting does not depend on the claim's
+    // window. The verified record establishes execution, so a released
+    // reservation of the permit it names commits. A claim row that is gone
+    // never reaches here (#1841): its boundary is not retained.
     const corrected = this.tx(() =>
       this.correctReleasedReservations(requester, evaluationId, `corrected_completed:${outcomeRef}`, this.now().getTime()),
     );
@@ -1477,7 +1478,10 @@ export class IdempotencyClaimDomain {
    * @spec metering#settlement-states (#816, owner review of #1713): the
    * budget correction from the executing PEP's verified `completed` record,
    * on the reservation rather than the claim, so it holds whatever the
-   * claim's state or window. Only the PEP and epoch the reserving permit was
+   * claim's state or window. It is reached only while the claim row exists,
+   * since `settle` binds the record to the boundary retained there (#1841); a
+   * reservation whose claim row is gone is corrected only by the operator's
+   * `executed` answer. Only the PEP and epoch the reserving permit was
    * issued to may correct it. A released reservation commits (an excess is
    * reported through `onBudgetOverspend`); one already committed is a
    * duplicate; one released because no permit ever left the PDP is refused,
