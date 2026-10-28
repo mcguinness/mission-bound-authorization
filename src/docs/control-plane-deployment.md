@@ -573,14 +573,16 @@ the record, with the expiry clock materialized in that read, and it carries its
 read and are never restamped; its freshness is 60 seconds, within
 `mission_max_stale_seconds` (300). Introspection reads the same record, the
 Mission Status List is rebuilt from the record set, and the Signals event is
-the committed lifecycle event, published after its commit and dated by its
-`committed_at`, a transition record rather than a signed state observation
-(D993). These four are the
+the committed lifecycle event, published after its commit. These four are the
 deployment's whole set of state-observation surfaces: it defines no parallel
-signed state-snapshot protocol (a deployment-inventory conclusion, D874).
-Refusing an
-observation whose commit point advanced is an optional policy
-(`strictObservationWatermark`), off. There is no lease and no replica read.
+signed state-snapshot protocol (a deployment-inventory conclusion, D874). The
+Signals surface's signed artifact, the SET, is a transition record dated by its
+`committed_at`, not a signed state observation (D993); the signed-artifact
+inventory under
+[Control-plane implementation boundary](#control-plane-implementation-boundary)
+classifies every signed artifact. Refusing an observation whose commit point
+advanced is an optional policy (`strictObservationWatermark`), off. There is no
+lease and no replica read.
 
 ### Replication and recovery model
 
