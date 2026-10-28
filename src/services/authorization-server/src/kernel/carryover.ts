@@ -42,6 +42,7 @@ import { withTransaction, type Database } from "@mission/store";
 import { compactVerify, type CryptoKey, type JWK, type KeyObject } from "jose";
 import { audienceReferences, inheritedAudiences } from "./approved-audience.js";
 import { inheritCapabilitySources } from "./capability-binding.js";
+import { successorAuthority as successorOf } from "./expansion.js";
 import {
   asNum,
   childrenOf,
@@ -989,10 +990,14 @@ export function prepareCarryover(
   // @spec child-delegation#fanout (#1304): with the child-actor origins the
   // successor's own derivation records, index-aligned through the per-entry
   // capability transforms, as the successor record will retain them.
-  const successorDerived = kernel.deriveWithProvenance(input.successorIntent, input.successorProposal);
-  const successorAuthority = kernel.resolveFreshCapabilities(
-    inheritCapabilitySources(successorDerived.entries, predecessor.authority_set),
-  );
+  // @spec resource-access#resource-contract (#249, #1845, D875): built by the
+  // one construction the successor itself is created by
+  // ({@link successorOf}): an Expansion is a new approval, so its references
+  // are assembled here too, and the manifest commits exactly the authority the
+  // approval creates. The reference stays in the commitment, and completion's
+  // mismatch check is unchanged.
+  const successorDerived = successorOf(kernel, input.successorIntent, input.successorProposal, predecessor);
+  const successorAuthority = successorDerived.entries;
 
   const planId = `cryp_${randomBytes(12).toString("base64url")}`;
   const reserved = store.reserve(issuer, planId, [

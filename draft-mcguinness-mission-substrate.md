@@ -934,9 +934,10 @@ MUST contain a section titled "Mission Substrate Statement".  For a
 specification that makes no such claim, another document MAY instead
 publish a **Mapping Assessment** of it: that other document's own
 assessment of how the unclaiming specification realizes the kernel
-and capabilities, in the Statement's form (for example, the OAuth
-binding publishes one of itself; {{I-D.draft-mcguinness-oauth-mission}},
-Section "OAuth Binding Mapping Assessment").  A Mapping Assessment is
+and capabilities, in the Statement's form (for example, the
+architecture document publishes one of the OAuth binding;
+{{I-D.draft-mcguinness-mission-architecture}}, Section "OAuth Binding Mapping
+Assessment").  A Mapping Assessment is
 not the assessed specification's conformance result, and no such
 result exists unless the specification claims conformance itself;
 the assessment binds only the document that publishes it, and the
@@ -1196,10 +1197,11 @@ normative Mission Substrate Statements: the standalone MAS
 ({{I-D.draft-mcguinness-mission-aauth}}), UMA
 ({{I-D.draft-mcguinness-mission-uma}}), and GNAP
 ({{I-D.draft-mcguinness-mission-gnap}}) bindings each publish their
-own.  The OAuth binding instead publishes its own Mapping Assessment
-of itself against this document's kernel and capabilities
-({{I-D.draft-mcguinness-oauth-mission}}, Section "OAuth Binding
-Mapping Assessment").  Those Statements and that Assessment, not this
+own.  The OAuth binding publishes none; the architecture document
+instead publishes a Mapping Assessment of it against this document's
+kernel and capabilities ({{I-D.draft-mcguinness-mission-architecture}},
+Section "OAuth Binding Mapping Assessment").  Those Statements and
+that Assessment, not this
 appendix, are the authoritative capability claims.  This appendix
 illustrates the mapping method through three design poles among
 which a new substrate can locate itself.
@@ -1319,12 +1321,12 @@ OAuth binding.
 Precedence is scoped, not global.  For the OAuth-native binding, the
 OAuth binding's definitions govern that mapping; this document governs
 the kernel and capability vocabulary.  Neither document takes a
-normative dependency on the other: this appendix is informative, and
-the OAuth binding publishes its own Mapping Assessment of itself
-against this document's kernel in its own text
-({{I-D.draft-mcguinness-oauth-mission}}, Section "OAuth Binding
-Mapping Assessment"), informatively citing this document in turn; the
-family manifest's typed edges record both directions as informative.
+normative dependency on the other: this appendix is informative, the
+OAuth binding cites this document informatively, and the architecture
+document publishes the Mapping Assessment of the OAuth binding against
+this document's kernel ({{I-D.draft-mcguinness-mission-architecture}}, Section
+"OAuth Binding Mapping Assessment"); the family manifest's typed
+edges record both directions as informative.
 
 Ownership migrates by touch, not by relocation.  When a
 binding-neutral definition next changes substantively, the change
@@ -1334,6 +1336,11 @@ reference to it; no change is ever made solely to move words.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- The Mapping Assessment of the OAuth binding is published by the
+  architecture document; this document's Mission Substrate Statement,
+  Binding Mapping Guidance and Family Use cite it there.  No
+  requirement changed.
 
 - The Mission Substrate Statement's capability table is a capability
   list with one entry per capability, which fits the text rendering.
