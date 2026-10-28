@@ -571,7 +571,7 @@ async function approvalPage(issuer: string, client: Client, intentExtra: Record<
   });
   storeCookies(res, jar);
   const uid = (res.headers.get("location") as string).split("/interaction/")[1] as string;
-  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: cookieHeader(jar) } });
+  const page = await fetch(`${issuer}/interaction/${uid}`, { headers: { cookie: floorApprovalHeaders(approvalSessions.get(issuer) as ApprovalSessionStore, uid, cookieHeader(jar)).cookie as string } });
   expect(page.status).toBe(200);
   return page.text();
 }

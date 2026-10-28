@@ -754,10 +754,21 @@ export function assertApproverMayActivate(
 ): void {
   const local = assertLocalPrincipal(catalog, approver, "approver");
   if (!entry.activators.includes(local.sub)) {
-    throw new IntentError(
-      "access_denied",
+    throw new ActivationRefusedError(
       `approver '${local.sub}' is not authorized to activate the ${entry.type} authority source '${entry.id}'`,
     );
+  }
+}
+
+/**
+ * @spec mission#approval-preparation (step 3, #1802): gate 2's refusal. Its
+ * code stays `access_denied` on every surface that maps it; the approval page
+ * tells it apart as a refusal of this Approver alone, which leaves the request
+ * pending for another.
+ */
+export class ActivationRefusedError extends IntentError {
+  constructor(message: string) {
+    super("access_denied", message);
   }
 }
 
