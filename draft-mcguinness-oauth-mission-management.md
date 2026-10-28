@@ -701,16 +701,21 @@ schedule a bulk `suspend` commits.
 
 The membership is the one the dry run evaluated. A Mission created, or
 newly matching the filter, after the dry run is not in the membership
-and MUST NOT be operated on; a member that transitioned in the interim
-yields an `already_terminal` or `illegal_transition` outcome rather
-than a surprise transition ({{bulk-token-security}}).
+and MUST NOT be operated on. Before applying the operation to a member
+that is not `terminated`, the AS MUST compare the member's current
+state version with the version the bulk token pins for it. A member
+whose version differs is not operated on and is reported
+`stale_version` ({{manifest}}), unchanged, while the other members
+proceed. A member that changed after the dry run, even one whose state
+returned to the reviewed value, therefore never takes a transition the
+reviewer did not see ({{bulk-token-security}}).
 
-The dry-run-then-execute exchange with its pinned membership is the
-bulk-path analog of the status profile's `expected_version` guard
-({{I-D.draft-mcguinness-oauth-mission-status}}), and a deployment
-that requires `expected_version` for an operation it classifies
-high-risk satisfies that requirement on the bulk path through the
-pinned membership plus the per-member outcomes ({{manifest}}).
+The per-member version pin is the bulk-path form of the status
+profile's `expected_version` guard
+({{I-D.draft-mcguinness-oauth-mission-status}}). A deployment that
+requires `expected_version` for an operation it classifies high-risk
+satisfies that requirement on the bulk path through the pinned
+versions, with a stale member skipped rather than the batch refused.
 
 ## Outcome Manifest {#manifest}
 
