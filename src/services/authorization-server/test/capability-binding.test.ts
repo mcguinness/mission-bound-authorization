@@ -20,7 +20,6 @@ import {
   deriveAttenuationRoot,
   deriveCrossOrgRoot,
   mapAuthorityToCeiling,
-  mapAuthorityToTools,
   dispatchFromTemplate,
   inheritCapabilitySources,
   IntentError,
@@ -377,13 +376,15 @@ describe("wire-bound attenuation over recorded authority", () => {
     expect(root.missionConstraints).toEqual(ceiling.missionConstraints);
     expect(JSON.stringify(root.tools)).not.toContain("capability_sources");
     expect(JSON.stringify(root.missionConstraints)).not.toContain("capability_sources");
-    // The cross-organization root, still on its own wire (#1759).
-    const requestedTools = mapAuthorityToTools(record.authority_set);
+    // The cross-organization root maps the same way (#1759).
     const crossOrg = await deriveCrossOrgRoot(kernel, privateKey, "root", {
-      ...common, cnfJwk: HOLDER_JWK, requestedTools, actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
+      ...common, cnfJwk: HOLDER_JWK, operations: TEST_OPERATIONS, requested: { tools: ceiling.tools },
+      actor: { iss: ISS, sub: "ap-agent" }, mappingVersion: "test-v1",
     });
-    expect(crossOrg.tools).toEqual(requestedTools);
+    expect(crossOrg.tools).toEqual(ceiling.tools);
+    expect(crossOrg.missionConstraints).toEqual(ceiling.missionConstraints);
     expect(JSON.stringify(crossOrg.tools)).not.toContain("capability_sources");
+    expect(JSON.stringify(crossOrg.missionConstraints)).not.toContain("capability_sources");
   });
 });
 
