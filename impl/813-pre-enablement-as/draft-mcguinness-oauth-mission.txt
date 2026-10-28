@@ -3000,8 +3000,14 @@ Table of Contents
    [RFC9068] fixes the JWT's required claims (including jti), the typ
    header parameter value at+jwt, and resource server validation
    (Section 2.1 of [RFC9068], Section 2.2 of [RFC9068], Section 4 of
-   [RFC9068]).  In addition to what that profile requires, a derived
-   token:
+   [RFC9068]).  A token whose format a companion profile explicitly
+   defines, with its own typ and verification rules, follows that
+   profile instead, as the Mission Offline Attenuation root does
+   ([I-D.draft-mcguinness-oauth-mission-attenuation]).  JWT access-token
+   validation remains governed by Section 4 of [RFC9068], including
+   acceptance of at+jwt or application/at+jwt.  A companion-format token
+   is consumed only under that companion's verification rules.  In
+   addition to what [RFC9068] requires, a derived token:
 
    *  carries the token's Mission-derived authority as
       authorization_details ([RFC9396]); this MAY be the full Authority
@@ -7234,6 +7240,12 @@ Table of Contents
               bound-authorization/draft-mcguinness-oauth-mission-
               approved-set-verification.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -8726,6 +8738,12 @@ Appendix G.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Token Claims: a token whose format a companion profile explicitly
+      defines, with its own typ and verification rules (the Mission
+      Offline Attenuation root), follows that profile; JWT access-token
+      validation stays under Section 4 of RFC 9068, accepting at+jwt or
+      application/at+jwt (#1760).
 
    *  Configured-mapping mode can key on the requested scope values for
       a scope-only target, through that target's trusted scope-

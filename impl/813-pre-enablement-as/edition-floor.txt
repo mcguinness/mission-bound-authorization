@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-28T05:31:34Z
-Source repository commit: b5979b16bc1f65d9a7d518515d8b317e39f2b1bc
+Generated: 2026-10-28T15:26:51Z
+Source repository commit: 5dd6e89386f0b122112d5b22f91ff1f8ab873dfc
 Member count: 7
 
 Reading order:
@@ -10599,8 +10599,14 @@ Table of Contents
    [RFC9068] fixes the JWT's required claims (including jti), the typ
    header parameter value at+jwt, and resource server validation
    (Section 2.1 of [RFC9068], Section 2.2 of [RFC9068], Section 4 of
-   [RFC9068]).  In addition to what that profile requires, a derived
-   token:
+   [RFC9068]).  A token whose format a companion profile explicitly
+   defines, with its own typ and verification rules, follows that
+   profile instead, as the Mission Offline Attenuation root does
+   ([I-D.draft-mcguinness-oauth-mission-attenuation]).  JWT access-token
+   validation remains governed by Section 4 of [RFC9068], including
+   acceptance of at+jwt or application/at+jwt.  A companion-format token
+   is consumed only under that companion's verification rules.  In
+   addition to what [RFC9068] requires, a derived token:
 
    *  carries the token's Mission-derived authority as
       authorization_details ([RFC9396]); this MAY be the full Authority
@@ -14833,6 +14839,12 @@ Table of Contents
               bound-authorization/draft-mcguinness-oauth-mission-
               approved-set-verification.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -16326,6 +16338,12 @@ Appendix G.  Document History
 
    -02
 
+   *  Token Claims: a token whose format a companion profile explicitly
+      defines, with its own typ and verification rules (the Mission
+      Offline Attenuation root), follows that profile; JWT access-token
+      validation stays under Section 4 of RFC 9068, accepting at+jwt or
+      application/at+jwt (#1760).
+
    *  Configured-mapping mode can key on the requested scope values for
       a scope-only target, through that target's trusted scope-
       projection mapping, which also relates a requested value back to
@@ -16996,10 +17014,11 @@ Table of Contents
       it sent.
 
    The request also carries the client authentication parameters of the
-   method it uses (Section 3.2): client_id, REQUIRED with mTLS client
-   authentication (Section 2 of [RFC8705]), and client_assertion_type
-   and client_assertion, REQUIRED with private-key-JWT client
-   authentication [RFC7523].
+   method it uses (Section 3.2), for example client_id, REQUIRED with
+   mTLS client authentication (Section 2 of [RFC8705]), or
+   client_assertion_type and client_assertion, REQUIRED with private-
+   key-JWT client authentication [RFC7523].  A method that carries its
+   credentials in HTTP header fields keeps them there.
 
    The Mission Issuer's configuration states which audiences each
    authenticated caller may request: a resource server is typically
@@ -18876,9 +18895,33 @@ Table of Contents
 12.2.  OAuth Extensions Error Registration
 
    IANA is requested to register the following in the "OAuth Extensions
-   Error Registry" [RFC6749]. not_found is already registered for
-   another usage location; its entry here adds the usage locations of
-   this document.
+   Error Registry" [RFC6749]. invalid_request, invalid_client and
+   not_found are already registered for other usage locations; their
+   entries here add the usage locations of this document.
+
+   *  Error Name: invalid_request
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
+
+   *  Error Name: invalid_client
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: unauthorized
 
@@ -19204,6 +19247,16 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   -01
+
+   *  The Mission Status Request gives the client authentication
+      parameters of mTLS and private-key JWT as examples; a method that
+      carries its credentials in HTTP header fields keeps them there.
+
+   *  IANA Considerations adds the Mission Status and Mission Lifecycle
+      endpoints as usage locations for invalid_request and
+      invalid_client.
 
    -00
 
@@ -28429,8 +28482,19 @@ Table of Contents
       bound decided either deny (Section 7).
 
    *  A request whose authority is absent, or carries an entry the PDP
-      cannot evaluate in full, is denied credential_invalid: the PDP
-      MUST NOT fall back to the Mission's authority.
+      cannot evaluate in full, is denied credential_invalid, and the PDP
+      MUST NOT fall back to the Mission's authority.  This profile
+      deliberately requires the credential's entire authority
+      description to be evaluable, so an unevaluable credential entry
+      invalidates the request even when another entry could authorize it
+      under Resource Access's alternative-entry rule
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]).  That is
+      this profile's credential validation policy; the prohibition on
+      falling back to the Mission's authority does not by itself require
+      it.  An entry the PDP evaluates and finds unsatisfied invalidates
+      nothing: another complete entry of authority still authorizes the
+      action.  The policy has an interoperability cost: adding an entry
+      a PDP cannot evaluate makes the credential unusable at that PDP.
 
 5.7.  Action Parameters and Parameter Digest
 
@@ -31243,6 +31307,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Credential Decision Context: requiring a credential's whole
+      authority description to be evaluable is this profile's credential
+      validation policy, stricter than Resource Access's alternative-
+      entry rule and not a consequence of the prohibition on falling
+      back to the Mission's authority; an entry the PDP evaluates and
+      finds unsatisfied still lets another complete entry authorize; the
+      interoperability cost is stated (#1806).
 
    *  Changes a requirement (#956, D814): where the runtime Enforcement
       Scope Statement declares action classes, the PDP refuses a
