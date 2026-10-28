@@ -109,6 +109,7 @@ async function expectRevokedAtResource(agent: AgentClient, token: string, requir
   if (requirement === undefined) {
     expect(res.headers["aauth-requirement"]).toBeUndefined();
   } else {
+    expect(typeof res.headers["aauth-requirement"]).toBe("string");
     const field = parseRequirement(res.headers["aauth-requirement"] as string);
     expect(field.requirement).toBe(requirement);
     expect(field.params.get("resource-token")).toBeUndefined();
@@ -222,7 +223,7 @@ describe("termination through the control plane, with revocation at the Resource
 });
 
 describe("unavailable revocation (@spec mission-aauth-management#residuals, aauth#section-11.12.3)", () => {
-  it("unavailable revocation: while the endpoint answers 5xx or drops the connection the person token stays unconfirmed and complete false, and when it returns the retry confirms it", async () => {
+  it("unavailable revocation: while the endpoint answers 5xx, drops the connection or answers a malformed 200, the person token stays unconfirmed and complete false, and when it returns the retry confirms it", async () => {
     const agent = await w.agent();
     const s256 = await w.approve(agent);
     const person = await agent.requestPersonToken(RESOURCE);
@@ -252,23 +253,30 @@ describe("unavailable revocation (@spec mission-aauth-management#residuals, aaut
     expectRefused(await refusal(agent.call(RESOURCE, "/api/documents")), 403, "mission_terminated");
     nothingHappened(before, effects);
 
-    // The next attempt, after the backoff, meets a dropped connection: still unconfirmed.
-    w.revocationSwitch.mode = "reset";
-    w.clock.advance(30_000);
-    await w.ps.revocations?.runDue();
+    // The next attempts, each after its backoff, meet a dropped connection
+    // and then a malformed 200: still unconfirmed.
     const admin = w.manager(w.admins.alice);
-    expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
-      tracked: 1,
-      revocation_attempted: 1,
-      revocation_confirmed: 0,
-      residual_until: rfc3339(exp),
-      complete: false,
-    });
-    expect(w.revocationSwitch.attempts.map((a) => a.mode)).toEqual(["error", "reset"]);
+    for (const [mode, backoff] of [
+      ["reset", 30_000],
+      ["malformed", 60_000],
+    ] as const) {
+      w.revocationSwitch.mode = mode;
+      w.clock.advance(backoff);
+      await w.ps.revocations?.runDue();
+      expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
+        tracked: 1,
+        revocation_attempted: 1,
+        revocation_confirmed: 0,
+        residual_until: rfc3339(exp),
+        complete: false,
+      });
+    }
+    expect(w.revocationSwitch.attempts.map((a) => a.mode)).toEqual(["error", "reset", "malformed"]);
+    expect(revokedAtResource()).toEqual([]);
 
     // The endpoint returns: the next due retry confirms the person token.
     w.revocationSwitch.mode = "available";
-    w.clock.advance(60_000);
+    w.clock.advance(120_000);
     await w.ps.revocations?.runDue();
     expect(revokedAtResource()).toEqual([pair(person)]);
     expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
@@ -414,7 +422,8 @@ describe("restart mid-revocation (@spec mission-aauth-management#races-and-failu
           [decodeClaims(person).jti as string]: "confirmed",
           [decodeClaims(auth).jti as string]: "confirmed",
         }),
-      { timeout: 5000, interval: 20 },
+      // Within the test's own time limit, so a loop that never runs fails here.
+      { timeout: 3000, interval: 20 },
     );
     expect(revokedAtResource()).toEqual(expect.arrayContaining([pair(person), pair(auth)]));
     expect(((await admin.status(s256)).body as Record<string, unknown>).token_residual).toEqual({
