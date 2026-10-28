@@ -142,6 +142,8 @@ interface RequestOptions {
   action?: string;
   phase?: string;
   missionId?: string;
+  /** The Mission's issuer; defaults to the AS the fixture's principals belong to. */
+  missionIssuer?: string;
   sub?: string;
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
@@ -167,7 +169,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
     },
     context: {
-      mission: { id: o.missionId ?? "msn_917", issuer: "https://as.test" },
+      mission: { id: o.missionId ?? "msn_917", issuer: o.missionIssuer ?? "https://as.test" },
       actor: o.actor ?? { client_id: "ap-agent" },
       action_class: o.actionClass ?? "irreversible_action",
       parameter_digest: o.digest ?? "sha-256:operation-1",
@@ -282,6 +284,30 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.evaluation_id).toBe(permits[0]?.context.evaluation_id);
       expect(rows[0]?.state).toBe("permit_issued");
+    });
+  });
+
+  describe("the claim scope carries the canonical Mission identity (@spec control-plane#isolation, #1748)", () => {
+    it("gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const otherIssuer = "https://as-other.test";
+      const first = await evaluate(request(c, { key }), options(claims, c));
+      const second = await evaluate(
+        request(c, { key, missionIssuer: otherIssuer }),
+        options(claims, c, { view: view({ issuer: otherIssuer }) }),
+      );
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      expect(second.decision, JSON.stringify(second.context)).toBe(true);
+      expect(second.context.evaluation_id).not.toBe(first.context.evaluation_id);
+      claims.close();
+      const rows = rowsOf(file);
+      expect(rows.map((r) => r.evaluation_id).sort()).toEqual(
+        [String(first.context.evaluation_id), String(second.context.evaluation_id)].sort(),
+      );
+      expect(rows.map((r) => r.state)).toEqual(["permit_issued", "permit_issued"]);
     });
   });
 
