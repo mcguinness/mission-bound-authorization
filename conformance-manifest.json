@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "f840e2a086868bc25fa12eb25664b0116fb372ea",
-    "content_sha256": "031258375b9f81c473dc9d5f4cb8a0b044a7caafcba3fe653d1c4975a3f0e713"
+    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
+    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -15906,92 +15906,6 @@
     }
    ],
    "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. D733: the template dispatch witness in scope-projection.test.ts recovers an instance created while the target was unmapped and issues for it once the mapping is back, because the instance inherits the association its template retained at consent. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
-  },
-  {
-   "id": "core.other-types.original-audience-refusal",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "Without `narrowing`, a token for another audience does not carry the entry",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "token-endpoint",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
-    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
-   },
-   "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
-     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/device-authorization.test.ts",
-     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
-     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    }
-   ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.other-types.capability-carrier-first-false-governs",
@@ -45608,8 +45522,8 @@
    "coverage": "partial",
    "tests": [
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "toolsSubset (capability monotonicity) > adding a tool the parent lacks is NOT a subset (widen)",
+     "file": "src/packages/mission-core/test/aat-verify.test.ts",
+     "name": "verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 steps 1 to 5 and 6c, #1756) > refuses a child that names a tool its parent lacks, or widens a tool it keeps (I4, step 4p)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -45620,7 +45534,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain runs the same verifier since #1759 (#1818), and the earlier toolsSubset rule is retired (#1819). The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -62571,7 +62485,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
-    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; an attenuation root carries max_amount unchanged in mission_constraints, and a mint refuses a malformed currency before signing (the consumer's own reading); the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
    },
    "level": "unit",
    "coverage": "tested",
@@ -62596,18 +62510,18 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > refuses a malformed currency before signing, rather than carrying or folding it",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "name": "an attenuation root never carries a malformed max_amount (@spec mission#max-amount) > carries a well-formed max_amount unchanged, as a decimal string, and reads it back unchanged",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); admitting a malformed currency at the mint's carriable check (the consumer's own reading) fails its attenuation witness."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
@@ -62646,7 +62560,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > carries a well-formed code ISO 4217 does not assign unchanged, and reads it back",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64963,7 +64877,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the consumer recovers the same exact target for every action, whatever the audience",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64992,18 +64906,18 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an action whose tool identifier would read back as another target, rather than minting it",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
@@ -77860,7 +77774,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
-    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -77926,7 +77840,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Absorbs core.other-types.original-audience-refusal (#1793, D919): its Declared Transformation Capabilities sentence restated this rule, on the same tests, and was removed. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.tokens.multi-audience-refusal",
