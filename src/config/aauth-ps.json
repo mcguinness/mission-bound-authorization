@@ -1,0 +1,24 @@
+{
+  "issuer": "https://ps.test",
+  "signing_key": { "kid": "ps-signing-1", "alg": "Ed25519" },
+  "lifetimes": {
+    "person_token_seconds": 3600,
+    "auth_token_seconds": 3600,
+    "mission_default_seconds": 86400,
+    "mission_max_seconds": 604800
+  },
+  "persons": [
+    { "id": "alice", "tenant": "acme" },
+    { "id": "bob" }
+  ],
+  "agents": [
+    { "agent": "aauth:assistant@ap.test", "person": "alice", "mission_governed": true },
+    { "agent": "aauth:planner@ap.test", "person": "alice", "mission_governed": true },
+    { "agent": "aauth:helper@ap.test", "person": "bob", "mission_governed": false }
+  ],
+  "description_rules": [
+    { "contains": "wire transfer", "decision": "deny" },
+    { "contains": "delete all", "decision": "deny" }
+  ],
+  "default_decision": "approve"
+}

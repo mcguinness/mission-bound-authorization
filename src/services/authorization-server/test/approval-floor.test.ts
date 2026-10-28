@@ -28,7 +28,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, recheckApprovalGovernanceRecord } from "../src/index.js";
 import { evaluateApprovalFloor } from "../src/kernel/approval-floor.js";
 import type { AuthorityEntry, MissionRecord } from "../src/kernel/types.js";
-import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
+import { browserApprovalHeaders, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
 
 const PORT = 14791;
 const OVERRIDE_PORT = 14792;
@@ -184,8 +185,10 @@ async function authorize(
     approval: Approval;
     /** The ceiling members the decision consents (#1255). */
     ceiling?: Record<string, unknown>;
+    /** Runs between the rendering and the decision. */
+    beforeDecide?: () => void;
   },
-): Promise<{ code?: string; error?: string; description?: string; jar: Jar; missions: number; grants: number }> {
+): Promise<{ code?: string; error?: string; description?: string; jar: Jar; missions: number; grants: number; rendered: { status: number; html: string } }> {
   const jar: Jar = new Map();
   const missionsBefore = s.as.kernel.allMissions().length;
   let grants = 0;
@@ -232,8 +235,6 @@ async function authorize(
     keep(jar, res);
     let location = res.headers.get("location") ?? "";
     const uid = location.split("/interaction/")[1] as string;
-    // The Approver sees the page, which retains the ceiling it offers (#1017).
-    if (args.ceiling) await fetch(`${s.issuer}/interaction/${uid}`, { headers: { cookie: cookieOf(jar) } });
     const headers =
       "browser" in args.approval
         ? browserApprovalHeaders(s.sessions, uid, args.approval.browser, cookieOf(jar))
@@ -241,13 +242,20 @@ async function authorize(
             ...trustedApprovalHeaders(args.approval.headless.sub, { approver_acr: args.approval.headless.acr }, args.approval.headless.subject),
             cookie: cookieOf(jar),
           };
-    // The Approver reviews the page in this session; the decision names that rendering (#1446).
-    const render_revision = await renderedRevision(s.issuer, uid, headers);
+    // The Approver reviews the page in this session, which retains the ceiling
+    // it offers (#1017); the decision names that rendering (#1446). A login the
+    // floor refuses is asked to sign in again and shown nothing (#1802): its
+    // decision then names no rendering, and the decision's own floor refuses it.
+    const { "x-csrf-token": _csrf, ...viewing } = headers as Record<string, string>;
+    const page = await fetch(`${s.issuer}/interaction/${uid}`, { headers: viewing });
+    const rendered = { status: page.status, html: await page.text() };
+    const render_revision = page.headers.get(RENDER_REVISION_HEADER) ?? undefined;
+    args.beforeDecide?.();
     res = await fetch(`${s.issuer}/interaction/${uid}/decide`, {
       method: "POST",
       redirect: "manual",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ decision: "approve", render_revision, ...(args.ceiling ?? {}) }),
+      body: JSON.stringify({ decision: "approve", ...(render_revision ? { render_revision } : {}), ...(args.ceiling ?? {}) }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
     keep(jar, res);
@@ -260,6 +268,7 @@ async function authorize(
     const q = new URL(location).searchParams;
     return {
       jar,
+      rendered,
       missions: s.as.kernel.allMissions().length - missionsBefore,
       grants,
       ...(q.get("code") ? { code: q.get("code") as string } : {}),
@@ -287,6 +296,20 @@ async function expectRefusedClean(s: Server2, r: Awaited<ReturnType<typeof autho
   expect(await sessionAccount(s, r.jar)).not.toBe("alice");
 }
 
+/**
+ * @spec mission#approval-preparation (step 1, #1802): the floor or the
+ * requested strength refused the login before anything rendered. The page
+ * asked it to sign in again, carried nothing of the request and minted no
+ * revision, so the decision that followed named none and was refused by the
+ * decision's own check.
+ */
+function expectStepUp(r: Awaited<ReturnType<typeof authorize>>): void {
+  expect(r.rendered.status).toBe(401);
+  expect(r.rendered.html).toContain('data-error="insufficient_user_authentication"');
+  expect(r.rendered.html).not.toContain("Pay Acme invoices");
+  expect(r.rendered.html).not.toContain("payments:");
+}
+
 const now = () => Math.floor(Date.now() / 1000);
 
 describe("the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425)", () => {
@@ -300,12 +323,15 @@ describe("the published approval-authentication floor at the approval decision (
 
   it("refuses high-risk authority, with no client request, from a browser Approver whose achieved acr the floor does not accept: no Mission, Grant, code or Subject session", async () => {
     const r = await authorize(shipped, { authority: REMIT, approval: { browser: { sub: "bob", acr: "password", subject: "alice" } } });
+    expectStepUp(r);
     await expectRefusedClean(shipped, r);
     expect(r.description).toMatch(/high-risk-authority floor/);
   });
 
   it("refuses high-risk authority approved headlessly, even when the approval service's registration claims mfa", async () => {
     const r = await authorize(shipped, { authority: REMIT, approval: { headless: { sub: "bob", acr: "mfa", subject: "alice" } } });
+    // A headless rendering does not pass a browser-only floor its registration claims to meet (#1802).
+    expectStepUp(r);
     await expectRefusedClean(shipped, r);
     expect(r.description).toMatch(/browser approval surface/);
   });
@@ -322,14 +348,31 @@ describe("the published approval-authentication floor at the approval decision (
       authority: REMIT,
       approval: { browser: { sub: "bob", acr: "mfa", auth_time: t - MAX_AGE - 1, subject: "alice" } },
     });
+    expectStepUp(older);
     await expectRefusedClean(shipped, older);
     expect(older.description).toMatch(/older than the high-risk-authority floor allows/);
   });
 
+  it("the age bound at the decision: a login inside the bound at the rendering and past it at the decision is refused, with nothing created (#1802)", async () => {
+    const t = now();
+    const clock = vi.spyOn(shipped.as.kernel, "nowDate").mockReturnValue(new Date(t * 1000));
+    const aged = await authorize(shipped, {
+      authority: REMIT,
+      approval: { browser: { sub: "bob", acr: "mfa", auth_time: t - MAX_AGE, subject: "alice" } },
+      // The page rendered to a login exactly at the bound; it ages a second before the decision.
+      beforeDecide: () => clock.mockReturnValue(new Date((t + 1) * 1000)),
+    });
+    expect(aged.rendered.status).toBe(200);
+    await expectRefusedClean(shipped, aged);
+    expect(aged.description).toMatch(/older than the high-risk-authority floor allows/);
+  });
+
   it("classifies the complete derived set: a high-risk entry after a low-risk one still invokes the floor", async () => {
     const weak = await authorize(shipped, { authority: MIXED, approval: { browser: { sub: "bob", acr: "password", subject: "alice" } } });
+    expectStepUp(weak);
     await expectRefusedClean(shipped, weak);
     const headless = await authorize(shipped, { authority: MIXED, approval: { headless: { sub: "bob", acr: "mfa", subject: "alice" } } });
+    expectStepUp(headless);
     await expectRefusedClean(shipped, headless);
     const strong = await authorize(shipped, { authority: MIXED, approval: { browser: { sub: "bob", acr: "mfa", subject: "alice" } } });
     expect(strong.code, strong.description).toBeTruthy();
@@ -346,6 +389,10 @@ describe("the published approval-authentication floor at the approval decision (
       authority: [{ type: "mission_resource_access", resource: PAYMENTS, actions: ["payments:vendor.read"] }],
       approval: { browser: { sub: "bob", acr: "mfa", subject: "alice" } },
     });
+    // No login can lift it, so the rendering refuses it for every Approver,
+    // as a derivation refusal (#1802); the decision refuses it again.
+    expect(r.rendered.status).toBe(400);
+    expect(JSON.parse(r.rendered.html)).toMatchObject({ error: "access_denied" });
     await expectRefusedClean(override, r);
     expect(r.description).toMatch(/does not name payments:vendor\.read/);
   });
@@ -360,6 +407,7 @@ describe("the floor and the client's requested strength are conjunctive (@spec m
       extra: { acr_values: "password" },
       approval: { browser: { sub: "alice", acr: "password" } },
     });
+    expectStepUp(r);
     await expectRefusedClean(override, r);
     expect(r.description).toMatch(/high-risk-authority floor/);
   });
@@ -370,6 +418,7 @@ describe("the floor and the client's requested strength are conjunctive (@spec m
       extra: { acr_values: "passkey" },
       approval: { browser: { sub: "alice", acr: "mfa" } },
     });
+    expectStepUp(r);
     expect(r.error).toBe("access_denied");
     expect(r.missions).toBe(0);
     expect(r.grants).toBe(0);
@@ -391,14 +440,22 @@ describe("the floor over a consented authority ceiling (@spec mission#approval-a
   // The derived set is read-only, which invokes no floor; the ceiling admits
   // payment execution and remittance, which a later drawdown could grant
   // under this consent with no Approver authenticating.
-  it("refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code", async () => {
+  it("offers a ceiling admitting floor-class authority only to a login that meets the floor over it: a password Approver sees the page without it and can consent none (#1802)", async () => {
     const r = await authorize(progressive, {
       authority: READ,
       ceiling: CEILING_CONSENT,
       approval: { browser: { sub: "bob", acr: "password", subject: "alice" } },
     });
-    await expectRefusedClean(progressive, r);
-    expect(r.description).toMatch(/high-risk-authority floor/);
+    // The derived set invokes no floor, so the page renders, without the offer.
+    expect(r.rendered.status).toBe(200);
+    expect(r.rendered.html).toContain("Derived authority (what approval grants)");
+    expect(r.rendered.html).not.toContain('class="authority-ceiling"');
+    expect(r.rendered.html).not.toContain("payments:remittance.send");
+    expect(r.error).toBe("invalid_request");
+    expect(r.description).toBe("the decision consents a ceiling the approval page did not render");
+    expect(r.code).toBeUndefined();
+    expect(r.missions).toBe(0);
+    expect(r.grants).toBe(0);
     // Without the ceiling, the same derived set and login are approved: the ceiling invoked the floor.
     const uncapped = await authorize(progressive, {
       authority: READ,
@@ -406,6 +463,22 @@ describe("the floor over a consented authority ceiling (@spec mission#approval-a
     });
     expect(uncapped.code, uncapped.description).toBeTruthy();
     expect(uncapped.missions).toBe(1);
+  });
+
+  it("refuses a ceiling admitting floor-class authority at the decision when the login ages past the floor after the rendering: access_denied, with no Mission, Grant or code (#1255, #1802)", async () => {
+    const t = now();
+    const clock = vi.spyOn(progressive.as.kernel, "nowDate").mockReturnValue(new Date(t * 1000));
+    const r = await authorize(progressive, {
+      authority: READ,
+      ceiling: CEILING_CONSENT,
+      approval: { browser: { sub: "bob", acr: "mfa", auth_time: t - MAX_AGE, subject: "alice" } },
+      beforeDecide: () => clock.mockReturnValue(new Date((t + 1) * 1000)),
+    });
+    // The page offered the ceiling to the login inside the bound.
+    expect(r.rendered.status).toBe(200);
+    expect(r.rendered.html).toContain('class="authority-ceiling"');
+    await expectRefusedClean(progressive, r);
+    expect(r.description).toMatch(/older than the high-risk-authority floor allows/);
   });
 
   it("approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it", async () => {

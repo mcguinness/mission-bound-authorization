@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5257c35b038c4d3dbea79a1abeffe9bb1b61366c",
-    "content_sha256": "a270d0a4a4ce798051b32fc4bedfa6fee5c7e300864e92bb0b5083ed4634cc8d"
+    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
+    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -328,7 +328,8 @@
    "metering.exact-budget",
    "metering.child-accounting",
    "metering.escrow-allocation",
-   "consent-evidence.recording"
+   "consent-evidence.recording",
+   "core.cross-domain"
   ]
  },
  "profiles": [
@@ -6938,6 +6939,94 @@
    "notes": "#1482 (D620). The reference AS ships with an empty evidence registry (the unit test), the configuration this sentence describes, and rar-carriage registers no type, so its wire tests run that configuration. Applicability is that configuration, which the applicability model cannot express; an AS supporting a type follows the same dispatch rules for every type it does not support. Proved by swapping either code (the matching rar-carriage test fails)."
   },
   {
+   "id": "core.cross-domain.reference-and-hash-intact",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "the Mission reference (`mission.id`, `mission.issuer`) and the `authority_hash` the projection carries, intact",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission projection carries `mission.id` and `mission.issuer` equal to the Mission's and `authority_hash` equal to the Mission Record's, and no step across the hop alters them: the values the authorization server in the other trust domain receives and relies on are the Mission's own"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.authority-only-narrows",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "authority that only narrows ({{subset}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every entry a projection conveys is a subset, under its type's relation, of a Mission Authority Set entry, and no credential issued from the projection in the other trust domain carries authority broader than the projection conveyed: authority narrows or stays equal at each step across the hop and never widens"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.issuer-authorized-while-active",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projection performed only by, or under the authorization of, the Mission `issuer`, gated on the Mission's `active` state ({{lifecycle}}, {{issuance-gating}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a Mission is projected only by its `issuer`, or by a party acting under that issuer's authorization, and only while the Mission is `active`: a request to project a Mission that is not `active` is refused with no projection issued, and an authorization server that is neither the Mission's `issuer` nor authorized by it issues no projection of that Mission"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
+   "id": "core.cross-domain.lifetime-capped-by-expiry",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "optional-capabilities",
+   "text": "projected credential lifetimes capped by the Mission's `expires_at` ({{token-authentication-lifetime}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.cross-domain"
+   },
+   "profiles": [],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every credential a projection yields has an `exp` no later than the Mission's `expires_at`, including when the Mission's remaining lifetime is shorter than the credential's default lifetime, and the cap holds for credentials issued from the projection in the other trust domain"
+   },
+   "level": "cross-component",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1795 (D919, D181): one property of the OAuth binding's Cross-Domain bar, under its own capability core.cross-domain, which no published baseline selects and no deployment claims. The companion Mission Cross-Domain Projection profile specifies the interoperable mechanism, and its rows sit under cross-domain.projection. A companion test supports this row only where it proves the row's complete assertion at the relevant surface; none is cited."
+  },
+  {
    "id": "core.derivation.configured-mapping-scope-key",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "derivation-modes",
@@ -8414,6 +8503,12 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > runs gate 4 at dispatch on the recipient's own root, refusing a human Subject of a workload source",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses the subject discipline before anything renders, for every Approver, and the decision approves nothing",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
    ]
   },
@@ -8574,6 +8669,12 @@
      "name": "approval resolution establishes identity from the surface (#759, #761) > the demo console proxy rejects the agent channel while its independently authenticated session resolves a real interaction",
      "level": "cross-component",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers the interaction cookie alone, with no Approver session, 401 and nothing of the request; an authorized Approver then renders and approves the same interaction",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
    "notes": "#759: enabled-path identity tests pass, including identity-body refusal, scoped-service and independent-browser resolution, achieved authentication strength, Subject authorization, and agent/console separation. #761's normative core sentence was already landed; no duplicate core edit."
@@ -8594,8 +8695,8 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused at the approval decision, and no Mission is created",
-    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden at the decision, before derivation, the source gates or any record"
+    "normative": "an Approver who is not the Subject and whom local policy does not authorize to approve for the selected Subject is refused before the approval rendering shows anything of the request, and refused at the approval decision, and no Mission is created",
+    "local": "the reference's local policy is identity.json's approves_for list; the refusal is HTTP 403 approval_forbidden: on the approval page (browser, device and headless) after derivation and the authentication checks and before the source gates and any rendering, with a notice carrying nothing of the request, no render revision, and the interaction left pending (#1802); and at the decision, before derivation, the source gates or any record, including for authority withdrawn after an authorized rendering; a refusal no Approver can lift (derivation, unclassified authority, a source gate other than activation) carries its detailed description only to a principal who passes the Approver checks that can be evaluated, and a generic one, with the same status and error code, to any other"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8605,9 +8706,45 @@
      "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 1a (approval authorization): an Approver not authorized to approve for the workload principal is refused before any Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering: Alice for Bob, and Dana for Alice",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses a headless approval service naming a Subject its Approver may not approve for 403 before rendering",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver with no approve-for authority over the selected Subject 403 approval_forbidden before rendering",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses at the decision an Approver whose approve-for authority is withdrawn after the rendering, creating nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers a refusal no Approver can lift with nothing of the request to a principal without approve-for authority: unclassified authority",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > re-establishes approve-for authority after the last await: authority withdrawn during evidence verification gets 403 and nothing of the request (#1817 review)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1194. Proved by disabling the approves_for check at the decision (provider.ts): bob's approval for the workload principal then proceeds past the decision and the 403 assertion fails."
+   "notes": "#1194. Proved by disabling the approves_for check at the decision (provider.ts): bob's approval for the workload principal then proceeds past the decision and the 403 assertion fails. #1802: step 1a now asserts the render-time refusal (403, nothing of the request) and the decision's own 403. Proved by disabling the render-time predicate (the four render witnesses rendered 200, the device one fell through to the activation refusal) and the decision-time predicate (the withdrawn-authority decision approved, 303, and the step 1a and Alice-for-Bob decisions answered 409 instead of 403)."
   },
   {
    "id": "core.approval-event.authority-source-trusted-establishment",
@@ -8690,7 +8827,8 @@
    "surface": "authorization-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an Approver outside the established source's declared activators is refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver"
+    "normative": "an Approver outside the established source's declared activators is refused before the approval rendering shows anything of the request, and refused `access_denied` at the approval decision; the check never reads the Authority Set, so an activator holding none of the source's operational permissions still activates; the check has no vacuous form, a source declaring no activator being refused at catalog load rather than admitting every Approver",
+    "local": "#1802: the approval page establishes the source for its principal (establishAuthoritySource, gates 1, 2, 4 and 5, and assertAuthorityWithinSource, gate 3, on one resolution) after derivation and before rendering; an Approver outside the activators gets 403 with a notice carrying nothing of the request and no render revision, and the interaction, or the device session, stays pending for an Approver who may activate it. The decision establishes the source again, so activation authority withdrawn after an authorized rendering refuses there and completes the request access_denied. A refusal no Approver can lift names its cause only to a principal who may activate the source and passes the other Approver checks over the derived set; with no derived set it names none (#1817 review). The page runs steps 1 to 3 again after its last await, before any detail or revision."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -8802,8 +8940,27 @@
      "name": "principal-specific source resolution (@spec mission#authority-sources, mission#approval-event, #827) > records each recipient's own root at template consent, and dispatch draws on the dispatching Subject's root, never another recipient's",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver who may not activate the established source 403 before rendering, leaving the interaction pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses an Approver who may not activate the source before anything renders, leaving the request pending for one who may",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver who may not activate the source 403 before rendering, leaving the session pending",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
     }
-   ]
+   ],
+   "notes": "#1802: the rar-carriage decision witness (\"refuses access_denied when the Approver may not activate the source\") now withdraws Bob's activation after an authorized rendering; the three render-time witnesses were proved by replacing establishAuthoritySource with gate 1 alone at the render (each rendered 200), and the decision witness and the device commit refusal by dropping assertApproverMayActivate from establishAuthoritySource."
   },
   {
    "id": "core.approval-event.authority-source-ceiling",
@@ -9043,6 +9200,37 @@
    "notes": "#1503 finding 5 (D620). The authorization-code approval page renders the client from provider.Client.find over the interaction's client_id, the client the decision commits; clients are the deployment's static registrations (no dynamic registration), so the registered name is the AS's. The device verification page names the client in its own section from the same lookup (device-authorization.approval.render-client). Proved by removing the section (both tests fail) and by adding the Intent's goal inside it (the second test fails on its negative clause)."
   },
   {
+   "id": "core.approval-event.subject-rendering",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "When the Approver is not the Subject, the rendering MUST identify the Subject the authority is granted for",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval rendering made to an Approver who is not the Subject names the Subject the authority is granted for, as the authenticated approval surface established it, never from text the client supplies",
+    "local": "the authorization-code page renders a Subject section beside the receiving client (the Subject the approval session's trusted login selected, or the headless service named) only when it differs from the Approver; a self-approval renders none; login_hint, which concerns the Approver, never appears. The device verification page names the Subject in its own section, self-approval included (device-authorization rows)."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > names the Subject the authority is granted for when the Approver is not the Subject, from the authenticated approval surface's selection",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1802 (owner ruling 3). The clause's condition (the Approver is not the Subject) has no applicability kind, so the row stays unconditional; the witness renders both an approval on Alice's behalf, which names her, and a self-approval, which names no separate Subject. Proved by disabling the Subject section (the witness failed)."
+  },
+  {
    "id": "core.rendering-safeguards.client-text-attributed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
@@ -9251,7 +9439,7 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous rendering, approves nothing",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a decision with no rendering, or after only an anonymous request for the page, approves nothing",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     },
@@ -12008,6 +12196,126 @@
    "notes": "#1721 item 1 (D845). Proved by mutation: making the decision's refusal mapping return the error's own code (invalid_request) fails both browser tests on the error parameter; removing the commit guard (created_at < expires_at) fails the race test, which then completes with a code; throwing an untyped invalid_request from the decision's re-validation fails the late-decision test alone; making the device decision record invalid_request for a refusal fails the device test. The device test passes whatever the browser mapping returns, so it witnesses only the back-channel arm. The approval render of an expired request still answers 400 invalid_request to the Approver's user agent: a render completes nothing."
   },
   {
+   "id": "core.approval-event.ordered-procedure",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "direct-approval-steps",
+   "text": "At a direct approval event the AS MUST perform steps 1 to 7, in order, as one procedure",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the order is observed at its boundaries, not as the sequence of internal computations: an Approver whose authentication fails (step 1), or who is not authorized to activate the established authority source (step 3), is refused before the derived Authority Set is rendered for consent (step 5), and nothing step 5 renders is disclosed to that party; an effective-expiry failure, where step 4 cannot establish an effective expiry within the bounds `expires_at` requires or the commit's strictly-later recheck fails (step 7), prevents the commit, so no Mission is created; and a commit that fails leaves no active Mission and no usable Mission-bound grant, neither an authorization code nor a profile-defined grant activated for redemption. A back-channel carriage profile can issue a profile-defined grant, such as a device code, while the request is pending, so the invariant is that nothing is activated, and no grant is redeemed with Mission authority, before the commit, not that no earlier artifact exists"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers the interaction cookie alone, with no Approver session, 401 and nothing of the request; an authorized Approver then renders and approves the same interaction",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > treats a login whose recorded authentication time is in the future as no Approver: 401 and nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request and no revision",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login that fails the client's requested acr_values or max_age to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses a headless rendering of authority behind a browser-only floor, whatever acr its registration claims",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > re-establishes the login after the last await: one that ages past the client's max_age during evidence verification gets the step-up notice, not the page (#1817 review)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers an unresolvable capability binding against the derived set it was binding: a login the floor refuses over that set learns nothing of it (#1817 review)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses an authenticated Approver who may not activate the established source 403 before rendering, leaving the interaction pending",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > answers a derivation refusal with nothing of the request, whoever asks: with no derived set, eligibility cannot be established",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "authority source on the approval surface (@spec mission#authority-sources) > refuses an Approver who may not activate the source before anything renders, leaving the request pending for one who may",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > answers the verification user agent with no Approver session 401 and nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > refuses an Approver who may not activate the source 403 before rendering, leaving the session pending",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approver-login.test.ts",
+     "name": "the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > answers the interaction cookie alone with a sign-in notice whose link starts this login, and renders the page to the Approver it logs in (#1802)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "a pushed request that no longer validates is refused, never a 500 (@spec mission#approval-event, mission#error-mapping, #1610) > a decision after the request's expires_at passed completes the request access_denied, with no Mission, grant or code (@spec mission#approval-commit, #1721)",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. #1802: two of the three boundaries have witnesses. The first (an Approver whose authentication fails, or who may not activate the source, is refused before step 5 renders and is shown nothing of it) is witnessed at the approval page on the browser, device, headless and upstream-login paths, including a login that ages out during the page's last await and a refusal whose description would otherwise name the request. The expiry boundary is witnessed by the two decision tests in which the requested expiry passes before or during the commit, each creating no Mission, grant or code. The failed-commit boundary (no active Mission and no usable Mission-bound grant after a failed commit) has no witness here: it rests on the partial record-and-code atomicity row (#250). Each render-time witness was proved by disabling its guard alone."
+  },
+  {
    "id": "core.approval-event.record-code-atomicity",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-event",
@@ -12587,7 +12895,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "acr_values/max_age describe the requested authentication of the Approver, never the token's Subject; the Approver's achieved authentication must satisfy both the deployment's own floor and a client-requested acr_values/max_age, and the AS refuses the approval decision (access_denied, per {{error-mapping}}) when either is unmet",
-    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age. Where the deployment selects Progressive authorization, the authority ceiling the approval decision consents is validated and classified with the derived set before any write (#1255): a later drawdown grants the ceiling's authority under this consent's consent_principal and approved_at with no Approver authenticating, so a ceiling that admits high-risk authority needs the same floor-meeting Approver, and a refusal leaves no Mission, Grant or code."
+    "local": "the achieved context (acr, auth_time) comes from the authenticated approval surface: a trusted browser login's recorded context (on the as-native target, the acr and auth_time of the ID Token the approval surface's upstream OpenID Connect login validated, #1320) or a headless approval service's registration, never decide()'s body, which refuses identity members. oidc-provider accepts acr_values and max_age only with openid (lib/actions/authorization/check_openid_scope.js, 9.10.0), and openid is available only to a self-approval in this user agent (#826), so a client-requested strength is exercised on self-approvals; an approval for another principal cannot request one here: PAR refuses acr_values or max_age without openid invalid_request, before any interaction (the accepted fail-closed limitation, D305: unsupported, never ignored or downgraded). The published floor (config/approval-floor.json, evaluateApprovalFloor) is evaluated after derivation over the complete derived Authority Set and before any Mission, Grant or code: every action is classified through the AS-owned classification (an unclassified one refuses), and payment execution and remittance invoke the high-risk-authority floor, satisfied only by a browser Approver with achieved acr mfa authenticated at most 300 seconds earlier; a headless service registration never satisfies it. oidc-provider's own check_max_age middleware translates a literal max_age=0 to prompt=login and clears params.max_age before this handler runs, so the implementation recovers that signal from prompt=login (forceFreshLogin) rather than reading a cleared max_age. Where the deployment selects Progressive authorization, the authority ceiling the approval decision consents is validated and classified with the derived set before any write (#1255): a later drawdown grants the ceiling's authority under this consent's consent_principal and approved_at with no Approver authenticating, so a ceiling that admits high-risk authority needs the same floor-meeting Approver, and a refusal leaves no Mission, Grant or code. #1802: step 1 runs before the approval page renders anything: after derivation the page checks the requested acr_values and max_age and the floor over the derived set against the same trusted context, and a login that falls short gets a 401 step-up notice (insufficient_user_authentication) carrying nothing of the request and no render revision; a ceiling the page offers is classified with the derived set and offered only to a login that meets the floor over both. The decision checks both again, so a login that ages out after the rendering is refused there."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -12744,7 +13052,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-floor.test.ts",
-     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority for a password Approver, though the derived set invokes no floor: access_denied, with no Mission, Grant or code",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > offers a ceiling admitting floor-class authority only to a login that meets the floor over it: a password Approver sees the page without it and can consent none (#1802)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > refuses a ceiling admitting floor-class authority at the decision when the login ages past the floor after the rendering: access_denied, with no Mission, Grant or code (#1255, #1802)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12753,9 +13067,57 @@
      "name": "the floor over a consented authority ceiling (@spec mission#approval-authentication, progressive#progressive-authorization, #1255) > approves the same ceiling for an mfa Approver inside the age bound, and the Mission records it",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-floor.test.ts",
+     "name": "the published approval-authentication floor at the approval decision (@spec mission#approval-authentication, #826, D425) > the age bound at the decision: a login inside the bound at the rendering and past it at the decision is refused, with nothing created (#1802)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request and no revision",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > asks a login that fails the client's requested acr_values or max_age to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses a headless rendering of authority behind a browser-only floor, whatever acr its registration claims",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > refuses at the decision a login that ages past the client's requested max_age after the rendering, creating nothing",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login the approval-authentication floor refuses to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login that fails the client's requested acr_values to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/device-authorization.test.ts",
+     "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login older than the client's requested max_age to sign in again, with nothing of the request",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed)."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -23330,7 +23692,7 @@
     "local": "The AS lists its Status role's generations withdrawn as compromised in the historical key set it serves at mission_historical_jwks_uri (kernel/historical-key-set.ts)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23339,7 +23701,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. History: specified but not implemented (D405) until the ring's compromise operation (#831 B2 (#1681, D809)) and the historical key set (#831 B3 (#1766)). #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. D931 per-row review: tested. Obligation: a key known or suspected compromised is published as revoked in the historical key set. Witness: the endpoint test compromises the Status key across AS boots and finds the withdrawn key listed under its original kid and material, revoked. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). Only the Status role signs Status and Lifecycle responses, and a compromise takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
@@ -23386,7 +23748,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder now keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -23411,7 +23773,7 @@
     "local": "A retired Status generation stays in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime (#831 B2); a compromised one stays resolvable in the historical key set (#831 B3)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23426,7 +23788,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842). #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774). #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; #831 B3 (#1766) retains a compromised key in the historical key set. #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. D931 per-row review: tested. Obligation: every kid that signed a Status or Lifecycle response stays resolvable for at least the Mission's audit horizon, a retired key in the jwks_uri and a compromised key in the historical key set. Witnesses: the unit test holds a retirement to its deadline (the confirmed stop plus the longer of the audit horizon and the longest Mission lifetime) and refuses one it cannot establish; the endpoint test finds a compromised Status key resolvable in the historical key set after its withdrawal. The set keeps every listed key; nothing removes one. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.signing-keys.compromised-withdrawn",
@@ -23451,7 +23813,7 @@
     "local": "Compromising a generation withdraws it from the jwks_uri and stops signing under it, activating a replacement in the same write (#831 B2)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23466,7 +23828,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842). #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. D931 per-row review: tested. Obligation: a compromised key signs nothing further and is absent from the jwks_uri. Witnesses: the unit test withdraws the generation at once and activates a replacement in the same write; the endpoint test finds it absent from /jwks and the kernel signing under the replacement. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). The withdrawal takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.no-historical-fallback",
@@ -23486,7 +23848,7 @@
     "local": "The current-reliance keys never resolve a key from the historical key set; auditKeys alone reads one, to verify an archived response."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -23495,7 +23857,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833) and #831 B3 (#1766). #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. D931 per-row review: tested. Obligation: no consumer verifies a response for current reliance under a key found only in the historical key set. Witness: the PDP's current-reliance keys never resolve a listed key once the jwks_uri drops it, and only `auditKeys` reads the set. The reference's other Status and Lifecycle consumers (the Lifecycle client, the Signals receiver) never read the set at all."
   },
   {
    "id": "status.signing-keys.bounded-jwks-cache",
@@ -23515,7 +23877,7 @@
     "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23524,7 +23886,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -23544,7 +23906,7 @@
     "local": "A jwks_uri response without explicit freshness is stale when received, so the Status consumer revalidates it at every verification."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23553,7 +23915,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a jwks_uri response without valid explicit freshness is stale when received and revalidated before reuse, never given a heuristic lifetime. Witness: every verification refetches such a response. The Lifecycle client reuses no response."
   },
   {
    "id": "status.signing-keys.failed-revalidation-refuses",
@@ -23582,7 +23944,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a stale jwks_uri that cannot be revalidated refuses the Status response, with no stale fallback, until a revalidation succeeds. Gap: the sentence names Status or Lifecycle responses. The reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it."
   },
   {
    "id": "status.historical-key-set.signed",
@@ -23607,7 +23969,7 @@
     "local": "signHistoricalKeySet signs once at boot under the active Status key, the replacement after a Status compromise, and refuses a signer whose kid or key material the set lists."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23622,7 +23984,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. D931 per-row review: tested. Obligation: the set is signed under the active Mission Status key, never a listed key or another role's, and after that key's compromise under its replacement. Witnesses: the endpoint test verifies the served set under the replacement Status key alone, the key the kernel now signs Status responses under; the unit test refuses a listed signer by kid and by key material. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.historical-key-set.consumer-validates-signer",
@@ -23642,7 +24004,7 @@
     "local": "verifyHistoricalKeySet accepts a set only with typ jwk-set+jwt, the expected iss, and a signature under the consumer's configured Status keys; a replacement Status key signs only once the configuration names it."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -23657,7 +24019,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); #831 C (#1697, #1705, D833) gave the Status consumers role-bound trusted kids, and #831 B3 (#1766) the historical key set they validate. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. D931 per-row review: tested. Obligation: a consumer accepts a set only under the Mission Status key its trusted configuration authorizes. Witnesses: the PDP's holder refuses a set under another role's published key, an unconfigured replacement (until configured), a wrong typ, and a learned-compromised key. It is the reference's only reader of the set."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -23682,7 +24044,7 @@
     "local": "historicalKeys converts the ring's ISO times to NumericDates and adds compromised_at only when the compromise recorded one."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23697,7 +24059,169 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. D931 per-row review: tested. Obligation: each listed JWK carries revoked with reason compromised, revoked_at, and compromised_at only when established, as NumericDates. Witnesses: the unit test covers presence and absence of compromised_at and the NumericDate conversion; the endpoint test finds the full member on the served key. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
+  },
+  {
+   "id": "status.historical-key-set.media-type",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS serves the set with the media type `application/jwk-set+jwt` ({{OpenID.Federation}}, Section 15.6).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with the HTTP Content-Type application/jwk-set+jwt"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type against the literal application/jwk-set+jwt, the media type OpenID Federation registers for a signed JWK Set (Section 15.6), not against the server's own constant. Mutation-proved (#1813 review, D945): the server serving application/jwk-set+json fails it; the earlier assertion against the shared constant let that pass."
+  },
+  {
+   "id": "status.historical-key-set.explicit-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS declares a freshness lifetime for the set with explicit freshness information ({{Section 4.2.1 of RFC9111}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with explicit freshness information, a freshness lifetime of its choosing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control is a max-age with a positive delta-seconds, not the server's own constant: the draft fixes no lifetime (the reference declares 300 s, as /jwks does). Mutation-proved (#1813 review): a lifetime that is not a valid delta-seconds fails it."
+  },
+  {
+   "id": "status.historical-key-set.consumer-refetches",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer refetches the set, or revalidates its copy ({{Section 4.3 of RFC9111}}), once that lifetime ends; a response without valid explicit freshness information is stale when received ({{Section 4.2.2 of RFC9111}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a historical key set fetches it again once the freshness lifetime the set declared ends, so it learns a key a later set lists, and treats a set served without explicit freshness as stale on receipt, fetching it again at each use"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > refetches the set once the lifetime it declares ends, learning a key a later set lists, and treats a set without explicit freshness as stale when received",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). Witnessed at the PDP's holder, the reference's only reader of the set: a key a later set lists is learned once the declared 300 s end, and a set served without Cache-Control is fetched at each use. Mutation-proved: never refetching a held set fails the learning assertion; giving a set without explicit freshness a heuristic lifetime fails the fetch count."
+  },
+  {
+   "id": "status.historical-key-set.compromise-not-cleared",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "a consumer MUST NOT treat it as no longer compromised because a later set omits it, an earlier set is presented again, or a fetch of the set fails.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a key a historical key set the consumer verified has listed stays refused for current reliance: a later set that omits it, an earlier valid set replayed, a set that does not verify, or a failed fetch of the set leaves it refused"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), the D887 consumer rule made normative. Witnessed at the PDP's holder, the reference's only reader of the set: a failed fetch and a set that does not verify keep the learned key refused; a replayed empty set the current key signed does not remove it; a set signed under a learned-compromised key is refused whole. Mutation-proved in #1766 (D887): replacing the held list on each set, and dropping the learned-signer check, each fail their witness."
+  },
+  {
+   "id": "status.historical-key-set.no-jwks-extension",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "the set's freshness never extends that of the consumer's cached `jwks_uri`, which {{signing-key-retention}} governs.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a fresh historical key set still refuses current reliance once its cached jwks_uri is stale and cannot be revalidated: the set extends nothing about the live keys"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > never lets a held set extend the cached jwks_uri's freshness: a stale jwks_uri that cannot be revalidated refuses, though the set is fresh",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), from D887's outage ruling: keeping verified compromise information during an outage does not extend the current JWKS's freshness. Witnessed at the PDP's consumer: with the set fresh for an hour and the jwks_uri's 60 s passed and unrevalidatable, a Status response under the current key is refused. Mutation-proved: a stale-if-error fallback on the live keys while a set is held fails it."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
@@ -23731,7 +24255,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3. #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. D931 per-row review: stays partial. Witnessed: no member and no set before a compromise, and both after it. Gap: the member is an https URL; the reference AS serves on http localhost (a development limitation, D887), so no witness shows the https form."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
@@ -83332,6 +83856,1067 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1169 (D368). Applies to a consumer that represents an AAuth Mission Reference with `issuer` and `id` (a Runtime or AuthZEN adapter). No reference component does: `src/packages/aauth-wire` (#836 slice 1) verifies token `ps` and `iss` but carries no Mission and no service consumes it, so its token tests are not a projection witness. A future adapter's witness substitutes the token `iss` for `ps`, alters `s256`, and collapses namespaces. The acceptance fixtures are scripts/check-aauth-reference-projection.mjs (chained from the family-manifest check); they exercise a reference projector, not a composed adapter, so they are not a witness either."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-copies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A resource that verifies a presented token (a person token or an auth token) carrying `mission_s256` MUST copy it into the resource token it issues, which names that presented token in `presented_jti`",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a resource token the Resource issues for a verified presented token carrying `mission_s256` (a person token at a protected operation or at the authorization endpoint, and an auth token on a step-up) carries that `mission_s256` and names the presented token's `jti` in `presented_jti`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > answers a person token with requirement=auth-token and a resource token naming it, never running the operation (@spec aauth#section-13.11)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > copies mission_s256 unchanged from the person token (@spec aauth#section-6.7.1)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "step-up on a presented auth token (V5; @spec aauth#section-6.5) > challenges an auth token whose scope falls short with a resource token naming it",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: an honest step-up on a presented auth token carries the mission into the new auth token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The Resource copies `mission_s256` unchanged from the presented token it verified (AAuth -11 Section 6.7.1). Mutations: dropping the copy (R8), copying it only from a person token (R9), a fresh `presented_jti` (R11) and dropping it at the authorization endpoint (X06) each fail a cited test. The paired MUST NOT (\"a resource MUST NOT omit `mission_s256`\") restates this duty and is witnessed by the same tests."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-preserves-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Each copying party MUST preserve `mission_s256` exactly.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the `mission_s256` in a resource token the Resource issues is byte-identical to the presented token's, for the agent's own mission and for a reference naming no mission or another agent's mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/resource.test.ts",
+     "name": "challenges (@spec aauth#section-6.4, aauth#section-6.5) > copies mission_s256 unchanged from the person token (@spec aauth#section-6.7.1)",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the auth token endpoint's mission check: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The Resource holder of the duty; the PS holder is aauth.ref-propagation.ps-preserves-reference. The Resource copies the value without validating it, so a reference naming no mission reaches the PS unchanged (P1 at the auth token endpoint). Mutations R8 and R9 fail the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-preserves-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Each copying party MUST preserve `mission_s256` exactly.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the `mission_s256` in a person token the PS issues is byte-identical to the request's `mission_s256`, and in an auth token the PS issues to the resource token's"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: issuance > issues a Mission-bound person token a resource can verify",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > issues an auth token bound to the agent's key, with mission_s256 copied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder of the duty; the Resource holder is aauth.ref-propagation.resource-preserves-reference. Mutations: dropping the person token's `mission_s256` (P11) or the auth token's (T30) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.auth-token-copies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "When an auth token is issued in the mission context, its issuer (the PS, or the AS in four-party access) copies the same flat `mission_s256` claim onward from the resource token",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an auth token the PS issues in three-party access for a resource token carrying `mission_s256` carries the same `mission_s256`, whether the resource token answered a person token or a presented auth token (a step-up)"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > issues an auth token bound to the agent's key, with mission_s256 copied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > V5 positive: accepts a step-up on a presented auth token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: an honest step-up on a presented auth token carries the mission into the new auth token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The AS holder (four-party access) is outside the slice. Mutation: dropping the auth token's `mission_s256` (T30) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-self-before-state",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A PS receiving a resource token with a mission reference MUST verify that `ps` identifies itself before using local mission state.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose resource token carries `mission_s256` and names another PS in `ps` is refused with no token issued and no mission state read, even when that `mission_s256` equals a mission of the requesting agent at this PS"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the PS's own checks before mission state (@spec mission-aauth#ref-propagation) > refuses a resource token whose ps names another PS before reading any mission state, even when it names this agent's own mission",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 steps 1 and 2: the resource token > refuses a resource token whose ps names another person server: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The integration test counts the PS store's mission reads: a person token from another PS names the agent's own `mission_s256`, and a faulty Resource addresses the resulting resource token to this PS. Mutation: removing the `ps` check (T23) issues an auth token under the agent's own mission and fails the test. The endpoint test carries no mission reference, so it witnesses the refusal only."
+  },
+  {
+   "id": "aauth.ref-propagation.ps-verifies-presented-token",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a PS MUST verify the `presented_token` the agent forwards against the resource token, its `jti` against `presented_jti` and its `mission_s256` against the resource token's, and reject any mismatch or omission",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request is refused, with no token issued, when the forwarded `presented_token`'s `jti` is not the resource token's `presented_jti`, or when the resource token omits the presented token's `mission_s256`, names a different one, or carries one the presented token lacks, for a presented person token and a presented auth token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V4: refuses a presented token other than the one presented_jti names: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V2: refuses a resource token stripped of the presented token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V3: refuses a different mission on the resource token, and surfaces it to operators",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > refuses a mission_s256 the presented token does not carry: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V5: refuses a step-up resource token stripped of the auth token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V4: a person token other than the one presented_jti names is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. AAuth -11 Section 6.7.2 step 3 as #836's Analysis reads it. Mutations: no `jti` check (T15), no `mission_s256` check (T19) and an omission treated as a match (T21) each fail cited tests at the endpoint and through the integration suite."
+  },
+  {
+   "id": "aauth.ref-propagation.resource-token-mismatch-code",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a resource token that omits or mismatches its presented token's `mission_s256` receives `invalid_resource_token`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose resource token omits, or names a different, `mission_s256` than its presented token (a person token, or an auth token on a step-up) is refused `invalid_resource_token`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V2: refuses a resource token stripped of the presented token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V3: refuses a different mission on the resource token, and surfaces it to operators",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > V5: refuses a step-up resource token stripped of the auth token's mission_s256: invalid_resource_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The binding names the code (restating AAuth -11 Section 6.7.2). Mutations T19 and T21 fail the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.agent-verifies-reference",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "An agent operating under a mission MUST verify that a returned resource token carries the exact `mission_s256`, and MUST NOT continue that authorization under the mission when it is absent or different.",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent operating under a mission that receives a resource token whose `mission_s256` is absent or names another mission refuses it: it sends no auth token request for it, and nothing runs at the resource"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "challenge verification (@spec aauth#section-6.7.3) > the binding's mission check (@spec mission-aauth#ref-propagation) > refuses a resource token whose mission_s256 was stripped",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "challenge verification (@spec aauth#section-6.7.3) > the binding's mission check (@spec mission-aauth#ref-propagation) > refuses a resource token naming another mission",
+     "level": "unit",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/flow.test.ts",
+     "name": "a resource token without the agent's mission (@spec mission-aauth#ref-propagation) > is refused by the agent when stripped (V2): nothing reaches the token endpoint, nothing runs",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/flow.test.ts",
+     "name": "a resource token without the agent's mission (@spec mission-aauth#ref-propagation) > is refused by the agent when it names another mission (V3)",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the agent's mission check (@spec mission-aauth#ref-propagation) > V2 at the agent: a resource token stripped of its mission is never carried to the PS",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "the agent's mission check (@spec mission-aauth#ref-propagation) > V3 at the agent: a resource token naming another of its missions is never carried to the PS",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V5: a step-up resource token stripped of the auth token's mission is refused by the agent, and at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutation: disabling its mission check (A6) fails the cited tests, including on a step-up resource token (V5)."
+  },
+  {
+   "id": "aauth.ref-propagation.governed-missionless-rejected",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "A PS whose policy places an agent under mission governance MUST reject a missionless token request from that agent.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request with no `mission_s256`, or an auth token request whose resource token and presented token carry none, from an agent the PS's policy places under mission governance is rejected with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V9: refuses a missionless request from an agent under mission governance: denied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V9: refuses a missionless token request from an agent under mission governance: denied",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: a missionless person token request from an agent under mission governance is refused",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: after a restart places an agent under governance, its missionless requests are refused at both token endpoints",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The governance mode is static configuration (`mission_governed` per agent in src/config/aauth-ps.json). The binding names no error; the reference answers `denied`, an implementation choice the observation does not pin. Mutations: removing the rule at the person token endpoint (P05) or the auth token endpoint (T25) fails the cited tests; the integration test reaches the auth token endpoint through a restart that places a missionless agent under governance."
+  },
+  {
+   "id": "aauth.ref-propagation.person-token-reference-checks",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a malformed `mission_s256` in a person token request receives `invalid_request`, and one naming a mission that does not exist or belongs to another agent is rejected",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request whose `mission_s256` is malformed is refused `invalid_request`, and one whose well-formed `mission_s256` names no mission or a mission of another agent is rejected; neither issues a token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V7: refuses a malformed mission_s256: invalid_request",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8: refuses a well-formed mission_s256 that names no mission: invalid_request",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8 and P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The binding pins `invalid_request` only for a malformed value; the reference also answers an unknown or foreign reference `invalid_request` (identical, for P1), which the observation does not pin. Mutations: no well-formedness check (P03) or a lookup by `s256` alone (M14) fails the cited tests."
+  },
+  {
+   "id": "aauth.ref-propagation.presented-token-failure-codes",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a presented token that fails verification receives `invalid_presented_token`, or `expired_presented_token` when only its `exp` fails, which is how a Mission-bound token fails once `expires_at` passes",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an auth token request whose presented token fails verification is refused `invalid_presented_token`, or `expired_presented_token` when only its `exp` fails, and a Mission-bound person token presented after the mission's `expires_at`, which capped its `exp`, is refused `expired_presented_token`; none issues a token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > refuses a presented token whose signature fails: invalid_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > answers a presented token that fails only on exp: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 3: presented_token verification > answers an expired presented token that also fails another check: invalid_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V11: a mission past expires_at fails at presented-token verification: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V11: once the mission's expires_at passes, its person token fails presented-token verification: expired_presented_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a presented token that expires while a key is resolved: expired_presented_token",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Mutations: no presented-token verification (T12), no `expired_presented_token` (T13) and `expired_presented_token` for any expired token (T14) each fail cited tests. #1805 P2 2 (D934): the auth token endpoint rechecks the presented token's `exp` at the current time immediately before the record is written, so a token that expires while a key is resolved is still `expired_presented_token`, including a Mission-bound person token capped at `expires_at`. Mutations: no final recheck (RC1) and a recheck at the time captured before the awaits (RC2) fail both recheck witnesses."
+  },
+  {
+   "id": "aauth.ref-propagation.terminated-at-state-check",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "a request that reaches the mission-state check under a mission that is no longer active receives `mission_terminated`",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a person token request, or an auth token request whose presented token still verifies, naming the requesting agent's own mission after it terminated is refused `mission_terminated` with no token issued"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "6.7.2 step 4 and governance > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission terminated while a key is resolved: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Termination here is a direct store transition: the PS has no termination surface until slice 3. Mutation: no terminated-state check (M15) fails the cited tests. #1805 P2 2 (D934): the mission gate runs again at the current time immediately before the record is written, so a mission whose `expires_at` passes while a key is resolved is `mission_terminated` (reason `expired`) even under a presented token still valid; a termination during the key fetch is seen because no await follows the gate. Mutations: no regate (RC3), no final recheck (RC1) and the captured time (RC2) fail the `expires_at` witness."
+  },
+  {
+   "id": "aauth.ref-propagation.failed-not-missionless",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "The PS, or the AS in four-party access, MUST NOT evaluate a failed request as missionless authorization",
+   "role": "Controller",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a request whose required Mission association fails (a malformed, unknown or foreign reference; a stripped, mismatched or misnamed presented token; a terminated or expired mission; unavailable mission state) yields no token, missionless or otherwise, no record and no effect, and an agent the policy admits missionless whose request names a failing reference is refused rather than served missionless"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V4: a person token other than the one presented_jti names is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V10: a mission terminated after its person token was issued is refused: mission_terminated",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V11: once the mission's expires_at passes, its person token fails presented-token verification: expired_presented_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V12: when the mission's state cannot be established, the PS refuses: server_error",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V14: an agent admitted missionless from the outset is served without a mission, and a failed reference is never served missionless",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > issues nothing when the mission's expires_at passes while the resource's key is resolved",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "the issuance commit: time and mission state rechecked at the current time > refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS holder; the agent holder is aauth.ref-propagation.agent-no-retry. Each cited test compares the PS's issued-token records and mission logs, and the Resource's effect log, before and after the refused request. Mutations: a failing reference served missionless to an agent admitted missionless (X02) fails V14, and each check's own mutation (T19, T15, P03, M14, M15, T13, M19) fails its vector. #1805 P2 2 (D934): an expiry reached while a key is resolved yields no token, missionless or otherwise, because the PS rechecks at the current time before the record is written (mutations RC1, RC2)."
+  },
+  {
+   "id": "aauth.ref-propagation.agent-no-retry",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "the agent MUST NOT retry it without the reference",
+   "role": "client",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "after the PS refuses a request whose Mission association failed, the agent sends no further request for that authorization: no person token request without `mission_s256` and no other token request"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V2: a resource token stripped of the person token's mission is refused at the PS: invalid_resource_token",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V3: a resource token naming the agent's other mission is refused at the PS and surfaced to operators",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V7: a malformed mission_s256 at the person token endpoint is refused: invalid_request",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V8: a well-formed mission_s256 naming no mission, or another agent's, is refused at the person token endpoint",
+     "level": "cross-component",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutations: a client that retries a refused person token request without the reference (X04) fails V7 and V8, and one that answers a refused auth token request with a missionless person token request (X05) fails V2 and V3."
+  },
+  {
+   "id": "aauth.ref-propagation.missionless-by-policy-only",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "ref-propagation",
+   "text": "Intentionally missionless authorization is a separate path, admitted by explicit deployment policy from the outset for requests with no required or inherited Mission association. It is never a fallback after Mission validation fails.",
+   "role": "Controller",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "propagation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the PS issues missionless person and auth tokens only to an agent its configuration admits missionless, for requests carrying no `mission_s256`, and refuses a governed agent's missionless request; the admitted agent's request whose `mission_s256` is malformed or names no mission of its own is refused, never served missionless"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V14: an agent admitted missionless from the outset is served without a mission, and a failed reference is never served missionless",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: a missionless person token request from an agent under mission governance is refused",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V9: after a restart places an agent under governance, its missionless requests are refused at both token endpoints",
+     "level": "cross-component",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: issuance > V14: issues a missionless person token to an agent admitted missionless",
+     "level": "endpoint",
+     "surface": "propagation"
+    },
+    {
+     "file": "src/services/aauth-ps/test/auth-token.test.ts",
+     "name": "V1: the governed path > V14: issues a missionless auth token to an agent admitted missionless",
+     "level": "endpoint",
+     "surface": "propagation"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Missionless admission is the static `mission_governed: false` of src/config/aauth-ps.json. Mutations: governance applied to every agent (X01) and a failing reference served missionless (X02) fail V14."
+  },
+  {
+   "id": "aauth.reference.ownership-before-state",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "at a PS endpoint that takes a `mission_s256` parameter, a PS MUST establish that the mission belongs to the requesting agent before reporting its state",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "at the person token endpoint and at `{mission_endpoint}/{mission_s256}`, a reference to another agent's mission, active or terminated, is never answered `mission_terminated` or with any other report of its state, while the owning agent is told that its mission terminated"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V10: refuses a mission that is no longer active: mission_terminated with its reason",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > tells the owner its mission terminated, with the reason",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the person token endpoint: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at {mission_endpoint}/{mission_s256}: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The PS looks a mission up by owning agent and `s256` together, so another agent's mission misses as an absent one does. `{mission_endpoint}/{mission_s256}` is AAuth -11 Section 8.7's surface; the PS answers GET there as a local read for the owner. Mutations: a lookup by `s256` alone (M14), or one that finds another agent's terminated mission (X03), fails the cited tests."
+  },
+  {
+   "id": "aauth.reference.absent-foreign-same-response",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an absent mission and a mission belonging to another agent, the PS MUST return the same status, error, body, and header set, with observably equivalent timing.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "for a well-formed reference naming no mission and one naming another agent's mission, active or terminated, the person token endpoint, `{mission_endpoint}/{mission_s256}` and the auth token endpoint's mission check each return the same status, error, body and header set"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > V8 and P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/person-token.test.ts",
+     "name": "person token endpoint: the Mission association > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's active mission exactly as an absent one",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-ps/test/mission.test.ts",
+     "name": "{mission_endpoint}/{mission_s256}: the owner's read > P1: answers another agent's terminated mission exactly as an absent one, never mission_terminated",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the person token endpoint: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at {mission_endpoint}/{mission_s256}: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "P1: a guessed reference from a non-owner agent discloses nothing (@spec mission-aauth#reference) > P1 at the auth token endpoint's mission check: another agent's mission, active or terminated, is answered exactly as an absent one",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. Status, error, body and header set; the integration tests also compare the body bytes and every header value except `Date`. The auth token endpoint's probe re-signs the agent's real person token with the PS key with only `mission_s256` changed, since no honest PS issues one naming a mission the agent does not own. Timing is the separate row aauth.reference.absent-foreign-same-timing. Mutations M14 and X03 fail the cited tests."
+  },
+  {
+   "id": "aauth.reference.absent-foreign-same-timing",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "For an absent mission and a mission belonging to another agent, the PS MUST return the same status, error, body, and header set, with observably equivalent timing.",
+   "role": "Controller",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "privacy",
+   "observation": {
+    "normative": "the PS's response for an absent mission and for another agent's mission is observably equivalent in timing at each endpoint that takes a mission reference"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. No test measures timing. Both cases take the same path (one lookup by owning agent and `s256`, then the same refusal), which is a design argument, not a witness."
+  },
+  {
+   "id": "aauth.reference.agent-verifies-s256",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "a Mission Context Agent MUST verify it before any governed use",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent receiving an approval whose `s256` is not the SHA-256 digest of the exact bytes `mission` decodes to, or whose `mission` is not unpadded base64url, refuses it and does not operate under that mission"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an approval whose s256 is not the digest of the mission bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses a mission that is not unpadded base64url",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > verifies s256 over the exact decoded bytes, and keeps those bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent, against a stand-in mission endpoint that returns a chosen approval. Mutations: no digest check (A12) and no unpadded base64url check (A13) fail the cited tests."
+  },
+  {
+   "id": "aauth.reference.agent-preserves-blob",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "reference",
+   "text": "MUST preserve the decoded bytes exactly",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "mission-reference",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the agent keeps the exact bytes `mission` decodes to, whitespace and member order included, equal byte for byte to the blob the PS persisted and returns to its owner"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > verifies s256 over the exact decoded bytes, and keeps those bytes",
+     "level": "endpoint",
+     "surface": "mission-reference"
+    },
+    {
+     "file": "src/services/aauth-resource/test/integration/three-party.test.ts",
+     "name": "three-party propagation through the real agent, PS and Resource (@spec mission-aauth#ref-propagation) > V1: the governed path carries the agent's exact mission from approval through every token to the run",
+     "level": "cross-component",
+     "surface": "mission-reference"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. The testkit agent client is the acting agent. Mutation: keeping a reserialization of the decoded bytes (X07) fails the approval test, whose blob has unusual whitespace and member order; the PS's compact encoding round-trips, so V1 shows equality with the persisted bytes but cannot catch a reserialization alone."
+  },
+  {
+   "id": "aauth.approval.agent-verifies-blob-agent",
+   "spec": "draft-mcguinness-mission-aauth.md",
+   "anchor": "approval",
+   "text": "verify that the blob's `agent` member identifies the requesting agent",
+   "role": "client",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an agent receiving an approval envelope whose `s256` verifies but whose blob's `agent` member names another agent, or whose blob is not a JSON object, refuses it before any use: it does not operate under the mission and keeps no person token the envelope carried"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an intact approval whose blob names another agent, before adopting the mission or its person tokens (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/packages/aauth-testkit/test/agent-client.test.ts",
+     "name": "PS metadata and mission approval (@spec aauth#section-11.2, aauth#section-8.2) > refuses an approval whose blob is not a JSON object, adopting nothing (@spec mission-aauth#approval)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#836 slice 2 (D303): `@mission/aauth-ps`, `@mission/aauth-resource` and the `@mission/aauth-testkit` agent, three-party access only. #1805 P2 3 (D934): the testkit agent client parses the decoded bytes only to read `agent`, after the digest check and before it changes the mission or caches any person token; the bytes it keeps are the decoded ones (aauth.reference.agent-preserves-blob). The approving-PS half of step 4 has no separate witness: the client records its own configured PS. Mutation: removing the `agent` comparison (AG1) fails the first cited test and the owner's probe."
   },
   {
    "id": "mandate.claims.approver-from-consent-principal",

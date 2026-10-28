@@ -354,7 +354,13 @@ describe("a new Mission submission reaches its own approval despite prior browse
     const missions = as.kernel.allMissions().length;
     const highRisk = await authorize(await push("Pay the approved Acme invoices", {}, { resource: CANONICAL_RESOURCE }), jar);
     expect(highRisk.uid, JSON.stringify(highRisk)).toBeTruthy();
-    const refused = await approve(highRisk.uid as string, jar, { sub: "bob", acr: "password", subject: "alice" });
+    // The page asks the password login to sign in again and renders nothing
+    // (#1802); the decision it then posts is refused by the floor.
+    const viewing = browserApprovalHeaders(SESSIONS, highRisk.uid as string, { sub: "bob", acr: "password", subject: "alice" }, cookieOf(jar));
+    const page = await fetch(`${ISSUER}/interaction/${highRisk.uid}`, { headers: { cookie: viewing.cookie as string } });
+    expect(page.status).toBe(401);
+    expect(await page.text()).toContain('data-error="insufficient_user_authentication"');
+    const refused = await approve(highRisk.uid as string, jar, { sub: "bob", acr: "password", subject: "alice" }, false);
     expect(refused.code).toBeUndefined();
     expect(refused.error).toBe("access_denied");
     expect(refused.description).toMatch(/high-risk-authority floor/);
