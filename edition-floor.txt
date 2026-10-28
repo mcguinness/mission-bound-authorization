@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-28T00:28:26Z
-Source repository commit: a560426d1bbedfd4b2dcd95dbbd902244e7aaa95
+Generated: 2026-10-28T16:05:01Z
+Source repository commit: bb8511f3e99e0c272fb573a481bda9b5019ecc2b
 Member count: 7
 
 Reading order:
@@ -7732,6 +7732,13 @@ Table of Contents
      8.6.  Refresh Tokens
      8.7.  Authentication Claims and Lifetime
      8.8.  Scope Projection
+       8.8.1.  Subset Condition
+       8.8.2.  Per-Audience Condition
+       8.8.3.  Projection Steps
+       8.8.4.  Requested Scope Values
+       8.8.5.  Scope-Only Targets
+       8.8.6.  Refresh Token Protection
+       8.8.7.  Projection Example
      8.9.  Mission Claim
        8.9.1.  Claim Reservation
    9.  Resource Server Enforcement
@@ -8767,30 +8774,40 @@ Table of Contents
    The Mission Intent members are:
 
    goal:  REQUIRED.  A string.  A human-readable statement of the task,
-      for rendering to the Approver.  It can describe the outcomes that
-      show the task is complete; like the rest of the prose, that
-      description carries no machine semantics (Section 5).  Maximum
-      4096 characters.  Prose here persists on the record and can carry
-      personal data about third parties (Section 21.4).
+      for rendering to the Approver.  Maximum 4096 characters.
+
+      *  It can describe the outcomes that show the task is complete;
+         like the rest of the prose, that description carries no machine
+         semantics (Section 5).
+
+      *  Prose here persists on the record and can carry personal data
+         about third parties (Section 21.4).
 
    goal_lang:  OPTIONAL.  A string.  A BCP 47 language tag [RFC5646]
       declaring the language of the Intent's human-readable members
-      (goal, task_bounds).  It is disclosure metadata for rendering,
-      committed by intent_hash like every Intent member, and carries no
-      machine semantics (Section 5).  At submission acceptance, the AS
-      MUST refuse a goal_lang that is not a well-formed language tag
-      with invalid_request (Section 22).
+      (goal, task_bounds).
+
+      *  It is disclosure metadata for rendering, committed by
+         intent_hash like every Intent member, and carries no machine
+         semantics (Section 5).
+
+      *  At submission acceptance, the AS MUST refuse a goal_lang that
+         is not a well-formed language tag with invalid_request
+         (Section 22).
 
    target_resources:  REQUIRED.  An array of strings.  A client-
       requested Intent ceiling on the task's target resources, each an
       absolute URI identifying a protected resource (an OAuth resource
       per [RFC8707]-style indicators or a protected resource per
-      [RFC9728]).  It bounds which resources a derived Authority Set
-      entry may name (Section 5) and serves as a configured-mapping
-      lookup key (Section 5.1); like purpose, the key alone grants no
-      authority.  It is not RFC 8707 resource carriage: a client
-      separately requests the audience of a given token with the
-      standard resource parameter (Section 8.5).
+      [RFC9728]).
+
+      *  It bounds which resources a derived Authority Set entry may
+         name (Section 5) and serves as a configured-mapping lookup key
+         (Section 5.1); like purpose, the key alone grants no authority.
+
+      *  It is not RFC 8707 resource carriage: a client separately
+         requests the audience of a given token with the standard
+         resource parameter (Section 8.5).
 
    task_bounds:  OPTIONAL.  An array of strings.  Human-readable bounds
       on the task (for example, "read only invoices from 2026").  They
@@ -8803,32 +8820,39 @@ Table of Contents
       task, recorded for disclosure and audit.  Its semantics are
       deployment- or registry-defined and opaque to this document.
 
-      purpose is an opaque lookup key: a configured mapping can key on
-      it to select candidate entries, which the Intent, policy, and the
-      approval event bound as in any Authority Set derivation
-      (Section 5); the key alone grants no authority.  In any other
-      decision, purpose MAY contribute only to a refusal or to stricter
-      treatment: its value, its absence, or a substituted value MUST NOT
-      supply, widen, relax, or refresh authority, or replace a check
-      that applies independently of it.  After approval, the purpose
-      consulted is the approved Mission's, or a validated projection of
-      it.
+      *  purpose is an opaque lookup key: a configured mapping can key
+         on it to select candidate entries, which the Intent, policy,
+         and the approval event bound as in any Authority Set derivation
+         (Section 5); the key alone grants no authority.
+
+      *  In any other decision, purpose MAY contribute only to a refusal
+         or to stricter treatment: its value, its absence, or a
+         substituted value MUST NOT supply, widen, relax, or refresh
+         authority, or replace a check that applies independently of it.
+
+      *  After approval, the purpose consulted is the approved
+         Mission's, or a validated projection of it.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 [RFC3339] date-time:
       the client's requested not-after ceiling for the Mission's
-      lifetime.  The submitted Intent is recorded verbatim.  The granted
-      lifetime is the Mission Record's effective expires_at, which the
-      AS establishes at Mission creation and which is no later than this
-      value (Section 6.2, Section 14).
+      lifetime.
 
-      At submission acceptance, the AS MUST refuse a malformed or
-      already-past value with invalid_request.  Acceptance does not
-      freeze time: Mission creation re-checks the effective expiry
-      atomically at the commit (Section 6.2).  A request that resolves
-      to an already-committed operation is recovery, not a new
-      submission, and returns the stored outcome under the applicable
-      idempotency rules even when the ceiling has since passed
-      (Section 8.2.4, Section 14).
+      *  The submitted Intent is recorded verbatim.
+
+      *  The granted lifetime is the Mission Record's effective
+         expires_at, which the AS establishes at Mission creation and
+         which is no later than this value (Section 6.2, Section 14).
+
+      *  At submission acceptance, the AS MUST refuse a malformed or
+         already-past value with invalid_request.
+
+      *  Acceptance does not freeze time: Mission creation re-checks the
+         effective expiry atomically at the commit (Section 6.2).
+
+      *  A request that resolves to an already-committed operation is
+         recovery, not a new submission, and returns the stored outcome
+         under the applicable idempotency rules even when the ceiling
+         has since passed (Section 8.2.4, Section 14).
 
    The Approver's authentication strength for the approval event is
    requested with the standard acr_values and max_age authorization-
@@ -9162,6 +9186,8 @@ Table of Contents
    run when the submission arrives; step 7 can run provisionally then
    and is complete before the approval rendering (Section 5.1); step 8
    belongs to the approval event, and step 9 to activation.
+   Section 15.3 states how JSON destined for commitment is parsed,
+   including the rejection of duplicate member names.
 
    1.  Parse the Submission envelope, enforce both closed top levels and
        the size bounds (Section 4.2), and check that each evidence entry
@@ -9655,6 +9681,10 @@ Table of Contents
    (approval_basis, Section 14); a companion profile that relocates a
    direct approval keeps them unchanged (Section 16).
 
+   Section 8.2.1 states the rule that keeps consent reuse, for an
+   authorization request that carries no mission_intent, from selecting
+   a grant bound to a Mission.
+
    Refusals follow Section 10.
 
 6.2.1.  Preparing the Approval
@@ -9690,7 +9720,8 @@ Table of Contents
        checks: an organizational owner may be authorized to activate
        policy without personally holding every operational permission.
        The AS MUST refuse when either relationship cannot be
-       established.
+       established.  Section 14.3 states the refusal to approve a
+       Mission whose authority source the AS does not recognize.
 
    4.  *Establish the effective Mission expiry*: the requested
        intent.expires_at ceiling narrowed by applicable AS policy and
@@ -9767,7 +9798,9 @@ Table of Contents
    naming who consented and how); the authority source; the issuer's
    provenance (the policy version and the approval event's identifier);
    and the Mission's expiry and lifecycle state.  Section 14 defines
-   each member and when it is present.
+   each member and when it is present.  Section 14.4 states how the AS
+   deduplicates a retried or duplicate delivery of the same approval
+   decision on approval_event_id.
 
 6.3.  Subject Establishment
 
@@ -10575,8 +10608,14 @@ Table of Contents
    [RFC9068] fixes the JWT's required claims (including jti), the typ
    header parameter value at+jwt, and resource server validation
    (Section 2.1 of [RFC9068], Section 2.2 of [RFC9068], Section 4 of
-   [RFC9068]).  In addition to what that profile requires, a derived
-   token:
+   [RFC9068]).  A token whose format a companion profile explicitly
+   defines, with its own typ and verification rules, follows that
+   profile instead, as the Mission Offline Attenuation root does
+   ([I-D.draft-mcguinness-oauth-mission-attenuation]).  JWT access-token
+   validation remains governed by Section 4 of [RFC9068], including
+   acceptance of at+jwt or application/at+jwt.  A companion-format token
+   is consumed only under that companion's verification rules.  In
+   addition to what [RFC9068] requires, a derived token:
 
    *  carries the token's Mission-derived authority as
       authorization_details ([RFC9396]); this MAY be the full Authority
@@ -10751,7 +10790,10 @@ Table of Contents
 8.6.  Refresh Tokens
 
    Issuance on a refresh applies the checks of Section 8.1 as that list
-   states for a refresh.
+   states for a refresh.  Section 4.3 states a refresh's exemption from
+   mission_intent and, for a Mission-governed resource, the refusal's
+   precedence and its timing relative to consuming or rotating the
+   refresh token.
 
    A Mission-bound refresh token is bound to the client it was issued
    to.  For a confidential client, client authentication supplies the
@@ -10818,6 +10860,8 @@ Table of Contents
    a target that consumes only scope: such a target receives a safe
    projection or a refusal (step 5 below).
 
+8.8.1.  Subset Condition
+
    For every target audience, the AS MUST establish that the effective
    rights the target's enforcement path grants from the projected scope,
    together with every independently mandatory control on that path, are
@@ -10836,6 +10880,14 @@ Table of Contents
 
    *  arises from the union of several entries.
 
+8.8.2.  Per-Audience Condition
+
+   For a multi-audience token, the AS establishes the condition
+   independently for each audience; a single-audience token
+   (Section 8.5) remains preferred.
+
+8.8.3.  Projection Steps
+
    To emit scope for an entry, the AS:
 
    1.  determines the target resource server or audience for the token;
@@ -10849,16 +10901,11 @@ Table of Contents
        is no broader than the applicable carried entries;
 
    4.  omits scope for an entry where the target's enforcement path
-       consumes authorization_details instead;
+       consumes authorization_details instead; and
 
    5.  MUST refuse issuance to a target that is scope-only when no safe
        projection exists for the applicable entries: an issued token no
-       enforcement path can safely evaluate is not a usable credential;
-       and
-
-   6.  for a multi-audience token, establishes the condition
-       independently for each audience; a single-audience token
-       (Section 8.5) remains preferred.
+       enforcement path can safely evaluate is not a usable credential.
 
    Unknown scope semantics, unknown resource server enforcement
    behavior, or an ambiguous or stale mapping all fail closed under step
@@ -10869,6 +10916,18 @@ Table of Contents
    target.  This rule applies to every issuance path that can emit scope
    on a Mission-bound token: initial issuance, refresh, Token Exchange,
    and any other derived-token path.
+
+   This is the type-agnostic form of the rule; a type's own
+   specification states when the mapping in step 3 is safe for that
+   type's entries (for mission_resource_access,
+   [I-D.draft-mcguinness-oauth-mission-resource-access]).
+
+   The runtime profile's enforcement-scope declarations
+   ([I-D.draft-mcguinness-mission-runtime]) can reference the same
+   mapping for the paths it covers; this rule does not depend on that
+   profile.
+
+8.8.4.  Requested Scope Values
 
    Scope projection does not change OAuth response semantics and does
    not make access-token inspection a client requirement.
@@ -10898,18 +10957,27 @@ Table of Contents
    and combine with authorization_details as Section 3.1 of [RFC9396]
    permits.
 
+8.8.5.  Scope-Only Targets
+
    For a scope-only target, the trusted mapping also relates a requested
    scope value back to authority, so a deployment's existing scope
    values can request a Mission in configured-mapping mode
    (Section 5.1), combining scope with the Mission's
    authorization_details as Section 3.1 of [RFC9396] leaves to the AS.
-   Each requested value stands for the entries that the type's
-   specification derives from the mapping (for mission_resource_access,
-   [I-D.draft-mcguinness-oauth-mission-resource-access]).  The Authority
-   Set is those entries narrowed to policy, and the token for that
-   target carries their projection under the steps above.  A requested
-   value the target's trusted mapping does not name cannot be granted,
-   and is refused with invalid_scope (Section 10).
+
+   *  Each requested value stands for the entries that the type's
+      specification derives from the mapping (for
+      mission_resource_access,
+      [I-D.draft-mcguinness-oauth-mission-resource-access]).
+
+   *  The Authority Set is those entries narrowed to policy, and the
+      token for that target carries their projection under the steps
+      above.
+
+   *  A requested value the target's trusted mapping does not name
+      cannot be granted, and is refused with invalid_scope (Section 10).
+
+8.8.6.  Refresh Token Protection
 
    A refusal caused solely by failure to establish a safe scope
    projection MUST NOT invalidate an otherwise-valid refresh token or
@@ -10919,10 +10987,7 @@ Table of Contents
    token, or within the same atomic issuance, not by disabling rotation
    or restoring a consumed token.
 
-   This is the type-agnostic form of the rule; a type's own
-   specification states when the mapping in step 3 is safe for that
-   type's entries (for mission_resource_access,
-   [I-D.draft-mcguinness-oauth-mission-resource-access]).
+8.8.7.  Projection Example
 
    For example, a payments API at https://pay.example.com consumes only
    scope.  Its trusted mapping states that payments.small stands for the
@@ -10946,11 +11011,6 @@ Table of Contents
    explicitly requested value above (Section 10).  The Mission Resource
    Access Profile gives the same pair
    ([I-D.draft-mcguinness-oauth-mission-resource-access]).
-
-   The runtime profile's enforcement-scope declarations
-   ([I-D.draft-mcguinness-mission-runtime]) can reference the same
-   mapping for the paths it covers; this rule does not depend on that
-   profile.
 
 8.9.  Mission Claim
 
@@ -11146,6 +11206,11 @@ Table of Contents
        introspection response or issuer-local resolution the resource
        server relies on, and the same checks apply to that response's
        mission member (Section 11.4).
+
+   Other sections state how a resource server treats a reported Mission
+   state (Section 7), mission claim members (Section 8.9), an entry's
+   resource against a request's target (Section 8.5), and a designation
+   presented to it (Section 12.1).
 
    A resource server can also:
 
@@ -11984,7 +12049,8 @@ Table of Contents
    accounting records as the token's outermost actor (Section 12.5).
 
    Issuing a designation applies the checks of Section 8.1 as that list
-   states for a designation.
+   states for a designation.  Section 4.3 states a designation request's
+   exemption from mission_intent and the checks that still apply to it.
 
    A designation the AS issues:
 
@@ -12157,43 +12223,49 @@ Table of Contents
    and context selection.  Deployments configure its use and whether
    instance attribution is required.
 
-   When issuing context under this composition, the AS MUST use the
-   presenting instance validated under Section 5 of
-   [I-D.draft-mcguinness-oauth-client-instance-id], establish its
-   trusted association with the separately authenticated delegate, and
-   bind the output token to an instance-unique key whose possession it
-   verified in that exchange.  Context is mapped from that validated
-   instance into the output audience's Consumer Scope under Section 7.1
-   of [I-D.draft-mcguinness-oauth-client-instance-id].  The AS MUST NOT
-   use context copied or remapped from an input token as a substitute
-   for the presenting instance's evidence.  For example, when instance B
-   is authorized to continue work from instance A, output context names
-   B; A's context does not become B's identity by remapping it.
+   *  When issuing context under this composition, the AS MUST use the
+      presenting instance validated under Section 5 of
+      [I-D.draft-mcguinness-oauth-client-instance-id], establish its
+      trusted association with the separately authenticated delegate,
+      and bind the output token to an instance-unique key whose
+      possession it verified in that exchange.  Context is mapped from
+      that validated instance into the output audience's Consumer Scope
+      under Section 7.1 of
+      [I-D.draft-mcguinness-oauth-client-instance-id].  The AS MUST NOT
+      use context copied or remapped from an input token as a substitute
+      for the presenting instance's evidence.  For example, when
+      instance B is authorized to continue work from instance A, output
+      context names B; A's context does not become B's identity by
+      remapping it.
 
-   The actor authentication, delegation eligibility, subset, and
-   lifecycle checks of Section 12.2 and Section 12.5 still authorize the
-   exchange; instance evidence satisfies none of them by itself.  Where
-   deployment policy requires instance attribution, the AS MUST refuse
-   the exchange if the required instance evidence or its association
-   with the delegate and output key cannot be established.  Section 10
-   gives the error codes for these refusals.
+   *  The actor authentication, delegation eligibility, subset, and
+      lifecycle checks of Section 12.2 and Section 12.5 still authorize
+      the exchange; instance evidence satisfies none of them by itself.
 
-   If the exchange issues a refresh token, the grant-continuity rules of
-   Section 5.1 of [I-D.draft-mcguinness-oauth-client-instance-id] apply
-   alongside Section 8.2; instance continuity alone does not authorize
-   replacement of the recorded instance or key rebinding.
+   *  Where deployment policy requires instance attribution, the AS MUST
+      refuse the exchange if the required instance evidence or its
+      association with the delegate and output key cannot be
+      established.  Section 10 gives the error codes for these refusals.
 
-   Consumers establish presenter attribution under Sections 7.3 and 7.5
-   of [I-D.draft-mcguinness-oauth-client-instance-id].  A consumer
-   requiring attribution rejects unestablished associations under
-   Section 7.6 of [I-D.draft-mcguinness-oauth-client-instance-id].
+   *  If the exchange issues a refresh token, the grant-continuity rules
+      of Section 5.1 of [I-D.draft-mcguinness-oauth-client-instance-id]
+      apply alongside Section 8.2; instance continuity alone does not
+      authorize replacement of the recorded instance or key rebinding.
 
-   This composition does not add provenance to client_instance: a
-   consumer can use the direct-attestation trust configuration only when
-   the issuer meets that configuration's restriction against upstream
-   context.  An issuer also conveying upstream context needs a
-   separately specified, authenticated provenance mechanism before its
-   context can support presenter attribution.
+   *  Consumers establish presenter attribution under Sections 7.3 and
+      7.5 of [I-D.draft-mcguinness-oauth-client-instance-id].  A
+      consumer requiring attribution rejects unestablished associations
+      under Section 7.6 of
+      [I-D.draft-mcguinness-oauth-client-instance-id].
+
+   *  This composition does not add provenance to client_instance: a
+      consumer can use the direct-attestation trust configuration only
+      when the issuer meets that configuration's restriction against
+      upstream context.
+
+   *  An issuer also conveying upstream context needs a separately
+      specified, authenticated provenance mechanism before its context
+      can support presenter attribution.
 
 12.4.  Self-Exchange Down-Scoping
 
@@ -12653,13 +12725,17 @@ Table of Contents
          governance_record:  OPTIONAL.  A boolean. true when an Approval
             Governance Record is recorded for this approval event
             ([I-D.draft-mcguinness-mission-approval-governance]), joined
-            by this Mission's own approval_event_id.  It never changes
-            kind, which follows the basis (below and Section 13).
-            Approval Governance aligns the record's accountable
-            assertion, where it carries one, with that kind: a governed
-            decision still names its mechanism, and the record supplies
-            the fuller assertion set behind it, including any multi-
-            assertion set, never flattened into it.
+            by this Mission's own approval_event_id.
+
+            *  It never changes kind, which follows the basis (below and
+               Section 13).
+
+            *  Approval Governance aligns the record's accountable
+               assertion, where it carries one, with that kind: a
+               governed decision still names its mechanism, and the
+               record supplies the fuller assertion set behind it,
+               including any multi-assertion set, never flattened into
+               it.
 
          For kind: human: no additional kind-specific members; the
          deciding human is consent_principal.
@@ -12674,28 +12750,33 @@ Table of Contents
          authority.  A model is never itself the deciding policy or
          workflow.
 
-         Where adjudication is present for direct, kind MUST be human,
-         with or without governance_record: a policy decides an instance
-         only under a standing-consent basis (Section 13).
-
       approved_at:  Absent for direct, whose approval event carries its
          own instant (Section 6); a standing-consent basis carries it
          (Section 13).
 
-      For direct, activation.approval_event_id MUST identify a human
-      approval event (Section 6).  Approval Governance states how a
-      record backing a direct approval keeps that human decision as its
-      accountable assertion
-      ([I-D.draft-mcguinness-mission-approval-governance]).
+      The following rules apply to approval_basis:
 
-      approval_basis is provenance: none of the record's integrity
-      anchors, such as intent_hash, authority_hash or proposal_hash,
-      covers it (Section 15.1); a profile that commits the Mission
-      Record itself covers it under that profile's own anchor.  Two
-      optional profiles commit it (Section 20.1.1).  Its disclosure
-      through introspection follows Section 11.1.  It is not carried on
-      the baseline mission claim (Section 8.9), and it MUST NOT be
-      relied on to grant or widen authority wherever it does appear.
+      *  Where adjudication is present for direct, kind MUST be human,
+         with or without governance_record: a policy decides an instance
+         only under a standing-consent basis (Section 13).
+
+      *  For direct, activation.approval_event_id MUST identify a human
+         approval event (Section 6).  Approval Governance states how a
+         record backing a direct approval keeps that human decision as
+         its accountable assertion
+         ([I-D.draft-mcguinness-mission-approval-governance]).
+
+      *  approval_basis is provenance: none of the record's integrity
+         anchors, such as intent_hash, authority_hash or proposal_hash,
+         covers it (Section 15.1); a profile that commits the Mission
+         Record itself covers it under that profile's own anchor.  Two
+         optional profiles commit it (Section 20.1.1).
+
+      *  Its disclosure through introspection follows Section 11.1.
+
+      *  It is not carried on the baseline mission claim (Section 8.9),
+         and it MUST NOT be relied on to grant or widen authority
+         wherever it does appear.
 
    authority_source:  REQUIRED.  An object.  The source of the authority
       the approval draws on (Section 6.7), established at the approval
@@ -12715,12 +12796,16 @@ Table of Contents
       policy:  REQUIRED for organizational, absent otherwise.  An object
          with id, version, and digest: the stable reference to, and
          commitment over, the governed organizational policy the Mission
-         draws on. digest is a prefixed commitment (Section 15.3) whose
-         exact committed input and construction the policy's format
-         specifies: its species and, for an envelope anchor, its typ,
-         iss, and value.  The party that produces the reference computes
-         digest; a consumer holding the policy can reproduce it, and one
-         that does not compares it as an opaque value.
+         draws on.
+
+         *  digest is a prefixed commitment (Section 15.3) whose exact
+            committed input and construction the policy's format
+            specifies: its species and, for an envelope anchor, its typ,
+            iss, and value.
+
+         *  The party that produces the reference computes digest; a
+            consumer holding the policy can reproduce it, and one that
+            does not compares it as an opaque value.
 
       authority_source is provenance like approval_basis: recorded
       alongside it, folded into neither intent_hash nor authority_hash,
@@ -14772,6 +14857,12 @@ Table of Contents
               bound-authorization/draft-mcguinness-oauth-mission-
               approved-set-verification.html>.
 
+   [I-D.draft-mcguinness-oauth-mission-attenuation]
+              McGuinness, K., "Mission Offline Attenuation for OAuth
+              2.0", 2026, <https://mcguinness.github.io/mission-bound-
+              authorization/draft-mcguinness-oauth-mission-
+              attenuation.html>.
+
    [I-D.draft-mcguinness-oauth-mission-child-delegation]
               McGuinness, K., "Mission Child Delegation for OAuth 2.0",
               2026, <https://mcguinness.github.io/mission-bound-
@@ -16265,6 +16356,12 @@ Appendix G.  Document History
 
    -02
 
+   *  Token Claims: a token whose format a companion profile explicitly
+      defines, with its own typ and verification rules (the Mission
+      Offline Attenuation root), follows that profile; JWT access-token
+      validation stays under Section 4 of RFC 9068, accepting at+jwt or
+      application/at+jwt (#1760).
+
    *  Configured-mapping mode can key on the requested scope values for
       a scope-only target, through that target's trusted scope-
       projection mapping, which also relates a requested value back to
@@ -16499,6 +16596,28 @@ Appendix G.  Document History
       and Mission Identity, and Authority Materialized Before
       Containment point to the home of a rule they restated, keeping
       each operation's own condition (#1793, D919).
+
+   *  Editorial, no requirement change: Scope Projection is divided into
+      subsections for the subset condition, the per-audience condition,
+      the projection steps, requested scope values, scope-only targets,
+      refresh-token protection, and its example; Intent Members lists a
+      member's rules, the AS refusals included, under its definition,
+      for each member but task_bounds; Principals and Approval Basis
+      lists the rules that follow its member definitions; and Instance
+      Context in Delegated Tokens lists its rules (#1723, D845).
+
+   *  Editorial, no requirement change: Refresh Tokens, Designation,
+      Direct Approval Steps, Preparing the Approval, Committing the
+      Mission, Submission Processing Order, and Enforcement Requirements
+      point to the rules of their operation that other sections state,
+      which stay in place: the mission_intent exemption and the Mission-
+      governed resource refusal (Authority Proposal), consent reuse
+      (Establishing and Resolving a Binding), the unrecognized authority
+      source and approval idempotency (Principals and Approval Basis,
+      Provenance and Expiry), duplicate member names (Commitment
+      Mechanisms), and the resource-server rules of Mission Lifecycle,
+      Mission Claim, Audience and Token Response, and Designation
+      (#1723, D845).
 
    -01
 
@@ -16926,10 +17045,11 @@ Table of Contents
       it sent.
 
    The request also carries the client authentication parameters of the
-   method it uses (Section 3.2): client_id, REQUIRED with mTLS client
-   authentication (Section 2 of [RFC8705]), and client_assertion_type
-   and client_assertion, REQUIRED with private-key-JWT client
-   authentication [RFC7523].
+   method it uses (Section 3.2), for example client_id, REQUIRED with
+   mTLS client authentication (Section 2 of [RFC8705]), or
+   client_assertion_type and client_assertion, REQUIRED with private-
+   key-JWT client authentication [RFC7523].  A method that carries its
+   credentials in HTTP header fields keeps them there.
 
    The Mission Issuer's configuration states which audiences each
    authenticated caller may request: a resource server is typically
@@ -18467,7 +18587,9 @@ Table of Contents
    [RFC8414]).  Its claims are iss (the AS's issuer identifier), iat,
    and keys: a JWK Set's keys array [RFC7517] holding each such key's
    public JWK, under its original kid, for at least the audit horizon of
-   every Mission whose responses it signed.
+   every Mission whose responses it signed.  The AS serves the set with
+   the media type application/jwk-set+jwt ([OpenID.Federation],
+   Section 15.6).
 
    The AS signs the set under its active Mission Status signing key and
    never under a key the set lists or a key of another role.  When that
@@ -18493,6 +18615,19 @@ Table of Contents
    Both are NumericDate values [RFC7519].  The set reuses OpenID
    Federation's revoked encoding only; this document defines no OpenID
    Federation endpoint and claims no conformance to it.
+
+   The AS declares a freshness lifetime for the set with explicit
+   freshness information (Section 4.2.1 of [RFC9111]).  A consumer
+   refetches the set, or revalidates its copy (Section 4.3 of
+   [RFC9111]), once that lifetime ends; a response without valid
+   explicit freshness information is stale when received (Section 4.2.2
+   of [RFC9111]).  A key a verified set lists stays compromised for the
+   consumer: a consumer MUST NOT treat it as no longer compromised
+   because a later set omits it, an earlier set is presented again, or a
+   fetch of the set fails.  While a fetch fails, the consumer keeps
+   refusing the keys it has learned are compromised; the set's freshness
+   never extends that of the consumer's cached jwks_uri, which
+   Section 10.5 governs.
 
 9.  Conformance
 
@@ -18791,9 +18926,33 @@ Table of Contents
 12.2.  OAuth Extensions Error Registration
 
    IANA is requested to register the following in the "OAuth Extensions
-   Error Registry" [RFC6749]. not_found is already registered for
-   another usage location; its entry here adds the usage locations of
-   this document.
+   Error Registry" [RFC6749]. invalid_request, invalid_client and
+   not_found are already registered for other usage locations; their
+   entries here add the usage locations of this document.
+
+   *  Error Name: invalid_request
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
+
+   *  Error Name: invalid_client
+
+   *  Error Usage Location: Mission Status endpoint error response;
+      Mission Lifecycle endpoint error response
+
+   *  Related Protocol Extension: Mission Status and Lifecycle for OAuth
+      2.0
+
+   *  Change Controller: IETF
+
+   *  Specification Document(s): this document, Section 3.10
 
    *  Error Name: unauthorized
 
@@ -19119,6 +19278,16 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   -01
+
+   *  The Mission Status Request gives the client authentication
+      parameters of mTLS and private-key JWT as examples; a method that
+      carries its credentials in HTTP header fields keeps them there.
+
+   *  IANA Considerations adds the Mission Status and Mission Lifecycle
+      endpoints as usage locations for invalid_request and
+      invalid_client.
 
    -00
 
@@ -28344,8 +28513,19 @@ Table of Contents
       bound decided either deny (Section 7).
 
    *  A request whose authority is absent, or carries an entry the PDP
-      cannot evaluate in full, is denied credential_invalid: the PDP
-      MUST NOT fall back to the Mission's authority.
+      cannot evaluate in full, is denied credential_invalid, and the PDP
+      MUST NOT fall back to the Mission's authority.  This profile
+      deliberately requires the credential's entire authority
+      description to be evaluable, so an unevaluable credential entry
+      invalidates the request even when another entry could authorize it
+      under Resource Access's alternative-entry rule
+      ([I-D.draft-mcguinness-oauth-mission-resource-access]).  That is
+      this profile's credential validation policy; the prohibition on
+      falling back to the Mission's authority does not by itself require
+      it.  An entry the PDP evaluates and finds unsatisfied invalidates
+      nothing: another complete entry of authority still authorizes the
+      action.  The policy has an interoperability cost: adding an entry
+      a PDP cannot evaluate makes the credential unusable at that PDP.
 
 5.7.  Action Parameters and Parameter Digest
 
@@ -31158,6 +31338,14 @@ Table of Contents
 Appendix A.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Credential Decision Context: requiring a credential's whole
+      authority description to be evaluable is this profile's credential
+      validation policy, stricter than Resource Access's alternative-
+      entry rule and not a consequence of the prohibition on falling
+      back to the Mission's authority; an entry the PDP evaluates and
+      finds unsatisfied still lets another complete entry authorize; the
+      interoperability cost is stated (#1806).
 
    *  Changes a requirement (#956, D814): where the runtime Enforcement
       Scope Statement declares action classes, the PDP refuses a
