@@ -6,8 +6,9 @@
  * Constraints, below the endpoints: intake validation and the published
  * schema, derivation intersection (refusal on an empty intersection, no drop
  * of a ceiling key), effective-set projection (intersection, fragment dropped
- * on an empty intersection), and the two projections that cannot carry the
- * key and so refuse it (scope projection, the attenuation root mapping).
+ * on an empty intersection), scope projection, which cannot carry the key
+ * and so refuses it, and the attenuation root mapping, which leaves the
+ * entry's tool out rather than dropping the key (#1756).
  */
 
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -22,10 +23,11 @@ import {
   IntentError,
   MISSION_RESOURCE_ACCESS_SCHEMA,
   type MissionIntent,
-  mapAuthorityToTools,
+  mapAuthorityToCeiling,
   projectThroughEffective,
   validateAuthorityProposal,
 } from "../src/index.js";
+import { TEST_OPERATIONS } from "./attenuation.helper.js";
 
 const R = "https://erp.example.com";
 const intent = { target_resources: [R] } as unknown as MissionIntent;
@@ -37,6 +39,19 @@ const entry = (constraints?: Record<string, unknown>, actions = ["invoices.read"
     actions,
     ...(constraints ? { constraints } : {}),
   }) as AuthorityEntry;
+
+/**
+ * @spec attenuation#root-mapping (#1756): the attenuation root mapping maps an
+ * entry to a tool only where the resource server establishes every fact its
+ * constraints restrict, so an entry bound by a key the declared operation
+ * does not establish (TEST_OPERATIONS establishes only vendors and
+ * max_amount) leaves its tool out, never mapped with the bound dropped. The
+ * same entry without the bound maps, so the omission is the bound's.
+ */
+function expectRootLeavesOut(bound: Record<string, unknown>): void {
+  expect(Object.keys(mapAuthorityToCeiling([entry()], TEST_OPERATIONS).tools)).toEqual([`${R}#invoices.read`]);
+  expect(mapAuthorityToCeiling([entry(bound)], TEST_OPERATIONS).tools).toEqual({});
+}
 
 function refusal(fn: () => unknown): IntentError {
   try {
@@ -164,10 +179,8 @@ describe("projections that cannot carry the bound refuse it (@spec resource-acce
     expect(scopeValueSafeForEntry(mapping, entry({ resource_issued_before: "2026-09-30T23:59:59Z" }))).toBe(false);
   });
 
-  it("the attenuation root mapping refuses the bound rather than dropping it", () => {
-    expect(() => mapAuthorityToTools([entry({ resource_issued_after: "2026-07-01T00:00:00Z" })])).toThrow(
-      /unknown constraint 'resource_issued_after'/,
-    );
+  it("the attenuation root mapping leaves the entry's tool out rather than dropping the bound", () => {
+    expectRootLeavesOut({ resource_issued_after: "2026-07-01T00:00:00Z" });
   });
 });
 
@@ -208,13 +221,13 @@ describe("derivation, projection and intake over tenant (@spec resource-access#i
     }
   });
 
-  it("scope projection and the attenuation root mapping refuse a tenant-bound entry", () => {
+  it("scope projection refuses a tenant-bound entry, and the attenuation root mapping leaves its tool out", () => {
     const mapping = {
       rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
       mandatory_controls: {},
     };
     expect(scopeValueSafeForEntry(mapping, entry({ tenant: "acme" }))).toBe(false);
-    expect(() => mapAuthorityToTools([entry({ tenant: "acme" })])).toThrow(/unknown constraint 'tenant'/);
+    expectRootLeavesOut({ tenant: "acme" });
   });
 });
 
@@ -263,13 +276,13 @@ describe("derivation, projection and intake over time_window (@spec resource-acc
     }
   });
 
-  it("scope projection and the attenuation root mapping refuse a windowed entry", () => {
+  it("scope projection refuses a windowed entry, and the attenuation root mapping leaves its tool out", () => {
     const mapping = {
       rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
       mandatory_controls: {},
     };
     expect(scopeValueSafeForEntry(mapping, entry({ time_window: H2 }))).toBe(false);
-    expect(() => mapAuthorityToTools([entry({ time_window: H2 })])).toThrow(/unknown constraint 'time_window'/);
+    expectRootLeavesOut({ time_window: H2 });
   });
 });
 
@@ -312,13 +325,13 @@ describe("derivation, projection and intake over recipient_domain (@spec resourc
     }
   });
 
-  it("scope projection and the attenuation root mapping refuse a recipient-bound entry", () => {
+  it("scope projection refuses a recipient-bound entry, and the attenuation root mapping leaves its tool out", () => {
     const mapping = {
       rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
       mandatory_controls: {},
     };
     expect(scopeValueSafeForEntry(mapping, entry(rd("example.com")))).toBe(false);
-    expect(() => mapAuthorityToTools([entry(rd("example.com"))])).toThrow(/unknown constraint 'recipient_domain'/);
+    expectRootLeavesOut(rd("example.com"));
   });
 });
 
@@ -363,13 +376,13 @@ describe("derivation, projection and intake over data_classification (@spec reso
     }
   });
 
-  it("scope projection and the attenuation root mapping refuse a classification-bound entry", () => {
+  it("scope projection refuses a classification-bound entry, and the attenuation root mapping leaves its tool out", () => {
     const mapping = {
       rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
       mandatory_controls: {},
     };
     expect(scopeValueSafeForEntry(mapping, entry(dc(["internal"])))).toBe(false);
-    expect(() => mapAuthorityToTools([entry(dc(["internal"]))])).toThrow(/unknown constraint 'data_classification'/);
+    expectRootLeavesOut(dc(["internal"]));
   });
 });
 
@@ -408,13 +421,13 @@ describe("derivation, projection and intake over allowed_tools (@spec resource-a
     }
   });
 
-  it("scope projection and the attenuation root mapping refuse a tool-bound entry", () => {
+  it("scope projection refuses a tool-bound entry, and the attenuation root mapping leaves its tool out", () => {
     const mapping = {
       rights: { type: "mission_resource_access" as const, resource: R, match: "exact" as const, actions: ["invoices.read"] },
       mandatory_controls: {},
     };
     expect(scopeValueSafeForEntry(mapping, entry(at(["a"])))).toBe(false);
-    expect(() => mapAuthorityToTools([entry(at(["a"]))])).toThrow(/unknown constraint 'allowed_tools'/);
+    expectRootLeavesOut(at(["a"]));
   });
 });
 

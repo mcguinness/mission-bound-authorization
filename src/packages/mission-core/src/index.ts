@@ -43,7 +43,9 @@ export {
   type AatReplayState,
   type AatTrustAnchor,
   type AatVerifiedToken,
+  aatChainAudienceProblem,
   verifyAatChain,
+  verifyAatChainLinks,
   verifyAatPresentation,
 } from "./aat-verify.js";
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";
@@ -83,25 +85,10 @@ export {
 export {
   AAT_DETAIL_TYPE,
   AAT_TYP,
-  type AATClaims,
-  type AATConstraint,
-  type AATEnumConstraint,
-  type AATExactConstraint,
-  type AATMissionClaim,
-  type AATRangeConstraint,
-  type AATToolArgs,
-  type AATTools,
   aatToolId,
   audNesting,
-  type ChainVerifyOptions,
-  type ChainVerifyResult,
-  expNesting,
-  missionClaimInvariant,
   parHash,
   parseAatToolId,
-  toolsOf,
-  toolsSubset,
-  verifyAttenuationChain,
 } from "./attenuation-chain.js";
 export {
   AuthorityDependencyConfigError,
@@ -228,7 +215,6 @@ export {
   coveringCredentialEntries,
   credentialAuthorityPermits,
   credentialConstraintGates,
-  credentialEntriesFromAatTools,
   credentialEntriesFromAuthority,
   entryCoversFacts,
   entryMatchesAction,
@@ -317,6 +303,22 @@ export {
   resolveCoResolvedLocalPrincipal,
   resolveLocalPrincipal,
 } from "./local-principal-mapping.js";
+export {
+  type AttenuationOperation,
+  type AttenuationOperations,
+  aatEntryOf,
+  aatUuidV7,
+  credentialEntriesFromMissionAat,
+  MISSION_CONSTRAINTS_MEMBER,
+  type MissionAatChain,
+  MissionAatError,
+  type MissionConstraints,
+  type MissionToolConstraints,
+  missionConstraintsNarrowingProblem,
+  missionToolEntry,
+  readMissionConstraints,
+  verifyMissionAatChain,
+} from "./mission-aat.js";
 export {
   type CredentialProfileClaims,
   CredentialProfileError,
