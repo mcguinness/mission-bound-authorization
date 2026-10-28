@@ -127,16 +127,18 @@ describe("authority source rendering for a shared agent registration (@spec miss
     expect(organizationalHtml).toContain("organizational");
     expect(organizationalHtml).toContain("acme-accounts-payable-controls");
 
-    // No Subject named: the two sources differ in provenance, so no rendering
-    // would be true for whichever Subject the decision binds.
+    // No Subject named: with no approval session there is no Approver and no
+    // Subject, so nothing renders (#1802), neither source nor any other part of
+    // the request.
     const unnamed = await render();
-    expect(unnamed.status).toBe(400);
-    expect(((await unnamed.json()) as { error_description: string }).error_description).toMatch(
-      /depends on the Subject/,
-    );
+    expect(unnamed.status).toBe(401);
+    const unnamedHtml = await unnamed.text();
+    expect(unnamedHtml).not.toContain("user_delegated");
+    expect(unnamedHtml).not.toContain("organizational");
     // A `login_hint` names the Approver, not the Subject: with no session it
     // selects nothing, and the rendering still refuses.
     const hinted = await render(undefined, "acme-accounts-payable");
-    expect(hinted.status).toBe(400);
+    expect(hinted.status).toBe(401);
+    expect(await hinted.text()).not.toContain("acme-accounts-payable-controls");
   });
 });
