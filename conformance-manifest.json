@@ -59,8 +59,8 @@
     "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
-    "content_sha256": "483287bedfb2209de40290df596ca9bc2ea3178e485e6eaa226a46e903e1d6c2"
+    "revision": "984303ad6d05f54acf371966dcb1f7cd6a0f41af",
+    "content_sha256": "07d75d7759e8fa751fe357884de4981471c1ff7623a08ca2ff50957b32e27b81"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
@@ -24671,6 +24671,48 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#705 (D359). The reference implementation has no Management bulk endpoint. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
+  },
+  {
+   "id": "management.bulk.version-pinned-per-member",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "dry-run",
+   "text": "each with the Mission's state version read in that same evaluation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the bulk token a dry run returns binds each member's state version as the dry run read it, so the matching execute compares each member against the version reviewed, not a later one"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#997 (D995). No reference implementation of Mission Management exists; `bulk_token` is unimplemented. Planned test surface: the Mission Management endpoint. Dry run a bulk `resume` over two suspended members; through the status endpoint, resume and re-suspend one of them; then execute. That member reports `stale_version` and stays suspended, the other reports `applied`, and a member terminated in between reports `already_terminal`."
+  },
+  {
+   "id": "management.bulk.stale-version-skipped",
+   "spec": "draft-mcguinness-oauth-mission-management.md",
+   "anchor": "execution",
+   "text": "Before applying the operation to a member that is not `terminated`, the AS MUST compare the member's current state version with the version the bulk token pins for it.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "at execute, a non-terminated member whose current state version differs from the pinned one, including one that changed and returned to its reviewed state, is not operated on, is reported stale_version and is unchanged, while the other members proceed; a terminated member reports already_terminal instead"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#997 (D995). No reference implementation of Mission Management exists; `bulk_token` is unimplemented. Planned test surface: the Mission Management endpoint. Dry run a bulk `resume` over two suspended members; through the status endpoint, resume and re-suspend one of them; then execute. That member reports `stale_version` and stays suspended, the other reports `applied`, and a member terminated in between reports `already_terminal`."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
