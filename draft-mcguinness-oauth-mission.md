@@ -8016,8 +8016,9 @@ Cross-Domain:
 - Editorial, no requirement change: Scope Projection is divided into
   subsections for the subset condition, the per-audience condition, the
   projection steps, requested scope values, `scope`-only targets,
-  refresh-token protection, and its example; Intent Members lists each
-  member's rules, the AS refusals included, under its definition;
+  refresh-token protection, and its example; Intent Members lists a
+  member's rules, the AS refusals included, under its definition, for
+  each member but `task_bounds`;
   Principals and Approval Basis lists the rules that follow its member
   definitions; and Instance Context in Delegated Tokens lists its rules
   (#1723, D845).
