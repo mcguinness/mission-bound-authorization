@@ -228,6 +228,38 @@ export function createRevocationWorker(options: RevocationWorkerOptions): Revoca
   const attempt = async (due: RevocationRecord): Promise<void> => {
     const at = nowS();
     if (due.exp <= at) return;
+    // The budget is spent before anything is counted or sent. A pending row
+    // whose attempts already reach the bound is one whose last attempt was
+    // recorded and then cut short (a crash, a stop): its outcome is unknown,
+    // so the credential stays unconfirmed, exhausted, with no further try.
+    if (due.attempts >= policy.maxAttempts) {
+      const spent: RevocationRecord = {
+        ...due,
+        state: "exhausted",
+        lastOutcome: "interrupted",
+        updatedAt: at,
+      };
+      delete spent.lastStatus;
+      store.atomically(() => {
+        store.updateRevocation(spent);
+        store.appendLog([
+          {
+            s256: due.s256,
+            at,
+            event: "revocation_result",
+            detail: {
+              token: { iss: due.iss, jti: due.jti },
+              kind: due.kind,
+              recipient: due.recipient,
+              attempt: due.attempts,
+              outcome: "interrupted",
+              state: "exhausted",
+            },
+          },
+        ]);
+      });
+      return;
+    }
     const n = due.attempts + 1;
     // Recorded before it is sent, with the next attempt already scheduled,
     // so an attempt cut short by a crash is retried, never lost.

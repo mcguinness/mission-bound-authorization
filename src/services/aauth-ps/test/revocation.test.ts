@@ -9,7 +9,7 @@
  * work across a restart.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { rfc3339 } from "../src/index.js";
+import { type RevocationRecord, rfc3339 } from "../src/index.js";
 import {
   type Agent,
   ASSISTANT,
@@ -490,5 +490,70 @@ describe("restart recovery", () => {
       complete: true,
     });
     expect(w.durable.findOwnedMission(ASSISTANT, s256)?.state).toBe("terminated");
+  });
+
+  it("sends nothing for a pending revocation whose attempts already reach the bound when the PS restarts", async () => {
+    await boot();
+    const { s256 } = await approve(w, assistant, { description: "Summarize", resources: [RS] });
+    w.rs.mode = "unavailable";
+    await control(w, assistant, s256, terminateBody());
+    const row = w.durable.revocations(s256)[0] as RevocationRecord;
+    // What a crash leaves at the last permitted attempt: recorded, never answered.
+    w.durable.updateRevocation({ ...row, attempts: 4, state: "pending", nextAt: w.clock.s });
+    const before = w.rs.requests;
+    await w.restart();
+    await w.ps.revocations?.runDue();
+    expect(w.rs.requests).toBe(before);
+    expect(w.durable.revocations(s256)[0]).toMatchObject({ attempts: 4, state: "exhausted" });
+  });
+
+  it("sends nothing more after a final attempt cut short by a restart: the credential stays unconfirmed, exhausted at the bound", async () => {
+    await boot();
+    const { s256 } = await approve(w, assistant, { description: "Summarize", resources: [RS] });
+    w.rs.mode = "unavailable";
+    await control(w, assistant, s256, terminateBody());
+    // The second and third attempts fail too, after backoffs of 30 and 60 seconds.
+    for (const wait of [30, 60]) {
+      w.clock.advance(wait);
+      await w.ps.revocations?.runDue();
+    }
+    expect(w.rs.requests).toBe(3);
+    expect(w.durable.revocations(s256)[0]).toMatchObject({ state: "pending", attempts: 3 });
+    // The fourth and last attempt is recorded and sent; the PS restarts
+    // before the recipient answers.
+    w.rs.mode = "hang";
+    let restarted: Promise<void> | undefined;
+    w.rs.onRequest = () => {
+      restarted ??= w.restart();
+    };
+    w.clock.advance(120);
+    void w.ps.revocations?.runDue();
+    await vi.waitFor(() => expect(restarted).toBeDefined());
+    await restarted;
+    expect(w.rs.requests).toBe(4);
+    expect(w.durable.revocations(s256)[0]).toMatchObject({ state: "pending", attempts: 4 });
+
+    // Its outcome is unknown: the restarted PS sends nothing more, and the
+    // credential stays unconfirmed until its exp.
+    w.rs.mode = "ok";
+    w.clock.advance(120);
+    await w.ps.revocations?.runDue();
+    expect(w.rs.requests).toBe(4);
+    expect(w.rs.revoked).toEqual([]);
+    expect(w.durable.revocations(s256)[0]).toMatchObject({
+      state: "exhausted",
+      attempts: 4,
+      lastOutcome: "interrupted",
+    });
+    expect(events(s256, "revocation_result").at(-1)?.detail).toMatchObject({
+      attempt: 4,
+      outcome: "interrupted",
+      state: "exhausted",
+    });
+    expect(await residualOf(s256)).toMatchObject({
+      tracked: 1,
+      revocation_confirmed: 0,
+      complete: false,
+    });
   });
 });
