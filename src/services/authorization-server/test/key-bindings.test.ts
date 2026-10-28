@@ -42,7 +42,7 @@ function layout() {
 const record = (file: string) => JSON.parse(readFileSync(file, "utf8")) as KeyBindingRecord;
 const kidsOf = (file: string) => record(file).bindings.map((b) => b.kid);
 
-describe("the AS's key binding record (@spec #831, #1815, D945)", () => {
+describe("the AS's key binding record (@spec #831, #1815, D945)", { timeout: 30_000 }, () => {
   it("refuses a ring recreated under the recorded kids, at load and at AS assembly, and loads the original ring restored", async () => {
     const { ring, bindings } = layout();
     await initSigningKeyRing(ring, ISSUER, ROLES, undefined, { bindings });

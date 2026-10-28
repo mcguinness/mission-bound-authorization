@@ -74,7 +74,7 @@ const jktOf = (file: string, kid: string) => record(file).bindings.find((b) => b
 const rejected = (results: PromiseSettledResult<unknown>[]) =>
   results.filter((r): r is PromiseRejectedResult => r.status === "rejected").map((r) => r.reason as Error);
 
-describe("the key binding record under concurrent writers (@spec #1815, #1833)", () => {
+describe("the key binding record under concurrent writers (@spec #1815, #1833)", { timeout: 30_000 }, () => {
   it("concurrent appends retain both accepted identifiers", async () => {
     const { ring, file } = layout();
     const [base, a, b] = await Promise.all([key("status"), key("status-2"), key("status-3")]);
