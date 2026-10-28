@@ -4,11 +4,12 @@ import type { EvaluationRequest } from "../src/evaluate.js";
  * Test fixture (@spec authzen#context-credential, #825 PR 2b, D312). The PEP
  * supplies the credential's own authority on every decision. A request built
  * without one gets a neutral credential authority: one entry covering exactly
- * the request's own operation target (#1276, D457) and action, with no
- * constraints, so a test that
- * exercises the Mission bound keeps its meaning. A request that names
- * `authority` itself, including as `undefined`, is passed through as written:
- * that is how the credential-bound tests reach the PDP.
+ * the request's own operation target (#1276, D457) and action, under the
+ * request's own `resource_contract` where it carries one (#249, D865), with
+ * no constraints, so a test that exercises the Mission bound keeps its
+ * meaning. A request that names `authority` itself, including as
+ * `undefined`, is passed through as written: that is how the
+ * credential-bound tests reach the PDP.
  */
 export function withCredential(req: EvaluationRequest): EvaluationRequest {
   return withCredentialAuthority(withActionClass(req));
@@ -32,6 +33,7 @@ export function withActionClass(req: EvaluationRequest): EvaluationRequest {
 function withCredentialAuthority(req: EvaluationRequest): EvaluationRequest {
   const credential = req.context.credential;
   if (credential !== undefined && "authority" in credential) return req;
+  const contract = req.resource.properties?.resource_contract;
   return {
     ...req,
     context: {
@@ -43,6 +45,7 @@ function withCredentialAuthority(req: EvaluationRequest): EvaluationRequest {
             type: "mission_resource_access",
             resource: req.resource.properties?.operation_target ?? "",
             actions: [req.action.name],
+            ...(contract !== undefined ? { resource_contract: contract } : {}),
           },
         ],
       },

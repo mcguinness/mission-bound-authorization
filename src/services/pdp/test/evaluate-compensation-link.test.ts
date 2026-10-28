@@ -43,8 +43,9 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, resourcePolicyFixture, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const AUDIENCE = "http://localhost:4403/mcp";
 const NOW = new Date("2026-10-24T12:00:00Z");
@@ -73,14 +74,14 @@ const view = (actions: string[] = [PAY, REVERSE]): MissionView => ({
   state: "active",
   version: 1,
   authority_hash: "sha-256:h252",
-  authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions }],
+  authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions })],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
 });
 
 /** A request at `phase` carrying `link`; `undefined` omits either member. */
 const request = (phase: unknown, link: unknown, action = REVERSE): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: AUDIENCE, operation_target: AUDIENCE, vendor_id: "acme" } },
     action: { name: action },
@@ -91,7 +92,7 @@ const request = (phase: unknown, link: unknown, action = REVERSE): EvaluationReq
       ...(phase !== undefined ? { action_phase: phase } : {}),
       ...(link !== undefined ? { compensates_evaluation_id: link } : {}),
     },
-  } as EvaluationRequest);
+  } as EvaluationRequest));
 
 const decisionOptions = (fga: Fga, actions?: string[]): DecisionOptions => ({
   view: view(actions),

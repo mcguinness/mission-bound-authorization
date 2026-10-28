@@ -106,12 +106,13 @@ export async function launchAsNative(options: ComposeStackOptions): Promise<AsNa
   // listens; composeStack loads it again when it builds the AS.
   if (options.signingKeys && "ring" in options.signingKeys) {
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
-    await loadSigningKeyRing(options.signingKeys.ring, `http://localhost:${options.asPort ?? TOPOLOGY.ports.as}`, {
-      asToken,
-      asStatus,
-      asTxn,
-      asContinuation,
-    });
+    await loadSigningKeyRing(
+      options.signingKeys.ring,
+      `http://localhost:${options.asPort ?? TOPOLOGY.ports.as}`,
+      { asToken, asStatus, asTxn, asContinuation },
+      // @spec #1815 (D945): the key binding record, checked before anything connects.
+      options.signingKeys.bindings ? { bindings: options.signingKeys.bindings } : {},
+    );
   }
   // @spec #1767 (D901): a missing or uninitialized redemption store refuses
   // before anything connects; the launcher never creates one.

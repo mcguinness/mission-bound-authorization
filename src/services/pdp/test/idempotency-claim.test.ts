@@ -40,8 +40,9 @@ import { decisionCacheKey } from "../src/projections.js";
 import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -123,12 +124,15 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:h917",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: MISSION_RESOURCE_ACCESS_TYPE,
       resource: RESOURCE,
-      actions: ["payments:payment.execute", "payments:remittance.send", ADMIN_ACTION],
-    },
-    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] },
+      actions: ["payments:payment.execute", "payments:remittance.send"],
+    }),
+    // The fixture admin action is outside the payments contract, so it has an
+    // entry of its own, under no reference.
+    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [ADMIN_ACTION] },
+    pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -158,7 +162,7 @@ interface RequestOptions {
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
-  return {
+  return withCurrentContractReference({
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
     resource: {
       ...target,
@@ -176,7 +180,7 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       mission_state_observation: o.observation ?? { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase !== undefined ? { action_phase: o.phase } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-917-a" };

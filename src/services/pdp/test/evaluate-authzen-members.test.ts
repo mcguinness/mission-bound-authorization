@@ -16,8 +16,9 @@ import type { Fga } from "../src/fga.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView, policyViewId } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -38,11 +39,11 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 3,
   authority_hash: "sha-256:h1004",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: MISSION_RESOURCE_ACCESS_TYPE,
       resource: RESOURCE,
       actions: ["payments:invoice.read", "payments:payment.execute"],
-    },
+    }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -63,7 +64,7 @@ const options = (over: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
 
 /** A read of one invoice: below the high-consequence floor, no observation needed. */
 const readRequest = (resource: EvaluationRequest["resource"]): EvaluationRequest =>
-  ({
+  withCurrentContractReference({
     subject: { id: "alice" },
     resource,
     action: { name: "payments:invoice.read", properties: { idempotency_key: freshKey() } },
@@ -71,7 +72,7 @@ const readRequest = (resource: EvaluationRequest["resource"]): EvaluationRequest
       mission: { id: "msn_1004", issuer: "https://as.test" },
       actor: { client_id: "ap-agent" },
     },
-  }) as EvaluationRequest;
+  } as EvaluationRequest);
 
 const HIGH_CONSEQUENCE_CLASSES = ["irreversible_action", "external_commitment", "privileged_administration"];
 
@@ -91,7 +92,7 @@ interface ObservedRequest {
 
 /** A keyed payment request; the class label is the request's own. */
 const observedRequest = (o: ObservedRequest = {}): EvaluationRequest =>
-  ({
+  withCurrentContractReference({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: { name: "payments:payment.execute", properties: { idempotency_key: freshKey() } },
@@ -101,7 +102,7 @@ const observedRequest = (o: ObservedRequest = {}): EvaluationRequest =>
       ...(o.actionClass !== undefined ? { action_class: o.actionClass } : {}),
       ...(o.observation === null ? {} : { mission_state_observation: o.observation ?? observed() }),
     },
-  }) as EvaluationRequest;
+  } as EvaluationRequest);
 
 describe("AuthZEN profile members (@spec authzen#pdp-request, authzen#context-audience-freshness, #1004)", () => {
   describe("under PEP placement the PDP reads context.mission_state_observation", () => {

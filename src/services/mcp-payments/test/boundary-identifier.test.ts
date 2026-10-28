@@ -75,6 +75,7 @@ import {
   TokenAudienceError,
   type WriteReservationStore,
 } from "../src/index.js";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 const OTHER_ISSUER = "https://other-as.test";
@@ -203,7 +204,7 @@ const viewOf = (resource = CANONICAL_RESOURCE): MissionView => ({
   authority_hash: "sha-256:m853",
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
-  authority_set: [{ type: "mission_resource_access", resource, actions: ALL_ACTIONS }],
+  authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource, actions: ALL_ACTIONS })],
 });
 
 let asKey: CryptoKey;
@@ -233,7 +234,7 @@ async function mint(aud: unknown, credentialResource = CANONICAL_RESOURCE, extra
     exp: now + 300,
     cnf: { jkt: "jkt-853" },
     mission: { id: "msn_853", issuer: ISSUER },
-    authorization_details: [{ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS }],
+    authorization_details: [pinnedToCurrentContract({ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS })],
     ...extra,
   };
   if (aud === undefined) delete payload.aud;
@@ -246,7 +247,7 @@ const factsFor = (credentialResource = CANONICAL_RESOURCE): TokenFacts => ({
   clientId: "ap-agent",
   cnfJkt: "jkt-853",
   mission: { id: "msn_853", issuer: ISSUER },
-  credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS }]),
+  credentialAuthority: credentialAuthorityFrom([pinnedToCurrentContract({ type: "mission_resource_access", resource: credentialResource, actions: ALL_ACTIONS })]),
 });
 
 /**
@@ -562,12 +563,12 @@ describe("each PEP establishes its boundary from configuration, and every consum
     const x = buildPep(d, "mcp-payments-pep", { profile });
     const facts = factsFor();
     const read = await x.pep.enforce("get_invoice", { invoice_id: "inv-1" }, { ...facts, credentialAuthority: credentialAuthorityFrom([
-      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS },
-      { type: "mission_resource_access", resource: ADMIN, actions: ALL_ACTIONS },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS }),
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: ADMIN, actions: ALL_ACTIONS }),
     ]) });
     const admin = await x.pep.enforce("lookup_vendor", { vendor_id: "acme" }, { ...facts, credentialAuthority: credentialAuthorityFrom([
-      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS },
-      { type: "mission_resource_access", resource: ADMIN, actions: ALL_ACTIONS },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS }),
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: ADMIN, actions: ALL_ACTIONS }),
     ]) });
     expect(read.permitted).toBe(true);
     expect(admin).toMatchObject({ permitted: false, denial_reason: "out_of_authority" });
@@ -706,7 +707,12 @@ describe("a declared change of boundary identifier (@spec runtime#boundary-ident
     const denied = await call(x, "get_invoice", { invoice_id: "inv-1" }, await mint(LEGACY));
     expect(denied).toMatchObject({ ok: false, denial_reason: "out_of_authority" });
     expect(x.decided.map((r) => r.resource.properties)).toEqual([
-      { vendor_id: "acme", audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE },
+      {
+        vendor_id: "acme",
+        audience: CANONICAL_RESOURCE,
+        operation_target: CANONICAL_RESOURCE,
+        resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ALL_ACTIONS }),
+      },
     ]);
     expect(x.fgaCalls()).toBe(0);
   });

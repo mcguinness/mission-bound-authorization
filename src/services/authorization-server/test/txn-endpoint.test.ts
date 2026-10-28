@@ -13,7 +13,7 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { AccessRequestService, txnTaskId } from "@mission/access-request";
-import { CANONICAL_RESOURCE, SCOPE_PROJECTION } from "@mission/demo-data";
+import { CANONICAL_RESOURCE, contractsRequiring, currentContractProfileVersion, SCOPE_PROJECTION } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -96,6 +96,14 @@ const WORKFLOW_LIFETIME_S = 600;
 const MAX_TOKEN_LIFETIME_S = 300;
 /** A second accepted Challenge-Issuing Resource the subject_token is NOT for. */
 const OTHER_RESOURCE = "http://localhost:4499/mcp";
+/**
+ * @spec runtime#resource-contract (#249): the payments resource's Operation
+ * Profile, registered under the version its current contract names, as the
+ * deployment registers it, so an entry carrying the contract's reference
+ * resolves to it.
+ */
+const CONTRACT_PROFILE = (): ReturnType<typeof missionResourceAccessProfile> =>
+  missionResourceAccessProfile(currentContractProfileVersion(RESOURCE));
 /** @spec txn-authorization#offline-verification — `txn` is unique within a
  *  Challenge-Issuing Resource, so the ARS task id carries the resource too. */
 const taskFor = (txn: string, resource: string = RESOURCE): string => txnTaskId(resource, txn);
@@ -537,7 +545,7 @@ beforeAll(async () => {
       // family's `mission_resource_access` entry; a run can supersede a version
       // to prove drift behaves.
       operationProfiles: operationProfiles
-        .register(RESOURCE, missionResourceAccessProfile())
+        .register(RESOURCE, CONTRACT_PROFILE())
         .register(OTHER_RESOURCE, missionResourceAccessProfile()),
       workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
       maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
@@ -1255,7 +1263,7 @@ describe("terminal result ordering (@spec txn-authorization#failure-semantics)",
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "expiry-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -1393,7 +1401,7 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars: localArs,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "local-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -1560,7 +1568,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars: localArs,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "local-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2152,6 +2160,21 @@ describe("subject_token binding (@spec txn-authorization#challenge-redemption)",
  * The describes below each mint their OWN Mission, so nothing here depends on
  * the state the containment run above left the base Mission in.
  */
+/**
+ * @spec resource-access#resource-contract (#249, D875): a Mission approved
+ * before the payments cutover, under the same declarations requiring no
+ * reference, so its entries carry none. The fixture for this endpoint's
+ * behavior toward unpinned authority, which the cutover does not rewrite.
+ */
+async function preCutoverMission(): ReturnType<typeof freshMission> {
+  const before = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+  try {
+    return await freshMission();
+  } finally {
+    before.mockRestore();
+  }
+}
+
 async function freshMission(
   constraints?: Record<string, unknown>,
 ): Promise<{ token: string; missionId: string; mission: Record<string, unknown> }> {
@@ -2309,7 +2332,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
   });
 
   it("refuses an entry whose type no Operation Profile governs", async () => {
-    const mission = await freshMission();
+    const mission = await preCutoverMission();
     const unknown = remittanceEntry(mission.missionId).map((e) => ({ ...e, type: "payments_wire_v9" }));
     const res = await submit(await challengeFor(mission, "txn_profile_unknown", unknown), {
       token: mission.token,
@@ -2334,7 +2357,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
   });
 
   it("completes a workflow admitted under a superseded version, and refuses new challenges naming it", async () => {
-    const mission = await freshMission();
+    const mission = await preCutoverMission();
     const details = remittanceEntry(mission.missionId);
     const supersededDigest = "sha-256:operation-profile-v1";
 
@@ -2363,7 +2386,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
     // entry's fixed `type` does not version it, #249): the version leaves
     // ADMISSION eligibility. The registry retains it, because a workflow
     // already recorded it.
-    operationProfiles.supersede(RESOURCE, missionResourceAccessProfile().version);
+    operationProfiles.supersede(RESOURCE, CONTRACT_PROFILE().version);
     try {
       // A NEW challenge, with no current version to be admitted under, is refused outright.
       const stale = await submit(
@@ -2400,11 +2423,11 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
       expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
         txn: "txn_profile_v1",
         operationType: "mission_resource_access",
-        profileVersion: missionResourceAccessProfile().version,
+        profileVersion: CONTRACT_PROFILE().version,
         parameterDigest: supersededDigest,
       });
     } finally {
-      operationProfiles.register(RESOURCE, missionResourceAccessProfile());
+      operationProfiles.register(RESOURCE, CONTRACT_PROFILE());
     }
   });
 });
@@ -2522,7 +2545,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "routing-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2651,7 +2674,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
       txn: {
         challengeIssuers: new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }]]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnTokenKey,
         tokenKid: "routing-subject-actor-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2724,7 +2747,7 @@ describe("transaction tokens carry only constraints keys the Challenge-Issuing R
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "keys-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -3128,7 +3151,7 @@ describe("a workflow store file created before Operation Profile versions were r
 
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "txn-store-upgrade-"));
-    m = await freshMission();
+    m = await preCutoverMission();
   });
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });

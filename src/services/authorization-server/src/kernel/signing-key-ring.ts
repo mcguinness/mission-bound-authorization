@@ -54,6 +54,7 @@
 import { randomBytes } from "node:crypto";
 import {
   closeSync,
+  existsSync,
   fsyncSync,
   linkSync,
   mkdirSync,
@@ -66,6 +67,7 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair, importJWK, type JWK } from "jose";
+import { checkKeyBindings, initKeyBindings, KeyBindingError, recordedKids, type RingKey } from "./key-bindings.js";
 import { witnessSharesStoreTree } from "./recovery-witness.js";
 
 /** The AS signing roles, in `TOPOLOGY.keys` names. */
@@ -266,9 +268,21 @@ export async function initSigningKeyRing(
   issuer: string,
   roles: Record<AsSigningRole, SigningRoleConfig>,
   now: () => Date = () => new Date(),
+  opts: { bindings?: string } = {},
 ): Promise<Record<string, unknown>[]> {
   if (!file) throw new SigningKeyRingError("no ring file is named");
   if (!issuer) throw new SigningKeyRingError("no issuer is named");
+  // @spec #1815: a record to create with the ring is checked before the ring is written.
+  if (opts.bindings && existsSync(opts.bindings)) {
+    throw new SigningKeyRingError(
+      `${opts.bindings} already exists; a key binding record is created once. Restore the ring it records, or initialize a ring under new configured kids without --bindings and start the AS against it`,
+    );
+  }
+  if (opts.bindings && witnessSharesStoreTree(file, opts.bindings)) {
+    throw new SigningKeyRingError(
+      `the key binding record ${opts.bindings} must be outside the ring's directory, and the ring outside the record's`,
+    );
+  }
   const dir = dirname(file);
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   if (openToOthers(dir) !== 0) {
@@ -325,7 +339,28 @@ export async function initSigningKeyRing(
   }
   unlinkSync(tmp);
   fsyncDir(dir);
+  if (opts.bindings) await bindSigningKeyRing(file, issuer, roles, opts.bindings, now);
   return published;
+}
+
+/**
+ * @spec #1815 (D945): create the key binding record at `bindings` from the
+ * ring at `file`, once: every kid it holds, bound to its key's thumbprint.
+ */
+export async function bindSigningKeyRing(
+  file: string,
+  issuer: string,
+  roles: Record<AsSigningRole, SigningRoleConfig>,
+  bindings: string,
+  now: () => Date = () => new Date(),
+): Promise<number> {
+  const { ring } = readRing(file, issuer);
+  const stored = checkHeader(file, ring, issuer);
+  if (ring.format === SIGNING_KEY_RING_FORMAT_V1) await resolveV1(file, stored, roles);
+  else await resolveV2(file, stored, roles);
+  const keys = ringKeys(ring, stored, roles);
+  await bound(() => initKeyBindings(bindings, file, issuer, keys, now));
+  return keys.length;
 }
 
 /** The ring file's bytes and parsed content, after the permission check. */
@@ -375,6 +410,37 @@ function checkHeader(file: string, ring: Record<string, unknown>, issuer: string
     if (!stored[name] || typeof stored[name] !== "object") throw new SigningKeyRingError(`${file} has no ${name} key`);
   }
   return stored;
+}
+
+/** Every key a ring holds, in any state, under its role's configured base `kid` (#1815). */
+function ringKeys(
+  ring: Record<string, unknown>,
+  stored: Record<string, Record<string, unknown>>,
+  roles: Record<AsSigningRole, SigningRoleConfig>,
+): RingKey[] {
+  const out: RingKey[] = [];
+  for (const name of AS_SIGNING_ROLES) {
+    const baseKid = roles[name].kid;
+    const entry = stored[name] as Record<string, unknown>;
+    if (ring.format === SIGNING_KEY_RING_FORMAT_V1) {
+      out.push({ role: name, baseKid, kid: entry.kid as string, publicJwk: publicHalf(entry.private_jwk as Record<string, unknown>) });
+      continue;
+    }
+    for (const g of entry.generations as Record<string, unknown>[]) {
+      out.push({ role: name, baseKid, kid: g.kid as string, publicJwk: g.public_jwk as Record<string, unknown> });
+    }
+  }
+  return out;
+}
+
+/** A key binding refusal, as the ring refusal it is. */
+async function bound<T>(step: () => T | Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (e) {
+    if (e instanceof KeyBindingError) throw new SigningKeyRingError(e.message);
+    throw e;
+  }
 }
 
 /** A slice 1 ring: one key per role under its configured `kid`, as one active generation. */
@@ -566,8 +632,19 @@ export async function loadSigningKeyRing(
   file: string,
   issuer: string,
   roles: Record<AsSigningRole, SigningRoleConfig>,
+  opts: KeyBindingOptions = {},
 ): Promise<AsSigningKeys> {
-  return (await loadSigningKeyRingState(file, issuer, roles)).keys;
+  return (await loadSigningKeyRingState(file, issuer, roles, opts)).keys;
+}
+
+/**
+ * @spec #1815 (D945): the key binding record a ring load is checked against
+ * (`key-bindings.ts`). Absent, nothing binds the ring's `kid`s to their
+ * material across a lost ring.
+ */
+export interface KeyBindingOptions {
+  bindings?: string;
+  now?: () => Date;
 }
 
 /** A `/2` ring's revision: a positive integer every key-state operation advances. */
@@ -588,12 +665,18 @@ export async function loadSigningKeyRingState(
   file: string,
   issuer: string,
   roles: Record<AsSigningRole, SigningRoleConfig>,
+  opts: KeyBindingOptions = {},
 ): Promise<{ keys: AsSigningKeys; revision?: number }> {
   const { ring } = readRing(file, issuer);
   const stored = checkHeader(file, ring, issuer);
-  if (ring.format === SIGNING_KEY_RING_FORMAT_V1) return { keys: await resolveV1(file, stored, roles) };
-  const revision = revisionOf(file, ring);
-  return { keys: await resolveV2(file, stored, roles), revision };
+  const state: { keys: AsSigningKeys; revision?: number } =
+    ring.format === SIGNING_KEY_RING_FORMAT_V1
+      ? { keys: await resolveV1(file, stored, roles) }
+      : { revision: revisionOf(file, ring), keys: await resolveV2(file, stored, roles) };
+  // @spec #1815 (D945): a recorded kid under other material refuses; a new one is recorded.
+  const bindings = opts.bindings;
+  if (bindings) await bound(() => checkKeyBindings(bindings, file, issuer, ringKeys(ring, stored, roles), opts.now));
+  return state;
 }
 
 /**
@@ -723,8 +806,11 @@ async function newGeneration(
   config: SigningRoleConfig,
   state: "pending" | "active",
   at: string,
+  recorded: ReadonlySet<string> = new Set(),
 ): Promise<StoredGeneration> {
-  const n = Math.max(...ring.roles[role].generations.map((g) => g.generation)) + 1;
+  // @spec #1815: never a kid the binding record holds, as after a restored older ring.
+  let n = Math.max(...ring.roles[role].generations.map((g) => g.generation)) + 1;
+  while (recorded.has(generationKid(config.kid, n))) n += 1;
   const privateJwk = await generate(config);
   return {
     generation: n,
@@ -750,14 +836,17 @@ export async function stageSigningKeyGeneration(
   roles: Record<AsSigningRole, SigningRoleConfig>,
   role: string,
   now: () => Date = () => new Date(),
+  opts: { bindings?: string } = {},
 ): Promise<{ kid: string }> {
   const name = roleOf(role);
+  const bindings = opts.bindings;
+  const recorded = bindings ? await bound(() => recordedKids(bindings, issuer)) : new Set<string>();
   return updateRing(file, issuer, roles, now, async (ring, at) => {
     const pending = ring.roles[name].generations.find((g) => g.state === "pending");
     if (pending) {
       throw new SigningKeyRingError(`${name} already has a pending generation, ${pending.kid}; activate or retire it first`);
     }
-    const g = await newGeneration(ring, name, roles[name], "pending", at);
+    const g = await newGeneration(ring, name, roles[name], "pending", at, recorded);
     ring.roles[name].generations.push(g);
     return { kid: g.kid };
   });
@@ -910,9 +999,11 @@ export async function compromiseSigningKeyGeneration(
   roles: Record<AsSigningRole, SigningRoleConfig>,
   role: string,
   kid: string,
-  opts: { compromisedAt?: Date; now?: () => Date } = {},
+  opts: { compromisedAt?: Date; now?: () => Date; bindings?: string } = {},
 ): Promise<{ kid: string; replacement?: string }> {
   const name = roleOf(role);
+  const bindings = opts.bindings;
+  const recorded = bindings ? await bound(() => recordedKids(bindings, issuer)) : new Set<string>();
   const now = opts.now ?? (() => new Date());
   return updateRing(file, issuer, roles, now, async (ring, at) => {
     const g = ring.roles[name].generations.find((x) => x.kid === kid);
@@ -926,7 +1017,7 @@ export async function compromiseSigningKeyGeneration(
     }
     let replacement: StoredGeneration | undefined;
     if (g.state === "active") {
-      replacement = await newGeneration(ring, name, roles[name], "active", at);
+      replacement = await newGeneration(ring, name, roles[name], "active", at, recorded);
       g.stopped_at = at;
     }
     g.state = "compromised";
@@ -1035,14 +1126,17 @@ export async function verifySigningKeyRing(
 }
 
 /** How the AS obtains its signing keys. */
-export type SigningKeySource = { ring: string } | { ephemeral: true };
+export type SigningKeySource = { ring: string; bindings?: string } | { ephemeral: true };
 
 /**
  * A deployment entry point's key source, from its environment: a ring at
  * `MISSION_KEY_RING` (an absolute path, since launchers do not run in the
  * directory they were started from), or ephemeral keys when
  * `MISSION_EPHEMERAL_KEYS=1`. Neither, or both, refuses: a deployment says
- * which it runs.
+ * which it runs. @spec #1815 (D945): a ring requires its key binding record,
+ * `MISSION_KEY_BINDINGS`, an absolute path outside the ring's directory tree,
+ * so a lost ring recreated under the same kids cannot replace the AS's keys
+ * silently.
  */
 export function signingKeysFromEnv(env: Readonly<Record<string, string | undefined>>): SigningKeySource {
   const ring = env.MISSION_KEY_RING?.trim();
@@ -1053,7 +1147,21 @@ export function signingKeysFromEnv(env: Readonly<Record<string, string | undefin
   if (ring && !isAbsolute(ring)) {
     throw new SigningKeyRingError(`MISSION_KEY_RING must be an absolute path, not ${ring}`);
   }
-  if (ring) return { ring };
+  if (ring) {
+    const bindings = env.MISSION_KEY_BINDINGS?.trim();
+    if (!bindings) {
+      throw new SigningKeyRingError(
+        "MISSION_KEY_RING requires MISSION_KEY_BINDINGS: without a key binding record kept apart from the ring, a lost ring recreated under the same kids would replace the AS's keys silently (create it once with `pnpm keys init --bindings` or `pnpm keys bind`)",
+      );
+    }
+    if (!isAbsolute(bindings)) throw new SigningKeyRingError(`MISSION_KEY_BINDINGS must be an absolute path, not ${bindings}`);
+    if (witnessSharesStoreTree(ring, bindings)) {
+      throw new SigningKeyRingError(
+        "MISSION_KEY_BINDINGS must be outside the ring's directory, and the ring outside the record's, so losing or restoring one does not take the other with it",
+      );
+    }
+    return { ring, bindings };
+  }
   if (ephemeral) return { ephemeral: true };
   throw new SigningKeyRingError(
     "choose the signing keys: MISSION_KEY_RING=<path> (initialize it once with `pnpm keys init`), or MISSION_EPHEMERAL_KEYS=1 for keys that change at every restart",

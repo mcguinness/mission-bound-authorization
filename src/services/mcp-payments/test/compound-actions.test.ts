@@ -26,7 +26,7 @@
 
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { CATALOG_TOOL_BINDINGS } from "@mission/demo-data";
+import { CATALOG_TOOL_BINDINGS, pinnedToCurrentContract } from "@mission/demo-data";
 import { type Decision, DecisionRequestRefused, type EvaluationRequest, type Fga, type MissionView } from "@mission/pdp";
 import {
   buildEffectiveParams,
@@ -65,13 +65,13 @@ const BASE_MS = Date.parse("2026-09-08T12:00:00.000Z");
 const alwaysAllowFga = { checkWithContext: async () => true } as unknown as Fga;
 
 const AUTHORITY = [
-  {
+  pinnedToCurrentContract({
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
     // #252: the compensation's own authority, beside the commit's.
     actions: ["payments:payment.execute", "payments:payment.reverse", "payments:payment.schedule", "payments:invoice.read"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-  },
+  }),
 ];
 
 /**
@@ -79,18 +79,18 @@ const AUTHORITY = [
  * USD 10 reversal ceiling (#252, the owner's regression).
  */
 const AUTHORITY_REVERSAL_CEILING_10 = [
-  {
+  pinnedToCurrentContract({
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
     actions: ["payments:payment.execute", "payments:payment.schedule", "payments:invoice.read"],
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-  },
-  {
+  }),
+  pinnedToCurrentContract({
     type: "mission_resource_access",
     resource: CANONICAL_RESOURCE,
     actions: ["payments:payment.reverse"],
     constraints: { max_amount: { amount: "10.00", currency: "USD" }, vendors: ["acme"] },
-  },
+  }),
 ];
 
 /** The same Mission authority with no authority to compensate (#252). */
