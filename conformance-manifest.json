@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "62b6341aa6f5f8c65ccc4accd00d1117fdd07bd6",
-    "content_sha256": "b9105f772d8d0a9223f255a412aff29fb30eeb355a5b76fff77708625ea5f3c6"
+    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
+    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "5257c35b038c4d3dbea79a1abeffe9bb1b61366c",
-    "content_sha256": "a270d0a4a4ce798051b32fc4bedfa6fee5c7e300864e92bb0b5083ed4634cc8d"
+    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
+    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "0b6d67499b0da9e206e19e0d407737bf57e31c64",
-    "content_sha256": "5c925ae1ec8379e9919b24c905c6d5a2ee40af1e8db65666ba44c41f54d2ad0a"
+    "revision": "05499ae43217ce7d528485c06622df662331aeed",
+    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -14034,7 +14034,7 @@
   {
    "id": "core.tokens.scope-ceiling",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "MUST refuse issuance to a target that is `scope`-only when no safe projection exists for the applicable entries",
    "role": "AS",
    "strength": "MUST",
@@ -14156,7 +14156,7 @@
   {
    "id": "core.scope-projection.semantic-subset-condition",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "together with every independently mandatory control on that path",
    "role": "AS",
    "strength": "MUST",
@@ -14205,7 +14205,7 @@
   {
    "id": "core.scope-projection.action-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "aggregates a broader action",
    "role": "AS",
    "strength": "stated",
@@ -14241,7 +14241,7 @@
   {
    "id": "core.scope-projection.resource-path-aggregation-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "spans more resource instances or paths than the entry",
    "role": "AS",
    "strength": "stated",
@@ -14278,7 +14278,7 @@
   {
    "id": "core.scope-projection.union-widening-fails",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-subset",
    "text": "arises from the union of several entries",
    "role": "AS",
    "strength": "stated",
@@ -14314,7 +14314,7 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-per-audience",
    "text": "establishes the condition independently for each audience",
    "role": "AS",
    "strength": "MUST",
@@ -14345,7 +14345,7 @@
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "fail closed under step 5",
    "role": "AS",
    "strength": "MUST",
@@ -14424,7 +14424,7 @@
   {
    "id": "core.scope-projection.derived-token-issuance-paths",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-steps",
    "text": "initial issuance, refresh, Token Exchange, and any other derived-token path",
    "role": "AS",
    "strength": "stated",
@@ -14515,7 +14515,7 @@
   {
    "id": "core.scope-projection.ungrantable-requested-scope-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-requested",
    "text": "The AS MUST refuse, with `invalid_scope` ({{error-mapping}}), a request that explicitly names a `scope` value the issuance cannot grant",
    "role": "AS",
    "strength": "MUST",
@@ -14588,7 +14588,7 @@
   {
    "id": "core.scope-projection.requested-scope-stands-for-entries",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "Each requested value stands for the entries that the type's specification derives from the mapping",
    "role": "AS",
    "strength": "stated",
@@ -14632,7 +14632,7 @@
   {
    "id": "core.scope-projection.requested-scope-unnamed-refused",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-scope-only",
    "text": "A requested value the target's trusted mapping does not name cannot be granted, and is refused with `invalid_scope`",
    "role": "AS",
    "strength": "stated",
@@ -14663,7 +14663,7 @@
   {
    "id": "core.scope-projection.refresh-preserved-on-projection-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection",
+   "anchor": "scope-projection-refresh",
    "text": "A refusal caused solely by failure to establish a safe scope projection MUST NOT invalidate an otherwise-valid refresh token or its authorization grant",
    "role": "AS",
    "strength": "MUST NOT",
@@ -23692,7 +23692,7 @@
     "local": "The AS lists its Status role's generations withdrawn as compromised in the historical key set it serves at mission_historical_jwks_uri (kernel/historical-key-set.ts)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23701,7 +23701,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. todo: the reference AS publishes no compromise information for its signing keys. The key ring has generations and a compromise operation (#831 B2 (#1681, D809)), but the historical key set the compromised key is published in is #831 B3. D405: specified, not implemented. #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#1535 finding 8 (D649): the issuance profile's Signing and Key Rotation compromise rule, applied to the Status signing key. History: specified but not implemented (D405) until the ring's compromise operation (#831 B2 (#1681, D809)) and the historical key set (#831 B3 (#1766)). #831 B1 (D774): re-anchored to the retention section and re-quoted; the publication is the historical key set, not the jwks_uri. #831 B3: the endpoint witness compromises the Status key across AS boots and finds the withdrawn key listed, revoked. Proven by not listing withdrawn generations, which fails it. D931 per-row review: tested. Obligation: a key known or suspected compromised is published as revoked in the historical key set. Witness: the endpoint test compromises the Status key across AS boots and finds the withdrawn key listed under its original kid and material, revoked. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). Only the Status role signs Status and Lifecycle responses, and a compromise takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.compromised-not-relied-on",
@@ -23748,7 +23748,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). todo: the reference AS publishes no compromise information for its signing keys: the historical key set is #831 B3, though the ring's compromise operation withdraws the key from the jwks_uri (#831 B2 (#1681, D809)). The Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) do not check published compromise; the separated MAS pilot's consumer stops trusting a withdrawn key once its cached set goes stale (#831 C (#1697, #1705, D833)). D405: specified, not implemented. The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder now keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -23773,7 +23773,7 @@
     "local": "A retired Status generation stays in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime (#831 B2); a compromised one stays resolvable in the historical key set (#831 B3)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23788,7 +23788,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, partly implemented. #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; a compromised key's retention in the historical key set is #831 B3. todo until the witnesses are reviewed (D842). #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774). #831 B2 (#1681, D809) keeps an overlap generation in the jwks_uri until its confirmed stop plus the longer of the audit horizon and the longest Mission lifetime, and refuses retirement when that cannot be established; #831 B3 (#1766) retains a compromised key in the historical key set. #831 B2 and B3: the unit witness holds a retirement to the retention deadline; the endpoint witness finds a compromised Status key resolvable in the historical key set after its withdrawal. D931 per-row review: tested. Obligation: every kid that signed a Status or Lifecycle response stays resolvable for at least the Mission's audit horizon, a retired key in the jwks_uri and a compromised key in the historical key set. Witnesses: the unit test holds a retirement to its deadline (the confirmed stop plus the longer of the audit horizon and the longest Mission lifetime) and refuses one it cannot establish; the endpoint test finds a compromised Status key resolvable in the historical key set after its withdrawal. The set keeps every listed key; nothing removes one. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.signing-keys.compromised-withdrawn",
@@ -23813,7 +23813,7 @@
     "local": "Compromising a generation withdraws it from the jwks_uri and stops signing under it, activating a replacement in the same write (#831 B2)."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23828,7 +23828,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. todo until that witness is reviewed for this row (D842). #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "#831 B1 (D774): implemented by #831 B2 (#1681, D809): compromising a generation stops signing with it and withdraws it from the jwks_uri, witnessed in signing-key-rotation.test.ts. #831 B2 and B3: the unit witness withdraws the generation at once; the endpoint witness finds it absent from /jwks and the AS signing under the replacement. D931 per-row review: tested. Obligation: a compromised key signs nothing further and is absent from the jwks_uri. Witnesses: the unit test withdraws the generation at once and activates a replacement in the same write; the endpoint test finds it absent from /jwks and the kernel signing under the replacement. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913). The withdrawal takes effect at the AS's next start (D806: stop, edit, start)."
   },
   {
    "id": "status.signing-keys.no-historical-fallback",
@@ -23848,7 +23848,7 @@
     "local": "The current-reliance keys never resolve a key from the historical key set; auditKeys alone reads one, to verify an archived response."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -23857,7 +23857,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833) and #831 B3 (#1766). #831 B3: proven by a current-reliance resolver that reads listed keys from the set, which this witness refuses. D931 per-row review: tested. Obligation: no consumer verifies a response for current reliance under a key found only in the historical key set. Witness: the PDP's current-reliance keys never resolve a listed key once the jwks_uri drops it, and only `auditKeys` reads the set. The reference's other Status and Lifecycle consumers (the Lifecycle client, the Signals receiver) never read the set at all."
   },
   {
    "id": "status.signing-keys.bounded-jwks-cache",
@@ -23877,7 +23877,7 @@
     "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23886,7 +23886,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -23906,7 +23906,7 @@
     "local": "A jwks_uri response without explicit freshness is stale when received, so the Status consumer revalidates it at every verification."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/refreshing-status-keys.test.ts",
@@ -23915,7 +23915,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a jwks_uri response without valid explicit freshness is stale when received and revalidated before reuse, never given a heuristic lifetime. Witness: every verification refetches such a response. The Lifecycle client reuses no response."
   },
   {
    "id": "status.signing-keys.failed-revalidation-refuses",
@@ -23944,7 +23944,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented; the Status consumers (src/services/pdp/src/mission-status-resolver.ts, state-observation.ts) are #831 C. #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer. Proven by a stale-if-error fallback. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a stale jwks_uri that cannot be revalidated refuses the Status response, with no stale fallback, until a revalidation succeeds. Gap: the sentence names Status or Lifecycle responses. The reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it."
   },
   {
    "id": "status.historical-key-set.signed",
@@ -23969,7 +23969,7 @@
     "local": "signHistoricalKeySet signs once at boot under the active Status key, the replacement after a Status compromise, and refuses a signer whose kid or key material the set lists."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -23984,7 +23984,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). D780: restricted to the authorized active Mission Status key; membership in the jwks_uri is not authorization. #831 B3: the endpoint witness verifies the served set under the replacement Status key alone; the unit witness refuses a listed signer by kid and by material. Proven by signing under the transaction-token role's key, by dropping the signer check, and by checking the kid alone. D931 per-row review: tested. Obligation: the set is signed under the active Mission Status key, never a listed key or another role's, and after that key's compromise under its replacement. Witnesses: the endpoint test verifies the served set under the replacement Status key alone, the key the kernel now signs Status responses under; the unit test refuses a listed signer by kid and by key material. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
   },
   {
    "id": "status.historical-key-set.consumer-validates-signer",
@@ -24004,7 +24004,7 @@
     "local": "verifyHistoricalKeySet accepts a set only with typ jwk-set+jwt, the expected iss, and a signature under the consumer's configured Status keys; a replacement Status key signs only once the configuration names it."
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/pdp/test/historical-key-set.test.ts",
@@ -24019,7 +24019,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 review (D780): specified, not implemented. #831 C (#1697, #1705, D833) gives the Status consumers role-bound trusted kids, but none fetches a historical key set, which is #831 B3. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified in the #831 B1 review (D780); #831 C (#1697, #1705, D833) gave the Status consumers role-bound trusted kids, and #831 B3 (#1766) the historical key set they validate. #831 B3: proven by skipping the signature check and by skipping the typ check. D887: a set signed under a key the consumer has learned is compromised is refused whole, though its configuration still names the key; proven by allowing that signer, which lets a compromised key list the current key. D931 per-row review: tested. Obligation: a consumer accepts a set only under the Mission Status key its trusted configuration authorizes. Witnesses: the PDP's holder refuses a set under another role's published key, an unconfigured replacement (until configured), a wrong typ, and a learned-compromised key. It is the reference's only reader of the set."
   },
   {
    "id": "status.historical-key-set.revoked-member",
@@ -24044,7 +24044,7 @@
     "local": "historicalKeys converts the ring's ISO times to NumericDates and adds compromised_at only when the compromise recorded one."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/historical-key-set.test.ts",
@@ -24059,7 +24059,169 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the historical key set is #831 B3. #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: proven by dropping the member, by emitting compromised_at when none is established, and by leaving the times as ISO strings. D931 per-row review: tested. Obligation: each listed JWK carries revoked with reason compromised, revoked_at, and compromised_at only when established, as NumericDates. Witnesses: the unit test covers presence and absence of compromised_at and the NumericDate conversion; the endpoint test finds the full member on the served key. Scope: under a key ring; per-boot Status keys (`MISSION_EPHEMERAL_KEYS=1`) are the documented development mode, which strands a prior boot's responses (`channel-key-matrix.md`, D913)."
+  },
+  {
+   "id": "status.historical-key-set.media-type",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS serves the set with the media type `application/jwk-set+jwt` ({{OpenID.Federation}}, Section 15.6).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with the HTTP Content-Type application/jwk-set+jwt"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the served set's Content-Type against the literal application/jwk-set+jwt, the media type OpenID Federation registers for a signed JWK Set (Section 15.6), not against the server's own constant. Mutation-proved (#1813 review, D945): the server serving application/jwk-set+json fails it; the earlier assertion against the shared constant let that pass."
+  },
+  {
+   "id": "status.historical-key-set.explicit-freshness",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "The AS declares a freshness lifetime for the set with explicit freshness information ({{Section 4.2.1 of RFC9111}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "status.mission-status",
+     "status.lifecycle",
+     "status.lifecycle-revoke"
+    ]
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS serves its historical key set with explicit freshness information, a freshness lifetime of its choosing"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/historical-key-set.test.ts",
+     "name": "an AS across a Status key compromise (@spec status#historical-key-set, status#as-metadata, #831 B3) > publishes no set before the compromise; after it, advertises mission_historical_jwks_uri and serves the withdrawn key, revoked, signed under the replacement",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). The endpoint test asserts the set's Cache-Control is a max-age with a positive delta-seconds, not the server's own constant: the draft fixes no lifetime (the reference declares 300 s, as /jwks does). Mutation-proved (#1813 review): a lifetime that is not a valid delta-seconds fails it."
+  },
+  {
+   "id": "status.historical-key-set.consumer-refetches",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "A consumer refetches the set, or revalidates its copy ({{Section 4.3 of RFC9111}}), once that lifetime ends; a response without valid explicit freshness information is stale when received ({{Section 4.2.2 of RFC9111}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a historical key set fetches it again once the freshness lifetime the set declared ends, so it learns a key a later set lists, and treats a set served without explicit freshness as stale on receipt, fetching it again at each use"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > refetches the set once the lifetime it declares ends, learning a key a later set lists, and treats a set without explicit freshness as stale when received",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931). Witnessed at the PDP's holder, the reference's only reader of the set: a key a later set lists is learned once the declared 300 s end, and a set served without Cache-Control is fetched at each use. Mutation-proved: never refetching a held set fails the learning assertion; giving a set without explicit freshness a heuristic lifetime fails the fetch count."
+  },
+  {
+   "id": "status.historical-key-set.compromise-not-cleared",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "a consumer MUST NOT treat it as no longer compromised because a later set omits it, an earlier set is presented again, or a fetch of the set fails.",
+   "role": "verifier",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a key a historical key set the consumer verified has listed stays refused for current reliance: a later set that omits it, an earlier valid set replayed, a set that does not verify, or a failed fetch of the set leaves it refused"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "a listed key and a current reliance decision (@spec status#signing-key-retention, status#historical-key-set, #831 B3) > keeps refusing a listed key through an outage of the set once it has verified one: a stale set can only refuse too much",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > keeps a learned revocation through a replayed older or empty set the current key signed",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "what the consumer learns as compromised, it keeps (@spec status#historical-key-set, status#signing-key-retention, #831 B3, D887) > refuses a replacement set signed under a learned-compromised key, whether it empties the set or lists the current key",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), the D887 consumer rule made normative. Witnessed at the PDP's holder, the reference's only reader of the set: a failed fetch and a set that does not verify keep the learned key refused; a replayed empty set the current key signed does not remove it; a set signed under a learned-compromised key is refused whole. Mutation-proved in #1766 (D887): replacing the held list on each set, and dropping the learned-signer check, each fail their witness."
+  },
+  {
+   "id": "status.historical-key-set.no-jwks-extension",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "historical-key-set",
+   "text": "the set's freshness never extends that of the consumer's cached `jwks_uri`, which {{signing-key-retention}} governs.",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer holding a fresh historical key set still refuses current reliance once its cached jwks_uri is stale and cannot be revalidated: the set extends nothing about the live keys"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/historical-key-set.test.ts",
+     "name": "the historical key set's freshness, and the jwks_uri's own (@spec status#historical-key-set, #1774, D931) > never lets a held set extend the cached jwks_uri's freshness: a stale jwks_uri that cannot be revalidated refuses, though the set is fresh",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1774 (D931), from D887's outage ruling: keeping verified compromise information during an outage does not extend the current JWKS's freshness. Witnessed at the PDP's consumer: with the set fresh for an hour and the jwks_uri's 60 s passed and unrevalidatable, a Status response under the current key is refused. Mutation-proved: a stale-if-error fallback on the live keys while a set is held fails it."
   },
   {
    "id": "status.metadata.historical-jwks-uri",
@@ -24093,7 +24255,7 @@
      "surface": "verification"
     }
    ],
-   "notes": "#831 B1 (D774): specified, not implemented; the reference AS publishes no historical key set or its metadata until #831 B3. #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. Partial until the owner reviews the witnesses (D842); coverage is promoted to tested only on his word."
+   "notes": "History: specified at #831 B1 (D774); implemented by #831 B3 (#1766). #831 B3: the endpoint witness finds no member and no set before the compromise and both after it. Proven by advertising it always and never. D931 per-row review: stays partial. Witnessed: no member and no set before a compromise, and both after it. Gap: the member is an https URL; the reference AS serves on http localhost (a development limitation, D887), so no witness shows the https form."
   },
   {
    "id": "status.mission-status.per-consumer-rate-limit",
@@ -24766,7 +24928,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Chain Presentation with an unknown top-level member is refused"
+    "normative": "a Chain Presentation with an unknown top-level member, the -01 `chain` member included, is refused"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24776,14 +24938,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses an unknown top-level member (closed envelope)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses the -01 chain member as an unknown top-level member (#1759)",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the envelope's chain member is the substrate's `aat_chain` (AAT -02 Section 7.4), and the envelope stays closed at the projection exchange (D932)."
   },
   {
    "id": "cross-org.chain.digest-canonical-bytes",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
+   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `aat_chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -24794,7 +24963,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two implementations compute byte-identical chain digests for the same presented chain array"
+    "normative": "two implementations compute byte-identical chain digests for the same presented `aat_chain` array"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24805,13 +24974,14 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759 (D932 direction 1): the digest commits to the ordered `aat_chain` array."
   },
   {
    "id": "cross-org.chain.bounds-before-crypto",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "A verifier MUST declare maximum hop count, maximum Presentation size, and a verification-cost ceiling, and MUST refuse a Presentation exceeding any of them before verifying any signature.",
+   "text": "A verifier MUST declare maximum hop count, maximum presentation size, and a verification-cost ceiling, and MUST refuse a presentation exceeding any of them before verifying any signature.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -24822,7 +24992,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "an over-bound presentation is refused with no signature verification performed"
+    "normative": "a Chain Presentation over the declared hop or size bound is refused with no signature verification performed"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24832,14 +25002,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a chain over the hop bound before parsing further",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a presentation over the size bound",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the sentence binds either presentation. The reference consumes the projection exchange's Chain Presentation; the direct-invocation presentation object has no reference consumer (cross-org.verification.direct-invocation, todo)."
   },
   {
    "id": "cross-org.chain.child-key-resolution",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
+   "text": "verify the Chain under steps 1 to 5 of the substrate's chain verification algorithm ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), which validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -24850,24 +25027,49 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a chain whose hop carries a thumbprint-only confirmation, or whose child signature fails under the parent's carried public key, is refused"
+    "normative": "a chain failing the substrate's chain verification (AAT -02 Section 8 steps 1 to 5) is refused: a hop whose cnf carries a thumbprint-only confirmation, a child whose signature fails under its parent's carried public key, a broken `par_hash` link, a tool its parent does not carry, and a depth beyond `del_max_depth`"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a hop whose cnf carries a thumbprint-only confirmation",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a missing middle hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a reordered / substituted parent (par_hash break)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses capability widening at a hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a chain whose depth exceeds del_max_depth",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: step 3 runs the substrate's algorithm (verifyAatChainLinks, the -02 verifier against the published vector suite) under the federation's trust anchors. Proved by skipping the substrate's cnf.jwk check (step 4b2): the thumbprint-only case passes."
   },
   {
    "id": "cross-org.verification.leaf-proof-of-possession",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "verify the leaf presenter's proof of possession",
+   "text": "at the projection exchange, which invokes no tool, through the token request's proof ({{projection-exchange}}) in place of the substrate's proof-of-possession JWT",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -24908,7 +25110,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier."
+   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier. #1759: step 8 names a mechanism per surface; this row is the projection exchange's, whose request checks are cross-org.projection-exchange.dpop-checks. Direct invocation is cross-org.verification.direct-invocation (todo)."
   },
   {
    "id": "cross-org.actor.credential-validation",
@@ -24992,7 +25194,8 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the unmapped entry rides beside the mapped one in a substrate-valid hop, which the substrate alone ignores (AAT -02 Section 8 step 4n). Proved by disabling this profile's exactly-the-mapped-entry check: the test passes the chain."
   },
   {
    "id": "cross-org.state.freshness-bound",
@@ -25043,12 +25246,227 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-     "name": "valid three-domain chain (@spec cross-org-delegation#verification) > verifies A -> B -> C and reconstructs the lineage",
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "the minted token and derivation evidence (@spec cross-org-delegation#projection-exchange, #projection) > mints a local access token with the expected claims and records derivation evidence",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#1759: witnessed by the exchange test that reads the derivation record (the kernel chain test it cited never read one). Proved by computing the digest over a different array and by recording the root's jti: the test fails each time."
+  },
+  {
+   "id": "cross-org.verification.mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "including the narrowing of its `mission_constraints` member ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section \"Mission Constraints Member\")",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain is refused when a hop omits `mission_constraints`, widens its parent's, changes its `resource_contract`, or carries a constraint or member the verifier does not understand"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints member is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints widen the parent's",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints carry a key the verifier does not understand",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a hop whose resource_contract differs from its parent's (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D902, D932): step 5 of the destination verification list, whose lead-in carries the MUST; the member's rules are the attenuation profile's. Proved by running the Mission layer over the root alone: the three hop cases pass the chain."
+  },
+  {
+   "id": "cross-org.projection-exchange.dpop-checks",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "A DPoP proof passes the checks of {{Section 4.3 of RFC9449}}, including its method, URI, and creation-time window, and its `jti` is accepted once within that window ({{Section 11.1 of RFC9449}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange is refused when its DPoP proof names another `htu` or `htm`, carries an `iat` outside the acceptance window, or repeats a `jti` already accepted within it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932 direction 3): at the exchange the request's proof stands in for the substrate's proof-of-possession JWT, with its freshness, replay and request-binding checks, through the shared token-endpoint verifier (#1173). Proved by dropping the htu and then the htm comparison: the request-binding test fails each time."
+  },
+  {
+   "id": "cross-org.projection-exchange.audience-every-hop",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "a requested audience outside a hop's `aud`, or a restriction of either layer of the leaf's capability entry that the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange whose requested audience is outside some hop's `aud`, including one the root names but a later hop does not, is refused with `invalid_target`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience outside the leaf's aud (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience the root's aud names but a later hop's does not (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759: the substrate's step 6c applied to the requested audience. The quoted sentence's second clause is cross-org.projection.both-layers. Both tests register the audience with the destination's scope mapping so only the hop audience check can refuse it. Proved by removing the check and by checking the root alone: the tests fail."
+  },
+  {
+   "id": "cross-org.projection.both-layers",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection",
+   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and a restriction of either layer that the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and the whole exchange is refused with `invalid_target` when any leaf tool carries a restriction of either layer the local token cannot represent or its consumer cannot enforce: an argument constraint narrower than the destination maps the tool to, a constraint whose fact the destination does not establish, or a `resource_contract` the destination does not declare, has retired, or holds superseded past its retention; a contract the destination holds superseded within retention projects"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > carries the Mission entry's resource_contract and constraints into the local token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf resource_contract the destination does not declare, has retired, or holds superseded past retention (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > projects a leaf resource_contract the destination holds superseded within retention",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932, D941 rulings 1 to 3): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling) and the destination's own resource-contract declarations, the ones its kernel reads, resolve its resource_contract (carriedViolation); any other leaf tool refuses the whole exchange with the projection exchange's invalid_target. Ordinary local-policy narrowing is separate, and an empty intersection after it stays invalid_grant (cross-org-grant-endpoint.test.ts: refuses a chain whose authority does not intersect the local ceiling). Proved by skipping the argument comparison, by dropping resource_contract, by projecting an entry the destination does not map, and by skipping the contract check: each test fails."
+  },
+  {
+   "id": "cross-org.verification.direct-invocation",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "at direct invocation, under steps 6 and 7 of the substrate's algorithm, which bind the proof to the invoked tool and its arguments",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain-verifying resource server refuses a direct invocation whose `aat_pop` does not verify under the leaf `cnf.jwk` for the invoked tool and its arguments (AAT -02 Section 8 steps 6 and 7)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 3). The reference has no cross-org chain-verifying resource server; the projection exchange is its only cross-org surface, which is what #1759's acceptance requires."
+  },
+  {
+   "id": "cross-org.chain.direct-presentation-actor-credentials",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "chain-presentation",
+   "text": "a chain-verifying resource server recognizes `actor_credentials` and validates it ({{actor-identity}}), and ignores other members it does not recognize, as the substrate specifies",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at direct invocation, a named hop without a valid aligned `actor_credentials` entry in the presentation object refuses the invocation, and an unrecognized member of that object does not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
   },
   {
    "id": "mas.reference.strict-dictionary",
@@ -29470,7 +29888,7 @@
     },
     {
      "file": "src/services/mcp-payments/test/attenuation.test.ts",
-     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose ath hashes the root rather than the leaf",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > refuses a proof whose aat_hash commits to the root rather than the leaf",
      "level": "endpoint",
      "surface": "resource-operation"
     },
@@ -29503,9 +29921,15 @@
      "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses the stale credential and its permit when a later version keeps the identifier but withdraws the alias it was validated through",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > tracks the proof's jti for a read as well: the same get_invoice presentation is refused the second time (D932)",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825: an attenuation chain's proof of possession runs the same DPoP check: bound to the leaf token by ath, with a fresh iat and a jti refused on reuse. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825, #1756: an attenuation chain's proof of possession is the -02 PoP JWT, verified under the leaf's cnf.jwk and bound to the leaf (aat_id, aat_hash), the invoked tool (aat_tool) and its arguments (hta), with a fresh iat and a jti refused on reuse for every class, reads included (D932; a full replay state refuses retryably). Proved by mutation: leaving a read's jti untracked fails the read witness. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -44923,13 +45347,13 @@
      "surface": "derivation"
     },
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "verifyAttenuationChain > WIDEN by raising the cap on the child is refused (capability_widened)",
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a child whose constraints are not within its parent's, or whose resource_contract changed, and admits a narrowing",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation-chain verifier (packages/mission-core) tests the no-broader-than narrowing check extensively (widen refused on tools, ranges, aud, exp, and delegation depth) for core's own claim. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -61824,7 +62248,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "at the point of use, an applicable entry whose max_amount currency is malformed provides no authority: the decision is a denial, even when the input's currency is spelled the same",
-    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, credential parsing refuses a credential whose authority carries one, and an AAT amount_ argument whose suffix is not three lower-case letters is refused rather than folded"
+    "local": "in the reference the payments resource server's decision is the PDP's (runtime-enforced profile): the PDP denies a malformed Mission-view cap currency as parameter_violation, and credential parsing refuses a credential whose authority carries one, an access token's authorization_details or an attenuation leaf's mission_constraints (#1756); the cross-organization wire refuses an amount_ argument whose suffix is not three lower-case letters rather than folding it"
    },
    "level": "unit",
    "coverage": "tested",
@@ -61842,13 +62266,13 @@
      "surface": "decision-request"
     },
     {
-     "file": "src/packages/mission-core/test/credential-authority.test.ts",
-     "name": "credentialEntriesFromAatTools: attenuation tools keep every restriction (#825) > refuses an upper-case currency suffix rather than dropping it",
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "readMissionConstraints and credentialEntriesFromMissionAat (@spec attenuation#mission-constraints, #1756) > refuses a max_amount currency that is not three upper-case letters rather than dropping it",
      "level": "unit",
      "surface": "decision-request"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Before it the PDP compared a Mission-view cap currency only by equality with the input's, and credential parsing admitted any non-empty string. Proved by mutation: removing the PDP's isCurrencyCode check fails its witness; admitting any string in credential parsing fails the parse witnesses; folding the amount_ suffix to upper case fails the suffix witness. #1756: the attenuation witness moved from the retired tools-to-credential reader to mission_constraints, read by the same credential parser; admitting a lower-case currency there fails it."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-exact",
@@ -64265,7 +64689,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), the attenuation target-restriction proof. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, covers that invoice alone at the payments resource: under the argument-derived invoice contract another invoice is refused out_of_authority, and under the shipped service-level contract the service target is refused out_of_authority too. Mutations: mapping each entry at the root's first aud instead of its resource fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The root is presented at one of its two audiences; that aud is not the boundary at any audience rests on the construction (the mapping never reads aud) and on the first mutation. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
+   "notes": "#1276 (D457), #1756 slice B3. A root minted by deriveAttenuationRoot for a Mission whose only entry names one invoice, with aud naming the payments service identifier and a second resource server, under the invoice-level deployment's declaration of its operations, maps the invoice read at that invoice alone. At the payments resource the consumer names the invoked tool by the operation's target, so another invoice under the invoice contract, and the service target under the shipped service-level contract, are refused by the substrate (the leaf does not authorize the tool), and the credential bound refuses both out_of_authority as well. Mutations: naming the invoked tool by the service identifier instead of the operation target fails the cross-component witness, and mapping every entry at the first entry's resource fails the unit witness. The mapping never reads aud. The proof is by construction for the reference's tool-identifier encoding; a deployment whose tool identifiers do not carry the resource needs argument constraints instead, which the reference does not implement."
   },
   {
    "id": "attenuation.root-mapping.refuse-unestablishable-tool",
@@ -64282,7 +64706,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "an entry whose target restriction a tool cannot carry is not mapped to that tool; the root is never minted with that tool narrowed, widened or relaxed to a different restriction",
-    "local": "the reference refuses the whole root mapping (throws) for an entry whose resource_match is present and not exact, and for an action whose tool identifier would read back as a different (resource, action) pair"
+    "local": "the mapped ceiling leaves out a tool for an entry whose resource_match is present and not exact, or whose tool identifier would read back as a different (resource, action) pair, and a request naming such a tool is refused; the cross-organization mapping (#1759) refuses the whole mapping (throws) for the same entries"
    },
    "level": "unit",
    "coverage": "tested",
@@ -64300,7 +64724,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457). mapAuthorityToTools refuses a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping; re-proved by mutation (dropping the guard fails the prefix case)."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
@@ -64317,12 +64741,25 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a Mission-bound attenuation root carries typ aat+jwt in its JWS header, not at+jwt, binds the holder's public key as cnf.jwk, and is returned from the token endpoint with token_type aat",
-    "local": "the reference mints the root in process with typ aat+jwt but binds the holder as cnf.jkt, and has no token endpoint route that returns a root"
+    "local": "the reference mints the root in process with typ aat+jwt and the holder's public key as cnf.jwk, and has no token endpoint route that returns a root"
    },
    "level": "unit",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the alignment to Attenuating Agent Tokens -02. todo: the typ clause is met (AAT_TYP) but no test asserts the minted header; the cnf.jwk clause is unmet, since the reference binds cnf.jkt and reads each child's key from its JWS header, which -02 Section 3.5 forbids (src/SPEC_VERSIONS.md lists the divergence); token_type has no surface. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > binds the holder's public key as cnf.jwk on an aat+jwt root with a UUIDv7 jti and integer iat and exp, which the substrate's chain verification admits",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a holder key carrying a private member or of a type the substrate does not take, before any count",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3. partial: the typ and cnf.jwk clauses are met and witnessed (the minted root's header and claims, verified by the -02 substrate verifier); the token_type clause has no surface, since the reference issues no root over HTTP: the token endpoint takes no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts). Proved by mutation: binding cnf.jkt fails the format witness, and admitting a private holder key fails the key witness."
   },
   {
    "id": "attenuation.request.client-req-cnf",
@@ -64404,9 +64841,16 @@
     "normative": "a root request whose attenuating_agent_token detail names a tool, argument constraint or mission_constraints value outside the mapped Authority Set is refused with invalid_authorization_details, and no root is issued for the remaining tools"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Added with the alignment to Attenuating Agent Tokens -02. The code was invalid_request; it now matches the OAuth binding's subset refusal and -02 Section 6.1.3 step 7. The validation itself (root mapping) is exercised in process by attenuation.root-mapping.*, not at a token endpoint. The reference issues no root over HTTP: the token endpoint parses no root request and no assembly advertises mission_attenuation_supported (D186, #927); the root is minted in process (kernel/attenuation.ts)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a request beyond the ceiling rather than issuing a root for the rest",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
   },
   {
    "id": "attenuation.discovery.lists-aat-type",
@@ -64445,7 +64889,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a chain any token of which carries an `aud` that does not name the consumer is refused, even when each child's `aud` nests within its parent's; the same chain whose tokens all name the consumer is accepted",
-    "local": "the payments consumer applies to every child the boundary check it applies to the root and refuses with audience_mismatch before any claim becomes a decision input"
+    "local": "the payments consumer passes the substrate verifier, as its audiences, only the values its boundary accepts for the issuer's aat+jwt tokens; a token whose aud names none of them is refused at step 6c before any claim becomes a decision input"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -64457,7 +64901,7 @@
      "surface": "resource-operation"
     }
    ],
-   "notes": "#1758 (D876, D882). Before the fix only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: dropping the per-child check fails the witness. The rest of Section 8 (the PoP JWT, child typ, the I3 relations, external vectors) is #1756."
+   "notes": "#1758 (D876, D882), moved onto the -02 substrate verifier by #1756 slice B3: verifyAatPresentation's step 6c checks every token's aud against the audiences this boundary accepts. Before #1758 only the root's aud was checked against the boundary and each child's only for nesting, so a child narrowed to another resource server was accepted. Mutation: passing every named audience through unfiltered fails the witness. The rest of Section 8 runs in the same verifier (the published vector suite, mission-core aat-vectors.test.ts)."
   },
   {
    "id": "attenuation.consumer.child-identity-claims-no-authority",
@@ -64511,10 +64955,22 @@
     "normative": "a Mission-bound chain any token of which lacks mission_constraints, or carries one without exactly one member per tool, is refused"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a token without the member, without a value for one of its tools, or with a value for a tool it does not carry",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a chain whose child removes mission_constraints or a tool's value, and records each refusal",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The Mission layer (verifyMissionAatChain) refuses a root or a child without the member, without a value for one of its tools, with a value for a tool it does not carry, or with a value lacking constraints. End to end, the payments consumer refuses a child its holder re-signed without the member, with an empty member, or with a value lacking constraints, after the substrate permits the chain, and records a token_invalid Refusal Record naming the root's subject and no Mission. Proved by mutation: admitting a tool with no value, and reading a missing member as empty, each fail the unit witness; the end-to-end witness fails when the credential mapping's own check of a missing value is dropped as well, since either check alone refuses the chain."
   },
   {
    "id": "attenuation.mission-constraints.per-hop-narrowing",
@@ -64533,10 +64989,28 @@
     "normative": "a child whose mission_constraints drops a member, drops constraints, carries constraints that are not a subset of its parent's under the Resource Access subset rule's step 3, or changes resource_contract refuses the whole chain"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a child whose constraints are not within its parent's, or whose resource_contract changed, and admits a narrowing",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a token without the member, without a value for one of its tools, or with a value for a tool it does not carry",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). Each hop's member is held to its parent's with the Resource Access subset rule (isSubsetEntry over one-action entries: step 3 for constraints, step 4 for the contract). Witnessed: a raised or removed cap, a removed or widened vendor bound, an emptied constraints object, a dropped or changed resource_contract, and (with required-member) a dropped member, value or constraints each refuse the whole chain, while a narrowing with the contract kept is admitted. Proved by mutation: a narrowing check that passes everything fails both the unit and the end-to-end witness."
   },
   {
    "id": "attenuation.mission-constraints.unknown-key-refused",
@@ -64555,10 +65029,22 @@
     "normative": "a mission_constraints key the consumer does not understand or cannot enforce refuses the chain"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the mission_constraints member (@spec attenuation#mission-constraints, #1756, D902) > refuses a key the consumer does not understand or cannot enforce, and a malformed constraint, rather than ignoring it",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses malformed or unsupported constraints and an unknown member key, rather than ignoring them",
+     "level": "cross-component",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). A value member other than constraints and resource_contract, a constraints key the credential reader does not enforce, a malformed max_amount (a JSON number amount, a lower-case currency), a malformed vendor bound or resource_contract, and constraints that are not an object each refuse the chain, on the root and on a child. Proved by mutation: ignoring an unknown value member, and dropping an unenforceable constraints key, each fail both witnesses."
   },
   {
    "id": "attenuation.consumer.enforce-mission-constraints",
@@ -64576,11 +65062,77 @@
    "observation": {
     "normative": "an invocation that the substrate permits but whose operation's facts do not satisfy the leaf's mission_constraints for the invoked tool is refused; the facts come from the resource server's records where the operation acts on one, never from an argument's claim about such a record"
    },
-   "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > admits a valid substrate proof whose Mission constraints then fail against the invoice, refusing the invocation at the PEP with a Refusal Record",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the mission_constraints member at the consumer (@spec attenuation#mission-constraints, #1756, D902) > refuses a write whose invoice changed after the presentation was validated, before the decision and between decision and execution",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: the leaf's restrictions bound the action (@spec runtime#input-authority, #825) > refuses an invoice above the leaf's narrowed amount bound before any PDP call, and admits one within it",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > refuses the cross-tool substitution: a presentation verified for the service tool never executes under another leaf tool's contract or restrictions",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > verifies a presentation naming the retained-contract tool and executes it under that contract",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > refuses a proof naming a tool its own contract does not perform the operation as, recording the refusal",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > authorizes only the invocation it was verified for: another tool or other arguments with the same facts are refused at intake",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > refuses before any decision a leaf with no contract where the resource requires one, and executes the same operation under the required contract",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > refuses a leaf whose contract the resource does not declare, before any decision",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > suppresses the effect when the leaf's contract is withdrawn between the decision and the release",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the invoked tool's authority alone (@spec attenuation#mission-binding-check, #1756, D932) > with the invoked tool, the credential authority is that one leaf tool's, and a tool the leaf does not carry refuses",
+     "level": "unit",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. D932 (owner review of #1792): the value enforced is the invoked tool's alone. The proof names the tool (aat_tool); its own mission_constraints names the contract the operation is performed under, whose Operation Profile must establish that tool's target; and the credential authority is that tool's entry alone, bound to the one invocation (tool name and arguments) it was verified for. Before the fix every leaf tool's authority reached the PEP, which could select another tool's retained contract: a presentation verified for a wildcard service tool executed under an invoice-level retained contract whose tool admitted only another invoice. Witnessed: that substitution is refused out_of_authority before any decision; a presentation naming the retained-contract tool executes under that contract; a tool whose own contract establishes another target is refused with a Refusal Record; and facts used for another tool or other arguments are refused at intake. The leaf's resource_contract is enforced end to end (D932 ruling 6): absent where the resource requires one it is refused before any decision, one the resource does not declare is refused at verification, and one withdrawn between the decision and the release suppresses the effect. Proved by mutation: passing every leaf tool's authority, computing the tool under the live profile, dropping the tool-to-contract binding, dropping the intake binding, ignoring the invoked tool in the Mission layer, not requiring a required contract, and not re-resolving the contract at use, each fail a witness. The row level is cross-component (B1 had placed unit on the blocked row): each witness mints at the AS kernel, verifies at the payments server and enforces at the PEP."
   },
   {
    "id": "attenuation.root-mapping.mission-constraints-ceiling",
@@ -64599,10 +65151,34 @@
     "normative": "the mapped ceiling carries, for each tool, the mapped entry's constraints and resource_contract unchanged as that tool's mission_constraints value; an issued root carries that value or constraints that are a subset of it under step 3 of the Resource Access subset rule, with resource_contract unchanged"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record. Renamed from mission-constraints-unchanged at the #1782 review (D904): the mapping is a ceiling."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > carries each entry's constraints and resource_contract unchanged as the tool's mission_constraints value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > issues exactly a requested narrowing within the ceiling: USD 100 under USD 500, and one period where the tool admits any",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > refuses a request beyond the ceiling rather than issuing a root for the rest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: verify + leaf enforcement > maps the root from the payments declaration: every argument explicit, the entry's restrictions as mission_constraints, and no tool whose facts the PEP does not establish",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902, D904). mapAuthorityToCeiling carries each mapped entry's constraints and resource_contract unchanged as the tool's value, and an issued root carries that value or a requested subset of it, never an added, dropped or changed resource_contract. Proved by mutation: dropping resource_contract from the ceiling fails the unit witness."
   },
   {
    "id": "attenuation.request.issued-mission-constraints-within-request",
@@ -64618,13 +65194,20 @@
    "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an issued root's mission_constraints value for each tool is no broader than the value the request carried for it, under step 3 of the Resource Access subset rule, with resource_contract unchanged; a request without a value for a tool receives at most the ceiling's"
+    "normative": "an issued root's mission_constraints value for each tool is no broader than the value the request carried for it, under step 3 of the Resource Access subset rule, with resource_contract unchanged; a request without a value for a tool receives at most the ceiling's",
+    "local": "the reference issues each requested value exactly, and the ceiling's value for a requested tool with none"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1782 review (D904): the substrate's request-subset check (-02 Section 6.1.3 step 7) does not cover the member, which it gives no authority. Blocked on #1756 slice B3 by the D902 plan of record; the reference also has no HTTP root issuance (D186)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > issues exactly a requested narrowing within the ceiling: USD 100 under USD 500, and one period where the tool admits any",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). The reference mints roots in process (deriveAttenuationRoot); no token endpoint takes a root request (#927, D186). The issued root carries exactly the request: each tool's argument map and mission_constraints value as requested, and the ceiling's value for a tool the request names none for. Proved by mutation: issuing the ceiling's value in place of the requested one fails the witness."
   },
   {
    "id": "attenuation.root-mapping.one-entry-per-tool",
@@ -64640,13 +65223,26 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where several entries map to one tool identifier, a minted root carries one entry's restrictions for that tool, or the issuer mints separate roots; restrictions are never merged"
+    "normative": "where several entries map to one tool identifier, a minted root carries one entry's restrictions for that tool, or the issuer mints separate roots; restrictions are never merged",
+    "local": "the derived ceiling leaves out a tool that entries with different restrictions map to; a request naming it is issued only within one entry's restrictions, and a request naming no value for it is refused"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > leaves out a tool that two entries with different restrictions map to, never merging them, and maps identical restrictions once",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > takes a tool two entries map to within one entry's restrictions when the request names it, never their merge",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D904). Proved by mutation: letting the first entry's restrictions win in the derived ceiling, and admitting a requested value within the entries' merge, each fail their witness."
   },
   {
    "id": "attenuation.root-mapping.facts-established",
@@ -64662,13 +65258,32 @@
    "surface": "derivation",
    "assertion": "refusal",
    "observation": {
-    "normative": "an entry whose constraints restrict a fact the resource server does not establish for an operation the tool identifier names is not mapped to that tool"
+    "normative": "an entry whose constraints restrict a fact the resource server does not establish for an operation the tool identifier names is not mapped to that tool",
+    "local": "the payments declaration names vendors and max_amount only; an entry restricting any other Common Constraint is not mapped at the payments resource"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > maps no tool unless every operation it names establishes each fact the entry restricts",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "the payments declaration of its operations to the mint (@spec attenuation#root-mapping, #1756) > declares each action's tools with their catalog arguments, and as established only the facts this PEP establishes from its records",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: verify + leaf enforcement > maps the root from the payments declaration: every argument explicit, the entry's restrictions as mission_constraints, and no tool whose facts the PEP does not establish",
+     "level": "cross-component",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The mint takes the resource server's declaration of the operations a tool identifier names and the constraint keys each establishes (AttenuationOperations); a tool whose operations are undeclared, or any of which does not establish a restricted key, is not mapped. The payments declaration (paymentsAttenuationOperations) names each action's tools, their catalog arguments, and only vendors and, for an amount-bearing invoice action, max_amount, the facts its PEP establishes from its records; so an amount-capped entry maps invoice.read and not invoice.list. Proved by mutation: dropping the mint's check, and declaring an amount fact a list never reads, each fail a witness; withdrawing the amount fact from an amount-bearing read fails the declaration witnesses."
   },
   {
    "id": "attenuation.root-mapping.arguments-explicit",
@@ -64687,10 +65302,22 @@
     "normative": "a minted root's argument constraints name each argument the operations' definitions declare, with no \"*\" entry; an argument only some of the operations take is optional"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > names every argument the operations declare as an explicit wildcard, optional where not every operation requires it, with no \"*\"",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > leaves out a tool whose operations declare no argument, so an empty argument map never stands for none (D932 ruling 2)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The argument map is the union of the operations' declared arguments, each a wildcard, optional unless every operation declares it required; for the payments execute action (preflight, prepare, commit) only the commit tool takes an idempotency key, which the map makes optional. A tool whose operations declare no argument is left out of the ceiling, and a request naming one is refused (D932 ruling 2): -02 reads an empty map as an admitting \"*\" and has no form for no arguments. Proved by mutation: mapping such a tool to an empty map fails the ceiling and the request witnesses. Proved by mutation: making every argument required, and adding a \"*\" entry, each fail the witness."
   },
   {
    "id": "attenuation.holder.narrow-mission-constraints",
@@ -64709,10 +65336,16 @@
     "normative": "a child an Attenuating Holder mints carries mission_constraints no broader than its parent's"
    },
    "level": "unit",
-   "coverage": "blocked",
-   "tests": [],
-   "blocked_by": "#1756",
-   "notes": "#1756 slice B1 (D902, option C): the draft defines the member; the reference mint and the payments consumer implement it in slice B3, so the row is blocked on #1756 by the D902 plan of record."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the issued root (@spec attenuation#request-discovery, attenuation#root, #1756, D904) > mintChildOffline (@spec attenuation#attenuation, #1756) > refuses a child broader than its parent: a tool, an argument, mission_constraints, aud or exp",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1756 slice B3 (D902). The reference holder mint (mintChildOffline) refuses a child that adds a tool or an argument, raises or removes a mission_constraints restriction, drops a tool's value, or widens aud or exp, and mints the parent's own authority unchanged. The consumer's own refusal of a broader child is attenuation.mission-constraints.per-hop-narrowing. Proved by mutation: skipping the member narrowing, and skipping the argument attenuation, each fail the witness."
   },
   {
    "id": "resource-access.subset.same-matcher",
@@ -65274,9 +65907,21 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > the consent commits the assembled ceiling, and refuses a ceiling configuration would now assemble differently, never substituting one",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned."
+   "notes": "Scope adoption follow-up (#1537). The sentence had no row since #1533 reworded it. Proved by mutation: disabling assembleResourceContracts' isCurrentFor check fails the witness (a Mission is created referencing the superseded v1). Template consent (#249 B.1, D875): a carried reference configuration does not name as current refuses the template, and the consent page refuses a ceiling whose references configuration would assemble differently than proposed (a version superseded, or a reference newly required), rather than re-pinning it. Proved by mutation: a page that does not compare, or a commit that does not assemble, fails a witness. Governed adjudication (#249 B.2, D875): a root ceiling pinned to a superseded version no longer activates, refused invalid_authorization_details with nothing committed. Proved by mutation: removing the assembly lets it commit. An Expansion (#249 B.3, D875) proposing a version no longer current refuses, and a completion after configuration moved to a new current version is refused access_denied with no successor created, never re-pinned. A ceiling consent (#249 B.4, D875): consentCeiling, at the initial consent and at an Expansion's re-consent, refuses a ceiling configuration would now assemble differently (a reference newly required, or the rendered version superseded), never re-pinning. Proved by mutation: removing the recheck fails the witnesses."
   },
   {
    "id": "resource-access.resource-contract.assembled-from-configuration",
@@ -65345,9 +65990,27 @@
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the review renders the reference, the decision commits it, and a configuration change before completion refuses rather than re-pins",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > the consented ceiling's entries carry the configured current reference, and the drawdown policy is kept",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > assembles the offer's references before it renders, and an offer configuration cannot assemble is not offered",
+     "level": "unit",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
+     "level": "unit",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses. A progressive ceiling consent (#249 B.4, D875) is a new approval: the offer is assembled before the authorization page and an Expansion's review render it, and the consent commits the assembled ceiling. Proved by mutation, each alone: the page's offer, the review's offer or assembledCeilingOffer not assembling, or a consent commit not handed the declarations, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -65402,7 +66065,7 @@
    "text": "Every derivation, narrowing, and delegation preserves it exactly",
    "observation": {
     "normative": "a derived entry carries exactly the reference of the entry it derives from: a child entry of a parent entry carrying resource_contract carries the same reference without restating it, a conflicting proposed reference is refused rather than replaced, and a superseded reference within its declared retention survives",
-    "local": "witnessed for child delegation and template Dispatch; token derivation, refresh, token exchange, carryover and drawdown (an Expansion is a new approval, so it assembles; #249 B.3) are not yet witnessed here (the #249 cutover, D875)"
+    "local": "witnessed for child delegation, template Dispatch, governed activation and ceiling drawdown (through the wire, #249 B.4); token derivation, refresh, token exchange and carryover are not yet witnessed here (the #249 cutover, D875). An Expansion is a new approval, so it assembles rather than preserves (#249 B.3)"
    },
    "tests": [
     {
@@ -65446,9 +66109,33 @@
      "name": "governed adjudication assembles the reference before evaluation (@spec resource-access#resource-contract, #249, D875) > a root ceiling carrying a reference carries it into the activation, and refuses a proposal naming another",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a superseded ceiling reference within its retention survives a drawdown, and a retired one refuses",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes, its successor carrying the consented ceiling's reference",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "ceiling consent under a configuration requiring a contract reference (@spec resource-access#resource-contract, #249, D875) > an in-ceiling drawdown completes once the consented version is superseded within its retention, with no current version",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness."
+   "notes": "#1751, D875. Child delegation derives under the policy ceiling, which carries no reference; inheritResourceContract carries the reference of the one parent entry that with it authorizes the whole child entry, never borrowing, combining or choosing, and the inherited reference is checked as a carried one (a retired version refuses the child). Proved by mutation, each alone: no inheritance, choosing among disagreeing covering entries, borrowing from any entry for the resource, replacing a proposed reference, and skipping the carried-reference check each fail a witness. Partial until the other derivation paths are witnessed. Template Dispatch (#249 B.1, D875) is preservation-only: the instance carries the template ceiling's reference without the Dispatcher restating it, a Dispatcher reference the ceiling lacks is refused out_of_template_ceiling, and the instance's references are checked as carried ones. Proved by mutation: comparing the policy-derived half with references, failing the invariant instead of refusing, or skipping the carried check each fails a witness. Governed activation (#249 B.2, D875) preserves a pinned root ceiling's reference and refuses a proposal naming another; against an unpinned root the assembled entry is compared without its reference. Proved by mutation: comparing the policy-derived half with references, or an unpinned root exactly, fails a witness. A ceiling drawdown (#249 B.4, D875) is preservation-only: every wire drawdown check (the non-widening check, the encounter facts and the decision) decides on drawdownRequested's set, and the creation inherits onto the derivation before capability bindings are added, both carrying the consented ceiling's reference through inheritResourceContract, never one assembled afresh, and checking it as a carried one. Two endpoint witnesses draw down through /token: under unchanged configuration, and with the consented version superseded within its retention and no current version. Proved by mutation, each alone: inheriting after capability bindings are added fails both endpoint witnesses; deciding the non-widening check, or every wire check, on the assembled derivation fails the superseded one; and not inheriting in either place, or skipping the carried check, fails a witness."
   },
   {
    "id": "resource-access.resource-contract.no-reference-without-approval",
@@ -65468,7 +66155,7 @@
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation, and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
    },
    "tests": [
     {
@@ -65480,6 +66167,12 @@
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "expansion approval assembles the successor's references (@spec resource-access#resource-contract, #249, D875) > the successor of a predecessor approved without a reference carries the configured current one, and the predecessor is not re-pinned",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
      "level": "unit",
      "surface": "derivation"
     }

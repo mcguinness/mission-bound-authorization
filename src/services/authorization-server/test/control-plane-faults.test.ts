@@ -15,6 +15,7 @@ import {
   StaleVersionError,
   validateMissionIntent,
 } from "../src/index.js";
+import { HOLDER_JWK, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 let statusKey: CryptoKey;
@@ -523,7 +524,8 @@ describe("control-plane derivation reservations", () => {
           missionId: record.id,
           aud: DERIVATION_POLICY.ceiling[0].resource,
           clientId: "agent",
-          cnfJkt: "jkt-holder",
+          cnfJwk: HOLDER_JWK,
+          operations: TEST_OPERATIONS,
           operationId: "op-7",
         }),
       ).rejects.toThrow("was refunded");
@@ -554,7 +556,8 @@ describe("control-plane concurrent derivations under one operation identity", ()
     missionId,
     aud: DERIVATION_POLICY.ceiling[0].resource as string,
     clientId: "agent",
-    cnfJkt: "jkt-holder",
+    cnfJwk: HOLDER_JWK,
+    operations: TEST_OPERATIONS,
     operationId,
   });
 

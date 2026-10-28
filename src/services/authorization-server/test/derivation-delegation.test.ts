@@ -12,7 +12,7 @@
 
 import { aatToolId } from "@mission/core";
 import { DERIVATION_POLICY } from "@mission/demo-data";
-import { type CryptoKey, decodeJwt, generateKeyPair } from "jose";
+import { type CryptoKey, decodeJwt, generateKeyPair, type JWK } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   type AuthorityEntry,
@@ -24,6 +24,7 @@ import {
   type MissionIntent,
   validateMissionIntent,
 } from "../src/index.js";
+import { CEILING_ARGS, holderKey, TEST_OPERATIONS } from "./attenuation.helper.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
 
 const ISS = "https://as.test";
@@ -207,9 +208,11 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
   };
 
   let signKey: CryptoKey;
+  let holder: JWK;
   let seq = 0;
   beforeAll(async () => {
     signKey = (await generateKeyPair("ES256", { extractable: true })).privateKey;
+    holder = (await holderKey()).jwk;
   });
 
   const mkKernel = (policy: unknown) =>
@@ -233,7 +236,8 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
       missionId: mission.id,
       aud: RES_A,
       clientId: "agent",
-      cnfJkt: "jkt-holder",
+      cnfJwk: holder,
+      operations: TEST_OPERATIONS,
       // NO delMaxDepth: exercises the DERIVED path.
     });
     expect(decodeJwt(root).del_max_depth).toBe(2); // min(3, 2)
@@ -243,7 +247,7 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
     expect(tools[aatToolId(RES_C, "c.read")]).toBeUndefined();
   });
 
-  it("a requestedTools narrowing is minted non-delegating (del_max_depth 0, fail-closed)", async () => {
+  it("a requested narrowing is minted non-delegating (del_max_depth 0, fail-closed)", async () => {
     // A client-requested narrowing does not inherit the full set's derived depth:
     // deriving over the justifying entries is fan-out accounting, deferred; a
     // non-delegating root is fail-closed.
@@ -253,8 +257,9 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
       missionId: mission.id,
       aud: RES_A,
       clientId: "agent",
-      cnfJkt: "jkt-holder",
-      requestedTools: { [aatToolId(RES_A, "a.read")]: {} },
+      cnfJwk: holder,
+      operations: TEST_OPERATIONS,
+      requested: { tools: { [aatToolId(RES_A, "a.read")]: CEILING_ARGS } },
     });
     expect(decodeJwt(root).del_max_depth).toBe(0);
     expect(tools[aatToolId(RES_A, "a.read")]).toBeDefined();
@@ -272,7 +277,8 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
       missionId: mission.id,
       aud: RES_C,
       clientId: "agent",
-      cnfJkt: "jkt-holder",
+      cnfJwk: holder,
+      operations: TEST_OPERATIONS,
     });
     expect(decodeJwt(root).del_max_depth).toBe(0);
     expect(tools[aatToolId(RES_C, "c.read")]).toBeDefined();
@@ -290,7 +296,8 @@ describe("deriveAttenuationRoot derives del_max_depth (@spec attenuation#root-ma
       missionId: mission.id,
       aud: RES_C,
       clientId: "agent",
-      cnfJkt: "jkt-holder",
+      cnfJwk: holder,
+      operations: TEST_OPERATIONS,
       delMaxDepth: 2,
     });
     expect(decodeJwt(root).del_max_depth).toBe(2);

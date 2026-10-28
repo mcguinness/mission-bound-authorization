@@ -409,7 +409,7 @@ function verifyChainTokens(
 
 /** Step 6c: every `aud` in the chain identifies this enforcement point. */
 function chainAudienceProblem(
-  tokens: readonly Token[],
+  tokens: readonly { claims: Readonly<Record<string, unknown>> }[],
   policy: Pick<AatPolicy, "audiences" | "requireChainAud">,
 ): string | undefined {
   let carried = false;
@@ -457,13 +457,40 @@ function chainPermit(tokens: readonly Token[], anchorIssuer: string): AatChainPe
  * with no tool invocation. PoP and argument checks are the caller's.
  */
 export function verifyAatChain(input: AatChainInput): AatChainPermit | AatDeny {
+  const links = verifyAatChainLinks(input);
+  if (links.verdict === "DENY") return links;
+  const aud = chainAudienceProblem(links.chain, input.policy);
+  if (aud) return deny("6c", aud);
+  return links;
+}
+
+/**
+ * @spec AAT -02 Section 8 steps 1 to 5 and 6a: verify a delegation chain
+ * with no enforcement-point audience, for a profile that applies step 6c
+ * itself once it knows the audience (the cross-organizational projection
+ * exchange checks its requested audience, cross-org-delegation#projection-
+ * exchange, #1759) with {@link aatChainAudienceProblem}.
+ */
+export function verifyAatChainLinks(
+  input: Omit<AatChainInput, "policy">,
+): AatChainPermit | AatDeny {
   const p = resolveParams(input.params);
   const r = verifyChainTokens(input.chain, input.trustAnchors, input.now, p);
   if ("verdict" in r) return r;
   // Step 6a holds by construction: every token carries exactly one entry (steps 3m and 4n).
-  const aud = chainAudienceProblem(r.tokens, input.policy);
-  if (aud) return deny("6c", aud);
   return chainPermit(r.tokens, r.anchorIssuer);
+}
+
+/**
+ * @spec AAT -02 Section 8 step 6c over a verified chain: why some token's
+ * `aud` does not identify the enforcement point `policy` names, or
+ * undefined.
+ */
+export function aatChainAudienceProblem(
+  chain: readonly AatVerifiedToken[],
+  policy: Pick<AatPolicy, "audiences" | "requireChainAud">,
+): string | undefined {
+  return chainAudienceProblem(chain, policy);
 }
 
 /**

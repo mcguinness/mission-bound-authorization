@@ -48,7 +48,9 @@ import {
   validateMissionResourceAccessSchema,
 } from "../src/index.js";
 import { TemplateConsentProposals, templateConsentDisclosure } from "../src/adapters/template-consent.js";
-import { inheritResourceContract } from "../src/kernel/child-delegation.js";
+import { inheritResourceContract } from "../src/kernel/resource-contract.js";
+import { assembledCeilingOffer, createCeilingDrawdownInCallerTx, drawdownRequested } from "../src/kernel/progressive.js";
+import { withTransaction } from "@mission/store";
 import { pinDispatchPolicy, templateContracts } from "../src/kernel/template.js";
 import { aiAgents } from "./actor-profiles.helper.js";
 import { TEST_APPROVAL_PRINCIPALS } from "./approval-fixture.js";
@@ -721,5 +723,155 @@ describe("expansion approval assembles the successor's references (@spec resourc
     const before = kernel.allMissions().length;
     expect(store.redeem(second.deferral_code)).toEqual({ error: "access_denied" });
     expect(kernel.allMissions().length).toBe(before);
+  });
+});
+
+// @spec resource-access#resource-contract (#249, D875): a ceiling consent is a
+// new approval, so its offer's references are assembled before it renders and
+// the commit refuses a ceiling configuration would now assemble differently;
+// a drawdown is preservation-only and carries the consented ceiling's
+// reference, never one assembled afresh.
+describe("progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875)", () => {
+  const LIST = "payments:invoice.list";
+  const CURRENT_V1 = declarations([declared("v1", "current")]);
+  const RETIRED = declarations([declared("v1", "retired"), declared("v2", "current")]);
+  /** v2 superseded and v3 current, required for the read. */
+  const LATER = declarations(
+    [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v3", "current")],
+    [READ],
+  );
+  const POLICY = { version: "1", content_type: "application/json", content: JSON.stringify({ max_added_actions: 1, ceiling_review_cadence_s: 2_592_000 }) };
+  let pkey: CryptoKey;
+  beforeAll(async () => {
+    pkey = (await generateKeyPair("ES256")).privateKey;
+  });
+  const kernelFor = (resourceContracts: ResourceContractDeclarations) => {
+    const opts: ConstructorParameters<typeof MissionKernel>[0] = {
+      issuer: "https://as.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: pkey,
+      statusKid: "as-status",
+      resourceContracts,
+      activationPolicies: { "drawdown-std": POLICY },
+      now: () => NOW,
+    };
+    return { opts, kernel: new MissionKernel(opts) };
+  };
+  /** The policy ceiling's entries for the payments resource, consented as the ceiling, each carrying `r` when given. */
+  const ceilingEntries = (r?: ResourceContractRef): AuthorityEntry[] =>
+    DERIVATION_POLICY.ceiling
+      .filter((e) => e.resource === RESOURCE)
+      .map((e) => ({ ...(e as unknown as AuthorityEntry), ...(r ? { resource_contract: r } : {}) }));
+  const offer = (r?: ResourceContractRef) => ({ authority_ceiling: ceilingEntries(r), drawdown_policy: { id: "drawdown-std", version: "1" } });
+  let seq = 0;
+  const approveWith = (kernel: MissionKernel, ceiling: unknown) =>
+    kernel.approve({
+      intent: validateMissionIntent(JSON.stringify(TASK_INTENT)),
+      proposedAuthority: proposal(),
+      subject: { iss: "https://as.test", sub: "alice" },
+      approver: { iss: "https://as.test", sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `rc-pg-apev-${seq++}`,
+      ceiling: ceiling as never,
+    });
+  const widen = () => [{ ...proposal()[0], actions: [READ, LIST] }] as AuthorityEntry[];
+  const intentNow = () => validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Widen to the invoice list" }));
+  const drawdown = (kernel: MissionKernel, predecessorId: string) =>
+    withTransaction(kernel.db, () =>
+      createCeilingDrawdownInCallerTx(kernel, {
+        predecessorId,
+        intent: intentNow(),
+        proposedAuthority: widen(),
+        activationActor: { iss: "https://as.test", sub: "ap-agent" },
+        policy: { ref: kernel.get(predecessorId)?.drawdown_policy as never, snapshot: POLICY },
+        restrictionsAtAdjudication: { containment: 0, discharge: 0 },
+      }),
+    );
+
+  it("assembles the offer's references before it renders, and an offer configuration cannot assemble is not offered", () => {
+    expect(assembledCeilingOffer(offer(), REQUIRED)?.authority_ceiling[0]?.resource_contract).toEqual(V2);
+    expect(assembledCeilingOffer(offer(V1), REQUIRED)).toBeUndefined();
+    expect(assembledCeilingOffer(undefined, REQUIRED)).toBeUndefined();
+  });
+
+  it("the consent commits the assembled ceiling, and refuses a ceiling configuration would now assemble differently, never substituting one", () => {
+    const { kernel } = kernelFor(REQUIRED);
+    const predecessor = approveWith(kernel, assembledCeilingOffer(offer(), REQUIRED));
+    expect(predecessor.authority_ceiling?.[0]?.resource_contract).toEqual(V2);
+    // Rendered while nothing was required, committed once a reference is: refused, never added.
+    expect(() => approveWith(kernel, offer())).toThrow(/contract references are not the ones configuration names now/);
+    // Rendered under v2, committed once v3 is current: refused, never re-pinned.
+    expect(() => approveWith(kernelFor(LATER).kernel, assembledCeilingOffer(offer(), REQUIRED))).toThrow(IntentError);
+  });
+
+  it("a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one", () => {
+    const pinned = kernelFor(REQUIRED);
+    const pinnedPredecessor = approveWith(pinned.kernel, assembledCeilingOffer(offer(), REQUIRED));
+    expect(drawdownRequested(pinned.kernel, intentNow(), widen(), pinnedPredecessor.authority_ceiling ?? [])[0]?.resource_contract).toEqual(V2);
+    expect(drawdown(pinned.kernel, pinnedPredecessor.id).authority_set[0]?.resource_contract).toEqual(V2);
+    // Consented while nothing was required, drawn down once a reference is: preservation, not assembly.
+    const unpinned = kernelFor(SUPERSEDED);
+    const unpinnedPredecessor = approveWith(unpinned.kernel, offer());
+    unpinned.opts.resourceContracts = REQUIRED;
+    expect(drawdownRequested(unpinned.kernel, intentNow(), widen(), unpinnedPredecessor.authority_ceiling ?? [])[0]?.resource_contract).toBeUndefined();
+    expect(drawdown(unpinned.kernel, unpinnedPredecessor.id).authority_set[0]?.resource_contract).toBeUndefined();
+  });
+
+  it("a superseded ceiling reference within its retention survives a drawdown, and a retired one refuses", () => {
+    const superseded = kernelFor(CURRENT_V1);
+    const a = approveWith(superseded.kernel, offer(V1));
+    superseded.opts.resourceContracts = SUPERSEDED;
+    expect(drawdown(superseded.kernel, a.id).authority_set[0]?.resource_contract).toEqual(V1);
+    const retired = kernelFor(CURRENT_V1);
+    const b = approveWith(retired.kernel, offer(V1));
+    retired.opts.resourceContracts = RETIRED;
+    expect(() => drawdown(retired.kernel, b.id)).toThrow(IntentError);
+  });
+
+  it("an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render", () => {
+    const { opts, kernel } = kernelFor(REQUIRED);
+    const predecessor = approveWith(kernel, assembledCeilingOffer(offer(), REQUIRED));
+    // The read entry alone, so the decision meets the approval floor without an authentication.
+    const reads = () => ({ ...offer(), authority_ceiling: ceilingEntries().slice(0, 1) });
+    const store = new ExpansionDeferralStore(kernel, () => NOW, undefined, undefined, reads);
+    const pending = store.open({
+      predecessorId: predecessor.id,
+      intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read Acme's Q3 and Q4 invoices" })),
+      proposedAuthority: proposal(),
+      clientId: "ap-agent",
+      jkt: "jkt-rc-pg",
+      creationRequestId: `crid-rc-pg-${seq++}`,
+    });
+    const rendered = store.pendingReview(pending.deferral_code)?.offer;
+    expect(rendered?.authority_ceiling[0]?.resource_contract).toEqual(V2);
+    // Decided and completed under the configuration it rendered under: the successor's ceiling carries it.
+    const kept = store.open({
+      predecessorId: approveWith(kernel, assembledCeilingOffer(offer(), REQUIRED)).id,
+      intent: validateMissionIntent(JSON.stringify({ ...TASK_INTENT, goal: "Read Acme's Q3 and Q4 invoices" })),
+      proposedAuthority: proposal(),
+      clientId: "ap-agent",
+      jkt: "jkt-rc-pg",
+      creationRequestId: `crid-rc-pg-${seq++}`,
+    });
+    const keptOffer = store.pendingReview(kept.deferral_code)?.offer;
+    store.approve(kept.deferral_code, {
+      approver: { iss: "https://as.test", sub: "bob" },
+      approvalEventId: `rc-pg-dec-${seq++}`,
+      approvedUntil: "2027-01-01T00:00:00Z",
+      ceiling: keptOffer,
+    } as never);
+    const done = store.redeem(kept.deferral_code);
+    expect("successor" in done && kernel.get(done.successor.id)?.authority_ceiling?.[0]?.resource_contract).toEqual(V2);
+    opts.resourceContracts = LATER;
+    expect(() =>
+      store.approve(pending.deferral_code, {
+        approver: { iss: "https://as.test", sub: "bob" },
+        approvalEventId: `rc-pg-dec-${seq++}`,
+        approvedUntil: "2027-01-01T00:00:00Z",
+        ceiling: rendered,
+      } as never),
+      // The commit's recheck: the rendered v2 is no longer current.
+    ).toThrow(/is not a contract this authorization server's configuration names as current/);
   });
 });

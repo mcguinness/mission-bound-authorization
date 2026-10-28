@@ -255,6 +255,13 @@ export interface CommonTokenFacts {
    * caller assembled without a server validator.
    */
   validatedBoundary?: ValidatedBoundary;
+  /**
+   * @spec attenuation#mission-binding-check (#1756 slice B3, D932): set on
+   * facts an attenuation presentation yielded. The presentation's proof binds
+   * one invocation, so its facts authorize only the tool call it was verified
+   * for: this tool name, with these original arguments.
+   */
+  presentedFor?: { tool: string; argumentsJson: string };
 }
 
 /** The boundary and statement version a credential's audience was validated against. */
@@ -1763,6 +1770,8 @@ export type ReverifyOutcome =
 /** Every caller-visible diagnostic this PEP refuses with on its Refusal Record path (`refuse`, `recordRefusal`). */
 export type PepRefusalDiagnostic =
   | "unknown_tool"
+  | "invalid_credential"
+  | "mission_claim_missing"
   | "invalid_request"
   | "unknown_mission"
   | "unknown_invoice"
@@ -1796,6 +1805,15 @@ export type PepRefusalDiagnostic =
 export const PRE_DECISION_DENIAL_REASON: Readonly<Record<PepRefusalDiagnostic, PepRefusalDenialReason>> = Object.freeze({
   // No such action at this enforcement surface.
   unknown_tool: "request_unsupported",
+  // @spec attenuation#mission-binding-check (#1756 slice B3): an attenuation
+  // presentation whose chain and proof verified, refused by the Mission
+  // layer (a `mission` claim not carried unchanged, `mission_constraints`
+  // missing, broadened or not understood, a root profile claim missing).
+  invalid_credential: "token_invalid",
+  // @spec attenuation#mission-binding-check: a verified chain whose root
+  // carries no `mission` claim is outside the profile; this resource accepts
+  // only Mission-bound credentials.
+  mission_claim_missing: "mission_claim_missing",
   // Intake (operation-profile-payments-v1, D316, D334): the PEP established
   // the action, and the supplied arguments fail its served input schema (an
   // unknown or authoritative member, a missing required member, a wrong type,
@@ -2337,11 +2355,22 @@ export class Pep {
     const established = await this.requestBoundary(token, mapping.action);
     if (!established.ok) return { ok: false, refusal_reason: established.refusal_reason };
     const boundary = established.boundary;
+    // @spec attenuation#mission-binding-check (#1756 slice B3, D932): facts a
+    // presentation yielded authorize only the invocation it was verified for.
+    // Any other tool, or other arguments, are outside the credential's
+    // authority.
+    const presented = token.presentedFor;
+    if (presented !== undefined && (presented.tool !== tool || invocation?.argumentsJson !== presented.argumentsJson)) {
+      await this.recordRefusal(boundary, token, "out_of_authority", mapping.action);
+      return { ok: false, refusal_reason: "out_of_authority" };
+    }
     // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the seam where the
     // invocation's original arguments are checked before normalization. The
     // transport's original text must describe exactly the arguments it
-    // dispatched; a presentation's `hta` is verified against this same text
-    // here, before `admitArguments` normalizes anything (#1756 slice B3).
+    // dispatched. An attenuation presentation's `hta` was verified against
+    // this same text before the call reached here
+    // (`McpPaymentsServer.validateAatPresentation`, #1756 slice B3), and
+    // nothing has normalized it yet (`admitArguments` runs below).
     if (invocation !== undefined && !originalArgumentsMatch(invocation, args)) {
       await this.recordRefusal(boundary, token, "invalid_request", mapping.action);
       return { ok: false, refusal_reason: "invalid_request" };
@@ -4439,6 +4468,36 @@ export class Pep {
    * (@spec runtime#runtime-conformance, #853, D487): the record's `audience`,
    * whatever `aud` the credential carried. A denial needs no permit for it.
    */
+  /**
+   * @spec attenuation#mission-binding-check, runtime-evidence#pre-decision-refusal
+   * (#1756 slice B3): an attenuation presentation the substrate permitted,
+   * refused by the Mission layer before it yields credential facts. One
+   * Refusal Record at the boundary this PEP establishes now, naming the
+   * subject only where the issuer-signed root carries one, and no `mission`
+   * member (no Mission reference was established). The record's correlation
+   * key is the root's claimed Mission id, when it names one. A presentation
+   * the substrate refused is answered with no record, as an access token
+   * that fails validation is: its holder is not authenticated. No boundary,
+   * no record.
+   */
+  async refusePresentation(
+    tool: string,
+    reason: "invalid_credential" | "mission_claim_missing",
+    claimed: { sub?: string; iss?: string; missionId?: string } = {},
+  ): Promise<void> {
+    const established = this.boundary();
+    if (!established.ok) return;
+    await this.deps.evidence.recordRefusal(CANONICAL_RESOURCE, "pep", {
+      missionId: claimed.missionId ?? "unknown",
+      audience: established.boundary,
+      action: { name: this.toolAction(tool)?.action ?? tool },
+      denial_reason: signedDenialReason(reason),
+      ...(claimed.sub !== undefined
+        ? { subject: { id: claimed.sub, ...(claimed.iss !== undefined ? { properties: { iss: claimed.iss } } : {}) } }
+        : {}),
+    });
+  }
+
   private async recordRefusal(
     boundary: string,
     token: TokenFacts,
