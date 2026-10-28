@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-28T00:46:21Z
-Source repository commit: 2d01c7e09af195dcf3eb55c541f5df91f4bdd64f
+Generated: 2026-10-28T04:34:54Z
+Source repository commit: 955854d92978b616a01d0a2d56980d65de656310
 Member count: 9
 
 Reading order:
@@ -9154,19 +9154,9 @@ Table of Contents
    entry (Section 19.1).
 
    Mission Intent Submission Evidence for OAuth 2.0
-   ([I-D.draft-mcguinness-oauth-mission-submission-evidence]) specifies:
-
-   *  the entry convention;
-
-   *  required-evidence resolution;
-
-   *  the binding of evidence to one Intent and to the presenter;
-
-   *  the verification-cost bound;
-
-   *  where the error is returned; and
-
-   *  evidence on idempotent creation surfaces.
+   ([I-D.draft-mcguinness-oauth-mission-submission-evidence]) specifies
+   the evidence framework, including required-evidence resolution and
+   the binding of evidence to one Intent and its presenter.
 
 4.5.  Submission Processing Order
 
@@ -10171,9 +10161,7 @@ Table of Contents
    A deployment-defined authenticated surface satisfies this
    requirement; Mission Status
    ([I-D.draft-mcguinness-oauth-mission-status]) defines an
-   interoperable revoke operation, authorized under its own lifecycle
-   authorization policy, which a deployment can serve alone under that
-   document's revoke-only conformance class.
+   interoperable revoke operation.
 
    As Section 2.1 of [RFC7009] permits, a deployment's revocation policy
    can treat revoking a Mission's refresh token as revoking the Mission;
@@ -10639,9 +10627,6 @@ Table of Contents
    resolvability while tokens signed under it remain valid.  A token the
    AS issues only for presentation back to itself, such as a designation
    (Section 12.1), creates no publication duty by itself.
-
-   Every emitted authorization_details entry is a subset of a Mission
-   Authority Set entry (Section 5.4).
 
 8.5.  Audience and Token Response
 
@@ -12076,11 +12061,9 @@ Table of Contents
    *  *Subject is stable.* sub remains the Mission's Subject.  The
       delegate is an actor, not the Subject.
 
-   *  *client_id keeps its ordinary meaning.* A delegated token's
-      client_id is the OAuth client that requested it (Section 4.3 of
-      [RFC8693], Section 2.2 of [RFC9068]).  The originally-approved
-      agent remains recorded in the Mission Record (Section 14,
-      Appendix B.6).
+   *  *client_id keeps its ordinary meaning.* It names the client that
+      requested the token (Section 8.4); the originally-approved agent
+      stays in the Mission Record (Appendix B.6).
 
    *  *The act chain identifies the delegates.* The delegated token
       carries an act claim per Section 4.1 of [RFC8693] and the Actor
@@ -12091,9 +12074,8 @@ Table of Contents
       sub_profile actor-type classification, such as ai_agent).
 
    *  *The audience processes the chain.* The AS issues the delegated
-      token only for an audience it has established as a Mission-aware
-      Resource Server that also processes the act chain, and refuses any
-      other with invalid_target (Section 9.2).
+      token only for an audience that meets the issuance rule of
+      Section 9.2, and refuses any other with invalid_target.
 
    *  *Authority only narrows.* The delegated token's
       authorization_details MUST be a subset (Section 5.4) of the
@@ -13940,10 +13922,8 @@ Table of Contents
    key.
 
    A consumer that needs to bind to or correlate a specific Mission uses
-   the Mission Identifier.  Where a deployment discloses authority_hash
-   to a resource server, it is an audit correlator, not an enforcement
-   input, and not proof that the carried entries are a subset of the
-   approved set.
+   the Mission Identifier.  A disclosed authority_hash is only an audit
+   correlator (Section 9.3).
 
 20.5.3.  Composition and the Effective Ceiling
 
@@ -13970,14 +13950,11 @@ Table of Contents
 
 20.5.4.  Authority Materialized Before Containment
 
-   Where a deployment runs the Mission Containment profile
-   ([I-D.draft-mcguinness-oauth-mission-containment]), a contain
-   transition does not reach authority materialized before it, such as a
-   cross-domain grant already redeemed at a Resource AS or an offline
-   attenuation root already minted.  That authority operates for its own
-   remaining lifetime, the same residual bound that revocation carries
-   (Section 7.2); the containment profile states the residual and how
-   short lifetimes bound it
+   Under the Mission Containment profile, a contain transition does not
+   reach authority materialized before it, such as a redeemed cross-
+   domain grant or a minted attenuation root, which operates for its own
+   remaining lifetime, as after revocation (Section 7.2); that profile
+   states the residual and how short lifetimes bound it
    ([I-D.draft-mcguinness-oauth-mission-containment], Section "The
    Materialized-Capability Residual").
 
@@ -16518,6 +16495,12 @@ Appendix G.  Document History
       condenses its practices; and the Enforcement Responsibilities
       table is removed, with Rendering Safeguards pointing to
       Enforcement Requirements and Scope Projection (#1793, D919).
+
+   *  Editorial, no requirement change: Token Claims, Delegated
+      Exchange, Intent Submission Evidence, Revocation, Authority Hash
+      and Mission Identity, and Authority Materialized Before
+      Containment point to the home of a rule they restated, keeping
+      each operation's own condition (#1793, D919).
 
    -01
 
