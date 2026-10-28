@@ -777,6 +777,42 @@ const childOf = (accessToken: string) =>
     child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
   });
 
+/**
+ * The children grant the expansion below proposes, narrower than the policy
+ * ceiling's (max_depth 2, five children of depth 2).
+ */
+const CHILDREN_GRANT = { max_depth: 1, children: { max_children: 2, max_child_depth: 1 } };
+
+/**
+ * A child-creation exchange at /token from the Mission `accessToken` is for:
+ * the invoice reads alone, restating the per-payment bound, the vendor and
+ * the children grant. A child entry that omits `delegation` inherits the
+ * policy ceiling's broader grant, and one that omits `max_amount` drops the
+ * successor's bound, so either is no subset of the successor's entry; this
+ * one is, and the child actor is one the grant admits.
+ */
+const readChildOf = (accessToken: string) =>
+  token({
+    grant_type: TOKEN_EXCHANGE,
+    subject_token: accessToken,
+    subject_token_type: ACCESS_TOKEN,
+    requested_token_type: JWT_TOKEN,
+    creation_request_id: crypto.randomUUID(),
+    mission_intent: JSON.stringify({
+      intent: { goal: "read Acme invoices", target_resources: [RESOURCE], expires_at: FAR_FUTURE },
+    }),
+    authorization_details: JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        delegation: CHILDREN_GRANT,
+      },
+    ]),
+    child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+  });
+
 /** A deferred expansion exchange for the Mission `accessToken` is for, with `maxBudget` (null: none) in the widened Intent. */
 const openExpansion = (accessToken: string, maxBudget: unknown) =>
   token({
@@ -798,7 +834,7 @@ const openExpansion = (accessToken: string, maxBudget: unknown) =>
         resource: RESOURCE,
         actions: [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        delegation: { max_depth: 1, children: { max_children: 2, max_child_depth: 1 } },
+        delegation: CHILDREN_GRANT,
       },
     ]),
     creation_request_id: crypto.randomUUID(),
@@ -869,6 +905,32 @@ describe("standing-payment lineage at the token endpoint (@spec template#instanc
     expect(status, JSON.stringify(body)).toBe(400);
     expect(body.mission_denial_reason).toBe("delegation_not_permitted");
     expect(created()).toEqual(before);
+  });
+
+  it("refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)", async () => {
+    const { accessToken, missionId } = await aliceInstance();
+    const code = await expansion(accessToken);
+    expect((await approveDeferral(code)).status).toBe(200);
+    const polled = await token({ grant_type: DEFERRED_GRANT, deferral_code: code });
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    const successorId = (
+      decodeJwt(polled.body.access_token as string) as { mission: { id: string } }
+    ).mission.id;
+    const successor = as.kernel.get(successorId);
+    expect(successor?.predecessor).toBe(missionId);
+    expect(successor?.intent.max_budget).toEqual(USD_1000);
+    expect(standingPaymentBudgetBindingOf(as.kernel, successor as never).kind).toBe("bound");
+    const reads = successor?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    expect(reads?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "USD" });
+    expect(reads?.delegation?.max_depth).toBe(CHILDREN_GRANT.max_depth);
+    expect(reads?.delegation?.children).toMatchObject(CHILDREN_GRANT.children);
+    const before = created();
+    const { status, body } = await readChildOf(polled.body.access_token as string);
+    expect(status, JSON.stringify(body)).toBe(400);
+    expect(body.mission_denial_reason).toBe("delegation_not_permitted");
+    expect(body.access_token).toBeUndefined();
+    expect(created()).toEqual(before);
+    expect(as.kernel.findChildren(successorId)).toEqual([]);
   });
 
   it("refuses invalid_request at /token an expansion of a standing-payment instance whose max_budget is raised, in another currency or absent, opening no deferral and creating nothing (@spec metering#capacity-across-missions, #813)", async () => {
