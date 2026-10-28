@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
-    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
+    "revision": "34bee4dbf69d56fb591c713bb713340632c1e059",
+    "content_sha256": "8d17e2fc8ef13ddc9d74d9f1d65a1e96f7a3d31b3137ba5598a29921ab90f10e"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -6499,9 +6499,9 @@
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "On a refresh, the AS decides this refusal before it consumes or rotates the refresh token",
+   "text": "On a refresh, the AS MUST decide this refusal before it consumes or rotates the refresh token",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6536,7 +6536,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): removing the rotateRefreshToken pre-check (leaving the post-consumption gate) failed all three: the retry got invalid_grant. D971 (#1723 S2, K3): the sentence carries its MUST, an observable ordering it already stated; coverage unchanged."
   },
   {
    "id": "core.submission.proposal-checks-before-evidence",
@@ -8602,9 +8602,9 @@
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
-   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it is never inferred from the token `sub`.",
+   "text": "The accountable principal is the record's `approval_basis.consent_principal` in every source; it MUST NOT be inferred from the token `sub`.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -8631,7 +8631,8 @@
      "level": "cross-component",
      "surface": "derivation"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K2): the sentence carries its MUST NOT, an obligation it already stated, in the passive voice it had; coverage unchanged."
   },
   {
    "id": "core.authority-sources.subject-discipline",
@@ -9919,9 +9920,9 @@
    "id": "core.approval-context-changes.proposal-swap",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "approval-context-changes",
-   "text": "a proposal swapped between rendering and decision changes `proposal_hash` even where `intent_hash` is unchanged",
+   "text": "If any of the following changes between approval rendering and the approval decision, the AS MUST recompute the affected values and the anchors the Mission records",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -9936,7 +9937,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446)."
+   "notes": "The task and the proposal are the interaction's immutable pushed parameters, so they cannot change between one interaction's rendering and its decision. The rendering's context commits both (intent_hash, proposal_hash), and a revision binds to its interaction, so a different task or proposal is a different interaction whose rendering this decision cannot name. Within one interaction no discriminating witness is possible (#1446). D971 (#1723 S2, X2): the swap sentence explains a consequence, so the row points to the rules that produce it: it quotes the recomputation MUST, trigger included, applied to a changed proposal (core.approval-context-changes.recompute quotes the same duty, observed for the Authority Set, source and policy inputs), and cites Authority Proposal's commitment rule, \"The AS records the array on the Mission exactly as submitted and commits it by `proposal_hash` ..., separately from the task (`intent_hash`)\". The observation is unchanged; there were no tests to keep, and coverage stays todo for the #1446 reason stated first."
   },
   {
    "id": "core.mission-record.authority-source-required",
@@ -10182,7 +10183,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625)."
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625). D971 (#1723 S2, X9): this row carries the reproducibility witnesses of the retired consumer row core.mission-record.authority-source-policy-digest-reproducible (\"a consumer holding the policy can reproduce it\", an ability the construction rule yields, not a duty). Both tests it cited are cited here: each recomputes the digest independently, the vector from a hand-written JCS string and the shipped pin from the policy file alone, and obtains the committed value."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-producer",
@@ -10219,42 +10220,6 @@
     }
    ],
    "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
-  },
-  {
-   "id": "core.mission-record.authority-source-policy-digest-reproducible",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "a consumer holding the policy can reproduce it",
-   "role": "verifier",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance"
-   ],
-   "surface": "commitment",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "a party holding the governed policy recomputes `policy.digest` from the input and construction the policy format names and obtains the committed value"
-   },
-   "level": "unit",
-   "coverage": "partial",
-   "tests": [
-    {
-     "file": "src/packages/mission-core/test/anchors.test.ts",
-     "name": "governed policy digest (@spec mission#mission-record, #1503) > reproduces the pinned vector from the policy and its governance authority",
-     "level": "unit",
-     "surface": "commitment"
-    },
-    {
-     "file": "src/services/authorization-server/test/shipped-config.test.ts",
-     "name": "shipped authority-source catalog (@spec mission#authority-sources) > pins the shipped governed policy digest, reproducible from the policy file and its governance authority (#1503)",
-     "level": "unit",
-     "surface": "commitment"
-    }
-   ],
-   "notes": "#1503 finding 2 (D620). Reproducibility is shown by independent recomputation in the tests: the vector from a hand-written JCS string, the shipped pin from the policy file alone. No reference component other than the AS's own loader holds a governed policy, so no verifier implementation is witnessed."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-opaque",
@@ -11707,9 +11672,9 @@
    "id": "core.termination.written-once-cause-preserved",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "termination",
-   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and never changes it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
+   "text": "The issuer writes `termination` once, atomically with the transition to `terminated`, and MUST NOT change it: an expiry, or any later event, does not replace the reason or references of a Mission already terminated.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -11749,7 +11714,8 @@
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "D971 (#1723 S2, K4): the prohibition carries its MUST NOT, an obligation it already stated; the write-once clause stays declarative (narrow wording), and write-once atomicity stays a requirement this row's witnesses do not assert. Coverage unchanged."
   },
   {
    "id": "core.termination.retained-facts-only",
@@ -14546,8 +14512,8 @@
   {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "scope-projection-per-audience",
-   "text": "establishes the condition independently for each audience",
+   "anchor": "scope-projection-subset",
+   "text": "For every target audience, the AS MUST establish that the effective rights the target's enforcement path grants from the projected `scope`, together with every independently mandatory control on that path, are a subset of the rights the token's applicable `authorization_details` grant",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14572,7 +14538,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row."
+   "notes": "Partial while this provider issues single-audience tokens (D415); not a permanent limitation. projectScope proves each audience independently at unit level (a value is emitted only when safe at every audience, mixed modes refuse). No endpoint mints a multi-audience Mission-bound token: oidc-provider refuses more than one resource indicator at the token request (lib/helpers/resolve_resource.js, 9.10.0), every custom-grant mint binds one resource server, and the cross-org exchange projects for its one requested audience. Reconsider if a genuine multi-audience issuance path is added; none is added only to witness this row. D971 (#1723 S2): the row quotes the MUST it relies on, the subset condition's \"For every target audience\", instead of Per-Audience Condition's keyword-free restatement; strength and coverage unchanged."
   },
   {
    "id": "core.scope-projection.unknown-stale-mapping-fail-closed",
@@ -78900,9 +78866,9 @@
    "id": "core.other-types.unestablished-audience-none",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "transformation-capabilities",
-   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping does not stand in for it",
+   "text": "Where the AS cannot establish an entry's original approved audience, the entry has none; the current mapping MUST NOT stand in for it",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -78956,7 +78922,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 4: fail closed; migration from trustworthy historical evidence is permitted, a backfill from today's mapping is not. Proved by skipping an unestablished reference instead of failing closed, by ignoring the alignment of a retained list, and by not reading a stored template or governed association back. D971 (#1723 S2, K1): the sentence carries its MUST NOT, an obligation it already stated; coverage unchanged."
   },
   {
    "id": "core.remediation-grains.refresh-within-grant-and-authority",
