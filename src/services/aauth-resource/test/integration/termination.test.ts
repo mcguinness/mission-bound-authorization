@@ -14,7 +14,7 @@
  * token, an administrator with the key the world enrolled for it.
  */
 import { createHash } from "node:crypto";
-import { parsePsConfig, rfc3339 } from "@mission/aauth-ps";
+import { parsePsConfig, rfc3339, SCHEDULER } from "@mission/aauth-ps";
 import {
   type AgentClient,
   createIssuerStub,
@@ -240,6 +240,50 @@ describe("termination through the control plane, with revocation at the Resource
         tracked: 2,
         revocation_attempted: 2,
         revocation_confirmed: 2,
+        complete: true,
+      },
+    });
+  });
+
+  it("expiry: past expires_at the PS commits terminated, reason expired, attributed to its scheduler; the agent's request is refused mission_terminated and status reports it", async () => {
+    const agent = await w.agent();
+    const expiresAt = w.seconds() + 120;
+    const s256 = await w.approve(agent, {
+      description: "Summarize the quarterly report",
+      expires_at: rfc3339(expiresAt),
+    });
+    const person = await agent.requestPersonToken(RESOURCE);
+    expect(decodeClaims(person).exp).toBe(expiresAt);
+    w.clock.advance(150_000);
+    const issued = w.store.issuedTokens();
+
+    const err = await refusal(agent.requestPersonToken(RESOURCE));
+
+    expectRefused(err, 403, "mission_terminated");
+    expect(err.response?.body).toMatchObject({
+      mission_status: "terminated",
+      termination_reason: "expired",
+    });
+    expect(w.store.issuedTokens()).toEqual(issued);
+    // The transition is committed at expires_at, attributed to the PS scheduler.
+    expect(w.store.missionLog(s256).filter((e) => e.event === "terminated")).toEqual([
+      {
+        s256,
+        at: expiresAt,
+        event: "terminated",
+        detail: { reason: "expired", actor: SCHEDULER, decision: "permit", policy: "expires_at" },
+      },
+    ]);
+    // status reports it as terminated, with no separate status value.
+    const status = await w.manager(agent).status(s256);
+    expect(status.body).toMatchObject({
+      mission_status: "terminated",
+      terminated_at: rfc3339(expiresAt),
+      termination_reason: "expired",
+      token_residual: {
+        tracked: 1,
+        revocation_attempted: 0,
+        revocation_confirmed: 0,
         complete: true,
       },
     });
