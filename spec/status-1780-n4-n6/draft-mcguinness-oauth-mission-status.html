@@ -3426,7 +3426,8 @@ validated (<span><a href="https://rfc-editor.org/rfc/rfc8414#section-3.3" class=
 issuer identifier), <code>iat</code>, and <code>keys</code>: a JWK Set's <code>keys</code> array
 <span>[<a href="#RFC7517" class="cite xref">RFC7517</a>]</span> holding each such key's public JWK, under its original
 <code>kid</code>, for at least the audit horizon of every Mission whose responses
-it signed.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+it signed. The AS serves the set with the media type
+<code>application/jwk-set+jwt</code> (<span>[<a href="#OpenID.Federation" class="cite xref">OpenID.Federation</a>]</span>, Section 15.6).<a href="#section-8.1-1" class="pilcrow">¶</a></p>
 <p id="section-8.1-2">The AS signs the set under its active Mission Status signing key and
 never under a key the set lists or a key of another role. When that
 key is itself compromised, the AS signs the set under its replacement
@@ -3453,6 +3454,16 @@ established.<a href="#section-8.1-4.2.1" class="pilcrow">¶</a></p>
 <p id="section-8.1-5">Both are NumericDate values <span>[<a href="#RFC7519" class="cite xref">RFC7519</a>]</span>. The set reuses OpenID
 Federation's <code>revoked</code> encoding only; this document defines no
 OpenID Federation endpoint and claims no conformance to it.<a href="#section-8.1-5" class="pilcrow">¶</a></p>
+<p id="section-8.1-6">The AS declares a freshness lifetime for the set with explicit
+freshness information (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.2.1" class="relref">Section 4.2.1</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>). A consumer
+refetches the set, or revalidates its copy (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.3" class="relref">Section 4.3</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>), once that lifetime ends; a response without valid explicit
+freshness information is stale when received (<span><a href="https://rfc-editor.org/rfc/rfc9111#section-4.2.2" class="relref">Section 4.2.2</a> of [<a href="#RFC9111" class="cite xref">RFC9111</a>]</span>). A key a verified set lists stays compromised for the
+consumer: a consumer <span class="bcp14">MUST NOT</span> treat it as no longer compromised because
+a later set omits it, an earlier set is presented again, or a fetch of
+the set fails. While a fetch fails, the consumer keeps refusing the keys
+it has learned are compromised; the set's freshness never extends that
+of the consumer's cached <code>jwks_uri</code>, which <a href="#signing-key-retention" class="auto internal xref">Section 10.5</a>
+governs.<a href="#section-8.1-6" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
