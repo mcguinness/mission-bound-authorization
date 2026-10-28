@@ -11,8 +11,8 @@
     "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "9f21e8b33e4be8c1e8912676a0a771b6224b9b9a2d67be938c11b5e94087e7a8"
+    "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
+    "content_sha256": "6360896049e20743ced8e1e89e1788c2df5b10045511f5a5d1ca2a7a42ffc4fe"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -37806,8 +37806,45 @@
      "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac): an unevaluable credential entry beside a complete one is refused credential_invalid in either order; dropping unevaluable entries one by one, as Resource Access's alternative-entry rule would (V2), fails that witness and the mixed-entry case of 'refuses a credential authority with %s'."
+  },
+  {
+   "id": "authzen.context-credential.unsatisfied-entry-not-invalidating",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An entry the PDP evaluates and finds unsatisfied invalidates nothing: another complete entry of `authority` still authorizes the action.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential whose authority holds one entry the PDP evaluates and finds unsatisfied and another complete entry the action satisfies is permitted, in either entry order; the unsatisfied entry neither denies the request nor makes it credential_invalid"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac). Distinguishes evaluates-but-unsatisfied from cannot-evaluate (authzen.context-credential.authority-no-fallback). A credential bound denying on any evaluated, unsatisfied entry (V1) fails the witness in both orders."
   },
   {
    "id": "authzen.pdp-request.credential-expiry",
