@@ -985,6 +985,18 @@ describe("the verification page renders only after steps 1 to 3 (@spec mission#a
     await stillPending(s);
   });
 
+  it("asks a login that fails the client's requested acr_values to sign in again, with nothing of the request", async () => {
+    // acr_values rides only with openid, which only a self-approval may carry (#826).
+    const s = await pendingSession(PUBLIC, { sub: "alice", acr: "password" }, { scope: "openid", acr_values: "mfa" });
+    const page = await approvalPage(s.uid, s.headers);
+    expect(page.status).toBe(401);
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html, s.userCode);
+    await stillPending(s);
+    const strong = browserApprovalHeaders(SESSIONS, s.uid, { sub: "alice", acr: "mfa" }, cookieOf(s.jar));
+    expect((await approvalPage(s.uid, strong)).status).toBe(200);
+  });
+
   it("asks a login the approval-authentication floor refuses to sign in again, with nothing of the request", async () => {
     const s = await pendingSession(PUBLIC, { ...ALICE_BY_BOB, acr: "password" }, { authorization_details: JSON.stringify(REMIT) });
     const page = await approvalPage(s.uid, s.headers);
