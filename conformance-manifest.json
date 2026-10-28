@@ -29100,9 +29100,15 @@
      "name": "a cutover between credential validation and the decision (@spec runtime-oauth#token-validation, runtime#boundary-identifier-change, #853) > refuses the stale credential and its permit when a later version keeps the identifier but withdraws the alias it was validated through",
      "level": "endpoint",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation.test.ts",
+     "name": "attenuation chain: proof of possession binds the leaf, fresh and once (@spec runtime-oauth#token-validation, #825) > tracks the proof's jti for a read as well: the same get_invoice presentation is refused the second time (D932)",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825, #1756: an attenuation chain's proof of possession is the -02 PoP JWT, verified under the leaf's cnf.jwk and bound to the leaf (aat_id, aat_hash), the invoked tool (aat_tool) and its arguments (hta), with a fresh iat and, for a side-effecting tool, a jti refused on reuse (a full replay state refuses retryably). #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
+   "notes": "Audience arm: a wrong-audience token is refused (runtime-refusal-backlog.test.ts, unconditional). Proof-of-possession arm: mcp-http-channel.test.ts's 4a (a valid DPoP-scheme token with no proof header, and the bearer scheme) and 4b (a well-formed proof signed by the wrong key) are both rejected at the gate before the PEP, with zero evidence/ledger, and a valid-DPoP client on the same live server then permits (non-vacuous); both CI-only (live OpenFGA, the file's shared beforeAll). #825, #1756: an attenuation chain's proof of possession is the -02 PoP JWT, verified under the leaf's cnf.jwk and bound to the leaf (aat_id, aat_hash), the invoked tool (aat_tool) and its arguments (hta), with a fresh iat and a jti refused on reuse for every class, reads included (D932; a full replay state refuses retryably). Proved by mutation: leaving a read's jti untracked fails the read witness. #1173: the Resource Server's one proof verifier holds a proof to the token endpoint's asymmetric window (60 s ahead, 240 s behind), tested without a PDP (dpop-proof.test.ts). #853 (D487): the audience arm is checked against the boundary the PEP establishes from its declared configuration, by membership under issuer- and profile-scoped aliases: absent, malformed, nonmatching, issuer- and profile-confused audiences and an ambiguous alias context are refused through the server's validation and the mediated channel, with no decision and no record. #853 review: the audience is held valid for the boundary and statement version the decision uses; a credential validated under another version (a cutover after validation) is refused before any decision."
   },
   {
    "id": "runtime.token-validation.no-cnf-is-bearer-for-high-consequence",
@@ -63349,7 +63355,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling, an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
+   "notes": "#1756 slice B3 (D904). partial: the validation against the root mapping is witnessed in process: a tool outside the ceiling (one whose operations declare no argument included, D932 ruling 2), an argument the ceiling does not name or a broader argument map, and a mission_constraints value beyond the entry's (a raised cap, a dropped restriction, an added resource_contract, an unknown member, a value for an unrequested tool) each refuse the whole request, with no root for the rest. The token endpoint and the invalid_authorization_details code have no surface: the reference issues no root over HTTP (D186, #927). Proved by mutation: dropping the argument attenuation check, and admitting a value beyond the entry, each fail the witness."
   },
   {
    "id": "attenuation.discovery.lists-aat-type",
@@ -63581,9 +63587,57 @@
      "name": "attenuation chain: the leaf's restrictions bound the action (@spec runtime#input-authority, #825) > refuses an invoice above the leaf's narrowed amount bound before any PDP call, and admits one within it",
      "level": "cross-component",
      "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > refuses the cross-tool substitution: a presentation verified for the service tool never executes under another leaf tool's contract or restrictions",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > verifies a presentation naming the retained-contract tool and executes it under that contract",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > refuses a proof naming a tool its own contract does not perform the operation as, recording the refusal",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "one tool binds verification, contract selection and execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932) > authorizes only the invocation it was verified for: another tool or other arguments with the same facts are refused at intake",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > refuses before any decision a leaf with no contract where the resource requires one, and executes the same operation under the required contract",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > refuses a leaf whose contract the resource does not declare, before any decision",
+     "level": "cross-component",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/attenuation-contract.test.ts",
+     "name": "the leaf's resource_contract is enforced at execution (@spec attenuation#mission-binding-check, runtime#resource-contract, #1756, D932 ruling 6) > suppresses the effect when the leaf's contract is withdrawn between the decision and the release",
+     "level": "cross-component",
+     "surface": "resource-operation"
+    },
+    {
+     "file": "src/packages/mission-core/test/mission-aat.test.ts",
+     "name": "the invoked tool's authority alone (@spec attenuation#mission-binding-check, #1756, D932) > with the invoked tool, the credential authority is that one leaf tool's, and a tool the leaf does not carry refuses",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. The leaf's resource_contract is enforced by the same bound's contract comparison (entryCoversFacts), witnessed by the Resource Access contract rows rather than end to end here. The row level is cross-component (B1 had placed unit on the blocked row): each witness mints at the AS kernel, verifies at the payments server and enforces at the PEP."
+   "notes": "#1756 slice B3 (D902). The leaf's tools and mission_constraints become the presented credential's authority, which the PEP's existing credential bound enforces against the facts it establishes from its own records (the invoice's vendor and amount; the arguments carry only the invoice identifier). A presentation the substrate permits for a 125 USD invoice under a USD 100 leaf is refused out_of_authority before any decision, with a credential_authority_insufficient Refusal Record, over the in-memory channel; an invoice whose amount passes the cap after validation is refused before the decision, and one that changes between decision and execution is refused parameter_mismatch with no effect. Proved by mutation: dropping the leaf's constraints from the credential authority, and reading the root's authority instead of the leaf's, each fail a witness. D932 (owner review of #1792): the value enforced is the invoked tool's alone. The proof names the tool (aat_tool); its own mission_constraints names the contract the operation is performed under, whose Operation Profile must establish that tool's target; and the credential authority is that tool's entry alone, bound to the one invocation (tool name and arguments) it was verified for. Before the fix every leaf tool's authority reached the PEP, which could select another tool's retained contract: a presentation verified for a wildcard service tool executed under an invoice-level retained contract whose tool admitted only another invoice. Witnessed: that substitution is refused out_of_authority before any decision; a presentation naming the retained-contract tool executes under that contract; a tool whose own contract establishes another target is refused with a Refusal Record; and facts used for another tool or other arguments are refused at intake. The leaf's resource_contract is enforced end to end (D932 ruling 6): absent where the resource requires one it is refused before any decision, one the resource does not declare is refused at verification, and one withdrawn between the decision and the release suppresses the effect. Proved by mutation: passing every leaf tool's authority, computing the tool under the live profile, dropping the tool-to-contract binding, dropping the intake binding, ignoring the invoked tool in the Mission layer, not requiring a required contract, and not re-resolving the contract at use, each fail a witness. The row level is cross-component (B1 had placed unit on the blocked row): each witness mints at the AS kernel, verifies at the payments server and enforces at the PEP."
   },
   {
    "id": "attenuation.root-mapping.mission-constraints-ceiling",
@@ -63760,9 +63814,15 @@
      "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > names every argument the operations declare as an explicit wildcard, optional where not every operation requires it, with no \"*\"",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/attenuation-mint.test.ts",
+     "name": "the mapped ceiling (@spec attenuation#root-mapping, #1756, D902, D904) > leaves out a tool whose operations declare no argument, so an empty argument map never stands for none (D932 ruling 2)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1756 slice B3 (D902). The argument map is the union of the operations' declared arguments, each a wildcard, optional unless every operation declares it required; for the payments execute action (preflight, prepare, commit) only the commit tool takes an idempotency key, which the map makes optional. A tool whose operations declare no argument maps to an empty map, which -02 reads as an admitting \"*\" (open question in the slice B3 report). Proved by mutation: making every argument required, and adding a \"*\" entry, each fail the witness."
+   "notes": "#1756 slice B3 (D902). The argument map is the union of the operations' declared arguments, each a wildcard, optional unless every operation declares it required; for the payments execute action (preflight, prepare, commit) only the commit tool takes an idempotency key, which the map makes optional. A tool whose operations declare no argument is left out of the ceiling, and a request naming one is refused (D932 ruling 2): -02 reads an empty map as an admitting \"*\" and has no form for no arguments. Proved by mutation: mapping such a tool to an empty map fails the ceiling and the request witnesses. Proved by mutation: making every argument required, and adding a \"*\" entry, each fail the witness."
   },
   {
    "id": "attenuation.holder.narrow-mission-constraints",
