@@ -4419,43 +4419,20 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         }
         throw e;
       }
-      // @spec progressive#progressive-authorization (#1017): the ceiling this
-      // deployment's approval surface offers, rendered for the Approver; the
-      // decision consents only exactly this offer. A device approval offers
-      // none (#1256).
-      const ceilingOffer =
-        !deviceJti && opts.progressive?.ceilingOffer
-          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
-          : undefined;
       // Step 1, continued (#1802; @spec mission#approval-authentication, #826,
-      // D425, #1255): the Approver's achieved authentication, from the trusted
+      // D425): the Approver's achieved authentication, from the trusted
       // surface, meets the client's requested `acr_values` and `max_age` and
-      // the published approval-authentication floor over the derived set and
-      // the ceiling this page offers, the inputs the decision checks. A login
-      // that falls short is asked to sign in again with nothing from the
-      // request shown, and a headless service's registration never meets a
-      // browser-only floor. Authority the classification does not name is
-      // refused for every Approver, as a derivation refusal is. The decision
-      // checks both again, so a login that ages out after the rendering still
-      // refuses there.
+      // the published approval-authentication floor over the derived set, the
+      // inputs the decision checks. A login that falls short is asked to sign
+      // in again with nothing from the request shown, and a headless
+      // service's registration never meets a browser-only floor. Authority
+      // the classification does not name is refused for every Approver, as a
+      // derivation refusal is. The decision checks both again, so a login
+      // that ages out after the rendering still refuses there.
       const nowSeconds = Math.floor(kernel.nowDate().getTime() / 1000);
-      let offered: AuthorityEntry[] = [];
-      try {
-        offered = ceilingOffer ? consentedCeilingEntries(ceilingOffer) : [];
-      } catch (e) {
-        if (e instanceof IntentError) {
-          ctx.status = 400;
-          ctx.body = { error: e.code, error_description: e.message };
-          return;
-        }
-        throw e;
-      }
-      const floor = evaluateApprovalFloor(
-        opts.approvalFloor,
-        [...authority, ...offered],
-        { acr: rendering.acr, auth_time: rendering.auth_time },
-        { interactive: rendering.interactive, nowSeconds },
-      );
+      const achieved = { acr: rendering.acr, auth_time: rendering.auth_time };
+      const floorContext = { interactive: rendering.interactive, nowSeconds };
+      const floor = evaluateApprovalFloor(opts.approvalFloor, authority, achieved, floorContext);
       if (floor.outcome === "refused" && floor.unclassified) {
         ctx.status = 400;
         ctx.body = { error: "access_denied", error_description: floor.reason };
@@ -4479,6 +4456,33 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           loginHref(rendering.selected),
         );
         return;
+      }
+      // @spec progressive#progressive-authorization (#1017, #1255, #1802): the
+      // ceiling this deployment's approval surface offers, rendered for the
+      // Approver; the decision consents only exactly this offer, and
+      // classifies it with the derived set. It is offered only to a login
+      // that meets the floor over both: any other sees the page without it,
+      // can consent no ceiling, and still approves the derived set it may. A
+      // device approval offers none (#1256).
+      const deploymentOffer =
+        !deviceJti && opts.progressive?.ceilingOffer
+          ? opts.progressive.ceilingOffer({ clientId: String(params.client_id), intent })
+          : undefined;
+      let ceilingOffer: CeilingConsent | undefined;
+      if (deploymentOffer) {
+        let offered: AuthorityEntry[];
+        try {
+          offered = consentedCeilingEntries(deploymentOffer);
+        } catch (e) {
+          if (e instanceof IntentError) {
+            ctx.status = 400;
+            ctx.body = { error: e.code, error_description: e.message };
+            return;
+          }
+          throw e;
+        }
+        const withCeiling = evaluateApprovalFloor(opts.approvalFloor, [...authority, ...offered], achieved, floorContext);
+        if (withCeiling.outcome !== "refused") ceilingOffer = deploymentOffer;
       }
       // Step 2 (#1802): the decision's own predicates for who may approve:
       // the Subject is known, and the Approver is that Subject or holds
@@ -4581,8 +4585,10 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
         asyncDelegation: opts.familyStore !== undefined,
         progressive: opts.progressive !== undefined,
       });
-      // The decision is bound to this rendering, never to an offer computed afresh.
-      retainRenderedOffer(provider, uid, ceilingOffer, details.exp);
+      // The decision is bound to this rendering, never to an offer computed
+      // afresh. A rendering that withheld the offer leaves the one an earlier
+      // rendering retained, which this login cannot consent at the decision.
+      if (ceilingOffer || !deploymentOffer) retainRenderedOffer(provider, uid, ceilingOffer, details.exp);
       // @spec mission#approval-context-changes (#1446, D583): the context this
       // page shows, committed under a revision bound to the principal it is
       // rendered to, superseding that principal's earlier rendering. The page
