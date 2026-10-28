@@ -1102,34 +1102,39 @@ informative; the member definitions after it are authoritative.
 The Mission Intent members are:
 
 `goal`:
-: REQUIRED. A string. A human-readable statement of the task,
-  for rendering to the Approver. It can describe the outcomes that
-  show the task is complete; like the rest of the prose, that
-  description carries no machine semantics
-  ({{authorization-derivation}}). Maximum 4096 characters. Prose
-  here persists on the record and can carry personal data about
-  third parties ({{third-party-data-subjects}}).
+: REQUIRED. A string. A human-readable statement of the task, for
+  rendering to the Approver. Maximum 4096 characters.
+
+  - It can describe the outcomes that show the task is complete; like
+    the rest of the prose, that description carries no machine semantics
+    ({{authorization-derivation}}).
+  - Prose here persists on the record and can carry personal data about
+    third parties ({{third-party-data-subjects}}).
 
 `goal_lang`:
 : OPTIONAL. A string. A BCP 47 language tag {{RFC5646}} declaring the
   language of the Intent's human-readable members (`goal`,
-  `task_bounds`). It is disclosure metadata for rendering, committed by
-  `intent_hash` like every Intent member, and carries no machine
-  semantics ({{authorization-derivation}}). At submission acceptance,
-  the AS MUST refuse a `goal_lang` that is not a well-formed language
-  tag with `invalid_request` ({{i18n}}).
+  `task_bounds`).
+
+  - It is disclosure metadata for rendering, committed by `intent_hash`
+    like every Intent member, and carries no machine semantics
+    ({{authorization-derivation}}).
+  - At submission acceptance, the AS MUST refuse a `goal_lang` that is
+    not a well-formed language tag with `invalid_request` ({{i18n}}).
 
 `target_resources`:
 : REQUIRED. An array of strings. A client-requested Intent ceiling on
   the task's target resources, each an absolute URI identifying a
   protected resource (an OAuth resource per {{RFC8707}}-style indicators
-  or a protected resource per {{RFC9728}}). It bounds which resources a
-  derived Authority Set entry may name ({{authorization-derivation}})
-  and serves as a configured-mapping lookup key ({{derivation-modes}});
-  like `purpose`, the key alone grants no authority. It is not RFC 8707
-  `resource` carriage: a client separately requests the audience of a
-  given token with the standard `resource` parameter
-  ({{token-response}}).
+  or a protected resource per {{RFC9728}}).
+
+  - It bounds which resources a derived Authority Set entry may name
+    ({{authorization-derivation}}) and serves as a configured-mapping
+    lookup key ({{derivation-modes}}); like `purpose`, the key alone
+    grants no authority.
+  - It is not RFC 8707 `resource` carriage: a client separately requests
+    the audience of a given token with the standard `resource` parameter
+    ({{token-response}}).
 
 `task_bounds`:
 : OPTIONAL. An array of strings. Human-readable bounds on the task
@@ -1144,32 +1149,34 @@ The Mission Intent members are:
   recorded for disclosure and audit. Its semantics are deployment- or
   registry-defined and opaque to this document.
 
-  `purpose` is an opaque lookup key: a configured mapping can key on it
-  to select candidate entries, which the Intent, policy, and the
-  approval event bound as in any Authority Set derivation
-  ({{authorization-derivation}}); the key alone grants no authority. In
-  any other decision, `purpose` MAY contribute only to a refusal or to
-  stricter treatment: its value, its absence, or a substituted value
-  MUST NOT supply, widen, relax, or refresh authority, or replace a
-  check that applies independently of it. After approval, the `purpose`
-  consulted is the approved Mission's, or a validated projection of it.
+  - `purpose` is an opaque lookup key: a configured mapping can key on
+    it to select candidate entries, which the Intent, policy, and the
+    approval event bound as in any Authority Set derivation
+    ({{authorization-derivation}}); the key alone grants no authority.
+  - In any other decision, `purpose` MAY contribute only to a refusal or
+    to stricter treatment: its value, its absence, or a substituted
+    value MUST NOT supply, widen, relax, or refresh authority, or
+    replace a check that applies independently of it.
+  - After approval, the `purpose` consulted is the approved Mission's,
+    or a validated projection of it.
 
 `expires_at`:
 : REQUIRED. A string. An RFC 3339 {{RFC3339}} date-time: the client's
-  requested not-after ceiling for the Mission's lifetime. The submitted
-  Intent is recorded verbatim. The granted lifetime is the Mission
-  Record's effective `expires_at`, which the AS establishes at Mission
-  creation and which is no later than this value
-  ({{direct-approval-steps}}, {{mission-record}}).
+  requested not-after ceiling for the Mission's lifetime.
 
-  At submission acceptance, the AS MUST refuse a malformed or
-  already-past value with `invalid_request`. Acceptance does not
-  freeze time: Mission creation re-checks the effective expiry
-  atomically at the commit ({{direct-approval-steps}}). A request that
-  resolves to an already-committed operation is recovery, not a new
-  submission, and returns the stored outcome under the applicable
-  idempotency rules even when the ceiling has since passed
-  ({{mission-response-parameters}}, {{mission-record}}).
+  - The submitted Intent is recorded verbatim.
+  - The granted lifetime is the Mission Record's effective `expires_at`,
+    which the AS establishes at Mission creation and which is no later
+    than this value ({{direct-approval-steps}}, {{mission-record}}).
+  - At submission acceptance, the AS MUST refuse a malformed or
+    already-past value with `invalid_request`.
+  - Acceptance does not freeze time: Mission creation re-checks the
+    effective expiry atomically at the commit
+    ({{direct-approval-steps}}).
+  - A request that resolves to an already-committed operation is
+    recovery, not a new submission, and returns the stored outcome under
+    the applicable idempotency rules even when the ceiling has since
+    passed ({{mission-response-parameters}}, {{mission-record}}).
 
 The Approver's authentication strength for the approval event is
 requested with the standard `acr_values` and `max_age`
