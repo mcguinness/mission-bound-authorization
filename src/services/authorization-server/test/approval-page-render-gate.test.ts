@@ -415,22 +415,87 @@ describe("the approval page renders only after steps 1 to 3 (@spec mission#direc
     expect((JSON.parse(bob.html) as { error_description: string }).error_description).toMatch(/does not name payments:vendor\.read/);
   });
 
-  it("answers a derivation refusal with nothing of the request to a principal who may not activate the source, and names its cause to one who may", async () => {
+  it("answers a derivation refusal with nothing of the request, whoever asks: with no derived set, eligibility cannot be established", async () => {
     const flow = await open(UNDERIVABLE);
-    // Dana approves for herself, but may not activate the source ap-agent resolves.
-    const dana = await render(flow.uid, browserApprovalHeaders(SESSIONS, flow.uid, { sub: "dana", acr: "mfa" }, flow.cookie));
-    expect(dana.status).toBe(400);
-    const withheld = JSON.parse(dana.html) as { error: string; error_description: string };
-    expect(withheld.error).toBe("invalid_authorization_details");
-    expect(withheld.error_description).toBe("this request cannot be approved; its details are shown only to an Approver who may approve it");
-    expect(dana.html).not.toContain("payments:");
-    expect(dana.html).not.toContain(RESOURCE);
-    expect(dana.html).not.toContain(GOAL_MARK);
-    const bob = await render(flow.uid, floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie));
-    expect(bob.status).toBe(400);
-    const named = JSON.parse(bob.html) as { error: string; error_description: string };
-    expect(named.error).toBe("invalid_authorization_details");
-    expect(named.error_description).not.toBe(withheld.error_description);
+    const WITHHELD = "this request cannot be approved; its details are shown only to an Approver who may approve it";
+    // Dana approves for herself, but may not activate the source ap-agent
+    // resolves; Bob may. Without a derived set the floor cannot be checked,
+    // so neither is told the cause, and both get the status and error code.
+    for (const headers of [
+      browserApprovalHeaders(SESSIONS, flow.uid, { sub: "dana", acr: "mfa" }, flow.cookie),
+      floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie),
+    ]) {
+      const page = await render(flow.uid, headers);
+      expect(page.status).toBe(400);
+      const body = JSON.parse(page.html) as { error: string; error_description: string };
+      expect(body.error).toBe("invalid_authorization_details");
+      expect(body.error_description).toBe(WITHHELD);
+      expect(page.html).not.toContain("payments:");
+      expect(page.html).not.toContain(RESOURCE);
+      expect(page.html).not.toContain(GOAL_MARK);
+    }
+  });
+
+  it("answers an unresolvable capability binding against the derived set it was binding: a login the floor refuses over that set learns nothing of it (#1817 review)", async () => {
+    const flow = await open(REMIT);
+    const weak = browserApprovalHeaders(SESSIONS, flow.uid, { sub: "bob", acr: "password", subject: "alice" }, flow.cookie);
+    // The remittance binding no longer resolves to a usable tool.
+    const resolver = as.kernel.authoritySourceOptions().capabilityResolver as NonNullable<
+      ReturnType<typeof as.kernel.authoritySourceOptions>["capabilityResolver"]
+    >;
+    vi.spyOn(resolver, "resolve").mockImplementation(() => [{ resource: RESOURCE, action: "payments:remittance.send" }] as never);
+    const page = await render(flow.uid, weak);
+    expect(page.status).toBe(400);
+    expect(page.revision).toBeNull();
+    expect((JSON.parse(page.html) as { error_description: string }).error_description).toBe(
+      "this request cannot be approved; its details are shown only to an Approver who may approve it",
+    );
+    expect(page.html).not.toContain("payments:remittance.send");
+    expect(page.html).not.toContain(RESOURCE);
+    // A login that meets the floor over the set is told the cause.
+    const strong = await render(flow.uid, floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie));
+    expect(strong.status).toBe(400);
+    expect(strong.html).toContain("payments:remittance.send");
+  });
+
+  it("re-establishes the login after the last await: one that ages past the client's max_age during evidence verification gets the step-up notice, not the page (#1817 review)", async () => {
+    const t = Math.floor(Date.now() / 1000);
+    const clock = vi.spyOn(as.kernel, "nowDate").mockReturnValue(new Date(t * 1000));
+    const flow = await open(READ, { scope: "openid", max_age: "60" });
+    const alice = browserApprovalHeaders(SESSIONS, flow.uid, { sub: "alice", acr: "mfa", auth_time: t - 30 }, flow.cookie);
+    const original = as.kernel.verifySubmissionEvidence.bind(as.kernel);
+    vi.spyOn(as.kernel, "verifySubmissionEvidence").mockImplementation(async (...args) => {
+      const result = await original(...args);
+      clock.mockReturnValue(new Date((t + 61) * 1000));
+      return result;
+    });
+    const page = await render(flow.uid, alice);
+    expect(page.status).toBe(401);
+    expect(page.revision).toBeNull();
+    expect(page.html).toContain('data-error="insufficient_user_authentication"');
+    expectNothingOfTheRequest(page.html);
+  });
+
+  it("re-establishes approve-for authority after the last await: authority withdrawn during evidence verification gets 403 and nothing of the request (#1817 review)", async () => {
+    const flow = await open();
+    const bob = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
+    const original = as.kernel.verifySubmissionEvidence.bind(as.kernel);
+    const bobs = APPROVES_FOR.get("bob") as Set<string>;
+    vi.spyOn(as.kernel, "verifySubmissionEvidence").mockImplementation(async (...args) => {
+      const result = await original(...args);
+      bobs.delete("alice");
+      return result;
+    });
+    try {
+      const page = await render(flow.uid, bob);
+      expect(page.status).toBe(403);
+      expect(page.revision).toBeNull();
+      expect(page.html).toContain('data-error="approval_forbidden"');
+      expectNothingOfTheRequest(page.html);
+    } finally {
+      bobs.add("alice");
+    }
+    await nothingCreated(flow.uid);
   });
 
   it("control: an authenticated Approver who may approve and activate is shown the page and approves", async () => {

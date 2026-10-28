@@ -220,7 +220,10 @@ describe("derivation from an entry whose delegation carries an unsupported membe
     expect(page.status, text.slice(0, 200)).toBe(400);
     const body = JSON.parse(text) as { error?: string; error_description?: string };
     expect(body.error).toBe("invalid_authorization_details");
-    expect(body.error_description).toMatch(/carries delegation\.future_policy, which is not a supported delegation member/);
+    // With no derived set, no principal's eligibility to learn the cause can
+    // be established, so the page names none (#1802); the unit case below
+    // witnesses the cause itself.
+    expect(body.error_description).not.toMatch(/future_policy/);
     expect(ceilingAs.kernel.allMissions().length).toBe(before);
   });
 
