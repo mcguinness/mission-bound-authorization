@@ -13,7 +13,13 @@ const FLOOR_SESSIONS = new ApprovalSessionStore();
 
 import { type Server } from "node:http";
 import { AccessRequestService, txnTaskId } from "@mission/access-request";
-import { CANONICAL_RESOURCE, SCOPE_PROJECTION } from "@mission/demo-data";
+import {
+  CANONICAL_RESOURCE,
+  contractsRequiring,
+  currentContractProfileVersion,
+  RESOURCE_CONTRACTS,
+  SCOPE_PROJECTION,
+} from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
   createRemoteJWKSet,
@@ -47,6 +53,7 @@ vi.mock("../src/kernel/transaction-token.js", async (importOriginal) => {
   };
 });
 import {
+  ResourceContractDeclarations,
   TXN_TOKEN_PROHIBITED_CLAIMS,
   txnApprovalBindingDigest,
   type TxnApprovalBinding,
@@ -60,7 +67,7 @@ import {
   type BuiltAs,
   type ChallengeIssuers,
 } from "../src/index.js";
-import { missionResourceAccessProfile, OperationProfileRegistry } from "../src/index.js";
+import { contractOperationProfiles, missionResourceAccessProfile, OperationProfileRegistry } from "../src/index.js";
 import { newDpopProofReplay } from "../src/adapters/dpop-replay.js";
 import {
   handleTransactionAuthorization,
@@ -96,6 +103,14 @@ const WORKFLOW_LIFETIME_S = 600;
 const MAX_TOKEN_LIFETIME_S = 300;
 /** A second accepted Challenge-Issuing Resource the subject_token is NOT for. */
 const OTHER_RESOURCE = "http://localhost:4499/mcp";
+/**
+ * @spec runtime#resource-contract (#249): the payments resource's Operation
+ * Profile, registered under the version its current contract names, as the
+ * deployment registers it, so an entry carrying the contract's reference
+ * resolves to it.
+ */
+const CONTRACT_PROFILE = (): ReturnType<typeof missionResourceAccessProfile> =>
+  missionResourceAccessProfile(currentContractProfileVersion(RESOURCE));
 /** @spec txn-authorization#offline-verification — `txn` is unique within a
  *  Challenge-Issuing Resource, so the ARS task id carries the resource too. */
 const taskFor = (txn: string, resource: string = RESOURCE): string => txnTaskId(resource, txn);
@@ -537,7 +552,7 @@ beforeAll(async () => {
       // family's `mission_resource_access` entry; a run can supersede a version
       // to prove drift behaves.
       operationProfiles: operationProfiles
-        .register(RESOURCE, missionResourceAccessProfile())
+        .register(RESOURCE, CONTRACT_PROFILE())
         .register(OTHER_RESOURCE, missionResourceAccessProfile()),
       workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
       maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
@@ -1255,7 +1270,7 @@ describe("terminal result ordering (@spec txn-authorization#failure-semantics)",
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "expiry-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -1393,7 +1408,7 @@ describe("origin principal vs the local subject (@spec txn-authorization#transac
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars: localArs,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "local-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -1560,7 +1575,7 @@ describe("dual identity fail-closed paths (@spec txn-authorization#challenge-red
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars: localArs,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "local-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2152,6 +2167,21 @@ describe("subject_token binding (@spec txn-authorization#challenge-redemption)",
  * The describes below each mint their OWN Mission, so nothing here depends on
  * the state the containment run above left the base Mission in.
  */
+/**
+ * @spec resource-access#resource-contract (#249, D875): a Mission approved
+ * before the payments cutover, under the same declarations requiring no
+ * reference, so its entries carry none. The fixture for this endpoint's
+ * behavior toward unpinned authority, which the cutover does not rewrite.
+ */
+async function preCutoverMission(): ReturnType<typeof freshMission> {
+  const before = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(contractsRequiring([]));
+  try {
+    return await freshMission();
+  } finally {
+    before.mockRestore();
+  }
+}
+
 async function freshMission(
   constraints?: Record<string, unknown>,
 ): Promise<{ token: string; missionId: string; mission: Record<string, unknown> }> {
@@ -2309,7 +2339,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
   });
 
   it("refuses an entry whose type no Operation Profile governs", async () => {
-    const mission = await freshMission();
+    const mission = await preCutoverMission();
     const unknown = remittanceEntry(mission.missionId).map((e) => ({ ...e, type: "payments_wire_v9" }));
     const res = await submit(await challengeFor(mission, "txn_profile_unknown", unknown), {
       token: mission.token,
@@ -2334,7 +2364,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
   });
 
   it("completes a workflow admitted under a superseded version, and refuses new challenges naming it", async () => {
-    const mission = await freshMission();
+    const mission = await preCutoverMission();
     const details = remittanceEntry(mission.missionId);
     const supersededDigest = "sha-256:operation-profile-v1";
 
@@ -2363,7 +2393,7 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
     // entry's fixed `type` does not version it, #249): the version leaves
     // ADMISSION eligibility. The registry retains it, because a workflow
     // already recorded it.
-    operationProfiles.supersede(RESOURCE, missionResourceAccessProfile().version);
+    operationProfiles.supersede(RESOURCE, CONTRACT_PROFILE().version);
     try {
       // A NEW challenge, with no current version to be admitted under, is refused outright.
       const stale = await submit(
@@ -2400,11 +2430,11 @@ describe("Operation Profile resolution and drift (@spec txn-authorization#resour
       expect(freshDecisionInputs.find((i) => i.txn === "txn_profile_v1")).toEqual({
         txn: "txn_profile_v1",
         operationType: "mission_resource_access",
-        profileVersion: missionResourceAccessProfile().version,
+        profileVersion: CONTRACT_PROFILE().version,
         parameterDigest: supersededDigest,
       });
     } finally {
-      operationProfiles.register(RESOURCE, missionResourceAccessProfile());
+      operationProfiles.register(RESOURCE, CONTRACT_PROFILE());
     }
   });
 });
@@ -2522,7 +2552,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "routing-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2651,7 +2681,7 @@ describe("delegated routing of transaction tokens (@spec mission#rs-enforcement)
       txn: {
         challengeIssuers: new Map([[RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }]]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnTokenKey,
         tokenKid: "routing-subject-actor-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -2724,7 +2754,7 @@ describe("transaction tokens carry only constraints keys the Challenge-Issuing R
           [RESOURCE, { jwks: createLocalJWKSet({ keys: [rsPub] }), algs: ["ES256"] }],
         ]) as ChallengeIssuers,
         ars,
-        operationProfiles: new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile()),
+        operationProfiles: new OperationProfileRegistry().register(RESOURCE, CONTRACT_PROFILE()),
         tokenKey: txnKeys.privateKey,
         tokenKid: "keys-txn",
         workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
@@ -3128,7 +3158,7 @@ describe("a workflow store file created before Operation Profile versions were r
 
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), "txn-store-upgrade-"));
-    m = await freshMission();
+    m = await preCutoverMission();
   });
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -3297,5 +3327,156 @@ describe("a workflow store file created before Operation Profile versions were r
     } finally {
       second.db.close();
     }
+  });
+});
+
+/**
+ * @spec txn-authorization#resource-challenge, runtime#resource-contract (#249,
+ * #1846): every contract version a resource declares as supported resolves at
+ * the Transaction Authorization Server to the Operation Profile its own
+ * document names. A Mission approved while the payments contract's 2026-10-26
+ * version was current carries that reference. Once 2026-10-27 supersedes it,
+ * within its retention, a transaction-authorized operation under that Mission
+ * is still admitted, and completes under the profile 2026-10-26 names, never
+ * the current one.
+ */
+describe("an older supported contract reference at the Transaction Authorization Server (@spec txn-authorization#resource-challenge, runtime#resource-contract, #249, #1846)", () => {
+  const OLDER = "2026-10-26";
+  const CUTOVER = [
+    "payments:payment.schedule",
+    "payments:payment.schedule.cancel",
+    "payments:payment.execute",
+    "payments:payment.reverse",
+    "payments:remittance.send",
+  ];
+
+  /** The shipped TAS's registry, as `demo/src/stack.ts` builds it. */
+  const shipped = (): OperationProfileRegistry => contractOperationProfiles(RESOURCE);
+  /** The registry the stack built before #1846: the current contract version's profile alone. */
+  const currentOnly = (): OperationProfileRegistry =>
+    new OperationProfileRegistry().register(RESOURCE, missionResourceAccessProfile(currentContractProfileVersion(RESOURCE)));
+
+  /**
+   * The shipped declarations as they stood while `version` was current: it
+   * current, every newer version absent, the cutover's actions required.
+   */
+  function asOf(version: string): ResourceContractDeclarations {
+    return new ResourceContractDeclarations(
+      RESOURCE_CONTRACTS.declarations.map((d) => {
+        const versions = d.versions.filter((v) => v.version <= version);
+        const served = new Set(versions.filter((v) => v.state !== "retired").flatMap((v) => v.operations));
+        return {
+          resource: d.resource,
+          ...(d.resource_match !== undefined ? { resource_match: d.resource_match } : {}),
+          id: d.id,
+          requires_reference: CUTOVER.filter((a) => served.has(a)),
+          versions: versions.map((v) => ({
+            version: v.version,
+            state: v.version === version ? "current" : v.state,
+            digest: v.digest,
+            ...(v.version !== version && v.retained_until !== undefined ? { retained_until: v.retained_until } : {}),
+            ...(v.document !== undefined ? { document: v.document } : {}),
+          })),
+        };
+      }),
+    );
+  }
+
+  /** A Mission approved while `version` was current: its payments entries carry that version's reference. */
+  async function approvedWhileCurrent(version: string): ReturnType<typeof freshMission> {
+    const then = vi.spyOn(as.kernel, "resourceContracts").mockReturnValue(asOf(version));
+    try {
+      return await freshMission();
+    } finally {
+      then.mockRestore();
+    }
+  }
+
+  async function depsWith(registry: OperationProfileRegistry) {
+    const asJwks = (await (await fetch(`${ISSUER}/jwks`)).json()) as { keys: JWK[] };
+    const txnKeys = await generateKeyPair("ES256", { extractable: true });
+    const decided: string[] = [];
+    return {
+      decided,
+      deps: {
+        issuer: ISSUER,
+        kernel: as.kernel,
+        clients: [{ client_id: "ap-agent", jwks: { keys: [agentClientPublicJwk] } }],
+        accessTokenJwks: asJwks,
+        dpopProofReplay: newDpopProofReplay(),
+        subjectTokenLive: async () => true,
+        now: () => new Date(),
+        scopeProjection: SCOPE_PROJECTION,
+        txn: {
+          challengeIssuers: new Map([
+            [RESOURCE, { jwks: createLocalJWKSet({ keys: [{ ...(await exportJWK(rsTxnKeys.publicKey)), kid: "rs-txn", alg: "ES256" } as JWK] }), algs: ["ES256"] }],
+          ]) as ChallengeIssuers,
+          ars,
+          operationProfiles: registry,
+          tokenKey: txnKeys.privateKey,
+          tokenKid: "older-txn",
+          workflowLifetimeSeconds: WORKFLOW_LIFETIME_S,
+          maxTokenLifetimeSeconds: MAX_TOKEN_LIFETIME_S,
+          freshDecision: async (input: { profileVersion: string }) => {
+            decided.push(input.profileVersion);
+            return { decision: "permit" as const };
+          },
+        },
+      } as unknown as TxnAuthorizationDeps,
+    };
+  }
+
+  /** Challenge, admit, approve and complete one remittance under `m` through `registry`. */
+  async function remitThrough(registry: OperationProfileRegistry, m: Awaited<ReturnType<typeof freshMission>>, txn: string) {
+    const { deps, decided } = await depsWith(registry);
+    const workflows = newTxnWorkflows();
+    const admitted = await callTransactionEndpoint(deps, workflows, {
+      transaction_challenge: await signChallenge(
+        {
+          txn,
+          authorization_details: remittanceEntry(m.missionId),
+          iss: RESOURCE,
+          aud: ISSUER,
+          reason: "action_approval_required",
+          parameter_digest: `sha-256:${txn}`,
+          mission: m.mission,
+        },
+        rsTxnKeys.privateKey,
+        "rs-txn",
+      ),
+      subject_token: m.token,
+      subject_token_type: "urn:ietf:params:oauth:token-type:access_token",
+    });
+    if (admitted.status !== 200) return { admitted, decided };
+    const handle = (admitted.body as { transaction_authorization_id: string }).transaction_authorization_id;
+    await ars.adjudicate(taskFor(txn), "approve", "bob");
+    const issued = await callTransactionEndpoint(deps, workflows, { transaction_authorization_id: handle });
+    return { admitted, issued, decided };
+  }
+
+  it("admits a transaction-authorized operation under a superseded version within its retention, and completes it under that version's own Operation Profile", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const pinned = RESOURCE_CONTRACTS.versionOf(remittanceEntry(m.missionId)[0]?.resource_contract);
+    expect(pinned?.version.version).toBe(OLDER);
+    expect(pinned?.version.state).toBe("superseded");
+    const { admitted, issued, decided } = await remitThrough(shipped(), m, "txn_older_supported");
+    expect(admitted.status, JSON.stringify(admitted.body)).toBe(200);
+    expect(issued?.status, JSON.stringify(issued?.body)).toBe(200);
+    expect(decided).toEqual([pinned?.version.operation_profile]);
+    expect(decided[0]).not.toBe(currentContractProfileVersion(RESOURCE));
+  });
+
+  // The #1846 reproduction, kept as the control: the registry holding only the
+  // current version's profile refuses the same supported reference at admission.
+  it("a registry holding only the current version's profile refuses the same reference at admission, creating no workflow", async () => {
+    const m = await approvedWhileCurrent(OLDER);
+    const { admitted, issued, decided } = await remitThrough(currentOnly(), m, "txn_older_current_only");
+    expect(admitted.status).toBe(400);
+    expect((admitted.body as { error?: string }).error).toBe("invalid_grant");
+    expect((admitted.body as { error_description?: string }).error_description).toBe(
+      "the resource_contract reference names no Operation Profile version this TAS retains",
+    );
+    expect(issued).toBeUndefined();
+    expect(decided).toEqual([]);
   });
 });

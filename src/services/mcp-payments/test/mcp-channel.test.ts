@@ -39,6 +39,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -76,12 +77,12 @@ const VIEW: MissionView = {
   version: 1,
   authority_hash: AUTHORITY_HASH,
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:invoice.list", "payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

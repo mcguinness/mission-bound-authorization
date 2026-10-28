@@ -40,6 +40,7 @@ import {
   TransactionEngine,
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 export const CRASH_MISSION = "msn_821_crash";
 const ISSUER = "https://as.test";
@@ -65,12 +66,12 @@ const view = (): MissionView => ({
   version: 1,
   authority_hash: "sha-256:m821crash",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",

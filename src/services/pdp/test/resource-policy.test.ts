@@ -35,9 +35,11 @@ import {
   RESOURCE_POLICY_REFUSES_ALL_FIXTURE,
   RESOURCE_POLICY_UNAVAILABLE_FIXTURE,
   resourcePolicyFixture,
+  withCurrentContractReference,
 } from "../src/test-support.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -55,15 +57,15 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:rphash",
   authority_set: [
-    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read", "payments:invoice.list"], constraints: { vendors: ["acme", "globex"] } },
-    { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute", "payments:remittance.send"] },
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.read", "payments:invoice.list"], constraints: { vendors: ["acme", "globex"] } }),
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: RESOURCE, actions: ["payments:payment.execute", "payments:remittance.send"] }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
   ...over,
 });
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice", properties: { iss: ISSUER } },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },

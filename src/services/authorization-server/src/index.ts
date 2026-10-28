@@ -161,6 +161,7 @@ export {
   MissionStateUnavailableError,
   ObservationWatermarkError,
   StaleVersionError,
+  KernelIssuerMismatchError,
   STATUS_SIGNING_ALG,
   type DischargeReceiptObservation,
   type ObservationWatermark,
@@ -389,6 +390,7 @@ export {
   type StoredLifecycleResponse,
 } from "./kernel/lifecycle-idempotency.js";
 export {
+  contractOperationProfiles,
   missionResourceAccessProfile,
   type OperationProfile,
   OperationProfileRegistry,
@@ -449,6 +451,7 @@ export {
   deriveAttenuationRoot,
   mintChildOffline,
   deriveCrossOrgRoot,
+  deriveCrossOrgChild,
   mintCrossOrgChild,
   mapAuthorityToCeiling,
   AAT_TYP,
@@ -460,6 +463,8 @@ export {
   type MintedRoot,
   type RequestedAuthority,
   type CrossOrgRootInput,
+  type CrossOrgChildOptions,
+  type CrossOrgHopActor,
 } from "./kernel/attenuation.js";
 export {
   verifyCrossOrgChain,

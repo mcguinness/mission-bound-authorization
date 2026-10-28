@@ -14,17 +14,24 @@
  *   appended to the effect log. Nothing else does.
  * - Every signature, key and token check is `@mission/aauth-wire`'s; a
  *   failure is 401 with Signature-Error (aauth#section-11.3.4).
+ * - A PS revokes the person tokens and auth tokens it issued at the
+ *   revocation endpoint, with a request it signs as a server under the
+ *   `jwks_uri` scheme naming `{jti, exp}` (aauth#section-11.12.1). A
+ *   revoked token presented afterwards is refused with `revoked_jwt`
+ *   (aauth#section-11.12.5).
  *
- * State (the effect log, person records, resource tokens issued, the
- * replay cache and the operations' data) is held in memory and lost on
- * restart. Deferred (202) delivery, interaction, session tokens, accounts
- * and revocation are not implemented.
+ * State: the revoked set is durable SQLite (`SqliteRevocationStore`), kept
+ * until each entry's `exp`. The effect log, person records, resource
+ * tokens issued, the replay cache, the per-issuer revocation rate and the
+ * operations' data are held in memory and lost on restart. Deferred (202)
+ * delivery, interaction, session tokens and accounts are not implemented.
  *
  * Pinned to draft-hardt-oauth-aauth-protocol-11 (src/SPEC_VERSIONS.md).
  */
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import {
+  BODY_COMPONENTS,
   generateSigningKey,
   InMemoryReplayCache,
   type JwksResolver,
@@ -38,14 +45,23 @@ import {
 } from "@mission/aauth-wire";
 import { type Parameters, serializeDictionary, Token } from "structured-headers";
 import type { ResourceConfig, ResourceOperation } from "./config.js";
+import type { RevocationStore } from "./revocations.js";
 
 export {
   ConfigError,
+  DEFAULT_REVOCATION_LIMITS,
   loadResourceConfig,
   parseResourceConfig,
   type ResourceConfig,
   type ResourceOperation,
+  type RevocationLimits,
 } from "./config.js";
+export {
+  type AdmitOutcome,
+  type RevocationEntry,
+  type RevocationStore,
+  SqliteRevocationStore,
+} from "./revocations.js";
 
 export interface ResourceOptions {
   config: ResourceConfig;
@@ -60,6 +76,11 @@ export interface ResourceOptions {
   now?: () => number;
   /** Default: in memory, one window of entries (aauth#section-11.3.4.2). */
   replayCache?: ReplayCache;
+  /**
+   * The revoked set, durable: `new SqliteRevocationStore(file)` on a file
+   * the deployment names. Its lifetime is the caller's.
+   */
+  revocations: RevocationStore;
 }
 
 /** A person, keyed by the token's (iss, sub) (aauth#section-7.1.4, aauth#section-13.7). */
@@ -101,12 +122,17 @@ export interface Resource {
   readonly effects: readonly Effect[];
   readonly issuedResourceTokens: readonly IssuedResourceToken[];
   readonly persons: readonly PersonRecord[];
+  readonly revocations: RevocationStore;
   metadata(): Record<string, unknown>;
 }
 
 const JWKS_PATH = "/.well-known/jwks.json";
 const METADATA_PATH = "/.well-known/aauth-resource.json";
 const AUTHORIZE_PATH = "/authorize";
+/** The revocation endpoint's path, published as `revocation_endpoint`. */
+export const REVOCATION_PATH = "/revoke";
+/** A PS signs in its own right under its `aauth-person.json` document (aauth#section-11.3.2). */
+const PERSON_SERVER_DOCUMENT = "aauth-person.json";
 const MAX_BODY = 64 * 1024;
 /** A space-delimited list of scope values (aauth#section-11.10, RFC 6749 Section 3.3). */
 const SCOPE_LIST = /^[\x21\x23-\x5B\x5D-\x7E]+( [\x21\x23-\x5B\x5D-\x7E]+)*$/;
@@ -117,6 +143,7 @@ class Problem extends Error {
     readonly status: number,
     readonly code: string,
     readonly detail: string,
+    readonly headers: Record<string, string> = {},
   ) {
     super(`${code}: ${detail}`);
   }
@@ -268,12 +295,17 @@ export function createResource(options: ResourceOptions): Resource {
   const personIndex = new Map<string, PersonRecord>();
   const data = new Map<string, Map<number, unknown[]>>();
 
+  const { revocations } = options;
+  /** Per issuer: the current one-minute window's start and its request count. */
+  const revocationRate = new Map<string, { windowStart: number; count: number }>();
+
   const metadata = (): Record<string, unknown> => ({
     issuer: identifier,
     jwks_uri: `${identifier}${JWKS_PATH}`,
     name: config.name,
     access_mode: "auth-token",
     authorization_endpoint: `${identifier}${AUTHORIZE_PATH}`,
+    revocation_endpoint: `${identifier}${REVOCATION_PATH}`,
     scope_descriptions: config.scopeDescriptions,
     signature_window: config.signatureWindowSeconds,
   });
@@ -293,11 +325,20 @@ export function createResource(options: ResourceOptions): Resource {
     }
   }
 
+  function headersOf(req: IncomingMessage): Record<string, string[]> {
+    const headers: Record<string, string[]> = {};
+    for (const [name, value] of Object.entries(req.headersDistinct)) {
+      if (value) headers[name] = value;
+    }
+    return headers;
+  }
+
   /**
    * Verify a signed request: undefined when it carries no signature at
    * all. A request with a body must cover Content-Digest and Content-Type.
    * Agent, person and auth tokens are accepted in Signature-Key, a person
-   * or auth token naming this resource in `aud`.
+   * or auth token naming this resource in `aud`. A person or auth token
+   * its issuer has revoked here is refused once the request verifies.
    *
    * @spec aauth#section-11.3.4
    */
@@ -306,14 +347,11 @@ export function createResource(options: ResourceOptions): Resource {
     target: string,
     body: Buffer,
   ): Promise<VerifiedRequest | undefined> {
-    const headers: Record<string, string[]> = {};
-    for (const [name, value] of Object.entries(req.headersDistinct)) {
-      if (value) headers[name] = value;
-    }
+    const headers = headersOf(req);
     if (!headers.signature && !headers["signature-input"] && !headers["signature-key"]) {
       return undefined;
     }
-    return verifyRequest(
+    const verified = await verifyRequest(
       { method: req.method ?? "GET", url: `${identifier}${target}`, headers, body },
       {
         resolver,
@@ -325,6 +363,123 @@ export function createResource(options: ResourceOptions): Resource {
         now,
       },
     );
+    refuseRevoked(verified.token);
+    return verified;
+  }
+
+  /**
+   * A person token or auth token its issuer revoked here: 401 with
+   * `Signature-Error: error=revoked_jwt`, never a resource token naming
+   * it. A revoked auth token also carries `requirement=person-token`, not
+   * `requirement=auth-token`. Agent tokens are revoked at the PS only, so
+   * none is held here. The revoked set is keyed by `(iss, jti)`.
+   *
+   * @spec aauth#section-11.12.2
+   * @spec aauth#section-11.12.4
+   * @spec aauth#section-11.12.5
+   */
+  function refuseRevoked(token: VerifiedToken | undefined): void {
+    if (!token || token.typ === "aa-agent+jwt") return;
+    const { iss, jti } = token.payload as { iss: string; jti: string };
+    if (!revocations.isRevoked(iss, jti, now())) return;
+    const kind = token.typ === "aa-person+jwt" ? "person token" : "auth token";
+    const refusal = new SignatureError("revoked_jwt", `the ${kind} was revoked by its issuer`);
+    if (token.typ === "aa-auth+jwt") {
+      refusal.headers["aauth-requirement"] = requirementField("person-token");
+    }
+    throw refusal;
+  }
+
+  /**
+   * The revocation endpoint. The caller signs as a server under the
+   * `jwks_uri` scheme, covering Content-Digest and Content-Type; the
+   * issuer is the identity the signature verified, never a request
+   * member. Only a PS (`dwk` `aauth-person.json`) issues the tokens this
+   * Resource accepts, so any other caller is `unsupported_iss`. Each
+   * issuer is bounded in rate and in entries (`rate_limited` with
+   * Retry-After). The pair is committed before the answer: 200 with no
+   * body, since nothing is downstream of a resource; never 202. A repeat
+   * records nothing new and is answered 200.
+   *
+   * The replay cache keys on the covered Content-Digest as well as the
+   * request tuple of aauth#section-11.3.4.2: a PS revoking two tokens here
+   * in one second sends two bodies, which the tuple alone would collide;
+   * a byte-identical replay still collides.
+   *
+   * @spec aauth#section-11.12
+   * @spec aauth#section-11.12.1
+   * @spec aauth#section-11.12.3
+   */
+  async function revoke(req: IncomingMessage, res: ServerResponse, target: string): Promise<void> {
+    const body = await readBody(req);
+    const headers = headersOf(req);
+    const digest = (headers["content-digest"] ?? []).join(", ");
+    const verified = await verifyRequest(
+      { method: "POST", url: `${identifier}${target}`, headers, body },
+      {
+        resolver,
+        acceptedSchemes: ["jwks_uri"],
+        // Covered on every revocation request, whether or not it carries a body.
+        additionalComponents: BODY_COMPONENTS,
+        replayCache: {
+          checkAndRecord: (key, expiresAtMs, nowMs) =>
+            replayCache.checkAndRecord(JSON.stringify([key, digest]), expiresAtMs, nowMs),
+        },
+        windowSeconds: config.signatureWindowSeconds,
+        now,
+      },
+    );
+    const signer = verified.signer as NonNullable<VerifiedRequest["signer"]>;
+    if (signer.dwk !== PERSON_SERVER_DOCUMENT) {
+      throw new Problem(403, "unsupported_iss", "this resource accepts revocations from a PS only");
+    }
+    const iss = signer.id;
+    limitRate(iss);
+    const params = parseJsonObject(req, body);
+    const { jti, exp } = params;
+    if (typeof jti !== "string" || jti === "") {
+      throw new Problem(400, "invalid_request", "jti is missing or is not a string");
+    }
+    if (typeof exp !== "number" || !Number.isSafeInteger(exp) || exp < 1) {
+      throw new Problem(400, "invalid_request", "exp is missing or is not a NumericDate");
+    }
+    const nowMs = now();
+    revocations.purge(nowMs);
+    const outcome = revocations.admit(
+      { iss, jti, exp, recordedAt: Math.floor(nowMs / 1000) },
+      nowMs,
+      config.revocationLimits.entriesPerIssuer,
+    );
+    if (outcome.kind === "full") {
+      throw new Problem(429, "rate_limited", "this issuer holds its bound of revocations", {
+        "retry-after": String(outcome.retryAfterSeconds),
+      });
+    }
+    send(res, 200);
+  }
+
+  /**
+   * At most the configured number of revocation requests per issuer in
+   * each one-minute window; beyond it, `rate_limited` with Retry-After
+   * (REQUIRED) naming the seconds until the window turns.
+   *
+   * @spec aauth#section-11.12.3
+   */
+  function limitRate(iss: string): void {
+    const nowMs = now();
+    const windowStart = nowMs - (nowMs % 60_000);
+    let rate = revocationRate.get(iss);
+    if (!rate || rate.windowStart !== windowStart) {
+      rate = { windowStart, count: 0 };
+      revocationRate.set(iss, rate);
+    }
+    if (rate.count >= config.revocationLimits.requestsPerIssuerPerMinute) {
+      const retryAfter = Math.ceil((windowStart + 60_000 - nowMs) / 1000);
+      throw new Problem(429, "rate_limited", "too many revocations from this issuer", {
+        "retry-after": String(Math.max(1, retryAfter)),
+      });
+    }
+    rate.count += 1;
   }
 
   /** @spec aauth#section-6.4 */
@@ -523,6 +678,7 @@ export function createResource(options: ResourceOptions): Resource {
       if (method === "GET" && path === METADATA_PATH) return send(res, 200, metadata());
       if (method === "GET" && path === JWKS_PATH) return send(res, 200, { keys: [key.publicJwk] });
       if (method === "POST" && path === AUTHORIZE_PATH) return await authorize(req, res, target);
+      if (method === "POST" && path === REVOCATION_PATH) return await revoke(req, res, target);
       const op = config.operations.find((o) => o.method === method && o.path === path);
       if (op) return await operate(req, res, target, op);
       throw new Problem(404, "not_found", `no operation ${method} ${path}`);
@@ -530,7 +686,7 @@ export function createResource(options: ResourceOptions): Resource {
       if (err instanceof SignatureError) {
         problem(res, err.status, err.code, err.detail, err.headers);
       } else if (err instanceof Problem) {
-        problem(res, err.status, err.code, err.detail);
+        problem(res, err.status, err.code, err.detail, err.headers);
       } else {
         problem(res, 500, "server_error", "internal error");
       }
@@ -545,6 +701,7 @@ export function createResource(options: ResourceOptions): Resource {
     effects,
     issuedResourceTokens: issued,
     persons,
+    revocations,
     metadata,
   };
 }

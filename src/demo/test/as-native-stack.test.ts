@@ -1705,6 +1705,66 @@ describe("the as-native launcher in process, OpenFGA client stubbed (D332)", () 
     await (await holdPort(LAUNCH_AS_PORT))();
   });
 
+  it("honors a Mission token issued before a restart of the whole target, with a key ring and a kernel file: the same token, DPoP-bound, reads after it (#1815 gap 1)", async () => {
+    const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
+    const dir = mkdtempSync(join(tmpdir(), "as-native-restart-"));
+    const ring = join(dir, "keys", "ring.json");
+    await initSigningKeyRing(ring, `http://localhost:${LAUNCH_AS_PORT}`, { asToken, asStatus, asTxn, asContinuation });
+    const kernelFile = join(dir, "state", "kernel.db");
+    const env = {
+      MISSION_KEY_RING: ring,
+      MISSION_KEY_BINDINGS: await bindingsFor(ring),
+      MISSION_KERNEL_STORE: kernelFile,
+      MISSION_KERNEL_WITNESS: initKernelWitness(kernelFile, join(dir, "witness", "kernel.witness")),
+      MISSION_RAS_REDEMPTIONS: rasStore(),
+    };
+    const files = { claimsFile: tempClaimsFile(), writeReservationsFile: tempReservationsFile() };
+    const read = async (issued: IssuedMission) => {
+      const { client, close } = await createHttpMediatedClient(CANONICAL_RESOURCE, issued.accessToken, issued.dpopKeys);
+      try {
+        return await client.callTool("get_invoice", { invoice_id: "inv-1" });
+      } finally {
+        await close();
+      }
+    };
+
+    const first = await launchAsNative(launchOptions(env, files));
+    let issued: IssuedMission;
+    try {
+      const as = first.stack.authServer;
+      if (!as) throw new Error("the as-native target runs the AS");
+      issued = await issueMissionToken(
+        as.asUrl,
+        as.agentClientJwk,
+        {
+          missionIntent: JSON.stringify({
+            intent: { goal: "Read the Acme invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" },
+          }),
+          authorizationDetails: JSON.stringify([
+            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+          ]),
+        },
+        as.approverConsole,
+      );
+      const before = await read(issued);
+      expect(before.ok, JSON.stringify(before)).toBe(true);
+    } finally {
+      await first.close();
+    }
+
+    // The whole target restarts on the same files. The launcher runs the AS,
+    // the PEP and the resource in one process, so the resource cannot restart
+    // alone; this is the assembled restart #1815 gap 1 falls back to.
+    const second = await launchAsNative(launchOptions(env, files));
+    try {
+      const after = await read(issued);
+      expect(after.ok, JSON.stringify(after)).toBe(true);
+      expect((after.result as { id?: string } | undefined)?.id).toBe("inv-1");
+    } finally {
+      await second.close();
+    }
+  });
+
   it("refuses to start on a kernel store restored from before its recovery witness, and starts again once the witnessed store is back (#250 step 3)", async () => {
     const { asToken, asStatus, asTxn, asContinuation } = TOPOLOGY.keys;
     const dir = mkdtempSync(join(tmpdir(), "as-native-kernel-"));

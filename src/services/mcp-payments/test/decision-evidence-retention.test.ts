@@ -23,7 +23,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AUDIT_HORIZON_SECONDS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { AUDIT_HORIZON_SECONDS, currentContractRef, RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import { canonicalDigest, type JsonValue } from "@mission/core";
 import {
   createDecisionEvidenceEmitter,
@@ -98,7 +98,7 @@ const view = (): MissionView => ({
   version: 1,
   authority_hash: "sha-256:rethash",
   authority_set: [
-    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
@@ -450,20 +450,29 @@ describe("the record survives the remote decision channel byte-identically (@spe
       replayWindowSeconds: 30,
     });
 
+    // The credential's entry pins the current contract, and the request
+    // carries its reference, as the PEP sends it (#249).
+    const entry = pinnedToCurrentContract({ type: "mission_resource_access" as const, resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] });
+    const contract = currentContractRef(entry);
     const request: EvaluationRequest = {
       subject: { id: "alice" },
-      resource: { type: "invoice", id: "inv-1", properties: { audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE, vendor_id: "acme" } },
+      resource: {
+        type: "invoice",
+        id: "inv-1",
+        properties: {
+          audience: CANONICAL_RESOURCE,
+          operation_target: CANONICAL_RESOURCE,
+          vendor_id: "acme",
+          ...(contract !== undefined ? { resource_contract: contract } : {}),
+        },
+      },
       action: { name: "payments:invoice.read" },
       context: {
         mission: { id: "msn_ret", issuer: ISSUER },
         // @spec runtime#classification (#956, D814): the class the PEP assigns.
         action_class: "consequential_read",
         // The credential's own authority rides every decision (#825 PR 2b).
-        credential: {
-          authority: [
-            { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] },
-          ],
-        },
+        credential: { authority: [entry] },
       },
     };
     const decision = await evaluateRemote(request, { url: handle.url, pepId: PEP_ID, secret: SECRET });

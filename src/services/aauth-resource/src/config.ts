@@ -30,7 +30,27 @@ export interface ResourceConfig {
   /** Scope values this resource defines (aauth#section-11.10), for consent display. */
   scopeDescriptions: Record<string, string>;
   operations: ResourceOperation[];
+  /**
+   * What one issuer can hold at the revocation endpoint, in entries and in
+   * rate: a recipient that accepts any verified issuer SHOULD bound both
+   * (aauth#section-11.12.3).
+   */
+  revocationLimits: RevocationLimits;
 }
+
+/** Per-issuer bounds at the revocation endpoint. */
+export interface RevocationLimits {
+  /** Unexpired revocations one issuer can hold at once. */
+  entriesPerIssuer: number;
+  /** Revocation requests one issuer can make in one minute. */
+  requestsPerIssuerPerMinute: number;
+}
+
+/** Applied when the configuration names no `revocation_limits`. */
+export const DEFAULT_REVOCATION_LIMITS: RevocationLimits = {
+  entriesPerIssuer: 10000,
+  requestsPerIssuerPerMinute: 600,
+};
 
 export class ConfigError extends Error {
   constructor(detail: string) {
@@ -60,11 +80,34 @@ function string(value: unknown, where: string): string {
   return value;
 }
 
-function seconds(value: unknown, where: string, max: number): number {
+function integerUpTo(value: unknown, where: string, max: number): number {
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > max) {
     throw new ConfigError(`${where} is not an integer from 1 to ${max}`);
   }
   return value;
+}
+
+/** Paths the Resource serves itself, which no configured operation may take. */
+const RESERVED_PATHS = new Set(["/authorize", "/revoke"]);
+
+function revocationLimits(value: unknown): RevocationLimits {
+  if (value === undefined) return { ...DEFAULT_REVOCATION_LIMITS };
+  const limits = object(value, "revocation_limits", [
+    "entries_per_issuer",
+    "requests_per_issuer_per_minute",
+  ]);
+  return {
+    entriesPerIssuer: integerUpTo(
+      limits.entries_per_issuer ?? DEFAULT_REVOCATION_LIMITS.entriesPerIssuer,
+      "revocation_limits.entries_per_issuer",
+      1_000_000,
+    ),
+    requestsPerIssuerPerMinute: integerUpTo(
+      limits.requests_per_issuer_per_minute ?? DEFAULT_REVOCATION_LIMITS.requestsPerIssuerPerMinute,
+      "revocation_limits.requests_per_issuer_per_minute",
+      1_000_000,
+    ),
+  };
 }
 
 /** Validate a parsed configuration document; unknown members are refused. */
@@ -77,6 +120,7 @@ export function parseResourceConfig(value: unknown): ResourceConfig {
     "signature_window_seconds",
     "scope_descriptions",
     "operations",
+    "revocation_limits",
   ]);
   const issuer = string(doc.issuer, "issuer");
   if (!isServerIdentifier(issuer)) throw new ConfigError("issuer is not a server identifier");
@@ -103,7 +147,7 @@ export function parseResourceConfig(value: unknown): ResourceConfig {
       throw new ConfigError(`operations[${i}].method is not GET or POST`);
     }
     const path = string(op.path, `operations[${i}].path`);
-    if (!path.startsWith("/") || path.startsWith("/.well-known/") || path === "/authorize") {
+    if (!path.startsWith("/") || path.startsWith("/.well-known/") || RESERVED_PATHS.has(path)) {
       throw new ConfigError(`operations[${i}].path is not an operation path`);
     }
     const scope = string(op.scope, `operations[${i}].scope`);
@@ -119,14 +163,19 @@ export function parseResourceConfig(value: unknown): ResourceConfig {
     issuer,
     name: string(doc.name, "name"),
     signingKey: { kid: string(key.kid, "signing_key.kid"), alg },
-    resourceTokenLifetimeSeconds: seconds(
+    resourceTokenLifetimeSeconds: integerUpTo(
       doc.resource_token_lifetime_seconds,
       "resource_token_lifetime_seconds",
       300,
     ),
-    signatureWindowSeconds: seconds(doc.signature_window_seconds, "signature_window_seconds", 300),
+    signatureWindowSeconds: integerUpTo(
+      doc.signature_window_seconds,
+      "signature_window_seconds",
+      300,
+    ),
     scopeDescriptions,
     operations,
+    revocationLimits: revocationLimits(doc.revocation_limits),
   };
 }
 

@@ -18,8 +18,9 @@ import { evaluate as evaluateRequest, type EvaluationRequest, type EvaluateOptio
 import { MISSION_RESOURCE_ACCESS_TYPE, type AuthorityEntry, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import type { EntitlementObservation, OriginPrincipal, PrincipalMappingObservation } from "@mission/core";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -43,11 +44,11 @@ const FRESH_MAPPING: PrincipalMappingObservation = {
 
 const ENTITLED: EntitlementObservation = { entitled: true, observed_at: "2026-08-23T11:59:00Z" };
 
-const entry: AuthorityEntry = {
+const entry: AuthorityEntry = pinnedToCurrentContract({
   type: MISSION_RESOURCE_ACCESS_TYPE,
   resource: RESOURCE,
   actions: ["payments:invoice.read"],
-};
+});
 
 const view: MissionView = {
   id: "msn_test_1",
@@ -73,7 +74,7 @@ const baseOpts = (extra: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
 /** A `fresh` Mission state observation read at the decision instant. */
 const OBSERVED = { state: "active", mode: "fresh", freshness_at: NOW.toISOString() };
 
-const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => ({
+const req = (over: Partial<EvaluationRequest> = {}): EvaluationRequest => withCurrentContractReference({
   subject: { id: LOCAL.sub, properties: { iss: LOCAL.iss } },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: "payments:invoice.read" },
@@ -275,7 +276,7 @@ describe("evaluateInner cross-domain entitlement authority (@spec cross-domain#d
   /** A view delegating both actions on the audience, so only entitlement decides. */
   const twoActionView: MissionView = {
     ...view,
-    authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:invoice.read", "payments:payment.schedule"] }],
+    authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:invoice.read", "payments:payment.schedule"] })],
   };
 
   const entitledTo = (authority: Array<{ resource: string; actions: string[] }>): EntitlementObservation => ({

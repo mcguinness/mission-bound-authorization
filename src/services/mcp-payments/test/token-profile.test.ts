@@ -47,6 +47,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "@mission/pdp/test-support";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 const HTU = CANONICAL_RESOURCE;
@@ -54,12 +55,13 @@ const HTM = "POST";
 const MISSION = { id: "msn_825", issuer: ISSUER };
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
-const entry = (actions: string[], constraints?: Record<string, unknown>) => ({
-  type: "mission_resource_access",
-  resource: CANONICAL_RESOURCE,
-  actions,
-  ...(constraints ? { constraints } : {}),
-});
+const entry = (actions: string[], constraints?: Record<string, unknown>) =>
+  pinnedToCurrentContract({
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions,
+    ...(constraints ? { constraints } : {}),
+  });
 const BROAD = [entry(["payments:invoice.read", "payments:vendor.read", "payments:invoice.list"])];
 
 const VIEW: MissionView = {
@@ -71,12 +73,12 @@ const VIEW: MissionView = {
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:vendor.read", "payments:invoice.list"],
       constraints: { vendors: ["acme", "globex"] },
-    },
+    }),
   ],
 };
 
@@ -456,7 +458,7 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     // The Mission's list entry carries no vendor constraint, so the read
     // returns every vendor the store holds invoices for: acme and globex. A
     // credential covering only acme does not cover it.
-    const unconstrained: MissionView = { ...VIEW, authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }] };
+    const unconstrained: MissionView = { ...VIEW, authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] })] };
     refusedBeforePdp(await attempt([entry(["payments:invoice.list"], { vendors: ["acme"] })], "list_invoices", {}, unconstrained), {
       type: "vendor",
       id: "acme",
@@ -532,7 +534,7 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
   /** A Mission scoped to `vendors` for vendor reads, under the same reference the token carries. */
   const missionScopedTo = (vendors: string[]): MissionView => ({
     ...VIEW,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors } }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors } })],
   });
   /** Look up `vendorId` under a credential scoped to `credentialVendors`, decided by the embedded signing PDP. */
   async function lookUp(vendorId: string, credentialVendors: string[], view: MissionView) {
@@ -561,7 +563,12 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
     expect((x.decided[0] as { resource: unknown }).resource).toEqual({
       type: "vendor",
       id: "acme",
-      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE },
+      properties: {
+        vendor_id: "acme",
+        audience: CANONICAL_RESOURCE,
+        operation_target: CANONICAL_RESOURCE,
+        resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }),
+      },
     });
   });
 

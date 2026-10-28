@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { authorityHash, intentHash } from "@mission/core";
+import { authorityHash, entryWithinCeiling, intentHash } from "@mission/core";
 import { DERIVATION_POLICY, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -415,7 +415,9 @@ describe("purpose never widens derivation (@spec mission#mission-intent, #1102, 
     for (const proposal of [withinCeiling, overBroad]) {
       const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p), proposal));
       for (const d of derived) expect(d).toEqual(derived[0]);
-      expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+      // Bounded by the ceiling as the kernel compares it: a derived entry's
+      // assembled contract reference set aside (#249, D553).
+      expect((derived[0] ?? []).every((e) => entryWithinCeiling(e, DERIVATION_POLICY.ceiling as never))).toBe(true);
     }
   });
 
@@ -423,7 +425,8 @@ describe("purpose never widens derivation (@spec mission#mission-intent, #1102, 
     const derived = PURPOSES.map((p) => kernel.derive(withPurpose(p)));
     for (const d of derived) expect(d).toEqual(derived[0]);
     expect(derived[0]?.length).toBeGreaterThan(0);
-    expect(isSubsetSet(derived[0] as never, DERIVATION_POLICY.ceiling as never)).toBe(true);
+    // Bounded by the ceiling as the kernel compares it (#249, D553).
+    expect((derived[0] ?? []).every((e) => entryWithinCeiling(e, DERIVATION_POLICY.ceiling as never))).toBe(true);
   });
 
   it("an input that derives no authority is refused the same way whatever the purpose: invalid_authorization_details for a submitted proposal, access_denied for the configured mapping", () => {

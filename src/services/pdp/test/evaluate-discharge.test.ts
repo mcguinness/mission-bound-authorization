@@ -27,11 +27,12 @@ import {
   computeAnchor,
   type JsonValue,
 } from "@mission/core";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import { evaluate as evaluateRequest, type EvaluationRequest } from "../src/evaluate.js";
 import type { MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
@@ -45,12 +46,12 @@ const NOW = new Date("2026-08-20T12:00:00Z");
 const CLOSE_EVENT = "accounting-period-closed";
 
 /** The approved set: a live read entry and a write entry that completes on the close. */
-const READ_ENTRY = {
+const READ_ENTRY = pinnedToCurrentContract({
   type: "mission_resource_access" as const,
   resource: RESOURCE,
   actions: ["payments:invoice.read"],
-};
-const WRITE_ENTRY = {
+});
+const WRITE_ENTRY = pinnedToCurrentContract({
   type: "mission_resource_access" as const,
   resource: RESOURCE,
   actions: ["payments:payment.execute"],
@@ -59,7 +60,7 @@ const WRITE_ENTRY = {
     vendors: ["acme"],
     terminal_when: [{ event_type: CLOSE_EVENT, discharge_authority: "close-management-2026-q3" }],
   },
-};
+});
 
 const writeDigest = computeAnchor(AUTHORITY_ENTRY_TYP, ISSUER, WRITE_ENTRY as unknown as JsonValue);
 
@@ -75,7 +76,7 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   ...over,
 });
 
-const req = (action: string): EvaluationRequest => ({
+const req = (action: string): EvaluationRequest => withCurrentContractReference({
   subject: { id: "alice" },
   resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
   action: { name: action },

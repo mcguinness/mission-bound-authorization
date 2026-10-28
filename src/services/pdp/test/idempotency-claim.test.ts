@@ -40,8 +40,9 @@ import { decisionCacheKey } from "../src/projections.js";
 import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -123,12 +124,15 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:h917",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: MISSION_RESOURCE_ACCESS_TYPE,
       resource: RESOURCE,
-      actions: ["payments:payment.execute", "payments:remittance.send", ADMIN_ACTION],
-    },
-    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] },
+      actions: ["payments:payment.execute", "payments:remittance.send"],
+    }),
+    // The fixture admin action is outside the payments contract, so it has an
+    // entry of its own, under no reference.
+    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [ADMIN_ACTION] },
+    pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -142,6 +146,8 @@ interface RequestOptions {
   action?: string;
   phase?: string;
   missionId?: string;
+  /** The Mission's issuer; defaults to the AS the fixture's principals belong to. */
+  missionIssuer?: string;
   sub?: string;
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
@@ -156,7 +162,7 @@ interface RequestOptions {
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
-  return {
+  return withCurrentContractReference({
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
     resource: {
       ...target,
@@ -167,14 +173,14 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
     },
     context: {
-      mission: { id: o.missionId ?? "msn_917", issuer: "https://as.test" },
+      mission: { id: o.missionId ?? "msn_917", issuer: o.missionIssuer ?? "https://as.test" },
       actor: o.actor ?? { client_id: "ap-agent" },
       action_class: o.actionClass ?? "irreversible_action",
       parameter_digest: o.digest ?? "sha-256:operation-1",
       mission_state_observation: o.observation ?? { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase !== undefined ? { action_phase: o.phase } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-917-a" };
@@ -282,6 +288,30 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.evaluation_id).toBe(permits[0]?.context.evaluation_id);
       expect(rows[0]?.state).toBe("permit_issued");
+    });
+  });
+
+  describe("the claim scope carries the canonical Mission identity (@spec control-plane#isolation, #1748)", () => {
+    it("gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const otherIssuer = "https://as-other.test";
+      const first = await evaluate(request(c, { key }), options(claims, c));
+      const second = await evaluate(
+        request(c, { key, missionIssuer: otherIssuer }),
+        options(claims, c, { view: view({ issuer: otherIssuer }) }),
+      );
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      expect(second.decision, JSON.stringify(second.context)).toBe(true);
+      expect(second.context.evaluation_id).not.toBe(first.context.evaluation_id);
+      claims.close();
+      const rows = rowsOf(file);
+      expect(rows.map((r) => r.evaluation_id).sort()).toEqual(
+        [String(first.context.evaluation_id), String(second.context.evaluation_id)].sort(),
+      );
+      expect(rows.map((r) => r.state)).toEqual(["permit_issued", "permit_issued"]);
     });
   });
 
