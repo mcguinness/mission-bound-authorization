@@ -636,7 +636,9 @@ describe("a Signals SET is a transition record (@spec control-plane#fresh-observ
         event_id: "set_suspended_v2",
       });
       (emitter as unknown as { db: Database }).db
-        .prepare("INSERT INTO signal_outbox (event_id, audience, commit_json, set_jwt) VALUES (?, ?, ?, NULL)")
+        .prepare(
+          "INSERT INTO signal_outbox (event_id, audience, commit_json, set_jwt) VALUES (?, ?, ?, NULL)",
+        )
         .run(JSON.stringify([ISS, suspended.event_id]), AUD, JSON.stringify(suspended));
       await emitter.drain();
       expect(emitter.pending()).toBe(0);
@@ -644,11 +646,17 @@ describe("a Signals SET is a transition record (@spec control-plane#fresh-observ
       expect(outcomes).toEqual(["applied"]);
 
       const late = decodeJwt(delivered[0] as string);
-      const event = (late.events as Record<string, Record<string, unknown>>)[LIFECYCLE_CHANGE_EVENT_URI];
+      const event = (late.events as Record<string, Record<string, unknown>>)[
+        LIFECYCLE_CHANGE_EVENT_URI
+      ];
       // Issued late: `iat` is the signing instant, not the commit.
       expect(late.iat).toBe(lateSigning / 1000);
       // The transition keeps its own observation point and version.
-      expect(event).toMatchObject({ state: "suspended", version: 2, committed_at: "2026-08-02T12:00:00Z" });
+      expect(event).toMatchObject({
+        state: "suspended",
+        version: 2,
+        committed_at: "2026-08-02T12:00:00Z",
+      });
       expect(Date.parse(event?.committed_at as string)).toBeLessThan((late.iat as number) * 1000);
       expect(receiver.viewState(suspended.id)).toMatchObject({ state: "suspended", version: 2 });
 
