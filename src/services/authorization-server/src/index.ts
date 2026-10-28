@@ -451,8 +451,6 @@ export {
   deriveCrossOrgRoot,
   mintCrossOrgChild,
   mapAuthorityToCeiling,
-  mapAuthorityToTools,
-  mapToolsToAuthority,
   AAT_TYP,
   MAX_ROOT_LIFETIME_S,
   type AatToolMap,

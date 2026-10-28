@@ -11,8 +11,8 @@
     "content_sha256": "30660feaec4fcdb7a500b1f2302ebd70a30a5deafcfb66398948d5e44c72869d"
    },
    "draft-mcguinness-mission-authzen.md": {
-    "revision": "14717538aeada93553cdc8d66f8aa3c6e92e946e",
-    "content_sha256": "9f21e8b33e4be8c1e8912676a0a771b6224b9b9a2d67be938c11b5e94087e7a8"
+    "revision": "f7db738441843285b69c35b2e12cf14195c3b02b",
+    "content_sha256": "6360896049e20743ced8e1e89e1788c2df5b10045511f5a5d1ca2a7a42ffc4fe"
    },
    "draft-mcguinness-mission-metering.md": {
     "revision": "d1c578b3df144dcbced24b66ed8f8c82e28c92ef",
@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "62b6341aa6f5f8c65ccc4accd00d1117fdd07bd6",
-    "content_sha256": "b9105f772d8d0a9223f255a412aff29fb30eeb355a5b76fff77708625ea5f3c6"
+    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
+    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
-    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
+    "revision": "7fb899a89a52b917a2711977ed0aef449e874836",
+    "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "05499ae43217ce7d528485c06622df662331aeed",
-    "content_sha256": "0ad029c5a6f7a0f1c5ca5ee64a7fdd07f5323b2918846cf4374aa2bb035be4b4"
+    "revision": "8c6b3484b8efb01c979bc54e712eb6e672ca03cc",
+    "content_sha256": "8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -10307,7 +10307,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted; and each Dispatch Handoff leg, the exchange and the redemption, settles its fresh reservation with the response, released on a 200 and settled as not accepted when the request fails in process before delivery, a request-path drain that throws included (D942). NOT covered, each by ruling: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted, the fail-safe (D772, D874); and a held or replayed reservation keeps its count, since an earlier attempt took it (a Dispatch Handoff redemption that fails inside the handler keeps its reservation for the retry that replays it). Partial on those: closing #935 does not establish unconditional compliance (D942)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -10363,6 +10363,24 @@
     {
      "file": "src/services/authorization-server/test/derivation-counting.test.ts",
      "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff exchange: a 200 releases its reservation and counts once; a drain failure after the handler answers 500 with no grant and settles the reservation as not accepted, returning the count once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a drain failure after the handler answers 500 with no token and settles its fresh reservation as not accepted, returning the count once; the grant stays consumed, so a retry is refused as already redeemed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a 200 releases its fresh reservation and counts once; a held reservation a retry replays keeps its count though that retry's drain fails",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -13976,6 +13994,40 @@
    "notes": "#1720 item 1 (D845). The condition is in the quoted clause: an AS issuing only tokens presented back to itself, such as designations, has no publication duty; the reference also issues resource-server tokens, so that exemption has no witness. The witness fetches /jwks directly; no test reads the RFC 8414 jwks_uri member and verifies an access token there, and the binding names jwks_uri only as an example. Mutation-proved: dropping the access-token role's keys from the published set (publicJwks in src/index.ts) fails the witness with JWKSNoMatchingKey."
   },
   {
+   "id": "core.token-claims.companion-format-not-access-token",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "token-claims",
+   "text": "JWT access-token validation remains governed by {{Section 4 of RFC9068}}, including acceptance of `at+jwt` or `application/at+jwt`. A companion-format token is consumed only under that companion's verification rules.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a resource server validating a JWT access token applies Section 4 of RFC 9068: it accepts typ at+jwt or application/at+jwt and refuses any other typ, so a companion-format token such as an aat+jwt attenuation root is not accepted as a JWT access token; a companion-format token is consumed only under its companion's verification rules"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > refuses a transaction token and an attenuation root presented as a Mission access token",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/mcp-payments/test/token-profile.test.ts",
+     "name": "the Mission access-token profile is met before any claim is trusted (@spec runtime-oauth#token-validation, #825) > accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1760 (D904, go in D932; wording corrected at the #1812 review, D938). Scoped to JWT access-token validation: the applicability stays unconditional because JWT validation is the baseline path, and opaque-token consumption is governed separately under core.introspected-consumption, which this row does not cover. Witnesses: the refusal of an aat+jwt token presented as a Mission access token (dropping the access-token profile's typ check fails it), and the acceptance of application/at+jwt (dropping the application/ prefix handling in mediaTypeOf fails it)."
+  },
+  {
    "id": "core.tokens.refresh-confidential-client-binding",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-bound-tokens",
@@ -15854,92 +15906,6 @@
     }
    ],
    "notes": "#1503 finding 7 (D620). Proved by deciding from the mapping current at issuance instead of the retained association, by retaining nothing at creation, and by not reading the retained association back from the store: the witnesses failed each time. D733: the template dispatch witness in scope-projection.test.ts recovers an instance created while the target was unmapped and issues for it once the mapping is back, because the instance inherits the association its template retained at consent. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea."
-  },
-  {
-   "id": "core.other-types.original-audience-refusal",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "Without `narrowing`, a token for another audience does not carry the entry",
-   "role": "AS",
-   "strength": "stated",
-   "applicability": {
-    "kind": "unconditional"
-   },
-   "profiles": [
-    "issuance",
-    "runtime-enforced"
-   ],
-   "surface": "token-endpoint",
-   "assertion": "output-bound",
-   "observation": {
-    "normative": "for a type with no declared narrowing capability, a token issued for an audience carries no entry whose original approved audience excludes that audience",
-    "local": "every Mission-bound mint path limits the entries it computed to those whose retained original approved audience includes the token's audience before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
-   },
-   "level": "endpoint",
-   "coverage": "tested",
-   "tests": [
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733) > a Mission approving an entry for each of two audiences issues each audience a token carrying only its own entry: the other audience's entry does not ride",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/scope-projection.test.ts",
-     "name": "the token endpoint emits for an audience only constraints keys it is known to enforce (@spec resource-access#resource-access-type) > checks an entry against the audience it is issued for: an entry for another resource does not ride in this token, and a token issued for that resource refuses it (boundary)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/deferred-mission-approval-endpoint.test.ts",
-     "name": "deferred Mission approval wire path (@spec deferred-approval#deferred-approval, deferred-approval#deferred-sequencing) > delivers the token for the resource the submission selected",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/device-authorization.test.ts",
-     "name": "Mission Device Authorization request (@spec device-authorization#request, #1202) > issues the device access token only the entries approved for its audience: an entry approved for another audience does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/template-dispatch-endpoint.test.ts",
-     "name": "mission-dispatch grant at /token (@spec mission-template#dispatch) > a dispatched instance approved for two audiences gets a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/expansion-endpoint.test.ts",
-     "name": "expansion wire: DEFERRED widening via the DTR substrate (@spec expansion#deferred-window) > a successor approved for two audiences completes with a token carrying only the entries approved for its audience: the other audience's entry does not ride (@spec mission#token-response, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/approved-audience.test.ts",
-     "name": "a token for an audience carries only the entries approved for it (@spec mission#token-response, #1503 finding 7, D733 ruling 1) > leaves an entry approved for another audience out of the token, never carrying it along",
-     "level": "unit",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
-     "name": "the delegated exchange carries only the entries approved for the requested audience (@spec mission#token-response, #1503 finding 7, D733) > a delegated exchange whose overlapping entries include one not approved for the requested audience is issued without that entry, never refused for it",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
-     "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    },
-    {
-     "file": "src/services/authorization-server/test/async-delegation.test.ts",
-     "name": "async-delegation issuance (@spec async-delegation) > opens a family only for a target its entries are approved for: a token for one audience opens none for another audience of the Mission, counting no derivation (@spec mission#token-response, mission#error-mapping, #1503 finding 7, D733)",
-     "level": "endpoint",
-     "surface": "token-endpoint"
-    }
-   ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Re-quoted: the sentence that a request issuing an entry to another audience is refused became the carriage consequence; the refusals moved to Audience and Token Response (rows core.tokens.no-approved-entry-refusal, core.tokens.requested-entry-refusal, core.tokens.multi-audience-refusal). Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.other-types.capability-carrier-first-false-governs",
@@ -21158,6 +21124,27 @@
    "notes": "#1535 finding 12 (D649); #1407: the advertised Mission Status endpoint shares the Lifecycle endpoint's authenticator (status.lifecycle.private-key-jwt-params)."
   },
   {
+   "id": "status.request.header-credentials-stay",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the Mission Status endpoint, and at the Mission Lifecycle endpoint, whose request carries the parameters \"as at the Mission Status endpoint\"; its credentials are not carried as form parameters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1780 N4 (D914): the twin of `mas.submission.header-credentials-stay`. Todo: the reference Mission Status and Lifecycle endpoints accept only private_key_jwt, whose parameters are form parameters; no header-carried method is served."
+  },
+  {
    "id": "status.request.form-post",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
@@ -24928,7 +24915,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Chain Presentation with an unknown top-level member is refused"
+    "normative": "a Chain Presentation with an unknown top-level member, the -01 `chain` member included, is refused"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24938,14 +24925,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses an unknown top-level member (closed envelope)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses the -01 chain member as an unknown top-level member (#1759)",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the envelope's chain member is the substrate's `aat_chain` (AAT -02 Section 7.4), and the envelope stays closed at the projection exchange (D932)."
   },
   {
    "id": "cross-org.chain.digest-canonical-bytes",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
+   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `aat_chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -24956,7 +24950,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two implementations compute byte-identical chain digests for the same presented chain array"
+    "normative": "two implementations compute byte-identical chain digests for the same presented `aat_chain` array"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24967,13 +24961,14 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759 (D932 direction 1): the digest commits to the ordered `aat_chain` array."
   },
   {
    "id": "cross-org.chain.bounds-before-crypto",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "A verifier MUST declare maximum hop count, maximum Presentation size, and a verification-cost ceiling, and MUST refuse a Presentation exceeding any of them before verifying any signature.",
+   "text": "A verifier MUST declare maximum hop count, maximum presentation size, and a verification-cost ceiling, and MUST refuse a presentation exceeding any of them before verifying any signature.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -24984,7 +24979,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "an over-bound presentation is refused with no signature verification performed"
+    "normative": "a Chain Presentation over the declared hop or size bound is refused with no signature verification performed"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24994,14 +24989,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a chain over the hop bound before parsing further",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a presentation over the size bound",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the sentence binds either presentation. The reference consumes the projection exchange's Chain Presentation; the direct-invocation presentation object has no reference consumer (cross-org.verification.direct-invocation, todo)."
   },
   {
    "id": "cross-org.chain.child-key-resolution",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
+   "text": "verify the Chain under steps 1 to 5 of the substrate's chain verification algorithm ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), which validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -25012,24 +25014,49 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a chain whose hop carries a thumbprint-only confirmation, or whose child signature fails under the parent's carried public key, is refused"
+    "normative": "a chain failing the substrate's chain verification (AAT -02 Section 8 steps 1 to 5) is refused: a hop whose cnf carries a thumbprint-only confirmation, a child whose signature fails under its parent's carried public key, a broken `par_hash` link, a tool its parent does not carry, and a depth beyond `del_max_depth`"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a hop whose cnf carries a thumbprint-only confirmation",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a missing middle hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a reordered / substituted parent (par_hash break)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses capability widening at a hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a chain whose depth exceeds del_max_depth",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: step 3 runs the substrate's algorithm (verifyAatChainLinks, the -02 verifier against the published vector suite) under the federation's trust anchors. Proved by skipping the substrate's cnf.jwk check (step 4b2): the thumbprint-only case passes."
   },
   {
    "id": "cross-org.verification.leaf-proof-of-possession",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "verify the leaf presenter's proof of possession",
+   "text": "at the projection exchange, which invokes no tool, through the token request's proof ({{projection-exchange}}) in place of the substrate's proof-of-possession JWT",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -25070,7 +25097,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier."
+   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier. #1759: step 8 names a mechanism per surface; this row is the projection exchange's, whose request checks are cross-org.projection-exchange.dpop-checks. Direct invocation is cross-org.verification.direct-invocation (todo)."
   },
   {
    "id": "cross-org.actor.credential-validation",
@@ -25097,8 +25124,104 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential names another subject",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential from an untrusted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a credential naming an issuer that is not an accepted attestation source",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential whose signature does not verify",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired actor credential",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential of an unknown type",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a listed actor-credential type the verifier does not implement",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. One witness per clause of Actor-Binding Credentials: type (unknown, and listed but not implemented), issuer trust (an unaccepted signing key, and an accepted key naming another issuer), validity (a signature that does not verify, an expired credential), subject, and bound key. Proved by skipping each check in turn (the subject comparison, the lifetime, the signature, the issuer binding, either type check): each witness fails."
+  },
+  {
+   "id": "cross-org.actor.credential-alignment",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "actor-identity",
+   "text": "A hop carrying `act` MUST have exactly one aligned entry in the `actor_credentials` presented with the Chain, at the projection exchange or at direct invocation, and its credential MUST validate under {{actor-evidence}}; a Chain naming an actor on a hop with a missing, misaligned, or invalid credential MUST be refused.",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at the projection exchange, a named hop with no aligned `actor_credentials` entry, an entry whose `hop` index is out of range or repeated, a credential aligned to a key-only hop, and a named hop whose credential fails validation (cross-org.actor.credential-validation) each refuse the Chain"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose actor credential is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a misaligned hop index",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses duplicate hop entries",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an actor credential aligned to a key-only hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a named hop whose credential binds the wrong key",
+     "level": "endpoint",
+     "surface": "verification"
+    }
+   ],
+   "notes": "#1821 (D941). The projection exchange's half of the sentence: its witnesses run the exchange's presentation parser and chain verifier. The direct-invocation half (`actor_credentials` in the substrate's presentation object) stays with the todo row cross-org.chain.direct-presentation-actor-credentials. The invalid-credential clause is witnessed clause by clause under cross-org.actor.credential-validation. Proved by treating a missing credential as key-only, skipping the key-only alignment check, and skipping the parser's range and repeat checks: each witness fails."
   },
   {
    "id": "cross-org.actor.root-resolution",
@@ -25154,7 +25277,8 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the unmapped entry rides beside the mapped one in a substrate-valid hop, which the substrate alone ignores (AAT -02 Section 8 step 4n). Proved by disabling this profile's exactly-the-mapped-entry check: the test passes the chain."
   },
   {
    "id": "cross-org.state.freshness-bound",
@@ -25171,7 +25295,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a revoked, expired, or staleness-exceeded Mission state prevents chain acceptance"
+    "normative": "a revoked, expired, staleness-exceeded, or unavailable Mission state prevents chain acceptance"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -25181,8 +25305,27 @@
      "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on stale Mission state",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > fails closed on unavailable Mission state",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a revoked Mission",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses an expired Mission",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1820. Each clause has its own witness: stale (the freshness bound), unavailable (no locally available state source, which the quoted text requires), revoked and expired (both `terminated`; the expired witness takes its record from the kernel's own expiry, so the verifier's clock stays inside the chain's lifetime, which the root caps at the Mission's expiry). Proved by reading an unavailable state as active, refusing only `suspended`, and skipping the freshness bound: each witness fails."
   },
   {
    "id": "cross-org.projection.provenance-recorded",
@@ -25205,12 +25348,227 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-     "name": "valid three-domain chain (@spec cross-org-delegation#verification) > verifies A -> B -> C and reconstructs the lineage",
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "the minted token and derivation evidence (@spec cross-org-delegation#projection-exchange, #projection) > mints a local access token with the expected claims and records derivation evidence",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#1759: witnessed by the exchange test that reads the derivation record (the kernel chain test it cited never read one). Proved by computing the digest over a different array and by recording the root's jti: the test fails each time."
+  },
+  {
+   "id": "cross-org.verification.mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "including the narrowing of its `mission_constraints` member ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section \"Mission Constraints Member\")",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain is refused when a hop omits `mission_constraints`, widens its parent's, changes its `resource_contract`, or carries a constraint or member the verifier does not understand"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints member is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints widen the parent's",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints carry a key the verifier does not understand",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a hop whose resource_contract differs from its parent's (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D902, D932): step 5 of the destination verification list, whose lead-in carries the MUST; the member's rules are the attenuation profile's. Proved by running the Mission layer over the root alone: the three hop cases pass the chain."
+  },
+  {
+   "id": "cross-org.projection-exchange.dpop-checks",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "A DPoP proof passes the checks of {{Section 4.3 of RFC9449}}, including its method, URI, and creation-time window, and its `jti` is accepted once within that window ({{Section 11.1 of RFC9449}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange is refused when its DPoP proof names another `htu` or `htm`, carries an `iat` outside the acceptance window, or repeats a `jti` already accepted within it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932 direction 3): at the exchange the request's proof stands in for the substrate's proof-of-possession JWT, with its freshness, replay and request-binding checks, through the shared token-endpoint verifier (#1173). Proved by dropping the htu and then the htm comparison: the request-binding test fails each time."
+  },
+  {
+   "id": "cross-org.projection-exchange.audience-every-hop",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "a requested audience outside a hop's `aud`, or a restriction of either layer of the leaf's capability entry that the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange whose requested audience is outside some hop's `aud`, including one the root names but a later hop does not, is refused with `invalid_target`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience outside the leaf's aud (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience the root's aud names but a later hop's does not (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759: the substrate's step 6c applied to the requested audience. The quoted sentence's second clause is cross-org.projection.both-layers. Both tests register the audience with the destination's scope mapping so only the hop audience check can refuse it. Proved by removing the check and by checking the root alone: the tests fail."
+  },
+  {
+   "id": "cross-org.projection.both-layers",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection",
+   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and a restriction of either layer that the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and the whole exchange is refused with `invalid_target` when any leaf tool carries a restriction of either layer the local token cannot represent or its consumer cannot enforce: an argument constraint narrower than the destination maps the tool to, a constraint whose fact the destination does not establish, or a `resource_contract` the destination does not declare, has retired, or holds superseded past its retention; a contract the destination holds superseded within retention projects"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > carries the Mission entry's resource_contract and constraints into the local token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf resource_contract the destination does not declare, has retired, or holds superseded past retention (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > projects a leaf resource_contract the destination holds superseded within retention",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932, D941 rulings 1 to 3): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling) and the destination's own resource-contract declarations, the ones its kernel reads, resolve its resource_contract (carriedViolation); any other leaf tool refuses the whole exchange with the projection exchange's invalid_target. Ordinary local-policy narrowing is separate, and an empty intersection after it stays invalid_grant (cross-org-grant-endpoint.test.ts: refuses a chain whose authority does not intersect the local ceiling). Proved by skipping the argument comparison, by dropping resource_contract, by projecting an entry the destination does not map, and by skipping the contract check: each test fails."
+  },
+  {
+   "id": "cross-org.verification.direct-invocation",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "at direct invocation, under steps 6 and 7 of the substrate's algorithm, which bind the proof to the invoked tool and its arguments",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain-verifying resource server refuses a direct invocation whose `aat_pop` does not verify under the leaf `cnf.jwk` for the invoked tool and its arguments (AAT -02 Section 8 steps 6 and 7)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 3). The reference has no cross-org chain-verifying resource server; the projection exchange is its only cross-org surface, which is what #1759's acceptance requires."
+  },
+  {
+   "id": "cross-org.chain.direct-presentation-actor-credentials",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "chain-presentation",
+   "text": "a chain-verifying resource server recognizes `actor_credentials` and validates it ({{actor-identity}}), and ignores other members it does not recognize, as the substrate specifies",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at direct invocation, a named hop without a valid aligned `actor_credentials` entry in the presentation object refuses the invocation, and an unrecognized member of that object does not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
   },
   {
    "id": "mas.reference.strict-dictionary",
@@ -30924,9 +31282,27 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > refuses at load a required operation that is an action family, outside the action grammar, or defined by no current or superseded version",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness. #1752 (D875): the operations requiring a reference are operations the resource serves. The loader refuses, naming the value, an action family, a value outside the action grammar, and an action no current or superseded version defines, even where a document names the value as an operation's action; a retired version's operations do not count, and a newer version's operation may be required though an older supported version lacks it (2026-10-20 lacks payments:payment.reverse). The shipped declaration loads, as does the same declaration requiring the current contract's five non-read actions. Proved by mutation, each alone (5 of 5): removing the family, grammar or served-operation check, counting a retired version's operations, or counting only the current version's, fails a witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",
@@ -37459,8 +37835,45 @@
      "name": "credential facts the PDP cannot use refuse credential_invalid (@spec authzen#pdp-request rule 6) > refuses a discharge condition carrying a member the profile does not define, though the Mission entry carries it without one (#1133 review P2)",
      "level": "unit",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
     }
-   ]
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac): an unevaluable credential entry beside a complete one is refused credential_invalid in either order; dropping unevaluable entries one by one, as Resource Access's alternative-entry rule would (V2), fails that witness and the mixed-entry case of 'refuses a credential authority with %s'."
+  },
+  {
+   "id": "authzen.context-credential.unsatisfied-entry-not-invalidating",
+   "spec": "draft-mcguinness-mission-authzen.md",
+   "anchor": "context-credential",
+   "text": "An entry the PDP evaluates and finds unsatisfied invalidates nothing: another complete entry of `authority` still authorizes the action.",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "decision-request",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a credential whose authority holds one entry the PDP evaluates and finds unsatisfied and another complete entry the action satisfies is permitted, in either entry order; the unsatisfied entry neither denies the request nor makes it credential_invalid"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/evaluate-credential-authority.test.ts",
+     "name": "the PDP enforces the credential bound independently (@spec runtime#input-authority, D312) > lets another complete entry authorize when an entry it evaluates is unsatisfied, in either order, while an entry it cannot evaluate invalidates the credential (@spec authzen#context-credential, #1806, D947)",
+     "level": "unit",
+     "surface": "decision-request"
+    }
+   ],
+   "notes": "#1806 (D947, spec/1806-credential-entry-clarification at 640220ac). Distinguishes evaluates-but-unsatisfied from cannot-evaluate (authzen.context-credential.authority-no-fallback). A credential bound denying on any evaluated, unsatisfied entry (V1) fails the witness in both orders."
   },
   {
    "id": "authzen.pdp-request.credential-expiry",
@@ -40603,7 +41016,7 @@
     "local": "The only approval surface that renders a consumption bound is the standing-payment template consent page: templateConsentDisclosure (adapters/template-consent.ts) renders the budget's limit and the per-instance maximum on max_budget only under its standingPayment option, which the provider sets only with the standing-payment-dispatch capability on (adapters/provider.ts). With it off, a template designating a standing payment gets the plain prohibited-classes statement and no budget lines. With it on, buildAuthorizationServer always hands the provider its Dispatch Policy registry, whose construction is refused (assertStandingPaymentExactProfile, adapters/provider.ts) unless the Enforcement Scope Statement claims budget_metering and declares each designating policy's budget under the exact profile, in the policy's unit and currency, with its limit and committed policy reference, metering payments:payment.execute at commit."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
@@ -40612,13 +41025,13 @@
      "surface": "deployment-documentation"
     },
     {
-     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
-     "name": "standing-payment template defects refused at the consent route, creating no template (@spec template#template-consent, #813, D877) > renders no standing-payment terms or budget lines on the consent page with the capability off, where nothing would meter the budget (@spec metering#consent, #813)",
+     "file": "src/services/authorization-server/test/template-standing-payment-endpoint.test.ts",
+     "name": "the consent page with the standing-payment capability off (@spec metering#consent, #813) > renders no budget line and no standing-payment terms on a designating template's consent page with the capability off, though the assembly wires the Approver's login, budget_metering and a budget exposure port holding figures, and states the plain prohibited classes instead (@spec metering#consent, #813)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.' Slice 3b (impl/813-budget-binding-3b at 62325958): the standing-payment consent page that renders the budget, and the per-instance maximum on max_budget, as limits runs only on an AS that started, and a capability-on AS starts only where its Enforcement Scope Statement declares the budget under budget_metering with the exact profile, in the policy's unit, metering payments:payment.execute at commit, with the policy's currency and limit and its committed policy reference; the composed stack hands the AS and the PDP the same statement, and the PDP meters both counters under it. Dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): with the capability off the consent page renders the ceiling and no standing-payment terms or budget lines. Partial: the capability-off page assertions have no kill yet. The recorded kill (23, forcing the standing-payment path with the capability off, the mutant that ignores the standingPayment option) fails at the page's first line: with no budget port the forced path turns the page into a read-failure refusal, so the no-budget-lines assertions never run. A mutant that renders the lines without reading the counters would test them; the level stays endpoint, approval-ceremony."
+   "notes": "#816, D830. The capability stays disabled and unclaimed. Also homes the paragraph's 'Such an Issuer MUST NOT render the bound as an enforced limit.' Slice 3b (impl/813-budget-binding-3b at 62325958): the standing-payment consent page that renders the budget, and the per-instance maximum on max_budget, as limits runs only on an AS that started, and a capability-on AS starts only where its Enforcement Scope Statement declares the budget under budget_metering with the exact profile, in the policy's unit, metering payments:payment.execute at commit, with the policy's currency and limit and its committed policy reference; the composed stack hands the AS and the PDP the same statement, and the PDP meters both counters under it. Dropping the claim, profile, owner, id, limit, currency, digest, version or policy-id comparison, or the provider's call (E1, E2, E3a, E3b, E4, E5, E6a, E6b, E6c, E7), or the unit, metered-action, phase or action-name check (V7, V8, V8b, V8c) fails the startup witness. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): with the capability off the consent page renders the ceiling and no standing-payment terms or budget lines. Pre-enablement gap 3 (D947; impl/813-pre-enablement-as at 8f2d1558, mutation at the same commit): the capability-off witness is in the endpoint file, on an assembly that wires the Approver's login, a budget_metering statement and a budget exposure port holding figures for the policy's budget, so a page that wrongly took the standing-payment path renders rather than refuses. It asserts the consent page (200, with the ceiling), then no budget line (neither the budget's limit, nor the per-instance maximum on max_budget, nor an exposure line), then no standing-payment terms, then the plain prohibited-classes statement. Each mutant alone, all killed: C1 (templateConsentDisclosure ignores its standingPayment option, the recorded 23) and C2 (the provider sets that option whatever the capability) fail it at the budget-line assertion, the page having rendered 200 with the ceiling; C5 (C1, with the page's viewer computed whatever the capability, so the port is read) fails it there with the exposure figures among the lines; C3 (the terms rendered with every budget line dropped) fails it at the terms assertion; C4 (the statement chosen by the policy's designation) fails it at the statement assertion. On the review-fixed code a capability-off page reads no counter (its viewer is computed only with the capability on), so C1 renders the withheld exposure line rather than a read-failure refusal. The capability-off test in template-standing-payment-token-batch.test.ts now fails under C1 at its first page assertion ('Standing payment'); it is no longer cited here, as its budget-line assertion has no kill of its own."
   },
   {
    "id": "metering.consent.unmetered-bound-refused-at-intake",
@@ -41177,7 +41590,7 @@
     "normative": "a Child Mission creation request under a Mission carrying max_budget is refused and creates nothing, since the deployment neither charges ancestors nor escrows"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
@@ -41196,9 +41609,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it. The successor case covers a Mission carrying max_budget other than the dispatched instance."
+   "notes": "#816, D830. Live, not deferred: D830 ruling 3 refuses children until their accounting is supported, so this refusal is the required behavior. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Slice 3a (impl/813-standing-payment-admission at a7063aab): in the reference only a standing-payment lineage carries max_budget, and a Child Mission under its instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Tested: the successor is a Mission carrying max_budget, and each clause (refused, nothing created) is asserted and killed by a mutant that leaves every other layer in place. D877 ruling 1 keeps this refusal a tested prerequisite. The successor case covers a Mission carrying max_budget other than the dispatched instance."
   },
   {
    "id": "metering.capacity-across-missions.child-charged-to-ancestors",
@@ -41454,9 +41879,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it."
+   "notes": "#813, #816, D830. Live, not deferred: D830 ruling 3; the charged-child alternative is the deferred one. Shares its witness with template.instance-composition.child-refused. The capability stays disabled and unclaimed. Slice 3b (62325958) adds a backstop, not this refusal: a Mission recorded as a Child Mission anywhere in a standing-payment lineage derives no budget binding and is refused at the PDP. Re-quoted against 9f8e8aca. Slice 3a (impl/813-standing-payment-admission at a7063aab): shares the witness of template.instance-composition.child-refused: a Child Mission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (refused not_strict_subset instead). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance the budget meters. The guard's necessity is witnessed on the instance's expansion successor, which continues the budget's counter (its budget binding equals the instance's) but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "metering.aggregate-bounds.refusal-names-counter",
@@ -45085,8 +45522,8 @@
    "coverage": "partial",
    "tests": [
     {
-     "file": "src/packages/mission-core/test/attenuation-chain.test.ts",
-     "name": "toolsSubset (capability monotonicity) > adding a tool the parent lacks is NOT a subset (widen)",
+     "file": "src/packages/mission-core/test/aat-verify.test.ts",
+     "name": "verifyAatChain: a chain with no invocation (@spec AAT -02 Section 8 steps 1 to 5 and 6c, #1756) > refuses a child that names a tool its parent lacks, or widens a tool it keeps (I4, step 4p)",
      "level": "unit",
      "surface": "derivation"
     },
@@ -45097,7 +45534,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain keeps toolsSubset until #1759. The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
+   "notes": "core's attenuation chain verification (packages/mission-core: the -02 substrate verifier, aat-verify.ts, and the Mission layer, mission-aat.ts, #1756) tests the no-broader-than narrowing check extensively (widen refused on tools, argument constraints, mission_constraints, aud, exp and delegation depth) for core's own claim; the cross-organization chain runs the same verifier since #1759 (#1818), and the earlier toolsSubset rule is retired (#1819). The unsupported-or-incomparable-values-fail-closed arm is untested at this generic level."
   },
   {
    "id": "substrate.monotonic-derivation.classification-taxonomy",
@@ -55648,7 +56085,7 @@
     "normative": "the human approval of a new template_version that changes destinations or raises the budget or per-payment bound renders the standing-consent budget's consumption to date and its outstanding reservations, read from the shared counter"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
@@ -55659,6 +56096,24 @@
     {
      "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
      "name": "budget exposure on the standing-payment template consent (@spec template#standing-payment-exception, metering#aggregate-bounds, #813, D877) > renders the budget's consumption to date and outstanding reservations on the standing-payment consent page, as the counters read (#813, D877)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
+     "name": "budget exposure on the consent of a standing-payment template's next version (@spec template#standing-payment-exception, metering#aggregate-bounds, mission#approval-context-changes, #813, D877) > renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the per-payment bound, after a consent to the previous version, and refuses its decision once they moved (#813, D877)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
+     "name": "budget exposure on the consent of a standing-payment template's next version (@spec template#standing-payment-exception, metering#aggregate-bounds, mission#approval-context-changes, #813, D877) > renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that changes destinations, after a consent to the previous version, and refuses its decision once they moved (#813, D877)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
+     "name": "budget exposure on the consent of a standing-payment template's next version (@spec template#standing-payment-exception, metering#aggregate-bounds, mission#approval-context-changes, #813, D877) > renders the shared budget's consumption to date and outstanding reservations on the consent of a new template_version that raises the budget, after a consent to the previous version, and refuses its decision once they moved (#813, D877)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -55717,7 +56172,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): every designating template consent page, for the authenticated Approver, renders the shared budget's consumption to date (committed) and outstanding reservations (reserved, and held pending reconciliation) as read through the AS's budget exposure port; the render revision commits the figures, so a change before the decision refuses it (409 approval_context_changed); a reading that cannot be made, is deferred, or is not the counters' totals withholds the decision (503 page and 503 temporarily_unavailable decision, no template, proposal pending); an unauthenticated viewer sees no figures and no counter is read. Current kills: M15, M14 and M18 (failed read), M1 to M3 (bad readings), M12, M12b and M13 (withholding), M7 and M11 (the consent page renders a never-charged counter at the declared exponent). Partial: the non-zero figures on the consent page (the rendering and render-to-decide tests, and the Approver half of the withholding test) and the composed-stack read of the real shared counter rest on mutants O1, O3 and O7, which were not re-run against the review-fixed code, and the port-required startup test on O0 likewise; no test consents an actual raise or destination change (the AS renders on every designating consent, having no stable template identity)."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST. The no-release clause that follows is homed by metering.aggregate-bounds.fresh-consent-no-release. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): every designating template consent page, for the authenticated Approver, renders the shared budget's consumption to date (committed) and outstanding reservations (reserved, and held pending reconciliation) as read through the AS's budget exposure port; the render revision commits the figures, so a change before the decision refuses it (409 approval_context_changed); a reading that cannot be made, is deferred, or is not the counters' totals withholds the decision (503 page and 503 temporarily_unavailable decision, no template, proposal pending); an unauthenticated viewer sees no figures and no counter is read. Current kills: M15, M14 and M18 (failed read), M1 to M3 (bad readings), M12, M12b and M13 (withholding), M7 and M11 (the consent page renders a never-charged counter at the declared exponent). Pre-enablement gap 1 (D947; impl/813-pre-enablement-as at 8f2d1558, mutation at the same commit): the exposure mutants re-run against the review-fixed code, each alone, all killed. O0 (startup port check removed) fails the port-required startup test. O1 (consent exposure lines not rendered) fails the rendering test at its exposure line, the render-to-decide test at its 409, the Approver half of the withholding test, the declared-exponent test, and the composed-stack consent test at its exposure line. O3 (consent figures left out of the commitment) fails the render-to-decide test at its 409. O7 (the stack port keys the shared counter by owner alone) fails the composed-stack consent test at its exposure line. O2 (consent read failure rendered as no exposure), re-targeted so the page and the decision go on without the figures, fails the read-failure page test at its 503 (page 200), the read-failure decision test at its 503 (409), and the three malformed-reading tests at their consent page's 503; its earlier text still applies but crashes the page render (500), so the re-targeted form is the one counted. Raise witness (D947; impl/813-pre-enablement-as at 46991675, mutation at the same commit): a deployment consents a template under version 1 of the Dispatch Policy, restarts on the same kernel file and budget counters holding version 2 (listed beside version 1 in its statement), and renders a new template_version's consent to the authenticated Approver, once each where version 2 raises the per-payment bound, changes destinations, or raises the budget (under a statement declaring the raised limit). Each page shows the new terms and the shared budget's consumption to date and outstanding reservations, with all three totals distinct; a decision after the counter moved is refused 409 approval_context_changed, and the consent rendered again is approved under the budget version 1 pinned. Each mutant alone, all killed: dropping the consent exposure lines (O1) and dropping them from every Dispatch Policy version but 1 (D1, which no version-1 test kills) fail all three at the exposure line, the new terms having rendered; reading a counter per template_version (W1), per Dispatch Policy version (W2) or keyed by the Dispatch Policy id (W3) instead of the shared budget's fail all three at the exposure line; leaving the figures out of the commitment (O3) fails all three at the 409."
   },
   {
    "id": "template.standing-payment.consent-disclosure",
@@ -55993,9 +56448,21 @@
      "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a Child Mission of a standing-payment instance's expansion successor that holds a children grant, creating nothing (#813)",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment.test.ts",
+     "name": "standing-payment lineage (@spec mission-template#instance-composition, #813 ruling 3) > refuses delegation_not_permitted a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, creating nothing (#813)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/template-standing-payment-token-batch.test.ts",
+     "name": "standing-payment lineage at the token endpoint (@spec template#instance-composition, metering#capacity-across-missions, #813, D830 ruling 3, D877) > refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason: without the guard the AS still refuses not_strict_subset, and the review could not build a child the AS admits without it. Partial: no recorded mutant shows the refusal depends on the guard, and the reason is not a clause of this row, so the witness proves the guard runs first, not that it is needed. D877 ruling 1 keeps this refusal a tested prerequisite; the witness does not yet establish it."
+   "notes": "#813, D830. The capability stays disabled and unclaimed. Re-quoted against 9f8e8aca. Now a MUST in Metering's form (refused unless charged). Live: D830 ruling 3 refuses children; the charged-child alternative is deferred. Shares its witness with metering.capacity-across-missions.standing-consent-child-refused. Slice 3a (impl/813-standing-payment-admission at a7063aab): createChildMission under a standing-payment instance is refused delegation_not_permitted. Mutation: removing the child guard fails it (the refusal becomes not_strict_subset, since the proposal equals the parent's authority; a strict-subset proposal would show the guard alone refuses). Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): at /token a Child Mission requested from a standing-payment instance, and from its expansion successor holding a children grant, is refused delegation_not_permitted and creates nothing. Mutation: removing the child guard (29) fails both only through the reason (not_strict_subset). D947 gap 2 (impl/813-child-refusal-witness at aa542b79): that child omitted delegation, so derivation gave it the policy ceiling's grant (max_depth 2, five children of depth 2), broader than the successor's (max_depth 1, two children of depth 1), and the strict-subset proof refused it with or without the guard. The new witnesses, at the kernel and at /token, send a child that restates the successor's per-payment bound, vendor and children grant, for a child actor the grant admits: under the successor, which carries the instance's max_budget, it is refused delegation_not_permitted (the kernel witness asserts the guard's own message), no grant is issued and nothing is created (Mission count and findChildren unchanged). Mutation, each run alone: mutant 29 (the guard line replaced by void 0) fails both by admission (the kernel creates the child; /token answers 200 with a child grant); mutant 29 with the refusal assertions removed fails the Mission-count assertions alone and, in a separate run, the findChildren assertions alone; the guard moved after the child's insertRecord fails the kernel witness's count (at /token the creation transaction rolls the child back, and that witness passes); a refusal with the same status and reason added at /token after the creation commit fails the endpoint witness's created() assertion. The existing witnesses pass unmutated. A kernel control, 'admits the same strict-subset Child Mission under an ordinary Mission holding the successor's Authority Set, outside any standing-payment lineage (#813)', creates the same child where the guard does not apply. On the dispatched instance itself no child is admissible without the guard either: the instance holds no delegation grant (a standing-payment ceiling admits none, refused at consent and re-checked at dispatch), so a derived child entry introduces the policy ceiling's grant (not_strict_subset) or lacks the children on-switch (delegation_not_permitted), and no single-layer mutant admits a child there; the instance witnesses prove ordering and reason. Partial: the observation names an instance holding authority admitted under the Standing Payment Exception. The guard's necessity is witnessed on the instance's expansion successor, which carries the budget forward but was not dispatched, so it is not an instance (template#instance-composition); on the dispatched instance the refusal also holds without the guard, as above. Whether this row's instance covers that successor is an owner ruling, open; until it is ruled the row stays partial. D877 ruling 1 keeps this refusal a tested prerequisite."
   },
   {
    "id": "template.instance-composition.cross-boundary-derivation-refused",
@@ -56103,11 +56570,17 @@
     "normative": "the human approval of an expansion successor of such an instance renders the standing-consent budget's consumption to date and its outstanding reservations, whether or not the successor raises a bound"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
      "name": "budget exposure on a standing-payment successor's approval (@spec template#instance-composition, metering#capacity-across-missions, #813, D877) > renders the dispatched instance's and the shared budget's consumption to date and outstanding reservations on the successor's approval page (#813, D877)",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/standing-payment-budget-exposure.test.ts",
+     "name": "budget exposure on a standing-payment successor's approval (@spec template#instance-composition, metering#capacity-across-missions, #813, D877) > renders the shared budget's line from the standing-consent counter every instance and successor draws on, not from the dispatched instance's counter (#813, D877)",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -56160,7 +56633,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the approval page of a standing-payment successor renders the dispatched instance's counter and the shared budget's, each as consumption to date and outstanding reservations, keyed by the dispatched instance even for a second-generation successor; through the composed stack the page shows the claim domain's committed, reserved and held totals (instance 50.00/10.00/25.00, shared 70.00/15.00/25.00); a change before the decision refuses it naming budget_exposure; a failed or malformed reading returns a 503 page and refuses the decision 503, approving nothing. Current kills: R1 and R2 (composed stack) and R3 (two-hop), each failing at the Instance line; M19 and M1 to M3 (failed and malformed readings). Partial: the shared budget line, which is this row's clause, has no current kill: R1 to R3 fail at the instance line first, and the section-not-rendered mutant (O38) and the render-to-decide and read-failure page mutants (O4, O5) were not re-run against the review-fixed code."
+   "notes": "#813, #816, D830. The capability stays disabled and unclaimed. New at 9f8e8aca. Broader than metering.capacity-across-missions.raised-bound-renders-consumption, which binds only a successor that raises a bound. Slice 4 AS track (impl/813-as-slice4 at 03a9a4a6, D877): the approval page of a standing-payment successor renders the dispatched instance's counter and the shared budget's, each as consumption to date and outstanding reservations, keyed by the dispatched instance even for a second-generation successor; through the composed stack the page shows the claim domain's committed, reserved and held totals (instance 50.00/10.00/25.00, shared 70.00/15.00/25.00); a change before the decision refuses it naming budget_exposure; a failed or malformed reading returns a 503 page and refuses the decision 503, approving nothing. Current kills: R1 and R2 (composed stack) and R3 (two-hop), each failing at the Instance line; M19 and M1 to M3 (failed and malformed readings). Pre-enablement gap 1 (D947; impl/813-pre-enablement-as at 8f2d1558, mutation at the same commit): a shared-line witness sets each of the shared counter's three totals apart from the instance counter's and asserts the shared line alone. Each mutant alone, all killed. S1 (the shared counter read from the dispatched instance's key, in deferralBudgetExposure) and S2 (the shared line rendered with the instance counter's figures, in budgetExposureSection) fail the shared-line witness, and fail the rendering, two-hop and composed-stack tests at their shared line, their instance line passing first. O7 (the stack port keys the shared counter by owner alone) fails the composed-stack test at its shared line, its instance line passing. S3 (the instance counter read from the shared key) fails the rendering, two-hop and composed-stack tests at their instance line and the render-to-decide test at its 409. Re-run against the review-fixed code: O38 (section not rendered, re-targeted to the section followed directly by the ceiling section) fails the rendering and two-hop tests at the continued-counter sentence, the shared-line witness, the composed-stack test at its instance line, and the ordinary-deferral test at its section check; O4 (successor figures left out of the commitment) fails the render-to-decide test at its 409 and the ordinary-deferral test at its commitment; O5 (page read failure rendered as no exposure) fails the read-failure page test and the three malformed-reading tests at the successor page's 503; O6 (decision read failure read as no exposure) fails the read-failure decision test and the three malformed-reading tests at the successor decision's 503. Every witness successor keeps its instance's max_budget, the only successor the reference admits (assertSuccessorMaxBudget refuses a raised one; see metering.capacity-across-missions.raised-bound-renders-consumption), so the page is witnessed for a successor that raises no bound."
   },
   {
    "id": "progressive.ceiling-review.cadence-versioned-with-policy",
@@ -62012,7 +62485,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "the authorization server compares currency values exactly: values differing in case or whitespace are never equal, a malformed value equals nothing, even itself, and no mapping folds a value's case on the way out or back",
-    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; the AAT root mapping names amount_<code> only for a well-formed code and reads back only three lower-case letters; the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
+    "local": "isSubsetEntry validates every present cap on either side, whether or not the other carries one, before comparing; an attenuation root carries max_amount unchanged in mission_constraints, and a mint refuses a malformed currency before signing (the consumer's own reading); the PDP's equality test is resource-access.common-constraints.max-amount-predicate's"
    },
    "level": "unit",
    "coverage": "tested",
@@ -62037,18 +62510,18 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapAuthorityToTools refuses a malformed currency rather than naming an argument for it",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > refuses a malformed currency before signing, rather than carrying or folding it",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > mapToolsToAuthority refuses an amount suffix that is not three lower-case letters",
+     "name": "an attenuation root never carries a malformed max_amount (@spec mission#max-amount) > carries a well-formed max_amount unchanged, as a decimal string, and reads it back unchanged",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); letting the root mapping name any string, or folding the read-back suffix to upper case, fails its attenuation witness."
+   "notes": "#1595 (D727): the owner ruled the currency grammar exactly three upper-case ASCII letters, compared exactly, with no assignment-list validation. Proved by mutation: removing isSubsetEntry's check of every present cap, made before any comparison, fails the byte-identical and the uncapped-side witnesses (#1595 review: a candidate-only usd cap against an uncapped reference had passed); admitting a malformed currency at the mint's carriable check (the consumer's own reading) fails its attenuation witness."
   },
   {
    "id": "resource-access.common-constraints.max-amount-currency-unassigned-admitted",
@@ -62087,7 +62560,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-amount.test.ts",
-     "name": "the AAT amount argument carries only a well-formed currency code (#1595, D727) > round-trips a well-formed code ISO 4217 does not assign",
+     "name": "an attenuation root carries only a well-formed currency code, never folded (#1595, D727) > carries a well-formed code ISO 4217 does not assign unchanged, and reads it back",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64404,7 +64877,7 @@
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the reverse mapping and the consumer recover the same exact target for every action, whatever the audience",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > every tool carries its entry's resource, so the consumer recovers the same exact target for every action, whatever the audience",
      "level": "unit",
      "surface": "derivation"
     }
@@ -64433,18 +64906,18 @@
    "tests": [
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an entry whose resource_match a tool identifier cannot carry, rather than mapping it as exact",
      "level": "unit",
      "surface": "derivation"
     },
     {
      "file": "src/services/authorization-server/test/attenuation-target-restriction.test.ts",
-     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > refuses an action whose tool identifier would read back as another target, rather than minting it",
+     "name": "the attenuation root mapping preserves each entry's whole target restriction (@spec attenuation#root-mapping, #1276) > leaves out an action whose tool identifier would read back as another target, rather than minting it",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool, and mapAuthorityToTools (the cross-organization wire) refuses, for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
+   "notes": "#1276 (D457), #1756 slice B3. mapAuthorityToCeiling omits the tool for a prefix, unrecognized or null resource_match (read back as exact, the tool would carry a different restriction) and for an action carrying '#' (the identifier would split into another target). Mutations: dropping the resource_match guard and dropping the read-back comparison each fail their witness. Derivation admits prefix entries (#1276), so the resource_match guard is the one refusal of a prefix entry at the root mapping."
   },
   {
    "id": "attenuation.root.substrate-token-format",
@@ -77301,7 +77774,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a token issued for an audience, and its token response, carry no entry whose original approved audience excludes that audience, absent a declared narrowing capability for the entry's type",
-    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, and the response echoes the limited set. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
+    "local": "the reference declares no narrowing capability, so the rule applies to every entry; each mint path limits its computed entries with one function (audienceCarriedEntries) before it builds the token, so the token, its response and its issuance record carry the same set; a save-time check refuses any token that still carries another. Witnessed on every mint path that can meet an entry approved for another audience: the code exchange, the refresh, the device redemption, the Deferred Mission Approval, template dispatch, Expansion completion, the delegated Token Exchange (an Expansion successor holding an entry approved before the requested audience was mapped), the child JWT-bearer redemption (a Child Mission whose entries are approved for different audiences), and the async delegation family (refused before any side effect). Each path's own filter is told apart from the save-time check: without it the token is refused rather than issued narrowed."
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -77367,7 +77840,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Mutation-proved per path as for core.other-types.original-audience-refusal. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
+   "notes": "#1503 finding 7, D733 (owner rulings on #1604). Ruling 1: audience-specific projection; an unrelated entry does not ride. Proved by carrying every computed entry (the two-audience witnesses were refused at the save-time check), and by bypassing each path's filter: the code and refresh hook, the device redemption, the Deferred Mission Approval, template dispatch and Expansion completion mints each failed its witness. Absorbs core.other-types.original-audience-refusal (#1793, D919): its Declared Transformation Capabilities sentence restated this rule, on the same tests, and was removed. Follow-up: the delegated exchange and child redemption filters are each witnessed (removing either turns the narrowed token into the save-time refusal), so the row is tested."
   },
   {
    "id": "core.tokens.multi-audience-refusal",

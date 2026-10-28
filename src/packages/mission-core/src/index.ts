@@ -43,7 +43,9 @@ export {
   type AatReplayState,
   type AatTrustAnchor,
   type AatVerifiedToken,
+  aatChainAudienceProblem,
   verifyAatChain,
+  verifyAatChainLinks,
   verifyAatPresentation,
 } from "./aat-verify.js";
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";
@@ -83,18 +85,10 @@ export {
 export {
   AAT_DETAIL_TYPE,
   AAT_TYP,
-  type AATConstraint,
-  type AATExactConstraint,
-  type AATOneOfConstraint,
-  type AATRangeConstraint,
-  type AATToolArgs,
-  type AATTools,
   aatToolId,
   audNesting,
-  expNesting,
   parHash,
   parseAatToolId,
-  toolsSubset,
 } from "./attenuation-chain.js";
 export {
   AuthorityDependencyConfigError,

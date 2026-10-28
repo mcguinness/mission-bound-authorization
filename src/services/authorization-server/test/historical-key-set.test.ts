@@ -152,6 +152,10 @@ describe("an AS across a Status key compromise (@spec status#historical-key-set,
       expect(typeof payload.iat).toBe("number");
       expect(payload.keys).toHaveLength(1);
       const listed = payload.keys[0] as Record<string, unknown>;
+      // Public material only (#1815): no listed key carries a private member.
+      for (const k of payload.keys) {
+        for (const member of ["d", "p", "q", "dp", "dq", "qi", "oth", "k"]) expect(k).not.toHaveProperty(member);
+      }
       expect({ kid: listed.kid, kty: listed.kty, crv: listed.crv, x: listed.x, y: listed.y }).toEqual({
         kid: original.kid,
         kty: original.kty,
