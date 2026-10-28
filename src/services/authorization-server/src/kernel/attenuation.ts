@@ -23,8 +23,6 @@ import {
   AAT_DEFAULT_PARAMS,
   AAT_DETAIL_TYPE,
   AAT_TYP,
-  type AATToolArgs,
-  type AATTools,
   type AatObject,
   type AttenuationOperations,
   aatConstraintMapAttenuationProblem,
@@ -38,9 +36,7 @@ import {
   audNesting,
   canonicalize,
   credentialEntriesFromMissionAat,
-  isCurrencyCode,
   isSubsetEntry,
-  isValidAmount,
   type JsonValue,
   MISSION_CONSTRAINTS_MEMBER,
   type MissionConstraints,
@@ -267,144 +263,6 @@ function assertCarriable(authority: AttenuatedAuthority): void {
   }
   const entry = { tools: authority.tools, [MISSION_CONSTRAINTS_MEMBER]: authority.missionConstraints };
   credentialEntriesFromMissionAat(authority.tools, readMissionConstraints(entry));
-}
-
-/**
- * @spec attenuation#root-mapping: forward map of the earlier
- * cross-organization wire, which no root mints since #1759 (both roots map
- * through {@link mapAuthorityToCeiling}): Authority Set -> AAT `tools`. Each (resource,
- * action) becomes one tool; the entry's Common Constraints become the tool's
- * argument constraints (`max_amount` -> `amount_<ccy>` as a range, `vendors`
- * -> `vendor` as a `one_of`). TOTAL and FAIL-CLOSED: an unrecognized
- * constraint name is rejected, never silently dropped.
- *
- * @spec attenuation#root-mapping, resource-access#resource-matching (#1276,
- * D457): the mapping preserves each entry's whole target restriction, for
- * every tool and every audience. The root carries no resource member, so
- * the restriction travels in the tool identifier: each tool names the
- * entry's `resource`, and the consumer matches the operation target against
- * that `resource` exactly, whatever the root's `aud`. An `aud` equal to the
- * entry's `resource` is never relied on. Where a tool identifier cannot
- * carry the restriction, the root is refused rather than minted without it
- * ({@link toolIdCarryingTarget}).
- */
-export function mapAuthorityToTools(entries: readonly AuthorityEntry[]): AATTools {
-  const tools: AATTools = {};
-  for (const entry of entries) {
-    const args = argsFromConstraints(entry.constraints);
-    for (const action of entry.actions) {
-      tools[toolIdCarryingTarget(entry, action)] = { ...args };
-    }
-  }
-  return tools;
-}
-
-/**
- * @spec attenuation#root-mapping (#1276, D457): {@link carriedToolId} as a
- * refusal, for the cross-organization mapping: any other `resource_match`,
- * or a `resource` and action whose identifier does not read back as that
- * same pair, refuses the mapping.
- */
-function toolIdCarryingTarget(entry: AuthorityEntry, action: string): string {
-  const match = (entry as { resource_match?: unknown }).resource_match;
-  if (match !== undefined && match !== "exact") {
-    throw new Error(
-      `attenuation root-mapping: resource_match ${JSON.stringify(match)} cannot be carried by a tool identifier; the entry is not mapped`,
-    );
-  }
-  const toolId = carriedToolId(entry, action);
-  if (toolId === undefined) {
-    throw new Error(
-      `attenuation root-mapping: the tool identifier for ${JSON.stringify(action)} at ${JSON.stringify(entry.resource)} does not carry that target; the entry is not mapped`,
-    );
-  }
-  return toolId;
-}
-
-function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToolArgs {
-  const args: AATToolArgs = {};
-  if (!constraints) return args;
-  for (const key of Object.keys(constraints)) {
-    if (key !== "max_amount" && key !== "vendors") {
-      throw new Error(`attenuation root-mapping: unknown constraint '${key}'`);
-    }
-  }
-  if (constraints.max_amount) {
-    const { amount, currency } = constraints.max_amount;
-    // @spec mission#max-amount — reject a malformed cap rather than minting a
-    // root whose `range.max` silently becomes NaN or an absurd magnitude: the
-    // AAT `range` constraint's `max` is a JSON number by wire contract (a
-    // separate concern from the decimal-string comparisons elsewhere on this
-    // path), so the fix here is validating before the one-time numeric
-    // conversion, not replacing it. A malformed max here would otherwise
-    // become an effectively-unbounded ceiling downstream: NaN < NaN and
-    // NaN > NaN are both false, so `constraintSubset`'s child.max > parent.max
-    // check never fires.
-    if (!isValidAmount(amount)) {
-      throw new Error(`attenuation root-mapping: malformed max_amount value ${JSON.stringify(amount)}`);
-    }
-    // @spec resource-access#initial-common-constraints (#1595, D727): the
-    // argument name carries the code in lower case, so only a well-formed
-    // code is named.
-    if (!isCurrencyCode(currency)) {
-      throw new Error(`attenuation root-mapping: malformed max_amount currency ${JSON.stringify(currency)}`);
-    }
-    args[`amount_${currency.toLowerCase()}`] = {
-      constraint_type: "range",
-      max: Number.parseFloat(amount),
-    };
-  }
-  if (constraints.vendors) {
-    args.vendor = { constraint_type: "one_of", values: [...constraints.vendors] };
-  }
-  return args;
-}
-
-/**
- * @spec attenuation#root-mapping: reverse map of the earlier
- * cross-organization wire, which the projection exchange no longer reads
- * since #1759 (it projects each leaf tool's `mission_constraints`): AAT
- * `tools` -> Authority Set, one single-action entry per tool. The
- * currency is synthesized from the argument name (`amount_usd` -> `USD`) so
- * that {@link isSubsetEntry}'s currency hard-fail is meaningful when the
- * reverse-mapped entry is checked against the Mission's (USD) entry. TOTAL
- * and FAIL-CLOSED: an unrecognized argument name is rejected, never dropped.
- */
-export function mapToolsToAuthority(tools: AATTools): AuthorityEntry[] {
-  const entries: AuthorityEntry[] = [];
-  for (const [toolId, args] of Object.entries(tools)) {
-    const { resource, action } = parseAatToolId(toolId);
-    const entry: AuthorityEntry = { type: "mission_resource_access", resource, actions: [action] };
-    const constraints = constraintsFromArgs(args);
-    if (constraints) entry.constraints = constraints;
-    entries.push(entry);
-  }
-  return entries;
-}
-
-function constraintsFromArgs(args: AATToolArgs): AuthorityEntry["constraints"] | undefined {
-  const constraints: NonNullable<AuthorityEntry["constraints"]> = {};
-  for (const [name, c] of Object.entries(args)) {
-    if (name === "vendor") {
-      if (c.constraint_type !== "one_of") throw new Error("attenuation: 'vendor' must be a one_of constraint");
-      constraints.vendors = [...c.values];
-    } else if (name.startsWith("amount_")) {
-      if (c.constraint_type !== "range" || c.max === undefined) {
-        throw new Error("attenuation: amount_* must be a range constraint carrying max");
-      }
-      // The suffix is exactly three lower-case ASCII letters, mapped to the
-      // upper-case code; any other suffix is refused, never folded (#1595, D727).
-      const suffix = name.slice("amount_".length);
-      const currency = /^[a-z]{3}$/.test(suffix) ? suffix.toUpperCase() : "";
-      if (!isCurrencyCode(currency)) {
-        throw new Error(`attenuation: amount_* argument ${JSON.stringify(name)} does not name a currency code`);
-      }
-      constraints.max_amount = { amount: String(c.max), currency };
-    } else {
-      throw new Error(`attenuation root-mapping: unknown tool argument '${name}'`);
-    }
-  }
-  return Object.keys(constraints).length > 0 ? constraints : undefined;
 }
 
 /**
