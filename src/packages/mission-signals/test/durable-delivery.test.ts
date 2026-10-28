@@ -26,6 +26,7 @@ import {
   MissionSignalEmitter,
   MissionSignalReceiver,
   SET_TYP,
+  signLifecycleEvent,
 } from "../src/index.js";
 
 const ISS = "https://as.test";
@@ -582,5 +583,84 @@ describe("durable per-consumer delivery (@spec signals#delivery, #641)", () => {
     });
     expect(receiver.retainedSet("msn_legacy_cascaded")).toBe(signedLegacy);
     emitter.close();
+  });
+});
+
+/**
+ * @spec control-plane#fresh-observation (#1750, D993): a lifecycle-change SET
+ * records a committed transition. Its observation point is the event's
+ * `committed_at`; its `iat` is RFC 8417 issuance time, so a job journaled at
+ * commit and first signed hours later (a crash before its first dispatch)
+ * keeps the commit's own `committed_at` and claims nothing newer. A receiver
+ * orders by `version`, so the late SET's newer `iat` regresses nothing.
+ */
+describe("a Signals SET is a transition record (@spec control-plane#fresh-observation, #1750, D993)", () => {
+  it("signs a job journaled before a crash, hours later, with its commit's own committed_at, and a receiver orders it by version: a SET for an older version with a newer iat is stale", async () => {
+    const { privateKey, jwks } = await statusKeyPair();
+    const sign = (commit: LifecycleCommit) =>
+      signLifecycleEvent(commit, { audience: AUD, key: privateKey, kid: "as-status" });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const receiver = makeReceiver(jwks);
+      // Version 1, signed and applied as it committed, an hour before T0.
+      vi.setSystemTime(T0 - 3_600_000);
+      const activated = commitFixture({
+        state: "active",
+        prior_state: undefined,
+        version: 1,
+        committed_at: "2026-08-02T11:00:00Z",
+        event_id: "set_active_v1",
+      });
+      expect((await receiver.verifyAndApply(await sign(activated))).status).toBe("applied");
+
+      // The suspension at version 2 committed at T0 and was journaled then; the
+      // process stopped before its first dispatch, so it is signed three hours on.
+      const lateSigning = T0 + 3 * 3_600_000;
+      vi.setSystemTime(lateSigning);
+      const emitter = new MissionSignalEmitter({
+        key: privateKey,
+        kid: "as-status",
+        consumers: [{ audience: AUD }],
+      });
+      const delivered: string[] = [];
+      const outcomes: string[] = [];
+      emitter.onDeliver(AUD, async (set) => {
+        delivered.push(set);
+        outcomes.push((await receiver.verifyAndApply(set)).status);
+      });
+      const suspended = commitFixture({
+        state: "suspended",
+        prior_state: "active",
+        version: 2,
+        committed_at: "2026-08-02T12:00:00Z",
+        event_id: "set_suspended_v2",
+      });
+      (emitter as unknown as { db: Database }).db
+        .prepare("INSERT INTO signal_outbox (event_id, audience, commit_json, set_jwt) VALUES (?, ?, ?, NULL)")
+        .run(JSON.stringify([ISS, suspended.event_id]), AUD, JSON.stringify(suspended));
+      await emitter.drain();
+      expect(emitter.pending()).toBe(0);
+      expect(delivered).toHaveLength(1);
+      expect(outcomes).toEqual(["applied"]);
+
+      const late = decodeJwt(delivered[0] as string);
+      const event = (late.events as Record<string, Record<string, unknown>>)[LIFECYCLE_CHANGE_EVENT_URI];
+      // Issued late: `iat` is the signing instant, not the commit.
+      expect(late.iat).toBe(lateSigning / 1000);
+      // The transition keeps its own observation point and version.
+      expect(event).toMatchObject({ state: "suspended", version: 2, committed_at: "2026-08-02T12:00:00Z" });
+      expect(Date.parse(event?.committed_at as string)).toBeLessThan((late.iat as number) * 1000);
+      expect(receiver.viewState(suspended.id)).toMatchObject({ state: "suspended", version: 2 });
+
+      // Ordered by version, never by `iat`: version 1 signed later still is stale.
+      vi.setSystemTime(lateSigning + 3_600_000);
+      const reissued = await sign({ ...activated, event_id: "set_active_v1_reissued" });
+      expect((decodeJwt(reissued).iat as number) > (late.iat as number)).toBe(true);
+      expect((await receiver.verifyAndApply(reissued)).status).toBe("stale");
+      expect(receiver.viewState(suspended.id)).toMatchObject({ state: "suspended", version: 2 });
+      emitter.close();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
