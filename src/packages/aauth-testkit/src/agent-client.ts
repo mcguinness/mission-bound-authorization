@@ -337,11 +337,14 @@ export class AgentClient {
    * Propose a mission and, on approval, operate under it. The agent
    * verifies `s256` against the bytes `mission` decodes to before any use,
    * and keeps those bytes exactly (the binding's Native Reference rule; a
-   * SHOULD in AAuth).
+   * SHOULD in AAuth), and requires the blob's `agent` to be its own
+   * identifier (the binding's approval procedure). A failed check changes
+   * neither the mission nor the token cache.
    *
    * @spec aauth#section-8.1
    * @spec aauth#section-8.2
    * @spec mission-aauth#reference
+   * @spec mission-aauth#approval
    */
   async proposeMission(proposal: Record<string, unknown>): Promise<MissionApproval> {
     const { mission_endpoint: endpoint } = await this.personServer();
@@ -362,6 +365,23 @@ export class AgentClient {
         "mission_digest_mismatch",
         "s256 is not the digest of the mission bytes",
       );
+    }
+    // The binding's approval procedure, step 4: the blob names this agent.
+    // Parsed only to read `agent`; the bytes kept are the decoded ones.
+    let approved: { agent?: unknown } | undefined;
+    try {
+      const parsed: unknown = JSON.parse(blob.toString("utf8"));
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        approved = parsed as { agent?: unknown };
+      }
+    } catch {
+      approved = undefined;
+    }
+    if (approved === undefined) {
+      throw new AgentError("mission_invalid", "the mission blob is not a JSON object");
+    }
+    if (approved.agent !== this.id) {
+      throw new AgentError("mission_invalid", "the mission blob names another agent");
     }
     this.mission = { s256, blob };
     const personTokens: Record<string, string> = {};

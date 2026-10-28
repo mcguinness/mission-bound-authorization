@@ -332,6 +332,35 @@ describe("PS metadata and mission approval (@spec aauth#section-11.2, aauth#sect
     expect(w.agent.personToken(RESOURCE)).toBe("pt-from-approval");
   });
 
+  it("refuses an intact approval whose blob names another agent, before adopting the mission or its person tokens (@spec mission-aauth#approval)", async () => {
+    w = await world();
+    const blob = Buffer.from(
+      JSON.stringify({
+        agent: "aauth:planner@ap.test",
+        description: "Summarize the quarterly report",
+        approved_at: new Date(w.clock.now()).toISOString(),
+        expires_at: new Date(w.clock.now() + 3_600_000).toISOString(),
+      }),
+    );
+    approve(blob);
+    const err = await refusal(
+      w.agent.proposeMission({ description: "Summarize the quarterly report" }),
+    );
+    expect(err.code).toBe("mission_invalid");
+    expect(err.detail).toBe("the mission blob names another agent");
+    expect(w.agent.mission).toBeUndefined();
+    expect(w.agent.personToken(RESOURCE)).toBeUndefined();
+  });
+
+  it("refuses an approval whose blob is not a JSON object, adopting nothing (@spec mission-aauth#approval)", async () => {
+    w = await world();
+    approve(Buffer.from("not json"));
+    const err = await refusal(w.agent.proposeMission({ description: "# Q" }));
+    expect(err.code).toBe("mission_invalid");
+    expect(w.agent.mission).toBeUndefined();
+    expect(w.agent.personToken(RESOURCE)).toBeUndefined();
+  });
+
   it("refuses an approval whose s256 is not the digest of the mission bytes", async () => {
     w = await world();
     approve(Buffer.from('{"agent":"a"}'), { s256: M });
