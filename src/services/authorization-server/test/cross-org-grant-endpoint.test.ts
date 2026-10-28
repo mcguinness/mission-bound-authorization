@@ -102,35 +102,60 @@ const DISJOINT_CEILING: AuthorityEntry[] = [
 ];
 
 /**
- * @spec resource-access#resource-contract: the destination resource's
- * contract, v1 superseded within retention and v2 current; an entry carries
- * one only when its proposal does.
+ * @spec resource-access#resource-contract: the resource's contracts as each
+ * side declares them; an entry carries one only when its proposal does.
+ * CONTRACT is declared alike on both sides, v1 superseded within retention
+ * and v2 current. The others are current at the origin, so a Mission can
+ * carry them, and stand otherwise at the destination (D941): RETIRED
+ * retired, PAST superseded past its retention, WITHIN superseded within it,
+ * and UNDECLARED not declared there at all.
  */
-const CONTRACT = "https://api.org3.test/contracts/payments";
-const contractDoc = (version: string) => ({
-  id: CONTRACT,
+const CONTRACT_BASE = "https://api.org3.test/contracts";
+const CONTRACT = `${CONTRACT_BASE}/payments`;
+const RETIRED = `${CONTRACT_BASE}/retired`;
+const PAST = `${CONTRACT_BASE}/past-retention`;
+const WITHIN = `${CONTRACT_BASE}/within-retention`;
+const UNDECLARED = `${CONTRACT_BASE}/undeclared`;
+const contractDoc = (version: string, id = CONTRACT) => ({
+  id,
   version,
   operation_profile: `profile-${version}`,
   operations: { op_0: { action: READ }, op_1: { action: SCHEDULE } },
 });
-const contractRef = (version: string): ResourceContractRef => ({
-  id: CONTRACT,
+const contractRef = (version: string, id = CONTRACT): ResourceContractRef => ({
+  id,
   version,
-  digest: resourceContractDigest(contractDoc(version)),
+  digest: resourceContractDigest(contractDoc(version, id)),
 });
 const V1 = contractRef("v1");
 const V2 = contractRef("v2");
-const CONTRACTS = new ResourceContractDeclarations([
-  {
-    resource: RESOURCE,
-    resource_match: "prefix",
-    id: CONTRACT,
-    requires_reference: [],
-    versions: [
-      { version: "v1", state: "superseded", retained_until: "2099-01-01T00:00:00Z", digest: V1.digest, document: contractDoc("v1") },
-      { version: "v2", state: "current", digest: V2.digest, document: contractDoc("v2") },
-    ],
-  },
+const declaredVersion = (id: string, version: string, state: string, retainedUntil?: string) => ({
+  version,
+  state,
+  ...(retainedUntil ? { retained_until: retainedUntil } : {}),
+  digest: contractRef(version, id).digest,
+  document: contractDoc(version, id),
+});
+const declaration = (id: string, versions: unknown[]) => ({
+  resource: RESOURCE,
+  resource_match: "prefix",
+  id,
+  requires_reference: [],
+  versions,
+});
+const PAYMENTS_DECLARATION = declaration(CONTRACT, [
+  declaredVersion(CONTRACT, "v1", "superseded", "2099-01-01T00:00:00Z"),
+  declaredVersion(CONTRACT, "v2", "current"),
+]);
+const ORIGIN_CONTRACTS = new ResourceContractDeclarations([
+  PAYMENTS_DECLARATION,
+  ...[RETIRED, PAST, WITHIN, UNDECLARED].map((id) => declaration(id, [declaredVersion(id, "v1", "current")])),
+]);
+const DESTINATION_CONTRACTS = new ResourceContractDeclarations([
+  PAYMENTS_DECLARATION,
+  declaration(RETIRED, [declaredVersion(RETIRED, "v1", "retired"), declaredVersion(RETIRED, "v2", "current")]),
+  declaration(PAST, [declaredVersion(PAST, "v1", "superseded", "2020-01-01T00:00:00Z"), declaredVersion(PAST, "v2", "current")]),
+  declaration(WITHIN, [declaredVersion(WITHIN, "v1", "superseded", "2099-01-01T00:00:00Z"), declaredVersion(WITHIN, "v2", "current")]),
 ]);
 
 async function pub(k: Keys): Promise<JWK> {
@@ -299,7 +324,7 @@ beforeAll(async () => {
     authoritySourceCatalog: testAuthoritySourceCatalog(originPolicy.ceiling, ["agent-a"], ["bob"]),
     statusKey: originKeys.privateKey,
     statusKid: "as-status",
-    resourceContracts: CONTRACTS,
+    resourceContracts: ORIGIN_CONTRACTS,
   });
   evidence = [];
   crossOrgOptions = {
@@ -333,6 +358,9 @@ beforeAll(async () => {
     issuer: ISSUER,
     crossOrg: crossOrgOptions,
     scopeProjection: SCOPE_MAPPING as never,
+    // @spec cross-org-delegation#projection (D941): the destination's own
+    // declarations, which a projected resource_contract must resolve under.
+    resourceContracts: DESTINATION_CONTRACTS,
   });
   asServer = as.provider.listen(PORT);
   clientKey = (await importJWK(as.agentClientJwk as never, "ES256")) as CryptoKey;
@@ -538,6 +566,31 @@ describe("both layers' restrictions in the local token (@spec cross-org-delegati
     expect(res.status).toBe(400);
     expect(body.error).toBe("invalid_target");
     expect(evidence.length).toBe(before);
+  });
+
+  it("refuses a leaf resource_contract the destination does not declare, has retired, or holds superseded past retention (invalid_target), recording no evidence", async () => {
+    for (const [label, id] of [
+      ["undeclared", UNDECLARED],
+      ["retired", RETIRED],
+      ["superseded past retention", PAST],
+    ] as const) {
+      const { chain, leafKeys } = await buildChain({ resourceContract: contractRef("v1", id) });
+      const before = evidence.length;
+      const res = await exchange({ subjectToken: present(chain), leafKeys });
+      const body = (await res.json()) as { error: string };
+      expect(res.status, label).toBe(400);
+      expect(body.error, label).toBe("invalid_target");
+      expect(evidence.length, label).toBe(before);
+    }
+  });
+
+  it("projects a leaf resource_contract the destination holds superseded within retention", async () => {
+    const ref = contractRef("v1", WITHIN);
+    const { chain, leafKeys } = await buildChain({ resourceContract: ref });
+    const res = await exchange({ subjectToken: present(chain), leafKeys });
+    const body = (await res.json()) as { access_token: string };
+    expect(res.status).toBe(200);
+    for (const d of localDetails(body.access_token)) expect(d.resource_contract).toEqual(ref);
   });
 
   it("refuses a leaf constraint the destination's consumer does not establish (invalid_target)", async () => {
