@@ -39,6 +39,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 /** @spec runtime#idempotency (#917): one fresh `idempotency_key` per intended execution. */
 const idem = (): string => `idem_${randomUUID()}`;
@@ -77,7 +78,7 @@ function view(actions: string[], overrides: Partial<MissionView["authority_set"]
     version: 1,
     authority_hash: "sha-256:testhash",
     authority_set: actions.length
-      ? [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, ...overrides }]
+      ? [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions, ...overrides })]
       : [],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
@@ -235,6 +236,10 @@ describe("an action-bound approval is reverified against the concrete parameters
       id: "apr_1",
       approved_at: new Date().toISOString(),
       parameter_digest: parameterDigest(effective),
+      // Given under the contract the entry pins, as a fresh approval records it (#249).
+      resource: {
+        properties: { resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:payment.schedule"] }) },
+      },
     };
 
     // The approval matches the CURRENT record: the gate is satisfied.

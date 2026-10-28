@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist" },
   "include": ["src"],
-  "references": [{ "path": "../../packages/aauth-wire" }]
+  "references": [{ "path": "../../packages/aauth-wire" }, { "path": "../../packages/store" }]
 }

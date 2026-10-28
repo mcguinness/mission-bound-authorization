@@ -3,12 +3,11 @@
  * @spec attenuation#attenuation
  *
  * Shared helpers for Mission-bound Attenuating Agent Token (AAT) chains: the
- * tool-identifier encoding, `par_hash`, and the per-hop `aud` and `exp`
- * nesting rules. A Mission-bound chain is verified by the -02 substrate
+ * tool-identifier encoding, `par_hash`, and the per-hop `aud` nesting rule.
+ * A Mission-bound chain is verified by the -02 substrate
  * verifier (`aat-verify.ts`) with the Mission layer of `mission-aat.ts` on
  * top, and so is the cross-organization chain (`kernel/cross-org-chain.ts`,
- * #1759). {@link toolsSubset} is the earlier cross-organization subset rule,
- * which no verifier uses.
+ * #1759).
  */
 
 import { createHash } from "node:crypto";
@@ -17,27 +16,6 @@ import { createHash } from "node:crypto";
 export const AAT_TYP = "aat+jwt";
 /** RFC 9396 authorization detail type carrying the AAT `tools` capability map. */
 export const AAT_DETAIL_TYPE = "attenuating_agent_token";
-
-export interface AATRangeConstraint {
-  constraint_type: "range";
-  min?: number;
-  max?: number;
-}
-/** @spec AAT -02 Section 3.4: `one_of`. No revision of the substrate defines `enum` (#1756). */
-export interface AATOneOfConstraint {
-  constraint_type: "one_of";
-  values: string[];
-}
-export interface AATExactConstraint {
-  constraint_type: "exact";
-  value: string | number;
-}
-export type AATConstraint = AATRangeConstraint | AATOneOfConstraint | AATExactConstraint;
-
-/** A tool's argument constraints, keyed by argument name. */
-export type AATToolArgs = Record<string, AATConstraint>;
-/** The AAT capability map: tool identifier -> argument constraints. */
-export type AATTools = Record<string, AATToolArgs>;
 
 /**
  * @spec attenuation#root-mapping — the tool-id encoding shared by the kernel
@@ -57,46 +35,6 @@ export function parseAatToolId(toolId: string): { resource: string; action: stri
   return { resource: toolId.slice(0, i), action: toolId.slice(i + 1) };
 }
 
-/** One AAT constraint is a (narrowing) subset of another of the same kind. */
-function constraintSubset(child: AATConstraint, parent: AATConstraint): boolean {
-  if (child.constraint_type !== parent.constraint_type) return false;
-  if (parent.constraint_type === "range" && child.constraint_type === "range") {
-    if (parent.max !== undefined && (child.max === undefined || child.max > parent.max))
-      return false;
-    if (parent.min !== undefined && (child.min === undefined || child.min < parent.min))
-      return false;
-    return true;
-  }
-  if (parent.constraint_type === "one_of" && child.constraint_type === "one_of") {
-    return child.values.every((v) => parent.values.includes(v));
-  }
-  if (parent.constraint_type === "exact" && child.constraint_type === "exact") {
-    return child.value === parent.value;
-  }
-  return false; // fail-closed: unrecognized constraint kind
-}
-
-/**
- * @spec cross-org-delegation#derivation: capability monotonicity as the
- * earlier cross-organization wire checked it; since #1759 the chain is
- * verified under AAT -02 Section 4.5 (`aat-constraints.ts`) instead. `child`
- * is a subset of `parent` when every child tool exists in the parent, every
- * constraint the parent placed on that tool is present on the child and at
- * least as tight, and the child adds no tool the parent lacks.
- */
-export function toolsSubset(child: AATTools, parent: AATTools): boolean {
-  for (const [toolId, childArgs] of Object.entries(child)) {
-    const parentArgs = parent[toolId];
-    if (parentArgs === undefined) return false; // widen: tool not in parent
-    for (const [arg, parentC] of Object.entries(parentArgs)) {
-      const childC = childArgs[arg];
-      if (childC === undefined) return false; // dropped a parent constraint => broader
-      if (!constraintSubset(childC, parentC)) return false;
-    }
-  }
-  return true;
-}
-
 function audSet(aud: string | string[]): Set<string> {
   return new Set(Array.isArray(aud) ? aud : [aud]);
 }
@@ -105,11 +43,6 @@ function audSet(aud: string | string[]): Set<string> {
 export function audNesting(childAud: string | string[], parentAud: string | string[]): boolean {
   const p = audSet(parentAud);
   return [...audSet(childAud)].every((a) => p.has(a));
-}
-
-/** @spec attenuation#attenuation — child `exp` does not exceed parent `exp`. */
-export function expNesting(childExp: number, parentExp: number): boolean {
-  return childExp <= parentExp;
 }
 
 /**

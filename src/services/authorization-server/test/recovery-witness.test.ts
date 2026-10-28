@@ -129,8 +129,14 @@ describe("recovery witness: admission at boot (@spec control-plane#rollback, #25
     expect(record).toMatchObject({ generation: 1, committed: 0, intent: null });
     expect(readRecoveryWitness(p.witness)).toEqual(record);
     const kernel = open(p);
-    expect(markerSequence(kernel)).toBe(0);
+    // The first open records the kernel's issuer (#1748) in one guarded
+    // transaction: the marker and the witness advance together, once.
+    expect(markerSequence(kernel)).toBe(1);
+    expect(readRecoveryWitness(p.witness)?.committed).toBe(1);
     kernel.close();
+    const again = open(p);
+    expect(markerSequence(again)).toBe(1);
+    again.close();
   });
 
   it("a normal restart on the same files opens, with the witness and the marker advanced together by every write transaction", () => {

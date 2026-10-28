@@ -17,9 +17,10 @@ import { evaluate as evaluateRequest, type EvaluateOptions, type EvaluationReque
 import type { Fga } from "../src/fga.js";
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { freshKey, openTestClaims } from "./claim-fixture.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const evaluate = (req: EvaluationRequest, opts: Parameters<typeof evaluateRequest>[1]) => evaluateRequest(withCredential(req), opts);
 
@@ -34,7 +35,7 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   state: "active",
   version: 2,
   authority_hash: "sha-256:own-read",
-  authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:payment.execute"] }],
+  authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:payment.execute"] })],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
   ...over,
@@ -56,7 +57,7 @@ const options = (over: Partial<EvaluateOptions> = {}): EvaluateOptions => ({
 
 /** A consequential write (300 s window and lifetime), carrying no PEP observation. */
 const request = (o: { action?: string; join?: boolean } = {}): EvaluationRequest =>
-  ({
+  withCurrentContractReference({
     subject: { id: "alice", properties: { iss: ISSUER } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: RESOURCE, operation_target: RESOURCE, vendor_id: "acme" } },
     action: { name: o.action ?? "payments:payment.execute", properties: { idempotency_key: freshKey() } },
@@ -66,7 +67,7 @@ const request = (o: { action?: string; join?: boolean } = {}): EvaluationRequest
       action_class: "consequential_write",
       ...(o.join ? { mission_join: {} } : {}),
     },
-  }) as EvaluationRequest;
+  } as EvaluationRequest);
 
 const validUntil = (context: Record<string, unknown>) => Date.parse((context.conditions as { valid_until: string }).valid_until);
 
@@ -114,7 +115,7 @@ describe("a view without Join Disclosure never joins (@spec authority-server#joi
   it("denies mission_binding_failed when the view carries no client_id, even where a delegate policy and the entry would admit the client as a delegate", async () => {
     const delegable = view({
       authority_set: [
-        { type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:payment.execute"], join_delegation: { max_depth: 1, allowed_delegates: ["ap-agent"] } },
+        pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: ["payments:payment.execute"], join_delegation: { max_depth: 1, allowed_delegates: ["ap-agent"] } }),
       ],
     });
     const { client_id: _c, ...noClient } = delegable;

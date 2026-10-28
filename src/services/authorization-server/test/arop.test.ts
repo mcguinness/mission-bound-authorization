@@ -16,6 +16,7 @@ import {
   DeferralStore,
   MISSION_TXN_TOKEN_TYP,
   MissionKernel,
+  type MissionRecord,
   mintTransactionToken,
   TXN_CHALLENGE_TYP,
   validateChallenge,
@@ -122,19 +123,32 @@ beforeAll(async () => {
   });
 });
 
+/**
+ * @spec resource-access#resource-contract (#249, D865): `entry` as a client
+ * restates it from its Mission: carrying the reference of the Mission entry
+ * that covers it, where that entry carries one.
+ */
+function restating(mission: MissionRecord, entry: AuthorityEntry): AuthorityEntry {
+  const ref = mission.authority_set.find(
+    (e) => e.resource === entry.resource && entry.actions.every((a) => e.actions.includes(a)),
+  )?.resource_contract;
+  return ref === undefined ? entry : { ...entry, resource_contract: ref };
+}
+
 describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never expands)", () => {
   it("deferred request for authority already in the Mission -> approve -> token carries the active Mission unchanged", () => {
     const mission = approveMission(1, ["acme"]); // active Mission with acme authority
     const deferrals = new DeferralStore(kernel);
 
     // Agent's held token is narrow; it defers for a subset of the Mission's authority.
+    // Restating the Mission's authority, with any contract reference it carries (#249, D865).
     const requested: AuthorityEntry[] = [
-      {
+      restating(mission, {
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:payment.execute"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
+      }),
     ];
     const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT });
     expect(pending.error).toBe("authorization_pending");
@@ -179,13 +193,14 @@ describe("M7 scenario 6: AROP over DTR (subset-of-Mission token, D42 -- never ex
   it("an approver denial redeems as access_denied (distinct from an invalid_grant)", () => {
     const mission = approveMission(8, ["acme"]);
     const deferrals = new DeferralStore(kernel);
+    // Restating the Mission's authority, with any contract reference it carries (#249, D865).
     const requested: AuthorityEntry[] = [
-      {
+      restating(mission, {
         type: "mission_resource_access",
         resource: RESOURCE,
         actions: ["payments:payment.execute"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-      },
+      }),
     ];
     const pending = deferrals.open({ missionId: mission.id, requested, clientId: "ap-agent", jkt: AGENT_JKT });
     deferrals.deny(pending.deferral_code);

@@ -11,7 +11,7 @@
  */
 import { aatJwkThumbprintUri, aatToolId, aatUuidV7, chainDigest, parHash, parseChainPresentation } from "@mission/core";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT, type JWK } from "jose";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   deriveCrossOrgRoot,
   mintCrossOrgChild,
@@ -369,6 +369,82 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
     ).rejects.toThrow(/every accepted attestation source/);
   });
 
+  // @spec cross-org-delegation#actor-evidence (#1820): each clause of the
+  // credential validation refuses on its own: the type, the issuer's trust,
+  // the credential's validity (signature and lifetime), and its subject.
+  it("refuses a named hop whose credential names another subject", async () => {
+    const { chain } = await buildChain();
+    const otherSubject = { hop: 1, type: WORKLOAD_ATTESTATION_TYPE, credential: await attest({ iss: "https://id.org2.test", sub: "wl-agent-z" }, agentB) };
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [otherSubject]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/subject differs from the hop act/);
+  });
+
+  it("refuses an expired actor credential", async () => {
+    const { chain } = await buildChain();
+    const expired = await new SignJWT({ subject: { iss: "https://id.org2.test", sub: "wl-agent-b" }, cnf: { jwk: await pub(agentB) } })
+      .setProtectedHeader({ alg: "ES256", typ: WORKLOAD_ATTESTATION_TYPE })
+      .setIssuer(ATTEST_ISS)
+      .setIssuedAt(nowS - 1200)
+      .setExpirationTime(nowS - 600)
+      .sign(attestKeys.privateKey);
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [{ hop: 1, type: WORKLOAD_ATTESTATION_TYPE, credential: expired }]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/every accepted attestation source/);
+  });
+
+  it("refuses an actor credential whose signature does not verify", async () => {
+    const { chain } = await buildChain();
+    const [h, p, sig] = (await attest({ iss: "https://id.org2.test", sub: "wl-agent-b" }, agentB)).split(".");
+    // Change the signature's first character: the header and claims are
+    // untouched, so only the signature check can refuse it.
+    const forged = `${h}.${p}.${sig?.startsWith("A") ? "B" : "A"}${sig?.slice(1)}`;
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [{ hop: 1, type: WORKLOAD_ATTESTATION_TYPE, credential: forged }]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/every accepted attestation source/);
+  });
+
+  it("refuses a credential naming an issuer that is not an accepted attestation source", async () => {
+    const { chain } = await buildChain();
+    // Signed by an accepted source's key, but naming another issuer.
+    const misnamed = await new SignJWT({ subject: { iss: "https://id.org2.test", sub: "wl-agent-b" }, cnf: { jwk: await pub(agentB) } })
+      .setProtectedHeader({ alg: "ES256", typ: WORKLOAD_ATTESTATION_TYPE })
+      .setIssuer("https://attest.rogue.test")
+      .setIssuedAt(nowS)
+      .setExpirationTime(nowS + 600)
+      .sign(attestKeys.privateKey);
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [{ hop: 1, type: WORKLOAD_ATTESTATION_TYPE, credential: misnamed }]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/every accepted attestation source/);
+  });
+
+  it("refuses an actor credential of an unknown type", async () => {
+    const { chain } = await buildChain();
+    const credential = await attest({ iss: "https://id.org2.test", sub: "wl-agent-b" }, agentB);
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [{ hop: 1, type: "x-unknown+jwt", credential }]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/unknown actor-credential type/);
+  });
+
+  it("refuses a listed actor-credential type the verifier does not implement", async () => {
+    const { chain } = await buildChain();
+    const credential = await attest({ iss: "https://id.org2.test", sub: "wl-agent-b" }, agentB);
+    const listing = { ...fed, actorCredentialTypes: [WORKLOAD_ATTESTATION_TYPE, "x-other+jwt"] };
+    await expect(
+      verifyCrossOrgChain({ federation: listing, presentation: present(chain, [{ hop: 1, type: "x-other+jwt", credential }]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/unsupported actor-credential type/);
+  });
+
+  // @spec cross-org-delegation#actor-identity (#1821): a credential aligned
+  // to a hop that names no actor is a misaligned credential.
+  it("refuses an actor credential aligned to a key-only hop", async () => {
+    const { chain, creds } = await buildChain();
+    const onKeyOnly = { hop: 2, type: WORKLOAD_ATTESTATION_TYPE, credential: await attest({ iss: "https://id.org3.test", sub: "wl-worker-c" }, workerC) };
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present(chain, [...creds, onKeyOnly]), nowS, stateSource: activeState }),
+    ).rejects.toThrow(/aligned to a key-only hop/);
+  });
+
   it("refuses a chain whose depth exceeds del_max_depth", async () => {
     // A non-delegating root (del_max_depth 0) then one child.
     const derived = await rootFor({ delMaxDepth: 0 });
@@ -422,5 +498,51 @@ describe("negative matrix (@spec cross-org-delegation#conformance)", () => {
     await expect(
       verifyCrossOrgChain({ federation: fed, presentation: present(chain, creds), nowS, stateSource: () => ({ state: "terminated", observedAtS: nowS }) }),
     ).rejects.toThrow(/not active/);
+  });
+
+  // @spec cross-org-delegation#verification step 9 (#1820): an expired
+  // Mission is `terminated` with reason `expired`, never `active`. The
+  // kernel's own expiry produces the record: its clock runs past the
+  // Mission's expires_at only for the state source. The verifier's clock
+  // stays inside the chain's lifetime, because the root's exp is capped at
+  // the Mission's expiry and would otherwise refuse first (AAT -02 step 3e).
+  it("refuses an expired Mission", async () => {
+    const expiring = kernel.approve({
+      intent: validateMissionIntent(
+        JSON.stringify({ goal: "Cross-org reconcile, expiring", target_resources: [RESOURCE], expires_at: "2027-01-01T00:00:00Z" }),
+      ),
+      proposedAuthority: [
+        {
+          type: "mission_resource_access",
+          resource: RESOURCE,
+          actions: ["payments:invoice.read", "payments:payment.schedule"],
+          constraints: { max_amount: { amount: "500.00", currency: "USD" } },
+          delegation: { max_depth: 3 },
+        },
+      ] as never,
+      subject: { iss: "https://id.org1.test", sub: "p-alice" },
+      approver: { iss: "https://id.org1.test", sub: "bob" },
+      clientId: "agent-a",
+      approvalEventId: "apev-xorg-expiring",
+    });
+    const derived = await deriveCrossOrgRoot(kernel, asKeys.privateKey, "as-token", {
+      missionId: expiring.id, aud: RESOURCE, clientId: "agent-a", cnfJwk: await pub(agentA), operations: TEST_OPERATIONS,
+      actor: { iss: "https://id.org1.test", sub: "wl-agent-a" }, mappingVersion: "map-1",
+    });
+    const expiredState = (id: string) => {
+      const clock = vi
+        .spyOn(kernel as unknown as { now: () => Date }, "now")
+        .mockImplementation(() => new Date("2027-01-02T00:00:00Z"));
+      try {
+        const record = kernel.applyExpiry(kernel.get(id) as NonNullable<ReturnType<typeof kernel.get>>);
+        return { state: record.state, observedAtS: nowS };
+      } finally {
+        clock.mockRestore();
+      }
+    };
+    await expect(
+      verifyCrossOrgChain({ federation: fed, presentation: present([derived.root]), nowS, stateSource: expiredState }),
+    ).rejects.toThrow(/not active \(terminated\)/);
+    expect(kernel.get(expiring.id)?.termination?.reason).toBe("expired");
   });
 });

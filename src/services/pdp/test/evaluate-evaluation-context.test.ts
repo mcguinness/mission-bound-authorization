@@ -16,7 +16,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
 import { EvaluationContextBindingDeclarations } from "@mission/core";
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import { evaluateRemote } from "../src/client.js";
 import { createEphemeralDecisionPoint } from "../src/decision-point.js";
 import {
@@ -38,7 +38,7 @@ import { relationForAction, stalenessBound } from "../src/policy.js";
 import { createPdpRefusalRecorder, type PdpRefusalRecord } from "../src/refusal-record.js";
 import { type EvidenceKeyResolver, REFUSAL_RECORD_MEDIA_TYPE, verifyEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { createPdpHttpServer, type PdpHttpServerHandle } from "../src/server.js";
-import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "../src/test-support.js";
+import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
 
 const AUDIENCE = "http://localhost:4403/mcp";
@@ -73,14 +73,14 @@ const view = (actions: string[] = [PAY, READ]): MissionView => ({
   state: "active",
   version: 1,
   authority_hash: "sha-256:h773",
-  authority_set: [{ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions }],
+  authority_set: [pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: AUDIENCE, actions })],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
 });
 
 /** A request for `action` at `phase`, with the given context inputs (`undefined` omits a member). */
 const request = (inputs: { digest?: unknown; binding?: unknown }, action = PAY, phase: string | undefined = "commit"): EvaluationRequest =>
-  withCredential({
+  withCredential(withCurrentContractReference({
     subject: { id: "alice", properties: { iss: "https://as.test" } },
     resource: { type: "invoice", id: "inv-1", properties: { audience: AUDIENCE, operation_target: AUDIENCE, vendor_id: "acme" } },
     action: { name: action },
@@ -92,7 +92,7 @@ const request = (inputs: { digest?: unknown; binding?: unknown }, action = PAY, 
       ...(inputs.digest !== undefined ? { evaluation_context_digest: inputs.digest } : {}),
       ...(inputs.binding !== undefined ? { evaluation_context_binding: inputs.binding } : {}),
     },
-  } as EvaluationRequest);
+  } as EvaluationRequest));
 
 const decisionOptions = (fga: Fga, v: MissionView = view()): DecisionOptions => ({
   view: v,
@@ -272,12 +272,12 @@ describe("the PDP echoes the validated context digest and records the binding (@
     const constrained: MissionView = {
       ...view(),
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: MISSION_RESOURCE_ACCESS_TYPE,
           resource: AUDIENCE,
           actions: [PAY],
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        },
+        }),
       ],
     };
     const covered = (amount: { amount: string; currency: string } | undefined, vendor = "acme"): EvaluationRequest => {

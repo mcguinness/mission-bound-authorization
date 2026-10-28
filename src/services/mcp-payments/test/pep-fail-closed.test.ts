@@ -37,6 +37,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // @spec authzen#evaluation-request-digest-input: a fixture digest of a submitted
 // request (the AuthZEN profile's worked value), for emitter inputs that model one.
@@ -110,7 +111,8 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       state: "active",
       version: 1,
       authority_hash: "sha-256:g1hash",
-      authority_set: [entry],
+      // As approved against the intended contract, matching the credential (#249, D865).
+      authority_set: [pinnedToCurrentContract(entry)],
       subject: { iss: ISSUER, sub: "alice" },
       client_id: "ap-agent",
     };
@@ -284,12 +286,12 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       version: 1,
       authority_hash: "sha-256:g1hash",
       authority_set: [
-        {
+        pinnedToCurrentContract({
           type: "mission_resource_access",
           resource: CANONICAL_RESOURCE,
           actions: ["payments:invoice.list"],
           constraints: { vendors: ["acme", "globex"] },
-        },
+        }),
       ],
       subject: { iss: ISSUER, sub: "alice" },
       client_id: "ap-agent",
@@ -318,7 +320,7 @@ d("GAP 1: list_invoices binds its result set to the Mission's Authority Set (@sp
       // write's TOCTOU proof.
       current = {
         ...current,
-        authority_set: [{ ...(current.authority_set[0] as never), constraints: { vendors: ["acme"] } }],
+        authority_set: [pinnedToCurrentContract({ ...(current.authority_set[0] as never), constraints: { vendors: ["acme"] } })],
       };
     });
     expect(res.ok).toBe(false);
@@ -356,12 +358,12 @@ describe("finding 3: a multi-vendor list_invoices names every returned vendor to
     version: 1,
     authority_hash: "sha-256:g3hash",
     authority_set: [
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: CANONICAL_RESOURCE,
         actions: ["payments:invoice.list"],
         constraints: { vendors: ["acme", "globex"] },
-      },
+      }),
     ],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",
@@ -427,7 +429,7 @@ describe("GAP 2: an unrecognized decision-context member makes a permit unusable
     version: 1,
     authority_hash: "sha-256:g2hash",
     authority_set: [
-      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] },
+      pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }),
     ],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",

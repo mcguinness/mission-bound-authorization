@@ -116,7 +116,7 @@ import { openResourcePolicyStore, type ResourcePolicyStore, seedDevelopmentResou
 import { type ApprovalConsole, type ApproverLogin, recordApproverLogin, type UpstreamApprovalConsole } from "./approval-console.js";
 import { type ApproverIdp, type CompletedLogin, startApproverIdp } from "./approver-idp.js";
 import { type LifecycleConsoleCredentials, newLifecycleConsole } from "./lifecycle-client.js";
-import { kernelBudgetBinding, kernelMissionView } from "./kernel-mission-view.js";
+import { kernelBudgetBinding, kernelMissionView, kernelMissionViewFor } from "./kernel-mission-view.js";
 
 /** Logical issuer for the in-process (non-auth-server) surfaces. */
 export const ISS = TOPOLOGY.issuers.as;
@@ -1362,8 +1362,8 @@ export async function composeStack(opts: {
   // loader asserts it, and the PEP only ever propagates what it asserts,
   // never re-stamping its own clock (Finding 1).
   const loadView = (ref: MissionReference): LoadedView | undefined => {
-    const view = viewFor(ref.id);
-    if (!view || view.issuer !== ref.issuer) return undefined;
+    const view = kernelMissionViewFor(kernel, ref);
+    if (!view) return undefined;
     return {
       view,
       observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() },

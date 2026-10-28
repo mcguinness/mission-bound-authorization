@@ -19,12 +19,32 @@ against a proposal's description, the first match deciding, else
 `@mission/aauth-ps`), not by `@mission/demo-data`; it refuses with a
 `PsConfigError`.
 
+`management` (#836 slice 3) is the mission control plane's policy (AAuth
+Mission Management): whether the owning agent is admitted for `status`
+and `revoked` termination, the seconds `fresh_until` follows
+`observed_at`, whether an untracked access mode may serve a mission (then
+`complete` is never true), the revocation retry policy (attempts,
+exponential spacing and its cap, one attempt's time limit, and how long a
+terminate waits for immediate results), and the administrators. Each
+administrator is an identifier, a deployment-chosen metadata document
+name and an enrolled public key: it signs control-plane requests under
+Signature-Key `jwks_uri` with that `id`, `dwk` and the key's `kid`, and
+the PS takes the key from this file, never by fetching. Its privilege is
+the listed persons' missions and the listed actions. The shipped
+administrator's private key is held by no one in this repository; a
+deployment enrolls its own.
+
 - **Owner.** The PS operator.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown members, an issuer or agent that is not an AAuth identifier, an
   agent named twice or bound to an unconfigured person, and a person or
-  auth token lifetime over AAuth's one-hour ceiling. The signing key is
-  generated at each boot and never configured.
+  auth token lifetime over AAuth's one-hour ceiling; under `management`,
+  an administrator whose `dwk` is an AAuth document name, whose key
+  carries a private member, lacks a `kid` or a usable fully-specified
+  `alg`, whose `id` is the PS's own issuer or repeats, or that names an
+  unconfigured person or an action the PS does not implement, and a retry
+  base over its cap. The signing key is generated at each boot and never
+  configured.
 - **Updating.** Edit, review, and restart the PS. A change applies to the
   next request; approved missions keep the blob they were approved with.
 
@@ -40,12 +60,19 @@ operation with the one scope an auth token must grant for it. The scope
 check is the Resource's own policy on the PS-issued auth token (Section
 13.7); the Resource never evaluates a mission.
 
+`revocation_limits` (#836 slice 3) bounds each PS at the revocation
+endpoint (aauth -11 Section 11.12.3): the unexpired revocations one issuer
+can hold (`entries_per_issuer`, default 10000) and the revocation requests
+it can make in one minute (`requests_per_issuer_per_minute`, default 600).
+A member left out takes its default.
+
 - **Owner.** The Resource's operator.
 - **Integrity.** Repository review and the strict loader, which refuses
   unknown members, an issuer that is not a server identifier, a lifetime
   over 300 seconds, an unsupported algorithm, an operation at a reserved
-  path, an operation scope the file does not define, and a duplicate
-  operation.
+  path (`/authorize`, `/revoke`), an operation scope the file does not
+  define, a duplicate operation, and a revocation limit that is not an
+  integer from 1 to 1000000.
 - **Updating.** Edit, review, and restart the Resource. Resource tokens
   already issued keep their scope.
 
