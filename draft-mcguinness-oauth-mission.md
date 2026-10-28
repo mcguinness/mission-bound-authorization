@@ -5498,9 +5498,7 @@ The smallest useful conforming deployment is a Mission Issuer that:
   only that type's specification-defined vocabulary; and
 - implements none of the optional capabilities.
 
-A scope-only resource server is served only where the AS established
-a safe scope projection for it ({{scope-projection}}). A Mission
-Issuer can instead start from configured-mapping mode
+A Mission Issuer can instead start from configured-mapping mode
 ({{authorization-derivation}}), which is equally conforming. Neither
 starting point is a conformance class, and neither removes a surface:
 the Mission Issuer still implements every surface its role lists
