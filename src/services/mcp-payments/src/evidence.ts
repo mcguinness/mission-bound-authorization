@@ -926,14 +926,30 @@ function sameDisposition(held: ExecutionDisposition, input: ExecutionEvidenceInp
 }
 
 /**
+ * One identity, one disposition: the refusal of a different disposition
+ * under an identity that already carries one. `held` says whether that
+ * disposition is already `retained` or still `in flight` (#1715: a
+ * suppression refused under an identity whose record is retained records
+ * nothing further and misses nothing).
+ */
+export class ExecutionRedispositionError extends Error {
+  constructor(
+    readonly identity: string,
+    readonly held: "retained" | "in flight",
+  ) {
+    super(
+      `EvidenceStore.recordExecution(): execution_id "${identity}" is already ${held} for a different disposition (fail closed: one identity per disposition, retries only)`,
+    );
+  }
+}
+
+/**
  * One identity, one disposition. Raised the same way whether the identity is
  * already `retained` or still `in flight`: a rejected replay presenting a
  * completed record's identity is refused in both windows.
  */
 function refuseRedisposition(identity: string, held: "retained" | "in flight"): never {
-  throw new Error(
-    `EvidenceStore.recordExecution(): execution_id "${identity}" is already ${held} for a different disposition (fail closed: one identity per disposition, retries only)`,
-  );
+  throw new ExecutionRedispositionError(identity, held);
 }
 
 /**

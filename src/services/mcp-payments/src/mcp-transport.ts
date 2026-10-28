@@ -32,7 +32,13 @@ import {
   ListToolsRequestSchema,
   type ListToolsResult,
 } from "@modelcontextprotocol/sdk/types.js";
-import { MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
+import { aatToPlainJson, MCP_REFERENCE_META_KEY, parseMcpReferenceMeta } from "@mission/core";
+import {
+  INVOCATION_ARGUMENTS_META_KEY,
+  parseOriginalArguments,
+  sameJson,
+  snapshotArguments,
+} from "./invocation-arguments.js";
 import {
   type DecisionEvidenceGap,
   type InsufficientAuthorization,
@@ -66,7 +72,11 @@ export interface MediatedToolResult {
    */
   error?: string;
   transaction_challenge?: string;
-  /** Present only when an effect committed and its evidence is missing (#1104, #1640); never a refusal. */
+  /**
+   * A disposition record that could not be written (#1104, #1640, #821,
+   * #1715): with no `refusal_reason`, an effect committed and its evidence is
+   * missing; beside one, nothing executed and the refusal's record is missing.
+   */
   gap?: TransactionToolResult["gap"] | DispositionGap;
   /** Present on a denial whose Decision Evidence did not verify (#1640, D770 ruling 6). */
   evidence_gap?: DecisionEvidenceGap;
@@ -138,7 +148,7 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
     const cred = request.params._meta?.[MISSION_TOKEN_META_KEY];
-    const args = (request.params.arguments ?? {}) as Record<string, unknown>;
+    const received = (request.params.arguments ?? {}) as Record<string, unknown>;
     let token: TokenFacts;
     try {
       if (typeof cred !== "string") throw new Error("missing mission credential in _meta");
@@ -162,6 +172,31 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
       }
       return toCallToolResult({ ok: false, denial_reason: "invalid_credential" });
     }
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the object API's
+    // serialization boundary. The client sends the one JSON snapshot it
+    // serialized beside the arguments; the call is dispatched from that
+    // snapshot, which must parse losslessly and describe exactly the
+    // arguments sent. A caller that sent none gets its snapshot taken here,
+    // once. Either way the boundary cannot detect duplicate members or
+    // number spellings an upstream parser already discarded.
+    const sent = request.params._meta?.[INVOCATION_ARGUMENTS_META_KEY];
+    let argumentsJson: string;
+    let args: Record<string, unknown>;
+    if (sent === undefined) {
+      try {
+        ({ argumentsJson, args } = snapshotArguments(received));
+      } catch {
+        return toCallToolResult({ ok: false, refusal_reason: "invalid_request" });
+      }
+    } else {
+      const original = typeof sent === "string" ? parseOriginalArguments(sent) : undefined;
+      const snapshot = original === undefined ? undefined : (aatToPlainJson(original) as Record<string, unknown>);
+      if (snapshot === undefined || !sameJson(snapshot, received)) {
+        return toCallToolResult({ ok: false, refusal_reason: "invalid_request" });
+      }
+      argumentsJson = sent as string;
+      args = snapshot;
+    }
     // @spec authority-server#mcp-reference — the propagated reference rides
     // params._meta on each tools/call under the namespaced key; a server
     // that silently ignored it would not be a conforming Mission PEP, so
@@ -169,13 +204,10 @@ function createMcpServer(paymentsServer: McpPaymentsServer): Server {
     const missionReference = parseMcpReferenceMeta(
       request.params._meta?.[MCP_REFERENCE_META_KEY],
     );
-    const verdict = await route(
-      paymentsServer,
-      request.params.name,
-      args,
-      token,
-      missionReference ? { missionReference } : undefined,
-    );
+    const verdict = await route(paymentsServer, request.params.name, args, token, {
+      ...(missionReference ? { missionReference } : {}),
+      invocation: { argumentsJson },
+    });
     return toCallToolResult(verdict);
   });
 
@@ -231,11 +263,18 @@ export class MediatedClient {
     // reference rides `_meta` beside the credential, typed `unknown` so a
     // caller (and a test) can present a malformed shape; the SERVER decides
     // what is well-formed, never the client helper.
+    //
+    // @spec AAT -02 Section 8 steps 6b and 7f (#1756, D902): the object API's
+    // serialization boundary. The arguments are serialized once, here; the
+    // call carries that snapshot's arguments and its JSON text, and the
+    // server verifies and dispatches that same snapshot.
+    const snapshot = snapshotArguments(args);
     const res = await this.client.callTool({
       name,
-      arguments: args,
+      arguments: snapshot.args,
       _meta: {
         [MISSION_TOKEN_META_KEY]: missionToken,
+        [INVOCATION_ARGUMENTS_META_KEY]: snapshot.argumentsJson,
         ...(missionReference !== undefined
           ? { [MCP_REFERENCE_META_KEY]: missionReference }
           : {}),

@@ -128,6 +128,12 @@ export {
   type HttpMcpChannel,
   type HttpMediatedClient,
 } from "./mcp-http-transport.js";
+export {
+  INVOCATION_ARGUMENTS_META_KEY,
+  originalArgumentsMatch,
+  snapshotArguments,
+} from "./invocation-arguments.js";
+export type { InvocationArguments } from "./pep.js";
 export { accessTokenHash } from "./dpop.js";
 export {
   Connectors,
@@ -149,6 +155,7 @@ export {
   indeterminateClaimAlert,
   type OperatorAlert,
   releasedReservationNotice,
+  settlementConflictAlert,
   type OperatorAlertKind,
   type OperatorAlertSink,
   type OutcomeReconciliationRun,

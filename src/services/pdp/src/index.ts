@@ -72,6 +72,14 @@ export {
   type VerifiedMissionStatus,
 } from "./state-observation.js";
 export {
+  auditKeys,
+  excludingCompromised,
+  HISTORICAL_KEY_SET_TYP,
+  type HistoricalKey,
+  HistoricalKeySetHolder,
+  verifyHistoricalKeySet,
+} from "./historical-key-set.js";
+export {
   declaredStatusKeys,
   refreshingStatusKeys,
   MISSION_STATUS_SKEW_SECONDS,
@@ -139,6 +147,7 @@ export {
   type ReleasedReservation,
   type ReservationRecord,
   type ReservationState,
+  type SettlementConflict,
 } from "./idempotency-claims.js";
 export {
   BUDGET_METERING_EXTENSION,

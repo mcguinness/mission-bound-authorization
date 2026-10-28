@@ -27,6 +27,14 @@ import type { CapabilitySourceResolver } from "../kernel/capability-binding.js";
 import { standingConsentLines, standingConsentMaximumOf } from "../kernel/standing-consent-limit.js";
 import { type StandingPaymentTerms, standingPaymentTermsOf } from "../kernel/standing-payment.js";
 import type { ActionApprovalPolicy } from "@mission/demo-data";
+import {
+  type BudgetExposurePort,
+  BudgetExposureUnavailableError,
+  type CounterUnit,
+  exposureLines,
+  readCounterExposure,
+  standingConsentKey,
+} from "../kernel/budget-exposure.js";
 import { contentDigest } from "./approval-render-revision.js";
 import { type DispatchPolicies, type TemplateProposalBody, templateCeiling, templateContracts } from "../kernel/template.js";
 
@@ -112,10 +120,21 @@ export interface TemplateConsentDisclosure {
 }
 
 /**
+ * Why a consent disclosure cannot be rendered. `unavailable` marks a refusal
+ * that lasts only while the budget counters cannot be read: the proposal
+ * stays pending and can be decided once they can.
+ */
+export interface TemplateConsentRefusal {
+  refusal: string;
+  unavailable?: true;
+}
+
+/**
  * The consent disclosure of a proposal, from the proposal and the issuer's
  * current state, or why it cannot be rendered: a Dispatch Policy snapshot that
- * no longer verifies against the proposal's pin, or a Template Ceiling whose
- * trusted capability bindings no longer resolve as they did.
+ * no longer verifies against the proposal's pin, a Template Ceiling whose
+ * trusted capability bindings no longer resolve as they did, or budget
+ * counters that cannot be read.
  */
 export function templateConsentDisclosure(
   proposal: TemplateProposal,
@@ -128,10 +147,17 @@ export function templateConsentDisclosure(
     standingPayment?: boolean;
     /** @spec runtime#action-approval (#813): the deployment's action-approval predicate. */
     actionApprovalPolicy?: ActionApprovalPolicy;
+    /**
+     * @spec mission-template#standing-payment-exception (#813, D830 ruling 7,
+     * D877): the deployment's read port onto the budget counters and the
+     * unit they count in, given only for a viewer who authenticated as the
+     * Approver; without it the page withholds the figures.
+     */
+    budgetExposure?: { port: BudgetExposurePort | undefined; unit: CounterUnit | undefined };
     /** @spec resource-access#resource-contract (#249, D875): the contract declarations the ceiling is assembled against. */
     resourceContracts?: ResourceContractDeclarations;
   },
-): { disclosure: TemplateConsentDisclosure } | { refusal: string } {
+): { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal {
   const { body } = proposal;
   const held = verifiedActivationPolicy(opts.issuer, dispatchPolicies, proposal.dispatch_policy);
   const maximum = held && standingConsentMaximumOf(held);
@@ -146,13 +172,44 @@ export function templateConsentDisclosure(
   // the consumption product, or refuses a statement it cannot render.
   let standing: string[] = [];
   if (opts.standingPayment) {
+    let terms: StandingPaymentTerms | undefined;
     try {
-      const terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
+      terms = standingPaymentTermsOf(held as NonNullable<typeof held>);
       standing = terms ? standingPaymentLines(terms, body, opts.actionApprovalPolicy) : [];
     } catch (e) {
       return {
         refusal: `The Dispatch Policy ${body.dispatch_policy.id} states standing-payment terms that cannot be shown (${(e as Error).message}). This consent is refused.`,
       };
+    }
+    // @spec mission-template#standing-payment-exception (#813, D830 ruling 7,
+    // D877): the budget's consumption to date and outstanding reservations,
+    // read now for the authenticated Approver, so a consent that raises a
+    // bound or changes destinations is given against the exposure it adds
+    // to; a reading that cannot be made withholds the decision until it can.
+    // Any other viewer is shown no figures, and none are read for it.
+    if (terms && !opts.budgetExposure) {
+      standing = [
+        ...standing,
+        `Budget ${terms.budget.owner}/${terms.budget.id} exposure: its consumption to date and outstanding reservations are shown once the Approver signs in.`,
+      ];
+    } else if (terms && opts.budgetExposure) {
+      try {
+        const exposure = readCounterExposure(
+          opts.budgetExposure.port,
+          standingConsentKey(terms.budget),
+          opts.budgetExposure.unit,
+        );
+        standing = [
+          ...standing,
+          ...exposureLines([{ label: `Budget ${terms.budget.owner}/${terms.budget.id} exposure`, exposure }]),
+        ];
+      } catch (e) {
+        if (!(e instanceof BudgetExposureUnavailableError)) throw e;
+        return {
+          refusal: `The consumption and outstanding reservations of budget ${terms.budget.owner}/${terms.budget.id} cannot be read (${e.message}), so this consent cannot account for them. It cannot be decided until they can be read.`,
+          unavailable: true,
+        };
+      }
     }
   }
   // @spec capability-binding#conformance: the page renders the ceiling the
@@ -313,7 +370,7 @@ export interface TemplateConsentContext {
 /** The rendering's context and commitment, or undefined when the disclosure cannot be rendered. */
 export function templateConsentRendering(
   proposal: TemplateProposal,
-  rendered: { disclosure: TemplateConsentDisclosure } | { refusal: string },
+  rendered: { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal,
 ): { context: TemplateConsentContext; commitment: string } | undefined {
   if ("refusal" in rendered) return undefined;
   const context: TemplateConsentContext = {
@@ -342,7 +399,7 @@ function renderLines(lines: readonly string[], cls: string): string {
  */
 export function renderTemplateConsentPage(
   proposal: TemplateProposal,
-  rendered: { disclosure: TemplateConsentDisclosure } | { refusal: string },
+  rendered: { disclosure: TemplateConsentDisclosure } | TemplateConsentRefusal,
   opts: { loginHref?: string; csrf?: string; revision?: string },
 ): string {
   const id = encodeURIComponent(proposal.id);

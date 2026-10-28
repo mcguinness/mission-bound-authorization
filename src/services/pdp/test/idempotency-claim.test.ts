@@ -1129,6 +1129,34 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expectDenied(await evaluate(request(c, { key }), options(claims, c)), "duplicate_suppressed", { next_action: "none" });
       claims.close();
     });
+
+    it("the sweep alone compacts and purges a settled claim: past the reconciliation window it tombstones the stored decision, and past the idempotency horizon it purges the row (@spec runtime#idempotency, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const first = await evaluate(request(c, { key: freshKey() }), options(claims, c));
+      const id = String(first.context.evaluation_id);
+      expect((await claims.settle(REQUESTER, await executionRecord(id, "completed"))).accepted).toBe(true);
+      c.set(T0 + VALID_MS + LEASE_MS + WINDOW_MS + 1_000);
+      claims.sweep();
+      c.set(T0 + HORIZON_MS + 1_000);
+      claims.sweep();
+      claims.close();
+      expect(rowsOf(file)).toEqual([]);
+    });
+
+    it("the sweep alone tombstones a settled claim's stored decision past the reconciliation window, before its horizon (@spec runtime#idempotency, #816, D877)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const first = await evaluate(request(c, { key: freshKey() }), options(claims, c));
+      const id = String(first.context.evaluation_id);
+      expect((await claims.settle(REQUESTER, await executionRecord(id, "completed"))).accepted).toBe(true);
+      c.set(T0 + VALID_MS + LEASE_MS + WINDOW_MS + 1_000);
+      claims.sweep();
+      claims.close();
+      expect(rowsOf(file)).toEqual([expect.objectContaining({ evaluation_id: id, state: "completed", decision_json: null })]);
+    });
   });
 
   describe("every keyed high-consequence action requires a well-formed key", () => {
