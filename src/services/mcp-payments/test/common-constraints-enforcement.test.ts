@@ -16,7 +16,7 @@
 
 import { randomUUID } from "node:crypto";
 import { IMPLEMENTED_COMMON_CONSTRAINTS, SUPPORTED_CONSTRAINT_KEYS } from "@mission/core";
-import { AUTHORITY_SOURCES, DERIVATION_POLICY, GOVERNED_POLICIES, SCOPE_PROJECTION } from "@mission/demo-data";
+import { AUTHORITY_SOURCES, DERIVATION_POLICY, GOVERNED_POLICIES, SCOPE_PROJECTION, pinnedToCurrentContract } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import type { Fga, MissionView } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
@@ -114,7 +114,7 @@ function harness(opts: {
     authority_hash: "sha-256:m1266",
     authority_set: (opts.entries ?? [opts.mission]).map(
       (constraints, i) =>
-        ({
+        pinnedToCurrentContract({
           type: "mission_resource_access",
           resource: CANONICAL_RESOURCE,
           actions: ALL_ACTIONS,
@@ -169,12 +169,12 @@ function harness(opts: {
     mission: { id: MISSION, issuer: ISSUER, authority_hash: "sha-256:m1266" },
     cnfJkt: "jkt-1266",
     credentialAuthority: credentialAuthorityFrom([
-      {
+      pinnedToCurrentContract({
         type: "mission_resource_access",
         resource: CANONICAL_RESOURCE,
         actions: ALL_ACTIONS,
         ...(opts.credential ? { constraints: opts.credential } : {}),
-      },
+      }),
     ]),
   };
   self = {

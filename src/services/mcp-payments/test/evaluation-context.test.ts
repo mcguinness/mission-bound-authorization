@@ -18,7 +18,7 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { canonicalDigest, EvaluationContextBindingDeclarations, type JsonValue, type ResourceContractRef } from "@mission/core";
-import { RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { pinnedToCurrentContract, RESOURCE_CONTRACTS, RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type Decision,
@@ -114,30 +114,40 @@ const missionToken = (id: string): TokenFacts => ({
 const TOKEN = missionToken("msn_773");
 const TOKEN_B = missionToken("msn_773b");
 
-const view = (id: string, constraints: Record<string, unknown> = {}, contract?: ResourceContractRef): MissionView => ({
-  id,
-  issuer: ISSUER,
-  state: "active",
-  version: 1,
-  authority_hash: `sha-256:${id}`,
-  authority_set: [
-    {
-      type: "mission_resource_access",
-      resource: CANONICAL_RESOURCE,
-      actions: [
-        "payments:payment.execute",
-        "payments:payment.reverse",
-        "payments:remittance.send",
-        "payments:payment.schedule",
-        "payments:invoice.read",
-      ],
-      constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"], ...constraints },
-      ...(contract !== undefined ? { resource_contract: contract } : {}),
-    },
-  ] as MissionView["authority_set"],
-  subject: { iss: ISSUER, sub: "alice" },
-  client_id: "ap-agent",
-});
+/**
+ * The Mission's view, its entry pinning `contract`: by default the current
+ * reference a fresh approval records (#249), and with "none" no reference.
+ */
+const view = (id: string, constraints: Record<string, unknown> = {}, contract?: ResourceContractRef | "none"): MissionView => {
+  const entry = {
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions: [
+      "payments:payment.execute",
+      "payments:payment.reverse",
+      "payments:remittance.send",
+      "payments:payment.schedule",
+      "payments:invoice.read",
+    ],
+    constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"], ...constraints },
+  };
+  return {
+    id,
+    issuer: ISSUER,
+    state: "active",
+    version: 1,
+    authority_hash: `sha-256:${id}`,
+    authority_set: [
+      contract === "none"
+        ? entry
+        : contract === undefined
+          ? pinnedToCurrentContract(entry)
+          : { ...entry, resource_contract: contract },
+    ] as MissionView["authority_set"],
+    subject: { iss: ISSUER, sub: "alice" },
+    client_id: "ap-agent",
+  };
+};
 
 interface Harness {
   server: McpPaymentsServer;
@@ -172,8 +182,11 @@ function harness(
     classification?: string;
     /** Common Constraints added to the Mission's entry. */
     constraints?: Record<string, unknown>;
-    /** The resource contract the Mission's entry pins (#1693, D879). */
-    contract?: ResourceContractRef;
+    /**
+     * The resource contract the Mission's entry pins (#1693, D879): by
+     * default the current one, and "none" for an entry that pins none (#249).
+     */
+    contract?: ResourceContractRef | "none";
   } = {},
 ): Harness {
   const now = () => new Date(BASE_MS);
@@ -1319,6 +1332,14 @@ const V15_CONTRACT = contractRef("2026-10-26");
 /** Contract version 2026-10-27, naming payments-runtime-profile-v16 (#813, #816), current. */
 const V16_CONTRACT = contractRef("2026-10-27");
 
+/** `TOKEN` whose credential's one entry pins no contract, as an unpinned Mission's entry (#249). */
+const UNPINNED_TOKEN: TokenFacts = {
+  ...TOKEN,
+  credentialAuthority: credentialAuthorityFrom([
+    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map((t) => t.action))] },
+  ]),
+};
+
 /** `TOKEN` whose credential's one entry pins `contract`, as the Mission's entry does. */
 const pinnedToken = (contract: ResourceContractRef): TokenFacts => ({
   ...TOKEN,
@@ -1377,8 +1398,8 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
     expect(pinned.requests.at(-1)?.resource.properties?.resource_contract).toEqual(V14_CONTRACT);
 
     // The same execute under an unpinned entry binds the same parameters.
-    const unpinned = harness();
-    expect((await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), TOKEN)).ok).toBe(true);
+    const unpinned = harness({ contract: "none" });
+    expect((await unpinned.server.callTransactionTool(COMMIT.tool, commitArgs(), UNPINNED_TOKEN)).ok).toBe(true);
     const commitDecision = (h: Harness) =>
       decisions(h).find((d) => d.action.name === "payments:payment.execute" && d.action_phase === "commit");
     expect(commitDecision(pinned)?.decision).toBe("permit");
@@ -1392,8 +1413,8 @@ describe("authority pinned to contract 2026-10-24 (payments-runtime-profile-v14)
     ["unpinned", undefined],
   ] as const) {
     it(`an entry ${mode} performs the reversal under the paid vendor's current tenant`, async () => {
-      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, ...(contract ? { contract } : {}) });
-      const token = contract ? pinnedToken(contract) : TOKEN;
+      const h = harness({ tenant: "tenant-a", constraints: { tenant: "tenant-a" }, contract: contract ?? "none" });
+      const token = contract ? pinnedToken(contract) : UNPINNED_TOKEN;
       expect((await h.server.callTransactionTool(COMMIT.tool, commitArgs(), token)).ok).toBe(true);
       const wire = ledgerWire(h);
       addVendor(h.payments, "globex", "tenant-b");

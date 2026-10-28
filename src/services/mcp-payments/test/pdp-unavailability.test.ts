@@ -5,6 +5,7 @@ import { CANONICAL_RESOURCE, createEphemeralEvidenceKeys, credentialAuthorityFro
 import { PaymentsToolCatalog } from "../src/tool-catalog.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   const point = createEphemeralDecisionPoint({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE, emitterId: CANONICAL_RESOURCE, audience: CANONICAL_RESOURCE });
@@ -17,7 +18,7 @@ async function build(mode: "co-resident" | "remote", override?: DecisionFn) {
   const view: MissionView = {
     id: "msn_remote", issuer: "https://as.test", state: "active", version: 1,
     authority_hash: "sha-256:fixture", subject: { iss: "https://as.test", sub: "alice" }, client_id: "agent",
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] }, capability_sources: [{ action: "payments:invoice.read", ...source.binding }] }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] }, capability_sources: [{ action: "payments:invoice.read", ...source.binding }] })],
   };
   const fga = { checkWithContext: async () => true } as unknown as Fga;
   const loadView = () => ({ view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } });
@@ -104,7 +105,7 @@ describe("configured PDP unavailability (@spec runtime#ride-through, authzen#fai
       }];
       const invoiceOnly: TokenFacts = {
         ...x.token,
-        credentialAuthority: credentialAuthorityFrom([{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] }]),
+        credentialAuthority: credentialAuthorityFrom([pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"] })]),
       };
       const refused = await x.server.callReadTool("lookup_vendor", { vendor_id: "acme" }, invoiceOnly);
       expect(refused).toMatchObject({ ok: false, denial_reason: "out_of_authority" });

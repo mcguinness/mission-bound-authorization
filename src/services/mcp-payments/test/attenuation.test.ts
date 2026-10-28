@@ -63,6 +63,7 @@ import {
   type TokenFacts,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 
 /** Fail-closed EvidenceStore (issue #649): every `evidence:` fixture below needs a signer. */
@@ -89,6 +90,8 @@ const POLICY = {
     },
   ],
 } as const;
+/** The reference a fresh approval of the ceiling records (#249), carried into each tool's mission_constraints. */
+const CONTRACT = currentContractRef(POLICY.ceiling[0]);
 
 const API_URL = process.env.OPENFGA_HTTP_URL ?? "https://localhost:8080";
 const KEY = process.env.OPENFGA_PRESHARED_KEY ?? "dev-preshared-key-change-me";
@@ -263,7 +266,7 @@ beforeAll(async () => {
         expires_at: "2027-01-01T00:00:00Z",
       }),
     ),
-    proposedAuthority: POLICY.ceiling as never,
+    proposedAuthority: POLICY.ceiling.map((e) => pinnedToCurrentContract(e)) as never,
     subject: { iss: AS_ISS, sub: "alice" },
     approver: { iss: AS_ISS, sub: "bob" },
     clientId: "ap-agent",
@@ -362,8 +365,8 @@ describe("attenuation chain: verify + leaf enforcement", () => {
       [SCHEDULE_TOOL_ID]: { idempotency_key: { constraint_type: "wildcard" }, invoice_id: { constraint_type: "wildcard" } },
     });
     expect(rootAuthority.missionConstraints).toEqual({
-      [READ_TOOL_ID]: { constraints: CAP },
-      [SCHEDULE_TOOL_ID]: { constraints: CAP },
+      [READ_TOOL_ID]: { constraints: CAP, resource_contract: CONTRACT },
+      [SCHEDULE_TOOL_ID]: { constraints: CAP, resource_contract: CONTRACT },
     });
   });
 
@@ -373,7 +376,7 @@ describe("attenuation chain: verify + leaf enforcement", () => {
     expect(facts.sub).toBe("alice");
     expect(facts.clientId).toBe("ap-agent");
     expect(facts.mission !== undefined && facts.credentialAuthority).toEqual([
-      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ_ACTION], constraints: CAP },
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [READ_ACTION], constraints: CAP, resource_contract: CONTRACT },
     ]);
   });
 
@@ -401,7 +404,12 @@ describe("attenuation chain: the leaf's restrictions bound the action (@spec run
     const narrowed = await mintChildOffline(
       root,
       holderKeys.privateKey,
-      { ...leafAuthority, missionConstraints: { [READ_TOOL_ID]: { constraints: { ...CAP, max_amount: { amount: "100", currency: "USD" } } } } },
+      {
+        ...leafAuthority,
+        missionConstraints: {
+          [READ_TOOL_ID]: { ...leafAuthority.missionConstraints[READ_TOOL_ID], constraints: { ...CAP, max_amount: { amount: "100", currency: "USD" } } },
+        },
+      },
       { cnfJwk: delegateJwk },
     );
     const narrowedFacts = await present(server, [root, narrowed]);
@@ -637,7 +645,10 @@ describe("attenuation chain: the mission_constraints member at the consumer (@sp
 
   it("refuses a child that widens mission_constraints: a raised cap, a removed vendor bound, an added vendor, or an added resource_contract", async () => {
     const widen = (constraints: Record<string, unknown>, extra: Record<string, unknown> = {}) =>
-      childWithEntry((entry) => ({ ...entry, mission_constraints: { [READ_TOOL_ID]: { constraints, ...extra } } }));
+      childWithEntry((entry) => ({
+        ...entry,
+        mission_constraints: { [READ_TOOL_ID]: { ...leafAuthority.missionConstraints[READ_TOOL_ID], constraints, ...extra } },
+      }));
     const widened = [
       await widen({ ...CAP, max_amount: { amount: "900", currency: "USD" } }),
       await widen({ max_amount: CAP.max_amount }),
@@ -654,12 +665,14 @@ describe("attenuation chain: the mission_constraints member at the consumer (@sp
   });
 
   it("refuses malformed or unsupported constraints and an unknown member key, rather than ignoring them", async () => {
+    // Each keeps the parent's resource_contract, so only its own defect differs.
+    const kept = leafAuthority.missionConstraints[READ_TOOL_ID];
     const refused = [
-      { [READ_TOOL_ID]: { constraints: CAP, scope: "x" } },
-      { [READ_TOOL_ID]: { constraints: { ...CAP, region: "eu" } } },
-      { [READ_TOOL_ID]: { constraints: { ...CAP, max_amount: { amount: 100, currency: "USD" } } } },
-      { [READ_TOOL_ID]: { constraints: { ...CAP, max_amount: { amount: "100", currency: "usd" } } } },
-      { [READ_TOOL_ID]: { constraints: "vendors=acme" } },
+      { [READ_TOOL_ID]: { ...kept, constraints: CAP, scope: "x" } },
+      { [READ_TOOL_ID]: { ...kept, constraints: { ...CAP, region: "eu" } } },
+      { [READ_TOOL_ID]: { ...kept, constraints: { ...CAP, max_amount: { amount: 100, currency: "USD" } } } },
+      { [READ_TOOL_ID]: { ...kept, constraints: { ...CAP, max_amount: { amount: "100", currency: "usd" } } } },
+      { [READ_TOOL_ID]: { ...kept, constraints: "vendors=acme" } },
     ];
     for (const member of refused) {
       const child = await childWithEntry((entry) => ({ ...entry, mission_constraints: member }));
@@ -688,7 +701,12 @@ describe("attenuation chain: the mission_constraints member at the consumer (@sp
     const capped = await mintChildOffline(
       root,
       holderKeys.privateKey,
-      { ...leafAuthority, missionConstraints: { [READ_TOOL_ID]: { constraints: { ...CAP, max_amount: { amount: "100", currency: "USD" } } } } },
+      {
+        ...leafAuthority,
+        missionConstraints: {
+          [READ_TOOL_ID]: { ...leafAuthority.missionConstraints[READ_TOOL_ID], constraints: { ...CAP, max_amount: { amount: "100", currency: "USD" } } },
+        },
+      },
       { cnfJwk: delegateJwk },
     );
     const evidence = new EvidenceStore(EVIDENCE_KEYS.signing, EVIDENCE_KEYS.resolver);

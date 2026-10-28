@@ -1,5 +1,5 @@
 import { canonicalDigest, catalogDigest, capabilitySourceDigest, extractMcpToolDefinition } from "@mission/core";
-import { TRUSTED_TOOL_CATALOGS, DERIVATION_POLICY, AUTHORITY_SOURCES } from "@mission/demo-data";
+import { TRUSTED_TOOL_CATALOGS, DERIVATION_POLICY, AUTHORITY_SOURCES, pinnedToCurrentContract } from "@mission/demo-data";
 import { MissionKernel, validateMissionIntent } from "@mission/authorization-server";
 import { trustedCapabilityResolver } from "../../authorization-server/src/adapters/capability-resolver.js";
 import { generateKeyPair } from "jose";
@@ -21,7 +21,7 @@ function fixture(source: () => string = () => text) {
     // Deduped: several served tools now share one action identifier (@spec
     // runtime#compound-actions), and an Authority Set entry names each action
     // once.
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map(t => t.action))], constraints: { vendors: ["acme"] } }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: [...new Set(TOOLS.map(t => t.action))], constraints: { vendors: ["acme"] } })],
     subject: { iss: token.mission.issuer, sub: "alice" }, client_id: "ap-agent" };
   const loadView = () => ({ view, observation: { state: view.state, version: view.version, mode: "fresh", freshness_at: new Date().toISOString() } });
   const requests: EvaluationRequest[] = [];
@@ -37,7 +37,7 @@ describe("one catalog snapshot from discovery to invocation", () => {
   it("a served definition edited after real approval denies capability_drift and retains the compared evidence", async () => {
     const key = (await generateKeyPair("ES256")).privateKey;
     const kernel = new MissionKernel({ issuer: "https://as.test", policy: DERIVATION_POLICY as never, authoritySourceCatalog: AUTHORITY_SOURCES as never, capabilityResolver: trustedCapabilityResolver(), statusKey: key, statusKid: "status" });
-    const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" })), proposedAuthority: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } }], subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, clientId: "ap-agent", approvalEventId: "catalog-e2e" });
+    const record = kernel.approve({ intent: validateMissionIntent(JSON.stringify({ goal: "Read invoice", target_resources: [CANONICAL_RESOURCE], expires_at: "2027-01-01T00:00:00Z" })), proposedAuthority: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.read"], constraints: { vendors: ["acme"] } })], subject: { iss: "https://as.test", sub: "alice" }, approver: { iss: "https://as.test", sub: "bob" }, clientId: "ap-agent", approvalEventId: "catalog-e2e" });
     let current = text;
     const f = fixture(() => current);
     Object.assign(f.view, { id: record.id, authority_hash: record.authority_hash, authority_set: record.authority_set });

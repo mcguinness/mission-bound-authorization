@@ -18,7 +18,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it } from "vitest";
 import { EvaluationContextBindingDeclarations } from "@mission/core";
-import { RUNTIME_SCOPE_CONFIG } from "@mission/demo-data";
+import { currentContractRef, RUNTIME_SCOPE_CONFIG, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   createEphemeralDecisionPoint,
   type EvaluationRequest,
@@ -89,17 +89,22 @@ const view = (): MissionView => ({
   authority_hash: MISSION_CLAIM.authority_hash,
   authority_set: [
     // The wire is gated on an action-bound approval bound to its parameter digest.
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:payment.execute"],
       constraints: { ...ENTRY_CONSTRAINTS, requires_action_approval: true },
-    },
-    { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:remittance.send"], constraints: ENTRY_CONSTRAINTS },
+    }),
+    pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:remittance.send"], constraints: ENTRY_CONSTRAINTS }),
   ] as MissionView["authority_set"],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
 });
+
+/** The approved Resource of an approval given under the contract the wire's entry pins, as a fresh approval records it (#249). */
+const APPROVED_RESOURCE = {
+  properties: { resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:payment.execute"] }) },
+};
 
 function harness() {
   const payments = new PaymentsStore();
@@ -234,6 +239,7 @@ describe("adoption keeps the approval and transaction-token bindings (@spec runt
       id: "apr_773",
       approved_at: new Date().toISOString(),
       parameter_digest: digestOf(h.payments, "payments:payment.execute"),
+      resource: APPROVED_RESOURCE,
     };
     // The gate is live: no approval, no permit.
     const ungated = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN);
@@ -292,6 +298,7 @@ describe("authoritative facts still reach policy beside the echoed context diges
       id: `apr_${invoiceId}`,
       approved_at: new Date().toISOString(),
       parameter_digest: digestOf(h.payments, "payments:payment.execute", invoiceId),
+      resource: APPROVED_RESOURCE,
     });
     const within = await h.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: idem() }, TOKEN, approval("inv-1"));
     expect(within.permitted, JSON.stringify(within)).toBe(true);

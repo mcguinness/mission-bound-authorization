@@ -28,6 +28,7 @@ import {
 } from "@mission/pdp";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
 import type { OperationContract } from "@mission/core";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 import { describe, expect, it } from "vitest";
 import {
   type ActionMapping,
@@ -55,7 +56,7 @@ const FORGED = "https://attacker.example/mcp";
 const ACTIONS = ["payments:invoice.read", "payments:vendor.read", "payments:payment.execute"];
 
 const missionEntry = (resource: string, over: Record<string, unknown> = {}) =>
-  ({ type: "mission_resource_access", resource, actions: ACTIONS, ...over }) as MissionView["authority_set"][number];
+  pinnedToCurrentContract({ type: "mission_resource_access", resource, actions: ACTIONS, ...over }) as MissionView["authority_set"][number];
 
 const viewOf = (authority_set: MissionView["authority_set"]): MissionView => ({
   id: "msn_1276_pep",
@@ -70,7 +71,7 @@ const viewOf = (authority_set: MissionView["authority_set"]): MissionView => ({
 
 const ALL_ACTIONS = [...new Set(TOOLS.map((t) => t.action))];
 const credentialFor = (...resources: string[]) =>
-  credentialAuthorityFrom(resources.map((resource) => ({ type: "mission_resource_access" as const, resource, actions: ALL_ACTIONS })));
+  credentialAuthorityFrom(resources.map((resource) => pinnedToCurrentContract({ type: "mission_resource_access" as const, resource, actions: ALL_ACTIONS })));
 
 const tokenFor = (view: MissionView, credentialAuthority = credentialFor(CANONICAL_RESOURCE)): TokenFacts => ({
   sub: "alice",
@@ -661,7 +662,11 @@ const PREFIX_CONTRACTS: readonly OperationContract[] = [...CONTRACTS, ARCHIVE, C
 
 const prefixEntry = (resource: string) => missionEntry(resource, { resource_match: "prefix" });
 const prefixCredential = (...resources: string[]) =>
-  credentialAuthorityFrom(resources.map((resource) => ({ type: "mission_resource_access" as const, resource, resource_match: "prefix" as const, actions: ALL_ACTIONS })));
+  credentialAuthorityFrom(
+    resources.map((resource) =>
+      pinnedToCurrentContract({ type: "mission_resource_access" as const, resource, resource_match: "prefix" as const, actions: ALL_ACTIONS }),
+    ),
+  );
 
 describe("the payments resource matches prefix entries against the operation target (@spec resource-access#resource-matching, resource-access#rs-enforcement, #1276)", () => {
   it("a prefix entry covers the target equal to its base and each target beneath it at a path-segment boundary, never a sibling sharing its characters; a base ending in / does not cover the bare path; an exact entry never covers a target beneath it", async () => {

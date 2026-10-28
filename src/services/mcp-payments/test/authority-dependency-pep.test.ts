@@ -28,7 +28,7 @@ import {
   AuthorityDependencyResolver,
   parseAuthorityDependencyDeclarations,
 } from "@mission/core";
-import { AUTHORITY_DEPENDENCIES, parseIdentityState } from "@mission/demo-data";
+import { AUTHORITY_DEPENDENCIES, parseIdentityState, pinnedToCurrentContract } from "@mission/demo-data";
 import {
   createDecisionChannel,
   createEphemeralDecisionPoint,
@@ -68,12 +68,12 @@ const view: MissionView = {
   version: 1,
   authority_hash: "sha-256:dep-pep",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: [...new Set(TOOLS.map((t) => t.action))],
       constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-    },
+    }),
   ],
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
