@@ -35,8 +35,8 @@
     "content_sha256": "72008afead28043e8e0ddccb7813d4347f3d4e9d9ecc0bcc0827b06c35eb5392"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
-    "revision": "62b6341aa6f5f8c65ccc4accd00d1117fdd07bd6",
-    "content_sha256": "b9105f772d8d0a9223f255a412aff29fb30eeb355a5b76fff77708625ea5f3c6"
+    "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
+    "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
     "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "da227edfc9286f89824ead93c3d5014c9587614f",
-    "content_sha256": "0cd296211b77413bb92945ced056c183c98262e864d842160f91123f9cee3ff8"
+    "revision": "7fb899a89a52b917a2711977ed0aef449e874836",
+    "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "d4ba1e7468a5f51f3a564b05154e077ad57ad676",
@@ -10307,7 +10307,7 @@
    "assertion": "no-side-effect",
    "observation": {
     "normative": "a failed or refused derivation leaves the derivation count unchanged",
-    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted. NOT covered: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted (#250 step 3); a replayed reservation that fails again stays counted, since an earlier attempt's artifact may have been accepted; and a Dispatch Handoff redemption that fails after its reservation keeps it for the retry that replays it. Partial on those."
+    "local": "Covered: refusals before admission are never counted, at the expansion nothing_to_expand refusal and at the cap boundary on a rotating refresh refused derivations_exhausted by the non-consuming pre-check (#914); a failure after admission on the async-delegation creating exchange, which counts inside the transaction that commits the family, rolls the count back; and a failure after admission that the AS observes in process before any artifact leaves is settled (#935, D772). The provider access-token hook (code exchange, refresh, deferred, child redemption, dispatch and the expansion successor mint), the same-Mission delegated exchange and the delegation handle note each count against the token request, which returns it when it answers anything but a 200 or fails by an exception after its response was prepared; the ID-JAG continuation settles its own fresh reservation as not accepted; and each Dispatch Handoff leg, the exchange and the redemption, settles its fresh reservation with the response, released on a 200 and settled as not accepted when the request fails in process before delivery, a request-path drain that throws included (D942). NOT covered, each by ruling: a token the release fence refuses keeps its count, its Mission having ended (D771, D772); a crash or a lost response after the count is never observed and stays counted, the fail-safe (D772, D874); and a held or replayed reservation keeps its count, since an earlier attempt took it (a Dispatch Handoff redemption that fails inside the handler keeps its reservation for the retry that replays it). Partial on those: closing #935 does not establish unconditional compliance (D942)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -10363,6 +10363,24 @@
     {
      "file": "src/services/authorization-server/test/derivation-counting.test.ts",
      "name": "a derivation that fails after admission (@spec mission#issuance-gating, #914 ruling 1) > a failure that escapes the request after its response was prepared (the request-path drain throws) answers 500 and returns the count (#935, D772)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff exchange: a 200 releases its reservation and counts once; a drain failure after the handler answers 500 with no grant and settles the reservation as not accepted, returning the count once",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a drain failure after the handler answers 500 with no token and settles its fresh reservation as not accepted, returning the count once; the grant stays consumed, so a retry is refused as already redeemed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/dispatch-handoff.test.ts",
+     "name": "the Dispatch Handoff settles a known in-process failure before delivery (@spec derivation-limits#counted-operations, #935, D942) > Dispatch Handoff redemption: a 200 releases its fresh reservation and counts once; a held reservation a retry replays keeps its count though that retry's drain fails",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
@@ -21158,6 +21176,27 @@
    "notes": "#1535 finding 12 (D649); #1407: the advertised Mission Status endpoint shares the Lifecycle endpoint's authenticator (status.lifecycle.private-key-jwt-params)."
   },
   {
+   "id": "status.request.header-credentials-stay",
+   "spec": "draft-mcguinness-oauth-mission-status.md",
+   "anchor": "mission-status-request",
+   "text": "A method that carries its credentials in HTTP header fields keeps them there.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a client authentication method whose credentials travel in HTTP header fields is authenticated from those header fields at the Mission Status endpoint, and at the Mission Lifecycle endpoint, whose request carries the parameters \"as at the Mission Status endpoint\"; its credentials are not carried as form parameters"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1780 N4 (D914): the twin of `mas.submission.header-credentials-stay`. Todo: the reference Mission Status and Lifecycle endpoints accept only private_key_jwt, whose parameters are form parameters; no header-carried method is served."
+  },
+  {
    "id": "status.request.form-post",
    "spec": "draft-mcguinness-oauth-mission-status.md",
    "anchor": "mission-status-request",
@@ -24928,7 +24967,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a Chain Presentation with an unknown top-level member is refused"
+    "normative": "a Chain Presentation with an unknown top-level member, the -01 `chain` member included, is refused"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24938,14 +24977,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses an unknown top-level member (closed envelope)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses the -01 chain member as an unknown top-level member (#1759)",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the envelope's chain member is the substrate's `aat_chain` (AAT -02 Section 7.4), and the envelope stays closed at the projection exchange (D932)."
   },
   {
    "id": "cross-org.chain.digest-canonical-bytes",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
+   "text": "The **chain digest** is the family anchor idiom ({{I-D.draft-mcguinness-oauth-mission}}) with typ `mission-delegation-chain` computed over the JCS canonical bytes of the `aat_chain` array exactly as presented, an ordered JSON array of compact-JWS strings.",
    "role": "verifier",
    "strength": "stated",
    "applicability": {
@@ -24956,7 +25002,7 @@
    "surface": "verification",
    "assertion": "output-bound",
    "observation": {
-    "normative": "two implementations compute byte-identical chain digests for the same presented chain array"
+    "normative": "two implementations compute byte-identical chain digests for the same presented `aat_chain` array"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24967,13 +25013,14 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759 (D932 direction 1): the digest commits to the ordered `aat_chain` array."
   },
   {
    "id": "cross-org.chain.bounds-before-crypto",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "chain-presentation",
-   "text": "A verifier MUST declare maximum hop count, maximum Presentation size, and a verification-cost ceiling, and MUST refuse a Presentation exceeding any of them before verifying any signature.",
+   "text": "A verifier MUST declare maximum hop count, maximum presentation size, and a verification-cost ceiling, and MUST refuse a presentation exceeding any of them before verifying any signature.",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -24984,7 +25031,7 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "an over-bound presentation is refused with no signature verification performed"
+    "normative": "a Chain Presentation over the declared hop or size bound is refused with no signature verification performed"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -24994,14 +25041,21 @@
      "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a chain over the hop bound before parsing further",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-core/test/cross-org-presentation.test.ts",
+     "name": "Chain Presentation parsing (@spec cross-org-delegation#chain-presentation) > refuses a presentation over the size bound",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the sentence binds either presentation. The reference consumes the projection exchange's Chain Presentation; the direct-invocation presentation object has no reference consumer (cross-org.verification.direct-invocation, todo)."
   },
   {
    "id": "cross-org.chain.child-key-resolution",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
+   "text": "verify the Chain under steps 1 to 5 of the substrate's chain verification algorithm ({{Section 8 of I-D.draft-niyikiza-oauth-attenuating-agent-tokens}}), which validate every `par_hash` link and every child signature through the leaf, verifying each child with the public key carried in its parent's `cnf.jwk`",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -25012,24 +25066,49 @@
    "surface": "verification",
    "assertion": "refusal",
    "observation": {
-    "normative": "a chain whose hop carries a thumbprint-only confirmation, or whose child signature fails under the parent's carried public key, is refused"
+    "normative": "a chain failing the substrate's chain verification (AAT -02 Section 8 steps 1 to 5) is refused: a hop whose cnf carries a thumbprint-only confirmation, a child whose signature fails under its parent's carried public key, a broken `par_hash` link, a tool its parent does not carry, and a depth beyond `del_max_depth`"
    },
    "level": "endpoint",
    "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a hop whose cnf carries a thumbprint-only confirmation",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a missing middle hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
      "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a reordered / substituted parent (par_hash break)",
      "level": "endpoint",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses capability widening at a hop",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "negative matrix (@spec cross-org-delegation#conformance) > refuses a chain whose depth exceeds del_max_depth",
+     "level": "endpoint",
+     "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: step 3 runs the substrate's algorithm (verifyAatChainLinks, the -02 verifier against the published vector suite) under the federation's trust anchors. Proved by skipping the substrate's cnf.jwk check (step 4b2): the thumbprint-only case passes."
   },
   {
    "id": "cross-org.verification.leaf-proof-of-possession",
    "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
    "anchor": "verification",
-   "text": "verify the leaf presenter's proof of possession",
+   "text": "at the projection exchange, which invokes no tool, through the token request's proof ({{projection-exchange}}) in place of the substrate's proof-of-possession JWT",
    "role": "verifier",
    "strength": "MUST",
    "applicability": {
@@ -25070,7 +25149,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier."
+   "notes": "#1173. Step 8 of the destination verification list, whose lead-in carries the MUST. The proof is complete and fresh (RFC 9449 Section 4.3) through the shared token-endpoint verifier. #1759: step 8 names a mechanism per surface; this row is the projection exchange's, whose request checks are cross-org.projection-exchange.dpop-checks. Direct invocation is cross-org.verification.direct-invocation (todo)."
   },
   {
    "id": "cross-org.actor.credential-validation",
@@ -25154,7 +25233,8 @@
      "level": "endpoint",
      "surface": "verification"
     }
-   ]
+   ],
+   "notes": "#1759: the unmapped entry rides beside the mapped one in a substrate-valid hop, which the substrate alone ignores (AAT -02 Section 8 step 4n). Proved by disabling this profile's exactly-the-mapped-entry check: the test passes the chain."
   },
   {
    "id": "cross-org.state.freshness-bound",
@@ -25205,12 +25285,227 @@
    "coverage": "tested",
    "tests": [
     {
-     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
-     "name": "valid three-domain chain (@spec cross-org-delegation#verification) > verifies A -> B -> C and reconstructs the lineage",
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "the minted token and derivation evidence (@spec cross-org-delegation#projection-exchange, #projection) > mints a local access token with the expected claims and records derivation evidence",
      "level": "endpoint",
      "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#1759: witnessed by the exchange test that reads the derivation record (the kernel chain test it cited never read one). Proved by computing the digest over a different array and by recording the root's jti: the test fails each time."
+  },
+  {
+   "id": "cross-org.verification.mission-constraints",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "including the narrowing of its `mission_constraints` member ({{I-D.draft-mcguinness-oauth-mission-attenuation}}, Section \"Mission Constraints Member\")",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "verification",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain is refused when a hop omits `mission_constraints`, widens its parent's, changes its `resource_contract`, or carries a constraint or member the verifier does not understand"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints member is missing",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints widen the parent's",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-delegation.test.ts",
+     "name": "Mission constraints at every hop (@spec cross-org-delegation#verification step 5, attenuation#mission-constraints, #1759) > refuses a hop whose mission_constraints carry a key the verifier does not understand",
+     "level": "endpoint",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a hop whose resource_contract differs from its parent's (invalid_grant)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D902, D932): step 5 of the destination verification list, whose lead-in carries the MUST; the member's rules are the attenuation profile's. Proved by running the Mission layer over the root alone: the three hop cases pass the chain."
+  },
+  {
+   "id": "cross-org.projection-exchange.dpop-checks",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "A DPoP proof passes the checks of {{Section 4.3 of RFC9449}}, including its method, URI, and creation-time window, and its `jti` is accepted once within that window ({{Section 11.1 of RFC9449}}).",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange is refused when its DPoP proof names another `htu` or `htm`, carries an `iat` outside the acceptance window, or repeats a `jti` already accepted within it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a DPoP proof bound to another URI or another method (invalid_dpop_proof)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "leaf proof of possession (@spec cross-org-delegation#projection-exchange) > refuses a proof with no iat, a non-numeric iat, or an iat outside the acceptance window; one inside the window is accepted once and its replay refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932 direction 3): at the exchange the request's proof stands in for the substrate's proof-of-possession JWT, with its freshness, replay and request-binding checks, through the shared token-endpoint verifier (#1173). Proved by dropping the htu and then the htm comparison: the request-binding test fails each time."
+  },
+  {
+   "id": "cross-org.projection-exchange.audience-every-hop",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection-exchange",
+   "text": "a requested audience outside a hop's `aud`, or a restriction of either layer of the leaf's capability entry that the local token cannot represent or its consumer cannot enforce, refuses with `invalid_target`",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a projection exchange whose requested audience is outside some hop's `aud`, including one the root names but a later hop does not, is refused with `invalid_target`"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience outside the leaf's aud (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "audience validation (@spec cross-org-delegation#projection-exchange) > refuses an audience the root's aud names but a later hop's does not (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759: the substrate's step 6c applied to the requested audience. The quoted sentence's second clause is cross-org.projection.both-layers. Both tests register the audience with the destination's scope mapping so only the hop audience check can refuse it. Proved by removing the check and by checking the root alone: the tests fail."
+  },
+  {
+   "id": "cross-org.projection.both-layers",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "projection",
+   "text": "preserve the restrictions of both layers of the leaf's capability entry: each local entry carries the `constraints` and `resource_contract` of its tool's `mission_constraints` value, and a restriction of either layer that the local token cannot represent, or its consumer cannot enforce, refuses the exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "each entry of a projected local token carries its leaf tool's `mission_constraints` `constraints` and `resource_contract`, and the whole exchange is refused with `invalid_target` when any leaf tool carries a restriction of either layer the local token cannot represent or its consumer cannot enforce: an argument constraint narrower than the destination maps the tool to, a constraint whose fact the destination does not establish, or a `resource_contract` the destination does not declare, has retired, or holds superseded past its retention; a contract the destination holds superseded within retention projects"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > carries the Mission entry's resource_contract and constraints into the local token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf argument restriction the local token cannot represent (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf constraint the destination's consumer does not establish (invalid_target)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > refuses a leaf resource_contract the destination does not declare, has retired, or holds superseded past retention (invalid_target), recording no evidence",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "both layers' restrictions in the local token (@spec cross-org-delegation#projection, #1759) > projects a leaf resource_contract the destination holds superseded within retention",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1759 (D932, D941 rulings 1 to 3): a leaf tool projects only where the destination's operations map its entry to exactly its argument constraints (the root mapping, mapAuthorityToCeiling) and the destination's own resource-contract declarations, the ones its kernel reads, resolve its resource_contract (carriedViolation); any other leaf tool refuses the whole exchange with the projection exchange's invalid_target. Ordinary local-policy narrowing is separate, and an empty intersection after it stays invalid_grant (cross-org-grant-endpoint.test.ts: refuses a chain whose authority does not intersect the local ceiling). Proved by skipping the argument comparison, by dropping resource_contract, by projecting an entry the destination does not map, and by skipping the contract check: each test fails."
+  },
+  {
+   "id": "cross-org.verification.direct-invocation",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "verification",
+   "text": "at direct invocation, under steps 6 and 7 of the substrate's algorithm, which bind the proof to the invoked tool and its arguments",
+   "role": "verifier",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a chain-verifying resource server refuses a direct invocation whose `aat_pop` does not verify under the leaf `cnf.jwk` for the invoked tool and its arguments (AAT -02 Section 8 steps 6 and 7)"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 3). The reference has no cross-org chain-verifying resource server; the projection exchange is its only cross-org surface, which is what #1759's acceptance requires."
+  },
+  {
+   "id": "cross-org.chain.direct-presentation-actor-credentials",
+   "spec": "draft-mcguinness-oauth-mission-cross-org-delegation.md",
+   "anchor": "chain-presentation",
+   "text": "a chain-verifying resource server recognizes `actor_credentials` and validates it ({{actor-identity}}), and ignores other members it does not recognize, as the substrate specifies",
+   "role": "verifier",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "cross-org.delegation"
+   },
+   "profiles": [],
+   "surface": "resource-operation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "at direct invocation, a named hop without a valid aligned `actor_credentials` entry in the presentation object refuses the invocation, and an unrecognized member of that object does not"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1759 (D932 direction 2). No reference consumer of the direct-invocation presentation object; see cross-org.verification.direct-invocation."
   },
   {
    "id": "mas.reference.strict-dictionary",
@@ -30924,9 +31219,27 @@
      "name": "authority pinned to contract 2026-10-24 (payments-runtime-profile-v14) never gets v15's reversal (@spec runtime#resource-contract, resource-access#resource-contract, runtime#compound-actions, #1693, D879) > declares 2026-10-27 current under v16, and 2026-10-26 superseded under v15 and 2026-10-24 superseded under v14, each with a retention (#813)",
      "level": "unit",
      "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > refuses at load a required operation that is an action family, outside the action grammar, or defined by no current or superseded version",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/resource-contract.test.ts",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > loads the shipped declaration, and the same declaration requiring the current contract's five non-read actions",
+     "level": "unit",
+     "surface": "deployment-documentation"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). The Enforcement Scope Statement's extensions.resource_contracts lists the served version with its covered operations, the operations requiring a reference (none: the shipped deployment enforces contracts optionally) and its state; the loader refuses a version without a state, a superseded version without retained_until, and a second current version. #1693 (D879) published 2026-10-26 (payments-runtime-profile-v15). #813, #816 (D877): the shipped statement declares four versions: 2026-10-27 current (payments-runtime-profile-v16), 2026-10-26 superseded (v15, retained until 2027-10-27T00:00:00Z), 2026-10-24 superseded (v14, retained until 2027-10-26T00:00:00Z) and 2026-10-20 superseded (v13, retained until 2027-10-24T00:00:00Z). Mutations: leaving the live version at v15 (R5) fails the one-current-version witness; retiring 2026-10-26 (R4) fails the four-version witness. #1752 (D875): the operations requiring a reference are operations the resource serves. The loader refuses, naming the value, an action family, a value outside the action grammar, and an action no current or superseded version defines, even where a document names the value as an operation's action; a retired version's operations do not count, and a newer version's operation may be required though an older supported version lacks it (2026-10-20 lacks payments:payment.reverse). The shipped declaration loads, as does the same declaration requiring the current contract's five non-read actions. Proved by mutation, each alone (5 of 5): removing the family, grammar or served-operation check, counting a retired version's operations, or counting only the current version's, fails a witness."
   },
   {
    "id": "runtime.resource-contract.pdp-refuses-unresolved",

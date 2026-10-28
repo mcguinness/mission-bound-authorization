@@ -13,8 +13,9 @@
  * parent's `cnf.jwk` binds: no Authorization Server contact.
  *
  * This is a standalone kernel module (mirrors kernel/cross-domain.ts); it is
- * not wired to an endpoint. The cross-organization root and child keep their
- * current wire ({@link mapAuthorityToTools}) until #1759 moves them to -02.
+ * not wired to an endpoint. The cross-organization root and child profile the
+ * same wire (#1759): the root maps as {@link deriveAttenuationRoot} does and
+ * adds the issuer-asserted `act` and the origin principal.
  */
 
 import { randomBytes } from "node:crypto";
@@ -52,8 +53,7 @@ import {
   parseAatToolId,
   readMissionConstraints,
 } from "@mission/core";
-import { calculateJwkThumbprint, type CryptoKey, decodeJwt, exportJWK, type JWK, SignJWT } from "jose";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { type CryptoKey, decodeJwt, exportJWK, type JWK, SignJWT } from "jose";
 import type { DerivationReservationResult } from "./derivation-reservations.js";
 import type { MissionKernel } from "./kernel.js";
 import { assertNotStandingPaymentLineage } from "./standing-payment.js";
@@ -270,8 +270,9 @@ function assertCarriable(authority: AttenuatedAuthority): void {
 }
 
 /**
- * @spec attenuation#root-mapping: forward map on the cross-organization
- * wire (#1759 moves it to -02): Authority Set -> AAT `tools`. Each (resource,
+ * @spec attenuation#root-mapping: forward map of the earlier
+ * cross-organization wire, which no root mints since #1759 (both roots map
+ * through {@link mapAuthorityToCeiling}): Authority Set -> AAT `tools`. Each (resource,
  * action) becomes one tool; the entry's Common Constraints become the tool's
  * argument constraints (`max_amount` -> `amount_<ccy>` as a range, `vendors`
  * -> `vendor` as a `one_of`). TOTAL and FAIL-CLOSED: an unrecognized
@@ -360,8 +361,10 @@ function argsFromConstraints(constraints: AuthorityEntry["constraints"]): AATToo
 }
 
 /**
- * @spec attenuation#root-mapping: reverse map on the cross-organization
- * wire: AAT `tools` -> Authority Set, one single-action entry per tool. The
+ * @spec attenuation#root-mapping: reverse map of the earlier
+ * cross-organization wire, which the projection exchange no longer reads
+ * since #1759 (it projects each leaf tool's `mission_constraints`): AAT
+ * `tools` -> Authority Set, one single-action entry per tool. The
  * currency is synthesized from the argument name (`amount_usd` -> `USD`) so
  * that {@link isSubsetEntry}'s currency hard-fail is meaningful when the
  * reverse-mapped entry is checked against the Mission's (USD) entry. TOTAL
@@ -492,18 +495,7 @@ export async function deriveAttenuationRoot(
   kid: string,
   input: DeriveRootInput,
 ): Promise<MintedRoot> {
-  if (input.delMaxDepth !== undefined && input.delMaxDepth < 0) {
-    throw new Error("attenuation: del_max_depth MUST be >= 0");
-  }
-  // @spec AAT -02 Section 8 step 3i: a consumer refuses a root whose
-  // del_max_depth exceeds MAX_DELEGATION_DEPTH.
-  if (input.delMaxDepth !== undefined && input.delMaxDepth > AAT_DEFAULT_PARAMS.maxDelegationDepth) {
-    throw new Error(`attenuation: del_max_depth exceeds ${AAT_DEFAULT_PARAMS.maxDelegationDepth}`);
-  }
-  // @spec attenuation#root: the holder's key travels as a public `cnf.jwk`.
-  // Refused before any count, as a request carrying it is refused.
-  const keyProblem = aatPublicJwkProblem(input.cnfJwk);
-  if (keyProblem) throw new Error(`attenuation: the holder key is not a supported public key: ${keyProblem}`);
+  assertRootInput(input);
   // @spec mission-template#prohibited-classes (#813, D830 ruling 3): an
   // attenuation root carries authority onward for offline delegation, which
   // a standing-payment lineage's budget accounting does not follow. Refused
@@ -525,37 +517,42 @@ export async function deriveAttenuationRoot(
   );
 }
 
-async function mintAttenuationRoot(
-  kernel: MissionKernel,
-  signKey: CryptoKey,
-  kid: string,
-  input: DeriveRootInput,
-  jti: string,
-  operationId: string,
-): Promise<MintedRoot> {
-  // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
-  // A recorded operation identity replays instead of counting again, and the
-  // reservation is released on acceptance below.
-  const admitted = kernel.reserveDerivation(input.missionId, {
-    operationId,
-    artifactId: jti,
-  });
-  const replayed = replayRoot(admitted.reservation);
-  if (replayed) return replayed;
-  const record: MissionRecord = admitted.record;
+/**
+ * The root input checks applied before any count: a `del_max_depth` override
+ * within 0 and MAX_DELEGATION_DEPTH (a consumer refuses a root beyond it,
+ * AAT -02 Section 8 step 3i), and a public holder key (@spec attenuation#root:
+ * the holder's key travels as a public `cnf.jwk`; a request carrying another
+ * is refused).
+ */
+function assertRootInput(input: Pick<DeriveRootInput, "delMaxDepth" | "cnfJwk">): void {
+  if (input.delMaxDepth !== undefined && input.delMaxDepth < 0) {
+    throw new Error("attenuation: del_max_depth MUST be >= 0");
+  }
+  if (input.delMaxDepth !== undefined && input.delMaxDepth > AAT_DEFAULT_PARAMS.maxDelegationDepth) {
+    throw new Error(`attenuation: del_max_depth exceeds ${AAT_DEFAULT_PARAMS.maxDelegationDepth}`);
+  }
+  const keyProblem = aatPublicJwkProblem(input.cnfJwk);
+  if (keyProblem) throw new Error(`attenuation: the holder key is not a supported public key: ${keyProblem}`);
+}
 
-  // Containment: the root maps from the EFFECTIVE set (approved minus the
-  // containment overlay); a contained capability never becomes an AAT tool.
-  const effective = kernel.effectiveAuthoritySet(record);
-
-  // @spec attenuation#root-mapping (S-15, closed): derive del_max_depth from the
-  // Authority Set's delegation policy unless the caller supplies an override. A
-  // client-requested narrowing is minted NON-delegating (del_max_depth 0):
-  // deriving a depth over such a root would need the entries the requested
-  // tools actually justify, which is fan-out accounting (deferred to the
-  // kernel fan-out PR); a non-delegating root is fail-closed and can never let
-  // a non-delegable requested tool ride a root whose depth exceeds 0. A
-  // derived depth beyond MAX_DELEGATION_DEPTH is capped there, a narrowing.
+/**
+ * @spec attenuation#root-mapping: a root's `del_max_depth` and authority from
+ * the EFFECTIVE Authority Set (approved minus the containment overlay, so a
+ * contained capability never becomes a tool).
+ *
+ * @spec attenuation#root-mapping (S-15, closed): `del_max_depth` is derived
+ * from the Authority Set's delegation policy unless the caller supplies an
+ * override. A client-requested narrowing is minted NON-delegating
+ * (del_max_depth 0): deriving a depth over such a root would need the entries
+ * the requested tools actually justify, which is fan-out accounting (deferred
+ * to the kernel fan-out PR); a non-delegating root is fail-closed and can
+ * never let a non-delegable requested tool ride a root whose depth exceeds 0.
+ * A derived depth beyond MAX_DELEGATION_DEPTH is capped there, a narrowing.
+ */
+function rootAuthority(
+  effective: readonly AuthorityEntry[],
+  input: Pick<DeriveRootInput, "delMaxDepth" | "requested" | "operations">,
+): { delMaxDepth: number; authority: AttenuatedAuthority } {
   const delMaxDepth =
     input.delMaxDepth ??
     (input.requested ? 0 : Math.min(deriveDelMaxDepth(effective), AAT_DEFAULT_PARAMS.maxDelegationDepth));
@@ -576,6 +573,29 @@ async function mintAttenuationRoot(
     authority = mapAuthorityToCeiling(mappable, input.operations);
   }
   assertCarriable(authority);
+  return { delMaxDepth, authority };
+}
+
+async function mintAttenuationRoot(
+  kernel: MissionKernel,
+  signKey: CryptoKey,
+  kid: string,
+  input: DeriveRootInput,
+  jti: string,
+  operationId: string,
+): Promise<MintedRoot> {
+  // Derivation gate (D26 lifecycle): throws GateError when non-active/expired.
+  // A recorded operation identity replays instead of counting again, and the
+  // reservation is released on acceptance below.
+  const admitted = kernel.reserveDerivation(input.missionId, {
+    operationId,
+    artifactId: jti,
+  });
+  const replayed = replayRoot(admitted.reservation);
+  if (replayed) return replayed;
+  const record: MissionRecord = admitted.record;
+
+  const { delMaxDepth, authority } = rootAuthority(kernel.effectiveAuthoritySet(record), input);
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
@@ -735,47 +755,44 @@ export async function mintChildOffline(
 
 
 /**
- * @spec cross-org-delegation#root-issuance — mint a cross-organizational
- * attenuation root, on the cross-organization wire until #1759 moves it to
- * -02 (its tools come from {@link mapAuthorityToTools}, and it carries no
- * `mission_constraints`). Differences from {@link deriveAttenuationRoot}: the
- * presenter key travels as the full public `cnf.jwk` (a disconnected verifier
- * verifies the first child under it); the root carries the issuer-asserted
- * `act` naming the approved agent under the caller-resolved canonical actor
- * mapping (@spec cross-org-delegation#actor-identity: the Mission Record's
- * client_id is not itself an actor identity); and the `mission` claim carries
- * the origin principal `subject`. The mapping and its version are returned
- * for the caller to record in the issuance derivation record.
+ * @spec cross-org-delegation#root-issuance (#1759): the input of a
+ * cross-organizational attenuation root. It maps as an in-organization root
+ * does ({@link DeriveRootInput}), and adds the caller-resolved canonical
+ * actor for the approved client (@spec cross-org-delegation#actor-identity:
+ * the Mission Record's client_id is not itself an actor identity) and the
+ * actor-mapping registry version, both recorded in issuance evidence.
  */
-export interface CrossOrgRootInput {
-  missionId: string;
-  aud: string | string[];
-  clientId: string;
-  /** The presenter's PUBLIC key, carried as cnf.jwk. */
-  cnfJwk: JWK;
+export interface CrossOrgRootInput extends DeriveRootInput {
   /** The caller-resolved canonical actor for the approved client. */
   actor: { iss: string; sub: string; sub_profile?: string };
   /** The actor-mapping registry version, recorded in issuance evidence. */
   mappingVersion: string;
-  requestedTools?: AATTools;
-  lifetimeSeconds?: number;
-  delMaxDepth?: number;
-  /**
-   * @spec control-plane#serialization — OPTIONAL durable operation identity.
-   * When supplied, the counted derivation is reserved against it and a repeat
-   * of the same identity REPLAYS the recorded artifact instead of counting a
-   * second derivation. When omitted, the reservation is keyed by the artifact
-   * identity alone, so the operation is reconcilable but not replayable.
-   */
-  operationId?: string;
 }
 
+/** A minted cross-organizational root and the actor mapping its `act` came from. */
+export interface CrossOrgRoot extends MintedRoot {
+  actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string };
+}
+
+/**
+ * @spec cross-org-delegation#root-issuance — mint a cross-organizational
+ * attenuation root. Its `attenuating_agent_token` entry is exactly the mapped
+ * entry an in-organization root carries ({@link deriveAttenuationRoot}: the
+ * `tools` and `mission_constraints` the root mapping derives from the
+ * effective Authority Set, gated on Mission state and counted once per
+ * operation identity). It adds the issuer-asserted `act` naming the approved
+ * agent and the origin principal `subject` on the `mission` claim; the
+ * presenter key travels as the public `cnf.jwk` a disconnected verifier
+ * verifies the first child under. The actor mapping and its version are
+ * returned for the caller to record in the issuance derivation record.
+ */
 export async function deriveCrossOrgRoot(
   kernel: MissionKernel,
   signKey: CryptoKey,
   kid: string,
   input: CrossOrgRootInput,
-): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
+): Promise<CrossOrgRoot> {
+  assertRootInput(input);
   // @spec mission-template#prohibited-classes (#813, D830 ruling 3): the
   // Mission Issuer refuses any cross-organization derivation from a
   // standing-payment lineage. Refused before any count.
@@ -784,7 +801,7 @@ export async function deriveCrossOrgRoot(
   // @spec control-plane#serialization — same reservation boundary as the
   // in-org root: artifact identity first, count and reservation together,
   // release on acceptance, and ONE in-flight owner per operation identity.
-  const jti = `aat_root_${randomBytes(12).toString("base64url")}`;
+  const jti = aatUuidV7(kernel.nowDate().getTime());
   const operationId = input.operationId ?? jti;
   return kernel.exclusiveDerivation(input.missionId, operationId, () =>
     mintCrossOrgRoot(kernel, signKey, kid, input, jti, operationId),
@@ -798,34 +815,20 @@ async function mintCrossOrgRoot(
   input: CrossOrgRootInput,
   jti: string,
   operationId: string,
-): Promise<{ root: string; jti: string; tools: AATTools; actorMapping: { client_id: string; actor: CrossOrgRootInput["actor"]; version: string } }> {
+): Promise<CrossOrgRoot> {
   const admitted = kernel.reserveDerivation(input.missionId, {
     operationId,
     artifactId: jti,
   });
   if (admitted.reservation.kind === "replay" && admitted.reservation.reservation.completion) {
-    return JSON.parse(admitted.reservation.reservation.completion) as Awaited<
-      ReturnType<typeof deriveCrossOrgRoot>
-    >;
+    return JSON.parse(admitted.reservation.reservation.completion) as CrossOrgRoot;
   }
   const record: MissionRecord = admitted.record;
-  const effective = kernel.effectiveAuthoritySet(record);
-  const delMaxDepth =
-    input.delMaxDepth ?? (input.requestedTools ? 0 : deriveDelMaxDepth(effective));
-  let tools: AATTools;
-  if (input.requestedTools) {
-    const requestedEntries = mapToolsToAuthority(input.requestedTools);
-    if (!isSubsetSetIgnoringCapabilitySources(requestedEntries, effective)) {
-      throw new Error("attenuation: requested root exceeds the Mission Authority Set");
-    }
-    tools = input.requestedTools;
-  } else {
-    const mappable = delMaxDepth > 0 ? effective.filter((e) => e.delegation) : effective;
-    tools = mapAuthorityToTools(mappable);
-  }
+  const { delMaxDepth, authority } = rootAuthority(kernel.effectiveAuthoritySet(record), input);
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
   const exp = Math.min(nowS + (input.lifetimeSeconds ?? MAX_ROOT_LIFETIME_S), missionExp);
+  if (!(exp > nowS)) throw new Error("attenuation: the Mission expires before a root could be used");
   const root = await new SignJWT({
     mission: {
       id: record.id,
@@ -839,7 +842,9 @@ async function mintCrossOrgRoot(
     client_id: input.clientId,
     del_depth: 0,
     del_max_depth: delMaxDepth,
-    authorization_details: [{ type: AAT_DETAIL_TYPE, tools }],
+    authorization_details: [
+      { type: AAT_DETAIL_TYPE, tools: authority.tools, [MISSION_CONSTRAINTS_MEMBER]: authority.missionConstraints },
+    ],
   })
     .setProtectedHeader({ alg: "ES256", kid, typ: AAT_TYP })
     .setIssuer(record.issuer)
@@ -848,30 +853,38 @@ async function mintCrossOrgRoot(
     .setExpirationTime(exp)
     .setJti(jti)
     .sign(signKey);
-  const actorMapping = {
-    client_id: input.clientId,
-    actor: input.actor,
-    version: input.mappingVersion,
+  const minted: CrossOrgRoot = {
+    root,
+    jti,
+    tools: authority.tools,
+    missionConstraints: authority.missionConstraints,
+    actorMapping: { client_id: input.clientId, actor: input.actor, version: input.mappingVersion },
   };
   kernel.releaseDerivation(admitted.reservation.reservation.reservationId, {
     artifactId: jti,
-    ...(input.operationId ? { completion: JSON.stringify({ root, jti, tools, actorMapping }) } : {}),
+    ...(input.operationId ? { completion: JSON.stringify(minted) } : {}),
   });
-  return { root, jti, tools, actorMapping };
+  return minted;
 }
 
 /**
  * @spec cross-org-delegation#derivation — holder-side cross-organizational
- * child mint: signs under the PARENT cnf key, binds via par_hash, carries the
- * recipient's PUBLIC key as cnf.jwk, keeps the mission claim (including
- * subject) value-invariant, and names this hop's actor only when `actor` is
- * supplied (a named hop needs an aligned actor-binding credential in the
- * Presentation; a key-only hop omits act entirely).
+ * child mint on the substrate's wire: signs under the PARENT's key, with
+ * `alg` chosen by that key's type and `iss` its JWK Thumbprint URI; binds
+ * the exact parent through `par_hash`; carries the recipient's PUBLIC key as
+ * `cnf.jwk`, the narrowed `tools` and `mission_constraints`, and the
+ * `mission` claim (including `subject`) unchanged; and names this hop's
+ * actor only when `actor` is supplied (a named hop needs an aligned
+ * actor-binding credential presented with the Chain; a key-only hop omits
+ * `act`). Like {@link mintChildOffline} it is a convenience, not the
+ * security boundary; unlike it, it does not refuse a broader child, because
+ * the destination's verification does ({@link verifyCrossOrgChain}), and a
+ * suite builds the chains that verification must refuse through it.
  */
 export async function mintCrossOrgChild(
   parentToken: string,
   parentKey: CryptoKey,
-  narrowedTools: AATTools,
+  narrowed: AttenuatedAuthority,
   opts: {
     cnfJwk: JWK;
     actor?: { iss: string; sub: string; sub_profile?: string };
@@ -881,7 +894,6 @@ export async function mintCrossOrgChild(
 ): Promise<string> {
   const parent = decodeJwt(parentToken) as Record<string, unknown>;
   const { d: _d, ...parentPub } = await exportJWK(parentKey);
-  const parentJkt = await calculateJwkThumbprint(parentPub as JWK);
   const nowS = Math.floor(Date.now() / 1000);
   const exp = opts.exp ?? Number(parent.exp);
   return new SignJWT({
@@ -890,15 +902,16 @@ export async function mintCrossOrgChild(
     del_depth: Number(parent.del_depth) + 1,
     del_max_depth: Number(parent.del_max_depth),
     par_hash: parHash(parentToken),
-    authorization_details: [{ type: AAT_DETAIL_TYPE, tools: narrowedTools }],
+    authorization_details: [
+      { type: AAT_DETAIL_TYPE, tools: narrowed.tools, [MISSION_CONSTRAINTS_MEMBER]: narrowed.missionConstraints },
+    ],
     ...(opts.actor ? { act: { iss: opts.actor.iss, sub: opts.actor.sub, ...(opts.actor.sub_profile ? { sub_profile: opts.actor.sub_profile } : {}) } } : {}),
-    ...(typeof parent.sub === "string" ? { sub: parent.sub } : {}),
   })
-    .setProtectedHeader({ alg: "ES256", typ: AAT_TYP })
-    .setIssuer(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${parentJkt}`)
+    .setProtectedHeader({ alg: holderAlg(parentPub as JWK), typ: AAT_TYP })
+    .setIssuer(aatJwkThumbprintUri(parentPub as Record<string, unknown>))
     .setAudience(opts.aud ?? (parent.aud as string | string[]))
     .setIssuedAt(nowS)
     .setExpirationTime(exp)
-    .setJti(`aat_child_${randomBytes(9).toString("base64url")}`)
+    .setJti(aatUuidV7())
     .sign(parentKey);
 }

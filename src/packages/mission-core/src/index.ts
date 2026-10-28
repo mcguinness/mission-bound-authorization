@@ -43,7 +43,9 @@ export {
   type AatReplayState,
   type AatTrustAnchor,
   type AatVerifiedToken,
+  aatChainAudienceProblem,
   verifyAatChain,
+  verifyAatChainLinks,
   verifyAatPresentation,
 } from "./aat-verify.js";
 export { ACTION_PHASES, type ActionPhase, isActionPhase } from "./action-phase.js";

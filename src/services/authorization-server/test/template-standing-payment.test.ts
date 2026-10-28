@@ -936,6 +936,7 @@ describe("standing-payment derivations refused (@spec mission-template#prohibite
         aud: RESOURCE,
         clientId: "worker",
         cnfJwk,
+        operations: TEST_OPERATIONS,
         actor: { iss: "https://id.example", sub: "wl-worker" },
         mappingVersion: "map-1",
       }),
