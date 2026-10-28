@@ -115,7 +115,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { validateExternalPins } from "./check-external-pins.mjs";
 import { validateBundleManifests } from "./check-bundle-manifest.mjs";
@@ -441,6 +441,112 @@ function extractSection(markdown, matchFn) {
     }
   }
   return lines.slice(start.line + 1, endLine).join("\n");
+}
+
+// (t) Mapping Assessment pins (#643 review; re-pointed by #708 when the
+// assessment moved from the substrate to the OAuth binding, and by #1794
+// (D973) when it moved to the architecture document). The architecture's
+// informative Mapping Assessment of the OAuth binding carries two pins:
+//
+//   - `assessed-substrate-digest`: the first 16 hex of sha256 of the
+//     substrate file it was last re-read against, hashed here from the
+//     live file, so the marker must move in the same change that moves
+//     the substrate. A coupling device, not proof the re-read happened.
+//   - `assessed-binding-snapshot`: the full commit and the 64-hex content
+//     sha256 of the assessed OAuth binding snapshot. It is validated
+//     against the pinned source (`git show <commit>:<binding>`), never the
+//     current binding file, so a later binding edit leaves the Assessment
+//     pinned to the revision it assessed (later revisions are unassessed).
+//     The appendix prose must state the same commit and digest, and every
+//     `{{I-D.draft-mcguinness-oauth-mission}}, Section "<title>"` citation
+//     in it must name a heading that exists at that commit.
+//
+// A failure is an editorial finding, never a conformance one.
+export const ASSESSMENT_FILE = "draft-mcguinness-mission-architecture.md";
+export const ASSESSMENT_TITLE = "OAuth Binding Mapping Assessment";
+export const ASSESSED_BINDING_FILE = "draft-mcguinness-oauth-mission.md";
+export const ASSESSED_SUBSTRATE_FILE = "draft-mcguinness-mission-substrate.md";
+
+// Heading titles of a kramdown draft, anchors stripped, fenced blocks skipped.
+export function headingTitles(markdown) {
+  const titles = new Set();
+  let fence = null;
+  for (const line of markdown.split("\n")) {
+    const f = line.match(/^(~~~|```)/);
+    if (f) {
+      if (fence === null) fence = f[1];
+      else if (fence === f[1]) fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    const m = line.match(/^#{1,6}\s+(.*)$/);
+    if (m) titles.add(m[1].replace(/\s*\{#[^}]*\}\s*$/, "").trim());
+  }
+  return titles;
+}
+
+// Every title a `{{I-D.draft-mcguinness-oauth-mission}}, Section(s) "..."`
+// citation names, read with line wraps joined.
+export function citedBindingTitles(text) {
+  const flat = text.replace(/\s+/g, " ");
+  const re = /\{\{I-D\.draft-mcguinness-oauth-mission\}\},? Sections? ((?:"[^"]+"(?:,? (?:and )?)?)+)/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(flat))) {
+    for (const q of m[1].matchAll(/"([^"]+)"/g)) out.push(q[1]);
+  }
+  return out;
+}
+
+// `assessmentText` is the architecture draft, `substrateBytes` the live
+// substrate file, and `showAtCommit(commit, file)` returns that file's
+// bytes at that commit, or null when git cannot resolve it.
+export function validateAssessmentPin({ assessmentText, substrateBytes, showAtCommit }) {
+  const findings = [];
+  const section = extractSection(assessmentText, (t, l) => l === 1 && t === ASSESSMENT_TITLE);
+  if (section === null) {
+    return [`${ASSESSMENT_FILE}: no "${ASSESSMENT_TITLE}" appendix`];
+  }
+  const sm = section.match(/<!-- assessed-substrate-digest: ([0-9a-f]{16}) -->/);
+  const srcDigest = createHash("sha256").update(substrateBytes).digest("hex");
+  if (!sm) {
+    findings.push(`${ASSESSMENT_FILE}: assessed-substrate-digest marker missing from the Mapping Assessment appendix`);
+  } else if (sm[1] !== srcDigest.slice(0, 16)) {
+    findings.push(
+      `assessed-substrate-digest ${sm[1]} != sha256(${ASSESSED_SUBSTRATE_FILE}) ${srcDigest.slice(0, 16)}; the substrate changed: re-read the Mapping Assessment, then re-pin the marker`,
+    );
+  }
+  const bm = section.match(/<!-- assessed-binding-snapshot: ([0-9a-f]{40}) ([0-9a-f]{64}) -->/);
+  if (!bm) {
+    findings.push(`${ASSESSMENT_FILE}: assessed-binding-snapshot marker (full commit and 64-hex content sha256) missing from the Mapping Assessment appendix`);
+    return findings;
+  }
+  const [, commit, digest] = bm;
+  const prose = section.replace(/<!--[\s\S]*?-->/g, "");
+  if (!prose.includes(commit) || !prose.includes(digest)) {
+    findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment's text must state the pinned snapshot commit ${commit.slice(0, 12)} and content digest ${digest.slice(0, 12)} that its assessed-binding-snapshot marker records`);
+  }
+  const bytes = showAtCommit(commit, ASSESSED_BINDING_FILE);
+  if (bytes === null) {
+    findings.push(`assessed-binding-snapshot: ${ASSESSED_BINDING_FILE} is not resolvable at ${commit.slice(0, 12)} in local git history (a shallow clone? fetch full history)`);
+    return findings;
+  }
+  const actual = createHash("sha256").update(bytes).digest("hex");
+  if (actual !== digest) {
+    findings.push(`assessed-binding-snapshot: sha256(${ASSESSED_BINDING_FILE} at ${commit.slice(0, 12)}) ${actual.slice(0, 16)} != pinned ${digest.slice(0, 16)}`);
+    return findings;
+  }
+  const titles = headingTitles(bytes.toString("utf8"));
+  const cited = citedBindingTitles(section);
+  if (cited.length === 0) {
+    findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites no section of the assessed OAuth binding`);
+  }
+  for (const title of cited) {
+    if (!titles.has(title)) {
+      findings.push(`${ASSESSMENT_FILE}: the Mapping Assessment cites Section "${title}" of the OAuth binding, which has no such section at the pinned snapshot ${commit.slice(0, 12)}`);
+    }
+  }
+  return findings;
 }
 
 // Identifier-boundary containment check: true if `token` occurs in `text`
@@ -1208,32 +1314,23 @@ function main() {
     }
   }
 
-  // (t) Mapping Assessment change-coupling tripwire (#643 review; re-pointed
-  // by #708 when the assessment relocated from the substrate to the OAuth
-  // binding itself; kept informative per the #717 review). The OAuth
-  // binding's informative self-assessment describes the Mission Substrate
-  // contract in the substrate's own Statement form, and it pins the
-  // substrate bytes it was last verified against, hashed HERE from the
-  // source file directly (never read from another pinned surface, so
-  // mechanically re-pinning a manifest cannot satisfy it by accident). It
-  // forces the marker to move in the same change that moves the substrate,
-  // prompting a re-read of the (informative) assessment for accuracy; it
-  // is a coupling device, not proof the re-read happened, and its failure
-  // is an editorial finding, never a conformance one.
-  {
-    const core = readFile(path.join(ROOT, "draft-mcguinness-oauth-mission.md"), "draft-mcguinness-oauth-mission.md");
-    const mm = core.match(/<!-- assessed-substrate-digest: ([0-9a-f]{16}) -->/);
-    const srcDigest = createHash("sha256")
-      .update(fs.readFileSync(path.join(ROOT, "draft-mcguinness-mission-substrate.md")))
-      .digest("hex");
-    if (!mm) {
-      fail("assessment-pin", "draft-mcguinness-oauth-mission.md: assessed-substrate-digest marker missing from the Mapping Assessment section");
-    } else if (mm[1] !== srcDigest.slice(0, 16)) {
-      fail(
-        "assessment-pin",
-        `assessed-substrate-digest ${mm[1]} != sha256(draft-mcguinness-mission-substrate.md) ${srcDigest.slice(0, 16)}; the substrate changed: re-read the Mapping Assessment, then re-pin the marker`,
-      );
-    }
+  // (t) Mapping Assessment pins: see validateAssessmentPin() above.
+  for (const e of validateAssessmentPin({
+    assessmentText: readFile(path.join(ROOT, ASSESSMENT_FILE), ASSESSMENT_FILE),
+    substrateBytes: fs.readFileSync(path.join(ROOT, ASSESSED_SUBSTRATE_FILE)),
+    showAtCommit: (commit, file) => {
+      try {
+        return execFileSync("git", ["show", `${commit}:${file}`], {
+          cwd: ROOT,
+          maxBuffer: 1024 * 1024 * 64,
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch {
+        return null;
+      }
+    },
+  })) {
+    fail("assessment-pin", e);
   }
 
   // (u) Binding packages: README.md's "Find your path" generated "Minimum

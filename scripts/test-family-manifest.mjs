@@ -22,7 +22,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { roleFor, maturityDisplay, CORE_SLUG, BINDING_SLUGS, validateCandidateGate, loadConformanceCounts, validateNoStatusSections } from "./generate-drafts-index.mjs";
-import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT } from "./check-family-manifest.mjs";
+import { HAND_TYPED_COUNT, UNSTABLE_SELF_CLAIM, parseFrontMatterTitle, parseFamilyRefTitles, validateWireNames, GRANDFATHERED_WIRE_NAMES, MISSION_COMPONENT, validateAssessmentPin, citedBindingTitles, headingTitles, ASSESSMENT_FILE, ASSESSED_SUBSTRATE_FILE } from "./check-family-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -859,4 +859,106 @@ test("wire names: the real repository is clean, and every grandfathered entry is
   const drafts = files.map((f) => ({ slug: f.replace(/\.md$/, ""), text: fs.readFileSync(path.join(REPO_ROOT, f), "utf8") }));
   assert.deepEqual(validateWireNames(drafts), []);
   assert.equal(validateWireNames(drafts, NONE).length, GRANDFATHERED_WIRE_NAMES.size);
+});
+
+// ---------------------------------------------------------------------
+// validateAssessmentPin(): check (t), the Mapping Assessment's pins (#1794, D973)
+// ---------------------------------------------------------------------
+
+const PIN_SUBSTRATE = Buffer.from("substrate bytes\n");
+const PIN_BINDING = Buffer.from("---\ntitle: x\n---\n\n# Conformance {#conformance}\n\n~~~\n# Not A Heading\n~~~\n\n## Binding the Mission to the Grant {#grant-binding}\n");
+const PIN_COMMIT = "a".repeat(40);
+const sha256hex = (b) => crypto.createHash("sha256").update(b).digest("hex");
+
+function assessmentFixture({ substrateDigest = sha256hex(PIN_SUBSTRATE).slice(0, 16), commit = PIN_COMMIT, digest = sha256hex(PIN_BINDING), prose = true, cite = 'Section "Binding the Mission to\n  the Grant"' } = {}) {
+  return [
+    "# Comparison {#c}",
+    "",
+    "# OAuth Binding Mapping Assessment {#oauth-statement}",
+    "",
+    `<!-- assessed-substrate-digest: ${substrateDigest} -->`,
+    `<!-- assessed-binding-snapshot: ${commit} ${digest} -->`,
+    "",
+    prose ? `The snapshot is commit \`${commit}\` with digest\n\`${digest}\`.` : "No snapshot named.",
+    "",
+    `See ({{I-D.draft-mcguinness-oauth-mission}}, Section "Conformance") and ({{I-D.draft-mcguinness-oauth-mission}}, ${cite}).`,
+    "",
+    "# A Worked Composition {#w}",
+    "",
+  ].join("\n");
+}
+
+const pinShow = (bytes) => (commit, file) => (commit === PIN_COMMIT && file === "draft-mcguinness-oauth-mission.md" ? bytes : null);
+
+test("assessment pin: a correct fixture passes", () => {
+  assert.deepEqual(validateAssessmentPin({ assessmentText: assessmentFixture(), substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) }), []);
+});
+
+test("assessment pin: a changed substrate fails the substrate digest", () => {
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture(), substrateBytes: Buffer.from("edited\n"), showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /assessed-substrate-digest .* the substrate changed/);
+});
+
+test("assessment pin: a missing snapshot marker fails", () => {
+  const text = assessmentFixture().replace(/<!-- assessed-binding-snapshot:[^>]*-->\n/, "");
+  const f = validateAssessmentPin({ assessmentText: text, substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /assessed-binding-snapshot marker .* missing/);
+});
+
+test("assessment pin: a digest that is not the binding's bytes at the pinned commit fails", () => {
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture({ digest: "b".repeat(64) }), substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /sha256\(draft-mcguinness-oauth-mission\.md at a{12}\) .* != pinned b{16}/);
+});
+
+test("assessment pin: the pin is checked against the pinned source, not the current binding", () => {
+  // showAtCommit serves the snapshot bytes; nothing here reads a working-tree
+  // binding, so a later binding edit cannot fail or satisfy the pin.
+  const edited = Buffer.concat([PIN_BINDING, Buffer.from("\n## Later Section {#later}\n")]);
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture(), substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(edited) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /!= pinned/);
+});
+
+test("assessment pin: an unresolvable commit fails", () => {
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture(), substrateBytes: PIN_SUBSTRATE, showAtCommit: () => null });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /not resolvable at a{12}/);
+});
+
+test("assessment pin: prose that does not state the pinned commit and digest fails", () => {
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture({ prose: false }), substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /must state the pinned snapshot commit/);
+});
+
+test("assessment pin: a cited title absent at the pinned commit fails, a fenced '#' line is no heading", () => {
+  const f = validateAssessmentPin({ assessmentText: assessmentFixture({ cite: 'Section "Not A Heading"' }), substrateBytes: PIN_SUBSTRATE, showAtCommit: pinShow(PIN_BINDING) });
+  assert.equal(f.length, 1);
+  assert.match(f[0], /cites Section "Not A Heading" of the OAuth binding, which has no such section/);
+});
+
+test("assessment pin: citedBindingTitles joins wraps and reads Sections lists; headingTitles strips anchors", () => {
+  assert.deepEqual(
+    citedBindingTitles('({{I-D.draft-mcguinness-oauth-mission}},\n Sections "A B" and\n "C") and {{I-D.draft-mcguinness-oauth-mission-resource-access}}, Section "D"'),
+    ["A B", "C"],
+  );
+  assert.deepEqual([...headingTitles("# One {#one}\n## Two\n```\n# Three\n```\n")], ["One", "Two"]);
+});
+
+test("assessment pin: the real repository's Mapping Assessment is pinned and its citations resolve at the snapshot", () => {
+  const findings = validateAssessmentPin({
+    assessmentText: fs.readFileSync(path.join(REPO_ROOT, ASSESSMENT_FILE), "utf8"),
+    substrateBytes: fs.readFileSync(path.join(REPO_ROOT, ASSESSED_SUBSTRATE_FILE)),
+    showAtCommit: (commit, file) => {
+      try {
+        return execFileSync("git", ["show", `${commit}:${file}`], { cwd: REPO_ROOT, maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "ignore"] });
+      } catch {
+        return null;
+      }
+    },
+  });
+  assert.deepEqual(findings, []);
 });
