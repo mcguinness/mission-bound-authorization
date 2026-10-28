@@ -4331,8 +4331,10 @@ names a delegate, so it is not a self-exchange, and these rules do not
 apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
 even when it carries no `actor_token`. Issuance applies the checks of
-{{issuance-checks}} as that list states for a self-exchange. A
-no-actor exchange is subject to the following:
+{{issuance-checks}} as that list states for a self-exchange.
+{{authority-proposal}} states a self-exchange request's exemption from
+`mission_intent` and the checks that still apply to it. A no-actor
+exchange is subject to the following:
 
 1. The AS MUST refuse a no-actor exchange with the `invalid_request`
    error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
