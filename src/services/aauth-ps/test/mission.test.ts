@@ -5,10 +5,12 @@
  * (Section 8.7; the binding's Native Reference rule; fixture P1).
  */
 import { createHash } from "node:crypto";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rfc3339 } from "../src/index.js";
 import {
   type Agent,
+  AP,
+  ASSISTANT,
   approve,
   claims,
   HELPER,
@@ -22,6 +24,7 @@ import {
   shape,
   signed,
   type World,
+  whileResolving,
   world,
 } from "./helpers.js";
 
@@ -35,6 +38,7 @@ beforeEach(async () => {
   planner = await makeAgent(w.ap, w.clock, PLANNER);
 });
 afterEach(async () => {
+  vi.restoreAllMocks();
   await w.close();
 });
 
@@ -262,5 +266,25 @@ describe("{mission_endpoint}/{mission_s256}: the owner's read", () => {
     const helper = await makeAgent(w.ap, w.clock, HELPER);
     const mine = await approve(w, helper);
     expect((await read(helper, mine.s256)).status).toBe(200);
+  });
+});
+
+describe("mission_endpoint: the approval commit", () => {
+  it("approves nothing when the agent token expires while its key is resolved and the proposal names a resource: 401 expired_jwt", async () => {
+    const shortLived = await makeAgent(w.ap, w.clock, ASSISTANT, { exp: w.clock.s + 10 });
+    whileResolving(AP, () => {
+      w.clock.ms = ((claims(shortLived.token).exp as number) + 1) * 1000;
+    });
+    const approved = vi.spyOn(w.faults, "approve");
+    const r = await propose(w, shortLived, {
+      description: "Summarize the quarterly report",
+      resources: [RS],
+    });
+    expect(r.status).toBe(401);
+    expect(r.body).toMatchObject({ error: "expired_jwt" });
+    expect(r.body.s256).toBeUndefined();
+    expect(r.body.person_tokens).toBeUndefined();
+    expect(approved).not.toHaveBeenCalled();
+    expect(issuedCount(w)).toBe(0);
   });
 });

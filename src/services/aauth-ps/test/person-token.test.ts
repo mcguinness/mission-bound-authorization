@@ -6,10 +6,11 @@
  */
 import { createHash } from "node:crypto";
 import { verifyPersonToken } from "@mission/aauth-wire";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rfc3339 } from "../src/index.js";
 import {
   type Agent,
+  AP,
   ASSISTANT,
   approve,
   claims,
@@ -27,6 +28,7 @@ import {
   shape,
   signed,
   type World,
+  whileResolving,
   world,
 } from "./helpers.js";
 
@@ -38,6 +40,7 @@ beforeEach(async () => {
   assistant = await makeAgent(w.ap, w.clock);
 });
 afterEach(async () => {
+  vi.restoreAllMocks();
   await w.close();
 });
 
@@ -326,5 +329,33 @@ describe("person token endpoint: the Mission association", () => {
     const r = await requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
     refused(r, 500, "server_error");
     expect(r.body.detail).toBe("the issued token could not be recorded");
+  });
+});
+
+describe("person token endpoint: the issuance commit", () => {
+  it("refuses an agent token that expires while its key is resolved, so no person token is minted already expired: 401 expired_jwt", async () => {
+    const shortLived = await makeAgent(w.ap, w.clock, ASSISTANT, { exp: w.clock.s + 10 });
+    const { s256 } = await approve(w, shortLived);
+    whileResolving(AP, () => {
+      w.clock.ms = ((claims(shortLived.token).exp as number) + 1) * 1000;
+    });
+    const r = await requestPersonToken(w, shortLived, { resource: RS, mission_s256: s256 });
+    refused(r, 401, "expired_jwt");
+    expect(r.headers.get("signature-error")).toBe("error=expired_jwt");
+    expect(w.ps.store.missionLog(s256).map((e) => e.event)).toEqual(["approved"]);
+  });
+
+  it("checks the mission at the time it reads after authentication: expires_at passing while the agent's key is resolved is refused", async () => {
+    const expiresAt = w.clock.s + 10;
+    const { s256 } = await approve(w, assistant, {
+      description: "Summarize the quarterly report",
+      expires_at: rfc3339(expiresAt),
+    });
+    whileResolving(AP, () => {
+      w.clock.ms = (expiresAt + 1) * 1000;
+    });
+    const r = await requestPersonToken(w, assistant, { resource: RS, mission_s256: s256 });
+    refused(r, 403, "mission_terminated");
+    expect(r.body.termination_reason).toBe("expired");
   });
 });

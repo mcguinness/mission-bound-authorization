@@ -260,27 +260,40 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     createHmac("sha256", store.pairwiseKey()).update(`${person}\n${resource}`).digest("base64url");
 
   /**
-   * A person token for `resource`: `sub` pairwise for the agent's person
-   * at that resource, `cnf.jwk` the key that signed the request, and `exp`
-   * capped at the one-hour ceiling, the presenting agent token's `exp` and
-   * the mission's `expires_at`.
+   * The agent token that authenticated the request expired before its
+   * issuance committed: the token in Signature-Key has no token endpoint
+   * code, so the answer is 401 with Signature-Error (AAuth -11 Section
+   * 11.9.3).
+   */
+  const agentTokenExpired = () =>
+    new SignatureError("expired_jwt", "the agent token expired before the issuance committed");
+
+  /**
+   * The claims and record of a person token for `resource`, built without
+   * an await so a caller can check them and write the record at the time
+   * it read: `sub` pairwise for the agent's person at that resource,
+   * `cnf.jwk` the key that signed the request, and `exp` capped at the
+   * one-hour ceiling, the presenting agent token's `exp` and the mission's
+   * `expires_at`. A token whose `exp` is not after `nowS` is refused, never
+   * minted already expired.
    *
    * @spec aauth#section-7.1.2
    * @spec aauth#section-14.1
    */
-  const mintPersonToken = async (
+  const personTokenFor = (
     entry: AgentEntry,
     agentToken: VerifiedToken,
     signerJwk: Record<string, unknown>,
     resource: string,
     mission: { s256: string; expiresAt: number } | undefined,
     nowS: number,
-  ): Promise<{ jwt: string; record: IssuedTokenRecord; expiresIn: number }> => {
+  ): { claims: Record<string, unknown>; record: IssuedTokenRecord; expiresIn: number } => {
     const person = config.persons.get(entry.person);
     if (!person) throw serverError("the agent's person is not configured");
     const caps = [nowS + config.lifetimes.personTokenSeconds, agentToken.payload.exp as number];
     if (mission) caps.push(mission.expiresAt);
     const exp = Math.min(...caps);
+    if (exp <= nowS) throw agentTokenExpired();
     const jti = randomUUID();
     const sub = pairwiseSub(person.id, resource);
     const claims: Record<string, unknown> = {
@@ -295,7 +308,6 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     };
     if (mission) claims.mission_s256 = mission.s256;
     if (person.tenant !== undefined) claims.tenant = person.tenant;
-    const jwt = await mintToken("aa-person+jwt", claims, minter);
     const record: IssuedTokenRecord = {
       iss: issuer,
       jti,
@@ -307,8 +319,11 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       issuedAt: nowS,
     };
     if (mission) record.missionS256 = mission.s256;
-    return { jwt, record, expiresIn: exp - nowS };
+    return { claims, record, expiresIn: exp - nowS };
   };
+
+  const mint = (typ: "aa-person+jwt" | "aa-auth+jwt", claims: Record<string, unknown>) =>
+    mintToken(typ, claims, minter);
 
   const record = (issued: IssuedTokenRecord[], log: MissionLogEntry[]) => {
     try {
@@ -417,20 +432,13 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     const bytes = encodeBlob(blob);
     const s256 = missionS256(bytes);
 
-    const personTokens: Record<string, string> = {};
-    const issued: IssuedTokenRecord[] = [];
-    for (const resource of resources ?? []) {
-      const minted = await mintPersonToken(
-        entry,
-        agentToken,
-        verified.publicJwk,
-        resource,
-        { s256, expiresAt },
-        nowS,
-      );
-      personTokens[resource] = minted.jwt;
-      issued.push(minted.record);
-    }
+    // From the time read above to the approval's commit nothing awaits, so
+    // every check holds at the moment the mission and its person tokens are
+    // recorded; the tokens are minted after, from claims already fixed.
+    const built = (resources ?? []).map((resource) =>
+      personTokenFor(entry, agentToken, verified.publicJwk, resource, { s256, expiresAt }, nowS),
+    );
+    const issued = built.map((t) => t.record);
     const mission: MissionRecord = {
       agent,
       s256,
@@ -449,6 +457,8 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     } catch {
       throw serverError("the approved mission could not be recorded");
     }
+    const personTokens: Record<string, string> = {};
+    for (const t of built) personTokens[t.record.aud] = await mint("aa-person+jwt", t.claims);
     const body: Record<string, unknown> = { s256, mission: bytes.toString("base64url") };
     if (resources) body.person_tokens = personTokens;
     send(res, 200, body);
@@ -497,6 +507,9 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     if (!isServerIdentifier(resource)) {
       throw invalidRequest("resource is missing or is not a server identifier");
     }
+    // Read after the request was authenticated; from here to the record
+    // nothing awaits, so the mission gate and the `exp` cap hold at the
+    // moment the token is recorded. It is minted after, from fixed claims.
     const nowS = Math.floor(now() / 1000);
     let mission: MissionRecord | undefined;
     if (params.mission_s256 !== undefined) {
@@ -507,14 +520,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     } else if (entry.missionGoverned) {
       throw governedMissionless();
     }
-    const minted = await mintPersonToken(
-      entry,
-      agentToken,
-      verified.publicJwk,
-      resource,
-      mission,
-      nowS,
-    );
+    const minted = personTokenFor(entry, agentToken, verified.publicJwk, resource, mission, nowS);
     const log: MissionLogEntry[] = mission
       ? [
           {
@@ -526,7 +532,8 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
         ]
       : [];
     record([minted.record], log);
-    send(res, 200, { person_token: minted.jwt, expires_in: minted.expiresIn });
+    const jwt = await mint("aa-person+jwt", minted.claims);
+    send(res, 200, { person_token: jwt, expires_in: minted.expiresIn });
   };
 
   /**
@@ -596,21 +603,34 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
 
     // Step 4: the mission is this agent's, active and unexpired.
     let mission: MissionRecord | undefined;
+    const notFound = () => new PsError(400, "invalid_resource_token", NOT_THIS_AGENTS_MISSION);
     if (rt.mission_s256 !== undefined) {
-      const notFound = () => new PsError(400, "invalid_resource_token", NOT_THIS_AGENTS_MISSION);
       if (typeof rt.mission_s256 !== "string") throw notFound();
       mission = gateMission(agent, rt.mission_s256, nowS, notFound);
     } else if (entry.missionGoverned) {
       throw governedMissionless();
     }
 
+    // The issuance commit. Key resolution and verification above awaited,
+    // and time passed: the clock is read again, and every time- and
+    // state-dependent check runs again at that time, with no await before
+    // the record is written. The token is minted after, from fixed claims.
+    const at = Math.floor(now() / 1000);
+    if ((rt.exp as number) <= at) {
+      throw new PsError(400, "expired_resource_token", "the resource token has expired");
+    }
+    if ((presented.payload.exp as number) <= at) {
+      throw new PsError(400, "expired_presented_token", "the presented token has expired");
+    }
+    if (mission) mission = gateMission(agent, mission.s256, at, notFound);
     const caps = [
-      nowS + config.lifetimes.authTokenSeconds,
+      at + config.lifetimes.authTokenSeconds,
       agentToken.payload.exp as number,
       presented.payload.exp as number,
     ];
     if (mission) caps.push(mission.expiresAt);
     const exp = Math.min(...caps);
+    if (exp <= at) throw agentTokenExpired();
     const jti = randomUUID();
     const claims: Record<string, unknown> = {
       iss: issuer,
@@ -619,7 +639,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       ps: issuer,
       sub: rt.sub,
       jti,
-      iat: nowS,
+      iat: at,
       exp,
       cnf: { jwk: publicJwk(verified.publicJwk) },
     };
@@ -627,7 +647,6 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       if (typeof rt[name] === "string") claims[name] = rt[name];
     }
     if (mission) claims.mission_s256 = mission.s256;
-    const jwt = await mintToken("aa-auth+jwt", claims, minter);
     const issued: IssuedTokenRecord = {
       iss: issuer,
       jti,
@@ -636,7 +655,7 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       exp,
       sub: rt.sub as string,
       agent,
-      issuedAt: nowS,
+      issuedAt: at,
     };
     const log: MissionLogEntry[] = [];
     if (mission) {
@@ -644,10 +663,11 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
       const detail: Record<string, unknown> = { jti, aud: rt.iss, presented_jti: rt.presented_jti };
       if (typeof rt.scope === "string") detail.scope = rt.scope;
       if (typeof params.justification === "string") detail.justification = params.justification;
-      log.push({ s256: mission.s256, at: nowS, event: "auth_token_issued", detail });
+      log.push({ s256: mission.s256, at, event: "auth_token_issued", detail });
     }
     record([issued], log);
-    send(res, 200, { auth_token: jwt, expires_in: exp - nowS });
+    const jwt = await mint("aa-auth+jwt", claims);
+    send(res, 200, { auth_token: jwt, expires_in: exp - at });
   };
 
   const authenticate = async (req: IncomingMessage, body: Buffer): Promise<VerifiedRequest> => {
@@ -717,6 +737,11 @@ export function createPersonServer(options: PersonServerOptions): PersonServer {
     } catch (err) {
       if (err instanceof PsError) {
         return send(res, err.status, { error: err.code, detail: err.detail, ...err.extra });
+      }
+      // The request's own token failing after authentication: the agent
+      // token expired before an issuance committed.
+      if (err instanceof SignatureError) {
+        return send(res, 401, { error: err.code, detail: err.detail }, err.headers);
       }
       return send(res, 500, { error: "server_error", detail: "internal error" });
     }

@@ -9,10 +9,11 @@
  */
 import { randomUUID } from "node:crypto";
 import { generateSigningKey, jwkThumbprint, mintToken, verifyAuthToken } from "@mission/aauth-wire";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { rfc3339 } from "../src/index.js";
 import {
   type Agent,
+  ASSISTANT,
   approve,
   claims,
   HELPER,
@@ -31,6 +32,7 @@ import {
   resourceTokenFor,
   STRANGER,
   type World,
+  whileResolving,
   world,
 } from "./helpers.js";
 
@@ -44,6 +46,7 @@ beforeEach(async () => {
   helper = await makeAgent(w.ap, w.clock, HELPER);
 });
 afterEach(async () => {
+  vi.restoreAllMocks();
   await w.close();
 });
 
@@ -599,6 +602,92 @@ describe("6.7.2 step 4 and governance", () => {
     const rt = await resourceTokenFor(w, assistant, pt);
     const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
     refused(r, 500, "server_error", before, "the issued token could not be recorded");
+  });
+});
+
+describe("the issuance commit: time and mission state rechecked at the current time", () => {
+  /** Move the shared clock to the start of second `s`. */
+  const reach = (s: number) => () => {
+    w.clock.ms = s * 1000;
+  };
+
+  it("issues nothing when the mission's expires_at passes while the resource's key is resolved", async () => {
+    const expiresAt = w.clock.s + 10;
+    const { pt } = await grant(assistant, {
+      description: "Summarize the quarterly report",
+      expires_at: rfc3339(expiresAt),
+    });
+    const rt = await resourceTokenFor(w, assistant, pt);
+    const before = issuedCount(w);
+    whileResolving(RS, reach(expiresAt + 1));
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    // The person token was capped at expires_at, so it fails first.
+    refused(r, 400, "expired_presented_token", before);
+  });
+
+  it("refuses a resource token that expires while its key is resolved: expired_resource_token", async () => {
+    const { pt } = await grant();
+    const expires = w.clock.s + 10;
+    const rt = await resourceTokenFor(w, assistant, pt, { exp: expires });
+    const before = issuedCount(w);
+    whileResolving(RS, reach(expires + 1));
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(r, 400, "expired_resource_token", before, "the resource token has expired");
+  });
+
+  it("refuses a presented token that expires while a key is resolved: expired_presented_token", async () => {
+    const expires = w.clock.s + 10;
+    const pt = await w.psMint(
+      "aa-person+jwt",
+      personClaims(w, helper, { sub: "bob-at-rs", tenant: undefined, exp: expires }),
+    );
+    const rt = await resourceTokenFor(w, helper, pt);
+    whileResolving(RS, reach(expires + 1));
+    const r = await requestAuthToken(w, helper, { resource_token: rt, presented_token: pt });
+    refused(r, 400, "expired_presented_token", 0, "the presented token has expired");
+  });
+
+  it("refuses a mission terminated while a key is resolved: mission_terminated", async () => {
+    const { s256, pt } = await grant();
+    const rt = await resourceTokenFor(w, assistant, pt);
+    const before = issuedCount(w);
+    whileResolving(RS, () => {
+      w.ps.store.terminate(assistant.id, s256, "revoked", w.clock.s);
+    });
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(r, 403, "mission_terminated", before);
+    expect(r.body.termination_reason).toBe("revoked");
+  });
+
+  it("refuses a mission whose expires_at passes while a key is resolved, under a presented token still valid: mission_terminated", async () => {
+    const expiresAt = w.clock.s + 10;
+    const { s256 } = await approve(w, assistant, {
+      description: "Summarize the quarterly report",
+      expires_at: rfc3339(expiresAt),
+    });
+    const pt = await w.psMint(
+      "aa-person+jwt",
+      personClaims(w, assistant, { mission_s256: s256, exp: w.clock.s + 1800 }),
+    );
+    const rt = await resourceTokenFor(w, assistant, pt);
+    whileResolving(RS, reach(expiresAt + 1));
+    const r = await requestAuthToken(w, assistant, { resource_token: rt, presented_token: pt });
+    refused(r, 403, "mission_terminated", 0);
+    expect(r.body.termination_reason).toBe("expired");
+  });
+
+  it("refuses an agent token that expires while a key is resolved, so no auth token is minted already expired: 401 expired_jwt", async () => {
+    const shortLived = await makeAgent(w.ap, w.clock, ASSISTANT, { exp: w.clock.s + 10 });
+    const { s256 } = await approve(w, shortLived);
+    const pt = await w.psMint(
+      "aa-person+jwt",
+      personClaims(w, shortLived, { mission_s256: s256, exp: w.clock.s + 1800 }),
+    );
+    const rt = await resourceTokenFor(w, shortLived, pt);
+    whileResolving(RS, reach((claims(shortLived.token).exp as number) + 1));
+    const r = await requestAuthToken(w, shortLived, { resource_token: rt, presented_token: pt });
+    refused(r, 401, "expired_jwt", 0);
+    expect(r.headers.get("signature-error")).toBe("error=expired_jwt");
   });
 });
 

@@ -36,6 +36,7 @@ import {
   type SigningKey,
   signRequest,
 } from "@mission/aauth-wire";
+import { vi } from "vitest";
 import {
   createPersonServer,
   type IssuedTokenRecord,
@@ -551,4 +552,21 @@ export function personClaims(
 /** The number of issued-token records, for refusal tests. */
 export function issuedCount(w: World): number {
   return w.ps.store.issuedTokens().length;
+}
+
+/**
+ * Run `effect` each time a key of `issuer` has been resolved, as if time
+ * passed or state changed during that key fetch. A test that uses it
+ * restores the resolver with `vi.restoreAllMocks()`.
+ */
+export function whileResolving(issuer: string, effect: () => void): void {
+  const original = JwksResolver.prototype.resolveKey;
+  vi.spyOn(JwksResolver.prototype, "resolveKey").mockImplementation(async function (
+    this: JwksResolver,
+    ...args: Parameters<JwksResolver["resolveKey"]>
+  ) {
+    const key = await original.apply(this, args);
+    if (args[0] === issuer) effect();
+    return key;
+  });
 }
