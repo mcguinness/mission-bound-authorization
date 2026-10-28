@@ -2256,7 +2256,19 @@ parameters violate a constraint on each of them, is denied
 </li>
           <li class="normal" id="section-5.6-5.5">
             <p id="section-5.6-5.5.1">A request whose <code>authority</code> is absent, or carries an entry the PDP
-cannot evaluate in full, is denied <code>credential_invalid</code>: the PDP <span class="bcp14">MUST NOT</span> fall back to the Mission's authority.<a href="#section-5.6-5.5.1" class="pilcrow">¶</a></p>
+cannot evaluate in full, is denied <code>credential_invalid</code>, and the PDP
+<span class="bcp14">MUST NOT</span> fall back to the Mission's authority. This profile
+deliberately requires the credential's entire authority description
+to be evaluable, so an unevaluable credential entry invalidates the
+request even when another entry could authorize it under Resource
+Access's alternative-entry rule
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>). That is this
+profile's credential validation policy; the prohibition on falling
+back to the Mission's authority does not by itself require it. An
+entry the PDP evaluates and finds unsatisfied invalidates nothing:
+another complete entry of <code>authority</code> still authorizes the action.
+The policy has an interoperability cost: adding an entry a PDP cannot
+evaluate makes the credential unusable at that PDP.<a href="#section-5.6-5.5.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 </section>
@@ -5704,14 +5716,23 @@ Protocol (HTTP) Field Name" registry (<span>[<a href="#RFC9110" class="cite xref
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Changes a requirement (#956, D814): where the runtime Enforcement
+          <p id="appendix-A-2.1.1">Credential Decision Context: requiring a credential's whole authority
+description to be evaluable is this profile's credential validation
+policy, stricter than Resource Access's alternative-entry rule and
+not a consequence of the prohibition on falling back to the Mission's
+authority; an entry the PDP evaluates and finds unsatisfied still
+lets another complete entry authorize; the interoperability cost is
+stated (#1806).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Changes a requirement (#956, D814): where the runtime Enforcement
 Scope Statement declares action classes, the PDP refuses a mediated
 request with no action class established before evaluation, records
 the Refusal Record <code>action_class_missing</code>, and never evaluates it
-under a default class or records one in Decision Evidence.<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+under a default class or records one in Decision Evidence.<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Work-Item Context: <code>context.work_item</code> is a harness-owned extension
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Work-Item Context: <code>context.work_item</code> is a harness-owned extension
 point the PEP populates only from the harness's authenticated
 attachment. A malformed member is refused before evaluation as
 <code>work_item_invalid</code>, and an absent one where work-item attribution is
@@ -5719,34 +5740,34 @@ claimed for the action's class is denied
 <code>work_item_context_missing</code>. The member is part of the authorization
 binding and the cache key, a permit binds it as the <code>work_item</code>
 condition, and a permit for another work item is Execution Evidence
-<code>suppressed</code> / <code>work_item_mismatch</code> (#815).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
+<code>suppressed</code> / <code>work_item_mismatch</code> (#815).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Failure-Condition Coverage maps a covered operation's evaluation
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Failure-Condition Coverage maps a covered operation's evaluation
 context not capturable at the PEP to the Refusal Record
 <code>evaluation_context_unresolvable</code>, and limits the <code>parameter_mismatch</code>
 row to a parameter no claimed binding declares as a fact; a context
 failure at use carries the <code>error</code> the runtime evidence profile's
 classification names; the context digest condition is recomputed under
-the descriptor the binding committed (#773).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+the descriptor the binding committed (#773).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Compensation link (#252). <code>context.compensates_evaluation_id</code> is
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Compensation link (#252). <code>context.compensates_evaluation_id</code> is
 <span class="bcp14">REQUIRED</span> on a compensate-phase request, established by the PEP from
 retained, verified evidence of the committed effect and its Decision,
 never from an agent argument. PDP-side consistency check 12 refuses a
 missing or malformed link before evaluation as
 <code>compensation_link_invalid</code>, and Failure-Condition Coverage maps it and
-the PEP's <code>compensation_link_unavailable</code>.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.5">
-          <p id="appendix-A-2.5.1">Failure-Condition Coverage maps a named target object, or the
-effective parameters it determines, not establishable at use to
-Execution Evidence <code>target_drift</code>, the post-permit counterpart of the
-pre-decision <code>target_unresolvable</code> (#786).<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
+the PEP's <code>compensation_link_unavailable</code>.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.6">
-          <p id="appendix-A-2.6.1">Owner-ruled follow-ups to the editorial pass (#1629). A PDP claiming
+          <p id="appendix-A-2.6.1">Failure-Condition Coverage maps a named target object, or the
+effective parameters it determines, not establishable at use to
+Execution Evidence <code>target_drift</code>, the post-permit counterpart of the
+pre-decision <code>target_unresolvable</code> (#786).<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.7">
+          <p id="appendix-A-2.7.1">Owner-ruled follow-ups to the editorial pass (#1629). A PDP claiming
 the Obligations feature publishes its supported obligation types; a
 PEP's <code>supported_obligations</code> declaration is optional and its
 omission relaxes nothing. Obligation Processing holds the
@@ -5761,10 +5782,10 @@ Binding and the harness are normative references, scoped to
 deployments adopting them. The history request object is
 <code>context.mission_history</code>. Transaction Assurance is required, and
 advertised, for the parameter-bound and high-consequence classes. A
-propagated <code>Mission-Decision</code> field travels over TLS.<a href="#appendix-A-2.6.1" class="pilcrow">¶</a></p>
+propagated <code>Mission-Decision</code> field travels over TLS.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.7">
-          <p id="appendix-A-2.7.1">Editorial and structural pass. Mission-Bound Authorization for OAuth
+        <li class="normal" id="appendix-A-2.8">
+          <p id="appendix-A-2.8.1">Editorial and structural pass. Mission-Bound Authorization for OAuth
 2.0 is called the OAuth binding throughout. Each repeated rule keeps
 one home, with pointers elsewhere: obligation processing, the
 idempotency claim (now its own subsection), ARAP's re-evaluation
@@ -5776,39 +5797,39 @@ advertisement rules move from IANA Considerations to a Capability
 Discovery subsection of Conformance, and IANA Considerations drop the
 withdrawn composite obligation's history. Mission Runtime Evidence is
 a normative reference and RAR metadata remediation an informative one.
-No requirement changed.<a href="#appendix-A-2.7.1" class="pilcrow">¶</a></p>
+No requirement changed.<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.8">
-          <p id="appendix-A-2.8.1">Failure-condition coverage: a duration-lease renewal that names no
+        <li class="normal" id="appendix-A-2.9">
+          <p id="appendix-A-2.9.1">Failure-condition coverage: a duration-lease renewal that names no
 lease the PDP issued or an ended activity, or fails continuity with
 the evaluation it renews, is denied <code>out_of_authority</code>; a
 retransmission of a settled renewal receives that renewal's permit
-while it is valid, not <code>duplicate_suppressed</code> (#1464).<a href="#appendix-A-2.8.1" class="pilcrow">¶</a></p>
+while it is valid, not <code>duplicate_suppressed</code> (#1464).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.9">
-          <p id="appendix-A-2.9.1">Runtime Denial Classification and Failure-condition coverage: a
+        <li class="normal" id="appendix-A-2.10">
+          <p id="appendix-A-2.10.1">Runtime Denial Classification and Failure-condition coverage: a
 resource contract reference missing where required, or not
 resolvable, is denied <code>resource_contract_drift</code>; the PEP records
 <code>resource_contract_unresolvable</code> before the decision request or at
-use (#249).<a href="#appendix-A-2.9.1" class="pilcrow">¶</a></p>
+use (#249).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.10">
-          <p id="appendix-A-2.10.1">Resource Contract: <code>resource.properties.resource_contract</code> carries
+        <li class="normal" id="appendix-A-2.11">
+          <p id="appendix-A-2.11.1">Resource Contract: <code>resource.properties.resource_contract</code> carries
 the reference the PEP will perform under, and the PDP requires it to
 equal the applicable entry's. The approval binds it through the
 approved Resource, and an approval under another reference is denied
 <code>out_of_scope</code>. The permit returns it as <code>conditions.resource_contract</code>,
-which the executing PEP compares before release (#249).<a href="#appendix-A-2.10.1" class="pilcrow">¶</a></p>
+which the executing PEP compares before release (#249).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.11">
-          <p id="appendix-A-2.11.1"><code>resource.properties.audience</code> carries the runtime profile's
+        <li class="normal" id="appendix-A-2.12">
+          <p id="appendix-A-2.12.1"><code>resource.properties.audience</code> carries the runtime profile's
 boundary identifier, the boundary the PEP established, byte for
 byte: on OAuth, the protected resource's identifier, never an <code>aud</code>
 value or alias. The authorization binding, and so the cache key,
-names it. Operation-target matching is unchanged (#853).<a href="#appendix-A-2.11.1" class="pilcrow">¶</a></p>
+names it. Operation-target matching is unchanged (#853).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.12">
-          <p id="appendix-A-2.12.1"><code>resource.properties.operation_target</code> carries the operation target
+        <li class="normal" id="appendix-A-2.13">
+          <p id="appendix-A-2.13.1"><code>resource.properties.operation_target</code> carries the operation target
 the PEP establishes from its trusted operation contract. The PDP
 matches <code>mission_resource_access</code> entries in the credential's and
 the current effective authority against it, never against
@@ -5816,66 +5837,66 @@ the current effective authority against it, never against
 absent, malformed or outside the PEP's enforcement scope
 (<code>operation_target_invalid</code>). The target is part of the operation
 identity, the authorization binding and the cache key; a target
-that changes at use is <code>target_drift</code> (#1276).<a href="#appendix-A-2.12.1" class="pilcrow">¶</a></p>
+that changes at use is <code>target_drift</code> (#1276).<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.13">
-          <p id="appendix-A-2.13.1"><code>context.mission</code>'s <code>id</code> and <code>issuer</code> are the binding's Mission
+        <li class="normal" id="appendix-A-2.14">
+          <p id="appendix-A-2.14.1"><code>context.mission</code>'s <code>id</code> and <code>issuer</code> are the binding's Mission
 Reference identifier and Controller namespace in that binding's
 representation, with the OAuth realization unchanged, and <code>issuer</code>
 is distinct from <code>context.credential.issuer</code>. Terminology states the
-same (#1169).<a href="#appendix-A-2.13.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.14">
-          <p id="appendix-A-2.14.1"><code>mission_state_observation</code> gains an <span class="bcp14">OPTIONAL</span> <code>termination</code>, the
-Mission's <code>termination</code> when <code>state</code> is <code>terminated</code>. The PDP rule,
-which keys only on exact <code>active</code>, is unchanged (#705).<a href="#appendix-A-2.14.1" class="pilcrow">¶</a></p>
+same (#1169).<a href="#appendix-A-2.14.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.15">
-          <p id="appendix-A-2.15.1">Decision Evidence gains <code>authority_bound</code>, registered by this
-profile: <code>credential</code> or <code>mission</code>, the authority bound that decided
-an <code>out_of_authority</code> or <code>parameter_violation</code> deny (#825).<a href="#appendix-A-2.15.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.15.1"><code>mission_state_observation</code> gains an <span class="bcp14">OPTIONAL</span> <code>termination</code>, the
+Mission's <code>termination</code> when <code>state</code> is <code>terminated</code>. The PDP rule,
+which keys only on exact <code>active</code>, is unchanged (#705).<a href="#appendix-A-2.15.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.16">
-          <p id="appendix-A-2.16.1">The failure-condition table maps supplied arguments that fail the
-PEP-established action's required input schema to the Refusal
-Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.16.1" class="pilcrow">¶</a></p>
+          <p id="appendix-A-2.16.1">Decision Evidence gains <code>authority_bound</code>, registered by this
+profile: <code>credential</code> or <code>mission</code>, the authority bound that decided
+an <code>out_of_authority</code> or <code>parameter_violation</code> deny (#825).<a href="#appendix-A-2.16.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.17">
-          <p id="appendix-A-2.17.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
+          <p id="appendix-A-2.17.1">The failure-condition table maps supplied arguments that fail the
+PEP-established action's required input schema to the Refusal
+Record's <code>request_invalid</code> (#1106).<a href="#appendix-A-2.17.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.18">
+          <p id="appendix-A-2.18.1"><code>context.credential</code> carries <code>authority</code>, the verified credential's
 own <code>authorization_details</code>, on every decision; the PDP enforces it
 as the credential authority bound, independently of the matched
 Mission entry, and denies <code>credential_invalid</code> when it is absent or
 not evaluable (#825). An action no credential entry names is
 <code>out_of_authority</code>; one whose parameters violate a constraint on
-every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.17.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.18">
-          <p id="appendix-A-2.18.1">The RAR remediation grain cites the working-group successor
-draft-ietf-oauth-rar-metadata-remediation and defers its routing to
-the issuance profile's remediation routing instead of restating it.
-No requirement changed.<a href="#appendix-A-2.18.1" class="pilcrow">¶</a></p>
+every entry that names it is <code>parameter_violation</code>.<a href="#appendix-A-2.18.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.19">
-          <p id="appendix-A-2.19.1">Mission-to-Policy Materialization describes the materialized policy
+          <p id="appendix-A-2.19.1">The RAR remediation grain cites the working-group successor
+draft-ietf-oauth-rar-metadata-remediation and defers its routing to
+the issuance profile's remediation routing instead of restating it.
+No requirement changed.<a href="#appendix-A-2.19.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.20">
+          <p id="appendix-A-2.20.1">Mission-to-Policy Materialization describes the materialized policy
 view as one evaluation path: a PDP that evaluates the Mission's
 recorded authority directly meets the runtime profile's authority
 input without a view and omits <code>policy_view_id</code>. The PDP-side
 consistency checks compare the request against the loaded view or
 the directly evaluated Mission record, and the <code>policy_view_id</code>
-check applies only where a view is used.<a href="#appendix-A-2.19.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.20">
-          <p id="appendix-A-2.20.1">Defined the input to <code>evaluation_request_digest</code>: the complete
-request body as submitted, extension members included, before any
-default or enrichment, with header fields and transport framing
-excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.20.1" class="pilcrow">¶</a></p>
+check applies only where a view is used.<a href="#appendix-A-2.20.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.21">
-          <p id="appendix-A-2.21.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
+          <p id="appendix-A-2.21.1">Defined the input to <code>evaluation_request_digest</code>: the complete
+request body as submitted, extension members included, before any
+default or enrichment, with header fields and transport framing
+excluded; a batch carries the one digest of its body (#971).<a href="#appendix-A-2.21.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.22">
+          <p id="appendix-A-2.22.1">The state observation's <code>mission_status_issued_at</code> is the RFC 3339
 form of a Mission Status Response's <code>iat</code>, which <code>freshness_at</code>
 precedes by no more than the published maximum clock skew, and
 <code>mission_status_expires_at</code> and the state valid-through are its
-<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.21.1" class="pilcrow">¶</a></p>
+<code>mission.fresh_until</code>, not its <code>exp</code>, or a lease's end.<a href="#appendix-A-2.22.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
