@@ -517,8 +517,8 @@ Chain, it MUST:
 * preserve the restrictions of both layers of the leaf's capability
   entry: each local entry carries the `constraints` and
   `resource_contract` of its tool's `mission_constraints` value, and
-  an argument constraint the local token cannot represent, or its
-  consumer cannot enforce, refuses the exchange;
+  a restriction of either layer that the local token cannot
+  represent, or its consumer cannot enforce, refuses the exchange;
 * preserve the `mission` claim invariants, including `subject`;
 * restart the local `act` chain at the local delegate (the
   cross-domain rule;
@@ -565,10 +565,10 @@ A Presentation that is malformed, carries an unknown top-level
 member, or exceeds a declared bound refuses with `invalid_request`; a
 Chain failing any step of {{verification}} refuses with
 `invalid_grant`, disclosing no partial verification detail; a
-requested audience outside a hop's `aud`, or a leaf argument
-constraint the local token cannot represent or its consumer cannot
-enforce, refuses with `invalid_target`.  On success the Resource AS
-mints the
+requested audience outside a hop's `aud`, or a restriction of either
+layer of the leaf's capability entry that the local token cannot
+represent or its consumer cannot enforce, refuses with
+`invalid_target`.  On success the Resource AS mints the
 audience-local token per the rules above.
 
 # Mission-Binding Profile {#binding-profile}
@@ -665,9 +665,9 @@ untrusted, expired, or revoked; an unmapped authorization-details
 entry beyond the mapped capability entry; a `mission_constraints`
 member missing, widened, or carrying an unknown key at either hop; a
 direct invocation whose proof names another tool, and a replayed
-exchange proof; a leaf argument constraint the local token cannot
-represent; and valid delegated authority denied by local entitlement
-or local policy.
+exchange proof; a leaf restriction of either layer the local token
+cannot represent or its consumer cannot enforce; and valid delegated
+authority denied by local entitlement or local policy.
 
 # End-to-End Example (Non-Normative) {#example}
 
