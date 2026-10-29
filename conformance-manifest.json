@@ -48884,6 +48884,75 @@
    "tests": []
   },
   {
+   "id": "evidence.execution.audience-bound-at-settlement",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.transaction-assurance-tier",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a settlement intake that settles a permit on an Execution Evidence record refuses, before any settlement effect, a record whose audience is not byte for byte the boundary retained for the permit it settles, although the record verifies under a key published for its own audience: the claim, its transitions, a conflicting record's retention and alarm, the reservations, the late budget correction and the counters are unchanged",
+    "local": "In the reference the settling consumer is the PDP's claim domain (settle in services/pdp/src/idempotency-claims.ts), which serves both the idempotency claim and the budget reservations. It retains the permit's boundary on the claim (claim schema 6): the request's resource.properties.audience, which the permit's Decision Evidence signs as audience, written at the claim and at adoption. A claim row from before the column takes the audience its stored Decision Evidence recorded, and one without a retained boundary settles nothing. The refusal reasons audience_mismatch, boundary_unretained and unknown_evaluation are not Mission diagnostics."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a completed record validly signed for another boundary, naming this permit's evaluation_id and delivered by its own PEP, is refused audience_mismatch at settlement and through the reconciler, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the record for the permit's own boundary commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a failed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's failed record holds both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a suppressed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's suppressed record releases both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an applied failed settlement, a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members, each validly signed for another boundary, are refused audience_mismatch: nothing is retained or alarmed, the held reservations stay held and the claim and both counters are unchanged, while the conflicting completed record for the permit's own boundary is retained, alarmed and commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an incorrect operator release and the claim's reconciliation window, a completed record validly signed for another boundary is refused audience_mismatch and corrects nothing: the reservations stay released, the claim and both counters are unchanged and no overspend is reported, while the permit's own boundary's record commits the correction (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on a claim file from before the boundary column, an unsettled permit takes the boundary its stored Decision Evidence recorded and settles only on that boundary's record, a settled claim whose decision was tombstoned keeps none and refuses even its own boundary's conflicting record boundary_unretained, and a reservation whose claim row is gone is not corrected from a record, each refusal leaving the claim, the conflict table, the reservations and both counters unchanged (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "settlement is bound to the adopting permit's boundary across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1841, D974) > a claim adopted through a replaced identifier's scope is settled at the boundary its permit was decided at: a record validly signed for the replaced identifier the claim's scope still names is refused audience_mismatch and leaves the claim unchanged, and the record for the permit's boundary settles it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "D991 (owner ruling on #1861): the consumer half of the audience member, a row of its own. These witnesses exercise the PDP's settlement intake and establish nothing about the PEP that writes the record; the producer duty needs its own witness at the PEP. Applicability: the duty binds whichever consumer settles a permit on Execution Evidence, the PDP's idempotency claim under the transaction-assurance tier (runtime#idempotency) or the metering settlement intake under exact budgets (metering#settlement-contract). The reference serves both from one claim domain, so the row applies under either capability (any_of), never under one mode alone. #1841 (D974; fix/1841-settlement-audience at c41a03f7, merged by #1861 at 4b4f5192): settle compares the authenticated record's audience byte for byte with the boundary retained for the permit's claim before any effect. Four other boundaries publish their own keys in one declaration (another port, the identifier with an upper-case host, the identifier with a trailing slash, the identifier truncated to its origin). Their records are refused audience_mismatch for completed, failed and suppressed outcomes on an unsettled claim, for a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members after an applied failed settlement, and for a completed record after an incorrect operator release past the window. Each refusal leaves the claim row, its transitions, the conflict table, the reservations and both counters unchanged with no alert, the failed and suppressed records never reach the redemption owner, and the permit's own boundary's record settles in each case. The adoption witness settles a claim adopted across a declared identifier change at the adopting permit's boundary and refuses the replaced identifier's record; the legacy-file witness takes a pre-column row's boundary from its stored Decision Evidence and refuses boundary_unretained on a row without one. #1861's mutants at c41a03f7, each alone with the source restored: removing the comparison (M1) fails all seven at their refusal; moving it after the claim's settlement (M2) fails six, and after the late correction (M3) all seven, at the unchanged-state assertion alone; moving it after the redemption owner's query (M4) fails the failed and suppressed witnesses at the never-asked assertion; a case-insensitive (M5), record-prefix (M6), boundary-prefix (M7) or URL-normalized (M8) comparison fails the five boundary witnesses; treating a NULL boundary as a match (M9) or as the scope's audience (M10), dropping the backfill (M11) and letting a record with no claim row reach the correction (M12) fail the legacy-file witness; leaving the boundary unchanged at adoption (M13) or comparing the scope's audience (M14) fails the adoption witness; omitting the boundary at the claim (M15) fails six. Re-verified at main 4b4f5192 with the same runner: M1 fails 7 of 7, M2 six, M5 the five boundary witnesses and M13 the adoption witness, the source restored byte-equal after each."
+  },
+  {
    "id": "evidence.execution.parameter-deviation-remains-valid-and-flagged",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
