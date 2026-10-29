@@ -13,11 +13,14 @@
  *    `authority_changed` in `mission_capabilities_supported` never receives
  *    that event, while a declared stream does;
  *  - the COMPOSITE case: a discharge on a PREVIOUSLY CONTAINED Mission carries
- *    `containment_version` (present, unchanged) and is still gated, because
- *    only an ADVANCE represents the narrowing to an undeclared consumer;
- *  - containment's own delivery rules are unchanged: a contain commit, whose
- *    narrowing IS represented by a `containment_version` advance, still reaches
- *    an undeclared stream.
+ *    `containment_version` and is still gated;
+ *  - the gate covers containment too (#1001, D1002): a contain commit that
+ *    narrows effective authority carries `authority_changed` true and is
+ *    withheld from an undeclared stream, while a declared stream receives it
+ *    and its receiver rematerializes;
+ *  - withholding renumbers nothing: the undeclared stream's next delivered
+ *    event carries the Mission's own `version`, so its receiver detects the
+ *    gap the withheld event left.
  */
 
 import {
@@ -31,10 +34,12 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
-import { exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
+  type ApplyResult,
   AUTHORITY_CHANGED_CAPABILITY,
+  LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
   MissionSignalReceiver,
 } from "../src/index.js";
@@ -99,6 +104,8 @@ interface Wired {
   undeclared: MissionSignalReceiver;
   declaredSets: string[];
   undeclaredSets: string[];
+  /** What the undeclared receiver reported for each delivered SET, in order. */
+  undeclaredResults: ApplyResult[];
 }
 
 /** One issuer, two streams: one that declared `authority_changed`, one that did not. */
@@ -130,13 +137,16 @@ async function wire(): Promise<Wired> {
   });
   const declaredSets: string[] = [];
   const undeclaredSets: string[] = [];
+  const undeclaredResults: ApplyResult[] = [];
   emitter.onDeliver(DECLARED_AUD, (set) => {
     declaredSets.push(set);
     return declared.verifyAndApply(set);
   });
-  emitter.onDeliver(UNDECLARED_AUD, (set) => {
+  emitter.onDeliver(UNDECLARED_AUD, async (set) => {
     undeclaredSets.push(set);
-    return undeclared.verifyAndApply(set);
+    const result = await undeclared.verifyAndApply(set);
+    undeclaredResults.push(result);
+    return result;
   });
   const kernel = new MissionKernel({
     issuer: ISS,
@@ -148,7 +158,15 @@ async function wire(): Promise<Wired> {
     now: () => NOW,
     onLifecycleCommit: (c) => emitter.onCommit(c),
   });
-  return { kernel, emitter, declared, undeclared, declaredSets, undeclaredSets };
+  return {
+    kernel,
+    emitter,
+    declared,
+    undeclared,
+    declaredSets,
+    undeclaredSets,
+    undeclaredResults,
+  };
 }
 
 let approvals = 0;
@@ -209,12 +227,11 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
   });
 
-  it("gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance", async () => {
+  it("gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate", async () => {
     const w = await wire();
     const mission = approve(w.kernel);
-    // A contain commit first: its narrowing IS represented by a
-    // containment_version advance, so containment's rules apply unchanged and
-    // BOTH streams receive it.
+    // A contain commit first. It narrows effective authority, so it carries
+    // authority_changed true and only the declared stream receives it.
     w.kernel.contain(mission.id, {
       event: {
         type: "anomaly.detected",
@@ -226,19 +243,127 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     });
     await w.emitter.drain();
     expect(w.declaredSets).toHaveLength(2);
-    expect(w.undeclaredSets).toHaveLength(2);
+    expect(w.undeclaredSets).toHaveLength(1);
 
     // Now discharge the OTHER entry. The commit carries containment_version 1
-    // (unchanged), so the narrowing is represented by authority_changed alone.
+    // beside authority_changed true; the gate reads authority_changed alone.
     w.kernel.discharge(mission.id, { ...selectors(mission), event_id: "close-composite-1" });
     await w.emitter.drain();
     expect(w.declaredSets).toHaveLength(3);
-    expect(w.undeclaredSets).toHaveLength(2); // still gated
+    expect(w.undeclaredSets).toHaveLength(1); // still gated
     expect(w.declared.needsRematerialization(mission.id)).toBe(true);
   });
 });
 
-describe("the delivery gate survives an emitter restart: provenance is commit-carried, never cursor-inferred", () => {
+/** The `mission.lifecycle-change` event body a delivered SET carries. */
+const eventOf = (set: string | undefined): Record<string, unknown> =>
+  (decodeJwt(set as string).events as Record<string, Record<string, unknown>>)[
+    LIFECYCLE_CHANGE_EVENT_URI
+  ] as Record<string, unknown>;
+
+/** A contain commit that narrows effective authority: the read entry loses its only action. */
+function containRead(kernel: MissionKernel, missionId: string, eventId: string): void {
+  kernel.contain(missionId, {
+    event: {
+      type: "anomaly.detected",
+      source: "svc:soc",
+      observed_at: NOW.toISOString(),
+      event_id: eventId,
+    },
+    remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+  });
+}
+
+describe("the delivery gate covers containment (@spec signals#discharge-compatibility, #1001)", () => {
+  it("withholds a real kernel contain() commit from an undeclared stream and delivers it to a declared one, whose receiver rematerializes", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    expect(w.declaredSets).toHaveLength(1);
+    expect(w.undeclaredSets).toHaveLength(1);
+
+    containRead(w.kernel, mission.id, "evt-gate-contain-1");
+    await w.emitter.drain();
+
+    // The declared stream receives the contain event: same state, the next
+    // version, containment_version 1 and authority_changed true. Its receiver
+    // applies it in order and latches rematerialization.
+    expect(w.declaredSets).toHaveLength(2);
+    expect(eventOf(w.declaredSets[1])).toMatchObject({
+      state: "active",
+      prior_state: "active",
+      version: 2,
+      containment_version: 1,
+      authority_changed: true,
+    });
+    expect(w.declared.viewState(mission.id)).toMatchObject({
+      state: "active",
+      version: 2,
+      containment_version: 1,
+    });
+    expect(w.declared.needsRematerialization(mission.id)).toBe(true);
+
+    // The undeclared stream receives nothing: its view stays at the
+    // activating event, with no narrowing it would misread as current.
+    expect(w.undeclaredSets).toHaveLength(1);
+    expect(w.undeclared.viewState(mission.id)).toMatchObject({ state: "active", version: 1 });
+    expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
+  });
+
+  it("keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+
+    containRead(w.kernel, mission.id, "evt-gap-contain-1"); // version 2: withheld
+    await w.emitter.drain();
+    expect(w.undeclaredSets).toHaveLength(1);
+
+    // A suspend narrows nothing beyond `state`, so both streams receive it.
+    w.kernel.transition(mission.id, "suspend"); // version 3
+    await w.emitter.drain();
+
+    // No renumbering per stream: the undeclared stream's event carries the
+    // Mission's version 3, not a stream-local 2.
+    expect(w.declaredSets.map((s) => eventOf(s).version)).toEqual([1, 2, 3]);
+    expect(w.undeclaredSets.map((s) => eventOf(s).version)).toEqual([1, 3]);
+
+    // The undeclared receiver detects the gap rather than applying the event
+    // as an in-order successor of its cached state; the declared receiver saw
+    // a contiguous sequence.
+    expect(w.undeclaredResults.map((r) => r.status)).toEqual(["applied", "gap"]);
+    expect(w.undeclaredResults[1]).toMatchObject({ status: "gap", expected: 2, received: 3 });
+    expect(w.undeclared.hasGap(mission.id)).toBe(true);
+    expect(w.declared.hasGap(mission.id)).toBe(false);
+
+    // The Mission Status read the gap calls for reports what the stream
+    // withheld: version 3 with containment_version 1, and the contained read
+    // action absent from the audience-scoped authority.
+    const status = w.kernel.statusObservation(mission.id, {
+      requester: "svc:reader",
+      audience: RESOURCE,
+    }).payload;
+    expect(status.mission).toMatchObject({
+      state: "suspended",
+      version: 3,
+      containment_version: 1,
+    });
+    expect(JSON.stringify(status.authorization_details)).not.toContain("payments:invoice.read");
+    expect(JSON.stringify(status.authorization_details)).toContain("payments:payment.execute");
+
+    // Later events keep applying on the undeclared stream, in order.
+    w.kernel.transition(mission.id, "resume"); // version 4
+    await w.emitter.drain();
+    expect(w.undeclaredSets.map((s) => eventOf(s).version)).toEqual([1, 3, 4]);
+    expect(w.undeclaredResults[2]).toMatchObject({
+      status: "applied",
+      state: "active",
+      version: 4,
+    });
+  });
+});
+
+describe("the delivery gate survives an emitter restart: it reads the commit's authority_changed, never emitter history", () => {
   const baseCommit = (over: Partial<LifecycleCommit>): LifecycleCommit => ({
     id: "msn_restart_1",
     issuer: ISS,
@@ -282,17 +407,16 @@ describe("the delivery gate survives an emitter restart: provenance is commit-ca
     expect(undeclared).toHaveLength(0);
   });
 
-  it("a real containment advance first observed above version 1 still reaches an undeclared stream on a fresh emitter", async () => {
+  it("withholds a containment commit first observed above version 1 from an undeclared stream and delivers it to a declared one", async () => {
     const { emitter, declared, undeclared } = await freshEmitter();
-    // The converse failure: a cursor-inferring gate WITHHELD a genuine
-    // containment event whose first observed version exceeds 1. The kernel's
-    // commit-carried discriminator makes it deliverable regardless of what
-    // this emitter has seen before.
-    emitter.onCommit(
-      baseCommit({ authority_changed: true, containment_version: 5, containment_advanced: true }),
-    );
+    // A contain commit narrows effective authority, so it carries
+    // authority_changed true and the gate binds it like a discharge (#1001,
+    // D1002): an undeclared consumer would accept the in-order increment and
+    // keep the contained authority. The decision needs no history, so a fresh
+    // emitter seeing the Mission first at containment_version 5 decides alike.
+    emitter.onCommit(baseCommit({ authority_changed: true, containment_version: 5 }));
     await emitter.drain();
     expect(declared).toHaveLength(1);
-    expect(undeclared).toHaveLength(1);
+    expect(undeclared).toHaveLength(0);
   });
 });
