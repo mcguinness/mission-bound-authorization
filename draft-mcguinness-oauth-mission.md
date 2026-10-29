@@ -1424,10 +1424,10 @@ or expired grant keeps its error, and a request under a grant bound to
 a Mission that is not `active` keeps the refusal of
 {{issuance-gating}}. The rule applies to every audience the token
 would carry, including one the AS infers or applies by default when the
-request names no `resource`: the AS refuses the request if any of them
-is Mission-governed, and does not issue the token for the others. On a
-refresh, the AS MUST decide this refusal before it consumes or rotates
-the refresh token.
+request names no `resource`: the AS MUST refuse the request if any of
+them is Mission-governed, and MUST NOT issue the token for the others.
+On a refresh, the AS MUST decide this refusal before it consumes or
+rotates the refresh token.
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
@@ -2861,7 +2861,7 @@ Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
 exhausted limit
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
 "Enforcement at Issuance"). A Mission in a state from which it can
-return to `active` is never reported with a termination reason.
+return to `active` MUST NOT be reported with a termination reason.
 
 The `mission_error` member is diagnostic only and optional, whichever
 document defines its value: it grants nothing, an unrecognized value
@@ -4295,7 +4295,9 @@ and whether instance attribution is required.
   refuse the exchange if the required instance evidence or its
   association with the delegate and output key cannot be established.
   {{error-mapping}} gives the error codes for these refusals.
-- If the exchange issues a refresh token, the grant-continuity rules of
+- If the exchange issues a refresh token, and so establishes a
+  redeemable grant lineage ({{grant-binding-related}}), the
+  grant-continuity rules of
   {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply
   alongside {{grant-binding}}; instance continuity alone does not
   authorize replacement of the recorded instance or key rebinding.
@@ -7683,6 +7685,14 @@ resolve before interoperating.
   of Mission Identifier and Expiry in Responses, and Self-Exchange
   Down-Scoping points to its `mission_intent` exemption in Authority
   Proposal (#1723, D971).
+- Two rules already stated as obligations carry BCP 14 keywords, with no
+  new requirement: the AS refuses a token request outside a Mission any
+  of whose audiences is Mission-governed, and issues no token for the
+  others (Authority Proposal); and a Mission in a state from which it
+  can return to `active` is not reported with a termination reason
+  (Issuance Gating). Editorial, no requirement change: Instance Context
+  in Delegated Tokens names the grant lineage a delegated exchange
+  establishes when it issues a refresh token (#1871, D1005).
 
 -01
 
