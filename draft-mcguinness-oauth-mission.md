@@ -1910,7 +1910,12 @@ governs. A `mission_transformation_capabilities` value is a JSON
 object with three OPTIONAL boolean members, `narrowing`, `delegation`,
 and `projection`; an absent member leaves that capability undeclared
 by this carrier, falling through to the next carrier in the order
-above. For each capability, the first carrier in that order that
+above. A type's specification MAY define another value for one of
+these members; a carrier declaring such a value declares that
+capability as the type's specification defines it, and a reader that
+does not understand the value, or cannot validate it as that
+specification requires, treats the carrier as declaring the capability
+`false`. For each capability, the first carrier in that order that
 declares the member governs, whether it declares `true` or `false`; a
 later carrier does not override it. A declared capability permits a
 transformation without requiring it, and waives no check this document
@@ -7698,6 +7703,10 @@ resolve before interoperating.
   new requirement; a companion's containment overlay or suspension
   schedule is issuer-held state associated with the Mission, outside
   the record (#1873, #1879, D1014).
+- Declared Transformation Capabilities: a type's specification can
+  define a value other than a boolean for a capability member, and a
+  value the reader cannot validate declares that capability `false`
+  (#1377, D1025).
 
 -01
 
