@@ -46,7 +46,7 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { DERIVATION_POLICY } from "@mission/demo-data";
+import { DERIVATION_POLICY, SCOPE_PROJECTION } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -59,6 +59,9 @@ const ISSUER = `http://localhost:${PORT}`;
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = DERIVATION_POLICY.ceiling[0]?.resource as string;
 const REPORTS = DERIVATION_POLICY.ceiling[3]?.resource as string;
+/** The scope-projection mapping, mutable so one case can narrow the keys the payments audience is known to enforce. */
+const MAPPING = structuredClone(SCOPE_PROJECTION);
+const SHIPPED_PAYMENTS = structuredClone(SCOPE_PROJECTION.audiences[RESOURCE]);
 const FAR_EXP = "2027-06-01T00:00:00Z";
 const VERIFIER = "common-constraints-verifier-0123456789-0123456789-01";
 const RS_PAYMENTS = ["rs-payments", "dev-introspection-rs-payments"] as const;
@@ -258,6 +261,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    scopeProjection: MAPPING,
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -586,6 +590,46 @@ describe("max_amount and requires_action_approval at the endpoints (@spec resour
       expect(res.status, JSON.stringify(requested)).toBe(400);
       expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
     }
+  });
+});
+
+describe("a constraints key only the candidate carries (@spec resource-access#subset, #1377, D712)", () => {
+  /** Run one case while the payments audience is known to enforce every shipped key but `without`. */
+  async function enforcingAllBut(without: string, run: () => Promise<void>): Promise<void> {
+    const audiences = MAPPING.audiences as Record<string, { mission_constraints_supported?: string[] }>;
+    const shipped = SHIPPED_PAYMENTS as { mission_constraints_supported?: string[] };
+    audiences[RESOURCE] = {
+      ...structuredClone(shipped),
+      mission_constraints_supported: (shipped.mission_constraints_supported ?? []).filter((k) => k !== without),
+    };
+    try {
+      await run();
+    } finally {
+      audiences[RESOURCE] = structuredClone(shipped);
+    }
+  }
+
+  it("a Token Exchange adding tenant to an untenanted entry is issued for an audience that enforces tenant, and the token carries it", async () => {
+    const issued = await issue(schedule());
+    const base = constraintsOf(claims(issued.at).authorization_details)[0] as Record<string, unknown>;
+    expect(base.tenant).toBeUndefined();
+    const tenanted = { ...base, tenant: "payments-demo" };
+    const ok = await exchange(issued.at, issued.keys, schedule(tenanted));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([tenanted]);
+  });
+
+  it("a Token Exchange adding tenant for an audience not known to enforce it is refused invalid_target; the same entry without it is issued", async () => {
+    const issued = await issue(schedule());
+    const base = constraintsOf(claims(issued.at).authorization_details)[0] as Record<string, unknown>;
+    await enforcingAllBut("tenant", async () => {
+      const same = await exchange(issued.at, issued.keys, schedule(base));
+      expect(same.status, JSON.stringify(same.body)).toBe(200);
+      const res = await exchange(issued.at, issued.keys, schedule({ ...base, tenant: "payments-demo" }));
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_target");
+      expect(res.body.error_description).toMatch(/not known to enforce the constraints key tenant/);
+    });
   });
 });
 
