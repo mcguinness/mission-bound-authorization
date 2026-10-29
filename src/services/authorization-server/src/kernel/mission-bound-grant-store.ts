@@ -46,6 +46,11 @@ CREATE TABLE mission_bound_grants (
   created_at TEXT NOT NULL,
   backing_grant_id TEXT
 ) STRICT;
+CREATE TABLE held_approval_grants (
+  grant_id TEXT PRIMARY KEY,
+  approval_event_id TEXT NOT NULL,
+  created_at TEXT NOT NULL
+) STRICT;
 `;
 
 /** How the grant became Mission-bound (audit only; all fail closed alike). */
@@ -101,5 +106,32 @@ export class MissionBoundGrantStore {
       kind: row.kind as MissionBoundGrantKind,
       ...(row.backing_grant_id === null ? {} : { backingGrantId: row.backing_grant_id }),
     };
+  }
+
+  /**
+   * @spec mission#approval-event (step 7), mission#grant-binding-resolution
+   * (#1863, D1001): record that `grantId` is the provider grant of a direct
+   * approval decision whose Mission commits only when its authorization code
+   * is issued. Written before that grant is first saved, so the grant is
+   * Mission-bound from the moment it exists. Append-only, like the index
+   * above: no refusal, hold expiry or failed grant deletion removes it, so a
+   * held grant can never pass as an ordinary one. The store lives as long as
+   * the process, as the provider's in-memory grants do. Idempotent.
+   */
+  recordHeldApproval(input: { grantId: string; approvalEventId: string }): void {
+    this.db
+      .prepare(
+        `INSERT INTO held_approval_grants (grant_id, approval_event_id, created_at)
+         VALUES (?, ?, ?) ON CONFLICT (grant_id) DO NOTHING`,
+      )
+      .run(input.grantId, input.approvalEventId, this.now().toISOString());
+  }
+
+  /** The approval event a held approval grant was recorded for; undefined for any other grant. */
+  heldApproval(grantId: string): { approvalEventId: string } | undefined {
+    const row = this.db.prepare("SELECT approval_event_id FROM held_approval_grants WHERE grant_id = ?").get(grantId) as
+      | { approval_event_id: string }
+      | undefined;
+    return row ? { approvalEventId: row.approval_event_id } : undefined;
   }
 }

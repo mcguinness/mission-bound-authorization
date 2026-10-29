@@ -1478,10 +1478,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * the state gate cannot be evaluated, so the profile fails closed. Returns
    * undefined only for an index MISS, the one case a token-plane hook may pass
    * through unchanged (an ordinary OAuth grant this AS never bound).
+   *
+   * @spec mission#approval-event (step 7) (#1863, D1001): a held approval
+   * grant (its decision commits only when its code is issued) that no
+   * Mission binds yet also refuses: before its commit, and for good after a
+   * refused or failed one, it is Mission-bound with no Mission to gate.
    */
   function missionForBoundGrant(grantId: string): MissionRecord | undefined {
     const bound = kernel.missionBoundGrants.resolve(grantId);
-    if (!bound) return undefined;
+    if (!bound) {
+      if (kernel.missionBoundGrants.heldApproval(grantId)) {
+        throw new errors.InvalidGrant("the grant's Mission approval has not committed");
+      }
+      return undefined;
+    }
     const record = kernel.get(bound.missionId);
     if (!record) {
       throw new errors.InvalidGrant("mission-bound grant's Mission no longer resolves");
@@ -1491,9 +1501,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
 
   /**
    * @spec mission#grant-binding-resolution (#1259): whether this AS ever bound
-   * `grantId` to a Mission, by any of its three records: a Mission's own grant,
-   * the delegation-family store (a terminal family included), and the durable
-   * bound-grant index (an entry whose Mission no longer resolves included).
+   * `grantId` to a Mission, by any of its four records: a Mission's own grant,
+   * the delegation-family store (a terminal family included), the durable
+   * bound-grant index (an entry whose Mission no longer resolves included),
+   * and the held approval grants (#1863: a decision whose Mission commits at
+   * code issuance, pending, refused or failed).
    * Liveness plays no part, so a known binding never passes as an ordinary
    * grant, and nothing here throws.
    */
@@ -1501,7 +1513,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     return (
       kernel.findByGrant(grantId) !== undefined ||
       opts.familyStore?.wasEverFamily(grantId) === true ||
-      kernel.missionBoundGrants.resolve(grantId) !== undefined
+      kernel.missionBoundGrants.resolve(grantId) !== undefined ||
+      kernel.missionBoundGrants.heldApproval(grantId) !== undefined
     );
   }
 
