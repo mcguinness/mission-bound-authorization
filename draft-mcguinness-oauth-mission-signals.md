@@ -745,17 +745,21 @@ prefix keeps this document's extension collision-safe on an object
 it does not own; the member rides an object the Shared Signals
 Framework already defines and needs no IANA action.
 
-The gate binds exactly the events whose authority change is carried
-only by the new member: a Mission Issuer MUST NOT deliver a
-`mission.lifecycle-change` event whose effective-authority change is
-represented by `authority_changed` alone (a discharge commit,
-{{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose
-consumer has not declared `authority_changed` in
-`mission_capabilities_supported`. An event whose narrowing is also
-represented by `containment_version` follows the containment
-profile's existing delivery and consumer rules unchanged
-({{I-D.draft-mcguinness-oauth-mission-containment}}); the member is
-still set on it, and a declared consumer applies one rule to both.
+The gate binds every event that carries `authority_changed` true, a
+discharge commit ({{I-D.draft-mcguinness-oauth-mission-discharge}})
+and a containment commit
+({{I-D.draft-mcguinness-oauth-mission-containment}}) alike: a Mission
+Issuer MUST NOT deliver a `mission.lifecycle-change` event that
+carries `authority_changed` true to a stream whose consumer has not
+declared `authority_changed` in `mission_capabilities_supported`. One
+declaration covers both, since the declared rule of
+{{consumer-behavior}} rematerializes on either. Withholding an event
+changes no other event's `version`, so the consumer's next delivered
+event for that Mission shows a version gap, and the consumer
+re-establishes state through the Mission Status operation
+({{consumer-behavior}}). Until then the withheld consumer has no
+notice of the narrowing; its fallback is that gap or, on a stream not
+verified live, the staleness rule of {{consumer-behavior}}.
 Where Signals is used, a Mission Issuer MUST emit
 `authority_changed` true on the `mission.lifecycle-change` event a
 discharge commit produces.
