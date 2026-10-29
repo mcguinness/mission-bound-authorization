@@ -563,6 +563,13 @@ Table of Contents
    never silently drops a committed event; the consumer never treats
    silence as health.
 
+   A verification or heartbeat event (Section 7) attests that every
+   committed transition for the stream would have been delivered, apart
+   from one the gate of Section 8 withholds.  A Mission Issuer therefore
+   MUST NOT transmit one on a stream while an earlier event on that
+   stream remains undelivered, including one being retried or in flight,
+   other than an event the gate of Section 8 withholds.
+
 7.  Consumer Behavior on Receipt
 
    On receiving and verifying (Section 5) a mission.lifecycle-change
@@ -661,12 +668,13 @@ Table of Contents
    consumer MAY continue to rely on cached Mission state for those
    subjects up to the next heartbeat interval, without polling Mission
    Status per Mission.  For a stream whose consumer has not declared
-   authority_changed, verified liveness does not establish that its
-   cached effective authority reflects every narrowing.  Continued
-   heartbeats can prevent the staleness fallback from firing while a
-   narrowing event is withheld (Section 8), so such a consumer has no
-   narrowing-specific freshness bound; Mission and credential expiry
-   still apply.
+   authority_changed, verified liveness alone does not establish that
+   its cached effective authority reflects every narrowing.  The Mission
+   Issuer pauses such a stream when it withholds a narrowing
+   (Section 8), so the staleness fallback below ends the consumer's
+   reliance within the longer of mission_max_stale_seconds and the
+   stream's heartbeat interval after its last verification or heartbeat
+   event.
 
    The staleness fallback applies to a stream that is not verified live.
    A consumer MUST treat cached Mission state as stale once the stream
@@ -674,7 +682,8 @@ Table of Contents
    longer than the Mission Issuer's advertised mission_max_stale_seconds
    ([I-D.draft-mcguinness-oauth-mission-status]).  Once its cached state
    is stale, the consumer MUST re-establish current state before further
-   reliance.
+   reliance.  A Stream Updated event, or a later verification or
+   heartbeat event, does not re-establish current state.
 
    The Mission Status operation is the RECOMMENDED fallback surface.  A
    consumer that cannot verify its stream, or that was down and may have
@@ -714,10 +723,48 @@ Table of Contents
    the consumer's next delivered event for that Mission shows a version
    gap, and the consumer re-establishes state through the Mission Status
    operation (Section 7).  Until then the withheld consumer has no
-   notice of the narrowing; its fallback is that gap or, on a stream not
-   verified live, the staleness rule of Section 7.  Where Signals is
-   used, a Mission Issuer MUST emit authority_changed true on the
-   mission.lifecycle-change event a discharge commit produces.
+   notice of the narrowing; the stream pause below bounds its reliance
+   on its cached state.  Where Signals is used, a Mission Issuer MUST
+   emit authority_changed true on the mission.lifecycle-change event a
+   discharge commit produces.
+
+   When the gate withholds an event from a stream, the Mission Issuer
+   MUST pause that stream: it sends the Shared Signals Framework Stream
+   Updated event with status paused before it transmits anything further
+   on the stream ([OIDC-SSF], Section 8.1.5), and it holds the stream's
+   later events, each with its own version.  A paused stream transmits
+   no event ([OIDC-SSF], Section 8.1.2.1), so it carries no verification
+   or heartbeat event.  The Mission Issuer MUST NOT re-enable the stream
+   while an attempt to deliver a verification or heartbeat event on it
+   is unresolved, or until more than the longer of
+   mission_max_stale_seconds and the stream's heartbeat interval, plus
+   any clock tolerance it allows its consumers, has passed since the
+   latest such attempt ended, whether or not that attempt was
+   acknowledged.  An attempt ends once the Mission Issuer can exclude
+   its receipt.  On re-enabling, it sends the Stream Updated event with
+   status enabled ([OIDC-SSF], Section 8.1.5), then the held events, and
+   a verification or heartbeat event only once they are delivered
+   (Section 6).  A Mission Issuer that serves a stream whose consumer
+   has not declared authority_changed, in a deployment that produces
+   events carrying authority_changed true, MUST advertise
+   mission_max_stale_seconds
+   ([I-D.draft-mcguinness-oauth-mission-status]).  Such a Mission Issuer
+   MUST serve the stream with a finite heartbeat interval agreed with
+   its consumer through configuration or discovery.  The bound relies on
+   that interval, and an unknown interval is never taken as zero or as
+   mission_max_stale_seconds.
+
+   The pause bounds the withheld consumer's reliance through rules it
+   already applies.  The consumer receives its last verification or
+   heartbeat event before the Mission Issuer's last attempt to deliver
+   one ends.  The stream stops being verified live once its heartbeat
+   interval has passed, so the staleness rule of Section 7 makes its
+   cached Mission state stale within the longer of
+   mission_max_stale_seconds and that interval after the event, before
+   the stream re-enables, and the consumer re-establishes state through
+   the Mission Status operation, which reports the narrowing.  Liveness
+   resumes only with the first verification or heartbeat event after re-
+   enabling; a Stream Updated event is not one.
 
 9.  Relationship to Revocation Propagation
 
@@ -807,10 +854,10 @@ Table of Contents
    *  as a *Mission Issuer*, emits a signed mission.lifecycle-change SET
       (Section 4, Section 5) on every committed Mission lifecycle
       transition, supports at least one SSF delivery method (Section 3),
-      meets the transmitter delivery duty of Section 6, advertises
+      meets the transmitter delivery duties of Section 6, advertises
       mission_event_stream_endpoint (Section 11), and, where a committed
       transition would carry authority_changed true, gates its delivery
-      per Section 8;
+      and pauses each stream it withholds the event from, per Section 8;
 
    *  as a *consumer*, verifies and applies received events per
       Section 5 and Section 7.
@@ -1078,9 +1125,19 @@ Appendix A.  Document History
       Compatibility: the delivery gate binds every event carrying
       authority_changed true, a containment commit as well as a
       discharge, under the one authority_changed capability.  A withheld
-      event leaves a version gap on the undeclared stream, and verified
-      liveness gives an undeclared consumer no narrowing-specific
-      freshness bound (#1001).
+      event leaves a version gap on the undeclared stream (#1001).
+
+   *  Authority Change Compatibility (Section 8): a withholding pauses
+      the stream through Shared Signals Framework stream status.  The
+      Mission Issuer re-enables it only after more than the longer of
+      mission_max_stale_seconds and the agreed heartbeat interval, plus
+      its clock tolerance, has passed since its last verification or
+      heartbeat delivery attempt ended, acknowledged or not, and
+      advertises mission_max_stale_seconds, so the staleness rule ends
+      an undeclared consumer's reliance within that bound.  A
+      verification or heartbeat event never overtakes an undelivered
+      earlier event on its stream (Section 6), and a Stream Updated or
+      verification event does not re-establish stale state (#1877).
 
 Acknowledgments
 
