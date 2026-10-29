@@ -3659,9 +3659,10 @@ owner in its own right (the <code>sub</code> model of <span>[<a href="#RFC9068" 
 the task's beneficiary.<a href="#section-6.1.7-6.2.1" class="pilcrow">¶</a></p>
 </li>
             <li class="normal" id="section-6.1.7-6.3">
-              <p id="section-6.1.7-6.3.1">The actor model does not vary by source: <code>client_id</code> names the
-Agent, and delegates are carried in the <code>act</code> chain
-(<a href="#delegation" class="auto internal xref">Section 8</a>).<a href="#section-6.1.7-6.3.1" class="pilcrow">¶</a></p>
+              <p id="section-6.1.7-6.3.1">The actor model does not vary by source: the Mission Record's
+<code>client_id</code> names the Agent, a token's <code>client_id</code> names the client
+that requested it (<a href="#token-claims" class="auto internal xref">Section 7.2</a>), and delegates are carried in
+the <code>act</code> chain (<a href="#delegation" class="auto internal xref">Section 8</a>).<a href="#section-6.1.7-6.3.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
 </section>
@@ -10494,16 +10495,23 @@ schedule is issuer-held state associated with the Mission, outside
 the record (#1873, #1879, D1014).<a href="#appendix-D-3.37.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-D-3.38">
-          <p id="appendix-D-3.38.1">Editorial, no requirement change: Issuance Gating opens with the
+          <p id="appendix-D-3.38.1">Editorial correction, no requirement change: Authority Sources says
+the Mission Record's <code>client_id</code> names the Agent and a token's
+<code>client_id</code> names the client that requested it, as Token Claims
+states, so it no longer reads as saying a delegated token's
+<code>client_id</code> names the Agent (#1851, D971).<a href="#appendix-D-3.38.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-D-3.39">
+          <p id="appendix-D-3.39.1">Editorial, no requirement change: Issuance Gating opens with the
 issuance procedure, the numbered checks every issuance path passes,
 in presentation order with no execution order or error precedence;
 the release-time revocation refusal and any sequencing a companion
 profile defines are unchanged. The Issuance Checks index is removed:
 the procedure and the sections it cites state its paths and per-path
-details (#1892, D1026).<a href="#appendix-D-3.38.1" class="pilcrow">¶</a></p>
+details (#1892, D1026).<a href="#appendix-D-3.39.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.39">
-          <p id="appendix-D-3.39.1">Editorial, no requirement change: text that restates rules stated
+        <li class="normal" id="appendix-D-3.40">
+          <p id="appendix-D-3.40.1">Editorial, no requirement change: text that restates rules stated
 elsewhere is removed: the Implementation Map; the End-to-End
 Example's timeline and companion variations (its Stage 5 is
 retitled Revocation); the derivation-policy paragraphs that the
@@ -10514,10 +10522,10 @@ Projection Example, which the Resource Access Profile gives; the
 three-sides restatement in Downgrade by Omission; Compromised or
 Over-Broad Derivation; Authority Hash and Mission Identity; and
 Authority Materialized Before Containment, which the Containment
-profile states (#1892, D1026).<a href="#appendix-D-3.39.1" class="pilcrow">¶</a></p>
+profile states (#1892, D1026).<a href="#appendix-D-3.40.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.40">
-          <p id="appendix-D-3.40.1">Editorial, no requirement change: the sections follow processing
+        <li class="normal" id="appendix-D-3.41">
+          <p id="appendix-D-3.41.1">Editorial, no requirement change: the sections follow processing
 order. Mission Creation gathers Mission Approval, Standing-Consent
 Bases, Mission Record, Integrity and Commitments, and Binding the
 Mission to the Grant; Mission-Bound Access Tokens is retitled
@@ -10526,60 +10534,60 @@ Within a Mission follows issuance; Token Consumption gathers Resource
 Server Enforcement and Mission State via Token Introspection; Error
 and Challenge Mapping, the two metadata sections, Extensibility and
 Conformance follow. Every section keeps its anchor and, except the
-issuance chapter, its title (#1892, D1026).<a href="#appendix-D-3.40.1" class="pilcrow">¶</a></p>
+issuance chapter, its title (#1892, D1026).<a href="#appendix-D-3.41.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.41">
-          <p id="appendix-D-3.41.1">Revocation: a Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated
+        <li class="normal" id="appendix-D-3.42">
+          <p id="appendix-D-3.42.1">Revocation: a Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated
 means independent of possession of any token, a revocation by
 <code>mission_id</code> from a party the deployment's policy authorizes, where
 a deployment was required to provide that means; Conformance Roles
 lists it among the Mission Issuer's surfaces; revoking a token does
-not by itself revoke a Mission (#1892, D1026).<a href="#appendix-D-3.41.1" class="pilcrow">¶</a></p>
+not by itself revoke a Mission (#1892, D1026).<a href="#appendix-D-3.42.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.42">
-          <p id="appendix-D-3.42.1">Editorial, no requirement change: Approval Comprehension's practices
+        <li class="normal" id="appendix-D-3.43">
+          <p id="appendix-D-3.43.1">Editorial, no requirement change: Approval Comprehension's practices
 for reviewing a large or varied Authority Set move to Mission Consent
 Evidence, which carries them beside its layered rendering, and
 Submission Processing Order drops its Consent Evidence example,
 keeping the rule that a committed approval surface covers the
-normalized provenance facts (#1892, D1026).<a href="#appendix-D-3.42.1" class="pilcrow">¶</a></p>
+normalized provenance facts (#1892, D1026).<a href="#appendix-D-3.43.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.43">
-          <p id="appendix-D-3.43.1">Editorial, no requirement change: delegation rules that sat in
+        <li class="normal" id="appendix-D-3.44">
+          <p id="appendix-D-3.44.1">Editorial, no requirement change: delegation rules that sat in
 issuance sections move into Delegation Within a Mission, leaving a
 pointer in each: a designation's audience, lifetime, <code>mission_intent</code>
 exemption and introspection rules move to Designation, and the
 delegated-exchange response members and the rule for a type delegable
 only unchanged move to Delegated Exchange. Self-Exchange Down-Scoping,
 which delegates nothing, moves from that chapter to follow Refresh
-Tokens (#1892, D1026).<a href="#appendix-D-3.43.1" class="pilcrow">¶</a></p>
+Tokens (#1892, D1026).<a href="#appendix-D-3.44.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.44">
-          <p id="appendix-D-3.44.1">Editorial, no requirement change: Protocol Flow keeps its figure
+        <li class="normal" id="appendix-D-3.45">
+          <p id="appendix-D-3.45.1">Editorial, no requirement change: Protocol Flow keeps its figure
 without the prose the Introduction's flow states; Derivation Policy
 and Open-Ended Tasks becomes Authority Set Example, its open-ended-task
 guidance being Mission Intent Shaping's and the Architecture's; and
 Policy-Language Types, whose rules Declared Transformation
 Capabilities and the Mission Resource Access Profile state, is
-removed with its Cedar reference (#1892, D1026).<a href="#appendix-D-3.44.1" class="pilcrow">¶</a></p>
+removed with its Cedar reference (#1892, D1026).<a href="#appendix-D-3.45.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.45">
-          <p id="appendix-D-3.45.1">Editorial, no requirement change: Revocation no longer restates the
+        <li class="normal" id="appendix-D-3.46">
+          <p id="appendix-D-3.46.1">Editorial, no requirement change: Revocation no longer restates the
 token-lifetime bound of Issuance Gating or the introspection overlay;
 its duty to offer token introspection or Mission Status where
 consumers rely on Mission state beyond a token's lifetime is
-unchanged (#1892, D1026).<a href="#appendix-D-3.45.1" class="pilcrow">¶</a></p>
+unchanged (#1892, D1026).<a href="#appendix-D-3.46.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.46">
-          <p id="appendix-D-3.46.1">Editorial, no requirement change: Prompt Injection and Data
+        <li class="normal" id="appendix-D-3.47">
+          <p id="appendix-D-3.47.1">Editorial, no requirement change: Prompt Injection and Data
 Exfiltration and Downgrade by Omission keep their rules and residuals
 and point to the Mission Security Model for the analysis; Authority
 and Propagated Information and Composition and the Effective Ceiling,
 which the Security Model and Mission Work Products carry, are removed
-with the uncited Work Products reference (#1892, D1026).<a href="#appendix-D-3.46.1" class="pilcrow">¶</a></p>
+with the uncited Work Products reference (#1892, D1026).<a href="#appendix-D-3.47.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.47">
-          <p id="appendix-D-3.47.1">Editorial, no requirement change: the Architecture carries material
+        <li class="normal" id="appendix-D-3.48">
+          <p id="appendix-D-3.48.1">Editorial, no requirement change: the Architecture carries material
 on the family rather than the protocol: Relationship to Existing
 OAuth Objects; Missions, Plans, and Execution; the Derivation Policy
 appendix's worked example; and the guidance on sizing a Mission to
@@ -10587,13 +10595,13 @@ one task, which Applicability now points to. The Introduction's
 two-layer framing becomes a pointer, and the Mission Authority Server
 pointer of Mission-Bound Token Issuance and the End-to-End Example's
 agent-identity stage, each stated elsewhere, are removed with the
-uncited SPIFFE client authentication reference (#1892, D1026).<a href="#appendix-D-3.47.1" class="pilcrow">¶</a></p>
+uncited SPIFFE client authentication reference (#1892, D1026).<a href="#appendix-D-3.48.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-D-3.48">
-          <p id="appendix-D-3.48.1">Editorial, no requirement change: the Role Mapping appendix moves to
+        <li class="normal" id="appendix-D-3.49">
+          <p id="appendix-D-3.49.1">Editorial, no requirement change: the Role Mapping appendix moves to
 the Architecture as Approval Role Mapping, which Single Accountable
 Approver cites; the companions that cited it now cite Principals and
-Approval Basis, which defines the three roles (#1892, D1026).<a href="#appendix-D-3.48.1" class="pilcrow">¶</a></p>
+Approval Basis, which defines the three roles (#1892, D1026).<a href="#appendix-D-3.49.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-D-4">-01<a href="#appendix-D-4" class="pilcrow">¶</a></p>
