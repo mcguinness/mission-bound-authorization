@@ -42,6 +42,7 @@ import {
   RUNTIME_POSTURE,
   relationForAction,
   type RuntimePosture,
+  signEvidenceEnvelope,
   stalenessBound,
   verifyEvidenceEnvelope,
 } from "@mission/pdp";
@@ -55,6 +56,7 @@ import {
   BOUNDARY_UNRESOLVABLE,
   boundaryEvidenceAuthorization,
   CANONICAL_RESOURCE,
+  Connectors,
   createEphemeralEvidenceKeys,
   createMediatedClient,
   credentialAuthorityFrom,
@@ -66,13 +68,17 @@ import {
   type ExecutionEvidence,
   McpPaymentsServer,
   openEphemeralWriteReservationStore,
+  operationKey,
   PaymentsStore,
   Pep,
+  reconcileClaims,
+  redemptionStatusFor,
   type RefusalRecord,
   TOOL_ACTIONS,
   TOOLS,
   type TokenFacts,
   TokenAudienceError,
+  TransactionEngine,
   type WriteReservationStore,
 } from "../src/index.js";
 import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
@@ -184,12 +190,44 @@ const CHANGE_WITHOUT_ALIAS: EnforcementBoundaries = {
   ],
 };
 
-function statementWith(boundaries: EnforcementBoundaries): RuntimePosture {
+/**
+ * #1868 (D999): a declared change whose old and new identifiers are each
+ * spelled with upper-case letters and a trailing slash, so a record that
+ * normalizes either one (its case, its trailing slash) no longer carries the
+ * identifier its Decision Evidence recorded.
+ */
+const MIXED_OLD = "https://Payments.Example/Legacy/MCP/";
+const MIXED_NEW = "https://Payments.Example/MCP/";
+const MIXED_CHANGE: EnforcementBoundaries = {
+  versions: [
+    {
+      version: "payments-mixed-v1",
+      effective_at: "1970-01-01T00:00:00Z",
+      boundaries: [{ boundary: MIXED_OLD, pep_locations: ["mcp-payments-pep"], evidence_keys: PEP_KEYS }],
+    },
+    {
+      version: "payments-mixed-v2",
+      effective_at: "2026-06-01T00:00:00Z",
+      boundaries: [
+        {
+          boundary: MIXED_NEW,
+          pep_locations: ["mcp-payments-pep"],
+          audience_aliases: [{ issuer: ISSUER, token_profile: "at+jwt", alias: MIXED_OLD }],
+          evidence_keys: PEP_KEYS,
+        },
+      ],
+      replaces: [{ boundary: MIXED_NEW, previous_version: "payments-mixed-v1", previous_boundary: MIXED_OLD }],
+    },
+  ],
+};
+
+/** `mediated`, when given, adds mediated resource entries (a boundary in force must be one). */
+function statementWith(boundaries: EnforcementBoundaries, mediated: string[] = []): RuntimePosture {
   return loadRuntimePosture({
     ...RUNTIME_POSTURE,
     mediated_scope: {
       ...RUNTIME_POSTURE.mediated_scope,
-      resources: [CANONICAL_RESOURCE, LEDGER],
+      resources: [CANONICAL_RESOURCE, LEDGER, ...mediated],
       pep_locations: [...RUNTIME_POSTURE.mediated_scope.pep_locations, "mcp-payments-pep-2", "ledger-pep"],
     },
     enforcement_boundaries: boundaries,
@@ -303,17 +341,35 @@ interface Built {
   decided: EvaluationRequest[];
   options: DecisionOptions[];
   fgaCalls: () => number;
+  /** The transaction tier, when `transaction` was asked for. */
+  transaction?: { engine: TransactionEngine; connectors: Connectors };
 }
 
-/** `decide`, when given, stands in for the deployment's decision function; every call is still recorded. */
+/**
+ * `decide`, when given, stands in for the deployment's decision function;
+ * every call is still recorded. `transaction` adds the transaction tier (its
+ * engine and connector ledger on the deployment's clock); `decisionKeys`
+ * replaces the resolver this PEP verifies Decision Evidence under.
+ */
 function buildPep(
   d: ReturnType<typeof deployment>,
   pepLocation: string,
-  opts: { view?: MissionView; profile?: Record<string, ActionMapping>; decide?: DecisionFn } = {},
+  opts: {
+    view?: MissionView;
+    profile?: Record<string, ActionMapping>;
+    decide?: DecisionFn;
+    transaction?: boolean;
+    decisionKeys?: EvidenceKeyResolver;
+  } = {},
 ): Built {
   const view = opts.view ?? viewOf();
   const boundary = new EnforcementBoundaryContext(d.statement, pepLocation, d.clock);
-  const evidence = new EvidenceStore(d.keys.signing, d.resolver, undefined, boundaryEvidenceAuthorization(boundary, d.clock));
+  const evidence = new EvidenceStore(
+    d.keys.signing,
+    opts.decisionKeys ?? d.resolver,
+    undefined,
+    boundaryEvidenceAuthorization(boundary, d.clock),
+  );
   const payments = new PaymentsStore();
   payments.seed(
     [{ id: "acme", name: "Acme", status: "approved" }],
@@ -350,6 +406,9 @@ function buildPep(
     claims: d.claimChannel,
   });
   const writeReservations = openEphemeralWriteReservationStore({ owner: "mcp-payments-pep", now: d.clock });
+  const transaction = opts.transaction
+    ? { engine: new TransactionEngine(`epoch-${pepLocation}`, d.clock), connectors: new Connectors(d.clock) }
+    : undefined;
   const server = new McpPaymentsServer({
     pep,
     payments,
@@ -360,8 +419,9 @@ function buildPep(
     asIssuer: AS_TXN_ISSUER,
     keyRoles: { accessToken: ["as-token"], attenuationRoot: [], transactionToken: ["as-txn"] },
     writeReservations,
+    ...(transaction ? { transaction: { ...transaction, evidence } } : {}),
   });
-  return { server, pep, writeReservations, evidence, decided, options, fgaCalls: () => calls };
+  return { server, pep, writeReservations, evidence, decided, options, fgaCalls: () => calls, ...(transaction ? { transaction } : {}) };
 }
 
 async function call(x: Built, tool: string, args: Record<string, unknown>, token: string) {
@@ -1147,6 +1207,139 @@ describe("a cutover waits for every bound consumer, through the assembled PEP, P
     } finally {
       earlier.close();
       d.claims?.close();
+    }
+  });
+});
+
+/**
+ * Stands in for a decision point that returns the permit it holds for
+ * `heldKey` whatever version is now in force (a lagging clock, say), as the
+ * wire would; every other key is decided afresh.
+ */
+function replayingFor(d: ReturnType<typeof deployment>, heldKey: string): DecisionFn {
+  let held: Decision | undefined;
+  return async (req, o) => {
+    if (req.action.properties?.idempotency_key !== heldKey) return d.decide(req, o);
+    held ??= await d.decide(req, o);
+    return JSON.parse(JSON.stringify(held)) as Decision;
+  };
+}
+
+describe("Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999)", () => {
+  it("a permit decided under the old identifier and re-presented after the change is refused at use as before and releases no effect, and its suppression record carries the old identifier exactly as its Decision Evidence recorded it, while a fresh permit after the change executes and records the new identifier exactly", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(MIXED_CHANGE, [MIXED_NEW]), () => new Date(nowMs), { claims: true });
+    const k = `idem_${randomUUID()}`;
+    const x = buildPep(d, "mcp-payments-pep", { decide: replayingFor(d, k), transaction: true });
+    const { engine, connectors } = x.transaction as NonNullable<Built["transaction"]>;
+    const redemption = redemptionStatusFor(engine);
+    const linked = (evaluationId: string | undefined) => decisions(x).find((r) => r.evaluation_id === evaluationId);
+    try {
+      // Before the change: a permit for the wire whose response was lost before any use.
+      const first = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+      expect(first.permitted, JSON.stringify(first)).toBe(true);
+      const evaluationId = first.attempt?.evaluationId as string;
+      expect(linked(evaluationId)?.audience).toBe(MIXED_OLD);
+
+      nowMs = CUTOVER_MS + 1000;
+      // After it, the decision point re-presents that permit: its use is refused before redemption, as before the fix.
+      const replayed = await x.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: k }, factsFor());
+      expect(replayed, JSON.stringify(replayed)).toMatchObject({ ok: false, refusal_reason: BOUNDARY_CUTOVER_ERROR });
+      expect(connectors.ledgerEntries()).toEqual([]);
+      expect(redemption.status(evaluationId, redemption.epoch)).toBe("unconsumed");
+      // Its suppression record carries the linked Decision Evidence's audience, byte for byte, and verifies as historical evidence.
+      const suppressed = executions(x).filter((r) => r.evaluation_id === evaluationId);
+      expect(suppressed.map((r) => [r.audience, r.outcome, r.error])).toEqual([
+        [linked(evaluationId)?.audience, "suppressed", BOUNDARY_CUTOVER_ERROR],
+      ]);
+      expect(suppressed[0]?.audience).toBe(MIXED_OLD);
+      expect(await verifyEvidenceEnvelope(suppressed[0], EXECUTION_EVIDENCE_MEDIA_TYPE, d.resolver)).toEqual({ valid: true });
+
+      // Control: fresh permits after the change are decided at the new
+      // identifier and released, and their completed records carry it
+      // exactly: a read (the PEP's own record) and a wire (the executor's).
+      const read = await x.server.callReadTool("get_invoice", { invoice_id: "inv-1" }, factsFor());
+      expect(read.ok, JSON.stringify(read)).toBe(true);
+      const wire = await x.server.callTransactionTool(
+        "execute_wire_transfer",
+        { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` },
+        factsFor(),
+      );
+      expect(wire.ok, JSON.stringify(wire)).toBe(true);
+      expect(connectors.ledgerEntries()).toHaveLength(1);
+      const fresh = executions(x).filter((r) => r.evaluation_id !== evaluationId);
+      expect(fresh.map((r) => [r.outcome, linked(r.evaluation_id)?.audience])).toEqual([
+        ["completed", MIXED_NEW],
+        ["completed", MIXED_NEW],
+      ]);
+      expect(fresh.map((r) => r.audience)).toEqual([MIXED_NEW, MIXED_NEW]);
+    } finally {
+      d.claims?.close();
+      x.writeReservations.close();
+    }
+  });
+
+  it("a wire committed under the old identifier whose Execution Evidence was lost is recorded late, after the change, by reconciliation from the ledger: the late record carries the old identifier exactly as its Decision Evidence recorded it, and settles the claim", async () => {
+    let nowMs = CUTOVER_MS - 1000;
+    const d = deployment(statementWith(MIXED_CHANGE, [MIXED_NEW]), () => new Date(nowMs), { claims: true });
+    const x = buildPep(d, "mcp-payments-pep", { transaction: true });
+    const { engine, connectors } = x.transaction as NonNullable<Built["transaction"]>;
+    const redemption = redemptionStatusFor(engine);
+    try {
+      const permit = await x.pep.enforce("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, factsFor());
+      expect(permit.permitted, JSON.stringify(permit)).toBe(true);
+      const evaluationId = permit.attempt?.evaluationId as string;
+      const decision = decisions(x).find((r) => r.evaluation_id === evaluationId);
+      expect(decision?.audience).toBe(MIXED_OLD);
+      // The redemption and the connector commit happened; the process lost the Execution Evidence before it was recorded.
+      const digest = String(decision?.parameter_digest);
+      const opKey = operationKey("msn_853", "payments:payment.execute", digest, "commit");
+      expect(engine.redeemPermit({ permitId: evaluationId, opKey, missionId: "msn_853", action: "payments:payment.execute", leaseExpiresAtMs: nowMs + 30_000 }).ok).toBe(true);
+      connectors.postWire({ opKey, invoiceId: "inv-1", payeeAccount: "acct-acme", amount: "125.00", currency: "USD", permitId: evaluationId, missionId: "msn_853" });
+      expect(executions(x)).toEqual([]);
+
+      nowMs = CUTOVER_MS + 61_000;
+      const report = await reconcileClaims({ claims: d.claimChannel, evidence: x.evidence, redemption, connectors });
+      expect(report.settled).toEqual([evaluationId]);
+      const late = executions(x).filter((r) => r.evaluation_id === evaluationId);
+      expect(late.map((r) => [r.audience, r.outcome])).toEqual([[decision?.audience, "completed"]]);
+      expect(late[0]?.audience).toBe(MIXED_OLD);
+      expect(await verifyEvidenceEnvelope(late[0], EXECUTION_EVIDENCE_MEDIA_TYPE, d.resolver)).toEqual({ valid: true });
+    } finally {
+      d.claims?.close();
+      x.writeReservations.close();
+    }
+  });
+
+  it("a permit whose retained Decision Evidence records no audience, accepted under a key resolver that binds none, is refused decision_evidence_unverifiable before any attempt: no effect, no Execution Evidence, and the Refusal Record names the boundary established for the request", async () => {
+    const nowMs = CUTOVER_MS + 1000;
+    const d = deployment(statementWith(MIXED_CHANGE, [MIXED_NEW]), () => new Date(nowMs), { claims: true });
+    const unbound = await generateKeyPair("ES256", { extractable: true });
+    // A decision point whose Decision Evidence omits `audience`, signed under a key the PEP resolves for any audience.
+    const decide: DecisionFn = async (req, o) => {
+      const decided = await d.decide(req, o);
+      const { evidence_envelope: _envelope, audience: _audience, ...content } = decided.context.decision_evidence as DecisionEvidence["content"];
+      const evidence_envelope = await signEvidenceEnvelope(content as unknown as JsonValue, DECISION_EVIDENCE_MEDIA_TYPE, {
+        kid: "pdp-audience-unbound",
+        key: unbound.privateKey,
+      });
+      return { ...decided, context: { ...decided.context, decision_evidence: { ...content, evidence_envelope } } };
+    };
+    const decisionKeys: EvidenceKeyResolver = (p) =>
+      p.kid === "pdp-audience-unbound" && p.emitter.id === EMITTER && p.emitter.role === "pdp" ? { key: unbound.publicKey } : d.resolver(p);
+    const x = buildPep(d, "mcp-payments-pep", { decide, decisionKeys, transaction: true });
+    const { connectors } = x.transaction as NonNullable<Built["transaction"]>;
+    try {
+      const refused = await x.server.callTransactionTool("execute_wire_transfer", { invoice_id: "inv-1", idempotency_key: `idem_${randomUUID()}` }, factsFor());
+      expect(refused, JSON.stringify(refused)).toMatchObject({ ok: false, refusal_reason: "decision_evidence_unverifiable" });
+      // The record without an audience was retained: the refusal is the missing audience, not its verification.
+      expect(decisions(x).map((r) => r.audience)).toEqual([undefined]);
+      expect(connectors.ledgerEntries()).toEqual([]);
+      expect(executions(x)).toEqual([]);
+      expect(refusals(x).map((r) => [r.audience, r.denial_reason])).toEqual([[MIXED_NEW, "decision_evidence_unverifiable"]]);
+    } finally {
+      d.claims?.close();
+      x.writeReservations.close();
     }
   });
 });
