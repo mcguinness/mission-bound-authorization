@@ -766,11 +766,17 @@ authorization-bearing field. Containment history stays in the records
 this profile retains, for audit and restoration disclosure
 ({{restoration}}).
 
-A consumer that does not understand `containment_version` ignores it;
-the state version already makes the change observable
-({{contain-transition}}). A consumer that reads it holds a precise
-question: whether the authority view it materialized predates the
-current overlay.
+A consumer that does not understand `containment_version` ignores
+it. On Mission Status and introspection, the state version makes the
+change observable ({{contain-transition}}). On a Signals stream, a
+contain event that narrows effective authority carries
+`authority_changed` true and reaches only a consumer that declared
+that capability. An undeclared consumer gets no push: it learns of
+the containment through its next version gap or, on a stream not
+verified live, the staleness rule
+({{I-D.draft-mcguinness-oauth-mission-signals}}). A consumer that
+reads `containment_version` holds a precise question: whether the
+authority view it materialized predates the current overlay.
 
 # Propagation {#propagation}
 
@@ -799,7 +805,10 @@ none:
   consumer as an authorization change, rather than an opaque version
   increment. A dedicated containment event type is deferred; carrying
   `containment_version` on the existing event is what keeps that
-  change legible in the interim.
+  change legible in the interim. Signals delivers a contain event that
+  narrows effective authority only to a stream whose consumer declared
+  `authority_changed` ({{I-D.draft-mcguinness-oauth-mission-signals}},
+  Section "Authority Change Compatibility").
 
 How quickly a consumer must adopt the narrowed view is bounded by the
 freshness and staleness rules it already operates under
@@ -1233,6 +1242,11 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Visibility ({{visibility}}) and Propagation ({{propagation}}): on a
+  Signals stream, a contain event that narrows effective authority
+  reaches only a consumer that declared `authority_changed`; an
+  undeclared consumer learns of the containment through its next
+  version gap or the staleness rule, not by push (#1001).
 - Protected Events names a change an authority source reports, under
   a declared continuing authority dependency, as a representative
   event class; the mapping stays deployment-defined (#830).

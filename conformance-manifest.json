@@ -47,8 +47,8 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "552acb8c415969604ed2053786be955198d52785",
-    "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
+    "revision": "3e427937e568e6d3ddc0dcdca7d6221836200391",
+    "content_sha256": "9534986cf5c06f303145287839936647af64608c90c304bafdd031390af59c6e"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
@@ -155,8 +155,8 @@
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
    },
    "draft-mcguinness-oauth-mission-containment.md": {
-    "revision": "b2e4e9571e1c7173a778eb52bb888483ac09d3f5",
-    "content_sha256": "665929b2d3917e67c8460beac4de5e21b3a974edc710a684d3d2ca1e7eab3555"
+    "revision": "536e657927ec6f14c405df18c3edf4d163ea54ef",
+    "content_sha256": "d826301a7d93d759b48011f1bebb4fb6a6643e66d29e80ca583c5d054898ee7a"
    },
    "draft-mcguinness-mission-harness.md": {
     "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
@@ -24826,7 +24826,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event that carries `authority_changed` true to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -24837,8 +24837,8 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true",
-    "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
+    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true, whether a discharge commit or a containment commit narrowed the Mission's effective authority",
+    "local": "the discharge case requires the deployment to also adopt the Status profile's completion/discharge capability, and the containment case the containment profile"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -24851,12 +24851,60 @@
     },
     {
      "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
-     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > withholds a real kernel contain() commit from an undeclared stream and delivers it to a declared one, whose receiver rematerializes",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate survives an emitter restart: it reads the commit's authority_changed, never emitter history > withholds a containment commit first observed above version 1 from an undeclared stream and delivers it to a declared one",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: every event carrying `authority_changed` true, a discharge commit and a containment commit alike, is withheld from an undeclared stream and delivered to a declared one (#1001, D1002). The gate reads only the commit's own `authority_changed` and the consumer's declaration, never emitter-side history, so a restarted emitter decides alike; the kernel's former `containment_advanced` provenance marker, which let a contain commit through, is removed. A discharge on a previously contained Mission carries `containment_version` beside `authority_changed` and is still gated. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter. Proved by mutation: letting any event with a `containment_version` through the gate fails five tests: the previously-contained discharge test, the end-to-end contain witness, the gap test, and both fresh-emitter tests; reinstating the former contain-only pass-through (the kernel marker on contain commits) fails the previously-contained discharge test, the end-to-end contain witness and the gap test, while the discharge-only tests pass."
+  },
+  {
+   "id": "signals.discharge.withholding-keeps-version",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "Withholding an event changes no other event's `version`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the gate withholds an event from a stream, the next event delivered to that stream for the Mission carries the Mission's own committed version, not a stream-local renumbering, so the stream's consumer sees a version gap",
+    "local": "the reference journals each commit once per deliverable consumer with the kernel's committed version, and signLifecycleEvent writes that version unchanged; the receiver reports the resulting gap (ApplyResult status gap, hasGap) and leaves the Mission Status refetch to the consumer"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
      "level": "cross-component",
      "surface": "signals"
     }
    ],
-   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
+   "notes": "#1001 (D1002). A real kernel contain commit (version 2) is withheld from the undeclared stream; the suspend that follows reaches that stream as version 3 and its receiver reports a gap (expected 2, received 3), while the declared stream sees 1, 2, 3. Proved by mutation: renumbering versions per stream in the emitter's journal fails the test (the undeclared stream receives 1, 2)."
   },
   {
    "id": "signals.delivery.persist-until-acknowledged",
@@ -48894,6 +48942,75 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.audience-bound-at-settlement",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.transaction-assurance-tier",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a settlement intake that settles a permit on an Execution Evidence record refuses, before any settlement effect, a record whose audience is not byte for byte the boundary retained for the permit it settles, although the record verifies under a key published for its own audience: the claim, its transitions, a conflicting record's retention and alarm, the reservations, the late budget correction and the counters are unchanged",
+    "local": "In the reference the settling consumer is the PDP's claim domain (settle in services/pdp/src/idempotency-claims.ts), which serves both the idempotency claim and the budget reservations. It retains the permit's boundary on the claim (claim schema 6): the request's resource.properties.audience, which the permit's Decision Evidence signs as audience, written at the claim and at adoption. A claim row from before the column takes the audience its stored Decision Evidence recorded, and one without a retained boundary settles nothing. The refusal reasons audience_mismatch, boundary_unretained and unknown_evaluation are not Mission diagnostics."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a completed record validly signed for another boundary, naming this permit's evaluation_id and delivered by its own PEP, is refused audience_mismatch at settlement and through the reconciler, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the record for the permit's own boundary commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a failed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's failed record holds both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a suppressed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's suppressed record releases both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an applied failed settlement, a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members, each validly signed for another boundary, are refused audience_mismatch: nothing is retained or alarmed, the held reservations stay held and the claim and both counters are unchanged, while the conflicting completed record for the permit's own boundary is retained, alarmed and commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an incorrect operator release and the claim's reconciliation window, a completed record validly signed for another boundary is refused audience_mismatch and corrects nothing: the reservations stay released, the claim and both counters are unchanged and no overspend is reported, while the permit's own boundary's record commits the correction (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on a claim file from before the boundary column, an unsettled permit takes the boundary its stored Decision Evidence recorded and settles only on that boundary's record, a settled claim whose decision was tombstoned keeps none and refuses even its own boundary's conflicting record boundary_unretained, and a reservation whose claim row is gone is not corrected from a record, each refusal leaving the claim, the conflict table, the reservations and both counters unchanged (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "settlement is bound to the adopting permit's boundary across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1841, D974) > a claim adopted through a replaced identifier's scope is settled at the boundary its permit was decided at: a record validly signed for the replaced identifier the claim's scope still names is refused audience_mismatch and leaves the claim unchanged, and the record for the permit's boundary settles it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "D991 (owner ruling on #1861): the consumer half of the audience member, a row of its own. These witnesses exercise the PDP's settlement intake and establish nothing about the PEP that writes the record; the producer duty needs its own witness at the PEP. Applicability: the duty binds whichever consumer settles a permit on Execution Evidence, the PDP's idempotency claim under the transaction-assurance tier (runtime#idempotency) or the metering settlement intake under exact budgets (metering#settlement-contract). The reference serves both from one claim domain, so the row applies under either capability (any_of), never under one mode alone. #1841 (D974; fix/1841-settlement-audience at c41a03f7, merged by #1861 at 4b4f5192): settle compares the authenticated record's audience byte for byte with the boundary retained for the permit's claim before any effect. Four other boundaries publish their own keys in one declaration (another port, the identifier with an upper-case host, the identifier with a trailing slash, the identifier truncated to its origin). Their records are refused audience_mismatch for completed, failed and suppressed outcomes on an unsettled claim, for a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members after an applied failed settlement, and for a completed record after an incorrect operator release past the window. Each refusal leaves the claim row, its transitions, the conflict table, the reservations and both counters unchanged with no alert, the failed and suppressed records never reach the redemption owner, and the permit's own boundary's record settles in each case. The adoption witness settles a claim adopted across a declared identifier change at the adopting permit's boundary and refuses the replaced identifier's record; the legacy-file witness takes a pre-column row's boundary from its stored Decision Evidence and refuses boundary_unretained on a row without one. #1861's mutants at c41a03f7, each alone with the source restored: removing the comparison (M1) fails all seven at their refusal; moving it after the claim's settlement (M2) fails six, and after the late correction (M3) all seven, at the unchanged-state assertion alone; moving it after the redemption owner's query (M4) fails the failed and suppressed witnesses at the never-asked assertion; a case-insensitive (M5), record-prefix (M6), boundary-prefix (M7) or URL-normalized (M8) comparison fails the five boundary witnesses; treating a NULL boundary as a match (M9) or as the scope's audience (M10), dropping the backfill (M11) and letting a record with no claim row reach the correction (M12) fail the legacy-file witness; leaving the boundary unchanged at adoption (M13) or comparing the scope's audience (M14) fails the adoption witness; omitting the boundary at the claim (M15) fails six. Re-verified at main 4b4f5192 with the same runner: M1 fails 7 of 7, M2 six, M5 the five boundary witnesses and M13 the adoption witness, the source restored byte-equal after each."
   },
   {
    "id": "evidence.execution.parameter-deviation-remains-valid-and-flagged",

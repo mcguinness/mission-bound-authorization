@@ -702,13 +702,20 @@ verification event. A Mission Issuer MAY additionally emit a periodic
 stream-status heartbeat. A stream is verified live when the consumer
 has received a verified verification or heartbeat event within the
 stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered.
+transition for the stream's subjects would have been delivered, other
+than an event the gate of {{discharge-compatibility}} withholds.
 
 On a
 stream verified live, silence is freshness-preserving: the consumer
 MAY continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
-Mission.
+Mission. For a stream whose consumer has not declared
+`authority_changed`, verified liveness does not establish that its
+cached effective authority reflects every narrowing. Continued
+heartbeats can prevent the staleness fallback from firing while a
+narrowing event is withheld ({{discharge-compatibility}}), so such a
+consumer has no narrowing-specific freshness bound; Mission and
+credential expiry still apply.
 
 The staleness fallback applies to a stream that is not verified live.
 A consumer MUST treat cached Mission state as stale once the stream
@@ -723,7 +730,7 @@ surface. A consumer that cannot verify its stream, or that was down
 and may have missed events, applies the same rule rather than
 continuing on possibly stale state.
 
-# Discharge Compatibility {#discharge-compatibility}
+# Authority Change Compatibility {#discharge-compatibility}
 
 `authority_changed` true ({{lifecycle-event}}) is a breaking change
 for a consumer built before this member existed: such a consumer
@@ -745,17 +752,21 @@ prefix keeps this document's extension collision-safe on an object
 it does not own; the member rides an object the Shared Signals
 Framework already defines and needs no IANA action.
 
-The gate binds exactly the events whose authority change is carried
-only by the new member: a Mission Issuer MUST NOT deliver a
-`mission.lifecycle-change` event whose effective-authority change is
-represented by `authority_changed` alone (a discharge commit,
-{{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose
-consumer has not declared `authority_changed` in
-`mission_capabilities_supported`. An event whose narrowing is also
-represented by `containment_version` follows the containment
-profile's existing delivery and consumer rules unchanged
-({{I-D.draft-mcguinness-oauth-mission-containment}}); the member is
-still set on it, and a declared consumer applies one rule to both.
+The gate binds every event that carries `authority_changed` true, a
+discharge commit ({{I-D.draft-mcguinness-oauth-mission-discharge}})
+and a containment commit
+({{I-D.draft-mcguinness-oauth-mission-containment}}) alike: a Mission
+Issuer MUST NOT deliver a `mission.lifecycle-change` event that
+carries `authority_changed` true to a stream whose consumer has not
+declared `authority_changed` in `mission_capabilities_supported`. One
+declaration covers both, since the declared rule of
+{{consumer-behavior}} rematerializes on either. Withholding an event
+changes no other event's `version`, so the consumer's next delivered
+event for that Mission shows a version gap, and the consumer
+re-establishes state through the Mission Status operation
+({{consumer-behavior}}). Until then the withheld consumer has no
+notice of the narrowing; its fallback is that gap or, on a stream not
+verified live, the staleness rule of {{consumer-behavior}}.
 Where Signals is used, a Mission Issuer MUST emit
 `authority_changed` true on the `mission.lifecycle-change` event a
 discharge commit produces.
@@ -955,8 +966,8 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   `state` is `terminated`), `suspend_until` with `on_expiry` (present
   only on a transition to `suspended` under a deadline), and
   `authority_changed` (required true on any event whose commit
-  narrows effective authority without changing `state`, the discharge
-  commit being the current case, delivery subject to the gate of
+  narrows effective authority without changing `state`, for example a
+  discharge or containment commit, delivery subject to the gate of
   {{discharge-compatibility}}; optional and defaulting to false
   otherwise). Optional event-body claims: `tenant` and `reason`. See
   {{lifecycle-event}} for the schema.
@@ -995,6 +1006,13 @@ IETF; Reference this document, {{as-metadata}}.
 - Editorial, no requirement change: the lifecycle-change examples'
   revocation `reason` describes a revocation, not a completion
   (#1535).
+- Authority Change Compatibility ({{discharge-compatibility}}),
+  formerly Discharge Compatibility: the delivery gate binds every
+  event carrying `authority_changed` true, a containment commit as
+  well as a discharge, under the one `authority_changed` capability.
+  A withheld event leaves a version gap on the undeclared stream, and
+  verified liveness gives an undeclared consumer no narrowing-specific
+  freshness bound (#1001).
 
 # Acknowledgments
 {:numbered="false"}
