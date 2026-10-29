@@ -296,15 +296,15 @@ export type ResynchronizeResult =
   | {
       status: "refused";
       /**
-       * - `not_recovering`: the Mission is not held.
-       * - `unverified`: the response failed a Mission Status consumer check.
+       * - `unverified`: the response failed a Mission Status consumer check,
+       *   or the receiver has no Status settings to check it with.
        * - `nonce`: it does not echo a nonce this receiver issued for the Mission.
        * - `generation`: its nonce was issued before a later restore.
        * - `behind`: it reports a version below the one the store holds.
        * - `expired`: its reliance bound (its `fresh_until`, its `exp`, or an
        *   active Mission's `expires_at`) has passed.
        */
-      reason: "not_recovering" | "unverified" | "expired" | "nonce" | "generation" | "behind";
+      reason: "unverified" | "expired" | "nonce" | "generation" | "behind";
     };
 
 /**
@@ -340,6 +340,18 @@ export interface ReceiverOptions {
    */
   seenCapacity?: number;
   /**
+   * @spec signals#consumer-behavior, control-plane#state-surfaces (#1747): the
+   * Mission Issuer's advertised `mission_max_stale_seconds` (default {@link
+   * DEFAULT_MAX_STALE_SECONDS}, the reference issuer's). An `active` state a
+   * signal established is relied on for at most this long after the issuer's
+   * observation point (the event's `committed_at`), and never past the
+   * Mission's `expires_at`; then {@link MissionSignalReceiver.lease} gives no
+   * lease until Mission Status re-establishes it. A stand-in, stricter than
+   * the stream-liveness rule it approximates: this receiver does not read
+   * stream verification or heartbeat events.
+   */
+  maxStaleSeconds?: number;
+  /**
    * @spec control-plane#rollback (#1749): the receiver's recovery witness, a
    * file outside the store's directory tree that records this receiver's
    * write sequence, advanced before every commit. With it, a store restored
@@ -371,6 +383,17 @@ export interface ReceiverOptions {
 /** The default {@link ReceiverOptions.seenCapacity}. */
 export const DEFAULT_SEEN_CAPACITY = 65_536;
 
+/** The default {@link ReceiverOptions.maxStaleSeconds}: the reference issuer's advertised `mission_max_stale_seconds`. */
+export const DEFAULT_MAX_STALE_SECONDS = 300;
+
+/**
+ * @spec signals#consumer-behavior (#1747): the columns added to a receiver
+ * store after it was first written, each nullable. A row written before them
+ * has no observation time, so it gives no lease until Mission Status
+ * re-establishes it.
+ */
+const RECEIVER_MISSION_COLUMNS_SINCE = ["observed_at", "reliance_until", "state_source"] as const;
+
 /**
  * @spec signals#consumer-behavior (#250) — the receiver's durable state. One
  * row per (issuer, audience, Mission): the cached observation and version
@@ -393,6 +416,9 @@ CREATE TABLE IF NOT EXISTS signal_receiver_missions (
   remat_version INTEGER,
   remat_containment_version INTEGER,
   retained_set TEXT NOT NULL,
+  observed_at TEXT,
+  reliance_until TEXT,
+  state_source TEXT,
   PRIMARY KEY (issuer, audience, mission_id)
 ) STRICT;
 CREATE TABLE IF NOT EXISTS signal_receiver_seen (
@@ -490,6 +516,12 @@ interface ReceiverMissionRow {
   remat_version: number | null;
   remat_containment_version: number | null;
   retained_set: string;
+  /** @spec signals#consumer-behavior (#1747): the issuer's observation point, RFC 3339; null when unknown. */
+  observed_at: string | null;
+  /** The instant after which the row's state is not relied on, RFC 3339; null when unknown. */
+  reliance_until: string | null;
+  /** The surface that established the row: `signal` or, after a Status refresh, `status`. */
+  state_source: string | null;
 }
 
 /**
@@ -523,8 +555,11 @@ export class MissionSignalReceiver {
    * holds:
    *  - the cached observation and its version high-water (anti-revival);
    *  - the gap flag: a detected `version` gap, not safe to honor until
-   *    refetched (detect only; automatic Status refetch is deferred), cleared
-   *    by the next in-order event;
+   *    refetched. It holds across later events, contiguous ones included,
+   *    and clears only when a verified Mission Status response re-establishes
+   *    the Mission at or above the stored version (D950). A gap also raises
+   *    the rematerialization latch: the missing event may have narrowed
+   *    authority, which a state refresh does not re-establish;
    *  - @spec signals#consumer-behavior — the rematerialization latch: set by
    *    an applied or gapped event carrying `authority_changed` true, or by a
    *    containment-aware `containment_version` advance past the value this
@@ -543,6 +578,7 @@ export class MissionSignalReceiver {
    */
   private readonly db: Database;
   private readonly seenCapacity: number;
+  private readonly maxStaleSeconds: number;
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
   private readonly statusKeys: JWTVerifyGetKey | undefined;
   /** @spec control-plane#rollback (#1749): the witness as this receiver last wrote it. */
@@ -559,6 +595,10 @@ export class MissionSignalReceiver {
     this.seenCapacity = opts.seenCapacity ?? DEFAULT_SEEN_CAPACITY;
     if (!Number.isSafeInteger(this.seenCapacity) || this.seenCapacity < 1) {
       throw new Error("seenCapacity must be a positive integer");
+    }
+    this.maxStaleSeconds = opts.maxStaleSeconds ?? DEFAULT_MAX_STALE_SECONDS;
+    if (!Number.isSafeInteger(this.maxStaleSeconds) || this.maxStaleSeconds < 1) {
+      throw new Error("maxStaleSeconds must be a positive integer");
     }
     const witnessFile = opts.witness?.file;
     if (witnessFile !== undefined) {
@@ -579,6 +619,7 @@ export class MissionSignalReceiver {
     }
     this.db = openStore(RECEIVER_SCHEMA, opts.store);
     try {
+      this.addMissingMissionColumns();
       if (witnessFile !== undefined) {
         this.admit(witnessFile);
       } else if (this.sequenceRow() !== undefined) {
@@ -692,6 +733,21 @@ export class MissionSignalReceiver {
     this.witness = next;
   }
 
+  /** Add the nullable columns a store written before them lacks (#1747); idempotent. */
+  private addMissingMissionColumns(): void {
+    const present = new Set(
+      (
+        this.db.prepare("PRAGMA table_info(signal_receiver_missions)").all() as Array<{
+          name: string;
+        }>
+      ).map((c) => c.name),
+    );
+    for (const column of RECEIVER_MISSION_COLUMNS_SINCE) {
+      if (!present.has(column))
+        this.db.exec(`ALTER TABLE signal_receiver_missions ADD COLUMN ${column} TEXT`);
+    }
+  }
+
   private sequenceRow(): { store_id: string; sequence: number; witness: string } | undefined {
     return this.db
       .prepare(
@@ -747,6 +803,32 @@ export class MissionSignalReceiver {
     this.witness = record;
   }
 
+  /**
+   * @spec signals#consumer-behavior (#1747): the observation time and reliance
+   * bound of a state an event established. The observation point is the
+   * issuer's (the event's `committed_at`), never the receipt or the read. An
+   * `active` state is relied on for `maxStaleSeconds` after it, and never past
+   * `expires_at`; a state that is not `active` permits nothing, so its bound
+   * is the Mission's `expires_at`. An event without a usable `committed_at`
+   * still applies, but its state gives no lease.
+   */
+  private signalReliance(
+    state: string,
+    expiresAt: string,
+    committedAt: string | undefined,
+  ): { observed: string | null; until: string | null } {
+    if (committedAt === undefined) return { observed: null, until: null };
+    if (state !== "active") return { observed: committedAt, until: expiresAt };
+    const bound = Date.parse(committedAt) + this.maxStaleSeconds * 1000;
+    const expiresMs = Date.parse(expiresAt);
+    return {
+      observed: committedAt,
+      until: new Date(
+        Number.isFinite(expiresMs) ? Math.min(bound, expiresMs) : bound,
+      ).toISOString(),
+    };
+  }
+
   /** Write the witness ({@link writeDurableFile}); a seam for failure tests. */
   protected persistWitness(file: string, record: ReceiverWitness): void {
     writeDurableFile(file, JSON.stringify(record));
@@ -793,7 +875,8 @@ export class MissionSignalReceiver {
     return this.db
       .prepare(
         `SELECT state, termination_json, version, expires_at, containment_version, gapped,
-                remat_needed, remat_version, remat_containment_version, retained_set
+                remat_needed, remat_version, remat_containment_version, retained_set,
+                observed_at, reliance_until, state_source
          FROM signal_receiver_missions WHERE issuer = ? AND audience = ? AND mission_id = ?`,
       )
       .get(this.opts.issuer, this.audience, missionId) as ReceiverMissionRow | undefined;
@@ -932,7 +1015,9 @@ export class MissionSignalReceiver {
       priorContainmentVersion !== undefined &&
       containment_version !== undefined &&
       containment_version > priorContainmentVersion;
-    const rematerialize = authority_changed === true || containmentAdvanced;
+    // @spec signals#consumer-behavior (D950): a version gap also requires
+    // rematerialization, since the missing event may have narrowed authority.
+    const rematerialize = authority_changed === true || containmentAdvanced || isGap;
 
     // Carry the last-observed `containment_version` forward when this event
     // does not itself repeat it (defensive: the wire invariant is that it
@@ -945,6 +1030,7 @@ export class MissionSignalReceiver {
     // marker on its own. An event that DOES require it (re-)raises the
     // marker to THIS event's own version/containment_version: the new
     // high-water mark a markRematerialized baseline must cover to clear it.
+    const reliance = this.signalReliance(state, expires_at, parsed.committed_at);
     const remat = rematerialize
       ? { needed: 1, version, containment: nextContainmentVersion ?? null }
       : {
@@ -956,13 +1042,16 @@ export class MissionSignalReceiver {
       .prepare(
         `INSERT INTO signal_receiver_missions
            (issuer, audience, mission_id, state, termination_json, version, expires_at, containment_version,
-            gapped, remat_needed, remat_version, remat_containment_version, retained_set)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            gapped, remat_needed, remat_version, remat_containment_version, retained_set,
+            observed_at, reliance_until, state_source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET
            state = excluded.state, termination_json = excluded.termination_json, version = excluded.version,
            expires_at = excluded.expires_at, containment_version = excluded.containment_version,
            gapped = excluded.gapped, remat_needed = excluded.remat_needed, remat_version = excluded.remat_version,
-           remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set`,
+           remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set,
+           observed_at = excluded.observed_at, reliance_until = excluded.reliance_until,
+           state_source = excluded.state_source`,
       )
       .run(
         this.opts.issuer,
@@ -973,11 +1062,15 @@ export class MissionSignalReceiver {
         version,
         expires_at,
         nextContainmentVersion ?? null,
-        isGap ? 1 : 0,
+        // An unresolved gap holds across later events until Status covers it (D950).
+        isGap || stored?.gapped === 1 ? 1 : 0,
         remat.needed,
         remat.version,
         remat.containment,
         setJwt,
+        reliance.observed,
+        reliance.until,
+        SIGNAL_STATE_SOURCE,
       );
     if (isGap) {
       return {
@@ -1026,24 +1119,43 @@ export class MissionSignalReceiver {
   }
 
   /**
-   * @spec harness#mission-binding — the last signal-established state as the
+   * @spec harness#mission-binding: the last established state as the
    * shared `MissionStatusLease` shape (`@mission/core`) the harness consumes,
-   * tagged `state_source: "signal"`. Absent until a signal has established state
-   * for the Mission. `status_checked_at` is the instant the consumer read it.
-   * Absent while the Mission is held after a restore (#1749): no lease
-   * permits reliance before Mission Status re-establishes the Mission.
+   * tagged with the surface that established it (`signal`, or `status` after
+   * a Mission Status refresh). This is the receiver's reliance surface;
+   * {@link viewState} is the raw cache.
+   *
+   * `status_checked_at` is the issuer's observation point and
+   * `status_expires_at` its reliance bound (#1747), both fixed when the state
+   * was established, so `checkedAt`, the instant the consumer reads the
+   * lease, only decides whether the bound has passed. Absent until a state
+   * is established; past the bound; while the rematerialization latch or a
+   * version gap is open; and while the Mission is held after a restore
+   * (#1749). Each of those needs Mission Status before further reliance.
    */
   lease(missionId: string, checkedAt: string): MissionStatusLease | undefined {
     if (this.recovering(missionId)) return undefined;
-    const s = this.viewState(missionId);
-    if (!s) return undefined;
+    const r = this.row(missionId);
+    if (!r) return undefined;
+    // @spec control-plane#state-surfaces, signals#consumer-behavior (#1747):
+    // a narrowed Mission (the rematerialization latch) or one with a version
+    // gap needs Mission Status before further reliance, so no lease.
+    if (r.gapped === 1 || r.remat_needed === 1) return undefined;
+    // The lease carries the issuer's observation time and its reliance bound,
+    // the same at every read: reading it never makes a push-only state
+    // fresher. Past the bound, or with no known observation time, no lease.
+    if (r.observed_at === null || r.reliance_until === null) return undefined;
+    const at = Date.parse(checkedAt);
+    if (!Number.isFinite(at) || at >= Date.parse(r.reliance_until)) return undefined;
     return {
-      state: s.state,
-      ...(s.termination !== undefined ? { termination: s.termination } : {}),
-      version: s.version,
-      status_checked_at: checkedAt,
-      status_expires_at: s.expires_at,
-      state_source: SIGNAL_STATE_SOURCE,
+      state: r.state,
+      ...(r.termination_json !== null
+        ? { termination: JSON.parse(r.termination_json) as MissionTermination }
+        : {}),
+      version: r.version,
+      status_checked_at: r.observed_at,
+      status_expires_at: r.reliance_until,
+      state_source: r.state_source ?? SIGNAL_STATE_SOURCE,
     };
   }
 
@@ -1111,12 +1223,20 @@ export class MissionSignalReceiver {
   /**
    * @spec control-plane#rollback (#1749), status#mission-status-request: the
    * `nonce` for the Mission Status request that resynchronizes a held
-   * Mission, or undefined when the Mission is not held. Each call issues a
-   * fresh nonce, recorded with the current recovery generation, so a response
-   * to a request made before a later restore cannot release the Mission.
+   * Mission, or undefined when the Mission is not held ({@link statusNonce}).
    */
   recoveryNonce(missionId: string): string | undefined {
-    if (!this.recovering(missionId)) return undefined;
+    return this.recovering(missionId) ? this.statusNonce(missionId) : undefined;
+  }
+
+  /**
+   * @spec status#mission-status-request, signals#consumer-behavior (#1747):
+   * the `nonce` for a Mission Status request whose response {@link
+   * resynchronize} will take. Each call issues a fresh nonce, recorded with
+   * the current recovery generation (0 when no restore was ever detected), so
+   * a response to a request made before a later restore is refused.
+   */
+  statusNonce(missionId: string): string {
     const nonce = `rsn_${randomBytes(18).toString("base64url")}`;
     withTransaction(this.db, () => {
       this.witnessWrite();
@@ -1131,9 +1251,20 @@ export class MissionSignalReceiver {
   }
 
   /**
-   * @spec control-plane#rollback (#1749), status#mission-status-response:
-   * resynchronize a held Mission from a fresh, authenticated Mission Status
-   * response to a request carrying a {@link recoveryNonce}.
+   * @spec control-plane#rollback (#1749), control-plane#state-surfaces,
+   * signals#consumer-behavior (#1747), status#mission-status-response:
+   * re-establish a Mission from a fresh, authenticated Mission Status response
+   * to a request carrying a {@link statusNonce}: a Mission held after a
+   * restore is released, and any other Mission is refreshed, which is how a
+   * consumer re-establishes current state once a push-only lease has passed
+   * its bound, a version gap is open or the rematerialization latch is set.
+   *
+   * Conflicts are reconciled by version, never by severity: a response below
+   * the stored version is refused (`behind`), whatever states the two report;
+   * one at the stored version refreshes the observation time and bound and
+   * clears the gap; one above it replaces the state, a higher-version
+   * `active` over a stored `suspended` included. The rematerialization latch
+   * is never cleared here (D950).
    *
    * The response must pass the Mission Status consumer checks (the shared
    * verifier for the signature, `iss`, `aud`, `mission.id` and
@@ -1152,8 +1283,7 @@ export class MissionSignalReceiver {
     now: Date = new Date(),
   ): Promise<ResynchronizeResult> {
     const status = this.opts.status;
-    if (status === undefined || !this.recovering(missionId))
-      return { status: "refused", reason: "not_recovering" };
+    if (status === undefined) return { status: "refused", reason: "unverified" };
     const verified = await verifyMissionStatusResponse(
       statusResponse,
       { missionId, issuer: this.opts.issuer, audience: status.audience ?? status.clientId },
@@ -1196,31 +1326,43 @@ export class MissionSignalReceiver {
           return { status: "refused", reason: "nonce" };
         const generation = this.recoveryGeneration();
         if (issued.generation !== generation) return { status: "refused", reason: "generation" };
-        if (this.releasedGeneration(missionId) >= generation)
-          return { status: "refused", reason: "not_recovering" };
+        const recovering = this.recovering(missionId);
         const stored = this.row(missionId);
         if (stored !== undefined && (version as number) < stored.version)
           return { status: "refused", reason: "behind" };
-        // The Status read rematerializes the authority view at its own
-        // version: an outstanding latch it covers clears, as through
-        // markRematerialized.
-        const covers =
-          stored?.remat_needed !== 1 ||
-          ((version as number) >= (stored.remat_version as number) &&
-            (stored.remat_containment_version === null ||
-              (containment !== undefined && containment >= stored.remat_containment_version)));
+        // @spec signals#consumer-behavior (D950): a Mission Status read
+        // re-establishes state, not effective authority, so it never clears
+        // the rematerialization latch; the consumer acknowledges that through
+        // markRematerialized once it has refreshed its audience-scoped
+        // effective authority. A read that advances past this receiver's known
+        // history (a Mission it holds no row for, or a version above the
+        // stored one) skipped events it never saw, as does a Mission released
+        // after a restore; any of them may have narrowed authority, so the
+        // latch is raised, or its marker advanced, to the observed version.
+        // Accepting newer state does not establish newer authority.
+        // The containment cursor never moves back; at the stored version the
+        // artifact that established the state is kept.
+        const containmentVersion =
+          containment === undefined
+            ? (stored?.containment_version ?? null)
+            : Math.max(containment, stored?.containment_version ?? containment);
+        const sameVersion = stored !== undefined && (version as number) === stored.version;
+        const latch = recovering || stored === undefined || (version as number) > stored.version;
         this.witnessWrite();
         this.db
           .prepare(
             `INSERT INTO signal_receiver_missions
                (issuer, audience, mission_id, state, termination_json, version, expires_at, containment_version,
-                gapped, remat_needed, remat_version, remat_containment_version, retained_set)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+                gapped, remat_needed, remat_version, remat_containment_version, retained_set,
+                observed_at, reliance_until, state_source)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
              ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET
                state = excluded.state, termination_json = excluded.termination_json, version = excluded.version,
                expires_at = excluded.expires_at, containment_version = excluded.containment_version,
                gapped = 0, remat_needed = excluded.remat_needed, remat_version = excluded.remat_version,
-               remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set`,
+               remat_containment_version = excluded.remat_containment_version, retained_set = excluded.retained_set,
+               observed_at = excluded.observed_at, reliance_until = excluded.reliance_until,
+               state_source = excluded.state_source`,
           )
           .run(
             this.opts.issuer,
@@ -1230,18 +1372,24 @@ export class MissionSignalReceiver {
             termination !== undefined ? JSON.stringify(termination) : null,
             version,
             m.expires_at,
-            containment ?? null,
-            covers ? 0 : 1,
-            covers ? null : (stored?.remat_version ?? null),
-            covers ? null : (stored?.remat_containment_version ?? null),
-            statusResponse,
+            containmentVersion,
+            latch ? 1 : (stored?.remat_needed ?? 0),
+            latch ? version : (stored?.remat_version ?? null),
+            latch ? containmentVersion : (stored?.remat_containment_version ?? null),
+            sameVersion ? (stored as ReceiverMissionRow).retained_set : statusResponse,
+            // The Status observation point and the response's own reliance bound.
+            new Date((verified.payload.iat as number) * 1000).toISOString(),
+            new Date(verified.relianceBoundMs).toISOString(),
+            "status",
           );
-        this.db
-          .prepare(
-            `INSERT INTO signal_receiver_released (issuer, audience, mission_id, generation) VALUES (?, ?, ?, ?)
-             ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET generation = excluded.generation`,
-          )
-          .run(this.opts.issuer, this.audience, missionId, generation);
+        if (recovering) {
+          this.db
+            .prepare(
+              `INSERT INTO signal_receiver_released (issuer, audience, mission_id, generation) VALUES (?, ?, ?, ?)
+               ON CONFLICT (issuer, audience, mission_id) DO UPDATE SET generation = excluded.generation`,
+            )
+            .run(this.opts.issuer, this.audience, missionId, generation);
+        }
         this.db
           .prepare(
             "DELETE FROM signal_receiver_resync_nonces WHERE issuer = ? AND audience = ? AND mission_id = ?",
@@ -1278,6 +1426,8 @@ interface ParsedEvent {
   termination?: MissionTermination;
   version: number;
   expires_at: string;
+  /** @spec signals#lifecycle-event: the commit's time, normalized; absent when the event carries no usable one. */
+  committed_at?: string;
   /** @spec signals#lifecycle-event — the generic narrowing discriminator,
    *  when the event carries it. */
   authority_changed?: boolean;
@@ -1337,6 +1487,8 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
     state !== "terminated"
       ? undefined
       : (normalized.termination ?? readMissionTermination(ev.termination));
+  const committedMs =
+    typeof ev.committed_at === "string" ? Date.parse(ev.committed_at) : Number.NaN;
   return {
     missionId,
     missionIssuer,
@@ -1344,6 +1496,7 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
     ...(termination !== undefined ? { termination } : {}),
     version,
     expires_at,
+    ...(Number.isFinite(committedMs) ? { committed_at: new Date(committedMs).toISOString() } : {}),
     // `authority_changed` is a MUST-ignore-if-unrecognized member; a consumer
     // that does not understand it simply never sets these, so it is optional
     // here too (draft §consumer-behavior forward-compatibility).
