@@ -1802,11 +1802,19 @@ describe("delegation declared without narrowing: a delegated token carries an en
   // in this implementation; the equal-only carriage comes from the undeclared
   // `narrowing`. The ceiling is the Mission's own entry, so the proposal equals
   // it and derives unchanged.
+  /** A second delegable entry, so a credential can carry one of the Mission's entries unchanged. */
+  const vendorReads = () => ({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:vendor.read"],
+    constraints: { vendors: ["acme"] },
+    delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+  });
   let h: Harness;
   beforeAll(async () => {
     h = await harness(14954, {
       capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
-      derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads()] },
+      derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads(), vendorReads()] },
       transformationCapabilities: {
         declared: { mission_resource_access: { delegation: true } },
         narrowing: NARROWING_UNDECLARED,
@@ -1844,5 +1852,31 @@ describe("delegation declared without narrowing: a delegated token carries an en
     expect(designated.status, JSON.stringify(designated.body)).toBe(400);
     expect(designated.body.error).toBe("invalid_target");
     expect(derivations(h, missionId)).toBe(before);
+  });
+
+  it("a credential carrying one of the Mission's entries unchanged: the designation and its redemption never restore the entry it omits", async () => {
+    const { accessToken } = await baseMission(h, [broadReads(), vendorReads()]);
+    const entries = entriesOf(accessToken);
+    expect(entries).toHaveLength(2);
+    const reads = entries.find((e) => (e.actions as string[]).includes("payments:invoice.read")) as Body;
+    const handle = await designate(h, accessToken, "ap-agent");
+    expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+    const credential = await token(h, "ap-agent", dpop.get("ap-agent") as Keys, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: handle.body.access_token as string,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+      authorization_details: JSON.stringify([reads]),
+    });
+    expect(credential.status, JSON.stringify(credential.body)).toBe(200);
+    expect(entriesOf(credential.body.access_token as string)).toEqual([reads]);
+    const designation = await designate(h, credential.body.access_token as string, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(entriesOf(designation.body.access_token as string)).toEqual([reads]);
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([reads]);
   });
 });
