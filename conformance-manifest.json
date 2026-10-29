@@ -23851,7 +23851,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides. The Signals receiver's resynchronization (#1810) holds the Status keys as the PDP does (`missionStatusIssuer(...).keys`): a response under a key the set lists is refused, as its first verification and after one under the current key, and the held Mission stays held, though its configured kids and cached jwks_uri still carry the key; the same issuer advertising no set resynchronizes on it."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides. The Signals receiver's resynchronization (#1810) holds the Status keys as the PDP does (`missionStatusIssuer(...).keys`): a response under a key the set lists is refused, as its first verification (which fetches the set) and after one under the current key, and the held Mission stays held, though its configured kids and cached jwks_uri still carry the key; the same issuer advertising no set resynchronizes on it."
    },
    "level": "unit",
    "coverage": "partial",
@@ -24013,7 +24013,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime",
-    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime. The Signals receiver's resynchronization holds its Status keys the same way (#1810): a key withdrawn from the jwks_uri still verifies within the cached set's declared lifetime and is refused once it ends."
+    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime. The Signals receiver's resynchronization holds its Status keys the same way (#1810): a key withdrawn from the jwks_uri still verifies within the cached set's declared lifetime, without a fetch, and once it ends the set is fetched again and the key refused."
    },
    "level": "unit",
    "coverage": "tested",
@@ -24026,7 +24026,7 @@
     },
     {
      "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
-     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes at once, and a withdrawn one stops once the cached set's lifetime ends",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes before the cached set's lifetime ends, and a withdrawn one stops once it ends, when the set is fetched again",
      "level": "unit",
      "surface": "verification"
     }
