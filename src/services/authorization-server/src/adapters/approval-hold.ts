@@ -49,7 +49,10 @@ export interface HeldApproval {
   /** The approval as decided, naming its grant; `kernel.approve` commits it at code issuance. */
   input: ApproveInput & { grantId: string };
   prepared: PreparedApproval;
-  /** When the hold lapses, in epoch milliseconds on the kernel's clock: no later than its interaction. */
+  /**
+   * When the hold lapses, in epoch milliseconds on the provider's clock (the
+   * one its interaction expires by): no later than its interaction.
+   */
   expiresAt: number;
   /**
    * The decision's final checks, run again at the commit with nothing awaited
@@ -69,7 +72,7 @@ export class ApprovalHolds {
 
   /** Hold a decision, replacing an earlier hold of the same grant (a retried decision). */
   hold(held: HeldApproval): void {
-    const now = this.kernel.nowDate().getTime();
+    const now = Date.now();
     for (const [grantId, h] of this.holds) if (h.expiresAt <= now) this.holds.delete(grantId);
     this.holds.set(held.grantId, held);
   }
@@ -77,7 +80,7 @@ export class ApprovalHolds {
   /** The live hold of `grantId`; a lapsed one is dropped. */
   pending(grantId: string): HeldApproval | undefined {
     const held = this.holds.get(grantId);
-    if (held && held.expiresAt <= this.kernel.nowDate().getTime()) {
+    if (held && held.expiresAt <= Date.now()) {
       this.holds.delete(grantId);
       return undefined;
     }
