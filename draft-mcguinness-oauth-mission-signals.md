@@ -620,7 +620,8 @@ transmitter never silently drops a committed event; the consumer
 never treats silence as health.
 
 A verification or heartbeat event ({{consumer-behavior}}) attests that
-every committed transition for the stream would have been delivered.
+every committed transition for the stream would have been delivered,
+apart from one the gate of {{discharge-compatibility}} withholds.
 A Mission Issuer therefore MUST NOT transmit one on a stream while an
 earlier event on that stream remains undelivered, including one being
 retried or in flight, other than an event the gate of
