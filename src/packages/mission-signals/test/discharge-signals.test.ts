@@ -21,6 +21,12 @@
  *  - withholding renumbers nothing: the undeclared stream's next delivered
  *    event carries the Mission's own `version`, so its receiver detects the
  *    gap the withheld event left.
+ *
+ * A withholding also pauses the undeclared stream (#1877): it receives a
+ * Stream Updated notice, and its later events are held until the staleness
+ * window passes. The pause itself is proven in `stream-pause.test.ts`; here
+ * each sink sorts the SETs it receives by event type, so the gate's
+ * assertions read the lifecycle events alone.
  */
 
 import {
@@ -42,6 +48,7 @@ import {
   LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
   MissionSignalReceiver,
+  SSF_STREAM_UPDATED_EVENT_URI,
 } from "../src/index.js";
 
 const ISS = "https://as.test";
@@ -52,6 +59,19 @@ const NOW = new Date("2026-08-20T12:00:00Z");
 const EXPIRES_AT = "2027-01-01T00:00:00Z";
 const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_POLICY = "close-management-2026-q3";
+/** The issuer's advertised `mission_max_stale_seconds` in these tests. */
+const MAX_STALE_SECONDS = 60;
+/** The stream's agreed heartbeat interval, shorter than `MAX_STALE_SECONDS`. */
+const HEARTBEAT_INTERVAL_SECONDS = 10;
+
+/** True for a `mission.lifecycle-change` SET; false for an SSF stream-control SET. */
+const isLifecycle = (set: string): boolean =>
+  LIFECYCLE_CHANGE_EVENT_URI in (decodeJwt(set).events as Record<string, unknown>);
+
+/** The `status` of a Stream Updated SET. */
+const streamUpdatedStatus = (set: string): unknown =>
+  (decodeJwt(set).events as Record<string, Record<string, unknown>>)[SSF_STREAM_UPDATED_EVENT_URI]
+    ?.status;
 
 const POLICY = {
   policy_version: "discharge-signals-v1",
@@ -104,8 +124,12 @@ interface Wired {
   undeclared: MissionSignalReceiver;
   declaredSets: string[];
   undeclaredSets: string[];
+  /** The SSF stream-control SETs the undeclared stream received, in order. */
+  undeclaredControl: string[];
   /** What the undeclared receiver reported for each delivered SET, in order. */
   undeclaredResults: ApplyResult[];
+  /** Advance the emitter's clock. */
+  advance: (ms: number) => void;
 }
 
 /** One issuer, two streams: one that declared `authority_changed`, one that did not. */
@@ -117,6 +141,7 @@ async function wire(): Promise<Wired> {
     alg: "ES256",
     use: "sig",
   };
+  let clock = NOW.getTime();
   const emitter = new MissionSignalEmitter({
     key: statusKeys.privateKey,
     kid: "as-status",
@@ -124,6 +149,11 @@ async function wire(): Promise<Wired> {
       { audience: DECLARED_AUD, mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY] },
       { audience: UNDECLARED_AUD },
     ],
+    maxStaleSeconds: MAX_STALE_SECONDS,
+    // The agreed heartbeat interval: without one, a paused stream is never
+    // re-enabled automatically (D1023 ruling 3).
+    heartbeatIntervalSeconds: HEARTBEAT_INTERVAL_SECONDS,
+    now: () => new Date(clock),
   });
   const declared = new MissionSignalReceiver({
     jwks: { keys: [statusPub] },
@@ -137,12 +167,17 @@ async function wire(): Promise<Wired> {
   });
   const declaredSets: string[] = [];
   const undeclaredSets: string[] = [];
+  const undeclaredControl: string[] = [];
   const undeclaredResults: ApplyResult[] = [];
   emitter.onDeliver(DECLARED_AUD, (set) => {
     declaredSets.push(set);
     return declared.verifyAndApply(set);
   });
   emitter.onDeliver(UNDECLARED_AUD, async (set) => {
+    if (!isLifecycle(set)) {
+      undeclaredControl.push(set);
+      return undefined;
+    }
     undeclaredSets.push(set);
     const result = await undeclared.verifyAndApply(set);
     undeclaredResults.push(result);
@@ -165,7 +200,11 @@ async function wire(): Promise<Wired> {
     undeclared,
     declaredSets,
     undeclaredSets,
+    undeclaredControl,
     undeclaredResults,
+    advance: (ms) => {
+      clock += ms;
+    },
   };
 }
 
@@ -223,6 +262,8 @@ describe("discharge compatibility: authority_changed emission and the delivery g
 
     expect(w.declaredSets).toHaveLength(2);
     expect(w.undeclaredSets).toHaveLength(1); // gated: no second event
+    // The withholding paused the stream (#1877).
+    expect(w.undeclaredControl.map(streamUpdatedStatus)).toEqual(["paused"]);
     expect(w.undeclared.viewState(mission.id)).toMatchObject({ version: 1 });
     expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
   });
@@ -230,6 +271,9 @@ describe("discharge compatibility: authority_changed emission and the delivery g
   it("gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate", async () => {
     const w = await wire();
     const mission = approve(w.kernel);
+    // The activating event reaches both streams before the withholding
+    // pauses the undeclared one (#1877), which would hold it.
+    await w.emitter.drain();
     // A contain commit first. It narrows effective authority, so it carries
     // authority_changed true and only the declared stream receives it.
     w.kernel.contain(mission.id, {
@@ -319,9 +363,15 @@ describe("the delivery gate covers containment (@spec signals#discharge-compatib
     await w.emitter.drain();
     expect(w.undeclaredSets).toHaveLength(1);
 
-    // A suspend narrows nothing beyond `state`, so both streams receive it.
+    // A suspend narrows nothing beyond `state`, so both streams receive it;
+    // the undeclared stream, paused by the withholding (#1877), receives it
+    // once the staleness window has passed and the stream is re-enabled.
     w.kernel.transition(mission.id, "suspend"); // version 3
     await w.emitter.drain();
+    expect(w.undeclaredSets).toHaveLength(1);
+    w.advance(MAX_STALE_SECONDS * 1000 + 1);
+    await w.emitter.drain();
+    expect(w.undeclaredControl.map(streamUpdatedStatus)).toEqual(["paused", "enabled"]);
 
     // No renumbering per stream: the undeclared stream's event carries the
     // Mission's version 3, not a stream-local 2.
@@ -388,9 +438,12 @@ describe("the delivery gate survives an emitter restart: it reads the commit's a
     });
     const declared: string[] = [];
     const undeclared: string[] = [];
+    const undeclaredControl: string[] = [];
     emitter.onDeliver(DECLARED_AUD, (set) => declared.push(set));
-    emitter.onDeliver(UNDECLARED_AUD, (set) => undeclared.push(set));
-    return { emitter, declared, undeclared };
+    emitter.onDeliver(UNDECLARED_AUD, (set) =>
+      (isLifecycle(set) ? undeclared : undeclaredControl).push(set),
+    );
+    return { emitter, declared, undeclared, undeclaredControl };
   }
 
   it("a discharge on a previously contained Mission stays gated on a fresh emitter (containment_version 1, no advance)", async () => {
