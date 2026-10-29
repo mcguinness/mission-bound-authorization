@@ -351,8 +351,8 @@ Table of Contents
    access token and the refresh token is one.  A Token Exchange under
    the Mission is one derivation, whether it down-scopes a token for the
    approved agent or issues a delegated token
-   ([I-D.draft-mcguinness-oauth-mission], Section "Delegation Within a
-   Mission").
+   ([I-D.draft-mcguinness-oauth-mission], Sections "Self-Exchange Down-
+   Scoping" and "Delegation Within a Mission").
 
    The one exception is a delegation family under the Continuation
    profile's async delegation transport

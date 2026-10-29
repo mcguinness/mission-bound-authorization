@@ -140,26 +140,26 @@ Table of Contents
      7.2.  Token Claims
      7.3.  Audience and Token Response
      7.4.  Refresh Tokens
-     7.5.  Authentication Claims and Lifetime
-     7.6.  Scope Projection
-       7.6.1.  Subset Condition
-       7.6.2.  Per-Audience Condition
-       7.6.3.  Projection Steps
-       7.6.4.  Requested Scope Values
-       7.6.5.  Scope-Only Targets
-       7.6.6.  Refresh Token Protection
-     7.7.  Mission Claim
-       7.7.1.  Claim Reservation
-     7.8.  Mission Lifecycle
-       7.8.1.  Mission Termination
-       7.8.2.  Revocation
+     7.5.  Self-Exchange Down-Scoping
+     7.6.  Authentication Claims and Lifetime
+     7.7.  Scope Projection
+       7.7.1.  Subset Condition
+       7.7.2.  Per-Audience Condition
+       7.7.3.  Projection Steps
+       7.7.4.  Requested Scope Values
+       7.7.5.  Scope-Only Targets
+       7.7.6.  Refresh Token Protection
+     7.8.  Mission Claim
+       7.8.1.  Claim Reservation
+     7.9.  Mission Lifecycle
+       7.9.1.  Mission Termination
+       7.9.2.  Revocation
    8.  Delegation Within a Mission
      8.1.  Designation
      8.2.  Delegated Exchange
      8.3.  Instance Context in Delegated Tokens
-     8.4.  Self-Exchange Down-Scoping
-     8.5.  Delegation Constraints
-     8.6.  Delegated Token Example
+     8.4.  Delegation Constraints
+     8.5.  Delegated Token Example
    9.  Token Consumption
      9.1.  Resource Server Enforcement
        9.1.1.  Enforcement Requirements
@@ -251,7 +251,7 @@ Table of Contents
    Authority Set, and resource servers enforce the resulting
    credentials.  Revoking or expiring a Mission stops further issuance
    and refresh but does not, by itself, invalidate an already-issued
-   access token, which remains valid until it expires (Section 7.8.2).
+   access token, which remains valid until it expires (Section 7.9.2).
 
    Agent-identity work such as [I-D.draft-ietf-wimse-aims] establishes
    how an AI agent authenticates and how a user delegates authority to
@@ -279,7 +279,7 @@ Table of Contents
    disclosed task with its approved authority and has an identifier and
    a lifecycle independent of any grant.  It can be revoked by that
    identifier through an authenticated means, independent of possession
-   of any token (Section 7.8.2), and a token derived from it by Token
+   of any token (Section 7.9.2), and a token derived from it by Token
    Exchange identifies the same Mission (Section 6.5).
 
    A Mission is created and used in a single chain:
@@ -341,7 +341,7 @@ Table of Contents
    it receives delegated tokens (Section 9.1).  A Mission-unaware
    resource server that authorizes only from scope operates within the
    Mission only where the AS establishes that its scope projection and
-   the resource's independent controls cannot over-grant (Section 7.6).
+   the resource's independent controls cannot over-grant (Section 7.7).
    The chain provides task-bound issuance, auditability, and a
    revocation gate over future derivation.
 
@@ -433,11 +433,11 @@ Table of Contents
    server enforces the authorization_details statelessly and can check
    the mission claim (Section 9.1), with no callback to the AS required.
 
-   (5) A revocation (Section 7.8.2), or expires_at passing, moves the
+   (5) A revocation (Section 7.9.2), or expires_at passing, moves the
    Mission to terminated, with reason revoked or expired, after which
    the AS refuses further issuance and refresh.  A deployment can also
    treat [RFC7009] revocation of the refresh token as revoking the
-   Mission (Section 7.8.2).
+   Mission (Section 7.9.2).
 
    The end-to-end example (Appendix A) walks this flow with concrete
    messages.
@@ -493,7 +493,7 @@ Table of Contents
        refresh token, is refused with the invalid_grant error code
        (Section 7.1).  The already-issued access token can still be
        honored on this stateless path until 12:05; revocation does not
-       undo a completed read (Section 7.8.2).
+       undo a completed read (Section 7.9.2).
 
    An ERP that instead introspects on every request stops honoring the
    token on its next request after revocation, through the composite
@@ -611,7 +611,7 @@ Table of Contents
       (for example, a mission_id or a descriptor a companion profile
       defines) without Mission-derived authority or any gating
       guarantee.  An access token of this class does not carry the
-      mission claim (Section 7.7.1).
+      mission claim (Section 7.8.1).
 
    Derived token (Mission-derived token):  An access token issued under
       a Mission, carrying its Mission-derived authority (the full
@@ -651,7 +651,7 @@ Table of Contents
 
    Self-exchange (no-actor exchange):  A Token Exchange with no actor in
       which an agent presents its own Mission-bound access token to
-      obtain a narrowed one; it delegates nothing (Section 8.4).
+      obtain a narrowed one; it delegates nothing (Section 7.5).
 
 3.2.  Principal Model
 
@@ -1095,7 +1095,7 @@ Table of Contents
    Under the first rule, a token is issued outside a Mission when the
    request has no qualifying Mission binding: no grant bound to a
    Mission (Section 6.5), or to a companion profile's equivalent
-   binding, from which the issuance derives under Section 7.7.1.  The AS
+   binding, from which the issuance derives under Section 7.8.1.  The AS
    refuses a token request the first rule forbids with the
    invalid_target error code (Section 2 of [RFC8707]) once the request
    is otherwise processable.  Authentication, syntax, and grant-
@@ -1110,13 +1110,12 @@ Table of Contents
    refresh token.
 
    A token request under an existing Mission-bound grant, such as a
-   narrowing refresh, a self-exchange (Section 8.4) or an exchange for a
-   delegation designation (Section 8.1), needs no mission_intent under
-   the second rule.  This exception opens no Mission submission
-   carriage, and every other check still applies to the request:
-   Issuance Gating (Section 7.1), the subset rule (Section 5.4), the
-   first rule above, and the grant's binding to its Mission, client and
-   sender.
+   narrowing refresh or a self-exchange (Section 7.5), needs no
+   mission_intent under the second rule.  This exception opens no
+   Mission submission carriage, and every other check still applies to
+   the request: Issuance Gating (Section 7.1), the subset rule
+   (Section 5.4), the first rule above, and the grant's binding to its
+   Mission, client and sender.
 
    The following is an example of an authority proposal submitted
    alongside the example Intent of Section 4.  Authority Set derivation,
@@ -1254,9 +1253,7 @@ Table of Contents
    surface.  Where a deployment commits the rendered approval surface,
    that commitment MUST cover the normalized provenance facts, at least
    as a digest of their canonical submission_evidence representation
-   (Section 6.3).  For example, the consent-evidence companion binds
-   them with a submission_provenance_hash inside its committed
-   disclosure ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
+   (Section 6.3).
 
 5.  Mission Authority
 
@@ -1279,7 +1276,7 @@ Table of Contents
    *  *Configured-mapping mode*: no authority proposal was submitted,
       and a deployment-configured mapping, keyed on the Intent's purpose
       or target_resources, or on the requested scope values for a scope-
-      only target (Section 7.6), yields the candidate entries, which are
+      only target (Section 7.7), yields the candidate entries, which are
       then narrowed to policy.
 
       The mapping is a lookup, not synthesis, and no key grants
@@ -1483,7 +1480,7 @@ Table of Contents
       the same way regardless of type;
 
    *  narrowing and delegation use the subset and delegation semantics
-      the type defines (Section 5.4, Section 8.5), under the
+      the type defines (Section 5.4, Section 8.4), under the
       transformation capabilities the AS declares for the type (below);
       and
 
@@ -1505,7 +1502,7 @@ Table of Contents
       and
 
    *  *projection:* the AS establishes a safe scope projection for the
-      type (Section 7.6).
+      type (Section 7.7).
 
    The AS MUST NOT narrow, delegate, or project to scope an entry of a
    type for which it has not declared the corresponding capability; on
@@ -1554,21 +1551,8 @@ Table of Contents
    cannot prove that a transformed copy is still a subset of what was
    approved.
 
-   A type that declares delegation without narrowing is delegable only
-   unchanged: the AS MUST NOT include an entry of such a type in a
-   delegated token unless it is equal (Section 5.4) to an entry of the
-   presented delegating token, it keeps that entry's approved audience,
-   and the type's delegation policy permits the delegate (Section 8.5).
-   The reference is the presented token, not the Mission Authority Set,
-   so equality never restores an entry, or any part of one, that the
-   presented token omits.
-
-   A designation's aud names its redeemer (Section 8.1) and reassigns no
-   entry's original approved audience: for a designation, the audience
-   rules test the resource audiences associated with the entries it
-   carries, never the designated client (Section 7.3).  Its redemption
-   issues an entry only as the rules above permit, including their
-   narrowing condition.
+   Section 8.2 and Section 8.1 state how these rules apply to a
+   delegated token and to a designation.
 
    The AS declares the capabilities through these carriers, in order of
    preference:
@@ -1834,7 +1818,7 @@ Table of Contents
    Which party enforces each bound, and what holds when that party is
    absent, follows from Enforcement Requirements (Section 9.1.1) and,
    for a resource server that enforces only scope, from Scope Projection
-   (Section 7.6).  An AS SHOULD make clear to the Approver which
+   (Section 7.7).  An AS SHOULD make clear to the Approver which
    rendered bounds its deployment actually enforces, so consent is not
    given to a limit that binds nowhere.
 
@@ -1870,32 +1854,11 @@ Table of Contents
    rendering; comprehension cannot be inferred from an approval or its
    integrity anchors.
 
-   A short task can legitimately have a large or varied Authority Set:
-   an erasure request whose proposal or configured lookup (Section 5)
-   yields dozens of delete entries across resources.  The consent object
-   remains the complete derived Authority Set. The following non-
-   normative practices can help make it reviewable:
-
-   *  *Group* entries by resource and action, keeping visible an entry
-      whose constraints, such as its resource range or consumption
-      bound, differ materially from the rest of its group.
-
-   *  *Summarize with drill-down*: cover every resource, action, and
-      bound, with each complete entry one interaction away; a summary is
-      a view of the set, never a substitute for it.
-
-   *  *Surface high-risk entries*: make the high-risk authority of
-      Section 6.1.8 prominent in the initial view, distinguishing
-      materially different risks and bounds.
-
-   *  *Split rather than approve* when the set is too large or varied
-      for one decision (Section 1.1).
-
    Mission Consent Evidence
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]) defines
    layered rendering of a committed disclosure, including what its first
-   layer carries, and lets the Approver ask the basis for an entry
-   before deciding.
+   layer carries and practices for a large or varied Authority Set, and
+   lets the Approver ask the basis for an entry before deciding.
 
 6.1.7.  Authority Sources
 
@@ -1957,7 +1920,7 @@ Table of Contents
 
    Requesting these parameters implies nothing about the authentication
    claims of an issued token, which describe the token's Subject, not
-   the Approver (Section 7.5); when the Approver is the Subject, one
+   the Approver (Section 7.6); when the Approver is the Subject, one
    authentication event can back both.
 
    The Approver's authentication satisfies acr_values when it matches
@@ -2145,7 +2108,7 @@ Table of Contents
       (Section 6.1), including the creation commit of a deferred or
       relocated flow.  Recency is issuance-time eligibility only: a
       later change to a ceiling, or the passage of time past one, does
-      not terminate an active Mission (Section 7.8.2).
+      not terminate an active Mission (Section 7.9.2).
 
    *  The activating issuer MUST refuse an approved_at later than the
       evaluation instant by more than the deployment's declared, bounded
@@ -2167,7 +2130,7 @@ Table of Contents
    A Mission is the durable record created at the approval event; a
    Mission Identifier (Section 6.3.5) identifies it.  Its members MUST
    NOT be changed after creation, except state and the termination
-   member written once when the Mission terminates (Section 7.8.1).
+   member written once when the Mission terminates (Section 7.9.1).
 
    The record is a logical object: this document constrains its members
    and their values and requires no storage form.  Where a surface or
@@ -2184,7 +2147,7 @@ Table of Contents
    exp, iat) describe a signed artifact's own envelope, or identify a
    party in an {iss, sub} object, not the Mission.
 
-   Like the mission claim (Section 7.7), the record is open
+   Like the mission claim (Section 7.8), the record is open
    (Section 13): a companion profile of this document MAY record
    additional members set at creation using short names coordinated with
    it (for example, a lineage member linking the Mission to a
@@ -2207,11 +2170,11 @@ Table of Contents
    state:  REQUIRED.  A string.  The current lifecycle state: active or
       terminated in this document, or an additional state defined by a
       companion profile, subject to the forward-compatibility rule of
-      Section 7.8.
+      Section 7.9.
 
    termination:  CONDITIONAL.  An object, present exactly when state is
       terminated: the reason and instant the Mission terminated
-      (Section 7.8.1).
+      (Section 7.9.1).
 
 6.3.2.  Approved Content and Commitments
 
@@ -2227,7 +2190,7 @@ Table of Contents
 
    authority_hash:  REQUIRED.  A string.  The authority commitment over
       the Authority Set (Section 6.4.1).  It is not carried on the
-      baseline mission claim (Section 7.7).
+      baseline mission claim (Section 7.8).
 
    intent_hash:  REQUIRED.  A string.  The integrity commitment over the
       approved Mission Intent (Section 6.4.1), making the recorded task
@@ -2237,7 +2200,7 @@ Table of Contents
       otherwise.  A string.  The integrity commitment over the recorded
       proposed_authority (Section 6.4.1).  It is approval-time
       provenance, not enforcement input, and is not carried on the
-      mission claim (Section 7.7).
+      mission claim (Section 7.8).
 
    submission_evidence:  REQUIRED when the approved submission carried
       evidence, absent otherwise.  An array.  The verified Intent
@@ -2258,7 +2221,7 @@ Table of Contents
          cannot collide with the common members.
 
       submission_evidence is provenance, not enforcement input, and is
-      not carried on the mission claim (Section 7.7).  Recorded facts,
+      not carried on the mission claim (Section 7.8).  Recorded facts,
       such as a verified consent reference, are provenance and policy
       input only; a resource domain validates them under its own current
       policy (Section 16.4).
@@ -2295,7 +2258,7 @@ Table of Contents
       standing behind it, and MUST refuse only a profile operation that
       itself requires recognized adjudication semantics to proceed (for
       example, evaluating a policy-approval recency ceiling).  Unlike an
-      unrecognized lifecycle state (Section 7.8), an unrecognized value
+      unrecognized lifecycle state (Section 7.9), an unrecognized value
       here does not by itself invalidate or deactivate the Mission.
 
       consent_principal:  REQUIRED.  An object with iss and sub.  The
@@ -2384,7 +2347,7 @@ Table of Contents
 
       *  Its disclosure through introspection follows Section 9.2.1.
 
-      *  It is not carried on the baseline mission claim (Section 7.7),
+      *  It is not carried on the baseline mission claim (Section 7.8),
          and it MUST NOT be relied on to grant or widen authority
          wherever it does appear.
 
@@ -2444,7 +2407,7 @@ Table of Contents
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
 
    expires_at:  REQUIRED.  A string.  An RFC 3339 date-time: the AS-
-      established effective Mission expiry (Section 7.8, Section 7.1).
+      established effective Mission expiry (Section 7.9, Section 7.1).
       It MUST be later than created_at and MUST NOT be later than
       intent.expires_at, the requested ceiling (Section 4).
 
@@ -2810,7 +2773,7 @@ Table of Contents
    this document derives a Mission through OAuth, it relates the Mission
    to OAuth in two distinct ways: the *Mission grant binding*, defined
    below, and the mission claim a derived token carries as its own
-   Mission reference (Section 7.7).
+   Mission reference (Section 7.8).
 
    The Mission grant binding is an AS-controlled, functional mapping
    from one persistent, redeemable *grant lineage* to exactly one
@@ -2900,8 +2863,8 @@ Table of Contents
    *  *Token Exchange.* A Token Exchange derivation ([RFC8693]) that
       returns only an access token establishes no new grant lineage:
       ordinary in-Mission delegation (Section 8) and self-exchange down-
-      scoping (Section 8.4) both work this way, and the issued token is
-      a derived token (Section 7.7) whose mission claim identifies the
+      scoping (Section 7.5) both work this way, and the issued token is
+      a derived token (Section 7.8) whose mission claim identifies the
       one Mission its subject_token resolved to.  Where the
       subject_token was issued under a grant lineage, the issued token
       retains that grant provenance, and a later redemption of a
@@ -2956,7 +2919,7 @@ Table of Contents
    grant the same client or subject holds outside any Mission binding,
    and it does not recall an access token already issued before its exp
    absent a runtime state check the token's consumer performs
-   (Section 7.8.2, Section 9.2).
+   (Section 7.9.2, Section 9.2).
 
    An issuer that needs to cascade a lifecycle operation, or to
    enumerate a Mission's bound grant lineages and credentials, maintains
@@ -2969,7 +2932,7 @@ Table of Contents
    possible under the Mission regardless of which lifecycle outcome
    follows.  The deployment either revokes the Mission or lets it expire
    at expires_at, and applies one choice consistently; both outcomes
-   terminate it (Section 7.8), so reprocessing the same timeout changes
+   terminate it (Section 7.9), so reprocessing the same timeout changes
    nothing.
 
 6.5.4.  Mission Identifier and Expiry in Responses
@@ -2996,12 +2959,11 @@ Table of Contents
       code path, the authorization response carrying only the code is
       not that response; the token response redeeming the code is.
 
-   *  A delegated exchange response (Section 8.2) MUST carry both,
-      because the delegate did not receive the response that created the
-      Mission.
+   *  A delegated exchange response carries both as Section 8.2
+      requires.
 
    *  Any other Mission-bound token response, including a refresh,
-      designation (Section 8.1), or self-exchange (Section 8.4)
+      designation (Section 8.1), or self-exchange (Section 7.5)
       response, SHOULD carry both.
 
    *  A creation replay deduplicated under the applicable operation
@@ -3047,7 +3009,7 @@ Table of Contents
    response that redeems a newly created Mission's authorization code
    (Section 6.1.1); a refresh (Section 7.4); a designation
    (Section 8.1); a delegated exchange (Section 8.2); and a self-
-   exchange (Section 8.4).  Companion profiles define further
+   exchange (Section 7.5).  Companion profiles define further
    derivations.  A derivation passes every check below, each stated
    where cited, with any difference by path; a path's own section states
    its further rules.  The numbering is presentation order: it imposes
@@ -3065,7 +3027,7 @@ Table of Contents
         code, the refresh token, the token a designation request
         presents, the delegate, and the self-exchanging agent.
 
-   3.   Mission state: the Mission is active (below, Section 7.8); a
+   3.   Mission state: the Mission is active (below, Section 7.9); a
         delegated exchange evaluates each redemption afresh
         (Section 8.2).
 
@@ -3076,7 +3038,7 @@ Table of Contents
         also against the presented refresh grant on a refresh, the
         presented token on a designation or a self-exchange, and the
         designation on a delegated exchange; on those two delegation
-        exchanges, only as Section 8.5 permits.  An entry is narrowed,
+        exchanges, only as Section 8.4 permits.  An entry is narrowed,
         issued to another audience, delegated, or projected only under a
         declared capability (Section 5.5.1).
 
@@ -3086,11 +3048,11 @@ Table of Contents
         token, also an audience that processes the act chain
         (Section 9.1.2).
 
-   7.   Scope projection (Section 7.6), wherever scope is emitted,
+   7.   Scope projection (Section 7.7), wherever scope is emitted,
         requested, or the only form the target consumes.
 
-   8.   Claims and lifetime (Section 7.2, Section 7.7, Section 7.7.1,
-        Section 7.5): each token's exp does not exceed the Mission's
+   8.   Claims and lifetime (Section 7.2, Section 7.8, Section 7.8.1,
+        Section 7.6): each token's exp does not exceed the Mission's
         expires_at; the three exchanges keep the presented token's
         mission claim, with the differences Section 8.1 and Section 8.2
         state.
@@ -3124,10 +3086,10 @@ Table of Contents
    the mission_error token-error-response member (Section 18.1) with one
    of the values revoked, expired, or superseded (where a companion
    defines supersession), the Mission's termination reason
-   (Section 7.8.1).
+   (Section 7.9.1).
 
    These values are termination reasons.  A companion profile that
-   defines another Mission state (Section 7.8), which this section also
+   defines another Mission state (Section 7.9), which this section also
    refuses, or a further refusal at issuance defines any mission_error
    value for it, as Mission Status does for a suspended Mission
    ([I-D.draft-mcguinness-oauth-mission-status], Section "Mission
@@ -3144,7 +3106,7 @@ Table of Contents
    grant.
 
    The mission_error values this section names each report a terminated
-   Mission (Section 7.8.1): no retry under the same grant cures the
+   Mission (Section 7.9.1): no retry under the same grant cures the
    refusal.  Further work needs a new approval or, for superseded, the
    successor Mission ([I-D.draft-mcguinness-oauth-mission-expansion]).
    A new approval is a fresh approval event, not an automatic
@@ -3162,7 +3124,7 @@ Table of Contents
    lifetime is the termination latency there (Section 15.3.1).  Short-
    lived means within the termination latency the deployment accepts.
    This document sets no numerical bound; a deployment profile can.  The
-   cap at the Mission's expires_at (Section 7.5) does not by itself make
+   cap at the Mission's expires_at (Section 7.6) does not by itself make
    a token short-lived.
 
 7.2.  Token Claims
@@ -3183,7 +3145,7 @@ Table of Contents
       authorization_details ([RFC9396]); this MAY be the full Authority
       Set or a narrowed subset (Section 5.4);
 
-   *  carries a mission claim (Section 7.7);
+   *  carries a mission claim (Section 7.8);
 
    *  sets sub to the AS-local sub the AS maps the Mission's Subject to
       (Section 6.1);
@@ -3203,7 +3165,7 @@ Table of Contents
    *  MAY carry an act claim when the agent has delegated execution
       (Section 8.2);
 
-   *  MAY carry a scope claim, subject to Section 7.6; and
+   *  MAY carry a scope claim, subject to Section 7.7; and
 
    *  can be sender-constrained, as Section 2.2.1 of [RFC9700]
       recommends, via a cnf claim [RFC7800]: DPoP [RFC9449] (cnf.jkt) or
@@ -3262,16 +3224,8 @@ Table of Contents
    and one whose authorization_details (Section 6 of [RFC9396]) names an
    entry not approved for its audience.
 
-   For a designation (Section 8.1), these rules test the resource
-   audiences associated with the entries it carries, never the
-   designated client its aud names (Section 7.2).  A designation carries
-   only a permitted subset of the presented token's entries
-   (Section 5.4, Section 8.5), each keeping its original approved
-   audience (Section 5.5.1).  An entry without an original approved
-   audience is not carried, and a designation that would carry no entry
-   is refused with invalid_target.  The delegated token issued at its
-   redemption is subject to every rule of this section unchanged
-   (Section 8.2).
+   Section 8.1 states how these rules apply to a designation and to the
+   delegated token issued at its redemption.
 
    The AS returns the granted authorization_details in every token
    response, including refresh and Token Exchange responses (Section 7
@@ -3291,7 +3245,7 @@ Table of Contents
    only token with the [RFC8707] resource parameter and the
    authorization_details parameter (Section 6 of [RFC9396]).  The ERP
    consumes authorization_details, so a resource scope for it would be
-   refused (Section 7.6).  Extra line breaks are for display purposes
+   refused (Section 7.7).  Extra line breaks are for display purposes
    only:
 
    POST /token HTTP/1.1
@@ -3377,7 +3331,33 @@ Table of Contents
    Authority Set (Section 5.4), and MUST NOT instead issue a narrower
    set than the one requested.
 
-7.5.  Authentication Claims and Lifetime
+7.5.  Self-Exchange Down-Scoping
+
+   An agent MAY present its own Mission-bound access token as the
+   subject_token of a Token Exchange ([RFC8693]) with no actor, to
+   obtain a narrowed token (for example, a single-audience one).
+   Because it names no actor, such an exchange does not delegate: it re-
+   scopes the agent's own authority downward.  A designation
+   (Section 8.1) names a delegate, so it is not a self-exchange, and
+   these rules do not apply to it.  An exchange whose subject_token is a
+   designation is a delegated exchange (Section 8.2), not a no-actor
+   exchange, even when it carries no actor_token.  Issuance applies the
+   issuance procedure of Section 7.1 as it states for a self-exchange.
+   Section 4.3 states a self-exchange request's exemption from
+   mission_intent and the checks that still apply to it.  A no-actor
+   exchange is subject to the following:
+
+   1.  The AS MUST refuse a no-actor exchange with the invalid_request
+       error code (Section 2.2.2 of [RFC8693]) unless the authenticated
+       client is the Mission's approved agent (the Mission Record's
+       client_id, Section 6.3).  A delegate narrows only through a
+       delegated exchange that names it in the act chain.
+
+   2.  The result MUST be a subset (Section 5.4) of the presented
+       token's authority; it carries the same mission claim
+       (Section 7.8) and adds no act chain.
+
+7.6.  Authentication Claims and Lifetime
 
    A derived token's authority comes from the Mission, not from a fresh
    authentication.  Authentication claims (acr, amr, auth_time) on a
@@ -3395,7 +3375,7 @@ Table of Contents
    authentication downgrade.
 
    The authorization_details claim is the authoritative expression of a
-   Mission-bound token's authority; a scope claim (Section 7.6) is a
+   Mission-bound token's authority; a scope claim (Section 7.7) is a
    compatibility projection that cannot carry per-entry constraints.
 
    A credential the Mission Issuer derives MUST have an exp that does
@@ -3408,21 +3388,17 @@ Table of Contents
    Within that bound, a derived token's lifetime is the AS's policy,
    which Section 7.1 recommends keeping short.  Token Exchange does not
    tightly couple an issued token's lifetime to its subject_token's
-   (Section 2.1 of [RFC8693]): a designation's expiry (Section 8.1)
-   bounds when it can be redeemed, not the lifetime of the delegated
-   token issued from it, which can outlive both the designation and the
-   credential the designation was derived from.  Revoking the grant
-   state backing that credential still refuses every later redemption
-   (Section 8.2).
+   (Section 2.1 of [RFC8693]); Section 8.1 states how this applies to a
+   designation and to the delegated token issued from it.
 
-7.6.  Scope Projection
+7.7.  Scope Projection
 
    This section applies to every issuance that emits scope on a Mission-
    bound token or whose request names a scope value, and to issuance for
    a target that consumes only scope: such a target receives a safe
    projection or a refusal (step 5 below).
 
-7.6.1.  Subset Condition
+7.7.1.  Subset Condition
 
    For every target audience, the AS MUST establish that the effective
    rights the target's enforcement path grants from the projected scope,
@@ -3442,13 +3418,13 @@ Table of Contents
 
    *  arises from the union of several entries.
 
-7.6.2.  Per-Audience Condition
+7.7.2.  Per-Audience Condition
 
    For a multi-audience token, the AS establishes the condition
    independently for each audience; a single-audience token
    (Section 7.3) remains preferred.
 
-7.6.3.  Projection Steps
+7.7.3.  Projection Steps
 
    To emit scope for an entry, the AS:
 
@@ -3489,7 +3465,7 @@ Table of Contents
    mapping for the paths it covers; this rule does not depend on that
    profile.
 
-7.6.4.  Requested Scope Values
+7.7.4.  Requested Scope Values
 
    Scope projection does not change OAuth response semantics and does
    not make access-token inspection a client requirement.
@@ -3519,7 +3495,7 @@ Table of Contents
    and combine with authorization_details as Section 3.1 of [RFC9396]
    permits.
 
-7.6.5.  Scope-Only Targets
+7.7.5.  Scope-Only Targets
 
    For a scope-only target, the trusted mapping also relates a requested
    scope value back to authority, so a deployment's existing scope
@@ -3539,7 +3515,7 @@ Table of Contents
    *  A requested value the target's trusted mapping does not name
       cannot be granted, and is refused with invalid_scope (Section 10).
 
-7.6.6.  Refresh Token Protection
+7.7.6.  Refresh Token Protection
 
    A refusal caused solely by failure to establish a safe scope
    projection MUST NOT invalidate an otherwise-valid refresh token or
@@ -3549,7 +3525,7 @@ Table of Contents
    token, or within the same atomic issuance, not by disabling rotation
    or restoring a consumed token.
 
-7.7.  Mission Claim
+7.8.  Mission Claim
 
    The mission claim is a JSON object:
 
@@ -3571,7 +3547,7 @@ Table of Contents
       lifetime bound, not current state: a validator can check that the
       token's exp does not exceed it, but that check does not establish
       that the Mission is still active, the only state that permits
-      reliance (Section 7.8).
+      reliance (Section 7.9).
 
    A consumer that relies only on the presented token's own validity
    needs nothing further: the token's exp already bounds it.  A profile
@@ -3638,7 +3614,7 @@ Table of Contents
      }
    }
 
-7.7.1.  Claim Reservation
+7.8.1.  Claim Reservation
 
    The mission claim of an access token, and the mission member that
    introspection returns for an access token (Section 9.2), are reserved
@@ -3668,7 +3644,7 @@ Table of Contents
    conformed to its profile.  It does not mean that the party that
    minted the token queried the Mission's current state, and it attests
    issuance, not the Mission's state afterward: a later suspension or
-   revocation does not change what the claim attests (Section 7.8,
+   revocation does not change what the claim attests (Section 7.9,
    Section 9.2).  The claim establishes no trust by its presence; a
    resource server's issuer authorization and claim validation
    (Section 9.1.1) still apply.
@@ -3678,15 +3654,15 @@ Table of Contents
    mission descriptor (Section 13.1) is not an access token, and this
    section does not change its meaning.
 
-7.8.  Mission Lifecycle
+7.9.  Mission Lifecycle
 
    A Mission is in one of two states:
 
    *  active: the only state in which the AS derives tokens.
 
    *  terminated: a terminal state; the Mission has ended.  Its
-      termination member (Section 7.8.1) gives the reason: revoked when
-      it was revoked (Section 7.8.2), or expired when its expires_at
+      termination member (Section 7.9.1) gives the reason: revoked when
+      it was revoked (Section 7.9.2), or expired when its expires_at
       passed.
 
    The transitions are:
@@ -3729,7 +3705,7 @@ Table of Contents
    observed the boundary; persisting it never replaces a termination
    already recorded.
 
-7.8.1.  Mission Termination
+7.9.1.  Mission Termination
 
    A Mission whose state is terminated carries a termination object, in
    the Mission Record and wherever its state is reported with it; a
@@ -3779,7 +3755,7 @@ Table of Contents
    artifact over its original bytes, which it retains, before reading it
    this way.
 
-7.8.2.  Revocation
+7.9.2.  Revocation
 
    A Mission is revoked when the AS receives a revocation for it from a
    party the deployment's policy authorizes to revoke it, or when that
@@ -3846,7 +3822,7 @@ Table of Contents
    An intermediary in the agent's own trust domain that presents the
    agent's own tokens, such as a gateway holding the agent's
    credentials, acts as part of the agent and is not a delegate; acting
-   as the agent, it can also narrow by self-exchange (Section 8.4),
+   as the agent, it can also narrow by self-exchange (Section 7.5),
    which does not delegate.  An intermediary authenticated as a distinct
    actor that obtains a delegated token by Token Exchange is a delegate.
 
@@ -3881,17 +3857,18 @@ Table of Contents
    type:access_token.  Only a sender-constrained token can therefore be
    designated.  The holder is the Mission's approved agent for a token
    that carries no act claim, and otherwise the delegate that the AS's
-   accounting records as the token's outermost actor (Section 8.5).
+   accounting records as the token's outermost actor (Section 8.4).
 
    Issuing a designation applies the issuance procedure of Section 7.1
-   as it states for a designation.  Section 4.3 states a designation
-   request's exemption from mission_intent and the checks that still
-   apply to it.
+   as it states for a designation.  A designation request is a token
+   request under an existing Mission-bound grant (Section 4.3): it needs
+   no mission_intent, and every other check that section names still
+   applies to it.
 
    A designation the AS issues:
 
    *  carries a subset (Section 5.4) of the presented token's authority,
-      and the same mission claim (Section 7.7);
+      and the same mission claim (Section 7.8);
 
    *  has aud equal to the designated client's identifier, and a may_act
       claim (Section 4.4 of [RFC8693]) whose sub is that identifier;
@@ -3900,16 +3877,33 @@ Table of Contents
       bound to the client that redeems it, which authenticates and
       proves its own key in the delegated exchange (Section 8.2), and
       the delegated token's act renders the AS's accounting
-      (Section 8.5); and
+      (Section 8.4); and
 
    *  MUST expire shortly after it is issued, and no later than the
       presented token or the Mission's expires_at.
+
+   A designation's aud names its redeemer and reassigns no entry's
+   original approved audience (Section 5.5.1).  For a designation, the
+   audience rules of Section 7.3 test the resource audiences associated
+   with the entries it carries, never the designated client its aud
+   names (Section 7.2).  A designation carries only a permitted subset
+   of the presented token's entries (Section 5.4, Section 8.4), each
+   keeping its original approved audience (Section 5.5.1).  An entry
+   without an original approved audience is not carried, and a
+   designation that would carry no entry is refused with invalid_target.
+   Its redemption issues an entry only as Section 5.5.1 and Section 8.2
+   permit, including their narrowing condition.  The delegated token
+   issued at its redemption is subject to every rule of Section 7.3
+   unchanged.
 
    A designation names a delegate and adds none.  Whether one may be
    redeemed more than once within its lifetime is the AS's policy; each
    redemption is a delegated exchange of its own (Section 8.2).  Its
    expiry bounds when it can be redeemed, not the lifetime of a
-   delegated token issued from it (Section 7.5).
+   delegated token issued from it (Section 7.6).  That delegated token
+   can outlive both the designation and the credential the designation
+   was derived from.  Revoking the grant state backing that credential
+   still refuses every later redemption (Section 8.2).
 
    A designation authorizes no resource access.  A designated client's
    identifier MUST NOT be an audience that any resource server accepts
@@ -3919,8 +3913,8 @@ Table of Contents
    (Section 2.2.2 of [RFC8693]), a designation request naming a client
    for which it cannot establish that separation.  A resource server
    that validates a JWT access token's audience (Section 4 of [RFC9068])
-   therefore rejects a designation, and the AS reports one inactive at
-   introspection (Section 9.2.2).
+   therefore rejects a designation, and at introspection (Section 9.2.2)
+   the AS MUST return active: false for one, with no mission member.
 
 8.2.  Delegated Exchange
 
@@ -3939,7 +3933,7 @@ Table of Contents
       with invalid_request (Section 2.2.2 of [RFC8693]); an access token
       issued for resource access is never sufficient.  The delegate is
       identified by its own client authentication, and the AS asserts
-      the actor itself (Section 8.5).
+      the actor itself (Section 8.4).
 
    *  *The delegate authenticates.* The AS MUST authenticate the
       requesting client, whether or not the request carries an
@@ -3980,10 +3974,18 @@ Table of Contents
    *  *Authority only narrows.* The delegated token's
       authorization_details MUST be a subset (Section 5.4) of the
       designation's authority, hence of the delegating token's and of
-      the Mission Authority Set.
+      the Mission Authority Set. A type that declares delegation without
+      narrowing (Section 5.5.1) is delegable only unchanged: the AS MUST
+      NOT include an entry of such a type in a delegated token unless it
+      is equal (Section 5.4) to an entry of the presented delegating
+      token, it keeps that entry's approved audience, and the type's
+      delegation policy permits the delegate (Section 8.4).  The
+      reference is the presented token, not the Mission Authority Set,
+      so equality never restores an entry, or any part of one, that the
+      presented token omits.
 
    *  *The mission claim is unchanged.* The delegated token carries the
-      delegating token's mission claim (Section 7.7) unchanged, so every
+      delegating token's mission claim (Section 7.8) unchanged, so every
       actor in the chain operates under the one consented authority.
 
    *  *Each delegate is bound to its own key.* The delegated token MUST
@@ -4000,7 +4002,7 @@ Table of Contents
       a derivation of its own: the credential the designation was
       derived from, and all applicable grant state backing that
       credential, are still valid; the Mission is active; and the
-      delegation policy (Section 8.5) and the Mission's current
+      delegation policy (Section 8.4) and the Mission's current
       authority admit the result.  An earlier redemption establishes
       none of these.  Where that credential was issued under a grant
       lineage, the backing grant state includes that lineage, kept
@@ -4010,6 +4012,10 @@ Table of Contents
       exists, has no lineage to validate; that never excuses dropping or
       ignoring a lineage that does exist.  The Mission's active state
       never substitutes for backing grant state.
+
+   A delegated exchange response MUST carry mission_id and
+   mission_expires_at (Section 6.5.4), because the delegate did not
+   receive the response that created the Mission.
 
    The act chain nests (act.act) for as long as, and only while,
    authority continues under the same approved Mission.  A new approval
@@ -4024,7 +4030,7 @@ Table of Contents
 
    *  An act entry names who acted, for audit.
 
-   *  The input to the eligibility matching of Section 8.5 is the
+   *  The input to the eligibility matching of Section 8.4 is the
       delegate the AS authenticates and asserts at the exchange, not an
       entry read from the chain.
 
@@ -4075,7 +4081,7 @@ Table of Contents
       remapping it.
 
    *  The actor authentication, delegation eligibility, subset, and
-      lifecycle checks of Section 8.2 and Section 8.5 still authorize
+      lifecycle checks of Section 8.2 and Section 8.4 still authorize
       the exchange; instance evidence satisfies none of them by itself.
 
    *  Where deployment policy requires instance attribution, the AS MUST
@@ -4105,33 +4111,7 @@ Table of Contents
       specified, authenticated provenance mechanism before its context
       can support presenter attribution.
 
-8.4.  Self-Exchange Down-Scoping
-
-   An agent MAY present its own Mission-bound access token as the
-   subject_token of a Token Exchange ([RFC8693]) with no actor, to
-   obtain a narrowed token (for example, a single-audience one).
-   Because it names no actor, such an exchange does not delegate: it re-
-   scopes the agent's own authority downward.  A designation
-   (Section 8.1) names a delegate, so it is not a self-exchange, and
-   these rules do not apply to it.  An exchange whose subject_token is a
-   designation is a delegated exchange (Section 8.2), not a no-actor
-   exchange, even when it carries no actor_token.  Issuance applies the
-   issuance procedure of Section 7.1 as it states for a self-exchange.
-   Section 4.3 states a self-exchange request's exemption from
-   mission_intent and the checks that still apply to it.  A no-actor
-   exchange is subject to the following:
-
-   1.  The AS MUST refuse a no-actor exchange with the invalid_request
-       error code (Section 2.2.2 of [RFC8693]) unless the authenticated
-       client is the Mission's approved agent (the Mission Record's
-       client_id, Section 6.3).  A delegate narrows only through a
-       delegated exchange that names it in the act chain.
-
-   2.  The result MUST be a subset (Section 5.4) of the presented
-       token's authority; it carries the same mission claim
-       (Section 7.7) and adds no act chain.
-
-8.5.  Delegation Constraints
+8.4.  Delegation Constraints
 
    What may be delegated, how far, and to whom is governed per Authority
    Set entry by a type-defined delegation policy (Section 5.5).  For
@@ -4167,7 +4147,7 @@ Table of Contents
 
    *  each delegated exchange adds exactly one delegate;
 
-   *  a designation (Section 8.1) and a self-exchange (Section 8.4) add
+   *  a designation (Section 8.1) and a self-exchange (Section 7.5) add
       none; and
 
    *  a cross-domain projection is the one defined reset.
@@ -4213,7 +4193,7 @@ Table of Contents
    already-narrowed authorization_details and enforces those as usual
    (Section 9.1).
 
-8.6.  Delegated Token Example
+8.5.  Delegated Token Example
 
    In this example, the Mission's Authority Set has two entries on the
    ERP: invoices.read, delegable to ai_agent actors through depth 2; and
@@ -4333,7 +4313,7 @@ Table of Contents
        trusts to issue Mission-bound authorization for the resource;
        trusting the issuer's ordinary access tokens is not enough.  It
        MUST require mission.issuer to equal the token's iss, unless a
-       Mission-binding profile it has adopted (Section 7.7.1), such as
+       Mission-binding profile it has adopted (Section 7.8.1), such as
        [I-D.draft-mcguinness-oauth-mission-cross-domain], explicitly
        establishes the permitted relationship between the two.  It MUST
        reject a token that fails either check with the invalid_token
@@ -4343,7 +4323,7 @@ Table of Contents
        mission member (Section 9.2.4).
 
    Other sections state how a resource server treats a reported Mission
-   state (Section 7.8), mission claim members (Section 7.7), an entry's
+   state (Section 7.9), mission claim members (Section 7.8), an entry's
    resource against a request's target (Section 7.3), and a designation
    presented to it (Section 8.1).
 
@@ -4401,7 +4381,7 @@ Table of Contents
    authority: treating an unenforceable key or member as absent, or
    reducing it to disclosure-only, would widen the grant.
 
-   The baseline token carries no authority_hash (Section 7.7).  Where a
+   The baseline token carries no authority_hash (Section 7.8).  Where a
    deployment discloses it to a resource server (through introspection's
    disclosure privilege, Section 9.2.1, or a companion profile that
    carries its own copy), it is an audit correlator, not an enforcement
@@ -4422,7 +4402,7 @@ Table of Contents
 
    1.  *Weak or stale Subject authentication.* Where the deployment
        conveys the authentication of the token's Subject, through the
-       claims of Section 7.5 or introspection (Section 6 of [RFC9470]),
+       claims of Section 7.6 or introspection (Section 6 of [RFC9470]),
        and that authentication does not meet the resource's requirement,
        the resource server challenges with
        insufficient_user_authentication and the acr_values or max_age
@@ -4538,15 +4518,15 @@ Table of Contents
    (Section 9.2.1), MUST carry, in addition to the standard members, a
    mission member: a JSON object with the following members:
 
-   *  id and issuer: as in the mission claim (Section 7.7).
+   *  id and issuer: as in the mission claim (Section 7.8).
 
    *  state: the Mission's current lifecycle state (string).  Its value
       space, including a state a deployed companion profile defines, and
       the consumer's forward-compatibility rule are those of
-      Section 7.8.
+      Section 7.9.
 
    *  termination: when state is terminated, the Mission's termination
-      (Section 7.8.1) (object).
+      (Section 7.9.1) (object).
 
    *  proposal_hash: when the Mission records an authority proposal, the
       Mission's proposal_hash (Section 6.3) (string).
@@ -4572,7 +4552,7 @@ Table of Contents
    with no mission member; it does not reveal Mission state for a token
    it cannot bind to a Mission.  The AS discloses a mission member only
    for a token it has established was issued on a path that conforms to
-   Section 7.7.1; a token it cannot establish so is unresolvable in this
+   Section 7.8.1; a token it cannot establish so is unresolvable in this
    sense.  How the AS establishes this is its own; a record of its own
    issuance is one means.
 
@@ -4626,9 +4606,9 @@ Table of Contents
    not the token in isolation.  Strengthening Section 4 of [RFC7662],
    the AS MUST return active: true only when the access token passes
    that section's checks (valid signature, unexpired, and not
-   individually revoked) and the Mission is active.  A designation
-   (Section 8.1) authorizes no resource access: the AS MUST return
-   active: false for one, with no mission member.
+   individually revoked) and the Mission is active.  A designation,
+   which authorizes no resource access, is reported inactive with no
+   mission member, as Section 8.1 states.
 
    The AS does not verify the token's sender-constraint (cnf) at
    introspection; the resource server checks proof of possession when
@@ -4757,7 +4737,7 @@ Table of Contents
 9.2.5.  Introspection Response Examples
 
    The following is an example of an introspection response for the
-   canonical ERP token (Section 7.7) while the Mission is active.  The
+   canonical ERP token (Section 7.8) while the Mission is active.  The
    issuer AS returns the standard [RFC7662] members and the mission
    member to a caller holding the deployment's audit-and-correlation
    disclosure privilege, so authority_hash and proposal_hash appear; the
@@ -4892,7 +4872,7 @@ Table of Contents
    | projection exists for the       |                                 |
    | applicable entries when the     |                                 |
    | request names no scope value    |                                 |
-   | (Section 7.6); or the AS has    |                                 |
+   | (Section 7.7); or the AS has    |                                 |
    | not established a delegated     |                                 |
    | Mission-bound token's audience  |                                 |
    | as a Mission-aware Resource     |                                 |
@@ -4904,7 +4884,7 @@ Table of Contents
    | requested scope value the       | [RFC6749]).  Detail: safe       |
    | issuance cannot grant under a   | error_description               |
    | scope-projection mapping the    |                                 |
-   | AS trusts (Section 7.6)         |                                 |
+   | AS trusts (Section 7.7)         |                                 |
    +---------------------------------+---------------------------------+
    | Profile-defined operation that  | invalid_grant (Section 5.2 of   |
    | lets a client present a         | [RFC6749]).  Detail: safe       |
@@ -5024,7 +5004,7 @@ Table of Contents
    |                                   | safe error_description        |
    +-----------------------------------+-------------------------------+
    | Token exchange with no actor      | invalid_request               |
-   | (Section 8.4): the                | (Section 2.2.2 of [RFC8693]). |
+   | (Section 7.5): the                | (Section 2.2.2 of [RFC8693]). |
    | authenticated client is not       | Detail: safe                  |
    | the Mission's approved agent      | error_description             |
    +-----------------------------------+-------------------------------+
@@ -5057,7 +5037,7 @@ Table of Contents
    | never issues                      |                               |
    +-----------------------------------+-------------------------------+
    | Delegated token exchange          | invalid_target (Section 2.2.2 |
-   | (Section 8.5): narrowing          | of [RFC8693]).  Detail: safe  |
+   | (Section 8.4): narrowing          | of [RFC8693]).  Detail: safe  |
    | leaves no entries for the         | error_description             |
    | delegate                          |                               |
    +-----------------------------------+-------------------------------+
@@ -5142,7 +5122,7 @@ Table of Contents
       through PAR (Section 4), Authority Set derivation yielding
       authorization_details entries of its supported types (Section 5,
       Section 5.5), Mission-bound access tokens (Section 7), and the
-      mission JWT claim (Section 7.7).  It asserts Mission Issuer
+      mission JWT claim (Section 7.8).  It asserts Mission Issuer
       support only; it makes no claim about any resource server or about
       the optional capabilities, whose discovery is described below.  If
       omitted, the default value is false.
@@ -5214,7 +5194,7 @@ Table of Contents
 
    mission_bound_authorization_required:  OPTIONAL boolean.  When true,
       the protected resource accepts only Mission-bound tokens: a token
-      that lacks the mission claim (Section 7.7) is rejected
+      that lacks the mission claim (Section 7.8) is rejected
       (Section 9.1).  If omitted, the default value is false.  An AS
       that has authenticated this metadata treats a true value as making
       the resource Mission-governed (Section 4.3); false or omission
@@ -5236,7 +5216,7 @@ Table of Contents
    alongside the stable interface below; they MUST NOT redefine it.  The
    following remain stable across revisions of this document:
 
-   *  the mission claim members id and issuer (Section 7.7);
+   *  the mission claim members id and issuer (Section 7.8);
 
    *  the authorization_details carriage and its type-agnostic subset
       discipline (Section 5.5, Section 5.4); and
@@ -5267,11 +5247,11 @@ Table of Contents
 
       -  the delegation policy, which the AS applies only where it
          declares delegation; an entry with no type-defined policy is
-         non-delegable (Section 8.5);
+         non-delegable (Section 8.4);
 
       -  when a scope-projection mapping is safe for the type's entries,
          which the AS relies on only where it declares projection
-         (Section 7.6); and
+         (Section 7.7); and
 
       -  any normalization a comparison of its members uses; without
          one, URI-valued members compare byte for byte (Section 6.4.2).
@@ -5307,14 +5287,14 @@ Table of Contents
       and a typ that meets Section 6.4.1, not by hashing the bare
       object, so the domain separation and issuer binding hold
       uniformly.  A mission descriptor embedded in such an object uses
-      the mission claim shape (Section 7.7), optionally extended with
+      the mission claim shape (Section 7.8), optionally extended with
       collision-resistantly named members (for example, an intent_hash
       for audit), and is never authority-bearing on its own.
 
    *  *The mission claim.* It is an open object: additional, collision-
       resistantly named members can be carried in it (for example, a
       runtime decision reference, a delegation receipt, or an
-      attestation reference), under the consumer rules of Section 7.7.
+      attestation reference), under the consumer rules of Section 7.8.
 
    *  *Mission Record members.* The Mission Record is open to additional
       members set at creation, under short names a companion profile
@@ -5322,13 +5302,13 @@ Table of Contents
       as Section 6.3 states.
 
    *  *Lifecycle state and termination reason.* The lifecycle state
-      space (Section 7.8) is open to additional states that companion
+      space (Section 7.9) is open to additional states that companion
       profiles register in the Mission Lifecycle States registry
       (Section 18.7) for lifecycles they introduce.  The termination
-      reasons (Section 7.8.1) are likewise open to reasons that
+      reasons (Section 7.9.1) are likewise open to reasons that
       companion profiles register in the Mission Termination Reasons
       registry (Section 18.8).  Under the forward-compatibility rule of
-      Section 7.8, only active permits issuance.
+      Section 7.9, only active permits issuance.
 
    *  *Approval-event sequencing.* The approval-event steps, their
       order, and the atomicity of record creation with the approval
@@ -5370,7 +5350,7 @@ Table of Contents
 
    *  *Specification-defined.* A namespace with a defined fail-safe for
       unknown values and no registry, such as the mission claim members
-      (Section 7.7), the Mission Record members (Section 6.3) and the
+      (Section 7.8), the Mission Record members (Section 6.3) and the
       approval_basis.type values (Section 6.3.3), is specification-
       defined: the defining documents are its value space.
 
@@ -5427,7 +5407,7 @@ Table of Contents
    *  gating of issuance on Mission state (Section 7.1); and
 
    *  acceptance of a revocation by mission_id through an authenticated
-      means independent of possession of any token (Section 7.8.2).
+      means independent of possession of any token (Section 7.9.2).
 
    An AS can conform as a Mission Issuer without supporting any Intent
    Submission Evidence type.  Such an AS refuses every presented entry
@@ -5500,10 +5480,10 @@ Table of Contents
 
       3.  projection performed only by, or under the authorization of,
           the Mission issuer, gated on the Mission's active state
-          (Section 7.8, Section 7.1); and
+          (Section 7.9, Section 7.1); and
 
       4.  projected credential lifetimes capped by the Mission's
-          expires_at (Section 7.5).
+          expires_at (Section 7.6).
 
       This bar is self-contained in this document.  The companion
       Mission Cross-Domain Projection profile
@@ -5526,7 +5506,7 @@ Table of Contents
    detailed requirements.
 
    Emitting the mission claim is not, by itself, conformance: the claim
-   is reserved for conforming issuance (Section 7.7.1).  Conformance as
+   is reserved for conforming issuance (Section 7.8.1).  Conformance as
    a Mission Issuer requires the gates: authority derived from the
    approved Intent and committed by the anchors (Section 6.1), issuance
    bounded by the subset rule (Section 5.4), and derivation gated on
@@ -5568,7 +5548,7 @@ Table of Contents
    subsets of that set and signing every token accordingly, and on the
    resource server verifying the AS's token signature and enforcing the
    carried authority, not on every token carrying the commitment
-   (Section 7.7).
+   (Section 7.8).
 
    A derived token can carry a narrowed subset, so a resource server
    cannot in general recompute authority_hash from the token, and the
@@ -5824,7 +5804,7 @@ Table of Contents
    following limit this exposure:
 
    *  The per-entry delegation constraints (delegability, max_depth, and
-      allowed_delegates, Section 8.5) bound it at approval time.
+      allowed_delegates, Section 8.4) bound it at approval time.
       max_depth bounds the length of a delegation chain, not its
       breadth: only allowed_delegates bounds fan-out to many distinct
       depth-1 delegates.
@@ -5844,13 +5824,13 @@ Table of Contents
    *  the exchange is a derivation gated on Mission state;
 
    *  the AS applies delegation-authorization policy at every exchange
-      (Section 8.5);
+      (Section 8.4);
 
    *  the result is bound to the authenticated delegate's own key and
       narrowed by the subset rule; and
 
    *  a no-actor exchange is accepted only from the Mission's approved
-      agent (Section 8.4).
+      agent (Section 7.5).
 
    Designation (Section 8.1) closes the remaining gap: a delegated
    exchange accepts only a designation naming the authenticated
@@ -5909,7 +5889,7 @@ Table of Contents
 
 15.5.1.  Composition and the Effective Ceiling
 
-   Delegation depth (Section 8.5) resets to 0 at each cross-domain hop
+   Delegation depth (Section 8.4) resets to 0 at each cross-domain hop
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
    deployment runs the child-delegation profile, at each child
    generation ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
@@ -6190,9 +6170,9 @@ Table of Contents
 
    *  Change Controller: IETF
 
-   *  Specification Document(s): this document, Section 7.7
+   *  Specification Document(s): this document, Section 7.8
 
-   The mission claim (Section 7.7) references a Mission, the
+   The mission claim (Section 7.8) references a Mission, the
    authorization object this document defines.  It is distinct from
    AAuth's mission_s256 claim ([I-D.draft-hardt-oauth-aauth-protocol]),
    the SHA-256 digest that identifies an AAuth mission, and from the
@@ -6249,7 +6229,7 @@ Table of Contents
    The registration policy is Specification Required [RFC8126].
 
    A Designated Expert reviews a submission for the discipline
-   Section 7.8 requires:
+   Section 7.9 requires:
 
    *  a Value matching ^[a-z][a-z0-9_]*$ not already registered;
 
@@ -6267,7 +6247,7 @@ Table of Contents
 
    Only the exact value active permits token derivation or continued
    reliance; a consumer treats every other value, including one it does
-   not recognize, as non-active and never widens on it (Section 7.8).  A
+   not recognize, as non-active and never widens on it (Section 7.9).  A
    Designated Expert MUST reject a registration whose governing
    specification attempts to redefine this interaction rather than
    adding a new value bound by it.
@@ -6296,14 +6276,14 @@ Table of Contents
     | active     | no       | The only state | IETF       | this      |
     |            |          | from which     |            | document, |
     |            |          | tokens are     |            | Section   |
-    |            |          | derived.       |            | 7.8       |
+    |            |          | derived.       |            | 7.9       |
     +------------+----------+----------------+------------+-----------+
     | terminated | yes      | The Mission    | IETF       | this      |
     |            |          | has ended; its |            | document, |
     |            |          | termination    |            | Section   |
-    |            |          | gives the      |            | 7.8,      |
+    |            |          | gives the      |            | 7.9,      |
     |            |          | reason.        |            | Section   |
-    |            |          |                |            | 7.8.1     |
+    |            |          |                |            | 7.9.1     |
     +------------+----------+----------------+------------+-----------+
 
         Table 7: Mission Lifecycle States registry: initial contents
@@ -6327,11 +6307,11 @@ Table of Contents
       every registered reason; and
 
    *  a Members list naming each further termination member the reason
-      defines (Section 7.8.1) with its presence (REQUIRED, CONDITIONAL,
+      defines (Section 7.9.1) with its presence (REQUIRED, CONDITIONAL,
       or OPTIONAL).
 
    A reason never makes a Mission available for reliance: every
-   terminated Mission is non-active, whatever its reason (Section 7.8).
+   terminated Mission is non-active, whatever its reason (Section 7.9).
 
    Each registration records:
 
@@ -6355,14 +6335,14 @@ Table of Contents
    | revoked | An authorized party  | none    | IETF       | this      |
    |         | revoked the          |         |            | document, |
    |         | Mission, or the      |         |            | Section   |
-   |         | deployment's policy  |         |            | 7.8.1     |
+   |         | deployment's policy  |         |            | 7.9.1     |
    |         | terminated it        |         |            |           |
-   |         | (Section 7.8.2).     |         |            |           |
+   |         | (Section 7.9.2).     |         |            |           |
    +---------+----------------------+---------+------------+-----------+
    | expired | The Mission's        | none    | IETF       | this      |
    |         | expires_at passed;   |         |            | document, |
    |         | terminated_at        |         |            | Section   |
-   |         | equals it.           |         |            | 7.8.1     |
+   |         | equals it.           |         |            | 7.9.1     |
    +---------+----------------------+---------+------------+-----------+
 
       Table 8: Mission Termination Reasons registry: initial contents
@@ -7101,7 +7081,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
    naming the Mission it was derived under.  Its 300-second lifetime
    ends well before the Mission's expires_at.  Revoking the Mission
    stops further derivation, but this token remains valid until its own
-   exp (Section 7.8.2).
+   exp (Section 7.9.2).
 
 A.4.  Stage 3: Resource Server Enforcement
 
@@ -7151,7 +7131,7 @@ A.6.  Stage 5: Revocation
 
    At 08:53:20 the Mission is revoked, and the AS commits terminated
    with reason revoked.  Revocation stops the Mission at the issuer
-   (Section 7.8.2).  A later refresh is refused with the mission_error
+   (Section 7.9.2).  A later refresh is refused with the mission_error
    diagnostic (Section 7.1):
 
    HTTP/1.1 400 Bad Request
@@ -7301,7 +7281,7 @@ B.4.  Non-Goals
       as Security Event Tokens ([RFC8935]).
 
    *  *Human-in-the-loop suspension.* The base lifecycle is active and
-      terminated (Section 7.8).  Mission Status
+      terminated (Section 7.9).  Mission Status
       ([I-D.draft-mcguinness-oauth-mission-status]) defines a suspended
       state with resume/complete transitions as an optional extension.
       A pending-human-approval state and a holding-token pause-and-
@@ -7326,7 +7306,7 @@ B.4.  Non-Goals
       activity across audiences and resources. authority_hash is not
       part of that baseline correlation surface: it stays on the Mission
       Record and the audit and profile surfaces that carry it by
-      disclosure privilege (Section 7.7, Section 9.2.1), not on every
+      disclosure privilege (Section 7.8, Section 9.2.1), not on every
       token by default.  Pairwise or unlinkable presentation of Mission-
       bound authority works against the identifier and is therefore
       future work (Section 16.1).
@@ -8054,6 +8034,22 @@ Appendix F.  Document History
       a deployment was required to provide that means; Conformance Roles
       lists it among the Mission Issuer's surfaces; revoking a token
       does not by itself revoke a Mission (#1892, D1026).
+
+   *  Editorial, no requirement change: Approval Comprehension's
+      practices for reviewing a large or varied Authority Set move to
+      Mission Consent Evidence, which carries them beside its layered
+      rendering, and Submission Processing Order drops its Consent
+      Evidence example, keeping the rule that a committed approval
+      surface covers the normalized provenance facts (#1892, D1026).
+
+   *  Editorial, no requirement change: delegation rules that sat in
+      issuance sections move into Delegation Within a Mission, leaving a
+      pointer in each: a designation's audience, lifetime,
+      mission_intent exemption and introspection rules move to
+      Designation, and the delegated-exchange response members and the
+      rule for a type delegable only unchanged move to Delegated
+      Exchange.  Self-Exchange Down-Scoping, which delegates nothing,
+      moves from that chapter to follow Refresh Tokens (#1892, D1026).
 
    -01
 

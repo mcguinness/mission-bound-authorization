@@ -244,9 +244,11 @@ Table of Contents
    they yield land on the Mission record's submission_evidence.
 
    Material verified provenance is nonetheless part of the approval
-   surface: the disclosure commits it through submission_provenance_hash
-   (Section 4), covered by consent_rendering_hash, so the recorded
-   rendering proves which provenance supported the decision.
+   surface ([I-D.draft-mcguinness-oauth-mission], Section "Submission
+   Processing Order"): the disclosure commits it through
+   submission_provenance_hash (Section 4), covered by
+   consent_rendering_hash, so the recorded rendering proves which
+   provenance supported the decision.
 
 3.  Conventions and Terminology
 
@@ -596,6 +598,22 @@ Table of Contents
 
    consent_rendering_hash (Section 5) commits the disclosure object, not
    a layer, so layering changes presentation, not evidence.
+
+   A short task can legitimately have a large or varied Authority Set:
+   an erasure request whose proposal or configured lookup
+   ([I-D.draft-mcguinness-oauth-mission], Section "Derivation Modes")
+   yields dozens of delete entries across resources.  The first layer
+   can then summarize every resource, action, and bound; a summary is a
+   view of the set, never a substitute for it.  Two further non-
+   normative practices can help make the set reviewable:
+
+   *  *Group* entries by resource and action, keeping visible an entry
+      whose constraints, such as its resource range or consumption
+      bound, differ materially from the rest of its group.
+
+   *  *Split rather than approve* when the set is too large or varied
+      for one decision ([I-D.draft-mcguinness-oauth-mission],
+      Section "Applicability").
 
 4.5.  Disclosure Interrogation
 
@@ -2017,6 +2035,12 @@ Appendix C.  Document History
    *  Removed the uncited Mission Deferred Approval reference; the
       Approval Governance Record is the cited home of approval-
       governance facts.
+
+   *  Layered Rendering adds non-normative practices for a large or
+      varied Authority Set, grouping and splitting, from the OAuth
+      binding's Approval Comprehension; the evidence model cites the
+      binding's rule that a committed approval surface covers the
+      provenance facts.  No requirement changes (#1892).
 
 Acknowledgments
 

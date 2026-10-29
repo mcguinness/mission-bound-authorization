@@ -1469,7 +1469,8 @@ Evidence artifacts presented at admission
 disclosure or the Consent Evidence object, and the verified facts
 they yield land on the Mission record's <code>submission_evidence</code>.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 <p id="section-2.1-5">Material verified provenance is nonetheless part of the approval
-surface: the disclosure commits it through
+surface (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Submission
+Processing Order"): the disclosure commits it through
 <code>submission_provenance_hash</code> (<a href="#consent-disclosure" class="auto internal xref">Section 4</a>), covered by
 <code>consent_rendering_hash</code>, so the recorded rendering proves which
 provenance supported the decision.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
@@ -1984,6 +1985,25 @@ and the first layer states that it is available.<a href="#section-4.4-2.3.1" cla
 <p id="section-4.4-3"><code>consent_rendering_hash</code> (<a href="#consent-rendering-hash" class="auto internal xref">Section 5</a>) commits the
 disclosure object, not a layer, so layering changes presentation, not
 evidence.<a href="#section-4.4-3" class="pilcrow">¶</a></p>
+<p id="section-4.4-4">A short task can legitimately have a large or varied Authority Set:
+an erasure request whose proposal or configured lookup
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Derivation Modes")
+yields dozens of delete entries across resources. The first layer can
+then summarize every resource, action, and bound; a summary is a view
+of the set, never a substitute for it. Two further non-normative
+practices can help make the set reviewable:<a href="#section-4.4-4" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.4-5.1">
+            <p id="section-4.4-5.1.1"><strong>Group</strong> entries by resource and action, keeping visible an entry
+whose constraints, such as its resource range or consumption bound,
+differ materially from the rest of its group.<a href="#section-4.4-5.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-4.4-5.2">
+            <p id="section-4.4-5.2.1"><strong>Split rather than approve</strong> when the set is too large or varied
+for one decision (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Applicability").<a href="#section-4.4-5.2.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
 </section>
 </div>
 <div id="interrogation">
@@ -3775,6 +3795,13 @@ object, as a commitment that is never provenance or authority.<a href="#appendix
           <p id="appendix-C-2.5.1">Removed the uncited Mission Deferred Approval reference; the
 Approval Governance Record is the cited home of approval-governance
 facts.<a href="#appendix-C-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-C-2.6">
+          <p id="appendix-C-2.6.1">Layered Rendering adds non-normative practices for a large or varied
+Authority Set, grouping and splitting, from the OAuth binding's
+Approval Comprehension; the evidence model cites the binding's rule
+that a committed approval surface covers the provenance facts. No
+requirement changes (#1892).<a href="#appendix-C-2.6.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
