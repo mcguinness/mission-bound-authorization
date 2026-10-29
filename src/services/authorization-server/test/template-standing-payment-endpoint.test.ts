@@ -25,6 +25,7 @@ import {
   type ProviderCapability,
 } from "../src/adapters/capabilities.js";
 import { MISSION_DISPATCH_GRANT_TYPE } from "../src/adapters/provider.js";
+import { PROHIBITED_CLASSES_STATEMENT } from "../src/adapters/template-consent.js";
 import {
   ApprovalSessionStore,
   type BuiltAs,
@@ -129,6 +130,18 @@ const meteringStatement = (
   };
 };
 
+/**
+ * @spec metering#consent (#813): the capability-off assembly's budget
+ * counters, holding figures for the policy's budget, so a consent page that
+ * wrongly took the standing-payment path would read and show them.
+ */
+const offCounters = new FakeBudgetCounters();
+const OFF_SHARED = {
+  counter_scope: "standing_consent",
+  owner: TERMS.budget.owner,
+  budget_id: TERMS.budget.id,
+} as const;
+
 let as: BuiltAs;
 let off: BuiltAs;
 let alt: BuiltAs;
@@ -157,7 +170,17 @@ beforeAll(async () => {
     budgetExposure: new FakeBudgetCounters(),
   });
   server = as.provider.listen(PORT);
-  off = await buildAuthorizationServer({ issuer: OFF_ISSUER, dispatchPolicies: POLICIES });
+  // The capability off, though the assembly wires everything the
+  // standing-payment consent page would read: the Approver's login, an
+  // Enforcement Scope Statement declaring budget_metering, and a budget
+  // exposure port (#813).
+  off = await buildAuthorizationServer({
+    issuer: OFF_ISSUER,
+    approvalSessions: SESSIONS,
+    dispatchPolicies: POLICIES,
+    enforcementScopeStatement: meteringStatement(OFF_ISSUER),
+    budgetExposure: offCounters,
+  });
   offServer = off.provider.listen(OFF_PORT);
   // A deployment whose action-approval predicate names the payment, and
   // whose payments resource another AS serves, so authority there is
@@ -738,6 +761,34 @@ describe("standing-payment consent disclosure (@spec template#prohibited-classes
     expect(await consentPage({}, ALT_ISSUER)).toContain(
       "Action-bound approval for each payment: required, from the payments operations lead, bound to that payment's exact parameters (the deployment's action-approval predicate names payments:payment.execute).",
     );
+  });
+});
+
+describe("the consent page with the standing-payment capability off (@spec metering#consent, #813)", () => {
+  it("renders no budget line and no standing-payment terms on a designating template's consent page with the capability off, though the assembly wires the Approver's login, budget_metering and a budget exposure port holding figures, and states the plain prohibited classes instead (@spec metering#consent, #813)", async () => {
+    offCounters.set(OFF_SHARED, { committed: "125.00", reserved: "30.00", held: "20.00" });
+    const id = await propose(OFF_ISSUER, proposal({}, OFF_ISSUER));
+    const { "x-csrf-token": _csrf, ...cookie } = bob(id);
+    const res = await fetch(`${OFF_ISSUER}/templates/proposals/${id}`, { headers: cookie });
+    const html = await res.text();
+    // The consent page itself, not a refusal.
+    expect(res.status, html).toBe(200);
+    expect(html).toContain('<pre class="template-ceiling">');
+    // No budget line: not the budget's limit, not the per-instance maximum
+    // on max_budget, and no exposure line, withheld or read.
+    const { owner, id: budgetId, limit, per_instance_max, currency } = TERMS.budget;
+    const budgetLines = [
+      `Budget ${owner}/${budgetId}`,
+      `${limit} ${currency}`,
+      `${per_instance_max} ${currency}`,
+      `${currency} committed`,
+    ];
+    expect(budgetLines.filter((line) => html.includes(line))).toEqual([]);
+    // No standing-payment terms.
+    const terms = ["<h2>Standing payment</h2>", "Standing payment: "];
+    expect(terms.filter((term) => html.includes(term))).toEqual([]);
+    // The plain prohibited-classes statement, not the standing payment's.
+    expect(html).toContain(PROHIBITED_CLASSES_STATEMENT);
   });
 });
 

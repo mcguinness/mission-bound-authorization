@@ -102,8 +102,9 @@ const policy = (id: string, t: unknown) => ({
 
 /**
  * The batch's Dispatch Policies, each with its own budget: the ordinary one,
- * one with no class-named exception for the consumption bound, and one an
- * operator edits in place under its version.
+ * one with no class-named exception for the consumption bound, one with none
+ * for the irreversible class, and one an operator edits in place under its
+ * version.
  */
 const POLICIES: Record<string, { version: string; content_type: string; content: string }> = {
   "sp-batch": policy("sp-batch", terms("ap-batch")),
@@ -111,6 +112,12 @@ const POLICIES: Record<string, { version: string; content_type: string; content:
     "sp-batch-no-cb",
     terms("ap-batch-no-cb", {
       approval_governance: recency({ irreversible_action: { max_age_s: 3600 } }),
+    }),
+  ),
+  "sp-batch-no-ia": policy(
+    "sp-batch-no-ia",
+    terms("ap-batch-no-ia", {
+      approval_governance: recency({ consumption_bound: { max_age_s: 3600 } }),
     }),
   ),
   "sp-batch-editable": policy("sp-batch-editable", terms("ap-batch-editable")),
@@ -441,6 +448,16 @@ describe("standing-payment template defects refused at the token endpoint, creat
     await refusedAtToken(id, { max_budget: USD_1000 }, PROHIBITED);
   });
 
+  it("refuses dispatch_prohibited_class at /token an instance under a Dispatch Policy that commits no class-named exception for the irreversible class, creating nothing (@spec approval-governance#recency-high-risk, #813)", async () => {
+    const id = await consented(proposal({ policy: "sp-batch-no-ia" }));
+    await refusedAtToken(id, { max_budget: USD_1000 }, PROHIBITED);
+  });
+
+  it("refuses dispatch_prohibited_class at /token an instance whose max_budget is in a currency other than the budget's, creating nothing (#813)", async () => {
+    const id = await consented(proposal());
+    await refusedAtToken(id, { max_budget: { amount: "100.00", currency: "EUR" } }, PROHIBITED);
+  });
+
   it("refuses dispatch_policy_changed at /token once the Dispatch Policy is changed in place under its version, so a raise needs a new version and consent, creating nothing (#813)", async () => {
     const id = await consented(proposal({ policy: "sp-batch-editable" }));
     const held = POLICIES["sp-batch-editable"] as { content: string };
@@ -469,6 +486,22 @@ describe("standing-payment template defects refused at the token endpoint, creat
       await refusedAtToken(
         id,
         { max_budget: { amount, currency: "USD" } },
+        {
+          status: 400,
+          error: "invalid_request",
+          description:
+            "max_budget must be {amount, currency} with a decimal amount and a currency code",
+        },
+      );
+    }
+  });
+
+  it("refuses invalid_request at /token a max_budget with no amount, alone or beside another member, creating nothing (@spec metering#bounds, #813)", async () => {
+    const id = await consented(proposal());
+    for (const maxBudget of [{ currency: "USD" }, { currency: "USD", value: "100.00" }]) {
+      await refusedAtToken(
+        id,
+        { max_budget: maxBudget },
         {
           status: 400,
           error: "invalid_request",
@@ -535,12 +568,13 @@ describe("standing-payment template defects refused at the token endpoint, creat
     expect(created()).toEqual(before);
   });
 
-  it("commits max_budget in the instance's intent_hash: the dispatched instance's hash recomputes over its Intent, and another max_budget yields another hash (@spec metering#bounds, #813)", async () => {
+  it("records max_budget on the dispatched instance and commits it in its intent_hash: the stored Intent carries it, the hash recomputes over that Intent, and another max_budget yields another hash (@spec metering#bounds, #813)", async () => {
     const id = await consented(proposal());
     const { status, body } = await dispatch(id);
     expect(status, JSON.stringify(body)).toBe(200);
     const [missionId] = as.kernel.standingPayments.dispatchedInstances(id);
     const instance = as.kernel.get(missionId as string);
+    expect(instance?.intent.max_budget).toEqual(USD_1000);
     expect(instance?.intent_hash).toBe(intentHash(ISSUER, instance?.intent as never));
     expect(
       intentHash(ISSUER, {
@@ -647,6 +681,56 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
     await expect(built).rejects.toThrow("budget currency is not USD");
   });
 
+  it("refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states no recency ceiling (@spec approval-governance#recency-high-risk, #813)", async () => {
+    for (const cls of ["irreversible_action", "consumption_bound"]) {
+      const built = startup(
+        `sp-no-ceiling-${cls}`,
+        terms(`ap-no-ceiling-${cls}`, {
+          approval_governance: recency({ ...BOTH_EXCEPTIONS, [cls]: {} } as never),
+        }),
+      );
+      await expect(built, cls).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built, cls).rejects.toThrow(
+        `approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`,
+      );
+    }
+  });
+
+  it("refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states a malformed recency ceiling: zero, negative, fractional, beyond the safe integers, a string, beside another member, a bare number or null (@spec approval-governance#recency-high-risk, #813)", async () => {
+    const malformed: Array<[string, unknown]> = [
+      ["zero", { max_age_s: 0 }],
+      ["negative", { max_age_s: -60 }],
+      ["fractional", { max_age_s: 1.5 }],
+      ["beyond the safe integers", { max_age_s: 2 ** 53 }],
+      ["a string", { max_age_s: "3600" }],
+      ["beside another member", { max_age_s: 3600, scope: "all" }],
+      ["a bare number", 3600],
+      ["null", null],
+    ];
+    // Every form is started and its outcome recorded, so one comparison shows
+    // each form the AS refused and any it started under.
+    const outcomes: Record<string, string> = {};
+    const expected: Record<string, string> = {};
+    for (const cls of ["irreversible_action", "consumption_bound"]) {
+      for (const [i, [label, exception]] of malformed.entries()) {
+        const id = `sp-bad-ceiling-${cls}-${i}`;
+        outcomes[`${cls}: ${label}`] = await startup(
+          id,
+          terms(`ap-bad-ceiling-${cls}-${i}`, {
+            approval_governance: recency({ ...BOTH_EXCEPTIONS, [cls]: exception } as never),
+          }),
+        ).then(
+          () => "started",
+          (e: unknown) =>
+            e instanceof StandingPaymentConfigError ? e.message : `not a StandingPaymentConfigError: ${String(e)}`,
+        );
+        expected[`${cls}: ${label}`] =
+          `Dispatch Policy ${id}: standing_payment: approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`;
+      }
+    }
+    expect(outcomes).toEqual(expected);
+  });
+
   it("refuses to start with a Dispatch Policy whose budget omits its limit (#813)", async () => {
     const t = terms("ap-no-limit");
     const { limit: _limit, ...budget } = t.budget;
@@ -656,6 +740,22 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
       "budget is not {owner, id, currency, limit, per_instance_max}",
     );
   });
+
+  // The budget members the Template's exception and Metering's
+  // standing-consent budget name beside the limit. Each witness pins the
+  // member-set message: the later non-empty, currency and decimal checks also
+  // refuse an omission, so only the message shows which check refused it.
+  for (const member of ["owner", "id", "currency", "per_instance_max"] as const) {
+    it(`refuses to start with a Dispatch Policy whose budget omits its ${member} (#813)`, async () => {
+      const t = terms(`ap-no-${member}`);
+      const { [member]: _omitted, ...budget } = t.budget;
+      const built = startup(`sp-no-${member}`, { ...t, budget });
+      await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built).rejects.toThrow(
+        `Dispatch Policy sp-no-${member}: standing_payment: budget is not {owner, id, currency, limit, per_instance_max}`,
+      );
+    });
+  }
 
   it("classifies the designated payment under the shipped mapping as irreversible and no other prohibited class, and refuses to start where the mapping covers it but not as irreversible (#813)", async () => {
     const entry = {
@@ -777,6 +877,42 @@ const childOf = (accessToken: string) =>
     child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
   });
 
+/**
+ * The children grant the expansion below proposes, narrower than the policy
+ * ceiling's (max_depth 2, five children of depth 2).
+ */
+const CHILDREN_GRANT = { max_depth: 1, children: { max_children: 2, max_child_depth: 1 } };
+
+/**
+ * A child-creation exchange at /token from the Mission `accessToken` is for:
+ * the invoice reads alone, restating the per-payment bound, the vendor and
+ * the children grant. A child entry that omits `delegation` inherits the
+ * policy ceiling's broader grant, and one that omits `max_amount` drops the
+ * successor's bound, so either is no subset of the successor's entry; this
+ * one is, and the child actor is one the grant admits.
+ */
+const readChildOf = (accessToken: string) =>
+  token({
+    grant_type: TOKEN_EXCHANGE,
+    subject_token: accessToken,
+    subject_token_type: ACCESS_TOKEN,
+    requested_token_type: JWT_TOKEN,
+    creation_request_id: crypto.randomUUID(),
+    mission_intent: JSON.stringify({
+      intent: { goal: "read Acme invoices", target_resources: [RESOURCE], expires_at: FAR_FUTURE },
+    }),
+    authorization_details: JSON.stringify([
+      {
+        type: "mission_resource_access",
+        resource: RESOURCE,
+        actions: ["payments:invoice.read"],
+        constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
+        delegation: CHILDREN_GRANT,
+      },
+    ]),
+    child_actor: JSON.stringify({ sub: "subagent-extractor", sub_profile: "ai_agent" }),
+  });
+
 /** A deferred expansion exchange for the Mission `accessToken` is for, with `maxBudget` (null: none) in the widened Intent. */
 const openExpansion = (accessToken: string, maxBudget: unknown) =>
   token({
@@ -798,7 +934,7 @@ const openExpansion = (accessToken: string, maxBudget: unknown) =>
         resource: RESOURCE,
         actions: [STANDING_PAYMENT_OPERATION, "payments:invoice.read"],
         constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
-        delegation: { max_depth: 1, children: { max_children: 2, max_child_depth: 1 } },
+        delegation: CHILDREN_GRANT,
       },
     ]),
     creation_request_id: crypto.randomUUID(),
@@ -869,6 +1005,32 @@ describe("standing-payment lineage at the token endpoint (@spec template#instanc
     expect(status, JSON.stringify(body)).toBe(400);
     expect(body.mission_denial_reason).toBe("delegation_not_permitted");
     expect(created()).toEqual(before);
+  });
+
+  it("refuses delegation_not_permitted at /token a strict-subset Child Mission, restating its parent's per-payment bound and children grant, of a standing-payment instance's expansion successor, issuing no grant and creating nothing (#813)", async () => {
+    const { accessToken, missionId } = await aliceInstance();
+    const code = await expansion(accessToken);
+    expect((await approveDeferral(code)).status).toBe(200);
+    const polled = await token({ grant_type: DEFERRED_GRANT, deferral_code: code });
+    expect(polled.status, JSON.stringify(polled.body)).toBe(200);
+    const successorId = (
+      decodeJwt(polled.body.access_token as string) as { mission: { id: string } }
+    ).mission.id;
+    const successor = as.kernel.get(successorId);
+    expect(successor?.predecessor).toBe(missionId);
+    expect(successor?.intent.max_budget).toEqual(USD_1000);
+    expect(standingPaymentBudgetBindingOf(as.kernel, successor as never).kind).toBe("bound");
+    const reads = successor?.authority_set.find((e) => e.actions.includes("payments:invoice.read"));
+    expect(reads?.constraints?.max_amount).toEqual({ amount: "500.00", currency: "USD" });
+    expect(reads?.delegation?.max_depth).toBe(CHILDREN_GRANT.max_depth);
+    expect(reads?.delegation?.children).toMatchObject(CHILDREN_GRANT.children);
+    const before = created();
+    const { status, body } = await readChildOf(polled.body.access_token as string);
+    expect(status, JSON.stringify(body)).toBe(400);
+    expect(body.mission_denial_reason).toBe("delegation_not_permitted");
+    expect(body.access_token).toBeUndefined();
+    expect(created()).toEqual(before);
+    expect(as.kernel.findChildren(successorId)).toEqual([]);
   });
 
   it("refuses invalid_request at /token an expansion of a standing-payment instance whose max_budget is raised, in another currency or absent, opening no deferral and creating nothing (@spec metering#capacity-across-missions, #813)", async () => {

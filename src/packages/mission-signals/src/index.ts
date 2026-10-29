@@ -23,7 +23,8 @@
  * `suspend_until` and `on_expiry` from the commit that armed or replaced
  * it (#1002). The `mission_capabilities_supported` delivery gate
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
- * declared `authority_changed` is not delivered a discharge commit's event.
+ * declared `authority_changed` is not delivered any event carrying
+ * `authority_changed` true, a discharge or a containment commit alike.
  * Delivery durability (#641) is implemented: the emitter journals one durable
  * job per (event, consumer) in its own outbox store, redelivers byte-identical
  * SETs under a bounded backoff until the hand-off is acknowledged, and offers
@@ -53,7 +54,14 @@ import {
   witnessSharesStoreTree,
   writeDurableFile,
 } from "@mission/store";
-import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
+import {
+  createLocalJWKSet,
+  type JWK,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+  jwtVerify,
+  SignJWT,
+} from "jose";
 
 /**
  * @spec signals#lifecycle-event — the registered event-type identifier for the
@@ -358,10 +366,18 @@ export interface ReceiverOptions {
    * How a Mission Status response read to resynchronize a held Mission is
    * checked (@spec status#mission-status-response): `clientId` is the
    * requesting client (`sub`); `audience` is the response `aud`, by default
-   * the client, as for a state-only read; `jwks` are the keys that sign the
-   * issuer's Status responses, by default `jwks`.
+   * the client, as for a state-only read.
+   *
+   * `keys` resolves the issuer's Status signing keys (@spec
+   * status#signing-key-retention, status#historical-key-set, #1810): held as
+   * the PDP's Status consumer holds them, `missionStatusIssuer(...).keys`
+   * (`@mission/pdp`), so they follow a rotation within the freshness the
+   * `jwks_uri` declares, and a key the issuer's historical key set lists is
+   * refused for the current reliance decision a resynchronization makes,
+   * though a cached `jwks_uri` or the configured `kid`s still carry it. A key
+   * set pinned from configuration (`createLocalJWKSet`) does neither.
    */
-  status?: { clientId: string; audience?: string; jwks?: { keys: JWK[] } };
+  status?: { clientId: string; audience?: string; keys: JWTVerifyGetKey };
 }
 
 /** The default {@link ReceiverOptions.seenCapacity}. */
@@ -564,7 +580,7 @@ export class MissionSignalReceiver {
   private readonly seenCapacity: number;
   private readonly maxStaleSeconds: number;
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
-  private readonly statusKeys: ReturnType<typeof createLocalJWKSet>;
+  private readonly statusKeys: JWTVerifyGetKey | undefined;
   /** @spec control-plane#rollback (#1749): the witness as this receiver last wrote it. */
   private witness: ReceiverWitness | undefined;
   /** The witness's lock file, held while this receiver is open: one witnessed writer (D910). */
@@ -574,7 +590,7 @@ export class MissionSignalReceiver {
 
   constructor(private readonly opts: ReceiverOptions) {
     this.jwkSet = createLocalJWKSet({ keys: opts.jwks.keys } as never);
-    this.statusKeys = createLocalJWKSet({ keys: (opts.status?.jwks ?? opts.jwks).keys } as never);
+    this.statusKeys = opts.status?.keys;
     this.audience = opts.audience;
     this.seenCapacity = opts.seenCapacity ?? DEFAULT_SEEN_CAPACITY;
     if (!Number.isSafeInteger(this.seenCapacity) || this.seenCapacity < 1) {
@@ -1503,8 +1519,8 @@ export const AUTHORITY_CHANGED_CAPABILITY = "authority_changed";
  * @spec signals#discharge-compatibility — `mission_capabilities_supported` is
  * the receiver's declared capability list from its Stream Configuration. A
  * consumer that has NOT declared {@link AUTHORITY_CHANGED_CAPABILITY} is not
- * delivered an event whose effective-authority change is represented by
- * `authority_changed` ALONE (a discharge commit): such a consumer ignores the
+ * delivered an event carrying `authority_changed` true, whether a discharge
+ * or a containment commit narrowed the authority: such a consumer ignores the
  * unknown member, accepts an in-order active-to-active version increment, and
  * keeps a stale Authority Set, exactly the failure the member exists to
  * prevent. Absent means it declared nothing.
@@ -1646,25 +1662,19 @@ export class MissionSignalEmitter {
 
   /**
    * @spec signals#discharge-compatibility — the delivery GATE. The bound events
-   * are exactly those whose effective-authority change is represented by
-   * `authority_changed` alone: a commit that set the discriminator WITHOUT
-   * advancing `containment_version` (a discharge commit). An event whose
-   * narrowing is also represented by a `containment_version` ADVANCE follows the
-   * containment profile's existing delivery rules unchanged, and every event
-   * that narrows nothing is unaffected.
+   * are every event that carries `authority_changed` true, a discharge commit
+   * and a containment commit alike: such an event reaches only a consumer that
+   * declared {@link AUTHORITY_CHANGED_CAPABILITY}. An event that narrows
+   * nothing is delivered to every consumer.
    *
-   * Provenance comes from the kernel's own commit-time discriminator
-   * ({@link LifecycleCommit.containment_advanced}), never from emitter-side
-   * version history: an in-memory cursor does not survive restart, and a
-   * fresh emitter would either mistake a discharge on a previously contained
-   * Mission (unchanged `containment_version`) for the first containment
-   * advance — delivering an `authority_changed`-only narrowing to a consumer
-   * that never declared the capability — or withhold a real containment
-   * event first observed above version 1.
+   * The gate reads only the commit's own `authority_changed` and the
+   * consumer's declaration, never emitter-side history, so it decides the
+   * same way after a restart. Withholding a job leaves the commit's `version`
+   * as it is for every consumer: the undeclared consumer's next delivered
+   * event for the Mission shows the gap.
    */
   private deliverable(commit: LifecycleCommit, consumer: SignalConsumer): boolean {
     if (commit.authority_changed !== true) return true;
-    if (commit.containment_advanced === true) return true;
     return (consumer.mission_capabilities_supported ?? []).includes(AUTHORITY_CHANGED_CAPABILITY);
   }
 
@@ -1692,7 +1702,7 @@ export class MissionSignalEmitter {
     );
     for (const consumer of this.opts.consumers) {
       // @spec signals#discharge-compatibility — an undeclared stream is not
-      // delivered an event whose narrowing rides `authority_changed` alone.
+      // delivered an event carrying `authority_changed` true.
       if (!this.deliverable(commit, consumer)) continue;
       insert.run(
         JSON.stringify([commit.issuer, eventId]),

@@ -52,6 +52,21 @@ const REGISTRY: DispatchPolicies = {
     content_type: "application/json",
     content: JSON.stringify({ id: "sp-binding", derivation_limit_ceiling: 3, standing_payment: TERMS }),
   },
+  // A second policy committing another budget, owner, limit and payee, so a
+  // binding member taken from anywhere but the instance's own policy differs.
+  "sp-binding-treasury": {
+    version: "1",
+    content_type: "application/json",
+    content: JSON.stringify({
+      id: "sp-binding-treasury",
+      derivation_limit_ceiling: 3,
+      standing_payment: {
+        ...TERMS,
+        destinations: { acme: "acct-acme-0002" },
+        budget: { owner: "treasury-operator", id: "tr-standing-binding", currency: "USD", limit: "8000.00", per_instance_max: "1000.00" },
+      },
+    }),
+  },
 };
 const MAPPING: ProhibitedPredicateMapping = {
   classesOf: (_entry, action) =>
@@ -69,7 +84,7 @@ beforeAll(async () => {
 });
 
 /** A fresh kernel with one consented standing-payment template and one dispatched instance. */
-function dispatched() {
+function dispatched(policyId = "sp-binding") {
   const kernel = new MissionKernel({
     issuer: ISS,
     policy: DERIVATION_POLICY as never,
@@ -93,7 +108,7 @@ function dispatched() {
           constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
         },
       ],
-      dispatch_policy: { id: "sp-binding", version: "1" },
+      dispatch_policy: { id: policyId, version: "1" },
       dispatchers: ["orchestrator"],
       recipients: { subjects: [{ iss: ISS, sub: "alice" }], agents: ["worker"] },
       per_instance_lifetime_s: 3600,
@@ -172,6 +187,23 @@ describe("the budget binding the kernel derives for a standing payment (@spec me
         limit: "5000.00",
         policy: template.dispatch_policy,
         destinations: { acme: "acct-acme-0001", globex: "acct-globex-0001" },
+        instance: { max_budget: MAX_BUDGET, root_mission_id: mission.id },
+      },
+    });
+  });
+
+  it("derives the budget owner, identifier, limit and destinations from the instance's own committed Dispatch Policy: an instance under a policy committing another budget derives that budget (#813, #816)", () => {
+    const { kernel, template, mission } = dispatched("sp-binding-treasury");
+    expect(template.dispatch_policy.id).toBe("sp-binding-treasury");
+    expect(standingPaymentBudgetBindingOf(kernel, mission)).toEqual({
+      kind: "bound",
+      binding: {
+        owner: "treasury-operator",
+        budget_id: "tr-standing-binding",
+        currency: "USD",
+        limit: "8000.00",
+        policy: template.dispatch_policy,
+        destinations: { acme: "acct-acme-0002" },
         instance: { max_budget: MAX_BUDGET, root_mission_id: mission.id },
       },
     });

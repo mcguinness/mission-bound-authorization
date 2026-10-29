@@ -7,6 +7,9 @@
  */
 
 import { EvaluationContextBindingDeclarations } from "@mission/core";
+import { currentContractRef } from "@mission/demo-data";
+import type { EvaluationRequest } from "./evaluate.js";
+import type { MissionView } from "./policy-view.js";
 import {
   type ResourcePolicy,
   type ResourcePolicyQuery,
@@ -50,6 +53,40 @@ export function resourcePolicyFixture(refuses: (query: ResourcePolicyQuery) => b
  * witnesses (`evaluate-evaluation-context.test.ts`).
  */
 export const EVALUATION_CONTEXT_UNCLAIMED_FIXTURE = new EvaluationContextBindingDeclarations({});
+
+/**
+ * @spec runtime#resource-contract (#249, D865): `request` as a PEP that
+ * performs the operation under the intended contract sends it, with
+ * `resource.properties.resource_contract` set to the current reference for
+ * its operation target (else its audience) and action. A request no declared
+ * contract covers, or one already carrying a reference, is returned
+ * unchanged. Derived from the declarations, never hardcoded.
+ */
+export function withCurrentContractReference(request: EvaluationRequest): EvaluationRequest {
+  const properties = request.resource.properties;
+  if (properties.resource_contract !== undefined) return request;
+  const ref = currentContractRef({
+    resource: properties.operation_target ?? properties.audience,
+    actions: [request.action.name],
+  });
+  if (ref === undefined) return request;
+  return { ...request, resource: { ...request.resource, properties: { ...properties, resource_contract: ref } } };
+}
+
+/**
+ * @spec runtime#resource-contract (#249, D865): `request` as a PEP sends it
+ * for a credential carrying the Mission's own entry: with the reference the
+ * Mission entry covering its action carries. Unchanged where that entry
+ * carries none, or the request already carries one. For a Mission an
+ * authorization server approved, pinned only where configuration requires.
+ */
+export function withMissionContractReference(request: EvaluationRequest, view: MissionView): EvaluationRequest {
+  const properties = request.resource.properties;
+  if (properties.resource_contract !== undefined) return request;
+  const ref = view.authority_set.find((e) => e.actions.includes(request.action.name))?.resource_contract;
+  if (ref === undefined) return request;
+  return { ...request, resource: { ...request.resource, properties: { ...properties, resource_contract: ref } } };
+}
 
 /** Cannot answer: every check throws, as an unreachable policy backend does. */
 export const RESOURCE_POLICY_UNAVAILABLE_FIXTURE: ResourcePolicy = Object.freeze({

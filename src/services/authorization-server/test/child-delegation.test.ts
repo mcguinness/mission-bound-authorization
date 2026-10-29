@@ -216,8 +216,13 @@ describe("child mission creation (@spec child-delegation#child-creation, #parent
     const parent = approveParent(["payments:invoice.read", "payments:payment.execute"]);
     const { child } = createChild(parent.id, ["payments:invoice.read"]);
 
-    // payment.execute is granted by the parent but absent from the child.
-    const probe = probeOf(child, ["payments:payment.execute"]);
+    // payment.execute is granted by the parent but absent from the child. The
+    // probe restates the parent's grant of it, with any contract reference
+    // that grant carries (#249, D865).
+    const granted = parent.authority_set.find((e) => e.actions.includes("payments:payment.execute"))?.resource_contract;
+    const probe = probeOf(child, ["payments:payment.execute"]).map((e) =>
+      granted === undefined ? e : { ...e, resource_contract: granted },
+    );
     expect(isSubsetSet(probe, child.authority_set)).toBe(false);
     // Same probe (same constraints) IS a subset of the parent: the child failure
     // is attributable to the missing action, not to a constraint mismatch.

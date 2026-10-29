@@ -37,6 +37,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 
@@ -64,7 +65,7 @@ function view(actions: string[]): MissionView {
     version: 1,
     authority_hash: "sha-256:e2ehash",
     authority_set: actions.length
-      ? [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }]
+      ? [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions })]
       : [],
     subject: { iss: ISSUER, sub: "alice" },
     client_id: "ap-agent",

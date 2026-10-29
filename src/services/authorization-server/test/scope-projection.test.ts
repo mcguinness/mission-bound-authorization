@@ -452,6 +452,23 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     );
   });
 
+  it("refuses a scope named for the entry's action whose rights, as the target interprets it, exceed the entry", async () => {
+    await withPlain(
+      {
+        version: "local-interpretation-1",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: { [READ]: { rights: rights([READ, WRITE]), mandatory_controls: {} } },
+      },
+      async () => {
+        const res = await issue([entry([READ])]);
+        expect(res.status, JSON.stringify(res.body)).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.error_description).toMatch(/no safe scope projection/);
+      },
+    );
+  });
+
   it("refuses a prefix scope for an exact entry", async () => {
     await withPlain(
       {
@@ -1245,9 +1262,9 @@ describe("the Intent-only completion workaround is never a client proposal (@spe
     const record = await missionOf(code as string);
     expect(record?.proposal_hash).toBeUndefined();
     expect((record as { proposed_authority?: unknown } | undefined)?.proposed_authority).toBeUndefined();
-    // The first decision handed approve() (which computes the anchors) no
-    // proposal. The repeated decision recovers that committed record and binds
-    // the same grant without approving again (#916), so it reads none either.
+    // Both decisions held the one decision (the repeated one replaced the
+    // hold), and the code's save committed it once (#916, #1863): approve(),
+    // which computes the anchors, ran once and was handed no proposal.
     expect(approvals.mock.calls.length).toBe(1);
     for (const [input] of approvals.mock.calls) expect(input.proposedAuthority).toBeUndefined();
     expect(as.kernel.missionBoundGrants.resolve(record?.grant_id as string)?.missionId).toBe(record?.id);

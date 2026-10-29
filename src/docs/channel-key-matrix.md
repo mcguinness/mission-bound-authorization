@@ -46,7 +46,10 @@ ring's `revision`, and the AS serves the revision it loaded as its `/jwks`
 they carry this revision and exactly the ring's pending, active and overlap
 generations, and records what that confirms: when a generation was first
 published, when the AS stopped signing under it, and when it was withdrawn.
-One operator edits a ring at a time; nothing locks it.
+One operator edits a ring at a time; nothing locks the ring. The key binding
+record has its own lock: an AS start that records a new `kid` holds
+`<record>.lock` while it re-reads and appends, and a start that finds
+another process holding it is refused (#1833).
 
 - `pnpm keys rotate` stages a `pending` generation, published once the AS
   restarts, not signing.
@@ -94,7 +97,8 @@ One operator edits a ring at a time; nothing locks it.
 The AS publishes every live generation of `as-token`, `as-status`,
 `as-txn` and `as-continuation` at `/jwks`. The payments resource, the RAS
 and the separated MAS pilot's PDP hold that set through `IssuerKeys`
-(#831 C): per role, only the `kid`s their configuration trusts, refreshed
+(#831 C), and so does a Signals receiver a deployment wires, for the Status
+responses that resynchronize it (#1810): per role, only the `kid`s their configuration trusts, refreshed
 within the freshness `/jwks` declares, and refused when a stale set cannot
 be revalidated. A rotation reaches them once their trusted `kid`s name the
 new generation and they reload (`SIGUSR2`); publication alone grants no
@@ -132,7 +136,7 @@ require.
 
 | Material | Library support | Launcher wiring |
 |---|---|---|
-| AS role keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring (`signingKeys: { ring }`, created by `pnpm keys init`), or keys generated per boot | `pnpm as-native`, `pnpm issuance-only` and the MAS pilot's launchers require `MISSION_KEY_RING` or `MISSION_EPHEMERAL_KEYS=1`; `pnpm demo:serve` and the other demos run per boot |
+| AS role keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring (`signingKeys: { ring }`, created by `pnpm keys init`), checked against a key binding record when given one (`signingKeys: { ring, bindings }`, #1815), or keys generated per boot | `pnpm as-native`, `pnpm issuance-only` and the MAS pilot's launchers require `MISSION_KEY_RING` with its key binding record `MISSION_KEY_BINDINGS`, or `MISSION_EPHEMERAL_KEYS=1`; `pnpm demo:serve` and the other demos run per boot |
 | Evidence keys (`ephemeral-pep`, `ephemeral-executor`, `ephemeral-receipt_issuer`, `pdp-decision-evidence`) | evidence key files (`composeStack`'s `evidenceKeys`, created by `pnpm evidence-keys init`, loaded before anything listens), or keys generated per boot | `pnpm as-native` requires `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`; `pnpm demo:serve` takes the two files optionally, per boot without them; `pnpm measure:evidence` runs per boot |
 | The RAS's single-use ID-JAG claims (not a key: what keeps a key that survives a restart from redeeming a grant twice) | a durable redemption store (`RasConfig.redemptions`, `composeStack`'s `rasRedemptions`, created by `pnpm ras-redemptions init`), or in memory | `pnpm as-native` requires `MISSION_RAS_REDEMPTIONS` whenever `MISSION_KEY_RING` is set, and refuses a missing or uninitialized store; every other composition that runs the RAS keeps its claims in memory, under per-boot keys |
 

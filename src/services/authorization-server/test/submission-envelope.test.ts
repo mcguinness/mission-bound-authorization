@@ -513,8 +513,17 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
       body: JSON.stringify({ decision: "approve", render_revision }),
     });
     expect(res.status, await res.clone().text()).toBe(303);
+    storeCookies(res);
+    // The resume saves the code, which commits the held decision (#1863).
+    let resumeAt = res.headers.get("location") ?? "";
+    while (resumeAt.startsWith(ISSUER_E2E)) {
+      res = await fetch(resumeAt, { redirect: "manual", headers: { cookie: cookieHeader() } });
+      storeCookies(res);
+      resumeAt = res.headers.get("location") ?? "";
+    }
+    expect(new URL(resumeAt).searchParams.get("code"), resumeAt).toBeTruthy();
 
-    // The record exists (decide() ran kernel.approve) with REQUEST-DERIVED facts.
+    // The record exists (the code save ran kernel.approve) with REQUEST-DERIVED facts.
     const record = e2eAs.kernel.findByApprovalEvent(`apev_${uid}`);
     expect(record).toBeDefined();
     const facts = record?.submission_evidence;

@@ -22,7 +22,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LifecycleCommit } from "@mission/authorization-server";
 import { openStore } from "@mission/store";
-import { type CryptoKey, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
+import {
+  type CryptoKey,
+  createLocalJWKSet,
+  exportJWK,
+  generateKeyPair,
+  type JWK,
+  SignJWT,
+} from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MissionSignalReceiver, type ReceiverOptions, signLifecycleEvent } from "../src/index.js";
 
@@ -58,7 +65,9 @@ const receiver = (extra: Partial<ReceiverOptions> = {}) =>
     jwks,
     issuer: ISS,
     audience: AUD,
-    status: { clientId: CLIENT },
+    // A fixed key set: these cases test consumer reliance, not key freshness
+    // (receiver-status-keys.test.ts holds the keys as a deployment does, #1810).
+    status: { clientId: CLIENT, keys: createLocalJWKSet(jwks) },
     ...extra,
   });
 

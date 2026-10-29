@@ -26,6 +26,8 @@ import {
   type DpopKeys,
   dpopFetch,
   dpopProofFor,
+  paymentsAatToolId,
+  signAatPop,
   EVIDENCE_UNAVAILABLE_ERROR,
   EvidenceStore,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
@@ -45,6 +47,7 @@ import {
   verifyEvidenceEnvelope,
 } from "../src/index.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE, resourcePolicyFixture } from "@mission/pdp/test-support";
+import { currentContractRef, pinnedToCurrentContract } from "@mission/demo-data";
 
 const ISSUER = "https://as.test";
 const HTU = CANONICAL_RESOURCE;
@@ -52,12 +55,13 @@ const HTM = "POST";
 const MISSION = { id: "msn_825", issuer: ISSUER };
 const EVIDENCE_KEYS = createEphemeralEvidenceKeys({ resourcePolicy: RESOURCE_POLICY_PERMITS_ALL_FIXTURE });
 
-const entry = (actions: string[], constraints?: Record<string, unknown>) => ({
-  type: "mission_resource_access",
-  resource: CANONICAL_RESOURCE,
-  actions,
-  ...(constraints ? { constraints } : {}),
-});
+const entry = (actions: string[], constraints?: Record<string, unknown>) =>
+  pinnedToCurrentContract({
+    type: "mission_resource_access",
+    resource: CANONICAL_RESOURCE,
+    actions,
+    ...(constraints ? { constraints } : {}),
+  });
 const BROAD = [entry(["payments:invoice.read", "payments:vendor.read", "payments:invoice.list"])];
 
 const VIEW: MissionView = {
@@ -69,12 +73,12 @@ const VIEW: MissionView = {
   subject: { iss: ISSUER, sub: "alice" },
   client_id: "ap-agent",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: "mission_resource_access",
       resource: CANONICAL_RESOURCE,
       actions: ["payments:invoice.read", "payments:vendor.read", "payments:invoice.list"],
       constraints: { vendors: ["acme", "globex"] },
-    },
+    }),
   ],
 };
 
@@ -288,12 +292,21 @@ describe("the Mission access-token profile is met before any claim is trusted (@
     await expect(overHttp(await mint({}, { typ: "aat+jwt" }))).rejects.toThrow(/typ must be at\+jwt/);
   });
 
+  it("accepts application/at+jwt as the JWT access-token typ, as Section 4 of RFC 9068 does (@spec mission#token-claims, #1760)", async () => {
+    const token = await mint({}, { typ: "application/at+jwt" });
+    for (const facts of [await overHttp(token), await server.validateMissionToken(token)]) {
+      expect(facts).toMatchObject({ sub: "alice", clientId: "ap-agent", mission: MISSION });
+    }
+  });
+
   it("refuses an at+jwt presented as an attenuation root", async () => {
     // Signed under the root role's key, so the profile's type check is what refuses it.
     const token = await mint({}, { kid: "as-attenuation" }, rootSignKey);
-    await expect(
-      server.validateAttenuationChain([token], await dpopProofFor(holder, HTU, HTM, token), HTU, HTM),
-    ).rejects.toThrow(/typ must be aat\+jwt/);
+    const args = JSON.stringify({ invoice_id: "inv-1" });
+    const pop = await signAatPop({ leaf: token, holderKey: holder.privateKey, tool: paymentsAatToolId("get_invoice"), argumentsJson: args });
+    await expect(server.validateAatPresentation({ aat_chain: [token], aat_pop: pop }, "get_invoice", args)).rejects.toThrow(
+      /unexpected "typ" JWT header value/,
+    );
   });
 
   it("never demotes a Mission-bound token that fails its profile to the ordinary class on a gateway route", async () => {
@@ -445,7 +458,7 @@ describe("the credential authority bounds the action the PEP resolved (@spec run
     // The Mission's list entry carries no vendor constraint, so the read
     // returns every vendor the store holds invoices for: acme and globex. A
     // credential covering only acme does not cover it.
-    const unconstrained: MissionView = { ...VIEW, authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] }] };
+    const unconstrained: MissionView = { ...VIEW, authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:invoice.list"] })] };
     refusedBeforePdp(await attempt([entry(["payments:invoice.list"], { vendors: ["acme"] })], "list_invoices", {}, unconstrained), {
       type: "vendor",
       id: "acme",
@@ -521,7 +534,7 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
   /** A Mission scoped to `vendors` for vendor reads, under the same reference the token carries. */
   const missionScopedTo = (vendors: string[]): MissionView => ({
     ...VIEW,
-    authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors } }],
+    authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"], constraints: { vendors } })],
   });
   /** Look up `vendorId` under a credential scoped to `credentialVendors`, decided by the embedded signing PDP. */
   async function lookUp(vendorId: string, credentialVendors: string[], view: MissionView) {
@@ -550,7 +563,12 @@ describe("a vendor lookup carries the store-resolved vendor, so both bounds eval
     expect((x.decided[0] as { resource: unknown }).resource).toEqual({
       type: "vendor",
       id: "acme",
-      properties: { vendor_id: "acme", audience: CANONICAL_RESOURCE, operation_target: CANONICAL_RESOURCE },
+      properties: {
+        vendor_id: "acme",
+        audience: CANONICAL_RESOURCE,
+        operation_target: CANONICAL_RESOURCE,
+        resource_contract: currentContractRef({ resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }),
+      },
     });
   });
 

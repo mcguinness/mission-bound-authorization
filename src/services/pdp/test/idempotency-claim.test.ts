@@ -18,7 +18,7 @@ import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openDurableStore } from "@mission/store";
+import { type Database, openDurableStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { createDecisionEvidenceEmitter, type DecisionEvidenceEmitter } from "../src/decision-evidence.js";
 import type { BoundaryStatementVersion, EnforcementBoundaries } from "../src/enforcement-boundary.js";
@@ -37,11 +37,12 @@ import {
 import { MISSION_RESOURCE_ACCESS_TYPE, type MissionView } from "../src/policy-view.js";
 import { relationForAction, stalenessBound } from "../src/policy.js";
 import { decisionCacheKey } from "../src/projections.js";
-import { EXECUTION_EVIDENCE_MEDIA_TYPE, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
+import { EXECUTION_EVIDENCE_MEDIA_TYPE, type EvidenceKeyResolver, signEvidenceEnvelope } from "../src/runtime-evidence-integrity.js";
 import { RUNTIME_POSTURE } from "../src/runtime-posture.js";
 import { CLAIM_OWNER, claimSchemaPlaceholders, freshKey, statementWithPrivilegedAdministration } from "./claim-fixture.js";
-import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "../src/test-support.js";
+import { EVALUATION_CONTEXT_UNCLAIMED_FIXTURE, RESOURCE_POLICY_PERMITS_ALL_FIXTURE, withCurrentContractReference } from "../src/test-support.js";
 import { withCredential } from "./with-credential.js";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // Every decision carries the credential's own authority (#825 PR 2b); the
 // fixture adds a neutral one where a test does not name it.
@@ -97,12 +98,13 @@ async function executionRecord(
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
   error?: string,
+  audience = RESOURCE,
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
     evaluation_id: evaluationId,
     mission_id: "msn_917",
-    audience: RESOURCE,
+    audience,
     outcome,
     outcome_at: new Date(T0).toISOString(),
     sequence: 1,
@@ -123,12 +125,15 @@ const view = (over: Partial<MissionView> = {}): MissionView => ({
   version: 1,
   authority_hash: "sha-256:h917",
   authority_set: [
-    {
+    pinnedToCurrentContract({
       type: MISSION_RESOURCE_ACCESS_TYPE,
       resource: RESOURCE,
-      actions: ["payments:payment.execute", "payments:remittance.send", ADMIN_ACTION],
-    },
-    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] },
+      actions: ["payments:payment.execute", "payments:remittance.send"],
+    }),
+    // The fixture admin action is outside the payments contract, so it has an
+    // entry of its own, under no reference.
+    { type: MISSION_RESOURCE_ACCESS_TYPE, resource: RESOURCE, actions: [ADMIN_ACTION] },
+    pinnedToCurrentContract({ type: MISSION_RESOURCE_ACCESS_TYPE, resource: OTHER_RESOURCE, actions: ["payments:payment.execute"] }),
   ],
   subject: { iss: "https://as.test", sub: "alice" },
   client_id: "ap-agent",
@@ -142,6 +147,8 @@ interface RequestOptions {
   action?: string;
   phase?: string;
   missionId?: string;
+  /** The Mission's issuer; defaults to the AS the fixture's principals belong to. */
+  missionIssuer?: string;
   sub?: string;
   subIss?: string;
   actor?: NonNullable<EvaluationRequest["context"]["actor"]>;
@@ -156,7 +163,7 @@ interface RequestOptions {
 
 function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
   const target = o.resource ?? { type: "invoice", id: "inv-1", properties: { vendor_id: "acme" } };
-  return {
+  return withCurrentContractReference({
     subject: { id: o.sub ?? "alice", properties: { iss: o.subIss ?? "https://as.test" } },
     resource: {
       ...target,
@@ -167,14 +174,14 @@ function request(c: Clock, o: RequestOptions = {}): EvaluationRequest {
       ...(o.key === null ? {} : { properties: { idempotency_key: o.key ?? freshKey() } }),
     },
     context: {
-      mission: { id: o.missionId ?? "msn_917", issuer: "https://as.test" },
+      mission: { id: o.missionId ?? "msn_917", issuer: o.missionIssuer ?? "https://as.test" },
       actor: o.actor ?? { client_id: "ap-agent" },
       action_class: o.actionClass ?? "irreversible_action",
       parameter_digest: o.digest ?? "sha-256:operation-1",
       mission_state_observation: o.observation ?? { state: "active", mode: "fresh", freshness_at: c.now().toISOString() },
       ...(o.phase !== undefined ? { action_phase: o.phase } : {}),
     },
-  };
+  });
 }
 
 const REQUESTER: ClaimRequester = { pep_id: "mcp-payments-pep", pep_epoch: "epoch-917-a" };
@@ -282,6 +289,30 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.evaluation_id).toBe(permits[0]?.context.evaluation_id);
       expect(rows[0]?.state).toBe("permit_issued");
+    });
+  });
+
+  describe("the claim scope carries the canonical Mission identity (@spec control-plane#isolation, #1748)", () => {
+    it("gives the same key and operation under the same local Mission identifier at another issuer its own claim, never the first issuer's", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const key = freshKey();
+      const otherIssuer = "https://as-other.test";
+      const first = await evaluate(request(c, { key }), options(claims, c));
+      const second = await evaluate(
+        request(c, { key, missionIssuer: otherIssuer }),
+        options(claims, c, { view: view({ issuer: otherIssuer }) }),
+      );
+      expect(first.decision, JSON.stringify(first.context)).toBe(true);
+      expect(second.decision, JSON.stringify(second.context)).toBe(true);
+      expect(second.context.evaluation_id).not.toBe(first.context.evaluation_id);
+      claims.close();
+      const rows = rowsOf(file);
+      expect(rows.map((r) => r.evaluation_id).sort()).toEqual(
+        [String(first.context.evaluation_id), String(second.context.evaluation_id)].sort(),
+      );
+      expect(rows.map((r) => r.state)).toEqual(["permit_issued", "permit_issued"]);
     });
   });
 
@@ -1180,5 +1211,65 @@ describe("PDP idempotency claim (@spec runtime#idempotency, #917)", () => {
       }
       claims.close();
     });
+  });
+});
+
+describe("settlement is bound to the adopting permit's boundary across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1841, D974)", () => {
+  it("a claim adopted through a replaced identifier's scope is settled at the boundary its permit was decided at: a record validly signed for the replaced identifier the claim's scope still names is refused audience_mismatch and leaves the claim unchanged, and the record for the permit's boundary settles it", async () => {
+    const c = clock();
+    // OTHER_RESOURCE is replaced by RESOURCE: a key claimed under the old identifier is the new one's key.
+    const statement = statementWithPrivilegedAdministration();
+    const [shipped] = (statement.enforcement_boundaries as EnforcementBoundaries).versions as [BoundaryStatementVersion];
+    statement.enforcement_boundaries = {
+      versions: [
+        {
+          ...shipped,
+          version: "payments-boundary-v0",
+          effective_at: "1970-01-01T00:00:00Z",
+          boundaries: shipped.boundaries.map((b) => ({ ...b, boundary: OTHER_RESOURCE })),
+        },
+        {
+          ...shipped,
+          effective_at: new Date(T0 - 86_400_000).toISOString(),
+          replaces: [{ boundary: RESOURCE, previous_version: "payments-boundary-v0", previous_boundary: OTHER_RESOURCE }],
+        },
+      ],
+    };
+    // This PEP's key verifies a record for either identifier, so only the boundary binding can refuse one.
+    const keys: EvidenceKeyResolver = (p) =>
+      p.kid === "pep-exec-917" && p.emitter.id === RESOURCE && (p.audience === RESOURCE || p.audience === OTHER_RESOURCE)
+        ? { key: executionKey.publicKey }
+        : undefined;
+    const file = join(mkdtempSync(join(tmpdir(), "claim-1841-")), "claims.sqlite");
+    const claims = openIdempotencyClaimDomain({ file, owner: CLAIM_OWNER, statement, now: c.now, settlementKeys: keys });
+    const key = freshKey();
+    // Claimed under the old identifier, its permit never persisted (the evidence signer failed): the row is adoptable.
+    const failing: DecisionEvidenceEmitter = {
+      emit: async () => {
+        throw new Error("evidence signer down");
+      },
+    };
+    await expect(evaluate(request(c, { key, audience: OTHER_RESOURCE, target: RESOURCE }), options(claims, c, { evidence: failing }))).rejects.toThrow(
+      /signer down/,
+    );
+    // The retry at the new identifier meets that row through the lineage and adopts it.
+    const permit = await evaluate(request(c, { key, target: RESOURCE }), options(claims, c));
+    expect(permit.decision, JSON.stringify(permit.context)).toBe(true);
+    const evaluationId = permit.context.evaluation_id as string;
+    const db = (claims as unknown as { db: Database }).db;
+    const row = () => db.prepare("SELECT * FROM claims WHERE evaluation_id = ?").get(evaluationId) as Record<string, unknown>;
+    const transitions = () => db.prepare("SELECT * FROM claim_transitions WHERE evaluation_id = ? ORDER BY seq").all(evaluationId);
+    expect(String(transitions().map((t) => (t as { cause: string }).cause))).toMatch(/adopted:/);
+    // The row stays under the scope it was claimed in; the permit's boundary is the adopting request's.
+    expect((JSON.parse(String(row().scope_json)) as { audience: string }).audience).toBe(OTHER_RESOURCE);
+    expect(row().audience).toBe(RESOURCE);
+    const before = { claim: row(), transitions: transitions() };
+    const stale = await executionRecord(evaluationId, "completed", undefined, undefined, OTHER_RESOURCE);
+    expect(await claims.settle(REQUESTER, stale)).toEqual({ accepted: false, reason: "audience_mismatch" });
+    expect({ claim: row(), transitions: transitions() }).toEqual(before);
+    // Control: the record for the boundary the permit was decided at settles the claim.
+    expect(await claims.settle(REQUESTER, await executionRecord(evaluationId, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+    expect(row()).toMatchObject({ state: "completed" });
+    claims.close();
   });
 });

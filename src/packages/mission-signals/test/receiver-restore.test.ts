@@ -33,7 +33,14 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { LifecycleCommit } from "@mission/authorization-server";
-import { type CryptoKey, exportJWK, generateKeyPair, type JWK, SignJWT } from "jose";
+import {
+  type CryptoKey,
+  createLocalJWKSet,
+  exportJWK,
+  generateKeyPair,
+  type JWK,
+  SignJWT,
+} from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   MissionSignalEmitter,
@@ -152,7 +159,9 @@ const options = (
   audience: AUD,
   store: { file: paths.store },
   witness: { file: paths.witness },
-  status: { clientId: CLIENT },
+  // A fixed key set: these cases test the restore protocol, not key freshness
+  // (receiver-status-keys.test.ts holds the keys as a deployment does, #1810).
+  status: { clientId: CLIENT, keys: createLocalJWKSet(jwks) },
   ...extra,
 });
 

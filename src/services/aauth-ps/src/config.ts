@@ -1,5 +1,11 @@
 import { readFileSync } from "node:fs";
-import { isAgentIdentifier, isServerIdentifier } from "@mission/aauth-wire";
+import {
+  AAUTH_SERVER_DOCUMENTS,
+  determineAlgorithm,
+  isAgentIdentifier,
+  isServerIdentifier,
+  isWellKnownName,
+} from "@mission/aauth-wire";
 
 /** A configuration file that fails validation; the boot stops. */
 export class PsConfigError extends Error {
@@ -50,6 +56,61 @@ export interface PsLifetimes {
   missionMaxSeconds: number;
 }
 
+/** The control-plane actions this PS implements (the management companion). */
+export const CONTROL_ACTIONS = ["status", "terminate"] as const;
+export type ControlAction = (typeof CONTROL_ACTIONS)[number];
+
+/**
+ * A statically configured administrator (the management companion's
+ * Administrator caller class). It signs control-plane requests under the
+ * AAuth HTTP Message Signatures profile with Signature-Key `jwks_uri`:
+ * `id` its identifier, `dwk` a deployment-chosen document name, `kid` its
+ * key. The PS resolves that key from this registration, its own
+ * administrative channel, and never fetches it: a pinned, enrolled key,
+ * so the request is sender-constrained and nothing the administrator
+ * types can be phished. Its privilege is scoped by person population and
+ * by action.
+ */
+export interface AdministratorEntry {
+  id: string;
+  dwk: string;
+  kid: string;
+  /** The enrolled public key, with its `kid` and a fully-specified `alg`. */
+  key: Readonly<Record<string, string>>;
+  /** The persons whose missions this administrator governs. */
+  persons: ReadonlySet<string>;
+  actions: ReadonlySet<ControlAction>;
+}
+
+/** Revocation attempts after termination: bounded, spaced, and timed out. */
+export interface RevocationPolicy {
+  /** Attempts per Tracked Credential and recipient before the PS stops. */
+  maxAttempts: number;
+  /** The first retry's delay; each later one doubles, up to `retryMaxSeconds`. */
+  retryBaseSeconds: number;
+  retryMaxSeconds: number;
+  /** One attempt's limit, discovery and request together. */
+  attemptTimeoutMs: number;
+  /** How long a terminate waits for immediate results before it answers; 0 does not wait. */
+  immediateWaitMs: number;
+}
+
+/** The mission control plane's deployment policy. */
+export interface ManagementConfig {
+  /** The management companion's Owning Agent: admitted for status and `revoked` termination. */
+  admitOwningAgent: boolean;
+  /** `fresh_until` is this many seconds after `observed_at`. */
+  statusFreshSeconds: number;
+  /**
+   * True when an access mode the PS does not track (agent identity access,
+   * resource-managed access) may serve a mission's work; `complete` is then
+   * never true.
+   */
+  untrackedAccess: boolean;
+  revocation: RevocationPolicy;
+  administrators: readonly AdministratorEntry[];
+}
+
 /** The PS's static deployment configuration. */
 export interface PsConfig {
   /** The PS's server identifier: `iss` of every token it mints. */
@@ -63,6 +124,8 @@ export interface PsConfig {
   descriptionRules: readonly DescriptionRule[];
   /** The decision when no rule matches. */
   defaultDecision: "approve" | "deny";
+  /** The mission control plane's policy; absent, the PS implements no control plane. */
+  management?: ManagementConfig;
 }
 
 type Json = Record<string, unknown>;
@@ -102,6 +165,138 @@ function decision(value: unknown, where: string): "approve" | "deny" {
   return value;
 }
 
+function nonNegative(value: unknown, where: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new PsConfigError(`${where} is not a non-negative integer`);
+  }
+  return value;
+}
+
+function boolean(value: unknown, where: string): boolean {
+  if (typeof value !== "boolean") throw new PsConfigError(`${where} is not a boolean`);
+  return value;
+}
+
+/** A non-empty array of distinct strings, each accepted by `accept`. */
+function stringSet(
+  value: unknown,
+  where: string,
+  accept: (s: string) => boolean,
+  what: string,
+): Set<string> {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new PsConfigError(`${where} is not a non-empty array`);
+  }
+  const out = new Set<string>();
+  for (const item of value) {
+    const s = string(item, `${where}[]`);
+    if (!accept(s)) throw new PsConfigError(`${where} names ${what} ${s}`);
+    if (out.has(s)) throw new PsConfigError(`${where} names ${s} twice`);
+    out.add(s);
+  }
+  return out;
+}
+
+const PUBLIC_KEY_MEMBERS = ["kty", "crv", "x", "y", "alg", "kid"] as const;
+
+/**
+ * An administrator's enrolled public key: public members only, a `kid`,
+ * and a fully-specified `alg` its key type agrees with.
+ */
+function administratorKey(value: unknown, where: string): Record<string, string> {
+  const key = object(value, where);
+  only(key, where, PUBLIC_KEY_MEMBERS);
+  const out: Record<string, string> = {};
+  for (const name of PUBLIC_KEY_MEMBERS) {
+    if (key[name] !== undefined) out[name] = string(key[name], `${where}.${name}`);
+  }
+  if (out.kid === undefined) throw new PsConfigError(`${where}.kid is missing`);
+  try {
+    determineAlgorithm(out);
+  } catch (err) {
+    throw new PsConfigError(`${where} is not a usable public key: ${(err as Error).message}`);
+  }
+  return out;
+}
+
+function parseManagement(
+  raw: unknown,
+  issuer: string,
+  persons: ReadonlyMap<string, PersonEntry>,
+): ManagementConfig {
+  const doc = object(raw, "management");
+  only(doc, "management", [
+    "admit_owning_agent",
+    "status_fresh_seconds",
+    "untracked_access",
+    "revocation",
+    "administrators",
+  ]);
+  const rev = object(doc.revocation, "management.revocation");
+  only(rev, "management.revocation", [
+    "max_attempts",
+    "retry_base_seconds",
+    "retry_max_seconds",
+    "attempt_timeout_ms",
+    "immediate_wait_ms",
+  ]);
+  const revocation: RevocationPolicy = {
+    maxAttempts: seconds(rev.max_attempts, "management.revocation.max_attempts"),
+    retryBaseSeconds: seconds(rev.retry_base_seconds, "management.revocation.retry_base_seconds"),
+    retryMaxSeconds: seconds(rev.retry_max_seconds, "management.revocation.retry_max_seconds"),
+    attemptTimeoutMs: seconds(rev.attempt_timeout_ms, "management.revocation.attempt_timeout_ms"),
+    immediateWaitMs: nonNegative(rev.immediate_wait_ms, "management.revocation.immediate_wait_ms"),
+  };
+  if (revocation.retryBaseSeconds > revocation.retryMaxSeconds) {
+    throw new PsConfigError("management.revocation.retry_base_seconds exceeds retry_max_seconds");
+  }
+
+  if (!Array.isArray(doc.administrators)) {
+    throw new PsConfigError("management.administrators is not an array");
+  }
+  const ids = new Set<string>();
+  const administrators = doc.administrators.map((entry, i): AdministratorEntry => {
+    const where = `management.administrators[${i}]`;
+    const a = object(entry, where);
+    only(a, where, ["id", "dwk", "key", "persons", "actions"]);
+    if (!isServerIdentifier(a.id))
+      throw new PsConfigError(`${where}.id is not a server identifier`);
+    if (a.id === issuer) throw new PsConfigError(`${where}.id is the person server's own issuer`);
+    if (ids.has(a.id)) throw new PsConfigError(`management.administrators names ${a.id} twice`);
+    ids.add(a.id);
+    // An AAuth document name would let an AAuth server's own signature, or a
+    // token naming that document, be read as this administrator's.
+    if (
+      !isWellKnownName(a.dwk) ||
+      (AAUTH_SERVER_DOCUMENTS as readonly string[]).includes(a.dwk as string)
+    ) {
+      throw new PsConfigError(`${where}.dwk is not a deployment-chosen document name`);
+    }
+    const key = administratorKey(a.key, `${where}.key`);
+    return {
+      id: a.id,
+      dwk: a.dwk as string,
+      kid: key.kid as string,
+      key,
+      persons: stringSet(a.persons, `${where}.persons`, (p) => persons.has(p), "unknown person"),
+      actions: stringSet(
+        a.actions,
+        `${where}.actions`,
+        (s) => (CONTROL_ACTIONS as readonly string[]).includes(s),
+        "unknown action",
+      ) as Set<ControlAction>,
+    };
+  });
+
+  return {
+    admitOwningAgent: boolean(doc.admit_owning_agent, "management.admit_owning_agent"),
+    statusFreshSeconds: seconds(doc.status_fresh_seconds, "management.status_fresh_seconds"),
+    untrackedAccess: boolean(doc.untracked_access, "management.untracked_access"),
+    revocation,
+    administrators,
+  };
+}
+
 /**
  * Validate a parsed configuration document. Strict: unknown members,
  * duplicates, an agent bound to an unknown person, and a token lifetime
@@ -117,6 +312,7 @@ export function parsePsConfig(raw: unknown): PsConfig {
     "agents",
     "description_rules",
     "default_decision",
+    "management",
   ]);
   if (!isServerIdentifier(doc.issuer)) throw new PsConfigError("issuer is not a server identifier");
 
@@ -189,7 +385,7 @@ export function parsePsConfig(raw: unknown): PsConfig {
     };
   });
 
-  return {
+  const config: PsConfig = {
     issuer: doc.issuer,
     signingKey,
     lifetimes,
@@ -198,6 +394,10 @@ export function parsePsConfig(raw: unknown): PsConfig {
     descriptionRules,
     defaultDecision: decision(doc.default_decision, "default_decision"),
   };
+  if (doc.management !== undefined) {
+    config.management = parseManagement(doc.management, doc.issuer, persons);
+  }
+  return config;
 }
 
 /** Read and validate the configuration file at `file`. */

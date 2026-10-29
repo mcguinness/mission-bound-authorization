@@ -48,6 +48,7 @@ import { exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
   type ApplyResult,
+  AUTHORITY_CHANGED_CAPABILITY,
   MissionSignalEmitter,
   MissionSignalReceiver,
   signLifecycleEvent,
@@ -615,10 +616,15 @@ describe("authority_changed / containment_version — receiver rematerialization
       alg: "ES256",
       use: "sig",
     };
+    // The stream declares `authority_changed`: the contain commit narrows
+    // effective authority, and the Signals gate delivers it only to a stream
+    // whose consumer declared the rematerialization rule (#1001, D1002).
     const emitter = new MissionSignalEmitter({
       key: statusKeys.privateKey,
       kid: "as-status",
-      consumers: [{ audience: CONSUMER_AUD }],
+      consumers: [
+        { audience: CONSUMER_AUD, mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY] },
+      ],
     });
     const receiver = new MissionSignalReceiver({
       jwks: { keys: [statusPub] },

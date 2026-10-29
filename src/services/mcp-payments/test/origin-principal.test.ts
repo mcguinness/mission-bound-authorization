@@ -25,6 +25,7 @@ import {
 } from "../src/index.js";
 import { ALL_ACTIONS_CREDENTIAL } from "./credential-fixtures.js";
 import { RESOURCE_POLICY_PERMITS_ALL_FIXTURE } from "@mission/pdp/test-support";
+import { pinnedToCurrentContract } from "@mission/demo-data";
 
 // @spec runtime-evidence#decision-evidence-object (#741): one bundle per
 // test module. `signing`/`resolver` wire the PEP's store; `decide` is the
@@ -43,7 +44,7 @@ const view: MissionView = {
   state: "active",
   version: 1,
   authority_hash: "sha-256:hash539",
-  authority_set: [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] }],
+  authority_set: [pinnedToCurrentContract({ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: ["payments:vendor.read"] })],
   // @spec authority-server#mission-join (#685) -- the Mission's own approved
   // subject/client_id join fields, unrelated to the cross-domain Origin
   // Principal profile's mission.subject: this test file never exercises the
