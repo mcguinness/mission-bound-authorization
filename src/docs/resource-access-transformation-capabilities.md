@@ -10,7 +10,7 @@ undeclared. It is not the interoperable supported-subset profile either:
 that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
 relates to the reference's domain.
 
-Every statement here is true of the reference implementation at `57312dbf`
+Every statement here is true of the reference implementation at `ed2e0896`
 (paths relative to `src/`). Each rule names the code that applies or refuses
 it and the test (`it` title, in the named file) or case
 (`vectors/mission-resource-access/`) that witnesses it. Test files are under
@@ -120,7 +120,7 @@ rows and, for decimal amounts, by `compareAmounts`'s tests
 |---|---|---|---|
 | `vendors` (deployment-defined) and `terminal_when` (Discharge), compared by their own rules | implemented | `isSubsetEntry`, `intersect`, `intersectForProjection` | `packages/mission-core/test/authority-subset.test.ts` "never drops vendor, approval, or completion restrictions to meet a ceiling"; `token-request-rar-narrowing.test.ts` "relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed" |
 | A `constraints` key outside `SUPPORTED_CONSTRAINT_KEYS` (unknown, or a Common Constraint registered later), on the ceiling or the candidate | refused at intake, configuration load and derivation (`assertSupportedConstraints`); a projection fragment carrying one is dropped (`onlyProjectableConstraints`) | `SUPPORTED_CONSTRAINT_KEYS` (`authority-subset.ts`) | `unsupported-constraint-keys.test.ts` "configured-mapping mode refuses a Common Constraint registered after this implementation on a directly-supplied ceiling entry" and "submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine"; cases der-07, der-09, cc-unsupported-extension |
-| A key present only in the candidate narrows only when it has defined semantics and the resource server serving the entry can enforce it (D712) | implemented: a key without defined semantics is refused as above; a defined key the target audience is not known to enforce (its `mission_constraints_supported`) is refused at issuance with `invalid_target`, after a Token Exchange's subset gates, never issued with the key removed | as above; `unenforcedConstraintRefusal` (`packages/mission-core/src/scope-projection.ts`), called by `projectScope` | "a Token Exchange adding tenant to an untenanted entry is issued for an audience that enforces tenant, and the token carries it" and "a Token Exchange adding tenant for an audience not known to enforce it is refused invalid_target; the same entry without it is issued" (`common-constraints-endpoint.test.ts`); cases sub-enf-01 to sub-enf-07 (enforcement context), der-08 (narrows), der-09 (refused) |
+| A key present only in the candidate narrows only when it has defined semantics and the resource server serving the entry can enforce it (D712) | implemented: a key without defined semantics is refused as above; a defined key the target audience is not known to enforce (its `mission_constraints_supported`) is refused at issuance with `invalid_target`, after a Token Exchange's subset gates, never issued with the key removed. That issuance check is presence-keyed and stricter than the comparison: the cases decide a key's presence first, so a `requires_action_approval` of `false`, which Resource Access makes equivalent to omission, neither adds a key nor makes the reference carry one, on either operand (D1025) | as above; `unenforcedConstraintRefusal` (`packages/mission-core/src/scope-projection.ts`), called by `projectScope` | "a Token Exchange adding tenant to an untenanted entry is issued for an audience that enforces tenant, and the token carries it" and "a Token Exchange adding tenant for an audience not known to enforce it is refused invalid_target; the same entry without it is issued" (`common-constraints-endpoint.test.ts`); cases sub-enf-01 to sub-enf-11 (enforcement context and effective presence), der-08 (narrows), der-09 (refused) |
 | `locations` | refused, by presence | `REFUSED_ENTRY_MEMBERS`, `refusedEntryMember` (`authority-subset.ts`) | `rar-carriage.test.ts` "refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission"; case fc-08 |
 | An unknown top-level member, on the ceiling or the candidate | refused, by presence, against the supported set (the type's own members and `capability_sources`): at intake (the published schema's top level is closed) and at every requested-authority exchange, refresh narrowing included, with `invalid_authorization_details`; at configuration load and template consent; and by derivation over the ceiling and the proposal. A projection pairing carrying one is dropped, and the subset relation refuses any comparison involving one except a byte-identical pair, so an exchange that issues requested entries unprojected never drops an approved entry's member (#1399, D538) | `SUPPORTED_ENTRY_MEMBERS`, `unsupportedEntryMember` (`authority-subset.ts`) | `unknown-entry-member.test.ts` "refuses a ceiling entry carrying an unsupported member, whatever its value" and "refuses a submitted proposal entry carrying an unsupported member, whatever its value"; `rar-carriage.test.ts` "refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission" |
 
@@ -230,14 +230,14 @@ reference's domain contains it:
 | Actions | literal identifiers; a family refused | the same |
 | Members | `type`, `resource`, `resource_match`, `actions`, `constraints`, `resource_contract`; `delegation` and `capability_sources` outside | all eight (§2.3, §2.4) |
 | Constraints | the nine initial Common Constraints; `terminal_when` and `vendors` outside (D684) | the nine, `vendors` and `terminal_when` |
-| A key only the candidate carries | narrows only where `enforced_constraints` names it | narrows only where the serving audience enforces it |
+| A key only the candidate carries, by effective presence (D1025) | narrows only where `enforced_constraints` names it | narrows only where the serving audience enforces it |
 
 `resource-access-subset.test.ts` checks that containment against the case
 files: "selects expected-outcome cases this implementation runs, except a
 refusal of input the subset excludes and this implementation supports". A
 declaration whose domain is the fixture's would claim less than the
-reference implements. One whose domain is the reference's own (§6) also
-claims `prefix`, which #1377 asks the owner to rule on (ruling B).
+reference implements. The reference's qualified domain is its own (§6),
+`prefix` included, while the fixture stays `exact`-only (D1025, ruling B).
 
 ## 6. Route to a declaration
 
@@ -253,14 +253,17 @@ declaration is published yet. Before one is made:
   and §2.3 now give endpoint evidence for all nine Common Constraints and
   the candidate-only condition; `delegation` and `projection` need their
   own); and
-- the declaration states its domain: `exact` resources (and `prefix`, if
-  ruling B in #1377 includes it), literal actions, the supported members and
-  constraints, the matcher-comparison limitation of §2.4, and each
-  transformation's scope.
+- the declaration states its domain: `exact` and `prefix` resources (D1025,
+  ruling B), literal actions, the supported members and constraints, the
+  matcher-comparison limitation of §2.4, and each transformation's scope.
 
-The form a qualified declaration takes is #1377's ruling A: the binding's
-`mission_transformation_capabilities` value is three booleans, and D538
-forbids an unqualified whole-type boolean narrowed by prose.
+D1025 (ruling A) adopts a structured `narrowing` value that Resource Access
+defines, referencing a versioned domain document by identifier and digest,
+through the existing carrier and deployment documentation: boolean meanings
+and carrier precedence are preserved, and an unknown or malformed
+qualification, or an unavailable or mismatched domain, fails closed rather
+than counting as whole-type support. #249's fixture and #819's
+independent-consumer subset stay `exact`-only.
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
 A qualified `narrowing` choice establishes no `projection` evidence, and the
