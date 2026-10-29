@@ -3786,10 +3786,10 @@ Table of Contents
    policy itself terminates the Mission; either way, its termination
    reason is revoked.  The Subject, the Approver, and an administrator
    are parties that policy can authorize; none is authorized by its role
-   alone.  A deployment MUST provide an authenticated means, independent
-   of possession of any token, by which a party its policy authorizes
-   revokes a Mission by mission_id (so a Mission can be stopped even
-   when no refresh token is held).
+   alone.  A Mission Issuer MUST accept, through an authenticated means
+   independent of possession of any token, a revocation by mission_id
+   from a party the deployment's policy authorizes (so a Mission can be
+   stopped even when no refresh token is held).
 
    When the AS establishes that the principal identified by a Mission's
    recorded subject (Section 6.3.3) has been deprovisioned, it SHOULD
@@ -3815,9 +3815,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-status]) defines an
    interoperable revoke operation.
 
-   As Section 2.1 of [RFC7009] permits, a deployment's revocation policy
-   can treat revoking a Mission's refresh token as revoking the Mission;
-   a deployment that couples token revocation to Mission revocation
+   Revoking a token does not by itself revoke a Mission.  As Section 2.1
+   of [RFC7009] permits, a deployment's revocation policy can treat
+   revoking a Mission's refresh token as revoking the Mission; a
+   deployment that couples token revocation to Mission revocation
    documents that behavior.
 
    Token validity and Mission validity are distinct: an already-issued
@@ -5398,8 +5399,7 @@ Table of Contents
    a conformance class, and neither removes a surface: the Mission
    Issuer still implements every surface its role lists (Section 14.1),
    the evidence dispatch and refusal rules included even when it
-   supports no evidence type, and the deployment still provides the
-   authenticated revocation means of Section 7.8.2.
+   supports no evidence type.
 
 14.1.  Conformance Roles
 
@@ -5422,9 +5422,12 @@ Table of Contents
       (Section 7), as the RFC 9068 JWT or as an opaque reference token
       under the introspected consumption mode (Section 9.2.4);
 
-   *  the subset rule (Section 5.4); and
+   *  the subset rule (Section 5.4);
 
-   *  gating of issuance on Mission state (Section 7.1).
+   *  gating of issuance on Mission state (Section 7.1); and
+
+   *  acceptance of a revocation by mission_id through an authenticated
+      means independent of possession of any token (Section 7.8.2).
 
    An AS can conform as a Mission Issuer without supporting any Intent
    Submission Evidence type.  Such an AS refuses every presented entry
@@ -8044,6 +8047,13 @@ Appendix F.  Document History
       sections, Extensibility and Conformance follow.  Every section
       keeps its anchor and, except the issuance chapter, its title
       (#1892, D1026).
+
+   *  Revocation: a Mission Issuer MUST accept, through an authenticated
+      means independent of possession of any token, a revocation by
+      mission_id from a party the deployment's policy authorizes, where
+      a deployment was required to provide that means; Conformance Roles
+      lists it among the Mission Issuer's surfaces; revoking a token
+      does not by itself revoke a Mission (#1892, D1026).
 
    -01
 

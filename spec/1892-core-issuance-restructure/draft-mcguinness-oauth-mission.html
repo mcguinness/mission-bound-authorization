@@ -6124,10 +6124,10 @@ party the deployment's policy authorizes to revoke it, or when that
 policy itself terminates the Mission; either way, its termination
 reason is <code>revoked</code>. The Subject, the Approver, and an administrator
 are parties that policy can authorize; none is authorized by its role
-alone. A deployment <span class="bcp14">MUST</span> provide an authenticated means, independent
-of possession of any token, by which a party its policy authorizes
-revokes a Mission by <code>mission_id</code> (so a Mission can be stopped even
-when no refresh token is held).<a href="#section-7.8.2-1" class="pilcrow">¶</a></p>
+alone. A Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated means
+independent of possession of any token, a revocation by <code>mission_id</code>
+from a party the deployment's policy authorizes (so a Mission can be
+stopped even when no refresh token is held).<a href="#section-7.8.2-1" class="pilcrow">¶</a></p>
 <p id="section-7.8.2-2">When the AS establishes that the principal identified by a Mission's
 recorded <code>subject</code> (<a href="#record-principal-members" class="auto internal xref">Section 6.3.3</a>) has been
 deprovisioned, it <span class="bcp14">SHOULD</span> terminate that Mission with termination
@@ -6150,10 +6150,11 @@ deployment's enforcement mechanism.<a href="#section-7.8.2-2" class="pilcrow">¶
 deployment-defined authenticated surface satisfies this requirement;
 Mission Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>)
 defines an interoperable <code>revoke</code> operation.<a href="#section-7.8.2-3" class="pilcrow">¶</a></p>
-<p id="section-7.8.2-4">As <span><a href="https://rfc-editor.org/rfc/rfc7009#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> permits, a deployment's revocation
-policy can treat revoking a Mission's refresh token as revoking the
-Mission; a deployment that couples token revocation to Mission
-revocation documents that behavior.<a href="#section-7.8.2-4" class="pilcrow">¶</a></p>
+<p id="section-7.8.2-4">Revoking a token does not by itself revoke a Mission. As
+<span><a href="https://rfc-editor.org/rfc/rfc7009#section-2.1" class="relref">Section 2.1</a> of [<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> permits, a deployment's revocation policy
+can treat revoking a Mission's refresh token as revoking the Mission;
+a deployment that couples token revocation to Mission revocation
+documents that behavior.<a href="#section-7.8.2-4" class="pilcrow">¶</a></p>
 <p id="section-7.8.2-5">Token validity and Mission validity are distinct: an already-issued
 access token remains valid until it expires (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>), so
 a token can outlive a transition of its Mission by at most the token
@@ -7963,8 +7964,7 @@ only that type's specification-defined vocabulary; and<a href="#section-14-2.2.1
 starting point is a conformance class, and neither removes a surface:
 the Mission Issuer still implements every surface its role lists
 (<a href="#conformance-roles" class="auto internal xref">Section 14.1</a>), the evidence dispatch and refusal rules
-included even when it supports no evidence type, and the deployment
-still provides the authenticated revocation means of <a href="#revocation" class="auto internal xref">Section 7.8.2</a>.<a href="#section-14-3" class="pilcrow">¶</a></p>
+included even when it supports no evidence type.<a href="#section-14-3" class="pilcrow">¶</a></p>
 <div id="conformance-roles">
 <section id="section-14.1">
         <h3 id="name-conformance-roles">
@@ -7996,10 +7996,14 @@ reference token under the introspected consumption mode
 (<a href="#introspected-consumption" class="auto internal xref">Section 9.2.4</a>);<a href="#section-14.1-3.4.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-14.1-3.5">
-            <p id="section-14.1-3.5.1">the subset rule (<a href="#subset" class="auto internal xref">Section 5.4</a>); and<a href="#section-14.1-3.5.1" class="pilcrow">¶</a></p>
+            <p id="section-14.1-3.5.1">the subset rule (<a href="#subset" class="auto internal xref">Section 5.4</a>);<a href="#section-14.1-3.5.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-14.1-3.6">
-            <p id="section-14.1-3.6.1">gating of issuance on Mission state (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>).<a href="#section-14.1-3.6.1" class="pilcrow">¶</a></p>
+            <p id="section-14.1-3.6.1">gating of issuance on Mission state (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>); and<a href="#section-14.1-3.6.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-14.1-3.7">
+            <p id="section-14.1-3.7.1">acceptance of a revocation by <code>mission_id</code> through an authenticated
+means independent of possession of any token (<a href="#revocation" class="auto internal xref">Section 7.8.2</a>).<a href="#section-14.1-3.7.1" class="pilcrow">¶</a></p>
 </li>
         </ul>
 <p id="section-14.1-4">An AS can conform as a Mission Issuer without supporting any Intent
@@ -11110,6 +11114,14 @@ Server Enforcement and Mission State via Token Introspection; Error
 and Challenge Mapping, the two metadata sections, Extensibility and
 Conformance follow. Every section keeps its anchor and, except the
 issuance chapter, its title (#1892, D1026).<a href="#appendix-F-3.40.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.41">
+          <p id="appendix-F-3.41.1">Revocation: a Mission Issuer <span class="bcp14">MUST</span> accept, through an authenticated
+means independent of possession of any token, a revocation by
+<code>mission_id</code> from a party the deployment's policy authorizes, where
+a deployment was required to provide that means; Conformance Roles
+lists it among the Mission Issuer's surfaces; revoking a token does
+not by itself revoke a Mission (#1892, D1026).<a href="#appendix-F-3.41.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-F-4">-01<a href="#appendix-F-4" class="pilcrow">¶</a></p>
