@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         28 October 2026
-Expires: 1 May 2027
+Intended status: Standards Track                         29 October 2026
+Expires: 2 May 2027
 
 
                 Mission Lifecycle Signals for OAuth 2.0
@@ -53,7 +53,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 May 2027.
+   This Internet-Draft will expire on 2 May 2027.
 
 Copyright Notice
 
@@ -79,7 +79,7 @@ Table of Contents
    5.  SET Protection
    6.  Transmitter Delivery
    7.  Consumer Behavior on Receipt
-   8.  Discharge Compatibility
+   8.  Authority Change Compatibility
    9.  Relationship to Revocation Propagation
    10. Worked Example
    11. Authorization Server Metadata
@@ -655,12 +655,18 @@ Table of Contents
    consumer has received a verified verification or heartbeat event
    within the stream's heartbeat interval; such an event attests that
    any committed transition for the stream's subjects would have been
-   delivered.
+   delivered, other than an event the gate of Section 8 withholds.
 
    On a stream verified live, silence is freshness-preserving: the
    consumer MAY continue to rely on cached Mission state for those
    subjects up to the next heartbeat interval, without polling Mission
-   Status per Mission.
+   Status per Mission.  For a stream whose consumer has not declared
+   authority_changed, verified liveness does not establish that its
+   cached effective authority reflects every narrowing.  Continued
+   heartbeats can prevent the staleness fallback from firing while a
+   narrowing event is withheld (Section 8), so such a consumer has no
+   narrowing-specific freshness bound; Mission and credential expiry
+   still apply.
 
    The staleness fallback applies to a stream that is not verified live.
    A consumer MUST treat cached Mission state as stale once the stream
@@ -675,7 +681,7 @@ Table of Contents
    missed events, applies the same rule rather than continuing on
    possibly stale state.
 
-8.  Discharge Compatibility
+8.  Authority Change Compatibility
 
    authority_changed true (Section 4) is a breaking change for a
    consumer built before this member existed: such a consumer ignores
@@ -696,20 +702,22 @@ Table of Contents
    rides an object the Shared Signals Framework already defines and
    needs no IANA action.
 
-   The gate binds exactly the events whose authority change is carried
-   only by the new member: a Mission Issuer MUST NOT deliver a
-   mission.lifecycle-change event whose effective-authority change is
-   represented by authority_changed alone (a discharge commit,
-   [I-D.draft-mcguinness-oauth-mission-discharge]) to a stream whose
-   consumer has not declared authority_changed in
-   mission_capabilities_supported.  An event whose narrowing is also
-   represented by containment_version follows the containment profile's
-   existing delivery and consumer rules unchanged
-   ([I-D.draft-mcguinness-oauth-mission-containment]); the member is
-   still set on it, and a declared consumer applies one rule to both.
-   Where Signals is used, a Mission Issuer MUST emit authority_changed
-   true on the mission.lifecycle-change event a discharge commit
-   produces.
+   The gate binds every event that carries authority_changed true, a
+   discharge commit ([I-D.draft-mcguinness-oauth-mission-discharge]) and
+   a containment commit
+   ([I-D.draft-mcguinness-oauth-mission-containment]) alike: a Mission
+   Issuer MUST NOT deliver a mission.lifecycle-change event that carries
+   authority_changed true to a stream whose consumer has not declared
+   authority_changed in mission_capabilities_supported.  One declaration
+   covers both, since the declared rule of Section 7 rematerializes on
+   either.  Withholding an event changes no other event's version, so
+   the consumer's next delivered event for that Mission shows a version
+   gap, and the consumer re-establishes state through the Mission Status
+   operation (Section 7).  Until then the withheld consumer has no
+   notice of the narrowing; its fallback is that gap or, on a stream not
+   verified live, the staleness rule of Section 7.  Where Signals is
+   used, a Mission Issuer MUST emit authority_changed true on the
+   mission.lifecycle-change event a discharge commit produces.
 
 9.  Relationship to Revocation Propagation
 
@@ -901,10 +909,10 @@ Table of Contents
       is terminated), suspend_until with on_expiry (present only on a
       transition to suspended under a deadline), and authority_changed
       (required true on any event whose commit narrows effective
-      authority without changing state, the discharge commit being the
-      current case, delivery subject to the gate of Section 8; optional
-      and defaulting to false otherwise).  Optional event-body claims:
-      tenant and reason.  See Section 4 for the schema.
+      authority without changing state, for example a discharge or
+      containment commit, delivery subject to the gate of Section 8;
+      optional and defaulting to false otherwise).  Optional event-body
+      claims: tenant and reason.  See Section 4 for the schema.
 
    This event type uses the OpenID Shared Signals Framework [OIDC-SSF]
    SET shape.  The standalone Mission Issuer binding
@@ -1065,6 +1073,14 @@ Appendix A.  Document History
    *  Editorial, no requirement change: the lifecycle-change examples'
       revocation reason describes a revocation, not a completion
       (#1535).
+
+   *  Authority Change Compatibility (Section 8), formerly Discharge
+      Compatibility: the delivery gate binds every event carrying
+      authority_changed true, a containment commit as well as a
+      discharge, under the one authority_changed capability.  A withheld
+      event leaves a version gap on the undeclared stream, and verified
+      liveness gives an undeclared consumer no narrowing-specific
+      freshness bound (#1001).
 
 Acknowledgments
 

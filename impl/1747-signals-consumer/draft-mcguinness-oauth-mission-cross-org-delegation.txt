@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            28 October 2026
-Expires: 1 May 2027
+Intended status: Experimental                            29 October 2026
+Expires: 2 May 2027
 
 
          Mission Cross-Organizational Delegation for OAuth 2.0
@@ -56,7 +56,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 May 2027.
+   This Internet-Draft will expire on 2 May 2027.
 
 Copyright Notice
 
@@ -183,13 +183,15 @@ Table of Contents
    A Chain travels as one closed JSON envelope, the *Chain
    Presentation*:
 
-   chain:  REQUIRED.  An array of compact-serialization JWS strings
+   aat_chain:  REQUIRED.  An array of compact-serialization JWS strings
       ([RFC7515]), the root first and the leaf last; each element is one
-      hop token.
+      hop token.  It is the substrate's presentation member of that name
+      (Section 7.4 of
+      [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]).
 
    actor_credentials:  OPTIONAL.  An array of objects aligning actor-
       binding credentials to named hops (Section 3.4), each with hop
-      (REQUIRED, the 0-based index into chain), type (REQUIRED, a
+      (REQUIRED, the 0-based index into aat_chain), type (REQUIRED, a
       registered actor-credential type identifier), and credential
       (REQUIRED, the credential in the serialization its type defines).
 
@@ -200,18 +202,24 @@ Table of Contents
    exchange (Section 8.1) with subject_token_type
    urn:ietf:params:oauth:token-type:mission-delegation-chain; for
    retention and evidence its media type is application/mission-
-   delegation-chain+json (Section 16).  Direct presentation of a Chain
-   to a resource server is not defined in this version: a chain-
-   verifying resource server obtains the Presentation through a
-   deployment-defined channel and applies Section 7 unchanged.
+   delegation-chain+json (Section 16).
 
-   A verifier MUST declare maximum hop count, maximum Presentation size,
-   and a verification-cost ceiling, and MUST refuse a Presentation
+   At direct invocation, the holder presents the Chain to a chain-
+   verifying resource server in the substrate's presentation object
+   (Section 7.4 of [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]):
+   aat_chain, the invocation's aat_pop, and actor_credentials as defined
+   above.  That object is not closed: a chain-verifying resource server
+   recognizes actor_credentials and validates it (Section 3.3), and
+   ignores other members it does not recognize, as the substrate
+   specifies.
+
+   A verifier MUST declare maximum hop count, maximum presentation size,
+   and a verification-cost ceiling, and MUST refuse a presentation
    exceeding any of them before verifying any signature.
 
    The *chain digest* is the family anchor idiom
    ([I-D.draft-mcguinness-oauth-mission]) with typ mission-delegation-
-   chain computed over the JCS canonical bytes of the chain array
+   chain computed over the JCS canonical bytes of the aat_chain array
    exactly as presented, an ordered JSON array of compact-JWS strings.
    It commits to the complete ordered chain and to nothing else.
 
@@ -278,14 +286,15 @@ Table of Contents
    A parent signature on a later hop proves only that the parent
    delegated to the child key; it does not authenticate the identity
    values the parent asserts.  A hop carrying act MUST have exactly one
-   aligned entry in the Presentation's actor_credentials, and its
-   credential MUST validate under Section 3.4; a Chain naming an actor
-   on a hop with a missing, misaligned, or invalid credential MUST be
-   refused.  A hop without act is key-only: its holder is identified by
-   key possession alone, it satisfies no eligibility matcher (the
-   issuance profile's allowed_delegates or a sub_profile selector), and
-   where policy requires a named actor a key-only hop fails closed.  act
-   is an identity statement, never an evidence container.
+   aligned entry in the actor_credentials presented with the Chain, at
+   the projection exchange or at direct invocation, and its credential
+   MUST validate under Section 3.4; a Chain naming an actor on a hop
+   with a missing, misaligned, or invalid credential MUST be refused.  A
+   hop without act is key-only: its holder is identified by key
+   possession alone, it satisfies no eligibility matcher (the issuance
+   profile's allowed_delegates or a sub_profile selector), and where
+   policy requires a named actor a key-only hop fails closed.  act is an
+   identity statement, never an evidence container.
 
    The act member never carries authority.  Delegation history follows
    authorization continuity, not organizational topology
@@ -365,8 +374,9 @@ Table of Contents
    2.  bind the child to the exact parent through par_hash;
 
    3.  narrow or preserve the mapped capability entry under the
-       attenuation substrate's tool and constraint subset model; no
-       other authorization-details entry is added;
+       attenuation substrate's tool and constraint subset model, and its
+       mission_constraints member under the attenuation profile's
+       narrowing rule; no other authorization-details entry is added;
 
    4.  keep aud equal to or narrower than the parent's;
 
@@ -383,8 +393,8 @@ Table of Contents
    9.  bind the child to the recipient workload's own proof-of-
        possession key, carried as the child's public cnf.jwk.
 
-   The recipient proves possession of the leaf key at redemption or
-   direct resource access.
+   The recipient proves possession of the leaf key at the projection
+   exchange or at direct invocation (Section 7, step 8).
 
 6.  Trust Model
 
@@ -432,7 +442,10 @@ Table of Contents
         Mission-Issuer equality, the issuer-asserted root act, and the
         mission claim including subject;
 
-   3.   validate every par_hash link and every child signature through
+   3.   verify the Chain under steps 1 to 5 of the substrate's chain
+        verification algorithm (Section 8 of
+        [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]), which
+        validate every par_hash link and every child signature through
         the leaf, verifying each child with the public key carried in
         its parent's cnf.jwk;
 
@@ -442,9 +455,13 @@ Table of Contents
    5.   verify monotonic del_depth, the preserved del_max_depth, nested
         aud and exp, and the mapped capability entry's subset relation
         at every hop under the attenuation substrate's tool and
-        constraint model; an authorization-details entry of an unknown
-        or unmapped type MUST NOT be treated as conferred authority, and
-        its presence beyond the mapped entry refuses the Chain;
+        constraint model, including the narrowing of its
+        mission_constraints member
+        ([I-D.draft-mcguinness-oauth-mission-attenuation],
+        Section "Mission Constraints Member"); an authorization-details
+        entry of an unknown or unmapped type MUST NOT be treated as
+        conferred authority, and its presence beyond the mapped entry
+        refuses the Chain;
 
    6.   classify each hop as named (act present with its aligned
         credential validated per Section 3.4) or key-only (act absent),
@@ -455,7 +472,12 @@ Table of Contents
    7.   reconstruct the ordered actor history from the validated
         artifacts, rejecting conflicting or duplicated representations;
 
-   8.   verify the leaf presenter's proof of possession; identity
+   8.   verify the leaf presenter's proof of possession of the leaf
+        cnf.jwk key: at direct invocation, under steps 6 and 7 of the
+        substrate's algorithm, which bind the proof to the invoked tool
+        and its arguments; at the projection exchange, which invokes no
+        tool, through the token request's proof (Section 8.1) in place
+        of the substrate's proof-of-possession JWT; identity
         verification never substitutes for the authority-chain checks;
 
    9.   establish that the Mission is active from a locally available
@@ -480,6 +502,12 @@ Table of Contents
    Chain, it MUST:
 
    *  carry only the locally permitted subset;
+
+   *  preserve the restrictions of both layers of the leaf's capability
+      entry: each local entry carries the constraints and
+      resource_contract of its tool's mission_constraints value, and a
+      restriction of either layer that the local token cannot represent,
+      or its consumer cannot enforce, refuses the exchange;
 
    *  preserve the mission claim invariants, including subject;
 
@@ -516,19 +544,28 @@ Table of Contents
    *  requested_token_type: urn:ietf:params:oauth:token-
       type:access_token;
 
-   *  resource or audience: the requested local audience, within the
-      leaf's aud;
+   *  resource or audience: the requested local audience, within the aud
+      of every hop, as the substrate requires of an enforcement point at
+      direct invocation (Section 8 of
+      [I-D.draft-niyikiza-oauth-attenuating-agent-tokens], step 6c);
+      with the nesting of Section 7 step 5, this is the leaf's aud;
 
    *  client authentication as the Resource AS's policy requires; and
 
-   *  proof of possession of the leaf cnf.jwk key on the request (DPoP
-      or mTLS), the same mechanism the issued local token is bound to.
+   *  proof of possession of exactly the leaf cnf.jwk key on the
+      request, by DPoP ([RFC9449]) or mutual TLS ([RFC8705]), the same
+      mechanism the issued local token is bound to.  A DPoP proof passes
+      the checks of Section 4.3 of [RFC9449], including its method, URI,
+      and creation-time window, and its jti is accepted once within that
+      window (Section 11.1 of [RFC9449]).
 
    A Presentation that is malformed, carries an unknown top-level
    member, or exceeds a declared bound refuses with invalid_request; a
    Chain failing any step of Section 7 refuses with invalid_grant,
    disclosing no partial verification detail; a requested audience
-   outside the leaf's aud refuses with invalid_target.  On success the
+   outside a hop's aud, or a restriction of either layer of the leaf's
+   capability entry that the local token cannot represent or its
+   consumer cannot enforce, refuses with invalid_target.  On success the
    Resource AS mints the audience-local token per the rules above.
 
 9.  Mission-Binding Profile
@@ -548,8 +585,9 @@ Table of Contents
    2.  *Authority bound.* The root's mapped entry lies within the
        Mission Authority Set (Section 4); each hop is a subset of its
        parent under the attenuation substrate's tool and constraint
-       model (Section 5); the local token carries only the locally
-       permitted subset of the verified leaf (Section 8).
+       model and the attenuation profile's mission_constraints rule
+       (Section 5); the local token carries only the locally permitted
+       subset of the verified leaf (Section 8).
 
    3.  *Mission state.* The originating Mission Issuer issues the root
        only while the Mission is active (Section 4).  A holder mints a
@@ -623,9 +661,13 @@ Table of Contents
    confirmations; a named hop whose credential subject differs from its
    act, whose bound key differs from the hop cnf.jwk, or whose
    credential issuer is untrusted, expired, or revoked; an unmapped
-   authorization-details entry beyond the mapped capability entry; and
-   valid delegated authority denied by local entitlement or local
-   policy.
+   authorization-details entry beyond the mapped capability entry; a
+   mission_constraints member missing, widened, or carrying an unknown
+   key at either hop; a direct invocation whose proof names another
+   tool, and a replayed exchange proof; a leaf restriction of either
+   layer the local token cannot represent or its consumer cannot
+   enforce; and valid delegated authority denied by local entitlement or
+   local policy.
 
 13.  End-to-End Example (Non-Normative)
 
@@ -634,9 +676,9 @@ Table of Contents
    agent-a"}, records the mapping and version, and mints the root: typ
    per the substrate, iss the Mission Issuer, aud
    ["https://api.org3.example"], cnf.jwk agent A's public key, the
-   mapped capability entry, del_depth 0, del_max_depth 2, act naming
-   agent A, and the mission claim with id, issuer, authority_hash, and
-   subject.
+   mapped capability entry with its mission_constraints member,
+   del_depth 0, del_max_depth 2, act naming agent A, and the mission
+   claim with id, issuer, authority_hash, and subject.
 
    Agent A delegates to organization 2's agent B: it signs a child with
    its own key (the pair of the root's cnf.jwk), par_hash over the root,
@@ -649,7 +691,7 @@ Table of Contents
 
    POST /token
    grant_type=urn:ietf:params:oauth:grant-type:token-exchange
-   &subject_token=<base64url({"chain":[root,hop1,hop2],
+   &subject_token=<base64url({"aat_chain":[root,hop1,hop2],
      "actor_credentials":[{"hop":1,"type":"wimse-wit",
      "credential":"..."}]})>
    &subject_token_type=
@@ -806,9 +848,9 @@ Table of Contents
    [I-D.draft-niyikiza-oauth-attenuating-agent-tokens]
               Niyikiza, N. A., "Attenuating Authorization Tokens for
               Agentic Delegation Chains", Work in Progress, Internet-
-              Draft, draft-niyikiza-oauth-attenuating-agent-tokens-01,
-              15 June 2026, <https://datatracker.ietf.org/doc/html/
-              draft-niyikiza-oauth-attenuating-agent-tokens-01>.
+              Draft, draft-niyikiza-oauth-attenuating-agent-tokens-02,
+              26 October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-niyikiza-oauth-attenuating-agent-tokens-02>.
 
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
@@ -832,6 +874,12 @@ Table of Contents
               DOI 10.17487/RFC8693, January 2020,
               <https://www.rfc-editor.org/rfc/rfc8693>.
 
+   [RFC8705]  Campbell, B., Bradley, J., Sakimura, N., and T.
+              Lodderstedt, "OAuth 2.0 Mutual-TLS Client Authentication
+              and Certificate-Bound Access Tokens", RFC 8705,
+              DOI 10.17487/RFC8705, February 2020,
+              <https://www.rfc-editor.org/rfc/rfc8705>.
+
    [RFC8725]  Sheffer, Y., Hardt, D., and M. Jones, "JSON Web Token Best
               Current Practices", BCP 225, RFC 8725,
               DOI 10.17487/RFC8725, February 2020,
@@ -841,6 +889,11 @@ Table of Contents
               Rich Authorization Requests", RFC 9396,
               DOI 10.17487/RFC9396, May 2023,
               <https://www.rfc-editor.org/rfc/rfc9396>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/rfc/rfc9449>.
 
 17.2.  Informative References
 

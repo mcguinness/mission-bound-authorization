@@ -1062,7 +1062,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 1 May 2027</td>
+<td class="center">Expires 2 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1075,12 +1075,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-oauth-mission-signals-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-28" class="published">28 October 2026</time>
+<time datetime="2026-10-29" class="published">29 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Standards Track</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-01">1 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-02">2 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1136,7 +1136,7 @@ issuance profile; a deployment that does not adopt it is unaffected.<a href="#se
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 1 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 2 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1192,7 +1192,7 @@ issuance profile; a deployment that does not adopt it is unaffected.<a href="#se
             <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-consumer-behavior-on-receip" class="internal xref">Consumer Behavior on Receipt</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
-            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-discharge-compatibility" class="internal xref">Discharge Compatibility</a></p>
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-authority-change-compatibil" class="internal xref">Authority Change Compatibility</a></p>
 </li>
           <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
             <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-relationship-to-revocation-" class="internal xref">Relationship to Revocation Propagation</a></p>
@@ -1890,12 +1890,19 @@ verification event. A Mission Issuer <span class="bcp14">MAY</span> additionally
 stream-status heartbeat. A stream is verified live when the consumer
 has received a verified verification or heartbeat event within the
 stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered.<a href="#section-7-5" class="pilcrow">¶</a></p>
+transition for the stream's subjects would have been delivered, other
+than an event the gate of <a href="#discharge-compatibility" class="auto internal xref">Section 8</a> withholds.<a href="#section-7-5" class="pilcrow">¶</a></p>
 <p id="section-7-6">On a
 stream verified live, silence is freshness-preserving: the consumer
 <span class="bcp14">MAY</span> continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
-Mission.<a href="#section-7-6" class="pilcrow">¶</a></p>
+Mission. For a stream whose consumer has not declared
+<code>authority_changed</code>, verified liveness does not establish that its
+cached effective authority reflects every narrowing. Continued
+heartbeats can prevent the staleness fallback from firing while a
+narrowing event is withheld (<a href="#discharge-compatibility" class="auto internal xref">Section 8</a>), so such a
+consumer has no narrowing-specific freshness bound; Mission and
+credential expiry still apply.<a href="#section-7-6" class="pilcrow">¶</a></p>
 <p id="section-7-7">The staleness fallback applies to a stream that is not verified live.
 A consumer <span class="bcp14">MUST</span> treat cached Mission state as stale once the stream
 has gone without a verified verification or heartbeat event for longer
@@ -1911,8 +1918,8 @@ continuing on possibly stale state.<a href="#section-7-8" class="pilcrow">¶</a>
 </div>
 <div id="discharge-compatibility">
 <section id="section-8">
-      <h2 id="name-discharge-compatibility">
-<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-discharge-compatibility" class="section-name selfRef">Discharge Compatibility</a>
+      <h2 id="name-authority-change-compatibil">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-authority-change-compatibil" class="section-name selfRef">Authority Change Compatibility</a>
       </h2>
 <p id="section-8-1"><code>authority_changed</code> true (<a href="#lifecycle-event" class="auto internal xref">Section 4</a>) is a breaking change
 for a consumer built before this member existed: such a consumer
@@ -1932,17 +1939,21 @@ rematerialization rule of <a href="#consumer-behavior" class="auto internal xref
 prefix keeps this document's extension collision-safe on an object
 it does not own; the member rides an object the Shared Signals
 Framework already defines and needs no IANA action.<a href="#section-8-2" class="pilcrow">¶</a></p>
-<p id="section-8-3">The gate binds exactly the events whose authority change is carried
-only by the new member: a Mission Issuer <span class="bcp14">MUST NOT</span> deliver a
-<code>mission.lifecycle-change</code> event whose effective-authority change is
-represented by <code>authority_changed</code> alone (a discharge commit,
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>) to a stream whose
-consumer has not declared <code>authority_changed</code> in
-<code>mission_capabilities_supported</code>. An event whose narrowing is also
-represented by <code>containment_version</code> follows the containment
-profile's existing delivery and consumer rules unchanged
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>); the member is
-still set on it, and a declared consumer applies one rule to both.
+<p id="section-8-3">The gate binds every event that carries <code>authority_changed</code> true, a
+discharge commit (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-discharge" class="cite xref">I-D.draft-mcguinness-oauth-mission-discharge</a>]</span>)
+and a containment commit
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-containment" class="cite xref">I-D.draft-mcguinness-oauth-mission-containment</a>]</span>) alike: a Mission
+Issuer <span class="bcp14">MUST NOT</span> deliver a <code>mission.lifecycle-change</code> event that
+carries <code>authority_changed</code> true to a stream whose consumer has not
+declared <code>authority_changed</code> in <code>mission_capabilities_supported</code>. One
+declaration covers both, since the declared rule of
+<a href="#consumer-behavior" class="auto internal xref">Section 7</a> rematerializes on either. Withholding an event
+changes no other event's <code>version</code>, so the consumer's next delivered
+event for that Mission shows a version gap, and the consumer
+re-establishes state through the Mission Status operation
+(<a href="#consumer-behavior" class="auto internal xref">Section 7</a>). Until then the withheld consumer has no
+notice of the narrowing; its fallback is that gap or, on a stream not
+verified live, the staleness rule of <a href="#consumer-behavior" class="auto internal xref">Section 7</a>.
 Where Signals is used, a Mission Issuer <span class="bcp14">MUST</span> emit
 <code>authority_changed</code> true on the <code>mission.lifecycle-change</code> event a
 discharge commit produces.<a href="#section-8-3" class="pilcrow">¶</a></p>
@@ -2197,8 +2208,8 @@ approval-event emission), <code>termination</code> (present exactly when
 <code>state</code> is <code>terminated</code>), <code>suspend_until</code> with <code>on_expiry</code> (present
 only on a transition to <code>suspended</code> under a deadline), and
 <code>authority_changed</code> (required true on any event whose commit
-narrows effective authority without changing <code>state</code>, the discharge
-commit being the current case, delivery subject to the gate of
+narrows effective authority without changing <code>state</code>, for example a
+discharge or containment commit, delivery subject to the gate of
 <a href="#discharge-compatibility" class="auto internal xref">Section 8</a>; optional and defaulting to false
 otherwise). Optional event-body claims: <code>tenant</code> and <code>reason</code>. See
 <a href="#lifecycle-event" class="auto internal xref">Section 4</a> for the schema.<a href="#section-15.1-2.1.1" class="pilcrow">¶</a></p>
@@ -2374,6 +2385,15 @@ event delivery remains non-atomic and may reorder (#576).<a href="#appendix-A-2.
           <p id="appendix-A-2.3.1">Editorial, no requirement change: the lifecycle-change examples'
 revocation <code>reason</code> describes a revocation, not a completion
 (#1535).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.4">
+          <p id="appendix-A-2.4.1">Authority Change Compatibility (<a href="#discharge-compatibility" class="auto internal xref">Section 8</a>),
+formerly Discharge Compatibility: the delivery gate binds every
+event carrying <code>authority_changed</code> true, a containment commit as
+well as a discharge, under the one <code>authority_changed</code> capability.
+A withheld event leaves a version gap on the undeclared stream, and
+verified liveness gives an undeclared consumer no narrowing-specific
+freshness bound (#1001).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

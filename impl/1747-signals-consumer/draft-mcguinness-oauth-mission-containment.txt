@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            28 October 2026
-Expires: 1 May 2027
+Intended status: Experimental                            29 October 2026
+Expires: 2 May 2027
 
 
                    Mission Containment for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 May 2027.
+   This Internet-Draft will expire on 2 May 2027.
 
 Copyright Notice
 
@@ -754,9 +754,15 @@ Table of Contents
    records this profile retains, for audit and restoration disclosure
    (Section 15).
 
-   A consumer that does not understand containment_version ignores it;
-   the state version already makes the change observable (Section 7).  A
-   consumer that reads it holds a precise question: whether the
+   A consumer that does not understand containment_version ignores it.
+   On Mission Status and introspection, the state version makes the
+   change observable (Section 7).  On a Signals stream, a contain event
+   that narrows effective authority carries authority_changed true and
+   reaches only a consumer that declared that capability.  An undeclared
+   consumer gets no push: it learns of the containment through its next
+   version gap or, on a stream not verified live, the staleness rule
+   ([I-D.draft-mcguinness-oauth-mission-signals]).  A consumer that
+   reads containment_version holds a precise question: whether the
    authority view it materialized predates the current overlay.
 
 14.  Propagation
@@ -788,7 +794,11 @@ Table of Contents
       consumer as an authorization change, rather than an opaque version
       increment.  A dedicated containment event type is deferred;
       carrying containment_version on the existing event is what keeps
-      that change legible in the interim.
+      that change legible in the interim.  Signals delivers a contain
+      event that narrows effective authority only to a stream whose
+      consumer declared authority_changed
+      ([I-D.draft-mcguinness-oauth-mission-signals], Section "Authority
+      Change Compatibility").
 
    How quickly a consumer must adopt the narrowed view is bounded by the
    freshness and staleness rules it already operates under
@@ -1250,6 +1260,12 @@ Table of Contents
 23.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Visibility (Section 13) and Propagation (Section 14): on a Signals
+      stream, a contain event that narrows effective authority reaches
+      only a consumer that declared authority_changed; an undeclared
+      consumer learns of the containment through its next version gap or
+      the staleness rule, not by push (#1001).
 
    *  Protected Events names a change an authority source reports, under
       a declared continuing authority dependency, as a representative
