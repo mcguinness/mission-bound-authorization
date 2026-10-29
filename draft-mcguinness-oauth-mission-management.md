@@ -628,8 +628,10 @@ returns a signed response carrying:
 : REQUIRED. A string. An opaque, single-use token binding the caller,
   the `operation`, the `filter` (with `suspend_until` and `on_expiry`
   when present), and the evaluated membership itself: the exact set
-  of `mission_id` values matched at dry-run time
-  ({{bulk-token-security}}).
+  of `mission_id` values matched at dry-run time, each with the
+  Mission's state version read in that same evaluation
+  ({{I-D.draft-mcguinness-oauth-mission-status}},
+  {{bulk-token-security}}).
 
 `bulk_token_expires_at`:
 : REQUIRED. An RFC 3339 {{RFC3339}} date-time. The bulk token's
@@ -699,16 +701,21 @@ schedule a bulk `suspend` commits.
 
 The membership is the one the dry run evaluated. A Mission created, or
 newly matching the filter, after the dry run is not in the membership
-and MUST NOT be operated on; a member that transitioned in the interim
-yields an `already_terminal` or `illegal_transition` outcome rather
-than a surprise transition ({{bulk-token-security}}).
+and MUST NOT be operated on. Before applying the operation to a member
+that is not `terminated`, the AS MUST compare the member's current
+state version with the version the bulk token pins for it. A member
+whose version differs is not operated on and is reported
+`stale_version` ({{manifest}}), unchanged, while the other members
+proceed. A member that changed after the dry run, even one whose state
+returned to the reviewed value, therefore never takes a transition the
+reviewer did not see ({{bulk-token-security}}).
 
-The dry-run-then-execute exchange with its pinned membership is the
-bulk-path analog of the status profile's `expected_version` guard
-({{I-D.draft-mcguinness-oauth-mission-status}}), and a deployment
-that requires `expected_version` for an operation it classifies
-high-risk satisfies that requirement on the bulk path through the
-pinned membership plus the per-member outcomes ({{manifest}}).
+The per-member version pin is the bulk-path form of the status
+profile's `expected_version` guard
+({{I-D.draft-mcguinness-oauth-mission-status}}). A deployment that
+requires `expected_version` for an operation it classifies high-risk
+satisfies that requirement on the bulk path through the pinned
+versions, with a stale member skipped rather than the batch refused.
 
 ## Outcome Manifest {#manifest}
 
@@ -727,11 +734,13 @@ The outcomes:
 | `applied` | The operation succeeded: the transition was committed, or the Mission already stood in the operation's resulting non-terminal state (the status profile's idempotent case). |
 | `already_terminal` | The Mission was already `terminated`, whatever its termination reason, and is unchanged; when that reason is the operation's own (`revoked` for `revoke`, `completed` for `complete`), this is the status profile's idempotent case, reported distinctly for operator clarity, and otherwise it is the status profile's conflict, reported here because the bulk objective is met. |
 | `illegal_transition` | The operation is not legal from the Mission's current non-terminal state; the Mission is unchanged. |
+| `stale_version` | The Mission's current state version differs from the version the dry run pinned for it ({{execution}}); the operation was not applied and the Mission is unchanged. The symbol is the status profile's. |
 | `error` | The AS failed to process this Mission; its state is unverified. |
 
 A `terminated` Mission, whatever its termination reason, reports
-`already_terminal`, taking precedence over the idempotent reading of
-`applied`; it is reported distinctly from `error` because, for a
+`already_terminal`, taking precedence over `stale_version` and over
+the idempotent reading of `applied`; it is reported distinctly from
+`error` because, for a
 terminating operation, an already-terminal member is a satisfied
 objective, not a failure. `already_terminal` never reports a
 committed transition: a `revoke` member already terminated with
@@ -739,8 +748,9 @@ reason `completed` is not revoked, and its recorded `termination` is
 unchanged. After
 a partial failure the spent bulk token is not reusable; the caller
 remediates with a fresh dry run over the same filter and a new
-execute: members already transitioned then report `already_terminal`,
-and only `error` members are retried.
+execute. Members already terminated report `already_terminal`; other
+members are evaluated under the lifecycle rules and the newly pinned
+versions.
 
 ## Worked Example {#bulk-example}
 
@@ -1004,7 +1014,11 @@ bindings ({{dry-run}}) is load-bearing. The membership binding
 prevents time-of-review to time-of-execution growth: without it, a
 filter re-evaluated at execute time could match Missions created after
 the operator reviewed the dry-run count, so a reviewed "revoke these
-3" could silently become "revoke these 30". Single use prevents a
+3" could silently become "revoke these 30". Its per-member version
+prevents deciding over state the reviewer did not see: a member resumed
+and re-suspended after review returns to its reviewed state at a newer
+version, and the comparison at execute reports it `stale_version`
+instead of undoing the newer suspension. Single use prevents a
 captured or logged token from re-running the sweep; the short lifetime
 bounds how stale the reviewed set can be; and the caller binding keeps
 the reviewed set and the executing principal the same.
@@ -1127,3 +1141,8 @@ this surface.
 - A bulk `suspend` whose `on_expiry` is `revoke` needs the caller's
   bulk `revoke` authorization as well, checked at dry run and again
   at execute (#1535).
+- The bulk token pins each member's state version. An execute skips a
+  member whose version moved and reports it `stale_version`, and a
+  terminated member still reports `already_terminal`. The pinned
+  versions are the bulk-path form of the status profile's
+  `expected_version` guard (#997, D995).
