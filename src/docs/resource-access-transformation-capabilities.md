@@ -59,13 +59,17 @@ initial Common Constraints with `vendors` and `terminal_when`, and the
 to start on a declaration naming a missing, malformed or mismatched
 document, or one listing a key this implementation does not implement.
 
-Every narrowing site applies the declaration (`isSubsetEntryUnder` and
+These narrowing sites apply the declaration (`isSubsetEntryUnder` and
 `carriedUnder`, `packages/mission-core/src/narrowing-declaration.ts`):
 approval-time derivation, the Token Exchange, refresh and code-exchange
 narrowing, dispatch handoff, transaction authorization, and the delegated
 exchanges. Within the domain the reference narrows as §2 describes; an entry
 outside it is carried only as approved, a subset established only by
-equality. `qualified-narrowing-endpoint.test.ts` witnesses both, with
+equality. The cross-domain paths do not consult it yet: projection to a
+Resource AS (`kernel/cross-domain.ts`), the continuation ID-JAG's grant
+authority (`adapters/continuation-grant.ts`) and cross-org inbound narrowing
+(`adapters/cross-org-grant.ts`). In the shipped configuration every entry
+they see is within the domain. `qualified-narrowing-endpoint.test.ts` witnesses both, with
 `narrowing` undeclared and with an `exact`-only domain, and that the block
 above equals the metadata entry's value.
 
