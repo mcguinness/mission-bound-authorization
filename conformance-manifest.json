@@ -4959,7 +4959,7 @@
     "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/status-list.test.ts",
@@ -5014,9 +5014,33 @@
      "name": "control-plane retained signed responses > replays the retained bytes of a signed envelope past its own validity, for the whole nonce window",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint retries (@spec status#idempotency, control-plane#serialization, #1191) > recovers a committed response whose bytes were lost at its original observation: the same iat, exp and fresh_until",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until or exp beyond the advertised ceiling on a direct call",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until later than the response's own exp, at any requested lifetime (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "a Signals SET is a transition record (@spec control-plane#fresh-observation, #1750, D993) > signs a job journaled before a crash, hours later, with its commit's own committed_at, and a receiver orders it by version: a SET for an older version with a newer iat is stale",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
+   "notes": "The signed-artifact inventory in src/docs/control-plane-deployment.md classifies every signed artifact the reference produces (#1750). Three are state observations, each witnessed with a mutation that re-dates it. The Mission Status response is taken in one authoritative transactional read that carries its (version, commit) watermark, and its iat, exp and fresh_until belong to that read, never to the clock at signature time; a commit during the signature leaves it older, not re-dated. Lifecycle responses: a recovered response is signed over the recorded observation with its original iat, exp and fresh_until, and a retained envelope replays its exact bytes for the nonce window, past its own validity, solely as confirmation of the correlated original operation with every other check passing: it refreshes no state and authorizes nothing, and it is not a general exception that holding a watermark confers. The Mission Status List publisher serves a token only inside its own validity, rebuilds from the record set rather than re-signing cached bits, and lets no older in-flight snapshot land after a newer commit. A Mission Signals SET is a transition record (D993): its observation point is the committed_at recorded at commit, its iat is RFC 8417 issuance time, and a SET first signed hours after its commit keeps that committed_at; the receiver orders by version, never iat. The Join Assertion is an attestation with no state, version or fresh_until, whose cache replays original bytes only inside its exp and audience binding. Credentials take iat as issuance time, not a statement of current state: the AS's Mission-bound OAuth access tokens, ID-JAGs and AAT roots are gated on Mission state at mint with exp bounded by the Mission's expiry, while a holder-minted offline AAT child and an ARAP approval (bounded by approved_until, with no JWT exp) check no Mission state, and no mint-time state claim is made for the other credentials; records carry their recorded event times. The Status freshness ceiling is witnessed by the cap tests. Refusing an observation whose commit point advanced is a declared optional policy, off; its defects (it blocks Lifecycle response recovery, and its commit member falls after boot pruning) are #1865, availability under that option, not freshness. No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
