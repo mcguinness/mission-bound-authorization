@@ -25812,7 +25812,7 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "while a lifecycle event for a stream is undelivered, whether pending, backing off after a failed hand-off or claimed and in flight, neither a Transmitter-initiated nor a requested verification event is transmitted on that stream, while a stream with nothing undelivered keeps receiving its own; once the event is acknowledged, the verification follows it",
+    "normative": "while an earlier event on a stream is undelivered, whether a lifecycle event or a requested verification event, pending, backing off after a failed hand-off or in flight, neither a Transmitter-initiated nor a requested verification event is transmitted on that stream, while a stream with nothing undelivered keeps receiving its own; once the earlier event is acknowledged, the verification follows it",
     "local": "the emitter is in process, so SETs go to registered sinks, not an SSF HTTP transport; an event the gate withholds is never journaled on the undeclared stream, which is how the exception holds; the same check holds a verification behind an unacknowledged Stream Updated notice; a lifecycle event that can never be delivered blocks the stream's liveness indefinitely, which fails closed through the consumer's staleness rule"
    },
    "level": "cross-component",
@@ -25835,9 +25835,15 @@
      "name": "delivery uncertainty and liveness ordering (@spec signals#discharge-compatibility, signals#delivery, #1877 review, D1023) > on re-enabling sends Stream Updated enabled, then the held events, and liveness only once every held event is acknowledged",
      "level": "cross-component",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "delivery uncertainty and liveness ordering (@spec signals#discharge-compatibility, signals#delivery, #1877 review, D1023) > holds a verification behind an earlier verification still being retried or in flight",
+     "level": "cross-component",
+     "surface": "signals"
     }
    ],
-   "notes": "#1877 review (D1023). The owner's probe: a suspension committed, its delivery to the undeclared stream failing, and a liveness attestation 10 seconds later delivers no verification event to that stream (the declared stream receives one), while its receiver still holds active; once the suspension is delivered, liveness follows it. A requested verification waits behind a failed suspension delivery the same way. Proved by mutation: letting liveness overtake undelivered lifecycle events on both paths fails the three tests; on the attestLiveness path alone, the probe and the ordering test; on the requested path alone, the requested and ordering tests."
+   "notes": "#1877 review (D1023). The owner's probe: a suspension committed, its delivery to the undeclared stream failing, and a liveness attestation 10 seconds later delivers no verification event to that stream (the declared stream receives one), while its receiver still holds active; once the suspension is delivered, liveness follows it. A requested verification waits behind a failed suspension delivery the same way. A verification also waits behind an earlier requested verification being retried, and behind a verification hand-off still in flight. Proved by mutation: letting liveness overtake undelivered lifecycle events on both paths fails the probe, the requested and the ordering tests; on the attestLiveness path alone, the probe, the ordering and the verification-ordering tests; on the requested path alone, the requested, ordering and verification-ordering tests; dropping the check for earlier verifications fails the verification-ordering test, as does dropping only the in-flight check."
   },
   {
    "id": "signals.delivery.bounded-retry",
