@@ -448,6 +448,7 @@ describe("the Mission Record commits with its authorization code (@spec mission#
       const codes = stagedCodes();
       const out = await flow.resume(decided);
       expect(out.error).toBe("access_denied");
+      expect(out.description).toBe("the approval decision is no longer pending");
       expect(out.code).toBeNull();
       expect(codes).toEqual([]);
       expectNoMission(h, flow);

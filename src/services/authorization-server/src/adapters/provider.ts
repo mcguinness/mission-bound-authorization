@@ -1730,7 +1730,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
       record = missionForGrant(grantId);
     } catch (e) {
       if (authorization && e instanceof errors.InvalidGrant) {
-        throw new errors.AccessDenied("the Mission is not available");
+        // A held approval grant with no live hold names no Mission: its
+        // decision lapsed, or was refused, before any Mission existed.
+        throw new errors.AccessDenied(
+          grantId && kernel.missionBoundGrants.heldApproval(grantId)
+            ? "the approval decision is no longer pending"
+            : "the Mission is not available",
+        );
       }
       throw e;
     }
