@@ -7064,6 +7064,60 @@
    "notes": "#1503 finding 12 (D620): dispatch and verification stay at step 6. Proved by dispatching at parse on the PAR form intake (the proposal-before-dispatch test fails on an unknown type beside an entry outside target_resources) and in the Request Object hook (the Request Object test fails on an unsupported type beside a proposal entry missing its resource)."
   },
   {
+   "id": "core.submission.step8-provenance-rendered",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Render the Intent, the Authority Set, and the material verified provenance for approval; a change to any of them before the decision is re-rendered and approved over the changed context",
+   "facet": "verified-provenance",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a submission presented evidence that verified, the approval rendering presents its normalized verified facts with the Intent and the Authority Set, and a change to those facts between rendering and decision is rendered again and approved over the changed context before a Mission is created"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > PAR-submitted evidence is verified, RENDERED to the Approver, and landed request-derived on submission_evidence — outside all anchors",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Partial: the witness asserts the page's 'Verified intent provenance' section and a verified fact value (admission.example). No test changes the verified facts between rendering and decision. Lead for the builder: the decision re-runs evidence verification (provider.ts), while the render revision's committed context (approval-render-revision.ts ApprovalContext) carries no submission_evidence member, so a change to the verified facts alone may go undetected; confirm before citing any witness for the re-render clause. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
+  },
+  {
+   "id": "core.submission.rendered-surface-covers-provenance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Where a deployment commits the rendered approval surface, that commitment MUST cover the normalized provenance facts, at least as a digest of their canonical `submission_evidence` representation ({{mission-record}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a deployment commits the rendered approval surface of a submission that presented evidence, the commitment covers the normalized verified facts, at least as a digest over their canonical submission_evidence representation, so the committed surface cannot stand for the same approval with different provenance facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the core, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. Reading question for the owner: the reference's render revision commits 'the complete context the page showed' (approval-render-revision.ts) without submission_evidence; if that counts as committing the rendered approval surface, the reference does not meet this MUST."
+  },
+  {
    "id": "core.submission-evidence.structural-entry-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "intent-submission-evidence",
@@ -8701,6 +8755,151 @@
    "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type applies the same rule since #1503 (D620), and its preservation is witnessed on core.mission-record.authority-source-type-enum; this row stays scoped to the two fields the review named."
   },
   {
+   "id": "core.approval-basis.required-fixed-at-approval",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object. The approved authorization basis this Mission is rooted in, fixed at the approval event and immutable thereafter, like `subject`.",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event carries approval_basis from its creation, persisted with the record, and no later derivation or lifecycle transition changes it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "Mission Record immutability (@spec mission#mission-record) > every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#approval-basis, which is not a core anchor. Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis."
+  },
+  {
+   "id": "core.approval-basis.type-direct",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{standing-consent-bases}}).",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.type as the string direct"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 2 (record): the Mission records the workload principal as Subject, the agent as client, the administrator as consent principal, and the service_owned source",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct value; the standing-consent values are companion-defined. The kernel witness compares the whole stored basis with toEqual; the workload witness reads the record created over the approval endpoints. Mutation proof (2026-10-29): recording a type other than direct fails both witnesses on their assertions (the kernel toEqual over the stored basis; the workload step 2 type check)."
+  },
+  {
+   "id": "core.approval-basis.consent-principal-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object with `iss` and `sub`. The accountable human (or human-accountable principal) who consented.",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a direct approval records approval_basis.consent_principal as an object with iss and sub naming the authenticated Approver who consented, never the Subject when the two differ"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 2 (record): the Mission records the workload principal as Subject, the agent as client, the administrator as consent principal, and the service_owned source",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis, where the consent principal is the Approver. Both witnesses approve for a Subject other than the Approver (bob for alice; an administrator for a workload principal) and assert the {iss, sub} pair of the Approver. Quoted with its second sentence, since 'REQUIRED. An object with `iss` and `sub`.' also opens activation_actor. Mutation proof (2026-10-29): recording a consent principal other than the Approver fails both witnesses on their assertions."
+  },
+  {
+   "id": "core.approval-basis.activation-direct-event-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object naming what activated this Mission instance, shaped by `type`. For `direct`: `approval_event_id`, mirroring the record's own `approval_event_id` (below).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.activation as an object whose approval_event_id equals the record's own approval_event_id"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witness asserts activation equals {approval_event_id: 'apev-100'}, the identifier the approval was given, but never reads the stored record's approval_event_id, so a record whose own member diverged would still pass; one assertion against stored.approval_event_id would make it tested. mission-approval-deferral.test.ts makes the same comparison against store.approvalEventId(code) on Deferred Approval's relocated direct approval, also not against the record member."
+  },
+  {
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
@@ -9514,6 +9713,116 @@
    "notes": "#1802 (owner ruling 3). The clause's condition (the Approver is not the Subject) has no applicability kind, so the row stays unconditional; the witness renders both an approval on Alice's behalf, which names her, and a self-approval, which names no separate Subject. Proved by disabling the Subject section (the witness failed)."
   },
   {
+   "id": "core.approval-event.render-derived-set-with-intent-context",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "the derived Authority Set in human-meaningful terms, with the `goal`, `task_bounds`, and the effective `expires_at` (and, when it differs, the requested `intent.expires_at`, so the Approver sees the narrowing) as context",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering presents the derived Authority Set with the Intent's goal and task_bounds and the effective expires_at as context; where the effective expires_at is earlier than the requested intent.expires_at, the rendering shows both values, so the Approver sees the narrowing",
+    "local": "The authorization-code approval page (renderApprovalPage) shows the Intent as JSON under 'Intent (task context, untrusted)', the derived set under 'Derived authority (what approval grants)', and the effective value in a 'Mission expiry' section (time.mission-expires-at); the requested value appears only inside the Intent JSON."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > control: an authenticated Approver who may approve and activate is shown the page and approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Step 5's lead sentence; quoted after its bold label. Partial: the render-gate control asserts the goal, the task bounds and the exact derived entries on the page, and the effective-expiry witness asserts a policy-narrowed effective expires_at in its own element; no test asserts that the requested intent.expires_at is shown beside a narrowed effective value. 'Human-meaningful terms' is a judgment clause with no mechanical assertion."
+  },
+  {
+   "id": "core.approval-event.consent-object-derived-set",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "An approval surface that renders only the `goal` or Mission Intent does not conform.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering presents the complete derived Authority Set as the object of the decision, beside and never replaced by the goal or the Mission Intent, and the Mission created on approval commits exactly the set rendered"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > control: an authenticated Approver who may approve and activate is shown the page and approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). The consent-object bullet of step 5. The derivation-timing witness parses the page's derived-authority block and compares it with the full derivation of the same Intent and proposal (two or more entries, capability bindings included), then checks the record commits exactly that set; the render-gate control asserts the goal and the derived entries appear together. Mutation proof (2026-10-29): rendering only the first derived entry fails the derivation-timing witness on its assertion (one entry against the two derived); the render-gate control witnesses the goal and the derived entries shown together, not completeness."
+  },
+  {
+   "id": "core.approval-event.proposal-narrowing-distinguished",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "When the client submitted an authority proposal ({{authority-proposal}}), the rendering MUST distinguish the entries the client proposed from any narrowing or restructuring the AS applied",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the client submitted an authority proposal that the AS narrowed or restructured, the approval rendering presents the entries as the client proposed them apart from the derived Authority Set, so the Approver can see which proposed entries, actions or bounds the AS narrowed, dropped or restructured",
+    "local": "The page renders the submitted proposal verbatim under 'Proposed authority (submitted, untrusted)' and the derived set under 'Derived authority (what approval grants)'; it marks no individual narrowing."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "client-supplied text attributed to the client (@spec mission#rendering-safeguards, #1532) > attributes the Intent and the proposal to the requesting client, apart from the derived authority",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the end-to-end witness submits an over-ask the AS narrows (a cap above the policy ceiling and an action the ceiling does not grant) and asserts only that the page carries both the proposed and the derived headings; the attribution witness asserts the proposal section stands apart from the derived section, on a proposal the AS does not narrow. No test asserts that the proposed section shows the submitted entries and the derived section the narrowed values for a narrowed proposal."
+  },
+  {
    "id": "core.rendering-safeguards.client-text-attributed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
@@ -9578,6 +9887,118 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1532, D859. Replaces the removed misleading-goal refusal, which would have gated issuance on goal text against the binding's prohibition on gating issuance on goal, goal_lang or task_bounds. No test renders an over-long goal and checks it is not truncated."
+  },
+  {
+   "id": "core.rendering-safeguards.client-strings-inert",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as inert text and MUST NOT be interpreted as markup.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a goal or task_bounds value carrying markup (an element, an attribute, a script or a link) appears on the approval rendering as its literal characters: the rendering contains no element, attribute, script or link that the value supplies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). The MUST and the MUST NOT state one behavior and share this row. The reference escapes the Intent JSON on the approval page (provider.ts escapeHtml), but no test submits markup in goal or task_bounds. Patterns to reuse: approval-context-changes.test.ts 'a tool's description renders as inert text, and the binding commits the definition shown' (a capability-binding tool description) and device-authorization.test.ts (a client-supplied name), neither of which covers goal or task_bounds."
+  },
+  {
+   "id": "core.rendering-safeguards.unicode-presentation-mitigated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The AS SHOULD mitigate Unicode direction-override and confusable-character presentation in them.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a goal or task_bounds value carrying Unicode direction-override or isolate controls, or characters confusable with other text, is rendered so those controls cannot reorder the approval text around it and the confusable presentation is mitigated; a departure is a recorded SHOULD departure, not a failure"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). A search of the authorization server's approval rendering (provider.ts renderApprovalPage) finds HTML escaping only, with no direction-control or confusable handling, and no test covers either."
+  },
+  {
+   "id": "core.rendering-safeguards.unenforced-bound-not-presented-enforced",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "a deployment MUST NOT present a rendered bound as enforced when no party enforces it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering never presents a rendered bound (a task_bounds item, or a constraint of a derived entry) as enforced, or as a wider limit than the one enforced, unless some party in the deployment enforces it"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witness covers one bound, a per-action max_amount, which the page states imposes no Mission-wide total cap, so it is not presented as a limit nothing enforces. No test covers task_bounds, or a derived-entry constraint that the deployment's resource servers do not enforce. Derivation Limits cites this rule through the Mission Approval section."
+  },
+  {
+   "id": "core.rendering-safeguards.enforced-bounds-made-clear",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "An AS SHOULD make clear to the Approver which rendered bounds its deployment actually enforces, so consent is not given to a limit that binds nowhere.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering tells the Approver, for the bounds it renders, which ones the deployment enforces and how far; a departure is a recorded SHOULD departure, not a failure"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > does not state the per-action limit wording when no derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witnesses cover the extent of one bound only (a max_amount applies to each action, with no total cap), stated when a derived entry carries max_amount and absent otherwise. No rendering states which other rendered bounds, task_bounds included, the deployment enforces."
   },
   {
    "id": "core.approval-event.authority-source-rendering",
@@ -91268,6 +91689,29 @@
     }
    ],
    "notes": "#1202: an assembly without the opt-in device-authorization capability answers a device authorization request carrying mission_intent 404 and creates no Mission. Proved by enabling the capability by default (the request then yields a device_code). Partial: only the device authorization request is witnessed, and only on an AS without the device grant."
+  },
+  {
+   "id": "core.i18n.rendering-rules-any-script",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "i18n",
+   "text": "Rendering to the Approver follows the rendering rules of {{rendering-safeguards}} unchanged: client prose stays inert text in any language and any script, including bidirectional text.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "goal and task_bounds in any language or script, bidirectional text included, render under the same safeguards as other client prose: as inert text, attributed to the client, apart from the derived Authority Set, and untruncated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). Restates the rendering-safeguards rules for prose in any language or script; no test renders non-Latin or bidirectional goal or task_bounds text."
   },
   {
    "id": "discovery.mission-substrate.only-active-rule",
