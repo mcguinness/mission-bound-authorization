@@ -1442,7 +1442,8 @@ sufficient, for an action to proceed.<a href="#section-2-3.4.1" class="pilcrow">
         <dd class="break"></dd>
 <dt id="section-2-3.5">Metadata-only change:</dt>
         <dd style="margin-left: 1.5em" id="section-2-3.6">
-          <p id="section-2-3.6.1">A committed change to a Mission that leaves its <code>state</code> and
+          <p id="section-2-3.6.1">A committed change to issuer-held state associated with a Mission,
+outside its Mission Record, that leaves the Mission's <code>state</code> and
 <code>termination</code> unchanged: a schedule replacement (<a href="#idempotency" class="auto internal xref">Section 5.6</a>),
 or a change a companion profile defines as one.<a href="#section-2-3.6.1" class="pilcrow">¶</a></p>
 </dd>
@@ -2565,7 +2566,11 @@ requirements completely. It registers the value by defining it in
 its own specification; no IANA registry holds <code>operation</code> values
 (<a href="#iana" class="auto internal xref">Section 12</a>).<a href="#section-5.1-9" class="pilcrow">¶</a></p>
 <p id="section-5.1-10">A <code>suspend</code> <span class="bcp14">MAY</span> carry <code>suspend_until</code> with a <span class="bcp14">REQUIRED</span> <code>on_expiry</code>; the
-pair is the Mission's schedule. When the <code>suspend_until</code> of a current
+pair is the Mission's schedule. The schedule is issuer-held state
+associated with the Mission, outside its Mission Record
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Record"): an
+AS may store it with the record, and a signed or exchanged Mission
+Record does not carry it. When the <code>suspend_until</code> of a current
 schedule passes, the AS <span class="bcp14">MUST</span> apply <code>on_expiry</code> (transition to
 <code>active</code> for <code>resume</code>, or to <code>terminated</code> with reason <code>revoked</code> for
 <code>revoke</code>) and emit the corresponding transition, without a further
@@ -4324,6 +4329,13 @@ carries its credentials in HTTP header fields keeps them there.<a href="#appendi
           <p id="appendix-A-3.2.1">IANA Considerations adds the Mission Status and Mission Lifecycle
 endpoints as usage locations for <code>invalid_request</code> and
 <code>invalid_client</code>.<a href="#appendix-A-3.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-3.3">
+          <p id="appendix-A-3.3.1">A metadata-only change and a schedule are issuer-held state
+associated with the Mission, outside its Mission Record; an AS may
+store them with the record, and a signed or exchanged Mission
+Record does not carry them. Authorization, atomicity, versioning
+and scheduling rules are unchanged (#1879).<a href="#appendix-A-3.3.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-A-4">-00<a href="#appendix-A-4" class="pilcrow">¶</a></p>
