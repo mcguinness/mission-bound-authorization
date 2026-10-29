@@ -37,6 +37,7 @@ import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-s
 import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
+  type ApplyResult,
   AUTHORITY_CHANGED_CAPABILITY,
   LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
@@ -103,6 +104,8 @@ interface Wired {
   undeclared: MissionSignalReceiver;
   declaredSets: string[];
   undeclaredSets: string[];
+  /** What the undeclared receiver reported for each delivered SET, in order. */
+  undeclaredResults: ApplyResult[];
 }
 
 /** One issuer, two streams: one that declared `authority_changed`, one that did not. */
@@ -134,13 +137,16 @@ async function wire(): Promise<Wired> {
   });
   const declaredSets: string[] = [];
   const undeclaredSets: string[] = [];
+  const undeclaredResults: ApplyResult[] = [];
   emitter.onDeliver(DECLARED_AUD, (set) => {
     declaredSets.push(set);
     return declared.verifyAndApply(set);
   });
-  emitter.onDeliver(UNDECLARED_AUD, (set) => {
+  emitter.onDeliver(UNDECLARED_AUD, async (set) => {
     undeclaredSets.push(set);
-    return undeclared.verifyAndApply(set);
+    const result = await undeclared.verifyAndApply(set);
+    undeclaredResults.push(result);
+    return result;
   });
   const kernel = new MissionKernel({
     issuer: ISS,
@@ -152,7 +158,15 @@ async function wire(): Promise<Wired> {
     now: () => NOW,
     onLifecycleCommit: (c) => emitter.onCommit(c),
   });
-  return { kernel, emitter, declared, undeclared, declaredSets, undeclaredSets };
+  return {
+    kernel,
+    emitter,
+    declared,
+    undeclared,
+    declaredSets,
+    undeclaredSets,
+    undeclaredResults,
+  };
 }
 
 let approvals = 0;
@@ -294,6 +308,58 @@ describe("the delivery gate covers containment (@spec signals#discharge-compatib
     expect(w.undeclaredSets).toHaveLength(1);
     expect(w.undeclared.viewState(mission.id)).toMatchObject({ state: "active", version: 1 });
     expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
+  });
+
+  it("keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+
+    containRead(w.kernel, mission.id, "evt-gap-contain-1"); // version 2: withheld
+    await w.emitter.drain();
+    expect(w.undeclaredSets).toHaveLength(1);
+
+    // A suspend narrows nothing beyond `state`, so both streams receive it.
+    w.kernel.transition(mission.id, "suspend"); // version 3
+    await w.emitter.drain();
+
+    // No renumbering per stream: the undeclared stream's event carries the
+    // Mission's version 3, not a stream-local 2.
+    expect(w.declaredSets.map((s) => eventOf(s).version)).toEqual([1, 2, 3]);
+    expect(w.undeclaredSets.map((s) => eventOf(s).version)).toEqual([1, 3]);
+
+    // The undeclared receiver detects the gap rather than applying the event
+    // as an in-order successor of its cached state; the declared receiver saw
+    // a contiguous sequence.
+    expect(w.undeclaredResults.map((r) => r.status)).toEqual(["applied", "gap"]);
+    expect(w.undeclaredResults[1]).toMatchObject({ status: "gap", expected: 2, received: 3 });
+    expect(w.undeclared.hasGap(mission.id)).toBe(true);
+    expect(w.declared.hasGap(mission.id)).toBe(false);
+
+    // The Mission Status read the gap calls for reports what the stream
+    // withheld: version 3 with containment_version 1, and the contained read
+    // action absent from the audience-scoped authority.
+    const status = w.kernel.statusObservation(mission.id, {
+      requester: "svc:reader",
+      audience: RESOURCE,
+    }).payload;
+    expect(status.mission).toMatchObject({
+      state: "suspended",
+      version: 3,
+      containment_version: 1,
+    });
+    expect(JSON.stringify(status.authorization_details)).not.toContain("payments:invoice.read");
+    expect(JSON.stringify(status.authorization_details)).toContain("payments:payment.execute");
+
+    // Later events keep applying on the undeclared stream, in order.
+    w.kernel.transition(mission.id, "resume"); // version 4
+    await w.emitter.drain();
+    expect(w.undeclaredSets.map((s) => eventOf(s).version)).toEqual([1, 3, 4]);
+    expect(w.undeclaredResults[2]).toMatchObject({
+      status: "applied",
+      state: "active",
+      version: 4,
+    });
   });
 });
 
