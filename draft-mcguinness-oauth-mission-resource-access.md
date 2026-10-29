@@ -1375,6 +1375,10 @@ no metadata member or endpoint for it. It has exactly these members:
 `type`:
 : REQUIRED. The string `mission_resource_access`.
 
+`capability`:
+: REQUIRED. The string `narrowing`, the capability the domain
+  qualifies.
+
 `resource_match`:
 : REQUIRED. A non-empty array of the matching modes the domain covers
   ({{resource-matching}}): `exact`, `prefix`, or both.
@@ -1386,7 +1390,7 @@ no metadata member or endpoint for it. It has exactly these members:
 `constraints`:
 : REQUIRED. An array of the `constraints` keys the domain covers, each
   a Common Constraint ({{common-constraints}}) or a key whose subset and
-  intersection rules another specification defines.
+  intersection rules another specification or the deployment defines.
 
 `limitations`:
 : OPTIONAL. An array of identifiers, each naming a comparison the
@@ -1415,8 +1419,8 @@ A qualified value declares `narrowing` for the domain only, and never
 as `true`. A reader treats a carrier as declaring `narrowing` `false`
 when the qualified value has a member other than `domain`, when `id` or
 `digest` is malformed, or when the document is unavailable, does not
-have this form, names another `id` or `type`, or does not match
-`digest`; that carrier still governs `narrowing`, and a later carrier
+have this form, names another `id`, `type`, or `capability`, or does
+not match `digest`; that carrier still governs `narrowing`, and a later carrier
 does not supply it. `delegation` and `projection` remain booleans.
 
 # Modeling Tools and Function Calls {#tools}
