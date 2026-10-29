@@ -117,6 +117,9 @@ importers:
       '@mission/ras':
         specifier: workspace:*
         version: link:../services/ras
+      '@mission/store':
+        specifier: workspace:*
+        version: link:../packages/store
       '@mission/telemetry':
         specifier: workspace:*
         version: link:../packages/telemetry

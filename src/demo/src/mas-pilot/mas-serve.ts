@@ -65,6 +65,7 @@ import { ActorRecords } from "@mission/mcp-payments";
 import { loadMasPilotConfig, relocateMissionIssuer } from "./config.js";
 import { buildPilotMas, masIssuer, type PilotMas, parseStatusClients, type StatusClientRegistration } from "./mas-as.js";
 import { pilotJoinAssertions } from "./mas-join-assertions.js";
+import { scopeBindingsFromEnv } from "./scope-binding-ledger.js";
 import { masConsoleRoutes, type OperatorConsole, startOperatorConsole } from "./operator-console.js";
 
 function fail(message: string): never {
@@ -129,7 +130,14 @@ try {
     signingKeys: signingKeysFromEnv(process.env),
     ...(kernelStore ? { kernelStore } : {}),
     ...(joinIntrospectionSecret !== undefined
-      ? { joinAssertions: pilotJoinAssertions(config, { introspectionSecret: joinIntrospectionSecret, actorRecords, now }) }
+      ? {
+          joinAssertions: pilotJoinAssertions(config, {
+            introspectionSecret: joinIntrospectionSecret,
+            actorRecords,
+            scopeBindings: scopeBindingsFromEnv(process.env).ledger,
+            now,
+          }),
+        }
       : {}),
     now,
   });

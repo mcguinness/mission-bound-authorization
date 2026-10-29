@@ -18,6 +18,7 @@
     "@mission/pdp": "workspace:*",
     "@mission/plain-rs": "workspace:*",
     "@mission/ras": "workspace:*",
+    "@mission/store": "workspace:*",
     "@mission/telemetry": "workspace:*",
     "@mission/transparency": "workspace:*",
     "hono": "^4.9.11",

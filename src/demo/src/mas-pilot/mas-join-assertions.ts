@@ -52,12 +52,15 @@ import { IssuerKeys } from "@mission/core";
 import { type JWTVerifyGetKey, jwtVerify } from "jose";
 import type { MasPilotConfig } from "./config.js";
 import { MappingContractCache } from "./mapping-contract.js";
+import type { ScopeBindingLedger } from "./scope-binding-ledger.js";
 
 export interface PilotJoinAssertionOptions {
   /** The MAS's introspection client secret at the estate, generated where the MAS is started. */
   introspectionSecret: string;
   /** This MAS's actor records: the delegates recorded as acting under a Mission. */
   actorRecords: ActorRecords;
+  /** The scope binding ledger its mapping cache reads (#1847, #1866 review); the gateway's own. */
+  scopeBindings: ScopeBindingLedger;
   now?: () => Date;
 }
 
@@ -70,7 +73,7 @@ export function pilotJoinAssertions(config: MasPilotConfig, opts: PilotJoinAsser
   const now = opts.now ?? (() => new Date());
   const estate = config.estate.issuer;
   const scopes = new Set(config.separated_mas.enrollment.flatMap((p) => p.enforcement_scopes));
-  const mapping = new MappingContractCache({ maxStaleSeconds: config.mapping_cache.max_stale_seconds, now });
+  const mapping = new MappingContractCache({ maxStaleSeconds: config.mapping_cache.max_stale_seconds, ledger: opts.scopeBindings, now });
   const installed = mapping.install(config.mapping_contract);
   if (!installed.ok) throw new Error(installed.reason);
 

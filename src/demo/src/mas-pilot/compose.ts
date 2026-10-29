@@ -75,6 +75,7 @@ import {
   startEstateAuthorizationServer,
 } from "./estate-as.js";
 import { MappingContractCache, parseMappingContract } from "./mapping-contract.js";
+import type { ScopeBindingLedger } from "./scope-binding-ledger.js";
 import { pilotMissionPolicy } from "./mas-policy.js";
 import { StartupScope } from "./startup.js";
 
@@ -87,6 +88,12 @@ export interface MasPilotOptions {
    * (`resource-policy-store.ts`).
    */
   resourcePolicyStore: ResourcePolicyStore;
+  /**
+   * @spec resource-access#resource-contract (#1847, #1866 review): where the
+   * mapping cache keeps every scope value's contract binding, across versions,
+   * withdrawals and restarts. No default (`scope-binding-ledger.ts`).
+   */
+  scopeBindings: ScopeBindingLedger;
   /** Observes each decision request the PEP submits, before the PDP decides it (tests). */
   observeDecisionRequest?: (request: EvaluationRequest) => void;
   config?: MasPilotConfig;
@@ -306,6 +313,7 @@ export async function assembleMasPilot(
     const mappingNow = opts.mappingNow ?? opts.now;
     const mapping = new MappingContractCache({
       maxStaleSeconds: config.mapping_cache.max_stale_seconds,
+      ledger: opts.scopeBindings,
       ...(mappingNow ? { now: mappingNow } : {}),
     });
     const installed = mapping.install(config.mapping_contract);

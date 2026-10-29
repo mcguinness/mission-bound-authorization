@@ -174,6 +174,77 @@ describe("the authorization server assembles the reference from configuration be
   });
 });
 
+/**
+ * @spec resource-access#resource-contract (#1847, D989): the approval rule is
+ * per resource. Where configuration requires a reference for any operation of
+ * the entry's resource, a newly approved entry records the current reference,
+ * a read-only one included, while enforcement stays per operation. The one
+ * current contract must cover the whole entry: missing or ambiguous coverage
+ * refuses, never leaving the entry unpinned or combining contracts.
+ */
+describe("an approval records the reference for every entry on a resource that requires one for any operation (@spec resource-access#resource-contract, #1847, D989)", () => {
+  const EXECUTE = "payments:payment.execute";
+  /** v2 current, a reference required for the execute alone. */
+  const EXECUTE_REQUIRED = declarations([declared("v2", "current")], [EXECUTE]);
+  let key: CryptoKey;
+  let seq = 0;
+  beforeAll(async () => {
+    key = (await generateKeyPair("ES256")).privateKey;
+  });
+  const kernelWith = (resourceContracts: ResourceContractDeclarations) =>
+    new MissionKernel({
+      issuer: "https://as.test",
+      policy: DERIVATION_POLICY as never,
+      authoritySourceCatalog: testAuthoritySourceCatalog(DERIVATION_POLICY.ceiling, ["ap-agent"], ["bob"]),
+      statusKey: key,
+      statusKid: "as-status",
+      resourceContracts,
+      now: () => NOW,
+    });
+  const approve = (kernel: MissionKernel, proposedAuthority: AuthorityEntry[]) =>
+    kernel.approve({
+      intent: validateMissionIntent(JSON.stringify(TASK_INTENT)),
+      proposedAuthority,
+      subject: { iss: "https://as.test", sub: "alice" },
+      approver: { iss: "https://as.test", sub: "bob" },
+      clientId: "ap-agent",
+      approvalEventId: `rc-1847-${seq++}`,
+    });
+
+  it("records the current reference in a read-only entry and in a mixed read and write entry alike, the execute alone being required", () => {
+    expect(ACTIONS).toContain(EXECUTE);
+    const kernel = kernelWith(EXECUTE_REQUIRED);
+    expect(EXECUTE_REQUIRED.requiresReference(RESOURCE, READ)).toBe(false);
+    expect(approve(kernel, proposal(undefined, [READ])).authority_set[0]?.resource_contract).toEqual(V2);
+    expect(approve(kernel, proposal(undefined, [READ, EXECUTE])).authority_set[0]?.resource_contract).toEqual(V2);
+    // Nothing required anywhere on the resource: nothing is recorded (control).
+    expect(approve(kernelWith(SUPERSEDED), proposal(undefined, [READ])).authority_set[0]).not.toHaveProperty("resource_contract");
+  });
+
+  it("refuses an entry the current contract does not cover whole, and one two current contracts cover, never leaving it unpinned or combining them", () => {
+    const partial = declarations([declared("v2", "current", {}, [READ, EXECUTE])], [EXECUTE]);
+    const before = kernelWith(partial);
+    const uncovered = refusal(() => approve(before, proposal(undefined, [READ, "payments:invoice.list"])));
+    expect(uncovered.code).toBe("invalid_authorization_details");
+    expect(before.allMissions()).toHaveLength(0);
+    const OTHER_CONTRACT = "https://payments.test/contracts/payments-alt";
+    const otherDoc = { ...doc("v1"), id: OTHER_CONTRACT };
+    const ambiguous = new ResourceContractDeclarations([
+      { resource: RESOURCE, resource_match: "prefix", id: CONTRACT, requires_reference: [EXECUTE], versions: [declared("v2", "current")] },
+      {
+        resource: RESOURCE,
+        resource_match: "prefix",
+        id: OTHER_CONTRACT,
+        requires_reference: [],
+        versions: [{ version: "v1", state: "current", digest: resourceContractDigest(otherDoc), document: otherDoc }],
+      },
+    ]);
+    const k = kernelWith(ambiguous);
+    expect(refusal(() => approve(k, proposal(undefined, [READ]))).code).toBe("invalid_authorization_details");
+    expect(k.allMissions()).toHaveLength(0);
+  });
+});
+
 describe("the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249)", () => {
   const intent = validateMissionIntent(JSON.stringify(TASK_INTENT));
   const approvedCeiling = (r: ResourceContractRef) => ({ policy_version: "t", ceiling: proposal(r, ACTIONS) });
@@ -338,6 +409,24 @@ describe("template consent assembles the ceiling's references and Dispatch prese
     const store = new TemplateStore();
     const template = create(kernel, store, proposal(), SUPERSEDED);
     expect(() => dispatch(kernel, store, template.id, proposal(V2))).toThrow(DispatchError);
+  });
+
+  // @spec resource-access#resource-contract (#1847, D989): a ceiling
+  // consented while nothing was required keeps its read-only entry unpinned
+  // through a Dispatch after configuration starts requiring a reference for
+  // an operation of its resource, though a new approval there would pin it.
+  it("a Dispatch from a ceiling consented without a reference carries none after configuration requires one for the resource (#1847)", () => {
+    const { opts, kernel } = kernelFor(SUPERSEDED);
+    const store = new TemplateStore();
+    const template = create(kernel, store, proposal(), SUPERSEDED);
+    expect(template.ceiling[0]).not.toHaveProperty("resource_contract");
+    opts.resourceContracts = declarations(
+      [declared("v1", "superseded", { retained_until: "2027-01-01T00:00:00Z" }), declared("v2", "current")],
+      ["payments:payment.execute"],
+    );
+    expect(opts.resourceContracts.forEntry(proposal()[0] as AuthorityEntry).required).toBe(true);
+    const { mission } = dispatch(kernel, store, template.id);
+    expect(mission.authority_set[0]).not.toHaveProperty("resource_contract");
   });
 
   it("a superseded ceiling reference within its retention survives the Dispatch, and a retired one refuses", () => {
