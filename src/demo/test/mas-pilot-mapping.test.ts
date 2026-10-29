@@ -437,4 +437,38 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
       ),
     ).toMatchObject({ ok: true, version: 2 });
   });
+
+  it("refuses a newer version that withdraws a value whose stated contract is still supported, and accepts the withdrawal of a value stating none, or once its contract is not supported", () => {
+    const c = clock();
+    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: c.now });
+    const current = contractAt(CURRENT_VERSION);
+    const older = contractAt(OLDER_VERSION);
+    const stated = (ref: typeof current) => ({ actions: READ, resource_contract: ref });
+    expect(
+      cache.install(
+        withScopes(
+          { "invoices.read": READ, "invoices.read.contract-older": stated(older), "invoices.read.contract-current": stated(current) },
+          1,
+        ),
+      ),
+    ).toMatchObject({ ok: true });
+    // Withdrawing either stated value while its contract is supported: refused.
+    for (const kept of [
+      { "invoices.read": READ, "invoices.read.contract-current": stated(current) },
+      { "invoices.read": READ, "invoices.read.contract-older": stated(older) },
+    ]) {
+      const refused = cache.install(withScopes(kept, 2));
+      expect(refused.ok).toBe(false);
+      expect(!refused.ok && refused.reason).toMatch(/withdraws scope/);
+    }
+    // The legacy value states no contract: it may be withdrawn.
+    expect(
+      cache.install(withScopes({ "invoices.read.contract-older": stated(older), "invoices.read.contract-current": stated(current) }, 2)),
+    ).toMatchObject({ ok: true, version: 2 });
+    // Past the older version's declared retention, its value may be withdrawn too.
+    const retainedUntil = PAYMENTS_DECLARED?.versions.find((v) => v.version === OLDER_VERSION)?.retained_until as string;
+    expect(cache.install(withScopes({ "invoices.read.contract-current": stated(current) }, 3)).ok).toBe(false);
+    c.advance((Date.parse(retainedUntil) - c.now().getTime()) / 1000 + 1);
+    expect(cache.install(withScopes({ "invoices.read.contract-current": stated(current) }, 3))).toMatchObject({ ok: true, version: 3 });
+  });
 });

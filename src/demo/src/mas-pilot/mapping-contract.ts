@@ -133,6 +133,7 @@ const keyOf = (iss: string, id: string): string => JSON.stringify([iss, id]);
 export function parseMappingContract(
   raw: unknown,
   contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+  now: Date = new Date(),
 ): MappingContractDocument {
   const root = object(raw, "contract", TOP_LEVEL);
   const version = root.version;
@@ -203,6 +204,7 @@ export function parseMappingContract(
           throw new MappingContractError(message);
         },
         contracts,
+        now,
       );
       values[scope] = mapped.actions;
       if (mapped.resource_contract) stated[scope] = mapped.resource_contract;
@@ -378,13 +380,15 @@ export class MappingContractCache {
   private readonly log: MappingAuditRecord[] = [];
   private readonly maxStaleMs: number;
   private readonly now: () => Date;
+  private readonly contracts: ResourceContractDeclarations;
 
-  constructor(opts: { maxStaleSeconds: number; now?: () => Date }) {
+  constructor(opts: { maxStaleSeconds: number; now?: () => Date; contracts?: ResourceContractDeclarations }) {
     if (!Number.isInteger(opts.maxStaleSeconds) || opts.maxStaleSeconds <= 0) {
       throw new MappingContractError("maxStaleSeconds must be a positive integer");
     }
     this.maxStaleMs = opts.maxStaleSeconds * 1000;
     this.now = opts.now ?? (() => new Date());
+    this.contracts = opts.contracts ?? RESOURCE_CONTRACTS;
   }
 
   /** Install a newer contract version, or refuse it and say why. */
@@ -392,7 +396,7 @@ export class MappingContractCache {
     const at = this.now();
     let doc: MappingContractDocument;
     try {
-      doc = parseMappingContract(raw);
+      doc = parseMappingContract(raw, this.contracts, at);
     } catch (e) {
       const reason = (e as Error).message;
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
@@ -411,6 +415,18 @@ export class MappingContractCache {
     const repointed = this.installed ? repointedScope(this.installed, doc) : undefined;
     if (repointed !== undefined) {
       const reason = `mapping contract: version ${doc.version} repoints scope ${repointed} to another contract; a new contract takes a new scope value`;
+      this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
+      return { ok: false, reason };
+    }
+    // @spec resource-access#resource-contract (#1847, D989): a supported older
+    // mapping remains available while its contract is supported. A newer
+    // version that no longer maps a value stating a contract the declarations
+    // still support for its actions (current, or superseded within retention)
+    // is refused; once that contract is not supported, or for a value stating
+    // none, the value may be withdrawn.
+    const withdrawn = this.installed ? withdrawnScope(this.installed, doc, this.contracts, at) : undefined;
+    if (withdrawn !== undefined) {
+      const reason = `mapping contract: version ${doc.version} withdraws scope ${withdrawn}, whose contract is still supported`;
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
     }
@@ -474,6 +490,28 @@ function repointedScope(before: MappingContractDocument, after: MappingContractD
       const was = before.scopes.contracts[iss]?.[scope];
       const now = after.scopes.contracts[iss]?.[scope];
       if (!sameResourceContract(was, now) && !(was === undefined && now === undefined)) return `${iss} ${scope}`;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The first `issuer scope` the earlier document maps under a stated contract
+ * that the newer one no longer maps while the declarations still support that
+ * contract for the value's actions at `now`, or undefined (#1847, D989).
+ */
+function withdrawnScope(
+  before: MappingContractDocument,
+  after: MappingContractDocument,
+  contracts: ResourceContractDeclarations,
+  now: Date,
+): string | undefined {
+  for (const [iss, stated] of Object.entries(before.scopes.contracts)) {
+    for (const [scope, ref] of Object.entries(stated)) {
+      if (after.scopes.issuers[iss]?.[scope] !== undefined) continue;
+      const actions = before.scopes.issuers[iss]?.[scope] ?? [];
+      const entry = { resource: before.scopes.resource, actions, resource_contract: ref };
+      if (contracts.carriedViolation(entry, now) === undefined) return `${iss} ${scope}`;
     }
   }
   return undefined;
