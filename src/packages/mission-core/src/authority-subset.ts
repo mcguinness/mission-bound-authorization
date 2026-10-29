@@ -64,7 +64,7 @@ export function entryWithinCeiling(
 }
 
 /**
- * @spec mission#common-constraints, mission#derivation-policy — the
+ * @spec mission#common-constraints, mission#subset — the
  * `constraints` member names this engine accepts on an `AuthorityEntry`,
  * config ceiling and client proposal alike (issue #784). This spans the
  * Common Constraint keys the engine implements narrowing for (`max_amount`,

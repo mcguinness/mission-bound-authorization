@@ -444,7 +444,7 @@ describe("derivation refuses a proposal whose own bound admits nothing (@spec re
   });
 });
 
-describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#derivation-policy)", () => {
+describe("the typed config loader validates the implemented Common Constraints at load (@spec mission#subset)", () => {
   const REAL_CONFIG_DIR = fileURLToPath(new URL("../../../config", import.meta.url));
   let previous: string | undefined;
   let dir: string | undefined;

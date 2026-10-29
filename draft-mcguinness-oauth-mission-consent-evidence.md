@@ -62,6 +62,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8725:
   RFC8792:
   I-D.draft-mcguinness-oauth-mission-template:
@@ -632,8 +640,8 @@ practices can help make the set reviewable:
   whose constraints, such as its resource range or consumption bound,
   differ materially from the rest of its group.
 - **Split rather than approve** when the set is too large or varied
-  for one decision ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Applicability").
+  for one decision ({{I-D.draft-mcguinness-mission-architecture}},
+  Section "Mission Granularity").
 
 ## Disclosure Interrogation {#interrogation}
 
@@ -1863,6 +1871,10 @@ encoding difference to resolve before interoperating.
   Approval Comprehension; the evidence model cites the binding's rule
   that a committed approval surface covers the provenance facts. No
   requirement changes (#1892).
+
+- The split practice cites the architecture document's Mission
+  Granularity, which carries the evaluate-together boundary the OAuth
+  binding's Applicability stated. No requirement changes (#1892).
 
 # Acknowledgments
 {:numbered="false"}

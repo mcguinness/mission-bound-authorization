@@ -1509,9 +1509,9 @@ from Status or Signals.
 
 Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in a partner ERP
-under Mission `msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY`. Stage 0 (agent
-identity) and Stage 1 (Mission creation at the home AS) are the base
-profile's single-domain walkthrough, extended here in one way: the
+under Mission `msn_dYrf3sza_VS0UXcy-OHITvyReMNXzlOY`. Stage 1 (Mission
+creation at the home AS) is the base profile's single-domain
+walkthrough, extended here in one way: the
 Mission Intent's `target_resources` also names the partner ERP
 `https://erp.partner.example.com`, so the approved Authority Set
 additionally carries, for that resource, an `invoices.read` entry
@@ -1777,6 +1777,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 
 -01
 
+- The End-to-End Example starts from the base profile's Stage 1,
+  since that profile's example no longer has an agent-identity stage.
+  No requirement changed (#1892).
 - Changes a requirement, a normative wire change (#1630, D751): every
   cross-domain grant's `mission` claim carries the Mission's
   `expires_at`, unchanged and never the grant's `exp`. The Resource AS

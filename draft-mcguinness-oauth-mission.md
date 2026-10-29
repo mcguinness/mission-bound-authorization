@@ -68,7 +68,6 @@ normative:
 
 informative:
   I-D.draft-ietf-wimse-arch:
-  I-D.draft-ietf-oauth-spiffe-client-auth:
   RFC8126:
   RFC7009:
   RFC8935:
@@ -381,7 +380,9 @@ OAuth does not define a task record that links approval of a task to
 every grant obtained for it. Without that linkage, withdrawing task
 approval need not stop issuance under those grants.
 
-No existing OAuth object fills that role ({{why-a-new-object}}); an
+No existing OAuth object fills that role
+({{I-D.draft-mcguinness-mission-architecture}}, Section "Relationship
+to Existing OAuth Objects"); an
 `authorization_details` entry ({{RFC9396}}), for example, expresses
 authority but not the task it serves or a lifecycle of its own. A
 Mission, held by the AS beside the grant, does. It commits the
@@ -441,20 +442,11 @@ Verification
 defines how a token that carries only a narrowed subset is checked
 against the complete set.
 
-This chain is the first of two enforcement layers, and a deployment
-can run it alone: a resource server need not be Mission-aware unless
-it receives delegated tokens ({{rs-enforcement}}). A Mission-unaware
-resource server that authorizes only from `scope` operates within the
-Mission only where the AS establishes that its scope projection and
-the resource's independent controls cannot over-grant
-({{scope-projection}}). The chain provides task-bound issuance,
-auditability, and a revocation gate over future derivation.
-
-The chain does not evaluate individual actions, so token lifetime
-and narrow authority bound the exposure between issuance and use.
-The second layer, a separately specified runtime layer
-({{runtime-boundary}}), adds a per-action check for the action
-classes whose consequence needs one.
+A deployment can run the chain alone
+({{I-D.draft-mcguinness-mission-architecture}}, Section "The
+Issuance-Only Deployment"); a separately specified runtime layer adds
+a per-action check for the action classes whose consequence needs one
+({{runtime-boundary}}).
 
 ## Applicability {#applicability}
 
@@ -473,38 +465,12 @@ multi-step task is in scope as a service-owned Mission
 ({{authority-sources}}).
 
 The direct realization creates each Mission at an approval
-interaction on the authorization endpoint.
-{{I-D.draft-mcguinness-mission-architecture}} (Section "Mission
-Creation Paths") maps the paths where an administrator, or a policy a
-human consented to, decides without one.
-
-A Mission is intended to cover one concrete task, not an agent's
-whole lifetime. Narrow Missions, each separately approved and
-revocable, are preferred over one broad standing Mission that
-accumulates authority across unrelated tasks.
-
-This preference has a consent cost: many narrow Missions can create
-approval fatigue, and combining unrelated authority into one broad
-Mission can make approval difficult to evaluate. A useful boundary
-is a task whose purpose, authority, and bounds the Approver can
-evaluate together ({{approval-comprehension}}).
-
-Optional companions can reduce repeated approvals through standing
-consent ({{standing-consent-bases}}): for example, a template, an
-authority ceiling, or a policy that a human approved once governs
-later Missions. The template, ceiling, or policy still needs a
-meaningful human approval, and no such mechanism removes its
-profile's human-approval requirement for high-consequence authority.
-
-The unit of governance is the action, not the content. A Mission
-bounds where an agent may act (resources, actions) and how much
-(constraints and, where metered, cumulative bounds). It does not
-inspect the content that flows within an authorized action: an
-approved egress channel carries a status update or an exfiltrated
-payload with equal authority. Content-level controls (data loss
-prevention, redaction) are complementary; under mediated execution
-they fit at the mediating enforcement component
-({{runtime-boundary}}).
+interaction on the authorization endpoint, and a Mission is intended
+to cover one concrete task, not an agent's whole lifetime.
+{{I-D.draft-mcguinness-mission-architecture}} maps the paths where an
+administrator, or a policy a human consented to, decides without that
+interaction (Section "Mission Creation Paths"), and how a deployment
+sizes its Missions (Section "Mission Granularity").
 
 # Overview {#overview}
 
@@ -836,7 +802,7 @@ authority, and the granted authority are committed separately
 
 The client writes every Intent member; how it produces them, for
 example through a Mission Shaper working from a natural-language
-instruction, is out of scope ({{the-mission-the-plan-and-execution}}).
+instruction, is out of scope ({{I-D.draft-mcguinness-mission-shaping}}).
 The prose members (`goal`, `task_bounds`) bound authority only through
 disclosure: the Approver refuses authority the words do not support
 ({{authorization-derivation}}).
@@ -3015,10 +2981,6 @@ An access token issued under a Mission takes one of two forms:
   consumption mode ({{introspected-consumption}}), where introspection
   or issuer-local resolution carries its claims, with the same
   enforcement obligations.
-
-A deployment whose AS can issue neither deploys a Mission Authority
-Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
-governs ordinary tokens at the enforcement layer.
 
 {{issuance-gating}} states the issuance procedure for every path.
 
@@ -6009,17 +5971,6 @@ Scenario: agent `s6BhdRkqt3`, acting for `alice`
 (`user_3p2q8mN1a0kV7tR`), reconciles Q3 invoices in the home ERP
 under Mission `msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-`.
 
-## Stage 0: Agent Identity (by Reference) {#stage-0-agent-identity-by-reference}
-
-The agent is an OAuth client with a workload identity, for example
-one established using WIMSE {{I-D.draft-ietf-wimse-arch}} or SPIFFE
-{{I-D.draft-ietf-oauth-spiffe-client-auth}}. `alice` has delegated to
-it through an ordinary authorization code flow, per
-{{I-D.draft-ietf-wimse-aims}}: the `client_id` claim names the agent,
-and the `sub` claim identifies `alice`. This document adds the
-Mission layer to that identity; Stage 0 is otherwise unchanged from
-that specification.
-
 ## Stage 1: Mission Creation {#stage-1-mission-creation}
 
 The following example shows the Submission envelope the agent pushes
@@ -6325,51 +6276,6 @@ issuer on every request stops honoring it on its next request.
 This appendix explains the design choices behind the Mission and
 records what this document leaves to other work.
 
-## Relationship to Existing OAuth Objects {#why-a-new-object}
-
-OAuth already has objects near this need, but none is the approved
-task:
-
-- A `scope` value or an `authorization_details` entry
-  ({{RFC9396}}) expresses authority but neither the task it serves
-  nor a lifecycle of its own.
-- An access token is a short-lived projection; its `jti` claim
-  identifies the token, not the task.
-- A refresh token preserves the ability to obtain further tokens but
-  commits no bounded, approved authority.
-- A consent record proves that an approval event happened; it does
-  not govern the resulting work as it continues.
-
-The Mission is the durable object these project from: the approved
-task that bounds and outlives them and that every derived token
-refers back to. It is not another `authorization_details` type, since
-Rich Authorization Requests already express authority; it is the
-approved task with a lifecycle, which an Authority Set is derived for
-and gated by.
-
-## Missions, Plans, and Execution {#the-mission-the-plan-and-execution}
-
-The Mission is the durable, AS-held object that commits the approved
-authority and owns the task's lifecycle. Two related things an agent
-produces around a task draw on the Mission's authority but carry none
-of their own and never enlarge it.
-
-The agent's **plan** (how it decomposes the task, chooses tools, and
-delegates to sub-agents) is its own strategy and is out of scope. It
-grants nothing: a sub-agent's authority is carried on its delegated
-token ({{delegation}}), derived from the Mission and only narrowed
-from it ({{subset}}).
-
-The agent's **execution** (the tokens it derives, the calls it makes,
-and the decisions taken on them) references the Mission but cannot
-expand it. Revoking the Mission stops further derivation
-({{issuance-gating}}) but does not undo completed actions. Evaluating
-each action against the Mission at the point of use is the runtime
-layer's concern ({{runtime-boundary}}).
-
-How a client produces the Intent (for example, a "Mission Shaper"
-deriving it from a natural-language instruction) is out of scope.
-
 ## Scope {#scope-and-future-work}
 
 This document is self-contained: it binds Missions to OAuth 2.0 and
@@ -6578,69 +6484,6 @@ AGR-backed template or drawdown activation ({{I-D.draft-mcguinness-mission-appro
 Direct approval is the degenerate case where one human fills every
 role. Where a profile or deployment does not populate `adjudication`
 ({{mission-record}}), the list shows the value it would carry.
-
-# Derivation Policy {#derivation-policy}
-
-This appendix is illustrative and adds no requirements. It works one
-derivation rule through the contract in {{authorization-derivation}};
-it is not a standardized policy language or an alternative subset
-relation.
-
-## Derivation Rule Example {#derivation-rule-example}
-
-The following example uses a catalog whose read actions supply no amount
-for a cap to compare against, while a journal write does. The ceiling
-separates those actions:
-
-~~~ json
-[
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read", "journal-entries.read"] },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "500.00", "currency": "USD" } } }
-]
-~~~
-
-The validated proposal also separates the read from the amount-bound
-write:
-
-~~~ json
-[
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["invoices.read"] },
-  { "type": "mission_resource_access",
-    "resource": "https://erp.example.com",
-    "actions": ["journal-entries.write"],
-    "constraints": {
-      "max_amount": { "amount": "900.00", "currency": "USD" } } }
-]
-~~~
-
-Under a declared `narrowing` capability
-({{transformation-capabilities}}), the resulting Authority Set
-contains the proposed `invoices.read` entry unchanged, and the
-proposed `journal-entries.write` entry with `max_amount` narrowed to
-`500.00 USD`. The ceiling's unrequested `journal-entries.read` does
-not appear. Each proposed entry intersects the same-resource ceiling
-entries; an empty action intersection contributes no authority.
-
-Negative fixtures accompany this positive result; none is a special
-case that relaxes the type's relation:
-
-- A single mixed read and write proposal carrying the amount cap is
-  refused at intake: the read supplies no amount for the cap to
-  compare against, and Authority Set derivation does not drop the cap
-  from the read fragment.
-- A write proposal naming a different currency cannot produce the USD
-  intersection shown.
-- A proposal carrying a Common Constraint this deployment does not
-  compare is refused with the `invalid_authorization_details` error
-  code ({{error-mapping}}), not derived with the constraint dropped.
 
 # Integrity Anchor Test Vectors {#test-vectors}
 
@@ -7192,6 +7035,15 @@ resolve before interoperating.
   and Propagated Information and Composition and the Effective Ceiling,
   which the Security Model and Mission Work Products carry, are removed
   with the uncited Work Products reference (#1892, D1026).
+- Editorial, no requirement change: the Architecture carries material
+  on the family rather than the protocol: Relationship to Existing
+  OAuth Objects; Missions, Plans, and Execution; the Derivation Policy
+  appendix's worked example; and the guidance on sizing a Mission to
+  one task, which Applicability now points to. The Introduction's
+  two-layer framing becomes a pointer, and the Mission Authority Server
+  pointer of Mission-Bound Token Issuance and the End-to-End Example's
+  agent-identity stage, each stated elsewhere, are removed with the
+  uncited SPIFFE client authentication reference (#1892, D1026).
 
 -01
 

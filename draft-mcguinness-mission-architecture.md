@@ -773,6 +773,51 @@ Lifecycle cuts through the last three. In the OAuth model, the
 Authority Set is the concrete authority (resources, actions,
 constraints) derived for the Mission.
 
+## Relationship to Existing OAuth Objects {#why-a-new-object}
+
+OAuth already has objects near this need, but none is the approved
+task:
+
+- A `scope` value or an `authorization_details` entry
+  ({{RFC9396}}) expresses authority but neither the task it serves
+  nor a lifecycle of its own.
+- An access token is a short-lived projection; its `jti` claim
+  identifies the token, not the task.
+- A refresh token preserves the ability to obtain further tokens but
+  commits no bounded, approved authority.
+- A consent record proves that an approval event happened; it does
+  not govern the resulting work as it continues.
+
+The Mission is the durable object these project from: the approved
+task that bounds and outlives them and that every derived token
+refers back to. It is not another `authorization_details` type, since
+Rich Authorization Requests already express authority; it is the
+approved task with a lifecycle, which an Authority Set is derived for
+and gated by.
+
+## Missions, Plans, and Execution {#the-mission-the-plan-and-execution}
+
+The Mission is the durable object, held by its Controller (the
+authorization server in the OAuth binding), that commits the approved
+authority and owns the task's lifecycle. Two related things an agent
+produces around a task draw on the Mission's authority but carry none
+of their own and never enlarge it.
+
+The agent's **plan** (how it decomposes the task, chooses tools, and
+delegates to sub-agents) is its own strategy, which the family does not
+define ({{non-goals}}). It grants nothing: a sub-agent's authority is
+carried on its delegated token, derived from the Mission and only
+narrowed from it ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Subset Rule").
+
+The agent's **execution** (the tokens it derives, the calls it makes,
+and the decisions taken on them) references the Mission but cannot
+expand it. Revoking the Mission stops further derivation
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Issuance Gating")
+but does not undo completed actions. Evaluating each action against
+the Mission at the point of use is the runtime layer's concern
+({{I-D.draft-mcguinness-mission-runtime}}).
+
 ## Approval and Lifecycle {#approval-and-lifecycle}
 
 In every binding, an explicit approval event creates the Mission and
@@ -2278,10 +2323,8 @@ identifier and test fixtures that pin Intent-to-Authority-Set
 outcomes, making the local policy reviewable even though it does not
 travel. {{derivation-policy-authoring}} describes that policy
 artifact, its fixtures ({{derivation-policy-fixtures}}), and its
-ownership ({{derivation-policy-ownership}}); the OAuth binding's
-informative Derivation Policy appendix works one narrowing rule
-through ({{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation
-Rule Example").
+ownership ({{derivation-policy-ownership}}); {{derivation-rule-example}}
+works one narrowing rule through.
 
 The ceiling the derivation narrows against is a composition, not a
 single object. The derived Authority Set sits inside every bound on the
@@ -2327,10 +2370,8 @@ derivation, under the OAuth binding's rules
 the authority-bearing bindings share. It is not a requirement for
 every binding. It is illustrative and adds no requirements: it
 describes an authoring artifact for that derivation contract, not a
-standardized policy language or an alternative subset relation. The
-OAuth binding's Derivation Policy appendix works one derivation rule
-through ({{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation Rule
-Example").
+standardized policy language or an alternative subset relation.
+{{derivation-rule-example}} works one derivation rule through.
 
 ### Policy Artifact {#derivation-policy-artifact}
 
@@ -2424,6 +2465,66 @@ Authority Set derivation, and a real decision path, since a
 configuration that loads does not thereby authorize its intended
 workload. Applying the same entry checks at configuration load and at
 client intake keeps those two surfaces from disagreeing.
+
+### Derivation Rule Example {#derivation-rule-example}
+
+The following example works one derivation rule through the OAuth
+binding's derivation contract ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Mission Authority"). It uses a catalog whose read actions
+supply no amount for a cap to compare against, while a journal write
+does. The ceiling separates those actions:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read", "journal-entries.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "500.00", "currency": "USD" } } }
+]
+~~~
+
+The validated proposal also separates the read from the amount-bound
+write:
+
+~~~ json
+[
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["invoices.read"] },
+  { "type": "mission_resource_access",
+    "resource": "https://erp.example.com",
+    "actions": ["journal-entries.write"],
+    "constraints": {
+      "max_amount": { "amount": "900.00", "currency": "USD" } } }
+]
+~~~
+
+Under a declared `narrowing` capability
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Declared
+Transformation Capabilities"), the resulting Authority Set contains
+the proposed `invoices.read` entry unchanged, and the proposed
+`journal-entries.write` entry with `max_amount` narrowed to
+`500.00 USD`. The ceiling's unrequested `journal-entries.read` does
+not appear. Each proposed entry intersects the same-resource ceiling
+entries; an empty action intersection contributes no authority.
+
+Negative fixtures accompany this positive result; none is a special
+case that relaxes the type's relation:
+
+- A single mixed read and write proposal carrying the amount cap is
+  refused at intake: the read supplies no amount for the cap to
+  compare against, and Authority Set derivation does not drop the cap
+  from the read fragment.
+- A write proposal naming a different currency cannot produce the USD
+  intersection shown.
+- A proposal carrying a Common Constraint this deployment does not
+  compare is refused with the `invalid_authorization_details` error
+  code ({{I-D.draft-mcguinness-oauth-mission}}, Section "Error and
+  Challenge Mapping"), not derived with the constraint dropped.
 
 ### Ownership and Operational Signals {#derivation-policy-ownership}
 
@@ -3555,10 +3656,9 @@ it:
    `unknown` ({{I-D.draft-mcguinness-mission-orchestration}}, Section
    "In-Flight Requests"), and runtime evidence reconciles each executed
    effect with its action ({{I-D.draft-mcguinness-mission-runtime}},
-   Section "Runtime Enforcement Evidence"). The OAuth binding states
-   that revoking a Mission does not undo completed actions
-   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Missions, Plans,
-   and Execution"), and AAuth Management bounds the AAuth residual
+   Section "Runtime Enforcement Evidence"). Revoking a Mission does not
+   undo completed actions ({{the-mission-the-plan-and-execution}}), and
+   AAuth Management bounds the AAuth residual
    window ({{I-D.draft-mcguinness-mission-aauth-management}}, Section
    "Honest Residual Bounds").
 4. A route that does not consult Mission state is outside these limits.
@@ -3593,8 +3693,8 @@ direction.
 
 A deployment enters the family from the estate it already runs
 ({{entry-ramps}}). It can stop at issuance alone ({{issuance-only}}),
-adopt Missions one short task at a time ({{short-mission}}), and
-compose named patterns for untrusted input ({{quarantine-pattern}})
+adopt Missions one short task at a time ({{short-mission}}), size each
+Mission to one task ({{mission-granularity}}), and compose named patterns for untrusted input ({{quarantine-pattern}})
 and for work that never ends ({{standing-agent}}). The Deployment
 Profile states what it built ({{deployment-profile}}).
 
@@ -3666,6 +3766,38 @@ state and the issuance gate ({{validity-model}}). A deployment can
 adopt the family this way first, per task, and add state surfaces
 only where missions grow long enough to need suspend, complete, or
 kill-now.
+
+## Mission Granularity {#mission-granularity}
+
+A Mission is intended to cover one concrete task, not an agent's
+whole lifetime. Narrow Missions, each separately approved and
+revocable, are preferred over one broad standing Mission that
+accumulates authority across unrelated tasks.
+
+This preference has a consent cost: many narrow Missions can create
+approval fatigue, and combining unrelated authority into one broad
+Mission can make approval difficult to evaluate. A useful boundary
+is a task whose purpose, authority, and bounds the Approver can
+evaluate together ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Approval Comprehension").
+
+Optional companions can reduce repeated approvals through standing
+consent ({{I-D.draft-mcguinness-oauth-mission}}, Section
+"Standing-Consent Bases"; {{standing-agent}}): for example, a
+template, an authority ceiling, or a policy that a human approved
+once governs later Missions. The template, ceiling, or policy still
+needs a meaningful human approval, and no such mechanism removes its
+profile's human-approval requirement for high-consequence authority.
+
+The unit of governance is the action, not the content. A Mission
+bounds where an agent may act (resources, actions) and how much
+(constraints and, where metered, cumulative bounds). It does not
+inspect the content that flows within an authorized action: an
+approved egress channel carries a status update or an exfiltrated
+payload with equal authority. Content-level controls (data loss
+prevention, redaction) are complementary; under mediated execution
+they fit at the mediating enforcement component
+({{I-D.draft-mcguinness-mission-runtime}}).
 
 ## The Quarantine Pattern {#quarantine-pattern}
 
@@ -4066,10 +4198,10 @@ standardizes:
 
 | Requirement | Conventional OAuth+PDP realization | Mission standardization | Illustrative added Mission cost |
 |---|---|---|---|
-| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible ({{I-D.draft-mcguinness-oauth-mission}}, Section "Relationship to Existing OAuth Objects"; {{adjacent-work}}) | Durable-object and lifecycle storage |
+| Durable task semantics across tokens and restarts | OAuth grants, refresh families, or PDP records outlive the token | An independently addressable, lifecycle-bearing approved task with anchors consistently interpreted by the authorization server, PDP, agents, audiences, and evidence producers; it does not make persistence newly possible ({{why-a-new-object}}; {{adjacent-work}}) | Durable-object and lifecycle storage |
 | Multi-credential, multi-actor join | A deployment-invented transaction, grant, or workflow identifier shared across credentials | Stable approved-task semantics for that join, bound to authority and carried through delegation and fan-out outside one private PDP schema ({{swarm-execution}}) | New claims and endpoints |
 | A second trust domain | The partner calls the origin PDP, shares state, or federates policy, trading synchronous coupling, availability, and disclosure | Bounded local credentials and common anchors carried by Cross-Domain Projection, accepting local-token revocation latency (the Project verb): a portability choice, not the only possible design | State consistency and distribution; privacy and correlation surface |
-| Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite ({{I-D.draft-mcguinness-oauth-mission}}, Section "Relationship to Existing OAuth Objects"; the Prove verb) | Evidence operations |
+| Approval as a first-class record | A local consent or grant database plus versioned decision logs | A standardized immutable snapshot, integrity anchors, and one reference portable evidence can cite ({{why-a-new-object}}; the Prove verb) | Evidence operations |
 | Persistent narrowing | A stateful authorization server or PDP stores reduced entitlements and consults them at issuance | Monotonic subset semantics across issuance, delegation, attenuation, and cross-domain projections, auditable across components ({{invariants}}) | AS or MAS integration; ecosystem adoption |
 {: title="Where a conventional stack meets Mission standardization"}
 
@@ -4884,6 +5016,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Gains, from the OAuth binding, Relationship to Existing OAuth Objects
+  and Missions, Plans, and Execution under The Mission, the Derivation
+  Rule Example under Derivation Policy Authoring, and Mission
+  Granularity among the deployment patterns; its citations of those
+  sections become local. No requirement changed (#1892).
 
 - Mission Invariants' work-products and composition entries cite the
   Security Model's adversary model, which carries the analysis the
