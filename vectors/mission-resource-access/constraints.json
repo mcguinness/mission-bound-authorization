@@ -1115,14 +1115,18 @@
           "constraints": {
             "requires_action_approval": false
           }
-        }
+        },
+        "enforced_constraints": [
+          "requires_action_approval"
+        ]
       },
       "expected": {
         "outcome": "subset",
-        "reason": "narrowing may add the requirement"
+        "reason": "narrowing may add the requirement; the reference's false is equivalent to omission, so the added requirement narrows where the serving resource server enforces it"
       },
       "refs": [
-        "#1258 item 3"
+        "#1258 item 3",
+        "D1025"
       ]
     },
     {
