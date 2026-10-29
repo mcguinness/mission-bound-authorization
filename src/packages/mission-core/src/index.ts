@@ -339,6 +339,26 @@ export {
   reconcilePropagatedReferences,
 } from "./mission-reference.js";
 export {
+  carriedUnder,
+  entriesEqual,
+  entryWithinDomain,
+  isSubsetEntryUnder,
+  isSubsetSetUnder,
+  isSubsetSetUnderIgnoringCapabilitySources,
+  NARROWING_IN_FULL,
+  NARROWING_LIMITATIONS,
+  NARROWING_UNDECLARED,
+  type NarrowingDeclaration,
+  type NarrowingDomain,
+  type NarrowingResolution,
+  narrowingDomainDigest,
+  narrowingDomainViolation,
+  narrowingPermits,
+  qualifiedNarrowingViolation,
+  resolveNarrowing,
+  unimplementedDomainClaim,
+} from "./narrowing-declaration.js";
+export {
   type ArgumentDerivedContract,
   carriesHttpUserinfo,
   contractCanEstablish,
