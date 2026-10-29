@@ -1088,4 +1088,59 @@ describe("delivery uncertainty and liveness ordering (@spec signals#discharge-co
     w.rule.reestablish(w.now());
     expect(w.rule.mayRely(w.now())).toBe(true);
   });
+
+  it("holds a verification behind an earlier verification still being retried or in flight", async () => {
+    const w = await wire();
+    approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const from = w.now() + 1;
+
+    // A requested verification whose delivery fails and is retried.
+    w.fault.before = (r) => {
+      if (r.kind === "verification" && eventBody(r).state === "state-retried")
+        throw new Error("verification delivery failed");
+      return undefined;
+    };
+    w.advance(1);
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-retried");
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-later");
+    await w.emitter.drain();
+    w.advance(5_000);
+    await w.emitter.attestLiveness();
+    await w.emitter.drain();
+    expect(trace(since(w.undeclaredLog, from))).toEqual([]);
+    expect(since(w.declaredLog, w.now()).map((r) => r.kind)).toEqual(["verification"]);
+
+    // Once it is delivered, the later ones follow in order.
+    w.fault.before = undefined;
+    w.advance(30_000);
+    await w.emitter.drain();
+    await w.emitter.attestLiveness();
+    const delivered = since(w.undeclaredLog, from);
+    expect(delivered.map((r) => eventBody(r).state)).toEqual([
+      "state-retried",
+      "state-later",
+      undefined,
+    ]);
+
+    // A hand-off in flight holds the next attestation on that stream.
+    const received = deferred();
+    const outcome = deferred();
+    w.fault.after = (r) => {
+      if (r.kind !== "verification") return undefined;
+      w.fault.after = undefined;
+      received.resolve();
+      return outcome.promise;
+    };
+    w.advance(HEARTBEAT_MS);
+    const first = w.emitter.attestLiveness();
+    await received.promise;
+    await w.emitter.attestLiveness();
+    expect(since(w.undeclaredLog, w.now())).toHaveLength(1);
+    outcome.resolve();
+    await first;
+    await w.emitter.attestLiveness();
+    expect(since(w.undeclaredLog, w.now())).toHaveLength(2);
+  });
 });

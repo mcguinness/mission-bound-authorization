@@ -2132,14 +2132,26 @@ export class MissionSignalEmitter {
   /**
    * @spec signals#delivery (#1877 review, D1023): true while `audience`'s
    * stream may not carry a verification event: it is held, or an earlier
-   * lifecycle event for it is undelivered, including one backing off after a
-   * failed hand-off or claimed and in flight. A withheld event is never
-   * journaled on the stream, so the gate's exception needs no case here. A
-   * lifecycle event that can never be delivered blocks liveness for good,
-   * which fails closed: the consumer's staleness rule ends its reliance.
+   * event on it is undelivered, including one backing off after a failed
+   * hand-off or in flight. That covers its lifecycle events, the requested
+   * verifications journaled before `beforeJob` (every one, when absent),
+   * and any verification hand-off not yet ended. A withheld event is never
+   * journaled on the stream, so the gate's exception needs no case here. An
+   * event that can never be delivered blocks liveness for good, which fails
+   * closed: the consumer's staleness rule ends its reliance.
    */
-  private livenessBlocked(audience: string): boolean {
-    return this.held(audience) || this.lifecyclePending(audience);
+  private livenessBlocked(audience: string, beforeJob?: number): boolean {
+    return (
+      this.held(audience) ||
+      this.lifecyclePending(audience) ||
+      this.unresolvedLiveness(audience) > 0 ||
+      this.db
+        .prepare(
+          `SELECT 1 FROM signal_stream_outbox
+           WHERE audience = ? AND kind = 'verification' AND done = 0 AND job_id < ? LIMIT 1`,
+        )
+        .get(audience, beforeJob ?? Number.MAX_SAFE_INTEGER) !== undefined
+    );
   }
 
   /**
@@ -2392,7 +2404,7 @@ export class MissionSignalEmitter {
         // Until this notice is acknowledged, a later one for the stream waits.
         blocked.add(row.audience);
         if (!runnable) continue;
-      } else if (!runnable || this.livenessBlocked(row.audience)) {
+      } else if (!runnable || this.livenessBlocked(row.audience, row.job_id)) {
         continue;
       }
       const claimed = this.db
@@ -2440,7 +2452,7 @@ export class MissionSignalEmitter {
       }
       // Signing awaited: a withholding may have paused the stream, or a
       // lifecycle event been committed on it, meanwhile.
-      if (row.kind === "verification" && this.livenessBlocked(row.audience)) {
+      if (row.kind === "verification" && this.livenessBlocked(row.audience, row.job_id)) {
         this.db
           .prepare(`UPDATE signal_stream_outbox SET claimed_until = NULL WHERE job_id = ?`)
           .run(row.job_id);
