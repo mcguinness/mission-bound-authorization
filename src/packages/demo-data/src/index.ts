@@ -26,15 +26,19 @@ import {
   isAbsoluteUri,
   isActionPhase,
   isAuthorityEntry,
+  NARROWING_UNDECLARED,
+  type NarrowingDeclaration,
   parseAuthorityDependencyDeclarations,
   parseScopeProjectionMapping,
   parseStrictJson,
   ResourceContractDeclarations,
   type ResourceContractRef,
   refusedEntryMember,
+  resolveNarrowing,
   resourceMatchViolation,
   type ScopeProjectionMapping,
   ScopeProjectionMappingError,
+  unimplementedDomainClaim,
   unsupportedActionFamily,
   unsupportedDelegationMember,
   unsupportedEntryMember,
@@ -2833,6 +2837,104 @@ export function loadScopeProjection(
 
 /** The validated shipped scope-projection mapping (@see loadScopeProjection). */
 export const SCOPE_PROJECTION: ScopeProjectionMapping = loadScopeProjection();
+
+/**
+ * @spec resource-access#qualified-narrowing, mission#transformation-capabilities
+ * (#1377, D1025): the transformation capabilities this authorization server
+ * declares per supported type. `declared` holds each type's
+ * `mission_transformation_capabilities` value, emitted in its metadata entry
+ * and stated in deployment documentation; `narrowing` is the
+ * `mission_resource_access` declaration as this server resolves it, which
+ * every narrowing site applies.
+ */
+export interface TransformationCapabilities {
+  declared: Readonly<Record<string, Readonly<Record<string, JsonValue>>>>;
+  narrowing: NarrowingDeclaration;
+}
+
+const CAPABILITY_MEMBERS: readonly string[] = ["narrowing", "delegation", "projection"];
+
+function isJsonObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+/**
+ * Load and validate `transformation-capabilities.json`. The server never
+ * declares a value it cannot validate itself, so a qualified `narrowing` value
+ * naming a missing, malformed or mismatched narrowing domain document refuses
+ * to start, where a reader of another server's carrier would treat it as
+ * `false` (Resource Access); so does a domain listing a `constraints` key or
+ * member this implementation does not implement ("An authorization server
+ * MUST NOT declare a qualified value whose domain lists a `constraints` key
+ * whose subset and intersection rules it does not implement"). Each domain
+ * document is read, under this directory, from a path `narrowing_domains`
+ * lists.
+ */
+export function loadTransformationCapabilities(
+  text: string = readText("transformation-capabilities.json"),
+  readDomain: (path: string) => string = readText,
+): TransformationCapabilities {
+  const file = "transformation-capabilities.json";
+  let raw: unknown;
+  try {
+    raw = parseStrictJson(text);
+  } catch (e) {
+    throw new ConfigError(file, `invalid JSON: ${(e as Error).message}`);
+  }
+  if (!isJsonObject(raw)) throw new ConfigError(file, "must be a JSON object");
+  const extra = Object.keys(raw).find(
+    (k) => !["$comment", "types", "narrowing_domains"].includes(k),
+  );
+  if (extra !== undefined) throw new ConfigError(file, `unknown member ${extra}`);
+  const domains = new Map<string, unknown>();
+  for (const path of asArray(file, raw.narrowing_domains ?? [], "narrowing_domains")) {
+    if (typeof path !== "string") throw new ConfigError(file, "narrowing_domains lists paths");
+    let doc: unknown;
+    try {
+      doc = parseStrictJson(readDomain(path));
+    } catch (e) {
+      if (e instanceof ConfigError) throw e;
+      throw new ConfigError(path, `invalid JSON: ${(e as Error).message}`);
+    }
+    const id = isJsonObject(doc) ? doc.id : undefined;
+    if (typeof id !== "string")
+      throw new ConfigError(path, "a narrowing domain document names its id");
+    if (domains.has(id)) throw new ConfigError(file, `two narrowing domain documents name ${id}`);
+    domains.set(id, doc);
+  }
+  const types = raw.types ?? {};
+  if (!isJsonObject(types)) throw new ConfigError(file, "types must be an object keyed by type");
+  const declared: Record<string, Record<string, JsonValue>> = {};
+  let narrowing: NarrowingDeclaration = NARROWING_UNDECLARED;
+  for (const [type, value] of Object.entries(types)) {
+    if (type !== "mission_resource_access") {
+      throw new ConfigError(file, `${type} is not a supported authorization_details type`);
+    }
+    if (!isJsonObject(value)) throw new ConfigError(file, `${type} must be an object`);
+    const unknownMember = Object.keys(value).find((k) => !CAPABILITY_MEMBERS.includes(k));
+    if (unknownMember !== undefined)
+      throw new ConfigError(file, `${type} carries no capability ${unknownMember}`);
+    for (const member of ["delegation", "projection"]) {
+      if (value[member] !== undefined && typeof value[member] !== "boolean") {
+        throw new ConfigError(file, `${type}.${member} must be a boolean`);
+      }
+    }
+    const resolved = resolveNarrowing(value.narrowing, (id) => domains.get(id));
+    if (resolved?.fault !== undefined)
+      throw new ConfigError(file, `${type}.narrowing: ${resolved.fault}`);
+    if (resolved?.declaration.kind === "domain") {
+      const claim = unimplementedDomainClaim(resolved.declaration.domain);
+      if (claim !== undefined) throw new ConfigError(file, `${type}.narrowing: ${claim}`);
+    }
+    if (resolved) narrowing = resolved.declaration;
+    declared[type] = structuredClone(value) as Record<string, JsonValue>;
+  }
+  return { declared, narrowing };
+}
+
+/** The validated shipped transformation capabilities (@see loadTransformationCapabilities). */
+export const TRANSFORMATION_CAPABILITIES: TransformationCapabilities =
+  loadTransformationCapabilities();
 
 /**
  * @spec mission#approval-authentication (#826, D425) — an action class of the
