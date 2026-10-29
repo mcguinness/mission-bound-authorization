@@ -718,6 +718,14 @@ that any committed transition for the stream's subjects would have
 been delivered, other than an event the gate of
 {{discharge-compatibility}} withholds.
 
+The stream's heartbeat interval is the longest time after a
+verification or heartbeat event during which the stream stays verified
+live. It is finite, and the Mission Issuer and the consumer agree it
+through configuration or through a discovery mechanism another
+document defines; this document defines no discovery member for it. A
+stream whose heartbeat interval the consumer does not know is not
+verified live, so the staleness fallback below applies to it.
+
 On a
 stream verified live, silence is freshness-preserving: the consumer
 MAY continue to rely on cached Mission state for those subjects up to
