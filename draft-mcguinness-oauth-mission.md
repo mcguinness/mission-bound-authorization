@@ -4295,7 +4295,9 @@ and whether instance attribution is required.
   refuse the exchange if the required instance evidence or its
   association with the delegate and output key cannot be established.
   {{error-mapping}} gives the error codes for these refusals.
-- If the exchange issues a refresh token, the grant-continuity rules of
+- If the exchange issues a refresh token, and so establishes a
+  redeemable grant lineage ({{grant-binding-related}}), the
+  grant-continuity rules of
   {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply
   alongside {{grant-binding}}; instance continuity alone does not
   authorize replacement of the recorded instance or key rebinding.
