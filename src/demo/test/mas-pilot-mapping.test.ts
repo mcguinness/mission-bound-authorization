@@ -630,8 +630,15 @@ describe("mapping contract cache: the scope binding ledger (@spec authority-serv
     initSharedStore({ file: foreign, owner: "another-component", schema: "", schemaVersion: 1 });
     expect(() => SqliteScopeBindingLedger.open(foreign)).toThrow(/owned by another-component/);
 
+    // Initializing again never replaces history: the recorded binding stays.
     const once = initializedLedger();
-    expect(() => initScopeBindingLedger(once)).toThrow(/already exists/);
+    const kept = SqliteScopeBindingLedger.open(once);
+    expect(cacheOver(kept).install(withScopes({ legacy: READ }, 1)).ok).toBe(true);
+    kept.close();
+    expect(() => initScopeBindingLedger(once)).toThrow(/already exists: a store is initialized once/);
+    const reopened = SqliteScopeBindingLedger.open(once);
+    expect(stateOf(reopened).bindings).toEqual([{ issuer: ESTATE, scope: "legacy", resource: RESOURCE, resource_contract: null }]);
+    reopened.close();
     expect(() => initScopeBindingLedger("relative/scope-bindings.db")).toThrow(/absolute path/);
   });
 
