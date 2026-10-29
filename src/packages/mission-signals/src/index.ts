@@ -1497,9 +1497,9 @@ export class MissionSignalEmitter {
   }
 
   /**
-   * @spec signals#discharge-compatibility — the delivery GATE. It binds every
-   * event that carries `authority_changed` true, a discharge commit and a
-   * containment commit alike: such an event reaches only a consumer that
+   * @spec signals#discharge-compatibility — the delivery GATE. The bound events
+   * are every event that carries `authority_changed` true, a discharge commit
+   * and a containment commit alike: such an event reaches only a consumer that
    * declared {@link AUTHORITY_CHANGED_CAPABILITY}. An event that narrows
    * nothing is delivered to every consumer.
    *
