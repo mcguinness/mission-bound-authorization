@@ -135,6 +135,7 @@ beforeAll(async () => {
     keyRing,
     keyBindings,
     joinIntrospectionSecret,
+    scopeBindings: join(dir, "scope-bindings.json"),
     // Delegate edges are recorded only at the MAS's operator console (#1561).
     operatorConsole: true,
   });

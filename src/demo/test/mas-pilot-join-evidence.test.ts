@@ -310,6 +310,8 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       kernelStore: join(dir, "state", "kernel.db"),
       kernelWitness: kernelWitnessFor(join(dir, "state", "kernel.db"), join(dir, "witness", "kernel.witness")),
       joinIntrospectionSecret,
+      // The restarted process reads the same scope binding ledger (#1866 review).
+      scopeBindings: join(dir, "state", "scope-bindings.json"),
       operatorConsole: true,
     };
     let mas: MasProcess = await startMasProcess(options);
