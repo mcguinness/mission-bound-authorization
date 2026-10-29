@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "14b64c99afa1b8e4033b7e8f9e8767b68eef3290",
-    "content_sha256": "07372758b94daa68b313365e60817e67d29be6f209305acba22f74b9ef2a83fc"
+    "revision": "317b32d43274b867bfdbf8fcbcffe9c3f1d4f408",
+    "content_sha256": "52938b83baf22e9af8f251e28ae6217b1fe9f60eaa3269ffd25da421db8da73a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -10008,9 +10008,9 @@
    "id": "core.mission-record.members-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "Its members are immutable after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
+   "text": "Its members MUST NOT be changed after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -10056,7 +10056,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member; keyword-free here. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
+   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Takes MUST NOT under #1879 (D1014), the exceptions unchanged. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
   },
   {
    "id": "core.mission-record.authority-source-immutable",
