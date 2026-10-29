@@ -2,12 +2,14 @@
  * @spec mission#transformation-capabilities, resource-access#qualified-narrowing,
  * cross-domain#conveyed-delegation (#1377, D1025)
  *
- * Cross-domain issuance under the declared `narrowing`. A grant conveys an
- * entry changed from its approved entry (by containment, or by the conveyed
- * copy dropping `delegation`) only where the declaration permits narrowing it;
- * otherwise the entry does not cross the domain, and a grant left with none is
- * refused: by the derivation gate (`authority_contained`) where containment
- * leaves the Mission no entry, before anything is reserved. Each case runs under a kernel declaring narrowing in full, one with
+ * Cross-domain issuance under the declared `narrowing`. "Issuing an entry to an
+ * audience other than its original approved audience, including audience
+ * projection to a Resource AS, counts as narrowing and needs `narrowing`", so a
+ * grant conveys an entry, changed (by containment, or by the conveyed copy
+ * dropping `delegation`) or not, only where the declaration permits narrowing
+ * it. A grant left with none is refused: by the derivation gate
+ * (`authority_contained`) where containment leaves the Mission no entry, before
+ * anything is reserved, and otherwise at signing. Each case runs under a kernel declaring narrowing in full, one with
  * narrowing undeclared, and one whose narrowing domain covers `exact` entries
  * only.
  *
@@ -128,39 +130,45 @@ async function conveyed(kernel: MissionKernel, missionId: string): Promise<Autho
   return decodeJwt(grant).authorization_details as AuthorityEntry[];
 }
 
-describe("a cross-domain grant conveys a changed entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
-  it("after partial containment, narrowing in full conveys the narrowed entry; undeclared, the grant is refused", async () => {
+describe("audience projection to a Resource AS counts as narrowing: a grant conveys an entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
+  it("narrowing in full conveys an unchanged entry; with narrowing undeclared the grant is refused, the entry unchanged notwithstanding", async () => {
     const full = kernelWith(NARROWING_IN_FULL);
     const m = approve(full, [structuredClone(PLAIN)]);
-    contain(full, m.id, R_PLAIN, [LIST]);
-    expect(await conveyed(full, m.id)).toEqual([{ ...PLAIN, actions: [READ] }]);
+    expect(await conveyed(full, m.id)).toEqual([PLAIN]);
 
     const undeclared = kernelWith(NARROWING_UNDECLARED);
     const u = approve(undeclared, [structuredClone(PLAIN)]);
-    expect(await conveyed(undeclared, u.id)).toEqual([PLAIN]);
-    contain(undeclared, u.id, R_PLAIN, [LIST]);
-    await expect(conveyed(undeclared, u.id)).rejects.toThrow(/effective authority is fully contained/);
-  });
-
-  it("an entry whose conveyed copy drops `delegation` is conveyed without it under narrowing in full, and refused undeclared", async () => {
-    const full = kernelWith(NARROWING_IN_FULL);
-    const m = approve(full, [structuredClone(POLICY)]);
-    expect(await conveyed(full, m.id)).toEqual([{ type: "mission_resource_access", resource: R_POLICY, actions: [READ] }]);
-
-    const undeclared = kernelWith(NARROWING_UNDECLARED);
-    const u = approve(undeclared, [structuredClone(POLICY)]);
     await expect(conveyed(undeclared, u.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
   });
 
-  it("under an exact-only domain, a partially contained exact entry is conveyed narrowed and a partially contained prefix entry is refused", async () => {
-    const domain = kernelWith(exactOnly());
-    const exact = approve(domain, [structuredClone(PLAIN)]);
-    contain(domain, exact.id, R_PLAIN, [LIST]);
-    expect(await conveyed(domain, exact.id)).toEqual([{ ...PLAIN, actions: [READ] }]);
+  it("after partial containment, narrowing in full and an exact-only domain convey an exact entry narrowed", async () => {
+    for (const kernel of [kernelWith(NARROWING_IN_FULL), kernelWith(exactOnly())]) {
+      const m = approve(kernel, [structuredClone(PLAIN)]);
+      contain(kernel, m.id, R_PLAIN, [LIST]);
+      expect(await conveyed(kernel, m.id)).toEqual([{ ...PLAIN, actions: [READ] }]);
+    }
+  });
 
-    const prefix = approve(domain, [structuredClone(PREFIX)]);
-    expect(await conveyed(domain, prefix.id)).toEqual([PREFIX]);
-    contain(domain, prefix.id, R_PREFIX, [LIST]);
-    await expect(conveyed(domain, prefix.id)).rejects.toThrow(/effective authority is fully contained/);
+  it("under an exact-only domain, a prefix entry outside it is refused, unchanged or partially contained (contained whole)", async () => {
+    const domain = kernelWith(exactOnly());
+    const unchanged = approve(domain, [structuredClone(PREFIX)]);
+    await expect(conveyed(domain, unchanged.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+    const partial = approve(domain, [structuredClone(PREFIX)]);
+    contain(domain, partial.id, R_PREFIX, [LIST]);
+    await expect(conveyed(domain, partial.id)).rejects.toThrow(/effective authority is fully contained/);
+
+    const full = kernelWith(NARROWING_IN_FULL);
+    const m = approve(full, [structuredClone(PREFIX)]);
+    expect(await conveyed(full, m.id)).toEqual([PREFIX]);
+  });
+
+  it("an entry whose conveyed copy drops `delegation` is conveyed without it where narrowing is permitted, and refused undeclared", async () => {
+    for (const kernel of [kernelWith(NARROWING_IN_FULL), kernelWith(exactOnly())]) {
+      const m = approve(kernel, [structuredClone(POLICY)]);
+      expect(await conveyed(kernel, m.id)).toEqual([{ type: "mission_resource_access", resource: R_POLICY, actions: [READ] }]);
+    }
+    const undeclared = kernelWith(NARROWING_UNDECLARED);
+    const u = approve(undeclared, [structuredClone(POLICY)]);
+    await expect(conveyed(undeclared, u.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
   });
 });

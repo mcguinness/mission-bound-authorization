@@ -67,8 +67,9 @@ import {
   DPOP_PROOF_REPLAY_WINDOW_S,
   entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
+  isSubsetEntry,
   isSubsetSetUnderIgnoringCapabilitySources,
-  isSubsetEntryUnder,
+  narrowingPermits,
   carriedUnder,
   projectScope,
   splitScope,
@@ -854,19 +855,18 @@ export async function handleTokenExchangeGrant(
   // refusal at this exchange.
   const resourceFilter = continuationResourceFilter(resources);
   // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
-  // (#1377, D1025): an entry the conveyed copy or a filter changed (dropping
-  // `delegation`, narrowing resources) crosses the domain only where the
-  // declared `narrowing` permits narrowing it from an approved entry;
-  // otherwise only an entry equal to an approved one is conveyed.
+  // (#1377, D1025): "Issuing an entry to an audience other than its original
+  // approved audience, including audience projection to a Resource AS, counts
+  // as narrowing and needs `narrowing`". An entry crosses the domain only
+  // where the declared `narrowing` permits narrowing it from an approved
+  // entry, changed (dropping `delegation`, narrowing resources) or not.
   // Decided here, before anything is reserved or counted, as the grant's
   // signing decides it again.
   const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable)).filter((e) =>
-    record.authority_set.some((approved) => isSubsetEntryUnder(opts.kernel.narrowingDeclaration(), e, approved)),
+    record.authority_set.some(
+      (approved) => narrowingPermits(opts.kernel.narrowingDeclaration(), e, approved) && isSubsetEntry(e, approved),
+    ),
   );
-  if (effective.length > 0 && grantable.length === 0) {
-    txError(ctx, 400, "invalid_target", "no audience-scoped authority remains that this grant may convey");
-    return;
-  }
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate
@@ -899,6 +899,12 @@ export async function handleTokenExchangeGrant(
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority for the target");
       return;
     }
+  }
+  // After the requested-authority check, so an unsupported request is still
+  // refused as such; refused here, before anything is reserved or counted.
+  if (effective.length > 0 && grantable.length === 0) {
+    txError(ctx, 400, "invalid_target", "no audience-scoped authority remains that this grant may convey");
+    return;
   }
   // @spec mission#scope-projection — this exchange issues an identity
   // grant, not a Mission-bound access token: a requested `scope` cannot be

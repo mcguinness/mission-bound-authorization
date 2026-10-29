@@ -12,7 +12,7 @@
 import { randomBytes } from "node:crypto";
 import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
-import { isSubsetEntry, isSubsetEntryUnder, isSubsetSetUnderIgnoringCapabilitySources } from "@mission/core";
+import { isSubsetEntry, isSubsetSetUnderIgnoringCapabilitySources, narrowingPermits } from "@mission/core";
 import type { DelegateCandidate } from "./delegate-matcher.js";
 import { type OriginProjection, projectThroughEffective } from "./derive.js";
 import { combineOrigins, type DelegationCandidate, retainedOrigins } from "./eligibility-provenance.js";
@@ -373,13 +373,14 @@ async function signAdmittedGrant(
   // a request that keeps an omitted `delegation` exceeds the conveyed copy
   // under the subset rule ("introduces delegation the grantor lacks").
   // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
-  // (#1377, D1025): an entry the conveyed copy or a filter changed (dropping
-  // `delegation`, narrowing resources) crosses the domain only where the
-  // declared `narrowing` permits narrowing it from an approved entry;
-  // otherwise only an entry equal to an approved one is conveyed.
+  // (#1377, D1025): "Issuing an entry to an audience other than its original
+  // approved audience, including audience projection to a Resource AS, counts
+  // as narrowing and needs `narrowing`". An entry crosses the domain only
+  // where the declared `narrowing` permits narrowing it from an approved
+  // entry, changed (dropping `delegation`, narrowing resources) or not.
   const narrowing = kernel.narrowingDeclaration();
   const carried = conveyedCopy(record, candidates, filtered).filter((e) =>
-    record.authority_set.some((approved) => isSubsetEntryUnder(narrowing, e, approved)),
+    record.authority_set.some((approved) => narrowingPermits(narrowing, e, approved) && isSubsetEntry(e, approved)),
   );
   if (carried.length === 0) {
     throw new AuthorityNarrowedToEmptyError("no audience-scoped authority remains that this grant may convey");
