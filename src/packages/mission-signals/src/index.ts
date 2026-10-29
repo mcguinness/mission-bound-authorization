@@ -54,7 +54,14 @@ import {
   witnessSharesStoreTree,
   writeDurableFile,
 } from "@mission/store";
-import { createLocalJWKSet, type JWK, type JWTPayload, jwtVerify, SignJWT } from "jose";
+import {
+  createLocalJWKSet,
+  type JWK,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+  jwtVerify,
+  SignJWT,
+} from "jose";
 
 /**
  * @spec signals#lifecycle-event — the registered event-type identifier for the
@@ -347,10 +354,18 @@ export interface ReceiverOptions {
    * How a Mission Status response read to resynchronize a held Mission is
    * checked (@spec status#mission-status-response): `clientId` is the
    * requesting client (`sub`); `audience` is the response `aud`, by default
-   * the client, as for a state-only read; `jwks` are the keys that sign the
-   * issuer's Status responses, by default `jwks`.
+   * the client, as for a state-only read.
+   *
+   * `keys` resolves the issuer's Status signing keys (@spec
+   * status#signing-key-retention, status#historical-key-set, #1810): held as
+   * the PDP's Status consumer holds them, `missionStatusIssuer(...).keys`
+   * (`@mission/pdp`), so they follow a rotation within the freshness the
+   * `jwks_uri` declares, and a key the issuer's historical key set lists is
+   * refused for the current reliance decision a resynchronization makes,
+   * though a cached `jwks_uri` or the configured `kid`s still carry it. A key
+   * set pinned from configuration (`createLocalJWKSet`) does neither.
    */
-  status?: { clientId: string; audience?: string; jwks?: { keys: JWK[] } };
+  status?: { clientId: string; audience?: string; keys: JWTVerifyGetKey };
 }
 
 /** The default {@link ReceiverOptions.seenCapacity}. */
@@ -529,7 +544,7 @@ export class MissionSignalReceiver {
   private readonly db: Database;
   private readonly seenCapacity: number;
   private readonly jwkSet: ReturnType<typeof createLocalJWKSet>;
-  private readonly statusKeys: ReturnType<typeof createLocalJWKSet>;
+  private readonly statusKeys: JWTVerifyGetKey | undefined;
   /** @spec control-plane#rollback (#1749): the witness as this receiver last wrote it. */
   private witness: ReceiverWitness | undefined;
   /** The witness's lock file, held while this receiver is open: one witnessed writer (D910). */
@@ -539,7 +554,7 @@ export class MissionSignalReceiver {
 
   constructor(private readonly opts: ReceiverOptions) {
     this.jwkSet = createLocalJWKSet({ keys: opts.jwks.keys } as never);
-    this.statusKeys = createLocalJWKSet({ keys: (opts.status?.jwks ?? opts.jwks).keys } as never);
+    this.statusKeys = opts.status?.keys;
     this.audience = opts.audience;
     this.seenCapacity = opts.seenCapacity ?? DEFAULT_SEEN_CAPACITY;
     if (!Number.isSafeInteger(this.seenCapacity) || this.seenCapacity < 1) {
