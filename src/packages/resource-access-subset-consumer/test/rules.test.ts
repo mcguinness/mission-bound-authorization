@@ -898,13 +898,52 @@ describe("a key only the candidate carries (resource-access#subset; vectors READ
     expect(subsetCheck(two, omitted, ["max_amount", "tenant"]).outcome).toBe("subset");
   });
 
-  it("refuses an omission-equivalent value the reference lacks as it does any other", () => {
-    // The key "is never compared as absent", so requires_action_approval:
-    // false narrows nothing yet still needs the key named.
-    const rarFalse = { ...base, constraints: { requires_action_approval: false } };
-    expect(subsetCheck(rarFalse, omitted).outcome).toBe("refuse");
-    expect(subsetCheck(rarFalse, omitted, ["tenant"]).outcome).toBe("refuse");
-    expect(subsetCheck(rarFalse, omitted, ["requires_action_approval"]).outcome).toBe("subset");
+  it("decides presence first: an omission-equivalent value makes no key present on either operand", () => {
+    // requires_action_approval: "A value of false is equivalent to omitting
+    // the member". The vectors README: such a value "does not make the key
+    // present, on either operand"; a candidate's true against a reference's
+    // false adds the key and "needs enforcement context like every other
+    // added bound".
+    const rar = (v: boolean) => ({ ...base, constraints: { requires_action_approval: v } });
+    const named = ["requires_action_approval"];
+    for (const enforced of [undefined, [], ["tenant"], named]) {
+      const context = JSON.stringify(enforced);
+      // false against absence, and absence against false, add no key.
+      expect(subsetCheck(rar(false), omitted, enforced).outcome, context).toBe("subset");
+      expect(subsetCheck(omitted, rar(false), enforced).outcome, context).toBe("subset");
+      expect(subsetCheck(rar(false), rar(false), enforced).outcome, context).toBe("subset");
+      // A key both operands effectively carry needs no context.
+      expect(subsetCheck(rar(true), rar(true), enforced).outcome, context).toBe("subset");
+      // Removing the requirement adds no key, so the relation decides.
+      expect(subsetCheck(rar(false), rar(true), enforced).outcome, context).toBe("not-subset");
+      expect(subsetCheck(omitted, rar(true), enforced).outcome, context).toBe("not-subset");
+    }
+    // true against false, and true against absence, add the key.
+    for (const reference of [rar(false), omitted]) {
+      const name = JSON.stringify(reference.constraints ?? {});
+      const none = subsetCheck(rar(true), reference);
+      expect(none.outcome, name).toBe("refuse");
+      expect(none.reason, name).toMatch(/^missing comparison context/);
+      for (const enforced of [[], ["tenant"]]) {
+        const unnamed = subsetCheck(rar(true), reference, enforced);
+        expect(unnamed.outcome, name).toBe("refuse");
+        expect(unnamed.reason, name).toContain("cannot narrow");
+      }
+      expect(subsetCheck(rar(true), reference, named).outcome, name).toBe("subset");
+    }
+  });
+
+  it("names only effectively present keys, and leaves the parsed values as given", () => {
+    const withFalse = { ...base, constraints: { requires_action_approval: false, tenant: "acme" } };
+    const none = subsetCheck(withFalse, omitted);
+    expect(none.outcome).toBe("refuse");
+    expect(none.reason).toContain("tenant");
+    expect(none.reason).not.toContain("requires_action_approval");
+    expect(subsetCheck(withFalse, omitted, ["tenant"]).outcome).toBe("subset");
+    // Neither entry is rewritten: the key and its value stay in the parse.
+    const parsed = parseEntry(withFalse);
+    expect(parsed.ok && parsed.entry.constraints.get("requires_action_approval")).toBe(false);
+    expect(parsed.ok && parsed.entry.constraints.has("requires_action_approval")).toBe(true);
   });
 
   it("needs no enforcement context for a key both operands carry", () => {

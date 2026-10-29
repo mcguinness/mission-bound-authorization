@@ -55,8 +55,8 @@ function failure(operand: string, parsed: ParseResult): string | undefined {
  *   resource-access#entry-validation); and
  * - an entry carrying locations is refused by name
  *   (resource-access#entry-validation); and
- * - a constraints key only the candidate carries is refused unless `enforced`
- *   names it (see candidateOnlyRefusal).
+ * - a constraints key only the candidate effectively carries is refused
+ *   unless `enforced` names it (see candidateOnlyRefusal).
  *
  * `enforced` is the case's `enforced_constraints`: the keys the resource
  * server serving the candidate's resource is known to understand and enforce.
@@ -92,18 +92,23 @@ export function subsetCheck(
  * Enforcement comes from the case (vectors README, Checks, `subset`): when the
  * candidate carries a key the reference lacks, the outcome is refuse "if
  * enforced_constraints is absent (missing comparison context) or does not
- * name the key (the key cannot narrow, and is never compared as absent)". No
- * value is exempt, an omission-equivalent one included. "Like operand
- * validation, this check comes before the relation", so a not-subset result
- * never conceals it. A key both operands carry is compared by its own rule in
- * step 3 and needs no enforcement context.
+ * name the key (the key cannot narrow, and is never compared as absent)".
+ * "Like operand validation, this check comes before the relation", so a
+ * not-subset result never conceals it. A key both operands carry is compared
+ * by its own rule in step 3 and needs no enforcement context.
+ *
+ * Presence is effective presence on both operands (effectivelyCarries), so a
+ * candidate's requires_action_approval: false adds no key, and a candidate's
+ * true against a reference's false adds one.
  */
 function candidateOnlyRefusal(
   a: ParsedEntry,
   b: ParsedEntry,
   enforced: readonly string[] | undefined,
 ): SubsetResult | undefined {
-  const added = [...a.constraints.keys()].filter((key) => !b.constraints.has(key));
+  const added = [...a.constraints.keys()].filter(
+    (key) => effectivelyCarries(a, key) && !effectivelyCarries(b, key),
+  );
   if (added.length === 0) return undefined;
   if (enforced === undefined) {
     return refuse(
@@ -117,6 +122,25 @@ function candidateOnlyRefusal(
     );
   }
   return undefined;
+}
+
+/**
+ * Whether an entry carries a constraints key for this comparison: with a
+ * value its definition does not make equivalent to omitting the member
+ * (resource-access#initial-common-constraints requires_action_approval: "A
+ * value of false is equivalent to omitting the member"). The vectors README
+ * (Checks, `subset`): such a value "does not make the key present, on either
+ * operand: presence is decided before the search for a key only the candidate
+ * carries, and neither entry is rewritten". Only presence is decided here; the
+ * parsed values stay as given (resource-access#subset: "The equivalence in
+ * step 3 holds for comparison only").
+ */
+function effectivelyCarries(entry: ParsedEntry, key: string): boolean {
+  if (!entry.constraints.has(key)) return false;
+  const rule = CONSTRAINT_RULES.get(key);
+  // parseEntry admits only keys with a rule; a key without one is not
+  // treated as omitted.
+  return rule === undefined || !rule.omissionEquivalent(entry.constraints.get(key));
 }
 
 function compare(a: ParsedEntry, b: ParsedEntry): SubsetResult {
@@ -152,9 +176,10 @@ function compare(a: ParsedEntry, b: ParsedEntry): SubsetResult {
       return notSubset(`step 3: the candidate ${key} is not within the reference`);
     }
   }
-  // A key present only in A narrows A: candidateOnlyRefusal, run before the
-  // relation, has already refused any such key without defined semantics or
-  // without enforcement by the resource server serving A.resource.
+  // A key effectively present only in A narrows A: candidateOnlyRefusal, run
+  // before the relation, has already refused any such key without defined
+  // semantics or without enforcement by the resource server serving
+  // A.resource.
 
   // resource-access#subset step 4: "A carries resource_contract exactly when B
   // does, and then with id, version, and digest each equal to B's". Compared
