@@ -65479,7 +65479,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1377 step 5. Adding `true` is this key's own narrowing, not a candidate-only key (D712): the Subset clause lets narrowing add the requirement, the payments audience lists the key among the constraints it supports, and its enforcement is witnessed by runtime.action-approval.refusal-without-fresh-approval. The derived reference omits a `false` value, which Resource Access makes equivalent to omission. Proved by mutation: refusing an added `true`, admitting a dropped `true`, and admitting `true` restated as `false` each fail the test."
+   "notes": "#1377 step 5. Adding `true` is a key present only in the candidate, and it narrows under both conditions of the Subset Rule (D712): the key's own Subset clause defines the narrowing (it may add the requirement), and the payments audience serving the entry lists the key among the constraints it enforces (enforcement witnessed by runtime.action-approval.refusal-without-fresh-approval). The derived reference omits a `false` value, which Resource Access makes equivalent to omission. Proved by mutation: refusing an added `true`, admitting a dropped `true`, and admitting `true` restated as `false` each fail the test."
   },
   {
    "id": "resource-access.common-constraints.requires-action-approval-intersection",
