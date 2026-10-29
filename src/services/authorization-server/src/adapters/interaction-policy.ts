@@ -25,7 +25,7 @@
  * answers it with a Mission-bound grant ({@link loadReusableGrant}).
  */
 
-import { type Grant, interactionPolicy, type KoaContextWithOIDC } from "oidc-provider";
+import { errors, type Grant, interactionPolicy, type KoaContextWithOIDC } from "oidc-provider";
 
 /** The reason oidc-provider records when the check requests the interaction. */
 export const MISSION_APPROVAL_CHECK = "mission_approval_required";
@@ -84,6 +84,13 @@ export function missionInteractionPolicy(): interactionPolicy.DefaultPolicy {
  * it, and the excluded grant, its binding and the session's reference to it
  * stay as they were. `missionBound` classifies by what the AS recorded, never
  * by whether the Mission still resolves.
+ *
+ * @spec mission#approval-event (step 7) (#1863): the resume of a finished
+ * Mission approval completes under that approval's own grant or not at all.
+ * Where that grant no longer exists (a later decision on the interaction
+ * found its context changed and removed it, or it was otherwise lost), the
+ * request is refused `access_denied` rather than answered with a new, empty
+ * grant outside any Mission.
  */
 export async function loadReusableGrant(
   ctx: KoaContextWithOIDC,
@@ -95,7 +102,11 @@ export async function loadReusableGrant(
   if (!grantId) return undefined;
   const params = oidc.params as { mission_intent?: unknown } | undefined;
   if (params?.mission_intent === undefined && missionBound(grantId)) return undefined;
-  return oidc.provider.Grant.find(grantId);
+  const grant = await oidc.provider.Grant.find(grantId);
+  if (!grant && consented && params?.mission_intent !== undefined) {
+    throw new errors.AccessDenied("the approval decision is no longer available");
+  }
+  return grant;
 }
 
 /**
