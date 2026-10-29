@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         28 October 2026
-Expires: 1 May 2027
+Intended status: Standards Track                         29 October 2026
+Expires: 2 May 2027
 
 
                     Mission Management for OAuth 2.0
@@ -57,7 +57,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 1 May 2027.
+   This Internet-Draft will expire on 2 May 2027.
 
 Copyright Notice
 
@@ -736,9 +736,9 @@ Table of Contents
    completed is not revoked, and its recorded termination is unchanged.
    After a partial failure the spent bulk token is not reusable; the
    caller remediates with a fresh dry run over the same filter and a new
-   execute: members already transitioned then report already_terminal,
-   error members are retried, and stale_version members are reviewed
-   again at their current versions.
+   execute.  Members already terminated report already_terminal; other
+   members are evaluated under the lifecycle rules and the newly pinned
+   versions.
 
 7.4.  Worked Example
 
