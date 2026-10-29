@@ -10957,9 +10957,9 @@
    "id": "core.issuance-gating.reversible-state-not-termination",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
-   "text": "A Mission in a state from which it can return to `active` is never reported with a termination reason.",
+   "text": "A Mission in a state from which it can return to `active` MUST NOT be reported with a termination reason.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "status.lifecycle"
@@ -10987,7 +10987,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error."
+   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error. Takes MUST NOT under #1871 (D1005); applicability unchanged."
   },
   {
    "id": "core.revocation.revoke-by-mission-id",

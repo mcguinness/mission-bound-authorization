@@ -2861,7 +2861,7 @@ Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
 exhausted limit
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
 "Enforcement at Issuance"). A Mission in a state from which it can
-return to `active` is never reported with a termination reason.
+return to `active` MUST NOT be reported with a termination reason.
 
 The `mission_error` member is diagnostic only and optional, whichever
 document defines its value: it grants nothing, an unrecognized value
