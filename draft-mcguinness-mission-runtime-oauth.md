@@ -723,6 +723,10 @@ The Mission-bound token claims this document maps are registered by
 
 \[\[ To be removed from the final specification ]]
 
+- The `exp` cap citation names the OAuth binding's Mission-Bound Token
+  Issuance chapter, the retitled Mission-Bound Access Tokens. No
+  requirement changed (#1892).
+
 - Boundary and Audience: the runtime core's boundary identifier is the
   protected resource's resource identifier, spelled as its RFC 9728
   `resource` value, which trusted static configuration can supply.

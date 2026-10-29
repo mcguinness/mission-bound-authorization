@@ -1778,8 +1778,10 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 -01
 
 - The End-to-End Example starts from the base profile's Stage 1,
-  since that profile's example no longer has an agent-identity stage.
-  No requirement changed (#1892).
+  since that profile's example no longer has an agent-identity stage,
+  and the sender-constraint citation names the base profile's
+  Mission-Bound Token Issuance chapter, the retitled Mission-Bound Access
+  Tokens. No requirement changed (#1892).
 - Changes a requirement, a normative wire change (#1630, D751): every
   cross-domain grant's `mission` claim carries the Mission's
   `expires_at`, unchanged and never the grant's `exp`. The Resource AS

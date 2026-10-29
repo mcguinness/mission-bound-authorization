@@ -585,6 +585,10 @@ A further request presenting the same `device_code` receives
 
 -00
 
+- The token-rules citation names the OAuth binding's Mission-Bound
+  Token Issuance chapter, the retitled Mission-Bound Access Tokens. No
+  requirement changed (#1892).
+
 - Initial version (#1202). Carries the Submission envelope and
   authority proposal on the RFC 8628 device authorization request
   under the OAuth binding's alternative back-channel seam: the
