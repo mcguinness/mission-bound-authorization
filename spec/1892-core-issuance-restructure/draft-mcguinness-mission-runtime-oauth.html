@@ -1618,7 +1618,7 @@ the token's own <code>exp</code>: the baseline <code>mission</code> claim need n
 itself surface it. The issuance
 profile caps the <code>exp</code> of every token the Mission Issuer derives at
 the Mission's <code>expires_at</code> (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>,
-Section "Mission-Bound Access Tokens"), so the <code>exp</code> check enforces
+Section "Mission-Bound Token Issuance"), so the <code>exp</code> check enforces
 the Mission's expiry transitively, as the runtime core's time input
 expects. A profile that makes the <code>expires_at</code> member <span class="bcp14">REQUIRED</span> for
 the credentials it governs, such as the Issuance Grant profile

@@ -433,7 +433,7 @@ Table of Contents
       [RFC7662] does not itself surface it.  The issuance profile caps
       the exp of every token the Mission Issuer derives at the Mission's
       expires_at ([I-D.draft-mcguinness-oauth-mission], Section 
-      "Mission-Bound Access Tokens"), so the exp check enforces the
+      "Mission-Bound Token Issuance"), so the exp check enforces the
       Mission's expiry transitively, as the runtime core's time input
       expects.  A profile that makes the expires_at member REQUIRED for
       the credentials it governs, such as the Issuance Grant profile
