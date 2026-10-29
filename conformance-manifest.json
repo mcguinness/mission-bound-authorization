@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "317b32d43274b867bfdbf8fcbcffe9c3f1d4f408",
-    "content_sha256": "52938b83baf22e9af8f251e28ae6217b1fe9f60eaa3269ffd25da421db8da73a"
+    "revision": "d66520ed6bab5d98655caef139aa8f2c7d152176",
+    "content_sha256": "7f91ff0762692ac9e12537c7226a80ff1ada7501bb3d55f2832b1768aedc1d0f"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
-    "content_sha256": "29ab6b61f162fec24ca027aa42b9c99c1b776cb273692180b99ba44badc430b0"
+    "revision": "d66520ed6bab5d98655caef139aa8f2c7d152176",
+    "content_sha256": "3e680f32e653c57a32c7b516eae7fde66e20cfd0ae3d7e73004e08abe9a30c84"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "c1307f579ed5c96693321ada82523b60c61519fa",
@@ -16158,7 +16158,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe."
+   "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe. #1377 (D1025): narrowing is declared for mission_resource_access, as a qualified domain, in the metadata entry and the deployment documentation, and applied at every narrowing site. delegation and projection stay undeclared while the reference delegates (the delegated exchanges) and projects to scope (projectScope), so this row stays todo until their separate audits."
   },
   {
    "id": "core.other-types.narrowing-governs-derivation",
@@ -16180,9 +16180,34 @@
     "normative": "for a type with narrowing undeclared, each entry of the approved Authority Set is equal, under the canonical form, to a proposed entry or, with no proposal, to a configured-mapping candidate; a candidate not retained is absent; no approved entry is a candidate with an action dropped or a constraint intersected or added, approval notwithstanding"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1720 item 7 (D845, D859). The reference is nonconforming under this ruling. It declares no narrowing capability for mission_resource_access: no mission_transformation_capabilities member in its metadata entry (kernel/authorization-details-metadata.ts), none in its documentation (src/docs/resource-access-transformation-capabilities.md section 1 says it declares none), and no configuration that declares one. Its approval-time derivation nonetheless modifies proposed entries: deriveAuthoritySetWithProvenance (kernel/derive.ts:533) builds each entry with intersect (derive.ts:572), which drops actions the ceiling lacks, takes the smaller max_amount, intersects vendors and the Common Constraints, adds ceiling constraints a proposal omits, and narrows delegation. Witnesses of the modification: common-constraints-endpoint.test.ts 'a proposal narrowing the window derives the overlap, and refresh and introspection carry it' (the proposed time_window is cut to the ceiling's not_after and the ceiling's other constraints are added) and 'a proposal omitting the ceiling's window derives with the ceiling's window, never without it'. Configured-mapping candidates keyed on purpose or target_resources are self-intersected and come out unchanged (derive.ts:524); candidates keyed on requested scope values are narrowed against every governing ceiling entry. Route (D859): the reference declares narrowing for the type only after #1377's audit (D538), which requires a precisely supported subset and positive evidence for it; no whole-type narrowing is advertised before then, and the gap stays explicit here. The row stays todo until that declaration lands with a witness. #1717's witness (a), the capability-dependent delegation-without-narrowing case (row core.other-types.designation-equal-entry-issued), also belongs to #1377; declaring narrowing does not supply it (D859)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation retains a proposal equal to a ceiling entry unchanged, and the issued token carries it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation refuses a proposal it would have narrowed, creating no Mission, where the shipped declaration narrows it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > configured-mapping derivation with no proposal yields each mapped ceiling entry unchanged",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > a prefix proposal narrower than the prefix ceiling entry is refused, while one equal to it derives unchanged: the domain does not cover prefix",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1720 item 7 (D845, D859), #1377 (D1025). The reference declares narrowing for mission_resource_access as a qualified domain covering every entry it admits, so in its shipped configuration derivation narrows within the domain. deriveAuthoritySetWithProvenance (kernel/derive.ts) applies narrowingPermits to each proposal and ceiling pair and otherwise retains the candidate only when it is equal. Witnessed with narrowing undeclared (a test configuration): a proposal equal to a ceiling entry is retained unchanged, one the shipped declaration narrows is refused with no Mission, and configured-mapping derivation yields each mapped entry unchanged; and with an exact-only domain, a prefix proposal outside it is carried only when equal. Proved by mutation: a derivation that narrows whatever is declared fails the refusal witnesses. The configured-mapping witness holds by construction (the mapping intersects each candidate with itself), so no mutation of the gate fails it."
   },
   {
    "id": "core.authority-proposal.same-type-subset-under-narrowing",
@@ -16204,9 +16229,34 @@
     "normative": "with a proposal present, each approved Authority Set entry is a same-type subset of some proposed entry: narrowed under the type's subset rule only where narrowing is declared for the type, otherwise equal, under the canonical form, to a proposed entry"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1720 item 7 (D845, D859), the proposal-mode statement of row core.other-types.narrowing-governs-derivation. The same-type subset half is what the reference does; the carried-through-unchanged half is not, for the reason that row gives: the reference narrows proposed mission_resource_access entries at derivation without declaring narrowing. It stays todo on the route that row records (D859): narrowing is declared for the type only after #1377's audit establishes a precisely supported subset with positive evidence. #1717's witness (a), the capability-dependent delegation-without-narrowing case (row core.other-types.designation-equal-entry-issued), also belongs to #1377; declaring narrowing does not supply it (D859)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation refuses a proposal it would have narrowed, creating no Mission, where the shipped declaration narrows it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation retains a proposal equal to a ceiling entry unchanged, and the issued token carries it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > a prefix proposal narrower than the prefix ceiling entry is refused, while one equal to it derives unchanged: the domain does not cover prefix",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > an exact proposal narrower than an exact ceiling entry derives narrowed: the domain covers exact",
+     "level": "endpoint",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1720 item 7 (D845, D859), #1377 (D1025): the proposal-mode statement of row core.other-types.narrowing-governs-derivation. Narrowed under the subset rule where narrowing is declared for the pair (the shipped declaration, and an exact pair under an exact-only domain), and equal to a proposed entry otherwise (narrowing undeclared, and a prefix pair under the exact-only domain)."
   },
   {
    "id": "core.other-types.delegation-only-unchanged",
@@ -16226,9 +16276,28 @@
     "normative": "a delegated token carries an entry of a type that declares delegation without narrowing only when the entry is byte-identical under the canonical form to an entry of the presented delegating token, keeps that entry's approved audience, and the type's delegation policy permits the delegate; an entry the presented token omits is never restored"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#869 (D449) implements the delegated exchange, but no `authorization_details` type that declares delegation without narrowing is configured, so this row has no witness."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025) > a designation carrying an entry equal to the presented token's is issued with its approved audience kept, and its redemption carries the entry unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025) > once the Mission narrows the entry, a redemption and a new designation are refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025) > a credential carrying one of the Mission's entries unchanged: the designation and its redemption never restore the entry it omits",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#869 (D449), #1717, #1377 (D1025). Witnessed under a test configuration declaring delegation without narrowing: an entry equal to the presented token's is carried with its approved audience kept; once the Mission narrows the entry, a redemption and a new designation are refused invalid_target, counting nothing; and a credential carrying one of two entries yields a designation and redemption without the other. The delegate's eligibility is decided by kernel.delegableEntries on every path, whatever is declared. Proved by mutation: carrying a modified entry in the delegated exchanges fails the narrowing witness."
   },
   {
    "id": "core.other-types.designation-equal-entry-issued",
@@ -16248,9 +16317,16 @@
     "normative": "for a type that declares `delegation` without `narrowing`, a designation carrying an entry equal ({{subset}}) to an entry of the presented token, that entry keeping its original approved audience, is issued: the designated client its `aud` names is not tested as the entry's audience"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1717 (D845) witness (a), moved to #1377 by D859 (option (ii), which relaxes D845's all-three-witnesses requirement): this row stays todo until #1377's `delegation` audit supplies the declaration and the equal-only carriage it needs. The reference cannot express its precondition. (1) No declaration: it declares no transformation capability for its only supported type, `mission_resource_access` (no `mission_transformation_capabilities` member in AUTHORIZATION_DETAILS_TYPES_METADATA, none in its documentation: src/docs/resource-access-transformation-capabilities.md section 1), and has no per-type configuration that could declare `delegation` without `narrowing`; the `delegation` provider capability switches the exchanges on, it declares nothing for a type. (2) No behavior keyed on one: the designation and delegated exchanges narrow entries through the effective set whatever is declared, where this case needs them to carry only entries equal to the presented token's (row core.other-types.delegation-only-unchanged, todo; #1377 owns the `delegation` audit). The outcome without the precondition, an equal entry with its association kept carried by an issued designation, is asserted by row core.tokens.designation-permitted-subset-kept-audience."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025) > a designation carrying an entry equal to the presented token's is issued with its approved audience kept, and its redemption carries the entry unchanged",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1717 (D845) witness (a), moved to #1377 by D859, witnessed under D1025. The test configuration declares delegation without narrowing for mission_resource_access. The reference gates nothing on the delegation declaration (the shipped configuration leaves it undeclared; its audit is separate); the equal-only carriage comes from narrowing being undeclared: delegableAuthority (adapters/delegation-exchange.ts) applies carriedUnder. A designation carrying the presented entry unchanged is issued with its approved audience kept. Its outcome without the precondition remains asserted by core.tokens.designation-permitted-subset-kept-audience."
   },
   {
    "id": "core.other-types.no-narrowing-original-audience",
@@ -16270,7 +16346,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
-    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. Two gaps keep it partial. (1) \"only exactly as approved\": the reference narrows, delegates and projects mission_resource_access entries with no declared capability (#1377, D538; row core.other-types.transformation-boundary-declared). (2) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused."
+    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. Two gaps keep it partial. (1) \"only exactly as approved\": the reference declares narrowing for mission_resource_access (#1377, D1025) but delegates and projects its entries with no declared delegation or projection capability (row core.other-types.transformation-boundary-declared). (2) Audience projection to a Resource AS: the cross-domain projection proceeds without a declared narrowing capability and is not refused. With narrowing undeclared (a test configuration), derivation and the Token Exchange issue an entry only exactly as approved; proved by mutation only with both exchange gates disabled together, since the gate against the Mission's effective set also refuses."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -16346,9 +16422,21 @@
      "name": "a child's redemption carries only the entries approved for its audience (@spec mission#token-response, #1503 finding 7, D733) > a Child Mission whose entries are approved for different audiences redeems a token for its first entry's audience without the entry approved only for the other",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > a Token Exchange requesting the presented entry unchanged is issued; one requesting it narrowed is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation refuses a proposal it would have narrowed, creating no Mission, where the shipped declaration narrows it",
+     "level": "endpoint",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1503 finding 7 (D620). The reference declares no transformation capability for any type (src/docs/resource-access-transformation-capabilities.md), so the rule applies to every entry. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter."
+   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter."
   },
   {
    "id": "core.other-types.entry-audience-trusted-mapping",
@@ -16448,7 +16536,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), first conflict direction. The reference has no machine-readable capability carrier. It advertises an authorization_details_types_metadata_endpoint (/authorization-details-types, provider.ts), but the entry for its only supported type, mission_resource_access (AUTHORIZATION_DETAILS_TYPES_METADATA, kernel/authorization-details-metadata.ts), carries no mission_transformation_capabilities member, and its documentation declares no capability (src/docs/resource-access-transformation-capabilities.md section 1). No carrier declares a member, so no two carriers can disagree and no member can fall through to a carrier that declares it. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), first conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-carrier-first-true-governs",
@@ -16472,7 +16560,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), second conflict direction. The reference has no machine-readable capability carrier. It advertises an authorization_details_types_metadata_endpoint (/authorization-details-types, provider.ts), but the entry for its only supported type, mission_resource_access (AUTHORIZATION_DETAILS_TYPES_METADATA, kernel/authorization-details-metadata.ts), carries no mission_transformation_capabilities member, and its documentation declares no capability (src/docs/resource-access-transformation-capabilities.md section 1). No carrier declares a member, so no two carriers can disagree and no member can fall through to a carrier that declares it. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), second conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-carrier-absent-falls-through",
@@ -16496,7 +16584,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). The reference has no machine-readable capability carrier. It advertises an authorization_details_types_metadata_endpoint (/authorization-details-types, provider.ts), but the entry for its only supported type, mission_resource_access (AUTHORIZATION_DETAILS_TYPES_METADATA, kernel/authorization-details-metadata.ts), carries no mission_transformation_capabilities member, and its documentation declares no capability (src/docs/resource-access-transformation-capabilities.md section 1). No carrier declares a member, so no two carriers can disagree and no member can fall through to a carrier that declares it. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-declaration-waives-no-check",
@@ -16518,9 +16606,47 @@
     "normative": "for a type with a capability declared, a transformation of that type that fails a check this document requires (an entry the subset comparison finds broader or cannot decide, an audience its entries are not approved for) is still refused with that check's error, and the AS may still refuse it under local policy"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1720 item 2 (D845). The reference has no machine-readable capability carrier. It advertises an authorization_details_types_metadata_endpoint (/authorization-details-types, provider.ts), but the entry for its only supported type, mission_resource_access (AUTHORIZATION_DETAILS_TYPES_METADATA, kernel/authorization-details-metadata.ts), carries no mission_transformation_capabilities member, and its documentation declares no capability (src/docs/resource-access-transformation-capabilities.md section 1). No carrier declares a member, so no two carriers can disagree and no member can fall through to a carrier that declares it. Per D845 the reference builds no carrier or endpoint to make this testable. Without a declared capability the waiver case does not arise."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/common-constraints-endpoint.test.ts",
+     "name": "the implemented Common Constraints survive every issuance path (@spec resource-access#common-constraints) > a Token Exchange that drops or widens a bound is refused invalid_authorization_details",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1720 item 2 (D845). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable. With narrowing declared, a transformation that fails a required check is still refused with that check's error: a Token Exchange requesting a broader entry is refused invalid_authorization_details, and a token for an audience its entries are not approved for is refused invalid_target. Partial: an entry the subset comparison cannot decide is not cited at a declared transformation."
+  },
+  {
+   "id": "core.other-types.capability-value-unvalidated-false",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "transformation-capabilities",
+   "text": "a reader that does not understand the value, or cannot validate it as that specification requires, treats the carrier as declaring the capability `false`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a capability member whose type-defined value a reader cannot validate counts as false for that carrier"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "a reader resolves one carrier's narrowing member (@spec resource-access#qualified-narrowing, mission#transformation-capabilities) > a qualified value the reader cannot validate declares narrowing false, never true and never undeclared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Witnessed for the one type-defined value, Resource Access's qualified narrowing (resource-access.qualified-narrowing.reader-false)."
   },
   {
    "id": "core.delegation-constraints.depth-from-accounting",
@@ -66230,7 +66356,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1377. The reference declares no transformation capability for this type in any carrier, yet projects scope for it, so it does not apply this undeclared fallback. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
+   "notes": "#1377. The reference declares only a qualified narrowing for this type (D1025), leaving projection undeclared in every carrier, yet projects scope for it, so it does not apply this undeclared fallback. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
   },
   {
    "id": "resource-access.conformance.rs-role-independent-of-as-duties",
@@ -71034,7 +71160,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 3 (D444, D446). The reference declares no transformation capabilities. It implements and witnesses all nine initial Common Constraints (#1266), but declaring narrowing is outside #1266, so no declaration exists for this row to check. Case pj-07 skipped. #1377: the inventory of every rule a narrowing declaration would claim, which makes no declaration, is src/docs/resource-access-transformation-capabilities.md. D538 rules a qualified supported-subset declaration through a reviewable change; none is made yet."
+   "notes": "#1258 item 3 (D444, D446), #1377. The reference implements and witnesses all nine initial Common Constraints (#1266, #1377 step 5) but declares narrowing as a qualified domain (D1025), never as true, so no true declaration exists for this row to check. Its qualified analogue is resource-access.qualified-narrowing.unimplemented-key (tested). Case pj-07 skipped."
   },
   {
    "id": "resource-access.transformation-capabilities.undeclared-per-carrier",
@@ -71083,6 +71209,263 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped. #1377: the reference projects this type without a declaration, so this undeclared-projection path is not implemented; inventory: src/docs/resource-access-transformation-capabilities.md (section 4)."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.value-form",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "a JSON object with exactly one member, `domain`, whose value is an object with exactly these members",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a qualified narrowing value is an object with exactly a domain member, itself exactly an absolute-URI id and a sha-256 digest; a value with another member, or a malformed id or digest, is not a qualified declaration",
+    "local": "the reference's metadata entry carries its qualified value in that form, from transformation-capabilities.json"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
+     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
+     "name": "the loader refuses to start on a declaration it cannot validate (@spec resource-access#qualified-narrowing) > refuses a mismatched digest, an unknown member, an unavailable document and a malformed document",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "a reader resolves one carrier's narrowing member (@spec resource-access#qualified-narrowing, mission#transformation-capabilities) > a qualified value the reader cannot validate declares narrowing false, never true and never undeclared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Proved by mutation: accepting an unknown qualification member fails the reader and loader tests; omitting the declaration from the metadata entry fails the metadata test."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.domain-form",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "It has exactly these members",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a narrowing domain document has exactly id, type, capability, resource_match, members, constraints and the optional limitations, each of the given form; a document of another form is not a narrowing domain"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "the narrowing domain document's form (@spec resource-access#qualified-narrowing) > admits the form Resource Access gives, and refuses a missing covered member, an unknown matching mode or limitation",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
+     "name": "the loader refuses to start on a declaration it cannot validate (@spec resource-access#qualified-narrowing) > refuses a mismatched digest, an unknown member, an unavailable document and a malformed document",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
+     "name": "the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing) > declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). The reference's document is config/narrowing-domains/mission-resource-access-2026-10-29.json; narrowingDomainViolation (packages/mission-core/src/narrowing-declaration.ts) is the only code that knows the form."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.published",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "The authorization server publishes it in deployment documentation",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authorization server's deployment documentation states its narrowing declaration and names the narrowing domain document it references",
+    "local": "the inventory (src/docs/resource-access-transformation-capabilities.md, section 1) states the declaration in a marked block equal to the metadata entry's value, and names the domain document under config/narrowing-domains/"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the deployment documentation states the same declaration as the metadata entry (step 7)",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Proved by mutation: omitting the declaration from the metadata entry fails the documentation test, whose block must equal it."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.applicability",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "For any other pair, `narrowing` is undeclared",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "under a qualified declaration, a pair of entries both within the domain is narrowed by the subset rule, and any other pair is carried as approved: a proposal the subset rule would narrow outside the domain is refused, and one equal to the ceiling entry derives unchanged",
+    "local": "witnessed under a test configuration whose domain covers exact entries only: an exact pair narrows, and a prefix pair is carried only when equal, where the shipped declaration narrows it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > an exact proposal narrower than an exact ceiling entry derives narrowed: the domain covers exact",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > a prefix proposal narrower than the prefix ceiling entry is refused, while one equal to it derives unchanged: the domain does not cover prefix",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "domain applicability and the subset relation under a declaration (@spec resource-access#qualified-narrowing) > an entry is within the domain only when its matching mode, members, constraints keys and literal actions all are",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "domain applicability and the subset relation under a declaration (@spec resource-access#qualified-narrowing) > within the domain the subset rule narrows; outside it, and undeclared, a subset is established only by equality",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Proved by mutation: treating every matching mode as within the domain fails the prefix witness and the unit test; a derivation that narrows whatever is declared fails the prefix witness."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.unimplemented-key",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "An authorization server MUST NOT declare a qualified value whose domain lists a `constraints` key whose subset and intersection rules it does not implement",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an authorization server never declares a qualified narrowing whose domain lists a constraints key it does not implement",
+    "local": "the reference's loader refuses to start on such a declaration (unimplementedDomainClaim against SUPPORTED_CONSTRAINT_KEYS)"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/demo-data/test/transformation-capabilities.test.ts",
+     "name": "the loader refuses to start on a declaration it cannot validate (@spec resource-access#qualified-narrowing) > refuses a domain listing a constraints key whose rules this implementation does not implement",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "the narrowing domain document's form (@spec resource-access#qualified-narrowing) > refuses, as an implementation's own claim, a domain listing a constraints key or member it does not implement",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Proved by mutation: admitting an unimplemented key fails both tests."
+  },
+  {
+   "id": "resource-access.qualified-narrowing.reader-false",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "qualified-narrowing",
+   "text": "A reader treats a carrier as declaring `narrowing` `false` when the qualified value has a member other than `domain`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a qualified value with an unknown member, a malformed id or digest, or a document that is unavailable, malformed, names another id, type or capability, or does not match the digest resolves narrowing to false for that carrier, never true and never to the next carrier",
+    "local": "resolveNarrowing is the reader; the reference's own loader refuses to start on such a value rather than declare it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "a reader resolves one carrier's narrowing member (@spec resource-access#qualified-narrowing, mission#transformation-capabilities) > a qualified value the reader cannot validate declares narrowing false, never true and never undeclared",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "a reader resolves one carrier's narrowing member (@spec resource-access#qualified-narrowing, mission#transformation-capabilities) > a qualified value naming a document of the given form, id and digest declares narrowing for that domain",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/packages/mission-core/test/narrowing-declaration.test.ts",
+     "name": "a reader resolves one carrier's narrowing member (@spec resource-access#qualified-narrowing, mission#transformation-capabilities) > an absent member declares nothing, so the reader falls through; true and false keep their meanings",
+     "level": "unit",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1377 steps 6, 7 and 9 (D1025). Proved by mutation: skipping the digest comparison, and accepting an unknown qualification member, each fail the reader test."
   },
   {
    "id": "resource-access.type.resource-absolute-uri",
