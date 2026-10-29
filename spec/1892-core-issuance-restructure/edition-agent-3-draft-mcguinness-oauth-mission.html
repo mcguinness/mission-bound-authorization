@@ -1243,7 +1243,7 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
                 <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-consented-authority-set" class="internal xref">Consented Authority Set</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.3">
-                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-derivation-policy-and-open-" class="internal xref">Derivation Policy and Open-Ended Tasks</a></p>
+                <p id="section-toc.1-1.5.2.3.1"><a href="#section-5.3" class="auto internal xref">5.3</a>.  <a href="#name-authority-set-example" class="internal xref">Authority Set Example</a></p>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.4">
                 <p id="section-toc.1-1.5.2.4.1"><a href="#section-5.4" class="auto internal xref">5.4</a>.  <a href="#name-subset-rule" class="internal xref">Subset Rule</a></p>
@@ -1253,9 +1253,6 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
 <ul class="compact toc ulBare ulEmpty">
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5.2.1">
                     <p id="section-toc.1-1.5.2.5.2.1.1"><a href="#section-5.5.1" class="auto internal xref">5.5.1</a>.  <a href="#name-declared-transformation-cap" class="internal xref">Declared Transformation Capabilities</a></p>
-</li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.5.2.2">
-                    <p id="section-toc.1-1.5.2.5.2.2.1"><a href="#section-5.5.2" class="auto internal xref">5.5.2</a>.  <a href="#name-policy-language-types" class="internal xref">Policy-Language Types</a></p>
 </li>
                 </ul>
 </li>
@@ -1550,9 +1547,6 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
 <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2.2.1">
                     <p id="section-toc.1-1.15.2.2.2.1.1"><a href="#section-15.2.1" class="auto internal xref">15.2.1</a>.  <a href="#name-prompt-injection-and-data-e" class="internal xref">Prompt Injection and Data Exfiltration</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.2.2.2">
-                    <p id="section-toc.1-1.15.2.2.2.2.1"><a href="#section-15.2.2" class="auto internal xref">15.2.2</a>.  <a href="#name-authority-and-propagated-in" class="internal xref">Authority and Propagated Information</a></p>
-</li>
                 </ul>
 </li>
               <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.3">
@@ -1580,14 +1574,6 @@ action is a separate, optional layer.<a href="#section-abstract-3" class="pilcro
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.4.2.4">
                     <p id="section-toc.1-1.15.2.4.2.4.1"><a href="#section-15.4.4" class="auto internal xref">15.4.4</a>.  <a href="#name-signing-and-key-rotation" class="internal xref">Signing and Key Rotation</a></p>
-</li>
-                </ul>
-</li>
-              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5">
-                <p id="section-toc.1-1.15.2.5.1"><a href="#section-15.5" class="auto internal xref">15.5</a>.  <a href="#name-composition-and-residual-au" class="internal xref">Composition and Residual Authority</a></p>
-<ul class="compact toc ulBare ulEmpty">
-<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.15.2.5.2.1">
-                    <p id="section-toc.1-1.15.2.5.2.1.1"><a href="#section-15.5.1" class="auto internal xref">15.5.1</a>.  <a href="#name-composition-and-the-effecti" class="internal xref">Composition and the Effective Ceiling</a></p>
 </li>
                 </ul>
 </li>
@@ -1907,13 +1893,11 @@ they fit at the mediating enforcement component
         <h3 id="name-protocol-flow">
 <a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-protocol-flow" class="section-name selfRef">Protocol Flow</a>
         </h3>
-<p id="section-2.1-1">Besides the agent (the OAuth client) and the Mission Issuer (the
-AS), the flow involves two principals: the Subject, on whose behalf
-the Mission is approved, and the Approver, who approves it.
-<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a> defines these and the other terms.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
-<p id="section-2.1-2">The following figure shows the protocol flow between the agent and
-the Mission Issuer:<a href="#section-2.1-2" class="pilcrow">¶</a></p>
-<div class="alignLeft art-text artwork" id="section-2.1-3">
+<p id="section-2.1-1">The following figure shows the protocol flow between the agent (the
+OAuth client) and the Mission Issuer (the AS);
+<a href="#conventions-and-terminology" class="auto internal xref">Section 3</a> defines the Subject, the Approver, and
+the other terms:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-2.1-2">
 <pre>
  Agent (client)                       Mission Issuer (AS)
       |                                     |
@@ -1929,22 +1913,8 @@ the Mission Issuer:<a href="#section-2.1-2" class="pilcrow">¶</a></p>
       |&lt;----------- access token -----------| + authz_details
       |                                     |   + mission claim
       v
-</pre><a href="#section-2.1-3" class="pilcrow">¶</a>
+</pre><a href="#section-2.1-2" class="pilcrow">¶</a>
 </div>
-<p id="section-2.1-4">After token issuance, resource access and lifecycle management proceed
-as follows:<a href="#section-2.1-4" class="pilcrow">¶</a></p>
-<p id="section-2.1-5">(4) The agent calls the resource server with the token. The resource
-server enforces the <code>authorization_details</code> statelessly and can check
-the <code>mission</code> claim (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>), with no callback to the AS
-required.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
-<p id="section-2.1-6">(5) A revocation (<a href="#revocation" class="auto internal xref">Section 7.9.2</a>), or <code>expires_at</code>
-passing, moves the Mission
-to <code>terminated</code>, with reason <code>revoked</code> or <code>expired</code>, after which the
-AS refuses further issuance and refresh. A deployment can also treat
-<span>[<a href="#RFC7009" class="cite xref">RFC7009</a>]</span> revocation of the refresh token as revoking the Mission
-(<a href="#revocation" class="auto internal xref">Section 7.9.2</a>).<a href="#section-2.1-6" class="pilcrow">¶</a></p>
-<p id="section-2.1-7">The end-to-end example (<a href="#e2e-example" class="auto internal xref">Appendix A</a>) walks this flow with
-concrete messages.<a href="#section-2.1-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="first-mission">
@@ -3152,29 +3122,16 @@ matches the words, not as a machine enforcement mechanism.<a href="#section-5.2-
 </div>
 <div id="derivation-policy-tasks">
 <section id="section-5.3">
-        <h3 id="name-derivation-policy-and-open-">
-<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-derivation-policy-and-open-" class="section-name selfRef">Derivation Policy and Open-Ended Tasks</a>
+        <h3 id="name-authority-set-example">
+<a href="#section-5.3" class="section-number selfRef">5.3. </a><a href="#name-authority-set-example" class="section-name selfRef">Authority Set Example</a>
         </h3>
-<p id="section-5.3-1">For an open-ended task whose concrete objects cannot be enumerated at
-approval (for example, "reconcile this customer's ledger," where the
-individual invoices are not yet known), the derived authority is better
-bounded by <code>constraints</code> that hold as invariants over those objects
-than by an exhaustive <code>resource</code> enumeration. Such invariants include
-the owning customer, the tenant, an amount ceiling, read-only except
-named write actions, and a validity window. The runtime layer
-(<a href="#runtime-boundary" class="auto internal xref">Section 15.3.1</a>) checks each concrete object against the
-constraint at the point of use.<a href="#section-5.3-1" class="pilcrow">¶</a></p>
-<p id="section-5.3-2"><code>mission_resource_access</code> is defined by the Mission Resource Access
-Profile (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>); the
-Authority Set carries it on the same type-agnostic terms as any
-supported type (<a href="#other-types" class="auto internal xref">Section 5.5</a>).<a href="#section-5.3-2" class="pilcrow">¶</a></p>
-<p id="section-5.3-3">The following is an example of an Authority Set. The read entry is
+<p id="section-5.3-1">The following is an example of an Authority Set. The read entry is
 delegable to depth 2 and bounded to a Q3 issuance window by the
 <code>resource_issued_after</code> and <code>resource_issued_before</code> Common
 Constraints (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>);
 the write entry carries no <code>delegation</code> and so is non-delegable,
-because <code>delegation</code> is per entry:<a href="#section-5.3-3" class="pilcrow">¶</a></p>
-<div class="lang-json sourcecode" id="section-5.3-4">
+because <code>delegation</code> is per entry:<a href="#section-5.3-1" class="pilcrow">¶</a></p>
+<div class="lang-json sourcecode" id="section-5.3-2">
 <pre>
 [
   { "type": "mission_resource_access",
@@ -3195,7 +3152,7 @@ because <code>delegation</code> is per entry:<a href="#section-5.3-3" class="pil
       "max_amount": { "amount": "500.00", "currency": "USD" }
     } }
 ]
-</pre><a href="#section-5.3-4" class="pilcrow">¶</a>
+</pre><a href="#section-5.3-2" class="pilcrow">¶</a>
 </div>
 </section>
 </div>
@@ -3366,32 +3323,6 @@ declares the member governs, whether it declares <code>true</code> or <code>fals
 later carrier does not override it. A declared capability permits a
 transformation without requiring it, and waives no check this document
 requires and no local policy under which the AS refuses one.<a href="#section-5.5.1-11" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="policy-language-types">
-<section id="section-5.5.2">
-          <h4 id="name-policy-language-types">
-<a href="#section-5.5.2" class="section-number selfRef">5.5.2. </a><a href="#name-policy-language-types" class="section-name selfRef">Policy-Language Types</a>
-          </h4>
-<p id="section-5.5.2-1">Type-agnosticism lets policy-language profiles compose without this
-document defining them: for example, an entry carrying a Cedar policy
-set (<span>[<a href="#I-D.draft-cecchetti-oauth-rar-cedar" class="cite xref">I-D.draft-cecchetti-oauth-rar-cedar</a>]</span>), or an analogous AuthZEN
-policy entry, for an audience that evaluates it, alongside a
-general-purpose type such as <code>mission_resource_access</code>
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>).<a href="#section-5.5.2-1" class="pilcrow">¶</a></p>
-<p id="section-5.5.2-2">The AS derives such an entry from the Mission Intent and bounds it by
-the Intent like any other, but does not interpret the carried policy
-beyond its type's declared capabilities; the resource server or policy
-decision point (PDP) evaluates it at request time.<a href="#section-5.5.2-2" class="pilcrow">¶</a></p>
-<p id="section-5.5.2-3">Because the Cedar profile defines no subset or delegation rule over
-policy sets, the AS carries a Cedar entry as approved, so it does not
-appear in a delegated token or cross-domain grant. Delegation controls
-on other entries in the same Authority Set, such as a
-<code>mission_resource_access</code> entry, apply to those entries only.<a href="#section-5.5.2-3" class="pilcrow">¶</a></p>
-<p id="section-5.5.2-4">Invoking a Model Context Protocol tool or a function call is modeled
-as a <code>mission_resource_access</code> entry with no separate type; the
-mapping is specified in
-<span>[<a href="#I-D.draft-mcguinness-oauth-mission-resource-access" class="cite xref">I-D.draft-mcguinness-oauth-mission-resource-access</a>]</span>.<a href="#section-5.5.2-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -6138,17 +6069,10 @@ defines an interoperable <code>revoke</code> operation.<a href="#section-7.9.2-3
 can treat revoking a Mission's refresh token as revoking the Mission;
 a deployment that couples token revocation to Mission revocation
 documents that behavior.<a href="#section-7.9.2-4" class="pilcrow">¶</a></p>
-<p id="section-7.9.2-5">Token validity and Mission validity are distinct: an already-issued
-access token remains valid until it expires (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>), so
-a token can outlive a transition of its Mission by at most the token
-lifetime.<a href="#section-7.9.2-5" class="pilcrow">¶</a></p>
-<p id="section-7.9.2-6">Token introspection (<a href="#introspection" class="auto internal xref">Section 9.2</a>) is a state-observable overlay
-that lets a resource server see Mission state per request and refuse
-a revoked Mission's token before the token expires; Mission Status
-specifies another, a status surface keyed by <code>mission_id</code> with signed
-responses. A deployment whose consumers rely on Mission state beyond
-a token's lifetime offers one of these, so they read current state
-rather than infer it from token validity.<a href="#section-7.9.2-6" class="pilcrow">¶</a></p>
+<p id="section-7.9.2-5">A deployment whose consumers rely on Mission state beyond a token's
+lifetime offers token introspection (<a href="#introspection" class="auto internal xref">Section 9.2</a>) or Mission
+Status (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite xref">I-D.draft-mcguinness-oauth-mission-status</a>]</span>), so they read
+current state rather than infer it from token validity.<a href="#section-7.9.2-5" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -8216,36 +8140,15 @@ claim is governed by no Mission state, revocation, or consent
 commitment. <a href="#authority-proposal" class="auto internal xref">Section 4.3</a>, <a href="#discovery" class="auto internal xref">Section 11</a>, and
 <a href="#rs-enforcement" class="auto internal xref">Section 9.1</a> address this downgrade at issuance, at the client,
 and at enforcement.<a href="#section-15.1.2-1" class="pilcrow">¶</a></p>
-<p id="section-15.1.2-2">A held ordinary credential needs no request to the AS, and neither an
-AS nor a resource server can generally tell that a request made with
-one serves a Mission:<a href="#section-15.1.2-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-15.1.2-3.1">
-              <p id="section-15.1.2-3.1.1">Classifying a resource as Mission-governed closes this path at that
-resource.<a href="#section-15.1.2-3.1.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-15.1.2-3.2">
-              <p id="section-15.1.2-3.2.1">Mandatory mediation closes it where the client's requests must pass
-through a runtime layer that holds custody of the client's
-credentials (<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>).<a href="#section-15.1.2-3.2.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-15.1.2-3.3">
-              <p id="section-15.1.2-3.3.1">A decision-time join of an ordinary credential to the Mission, such
-as the Mission Join of
-<span>[<a href="#I-D.draft-mcguinness-mission-authority-server" class="cite xref">I-D.draft-mcguinness-mission-authority-server</a>]</span>, is one realization
-of the enforcement path that <a href="#discovery" class="auto internal xref">Section 11</a> permits.<a href="#section-15.1.2-3.3.1" class="pilcrow">¶</a></p>
-</li>
-            <li class="normal" id="section-15.1.2-3.4">
-              <p id="section-15.1.2-3.4.1">An unmediated ordinary workflow at a resource that is not
-Mission-governed remains a residual that only the client's own
-conformance closes.<a href="#section-15.1.2-3.4.1" class="pilcrow">¶</a></p>
-</li>
-          </ul>
-<p id="section-15.1.2-4">The integrity of the <code>mission_bound_authorization_supported</code>
+<p id="section-15.1.2-2">The Mission Security Model
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>) analyzes the path
+that an ordinary credential the client already holds leaves open, and
+where mediation closes it.<a href="#section-15.1.2-2" class="pilcrow">¶</a></p>
+<p id="section-15.1.2-3">The integrity of the <code>mission_bound_authorization_supported</code>
 (<a href="#discovery" class="auto internal xref">Section 11</a>) and <code>mission_bound_authorization_required</code>
 (<a href="#protected-resource-metadata" class="auto internal xref">Section 12</a>) metadata rests on the retrieval
 protections of <span>[<a href="#RFC8414" class="cite xref">RFC8414</a>]</span> and <span>[<a href="#RFC9728" class="cite xref">RFC9728</a>]</span>, whose security
-considerations apply.<a href="#section-15.1.2-4" class="pilcrow">¶</a></p>
+considerations apply.<a href="#section-15.1.2-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -8261,64 +8164,19 @@ considerations apply.<a href="#section-15.1.2-4" class="pilcrow">¶</a></p>
 <a href="#section-15.2.1" class="section-number selfRef">15.2.1. </a><a href="#name-prompt-injection-and-data-e" class="section-name selfRef">Prompt Injection and Data Exfiltration</a>
           </h4>
 <p id="section-15.2.1-1">This document assumes that an agent reading attacker-influenceable
-content can be prompt-injected, and does not try to make the agent
-immune. Injection is dangerous when one agent combines access to
-private data, exposure to untrusted content, and the ability to
-communicate externally; the Mission Security Model
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>) analyzes that
-combination and its architectural defenses.<a href="#section-15.2.1-1" class="pilcrow">¶</a></p>
-<p id="section-15.2.1-2">This document constrains the data-access leg: a Mission narrows
-authority from everything the agent's standing credentials allow to the
-resources the approved task needs, and per-task Missions
-(<a href="#applicability" class="auto internal xref">Section 1.1</a>) further limit the effect of a compromise.<a href="#section-15.2.1-2" class="pilcrow">¶</a></p>
-<p id="section-15.2.1-3">Against the untrusted-content leg, authority is fixed at the approval
+content can be prompt-injected. Authority is fixed at the approval
 event, so injected text cannot expand an approved Mission. <code>purpose</code>
 supplies candidate authority only as a lookup key of the pre-approval
 Authority Set derivation whose result the Approver reads and
 consents to, and otherwise can only refuse or tighten; <code>goal</code> and
 <code>task_bounds</code> bound it only through that disclosure
-(<a href="#mission-intent" class="auto internal xref">Section 4</a>, <a href="#authorization-derivation" class="auto internal xref">Section 5</a>).<a href="#section-15.2.1-3" class="pilcrow">¶</a></p>
-<p id="section-15.2.1-4">This document does not constrain the external-communication leg. It
-models authority over resources and actions, not how an agent uses
-authority it holds:
-within an approved Authority Set, an injected agent can read what the
-Mission permits and write to a sink the Mission permits.<a href="#section-15.2.1-4" class="pilcrow">¶</a></p>
-<p id="section-15.2.1-5">Constraining exfiltration by a compromised agent is the runtime layer's
-role (<a href="#runtime-boundary" class="auto internal xref">Section 15.3.1</a>), and even there it is bounded, not closed
-(<span>[<a href="#I-D.draft-mcguinness-mission-runtime" class="cite xref">I-D.draft-mcguinness-mission-runtime</a>]</span>). Preventing misuse of data
-within the authorized scope needs a taint or information-flow layer
-this document does not define.<a href="#section-15.2.1-5" class="pilcrow">¶</a></p>
-</section>
-</div>
-<div id="information-propagation">
-<section id="section-15.2.2">
-          <h4 id="name-authority-and-propagated-in">
-<a href="#section-15.2.2" class="section-number selfRef">15.2.2. </a><a href="#name-authority-and-propagated-in" class="section-name selfRef">Authority and Propagated Information</a>
-          </h4>
-<p id="section-15.2.2-1">Issuance gating bounds escalation by token acquisition
-(<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>, <a href="#subset" class="auto internal xref">Section 5.4</a>): an agent cannot exceed the approved
-Authority Set by acquiring additional tokens. The same bound holds for
-information: an agent can inherit another agent's knowledge, but not its
-authority.<a href="#section-15.2.2-1" class="pilcrow">¶</a></p>
-<p id="section-15.2.2-2">A work product of one Mission (a file, message, memory entry, queue
-event, or other durable shared artifact) is input, not authority, to
-an agent under another Mission that reads it. The
-receiving Mission determines what can be done with the information
-under its own Authority Set (<a href="#subset" class="auto internal xref">Section 5.4</a>); the producing Mission's
-authority does not transfer through the artifact by copying,
-referencing, embedding, or communicating it.<a href="#section-15.2.2-2" class="pilcrow">¶</a></p>
-<p id="section-15.2.2-3">An agent that needs authority to act on what it read acquires it only
-through an authorized derivation or delegation bounded by the Mission
-(<a href="#delegation" class="auto internal xref">Section 8</a>), not from the artifact.<a href="#section-15.2.2-3" class="pilcrow">¶</a></p>
-<p id="section-15.2.2-4">The threat is emergent authority through coordination: independent
-Missions communicating through shared state, so that individually
-acceptable actions compose into behavior no single Mission authorized
-(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>). Mission Work
-Products <span>[<a href="#I-D.draft-mcguinness-oauth-mission-work-products" class="cite xref">I-D.draft-mcguinness-oauth-mission-work-products</a>]</span>
-specifies the mechanism that upholds the invariant across such a
-carrier (work-product provenance and a non-transitive
-Mission-to-Mission handoff); this document takes no normative
-dependency on it.<a href="#section-15.2.2-4" class="pilcrow">¶</a></p>
+(<a href="#mission-intent" class="auto internal xref">Section 4</a>, <a href="#authorization-derivation" class="auto internal xref">Section 5</a>).<a href="#section-15.2.1-1" class="pilcrow">¶</a></p>
+<p id="section-15.2.1-2">Within an approved Authority Set, an injected agent can still read
+what the Mission permits and write to a sink the Mission permits. The
+Mission Security Model
+(<span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span>) analyzes that
+residual; constraining it is the runtime layer's role
+(<a href="#runtime-boundary" class="auto internal xref">Section 15.3.1</a>).<a href="#section-15.2.1-2" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -8545,38 +8403,6 @@ the one <code>jwks_uri</code> lets high-value, low-volume signing (long-lived
 evidence and portable artifacts) sit under stricter custody than
 high-volume token signing. Verification is <code>kid</code>-indexed, so this needs
 no wire change.<a href="#section-15.4.4-5" class="pilcrow">¶</a></p>
-</section>
-</div>
-</section>
-</div>
-<div id="sec-composition">
-<section id="section-15.5">
-        <h3 id="name-composition-and-residual-au">
-<a href="#section-15.5" class="section-number selfRef">15.5. </a><a href="#name-composition-and-residual-au" class="section-name selfRef">Composition and Residual Authority</a>
-        </h3>
-<div id="composition-and-the-effective-ceiling">
-<section id="section-15.5.1">
-          <h4 id="name-composition-and-the-effecti">
-<a href="#section-15.5.1" class="section-number selfRef">15.5.1. </a><a href="#name-composition-and-the-effecti" class="section-name selfRef">Composition and the Effective Ceiling</a>
-          </h4>
-<p id="section-15.5.1-1">Delegation depth (<a href="#delegation-constraints" class="auto internal xref">Section 8.4</a>) resets to 0 at each
-cross-domain hop (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-cross-domain" class="cite xref">I-D.draft-mcguinness-oauth-mission-cross-domain</a>]</span>)
-and, where a deployment runs the child-delegation profile, at each child
-generation (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>).<a href="#section-15.5.1-1" class="pilcrow">¶</a></p>
-<p id="section-15.5.1-2">The aggregate surface that a Mission's descendants can reach (the
-product of delegation depth, the number of trust domains projected into,
-and the number of child generations, each bounded independently) can
-therefore exceed what a single approval appears to bound at consent
-time. <span>[<a href="#I-D.draft-mcguinness-mission-security-model" class="cite xref">I-D.draft-mcguinness-mission-security-model</a>]</span> analyzes this
-composition, including why per-Mission child limits do not add up to a
-lifetime total, and the child-delegation profile states how an
-approval renders the subtree's figures
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission-child-delegation" class="cite xref">I-D.draft-mcguinness-oauth-mission-child-delegation</a>]</span>). Where a
-single approval's apparent bound must hold in practice, a deployment
-can impose a global cap out of band.<a href="#section-15.5.1-2" class="pilcrow">¶</a></p>
-<p id="section-15.5.1-3">Bounding aggregate consumption (calls, spend, or activity over the life
-of a Mission and its descendants) is the metering profile's role
-(<span>[<a href="#I-D.draft-mcguinness-mission-metering" class="cite xref">I-D.draft-mcguinness-mission-metering</a>]</span>).<a href="#section-15.5.1-3" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
@@ -9487,10 +9313,6 @@ member's registration in its own IANA considerations.<a href="#section-18.9-9" c
         <dd>
 <span class="refAuthor">OpenID Foundation</span>, <span class="refTitle">"OpenID AuthZEN Access Request and Approval Profile 1.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://openid.github.io/authzen/authzen-access-request-approval-profile-1_0.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
-<dt id="I-D.draft-cecchetti-oauth-rar-cedar">[I-D.draft-cecchetti-oauth-rar-cedar]</dt>
-        <dd>
-<span class="refAuthor">Cecchetti, S.</span>, <span class="refTitle">"Cedar Profile for OAuth 2.0 Rich Authorization Requests"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-cecchetti-oauth-rar-cedar-02</span>, <time datetime="2024-02-21" class="refDate">21 February 2024</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-cecchetti-oauth-rar-cedar-02</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
 <dt id="I-D.draft-hardt-oauth-aauth-protocol">[I-D.draft-hardt-oauth-aauth-protocol]</dt>
         <dd>
 <span class="refAuthor">Hardt, D.</span>, <span class="refTitle">"AAuth Protocol"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-hardt-oauth-aauth-protocol-11</span>, <time datetime="2026-09-25" class="refDate">25 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11" class="reader-edition-ext-link" target="_blank" rel="noopener">https://datatracker.ietf.org/doc/html/draft-hardt-oauth-aauth-protocol-11</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
@@ -9626,10 +9448,6 @@ member's registration in its own IANA considerations.<a href="#section-18.9-9" c
 <dt id="I-D.draft-mcguinness-oauth-mission-template">[I-D.draft-mcguinness-oauth-mission-template]</dt>
         <dd>
 <span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Template for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-template.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
-<dd class="break"></dd>
-<dt id="I-D.draft-mcguinness-oauth-mission-work-products">[I-D.draft-mcguinness-oauth-mission-work-products]</dt>
-        <dd>
-<span class="refAuthor">McGuinness, K.</span>, <span class="refTitle">"Mission Work Products for OAuth 2.0"</span>, <time datetime="2026" class="refDate">2026</time>, <span>&lt;<a href="https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html" class="reader-edition-ext-link" target="_blank" rel="noopener">https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html</a><span class="reader-edition-ext-marker"> (opens in a new tab)</span>&gt;</span>. </dd>
 <dd class="break"></dd>
 <dt id="RFC7009">[RFC7009]</dt>
         <dd>
@@ -11119,6 +10937,30 @@ delegated-exchange response members and the rule for a type delegable
 only unchanged move to Delegated Exchange. Self-Exchange Down-Scoping,
 which delegates nothing, moves from that chapter to follow Refresh
 Tokens (#1892, D1026).<a href="#appendix-F-3.43.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.44">
+          <p id="appendix-F-3.44.1">Editorial, no requirement change: Protocol Flow keeps its figure
+without the prose the Introduction's flow states; Derivation Policy
+and Open-Ended Tasks becomes Authority Set Example, its open-ended-task
+guidance being Mission Intent Shaping's and the Architecture's; and
+Policy-Language Types, whose rules Declared Transformation
+Capabilities and the Mission Resource Access Profile state, is
+removed with its Cedar reference (#1892, D1026).<a href="#appendix-F-3.44.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.45">
+          <p id="appendix-F-3.45.1">Editorial, no requirement change: Revocation no longer restates the
+token-lifetime bound of Issuance Gating or the introspection overlay;
+its duty to offer token introspection or Mission Status where
+consumers rely on Mission state beyond a token's lifetime is
+unchanged (#1892, D1026).<a href="#appendix-F-3.45.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.46">
+          <p id="appendix-F-3.46.1">Editorial, no requirement change: Prompt Injection and Data
+Exfiltration and Downgrade by Omission keep their rules and residuals
+and point to the Mission Security Model for the analysis; Authority
+and Propagated Information and Composition and the Effective Ceiling,
+which the Security Model and Mission Work Products carry, are removed
+with the uncited Work Products reference (#1892, D1026).<a href="#appendix-F-3.46.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-F-4">-01<a href="#appendix-F-4" class="pilcrow">¶</a></p>

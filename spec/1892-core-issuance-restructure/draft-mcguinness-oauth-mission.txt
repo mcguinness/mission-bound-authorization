@@ -99,11 +99,10 @@ Table of Contents
    5.  Mission Authority
      5.1.  Derivation Modes
      5.2.  Consented Authority Set
-     5.3.  Derivation Policy and Open-Ended Tasks
+     5.3.  Authority Set Example
      5.4.  Subset Rule
      5.5.  Authorization Details Types
        5.5.1.  Declared Transformation Capabilities
-       5.5.2.  Policy-Language Types
    6.  Mission Creation
      6.1.  Mission Approval
        6.1.1.  Authorization Code Protection
@@ -189,7 +188,6 @@ Table of Contents
        15.1.2.  Downgrade by Omission
      15.2.  Agent-Specific Threats
        15.2.1.  Prompt Injection and Data Exfiltration
-       15.2.2.  Authority and Propagated Information
      15.3.  Enforcement Boundaries
        15.3.1.  Issuance Scope and Runtime Enforcement
        15.3.2.  Denial Detail Disclosure
@@ -198,8 +196,6 @@ Table of Contents
        15.4.2.  Delegation and Chain Compromise
        15.4.3.  Client Attribution and Delegation Lineage
        15.4.4.  Signing and Key Rotation
-     15.5.  Composition and Residual Authority
-       15.5.1.  Composition and the Effective Ceiling
    16. Privacy Considerations
      16.1.  Mission Identifier Correlation
      16.2.  Token Payload Disclosure
@@ -403,13 +399,9 @@ Table of Contents
 
 2.1.  Protocol Flow
 
-   Besides the agent (the OAuth client) and the Mission Issuer (the AS),
-   the flow involves two principals: the Subject, on whose behalf the
-   Mission is approved, and the Approver, who approves it.  Section 3
-   defines these and the other terms.
-
-   The following figure shows the protocol flow between the agent and
-   the Mission Issuer:
+   The following figure shows the protocol flow between the agent (the
+   OAuth client) and the Mission Issuer (the AS); Section 3 defines the
+   Subject, the Approver, and the other terms:
 
     Agent (client)                       Mission Issuer (AS)
          |                                     |
@@ -425,22 +417,6 @@ Table of Contents
          |<----------- access token -----------| + authz_details
          |                                     |   + mission claim
          v
-
-   After token issuance, resource access and lifecycle management
-   proceed as follows:
-
-   (4) The agent calls the resource server with the token.  The resource
-   server enforces the authorization_details statelessly and can check
-   the mission claim (Section 9.1), with no callback to the AS required.
-
-   (5) A revocation (Section 7.9.2), or expires_at passing, moves the
-   Mission to terminated, with reason revoked or expired, after which
-   the AS refuses further issuance and refresh.  A deployment can also
-   treat [RFC7009] revocation of the refresh token as revoking the
-   Mission (Section 7.9.2).
-
-   The end-to-end example (Appendix A) walks this flow with concrete
-   messages.
 
 2.2.  Introductory Example
 
@@ -1384,22 +1360,7 @@ Table of Contents
    Set (Section 6.1.2) as the human check that the structure matches the
    words, not as a machine enforcement mechanism.
 
-5.3.  Derivation Policy and Open-Ended Tasks
-
-   For an open-ended task whose concrete objects cannot be enumerated at
-   approval (for example, "reconcile this customer's ledger," where the
-   individual invoices are not yet known), the derived authority is
-   better bounded by constraints that hold as invariants over those
-   objects than by an exhaustive resource enumeration.  Such invariants
-   include the owning customer, the tenant, an amount ceiling, read-only
-   except named write actions, and a validity window.  The runtime layer
-   (Section 15.3.1) checks each concrete object against the constraint
-   at the point of use.
-
-   mission_resource_access is defined by the Mission Resource Access
-   Profile ([I-D.draft-mcguinness-oauth-mission-resource-access]); the
-   Authority Set carries it on the same type-agnostic terms as any
-   supported type (Section 5.5).
+5.3.  Authority Set Example
 
    The following is an example of an Authority Set. The read entry is
    delegable to depth 2 and bounded to a Q3 issuance window by the
@@ -1578,30 +1539,6 @@ Table of Contents
    carrier does not override it.  A declared capability permits a
    transformation without requiring it, and waives no check this
    document requires and no local policy under which the AS refuses one.
-
-5.5.2.  Policy-Language Types
-
-   Type-agnosticism lets policy-language profiles compose without this
-   document defining them: for example, an entry carrying a Cedar policy
-   set ([I-D.draft-cecchetti-oauth-rar-cedar]), or an analogous AuthZEN
-   policy entry, for an audience that evaluates it, alongside a general-
-   purpose type such as mission_resource_access
-   ([I-D.draft-mcguinness-oauth-mission-resource-access]).
-
-   The AS derives such an entry from the Mission Intent and bounds it by
-   the Intent like any other, but does not interpret the carried policy
-   beyond its type's declared capabilities; the resource server or
-   policy decision point (PDP) evaluates it at request time.
-
-   Because the Cedar profile defines no subset or delegation rule over
-   policy sets, the AS carries a Cedar entry as approved, so it does not
-   appear in a delegated token or cross-domain grant.  Delegation
-   controls on other entries in the same Authority Set, such as a
-   mission_resource_access entry, apply to those entries only.
-
-   Invoking a Model Context Protocol tool or a function call is modeled
-   as a mission_resource_access entry with no separate type; the mapping
-   is specified in [I-D.draft-mcguinness-oauth-mission-resource-access].
 
 6.  Mission Creation
 
@@ -3797,18 +3734,10 @@ Table of Contents
    deployment that couples token revocation to Mission revocation
    documents that behavior.
 
-   Token validity and Mission validity are distinct: an already-issued
-   access token remains valid until it expires (Section 7.1), so a token
-   can outlive a transition of its Mission by at most the token
-   lifetime.
-
-   Token introspection (Section 9.2) is a state-observable overlay that
-   lets a resource server see Mission state per request and refuse a
-   revoked Mission's token before the token expires; Mission Status
-   specifies another, a status surface keyed by mission_id with signed
-   responses.  A deployment whose consumers rely on Mission state beyond
-   a token's lifetime offers one of these, so they read current state
-   rather than infer it from token validity.
+   A deployment whose consumers rely on Mission state beyond a token's
+   lifetime offers token introspection (Section 9.2) or Mission Status
+   ([I-D.draft-mcguinness-oauth-mission-status]), so they read current
+   state rather than infer it from token validity.
 
 8.  Delegation Within a Mission
 
@@ -5614,25 +5543,10 @@ Table of Contents
    Section 4.3, Section 11, and Section 9.1 address this downgrade at
    issuance, at the client, and at enforcement.
 
-   A held ordinary credential needs no request to the AS, and neither an
-   AS nor a resource server can generally tell that a request made with
-   one serves a Mission:
-
-   *  Classifying a resource as Mission-governed closes this path at
-      that resource.
-
-   *  Mandatory mediation closes it where the client's requests must
-      pass through a runtime layer that holds custody of the client's
-      credentials ([I-D.draft-mcguinness-mission-runtime]).
-
-   *  A decision-time join of an ordinary credential to the Mission,
-      such as the Mission Join of
-      [I-D.draft-mcguinness-mission-authority-server], is one
-      realization of the enforcement path that Section 11 permits.
-
-   *  An unmediated ordinary workflow at a resource that is not Mission-
-      governed remains a residual that only the client's own conformance
-      closes.
+   The Mission Security Model
+   ([I-D.draft-mcguinness-mission-security-model]) analyzes the path
+   that an ordinary credential the client already holds leaves open, and
+   where mediation closes it.
 
    The integrity of the mission_bound_authorization_supported
    (Section 11) and mission_bound_authorization_required (Section 12)
@@ -5644,65 +5558,19 @@ Table of Contents
 15.2.1.  Prompt Injection and Data Exfiltration
 
    This document assumes that an agent reading attacker-influenceable
-   content can be prompt-injected, and does not try to make the agent
-   immune.  Injection is dangerous when one agent combines access to
-   private data, exposure to untrusted content, and the ability to
-   communicate externally; the Mission Security Model
-   ([I-D.draft-mcguinness-mission-security-model]) analyzes that
-   combination and its architectural defenses.
-
-   This document constrains the data-access leg: a Mission narrows
-   authority from everything the agent's standing credentials allow to
-   the resources the approved task needs, and per-task Missions
-   (Section 1.1) further limit the effect of a compromise.
-
-   Against the untrusted-content leg, authority is fixed at the approval
+   content can be prompt-injected.  Authority is fixed at the approval
    event, so injected text cannot expand an approved Mission. purpose
    supplies candidate authority only as a lookup key of the pre-approval
    Authority Set derivation whose result the Approver reads and consents
    to, and otherwise can only refuse or tighten; goal and task_bounds
    bound it only through that disclosure (Section 4, Section 5).
 
-   This document does not constrain the external-communication leg.  It
-   models authority over resources and actions, not how an agent uses
-   authority it holds: within an approved Authority Set, an injected
-   agent can read what the Mission permits and write to a sink the
-   Mission permits.
-
-   Constraining exfiltration by a compromised agent is the runtime
-   layer's role (Section 15.3.1), and even there it is bounded, not
-   closed ([I-D.draft-mcguinness-mission-runtime]).  Preventing misuse
-   of data within the authorized scope needs a taint or information-flow
-   layer this document does not define.
-
-15.2.2.  Authority and Propagated Information
-
-   Issuance gating bounds escalation by token acquisition (Section 7.1,
-   Section 5.4): an agent cannot exceed the approved Authority Set by
-   acquiring additional tokens.  The same bound holds for information:
-   an agent can inherit another agent's knowledge, but not its
-   authority.
-
-   A work product of one Mission (a file, message, memory entry, queue
-   event, or other durable shared artifact) is input, not authority, to
-   an agent under another Mission that reads it.  The receiving Mission
-   determines what can be done with the information under its own
-   Authority Set (Section 5.4); the producing Mission's authority does
-   not transfer through the artifact by copying, referencing, embedding,
-   or communicating it.
-
-   An agent that needs authority to act on what it read acquires it only
-   through an authorized derivation or delegation bounded by the Mission
-   (Section 8), not from the artifact.
-
-   The threat is emergent authority through coordination: independent
-   Missions communicating through shared state, so that individually
-   acceptable actions compose into behavior no single Mission authorized
-   ([I-D.draft-mcguinness-mission-security-model]).  Mission Work
-   Products [I-D.draft-mcguinness-oauth-mission-work-products] specifies
-   the mechanism that upholds the invariant across such a carrier (work-
-   product provenance and a non-transitive Mission-to-Mission handoff);
-   this document takes no normative dependency on it.
+   Within an approved Authority Set, an injected agent can still read
+   what the Mission permits and write to a sink the Mission permits.
+   The Mission Security Model
+   ([I-D.draft-mcguinness-mission-security-model]) analyzes that
+   residual; constraining it is the runtime layer's role
+   (Section 15.3.1).
 
 15.3.  Enforcement Boundaries
 
@@ -5884,31 +5752,6 @@ Table of Contents
    evidence and portable artifacts) sit under stricter custody than
    high-volume token signing.  Verification is kid-indexed, so this
    needs no wire change.
-
-15.5.  Composition and Residual Authority
-
-15.5.1.  Composition and the Effective Ceiling
-
-   Delegation depth (Section 8.4) resets to 0 at each cross-domain hop
-   ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
-   deployment runs the child-delegation profile, at each child
-   generation ([I-D.draft-mcguinness-oauth-mission-child-delegation]).
-
-   The aggregate surface that a Mission's descendants can reach (the
-   product of delegation depth, the number of trust domains projected
-   into, and the number of child generations, each bounded
-   independently) can therefore exceed what a single approval appears to
-   bound at consent time.  [I-D.draft-mcguinness-mission-security-model]
-   analyzes this composition, including why per-Mission child limits do
-   not add up to a lifetime total, and the child-delegation profile
-   states how an approval renders the subtree's figures
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]).  Where a
-   single approval's apparent bound must hold in practice, a deployment
-   can impose a global cap out of band.
-
-   Bounding aggregate consumption (calls, spend, or activity over the
-   life of a Mission and its descendants) is the metering profile's role
-   ([I-D.draft-mcguinness-mission-metering]).
 
 16.  Privacy Considerations
 
@@ -6607,13 +6450,6 @@ Table of Contents
               <https://openid.github.io/authzen/authzen-access-request-
               approval-profile-1_0.html>.
 
-   [I-D.draft-cecchetti-oauth-rar-cedar]
-              Cecchetti, S., "Cedar Profile for OAuth 2.0 Rich
-              Authorization Requests", Work in Progress, Internet-Draft,
-              draft-cecchetti-oauth-rar-cedar-02, 21 February 2024,
-              <https://datatracker.ietf.org/doc/html/draft-cecchetti-
-              oauth-rar-cedar-02>.
-
    [I-D.draft-hardt-oauth-aauth-protocol]
               Hardt, D., "AAuth Protocol", Work in Progress, Internet-
               Draft, draft-hardt-oauth-aauth-protocol-11, 25 September
@@ -6811,12 +6647,6 @@ Table of Contents
               McGuinness, K., "Mission Template for OAuth 2.0", 2026,
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-template.html>.
-
-   [I-D.draft-mcguinness-oauth-mission-work-products]
-              McGuinness, K., "Mission Work Products for OAuth 2.0",
-              2026, <https://mcguinness.github.io/mission-bound-
-              authorization/draft-mcguinness-oauth-mission-work-
-              products.html>.
 
    [RFC7009]  Lodderstedt, T., Ed., Dronia, S., and M. Scurtescu, "OAuth
               2.0 Token Revocation", RFC 7009, DOI 10.17487/RFC7009,
@@ -8050,6 +7880,28 @@ Appendix F.  Document History
       rule for a type delegable only unchanged move to Delegated
       Exchange.  Self-Exchange Down-Scoping, which delegates nothing,
       moves from that chapter to follow Refresh Tokens (#1892, D1026).
+
+   *  Editorial, no requirement change: Protocol Flow keeps its figure
+      without the prose the Introduction's flow states; Derivation
+      Policy and Open-Ended Tasks becomes Authority Set Example, its
+      open-ended-task guidance being Mission Intent Shaping's and the
+      Architecture's; and Policy-Language Types, whose rules Declared
+      Transformation Capabilities and the Mission Resource Access
+      Profile state, is removed with its Cedar reference (#1892, D1026).
+
+   *  Editorial, no requirement change: Revocation no longer restates
+      the token-lifetime bound of Issuance Gating or the introspection
+      overlay; its duty to offer token introspection or Mission Status
+      where consumers rely on Mission state beyond a token's lifetime is
+      unchanged (#1892, D1026).
+
+   *  Editorial, no requirement change: Prompt Injection and Data
+      Exfiltration and Downgrade by Omission keep their rules and
+      residuals and point to the Mission Security Model for the
+      analysis; Authority and Propagated Information and Composition and
+      the Effective Ceiling, which the Security Model and Mission Work
+      Products carry, are removed with the uncited Work Products
+      reference (#1892, D1026).
 
    -01
 

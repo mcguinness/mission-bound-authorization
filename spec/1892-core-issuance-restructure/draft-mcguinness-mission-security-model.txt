@@ -215,6 +215,21 @@ Table of Contents
       constraint key, so a compromised agent cannot present a high-
       consequence credential directly.
 
+   Injection is dangerous when one agent combines access to private
+   data, exposure to untrusted content, and the ability to communicate
+   externally.  Issuance constrains the data-access leg: a Mission
+   narrows authority from everything the agent's standing credentials
+   allow to the resources the approved task needs, and per-task Missions
+   further limit the effect of a compromise
+   ([I-D.draft-mcguinness-oauth-mission]).  Issuance does not constrain
+   the external-communication leg: within an approved Authority Set, an
+   injected agent can read what the Mission permits and write to a sink
+   the Mission permits.  Constraining exfiltration by a compromised
+   agent is the runtime layer's role, and even there it is bounded, not
+   closed ([I-D.draft-mcguinness-mission-runtime]); preventing misuse of
+   data within the authorized scope needs an information-flow layer the
+   family does not define (Section 5).
+
    The agent and harness boundary assumes an isolation boundary between
    them: process, host, or service separation within a single operator.
    Without that separation, agent compromise and harness compromise are
@@ -1014,7 +1029,9 @@ Table of Contents
       profile's approval rendering states concurrency, depth, and
       derivation limits distinctly and whether a finite aggregate is
       enforced; an aggregate consumption cap is the metering profile's
-      role ([I-D.draft-mcguinness-mission-metering]).
+      role ([I-D.draft-mcguinness-mission-metering]).  Where a single
+      approval's apparent bound must hold in practice, a deployment can
+      impose a global cap out of band.
 
    Approval surface exposed to the agent as a tool (self-approval):  Addressed
       by resolution being unavailable from the agent's tool plane or
@@ -1059,13 +1076,19 @@ Table of Contents
       presenting no ordinary credential for it; and mandatory mediation
       where the runtime layer holds custody of the client's credentials
       ([I-D.draft-mcguinness-oauth-mission],
-      [I-D.draft-mcguinness-mission-runtime]).  Residual: a workload's
-      provisioned authority exists beside any Mission that draws on it,
-      and Mission state does not revoke a grant held outside any
-      Mission; at a resource that is not Mission-governed, absent
-      mandatory mediation, such a grant acts with no Mission state,
-      revocation, or consent commitment, and only the client's own
-      conformance closes that path.
+      [I-D.draft-mcguinness-mission-runtime]).  A decision-time join of
+      an ordinary credential to the Mission, such as the Mission Join of
+      [I-D.draft-mcguinness-mission-authority-server], is one
+      realization of the trusted enforcement path the OAuth binding
+      permits for such a credential.  Residual: a held ordinary
+      credential needs no request to the AS, and neither an AS nor a
+      resource server can generally tell that a request made with one
+      serves a Mission; a workload's provisioned authority exists beside
+      any Mission that draws on it, and Mission state does not revoke a
+      grant held outside any Mission; at a resource that is not Mission-
+      governed, absent mandatory mediation, such a grant acts with no
+      Mission state, revocation, or consent commitment, and only the
+      client's own conformance closes that path.
 
    Standing-authority creep through the source ceiling:  Addressed by
       the approval-time source check: approval activates only authority
@@ -1837,6 +1860,14 @@ Appendix A.  OWASP Agentic Threat Coverage
 Appendix B.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Untrusted Agent states the three legs of injection-driven
+      exfiltration and which of them issuance constrains; the bypass
+      entry of the adversary model names a decision-time join as one
+      realization of the OAuth binding's trusted enforcement path, and
+      the effective-ceiling entry notes an out-of-band global cap.  The
+      OAuth binding's Security Considerations point here for this
+      analysis.  No requirement changed (#1892).
 
    *  Mission bypass through source authority held outside any Mission
       follows the OAuth binding's governed rule: no token outside a
