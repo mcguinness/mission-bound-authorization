@@ -16,6 +16,7 @@ import {
   type JsonValue,
   NARROWING_IN_FULL,
   type NarrowingDeclaration,
+  narrowingPermits,
   proposalHash,
   type ResourceContractDeclarations,
 } from "@mission/core";
@@ -4179,7 +4180,15 @@ export class MissionKernel {
       if (removal.whole) continue; // a selector with no actions -> entry dropped
       const actions = entry.actions.filter((a) => !removal.actions.has(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
-      out.push({ origin: entry, entry: { ...entry, actions } });
+      const contained = { ...entry, actions };
+      // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+      // (#1377, D1025): removing some of an entry's actions modifies it, which
+      // only a declared `narrowing` permits. Where the declaration does not
+      // permit it for the pair, the entry is contained whole, as a selector
+      // finer than its entry already over-contains (D606): never modified, and
+      // never carried as approved past the containment.
+      if (!narrowingPermits(this.narrowingDeclaration(), contained, entry)) continue;
+      out.push({ origin: entry, entry: contained });
     }
     return out;
   }
