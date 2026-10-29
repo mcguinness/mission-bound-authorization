@@ -168,7 +168,7 @@ import {
   GovernedPolicyConsentStore,
   validateGovernedPolicyApprovalConfig,
 } from "./governed-policy-approval.js";
-import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
+import { BoundGrantIndexWriteError, MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
@@ -2032,7 +2032,13 @@ export class MissionKernel {
     // on its own store handle (it must outlive the record), written once the
     // record commits. A record whose `grant_id` is set resolves through
     // `findByGrant` first, so the gap before this write refuses nothing.
-    if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
+    if (input.grantId) {
+      try {
+        this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
+      } catch (e) {
+        throw new BoundGrantIndexWriteError(input.grantId, e);
+      }
+    }
     return record;
   }
 
@@ -2534,7 +2540,7 @@ export class MissionKernel {
       .run(JSON.stringify(termination), pred.id, pred.version);
     if (res.changes !== 1) return undefined;
     const fresh = this.get(pred.id);
-    if (fresh) this.emitCommit(fresh, "active", false, false, committedAt);
+    if (fresh) this.emitCommit(fresh, "active", false, committedAt);
     // @spec child-delegation#cascade — `superseded` is a TERMINAL cascade
     // trigger; the successor does NOT inherit the predecessor's children (their
     // strict-subset proof was against the predecessor's Authority Set). This
@@ -3083,7 +3089,7 @@ export class MissionKernel {
         .run(JSON.stringify(next), record.id, record.version);
       if (changed.changes !== 1) throw new LifecycleConflictError(`stale lifecycle version for ${record.id}`);
       const fresh = this.mustGet(record.id);
-      this.emitCommit(fresh, "suspended", false, false, committedAt, scheduleCommitMembers(fresh.schedule));
+      this.emitCommit(fresh, "suspended", false, committedAt, scheduleCommitMembers(fresh.schedule));
       return fresh;
     });
   }
@@ -3306,7 +3312,7 @@ export class MissionKernel {
         .run(JSON.stringify(next), record.id);
       const committed = this.get(record.id);
       if (!committed) throw new Error(`unknown mission: ${id}`);
-      this.emitCommit(committed, committed.state, authorityChanged, true);
+      this.emitCommit(committed, committed.state, authorityChanged);
       return committed;
     });
     // @spec child-delegation#child-state — containment propagates entry-wise to
@@ -5245,7 +5251,7 @@ export class MissionKernel {
       // discards applyExpiry()'s return, so the spread `version` can be off by one.
       const fresh = this.get(record.id);
       if (fresh) {
-        this.emitCommit(fresh, record.state, false, false, committedAt, {
+        this.emitCommit(fresh, record.state, false, committedAt, {
           ...(schedule ? scheduleCommitMembers(fresh.schedule) : {}),
           ...(opts.appliedSchedule
             ? {
@@ -5404,7 +5410,6 @@ export class MissionKernel {
     record: MissionRecord,
     prior?: MissionState,
     authorityChanged = false,
-    containmentAdvanced = false,
     committedAt?: string,
     schedule: ScheduleCommitMembers = {},
   ): void {
@@ -5423,10 +5428,6 @@ export class MissionKernel {
       client_id: record.client_id,
       ...(prior ? { prior_state: prior } : {}),
       ...(authorityChanged ? { authority_changed: true } : {}),
-      // @spec signals#discharge-compatibility — provenance, set ONLY by the
-      // one funnel that advances containment_version (`contain`); the Signals
-      // gate must never have to reconstruct this from version history.
-      ...(containmentAdvanced ? { containment_advanced: true } : {}),
       ...(record.containment
         ? { containment_version: record.containment.containment_version }
         : {}),

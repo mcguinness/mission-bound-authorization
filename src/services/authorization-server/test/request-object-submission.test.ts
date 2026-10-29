@@ -169,14 +169,15 @@ async function approve(requestUri: string) {
   });
   expect(res.status, await res.clone().text()).toBe(303);
   keep(res);
-  const record = as.kernel.findByApprovalEvent(`apev_${uid}`);
-  expect(record).toBeDefined();
   location = res.headers.get("location") ?? "";
   while (location.startsWith(ISSUER)) {
     res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
     keep(res);
     location = res.headers.get("location") ?? "";
   }
+  // The record commits when the code is saved (#1863).
+  const record = as.kernel.findByApprovalEvent(`apev_${uid}`);
+  expect(record).toBeDefined();
   return { record, code: new URL(location).searchParams.get("code") };
 }
 

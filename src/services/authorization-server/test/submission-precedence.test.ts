@@ -348,6 +348,15 @@ async function renderAndApprove(): Promise<{ rendered: unknown; recordId: string
     body: JSON.stringify({ decision: "approve", render_revision }),
   });
   expect(res.status, await res.clone().text()).toBe(303);
+  storeCookies(res);
+  // The record commits when the resume saves the code (#1863).
+  let location = res.headers.get("location") ?? "";
+  while (location.startsWith(DERIVE_ISSUER)) {
+    res = await fetch(location, { redirect: "manual", headers: { cookie: cookieHeader() } });
+    storeCookies(res);
+    location = res.headers.get("location") ?? "";
+  }
+  expect(new URL(location).searchParams.get("code"), location).toBeTruthy();
   const record = deriveAs.kernel.findByApprovalEvent(`apev_${uid}`);
   expect(record).toBeDefined();
   return { rendered, recordId: record?.id as string, approved: record?.authority_set };

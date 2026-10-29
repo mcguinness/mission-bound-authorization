@@ -396,6 +396,29 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     expect(out).toMatchObject({ outcome: "emit", values: ["r.read", "r.write"] });
   });
 
+  it("local interpretation: a value named for the entry's action is judged by the rights the target grants for it, not by its name", () => {
+    const local = (actions: string[]): ScopeProjectionMapping => ({
+      audiences: {
+        [RS]: {
+          version: "v1",
+          mission_aware: false,
+          mode: "scope_only",
+          scopes: { read: value(actions) },
+        },
+      },
+    });
+    expect(
+      projectScope({ mapping: local(["read"]), audiences: [RS], entries: [entry(["read"])] }),
+    ).toMatchObject({ outcome: "emit", values: ["read"] });
+    expect(
+      projectScope({
+        mapping: local(["read", "write"]),
+        audiences: [RS],
+        entries: [entry(["read"])],
+      }),
+    ).toMatchObject({ outcome: "refuse", error: "invalid_target" });
+  });
+
   it("omits scope for an authorization_details audience", () => {
     expect(projectScope({ mapping, audiences: [OTHER], entries: [entry(["read"])] })).toEqual({
       outcome: "omit",

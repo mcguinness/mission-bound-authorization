@@ -47,8 +47,8 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "552acb8c415969604ed2053786be955198d52785",
-    "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
+    "revision": "3e427937e568e6d3ddc0dcdca7d6221836200391",
+    "content_sha256": "9534986cf5c06f303145287839936647af64608c90c304bafdd031390af59c6e"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "c64512ff61df5fc5875a26eef068ceb60d700612",
-    "content_sha256": "4be63385aec0dd7355fe3e1450f1c4deaf28eba8a44491fe8179fa4805d6d732"
+    "revision": "14b64c99afa1b8e4033b7e8f9e8767b68eef3290",
+    "content_sha256": "07372758b94daa68b313365e60817e67d29be6f209305acba22f74b9ef2a83fc"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -155,8 +155,8 @@
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
    },
    "draft-mcguinness-oauth-mission-containment.md": {
-    "revision": "b2e4e9571e1c7173a778eb52bb888483ac09d3f5",
-    "content_sha256": "665929b2d3917e67c8460beac4de5e21b3a974edc710a684d3d2ca1e7eab3555"
+    "revision": "536e657927ec6f14c405df18c3edf4d163ea54ef",
+    "content_sha256": "d826301a7d93d759b48011f1bebb4fb6a6643e66d29e80ca583c5d054898ee7a"
    },
    "draft-mcguinness-mission-harness.md": {
     "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
@@ -4959,7 +4959,7 @@
     "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/status-list.test.ts",
@@ -5014,9 +5014,33 @@
      "name": "control-plane retained signed responses > replays the retained bytes of a signed envelope past its own validity, for the whole nonce window",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint retries (@spec status#idempotency, control-plane#serialization, #1191) > recovers a committed response whose bytes were lost at its original observation: the same iat, exp and fresh_until",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until or exp beyond the advertised ceiling on a direct call",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until later than the response's own exp, at any requested lifetime (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "a Signals SET is a transition record (@spec control-plane#fresh-observation, #1750, D993) > signs a job journaled before a crash, hours later, with its commit's own committed_at, and a receiver orders it by version: a SET for an older version with a newer iat is stale",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
+   "notes": "The signed-artifact inventory in src/docs/control-plane-deployment.md classifies every signed artifact the reference produces (#1750). Three are state observations, each witnessed with a mutation that re-dates it. The Mission Status response is taken in one authoritative transactional read that carries its (version, commit) watermark, and its iat, exp and fresh_until belong to that read, never to the clock at signature time; a commit during the signature leaves it older, not re-dated. Lifecycle responses: a recovered response is signed over the recorded observation with its original iat, exp and fresh_until, and a retained envelope replays its exact bytes for the nonce window, past its own validity, solely as confirmation of the correlated original operation with every other check passing: it refreshes no state and authorizes nothing, and it is not a general exception that holding a watermark confers. The Mission Status List publisher serves a token only inside its own validity, rebuilds from the record set rather than re-signing cached bits, and lets no older in-flight snapshot land after a newer commit. A Mission Signals SET is a transition record (D993): its observation point is the committed_at recorded at commit, its iat is RFC 8417 issuance time, and a SET first signed hours after its commit keeps that committed_at; the receiver orders by version, never iat. The Join Assertion is an attestation with no state, version or fresh_until, whose cache replays original bytes only inside its exp and audience binding. Credentials take iat as issuance time, not a statement of current state: the AS's Mission-bound OAuth access tokens, ID-JAGs and AAT roots are gated on Mission state at mint with exp bounded by the Mission's expiry, while a holder-minted offline AAT child and an ARAP approval (bounded by approved_until, with no JWT exp) check no Mission state, and no mint-time state claim is made for the other credentials; records carry their recorded event times. The Status freshness ceiling is witnessed by the cap tests. Refusing an observation whose commit point advanced is a declared optional policy, off; its defects (it blocks Lifecycle response recovery, and its commit member falls after boot pruning) are #1865, availability under that option, not freshness. No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -6419,9 +6443,9 @@
    "id": "core.authority-proposal.governed-resource-default-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`",
+   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`: the AS MUST refuse the request if any of them is Mission-governed",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6456,15 +6480,15 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness. Quote extended to the operative MUST under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-any-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "the AS refuses the request if any of them is Mission-governed, and does not issue the token for the others",
+   "text": "the AS MUST refuse the request if any of them is Mission-governed, and MUST NOT issue the token for the others",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6493,7 +6517,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness. Takes MUST and MUST NOT under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
@@ -10957,9 +10981,9 @@
    "id": "core.issuance-gating.reversible-state-not-termination",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
-   "text": "A Mission in a state from which it can return to `active` is never reported with a termination reason.",
+   "text": "A Mission in a state from which it can return to `active` MUST NOT be reported with a termination reason.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "status.lifecycle"
@@ -10987,7 +11011,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error."
+   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error. Takes MUST NOT under #1871 (D1005); applicability unchanged."
   },
   {
    "id": "core.revocation.revoke-by-mission-id",
@@ -12475,9 +12499,45 @@
      "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a refused commit completes access_denied: an authority source withdrawn after the decision leaves no code, no Mission and a classified grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed before the resume is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed between the code's lifetime and its save is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001) > after a refused commit whose grant deletion failed, the grant stays classified and unusable: an ordinary request on the same session is not answered with it, and a token minted under it is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. #1802: two of the three boundaries have witnesses. The first (an Approver whose authentication fails, or who may not activate the source, is refused before step 5 renders and is shown nothing of it) is witnessed at the approval page on the browser, device, headless and upstream-login paths, including a login that ages out during the page's last await and a refusal whose description would otherwise name the request. The expiry boundary is witnessed by the two decision tests in which the requested expiry passes before or during the commit, each creating no Mission, grant or code. The failed-commit boundary (no active Mission and no usable Mission-bound grant after a failed commit) has no witness here: it rests on the partial record-and-code atomicity row (#250). Each render-time witness was proved by disabling its guard alone."
+   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. #1802: two of the three boundaries have witnesses. The first (an Approver whose authentication fails, or who may not activate the source, is refused before step 5 renders and is shown nothing of it) is witnessed at the approval page on the browser, device, headless and upstream-login paths, including a login that ages out during the page's last await and a refusal whose description would otherwise name the request. The expiry boundary is witnessed by the two decision tests in which the requested expiry passes before or during the commit, each creating no Mission, grant or code. The failed-commit boundary (no active Mission and no usable Mission-bound grant after a failed commit) has browser-path witnesses since #1863, which commits at the code save: a code-storage failure (both kernels), a refused commit and a lapsed hold each leave no Mission and no redeemable code, and a held grant whose commit was refused and whose deletion failed is not reused and refuses a token mint. A recovery-witness failure releases no code but can leave the record durable under an uncertain kernel, so it is not cited for no active Mission. The row stays partial pending its coverage review (D1001). Each render-time witness was proved by disabling its guard alone."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -12496,7 +12556,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. The commits on one approval event run one at a time, cleanup included (in-process, under the single-process fence), so a decision resuming after asynchronous work recovers a commit made meanwhile and never writes over or destroys its grant (#1446). oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the commit's revalidation of the authority source and of a consented ceiling's drawdown policy, which refuses at the code save), reserves the approval event, classifies the interaction-derived grant as a held approval grant before its first save (append-only: refusal, hold expiry and failed cleanup never make it an ordinary grant), saves the grant, re-checks the context (#1446) and holds the decision, keyed by the grant, until the interaction expires. The provider's AuthorizationCode adapter fences a code under a held grant: it joins the approval event's serialization, stages the code (stored, not redeemable), then in one synchronous turn runs the final checks (the #1446 context re-check and the approval-authentication floor) and kernel.approve, which commits the record already bound to the grant (a retry's bindGrant is compare-and-set), and releases the code; find returns an unreleased code under a held grant as absent. An IntentError completes access_denied; recovery-witness uncertainty releases nothing; another post-commit failure releases only when the committed record is the held decision. In-process, under the single-process fence (D663): no store spans the kernel and the provider. The device flow commits at its decision (#1202)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12521,13 +12581,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure at the code save leaves no Mission, no binding and no code, only a classified grant, and the client starts again",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the decision is held, before its interaction finishes, leaves no Mission, and a retry on the interaction completes with one Mission and one binding",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12539,7 +12599,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the held decision's own retry still completes",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12563,18 +12623,126 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first; a change landing between them refuses it, and the held first decision commits nothing",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed commit: a decision by another principal is refused before saving a grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed decision: a decision by another principal is refused before saving a grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: the decision commits nothing; the code save commits the record bound to the grant, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: the decision commits nothing; the code save commits the record bound to the grant, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a refused commit completes access_denied: an authority source withdrawn after the decision leaves no code, no Mission and a classified grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a recovery-witness failure at the commit fails closed: the record's state cannot be told, and the staged code is never released",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a notification failure after the commit is recovered: the code redeems under the bound Mission, and the notification is retried",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a notification failure after the commit is recovered: the code redeems under the bound Mission, and the notification is retried",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed before the resume is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed between the code's lifetime and its save is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001) > after a refused commit whose grant deletion failed, the grant stays classified and unusable: an ordinary request on the same session is not answered with it, and a token minted under it is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "a decision racing the resume is ordered by the approval event's serialization (@spec mission#approval-event, #1863, D1001) > a retried decision in its grant save holds the resume's commit back; the code then commits one record, one binding, and agrees with the record",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "a decision racing the resume is ordered by the approval event's serialization (@spec mission#approval-event, #1863, D1001) > a retried decision reaching its commit while the code save commits waits for it and recovers the one binding: one record, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a retry of a held decision after a policy input changed asks for review, and the held decision's commit re-checks the context and refuses access_denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the code save clamps the code again to the hold it reads: a hold replaced after the code's lifetime was computed, with an earlier rendered expiry, never yields a code outliving its Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > an exception after the commit that is neither a failed notification nor a failed index write releases nothing: the staged code is never found",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a failed bound-grant index write after the commit is recovered: the entry is written again and the code redeems under the bound Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415; #916 closed, D461). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. A second residual is a delivery gap: a code issued whose redirect response is lost, which atomic record/code issuance would not remove, bounded by the code's 60 s lifetime clamped to the Mission's expires_at (provider-integration-port.md section 3.4; code reading, no test). The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (D1001): the rows' coverage is reviewed after these witnesses land, and nothing here promotes it. #1863 moves the commit from the decision to the code save. Witnessed (approval-code-atomicity.test.ts; both kernels where named): no Mission exists after the decision, and the code save commits the record bound to the grant, whose code redeems under it; a real code-storage failure commits nothing (no Mission, binding, index entry or redeemable code, and the grant stays classified); a refused commit completes access_denied with nothing created; a recovery-witness failure at the commit (file-backed) releases no code, even one whose deletion failed; a notification failure after the commit is recovered and its notification retried; a lapsed hold is refused; a held grant whose commit was refused and whose deletion failed is not reused by an ordinary request on the same session and refuses a token mint; a decision racing the resume is ordered against it, ending with one record and one binding; the commit re-checks the rendered context (approval-context-changes.test.ts) and the approval-authentication floor at its own instant; the code is clamped to the expires_at its commit establishes, again against the hold the code save reads. The #916 witnesses still hold: repeated and concurrent decisions keep one grant and binding, a decision by another Approver, Subject or client is refused before the grant is touched, and the commit revalidates the prepared source. Residuals: on the file-backed kernel a crash after the commit keeps the active Mission and loses its code with provider memory, the end state of the delivery gap (control-plane-deployment.md); the delivery gap itself, a code whose redirect is lost, is bounded by the code's 60 s lifetime clamped to expires_at (provider-integration-port.md section 3.4; code reading, no test). After a recovery-witness failure the record may be durable with the kernel uncertain, and every later write and state-dependent service refuses until reconciliation. Post-commit recovery is typed (#1878 review): a code is released after a commit only on a LifecycleNotificationError or a BoundGrantIndexWriteError, with the record agreeing with the held decision. An unrecognized post-commit exception releases nothing (witnessed), so the Mission it committed has no usable code until expiry or a revocation; a failed index write is recovered (witnessed). Coverage stays partial for the owner's review (D1001)."
   },
   {
    "id": "core.approval-event.every-mission-own-event",
@@ -13279,9 +13447,33 @@
      "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login older than the client's requested max_age to sign in again, with nothing of the request",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the client's requested max_age is measured again at the commit: a browser login that ages past it before the code save completes access_denied with no Mission and no released code",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > within the client's requested max_age at the commit, the held decision commits and its code redeems under the Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > max_age=0, through oidc-provider's prompt=login translation, is measured again at the commit: a login fresh at the decision and seconds old at the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering. #1863 (#1878 review): a held browser decision measures both again at its commit, when its authorization code is saved: the floor, and the client's acr_values and max_age (max_age=0 through its prompt=login translation). A login that no longer satisfies either completes access_denied with no Mission and no released code; a within-age control commits and redeems."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -13970,7 +14162,7 @@
     },
     {
      "file": "src/services/authorization-server/test/exp-clamp.test.ts",
-     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and creates no Mission",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     }
@@ -14508,6 +14700,43 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.scope-projection.local-interpretation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection-subset",
+   "text": "carries rights the target's local `scope` interpretation implies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope whose effective rights, as the target interprets it, exceed what a constraints-free entry grants fails the projection condition, whatever its name suggests."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope named for the entry's action whose rights, as the target interprets it, exceed the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > local interpretation: a value named for the entry's action is judged by the rights the target grants for it, not by its name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1871 (D1005): the fourth case of the Subset Condition list, sibling of action-aggregation-fails, resource-path-aggregation-fails and union-widening-fails. Witnesses: a value named for the entry's action, whose rights as the target declares them add an action, is refused invalid_target. Mutation-proved: treating a value whose name matches an entry action as safe without its declared rights fails both witnesses while the action-aggregation witnesses still pass."
   },
   {
    "id": "core.scope-projection.per-audience-proof",
@@ -23851,7 +24080,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides. The Signals receiver's resynchronization (#1810) holds the Status keys as the PDP does (`missionStatusIssuer(...).keys`): a response under a key the set lists is refused, as its first verification (which fetches the set) and after one under the current key, and the held Mission stays held, though its configured kids and cached jwks_uri still carry the key; the same issuer advertising no set resynchronizes on it."
    },
    "level": "unit",
    "coverage": "partial",
@@ -23879,9 +24108,15 @@
      "name": "the historical key set through the configured issuer (@spec status#historical-key-set, status#mission-status, #831 B3, D901) > refuses, through missionStatusIssuer, a key the advertised set lists while the cached jwks_uri still carries it",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > refuses a resynchronization response signed under a key the issuer's historical key set lists, though its configured kids and its cached jwks_uri still carry it; the set is what refuses it",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gap: the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness. #1810 (option A, on the owner's go): the Signals receiver's resynchronization took a pinned key set and never read the historical key set; it now takes the Status keys as a key resolver, held through `missionStatusIssuer`, and refuses a listed key. Witnessed with a control: the same issuer advertising no set resynchronizes on the key. Proven by restoring the pinned key set and by dropping the set's refusal; each fails the witness at the refusal. Stays partial for the Lifecycle consumer."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -24007,7 +24242,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime",
-    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
+    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime. The Signals receiver's resynchronization holds its Status keys the same way (#1810): a key withdrawn from the jwks_uri still verifies within the cached set's declared lifetime, without a fetch, and once it ends the set is fetched again and the key refused."
    },
    "level": "unit",
    "coverage": "tested",
@@ -24017,9 +24252,15 @@
      "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > relies on a cached jwks_uri only within the freshness lifetime its response declares",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes before the cached set's lifetime ends, and a withdrawn one stops once it ends, when the set is fetched again",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache. #1810: the Signals receiver's resynchronization holds the jwks_uri through `missionStatusIssuer` (`IssuerKeys`), witnessed by a withdrawn key that verifies within the declared lifetime and is refused once it ends; proven by using the cached set past its lifetime, which fails the witness at the refusal."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -24814,7 +25055,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event that carries `authority_changed` true to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -24825,8 +25066,8 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true",
-    "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
+    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true, whether a discharge commit or a containment commit narrowed the Mission's effective authority",
+    "local": "the discharge case requires the deployment to also adopt the Status profile's completion/discharge capability, and the containment case the containment profile"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -24839,12 +25080,60 @@
     },
     {
      "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
-     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > withholds a real kernel contain() commit from an undeclared stream and delivers it to a declared one, whose receiver rematerializes",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate survives an emitter restart: it reads the commit's authority_changed, never emitter history > withholds a containment commit first observed above version 1 from an undeclared stream and delivers it to a declared one",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: every event carrying `authority_changed` true, a discharge commit and a containment commit alike, is withheld from an undeclared stream and delivered to a declared one (#1001, D1002). The gate reads only the commit's own `authority_changed` and the consumer's declaration, never emitter-side history, so a restarted emitter decides alike; the kernel's former `containment_advanced` provenance marker, which let a contain commit through, is removed. A discharge on a previously contained Mission carries `containment_version` beside `authority_changed` and is still gated. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter. Proved by mutation: letting any event with a `containment_version` through the gate fails five tests: the previously-contained discharge test, the end-to-end contain witness, the gap test, and both fresh-emitter tests; reinstating the former contain-only pass-through (the kernel marker on contain commits) fails the previously-contained discharge test, the end-to-end contain witness and the gap test, while the discharge-only tests pass."
+  },
+  {
+   "id": "signals.discharge.withholding-keeps-version",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "Withholding an event changes no other event's `version`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the gate withholds an event from a stream, the next event delivered to that stream for the Mission carries the Mission's own committed version, not a stream-local renumbering, so the stream's consumer sees a version gap",
+    "local": "the reference journals each commit once per deliverable consumer with the kernel's committed version, and signLifecycleEvent writes that version unchanged; the receiver reports the resulting gap (ApplyResult status gap, hasGap) and leaves the Mission Status refetch to the consumer"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
      "level": "cross-component",
      "surface": "signals"
     }
    ],
-   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
+   "notes": "#1001 (D1002). A real kernel contain commit (version 2) is withheld from the undeclared stream; the suspend that follows reaches that stream as version 3 and its receiver reports a gap (expected 2, received 3), while the declared stream sees 1, 2, 3. Proved by mutation: renumbering versions per stream in the emitter's journal fails the test (the undeclared stream receives 1, 2)."
   },
   {
    "id": "signals.delivery.persist-until-acknowledged",
@@ -48888,6 +49177,124 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.audience-mirrors-decision",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte, mirrored for join-key convenience and so a verifier's key-to-boundary binding ({{decision-evidence-integrity}}) has its input. An outcome for an operation admitted before a boundary identifier change keeps the original identifier",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Execution Evidence record emitted for a permit carries audience byte for byte equal to the audience its linked Decision Evidence recorded, and verifies under a key published for that audience: a permit decided before a declared identifier change and re-presented after it is still refused at use with no effect, and its suppression record keeps the old identifier; a disposition after the change of a permit admitted before it keeps the old identifier; a late record for an effect committed before the change keeps the old identifier; and a fresh permit's records after the change carry the new identifier",
+    "local": "In the reference the execution attempt takes its audience, like its boundary version, from the retained Decision Evidence (services/mcp-payments/src/pep.ts), and every disposition record copies the attempt's: the PEP's own suppressions and completions and the executor's transaction completion (server.ts). The executor's late record from claim reconciliation reads the retained record directly (claim-reconciliation.ts). The boundary established for the current request stays independent: the decision request and pre-decision Refusal Records carry it, and the enforcement_boundary use check compares it with the attempt's. A retained Decision Evidence with no audience, which only a key resolver that binds no audience accepts, is refused decision_evidence_unverifiable before any attempt, with no effect and no Execution Evidence, rather than recorded under the request's boundary."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit decided under the old identifier and re-presented after the change is refused at use as before and releases no effect, and its suppression record carries the old identifier exactly as its Decision Evidence recorded it, while a fresh permit after the change executes and records the new identifier exactly",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a wire committed under the old identifier whose Execution Evidence was lost is recorded late, after the change, by reconciliation from the ledger: the late record carries the old identifier exactly as its Decision Evidence recorded it, and settles the claim",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit whose retained Decision Evidence records no audience, accepted under a key resolver that binds none, is refused decision_evidence_unverifiable before any attempt: no effect, no Execution Evidence, and the Refusal Record names the boundary established for the request",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1868 (D999; fix/1868-producer-audience): the producer half of the audience member, beside the consumer row evidence.execution.audience-bound-at-settlement (D991), whose PDP witnesses establish nothing here. Role PEP covers the enforcement-side emitter: the suppression and the read completion are signed under the PEP role, the wire completion and the late record under the executor role of the same component. Applicability is unconditional with the runtime-enforced profile, as for the other PEP rows at this anchor: any enforcement point that emits Execution Evidence writes the member. Both identifiers of the witnesses' declared change are spelled with upper-case letters and a trailing slash (https://Payments.Example/Legacy/MCP/ replaced by https://Payments.Example/MCP/), so a normalized record differs from its Decision Evidence; a decision point that re-presents a held permit whatever version is in force stands in for a retransmission on the wire. The #853 in-flight witness asserts that the dispositions after the cutover of a read and of a compound action's prepare phase, both admitted before it, keep the old identifier. The idempotency-claim-pep reconciliation witness asserts only that one late record exists, not its audience, so it is not cited. Mutants at 695aa419, each alone with vitest in its own process group and the source restored byte-equal: the attempt taking the request's boundary (MA, the #1868 defect) fails the re-presented witness at the suppression record's audience; a lowercased (MB1) or trailing-slash-trimmed (MB2) copy fails it there too (no key is published for the normalized spelling, so no record is emitted) and fails the fresh-permit control's records; dropping the refusal of a retained record without an audience and falling back to the request's boundary (MC) fails the no-audience witness at its refusal, no-effect, no-record and Refusal Record assertions; the use check reading the copied audience and version instead of the boundary established now (MD) fails the re-presented witness at its refusal, ledger and redemption assertions (the old permit executes), and four existing #853 witnesses; the disposition record taking the boundary established at emission (ME) fails the re-presented and in-flight witnesses at the record's audience; the late record taking the emitter's configured identifier (ML1) or a lowercased copy (ML2) fails the late-record witness at its settlement and record assertions. Rerun with every assertion of the three new witnesses soft, each assertion of the producer's behavior fails on its own under at least one mutant; the seven precondition assertions (the permit issued, the identifier the linked Decision Evidence recorded, the redemption, no record before reconciliation, the record without an audience retained) hold before the producer acts and are killed by none."
+  },
+  {
+   "id": "evidence.execution.audience-bound-at-settlement",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte",
+   "role": "PDP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capabilities",
+    "any_of": [
+     "runtime.transaction-assurance-tier",
+     "metering.exact-budget"
+    ]
+   },
+   "profiles": [],
+   "surface": "evidence-emission",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a settlement intake that settles a permit on an Execution Evidence record refuses, before any settlement effect, a record whose audience is not byte for byte the boundary retained for the permit it settles, although the record verifies under a key published for its own audience: the claim, its transitions, a conflicting record's retention and alarm, the reservations, the late budget correction and the counters are unchanged",
+    "local": "In the reference the settling consumer is the PDP's claim domain (settle in services/pdp/src/idempotency-claims.ts), which serves both the idempotency claim and the budget reservations. It retains the permit's boundary on the claim (claim schema 6): the request's resource.properties.audience, which the permit's Decision Evidence signs as audience, written at the claim and at adoption. A claim row from before the column takes the audience its stored Decision Evidence recorded, and one without a retained boundary settles nothing. The refusal reasons audience_mismatch, boundary_unretained and unknown_evaluation are not Mission diagnostics."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a completed record validly signed for another boundary, naming this permit's evaluation_id and delivered by its own PEP, is refused audience_mismatch at settlement and through the reconciler, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the record for the permit's own boundary commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a failed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's failed record holds both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on an unsettled claim, a suppressed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's suppressed record releases both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an applied failed settlement, a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members, each validly signed for another boundary, are refused audience_mismatch: nothing is retained or alarmed, the held reservations stay held and the claim and both counters are unchanged, while the conflicting completed record for the permit's own boundary is retained, alarmed and commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > after an incorrect operator release and the claim's reconciliation window, a completed record validly signed for another boundary is refused audience_mismatch and corrects nothing: the reservations stay released, the claim and both counters are unchanged and no overspend is reported, while the permit's own boundary's record commits the correction (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/budget-reservations.test.ts",
+     "name": "settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974) > on a claim file from before the boundary column, an unsettled permit takes the boundary its stored Decision Evidence recorded and settles only on that boundary's record, a settled claim whose decision was tombstoned keeps none and refuses even its own boundary's conflicting record boundary_unretained, and a reservation whose claim row is gone is not corrected from a record, each refusal leaving the claim, the conflict table, the reservations and both counters unchanged (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/pdp/test/idempotency-claim.test.ts",
+     "name": "settlement is bound to the adopting permit's boundary across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1841, D974) > a claim adopted through a replaced identifier's scope is settled at the boundary its permit was decided at: a record validly signed for the replaced identifier the claim's scope still names is refused audience_mismatch and leaves the claim unchanged, and the record for the permit's boundary settles it",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "D991 (owner ruling on #1861): the consumer half of the audience member, a row of its own. These witnesses exercise the PDP's settlement intake and establish nothing about the PEP that writes the record; the producer duty needs its own witness at the PEP. Applicability: the duty binds whichever consumer settles a permit on Execution Evidence, the PDP's idempotency claim under the transaction-assurance tier (runtime#idempotency) or the metering settlement intake under exact budgets (metering#settlement-contract). The reference serves both from one claim domain, so the row applies under either capability (any_of), never under one mode alone. #1841 (D974; fix/1841-settlement-audience at c41a03f7, merged by #1861 at 4b4f5192): settle compares the authenticated record's audience byte for byte with the boundary retained for the permit's claim before any effect. Four other boundaries publish their own keys in one declaration (another port, the identifier with an upper-case host, the identifier with a trailing slash, the identifier truncated to its origin). Their records are refused audience_mismatch for completed, failed and suppressed outcomes on an unsettled claim, for a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members after an applied failed settlement, and for a completed record after an incorrect operator release past the window. Each refusal leaves the claim row, its transitions, the conflict table, the reservations and both counters unchanged with no alert, the failed and suppressed records never reach the redemption owner, and the permit's own boundary's record settles in each case. The adoption witness settles a claim adopted across a declared identifier change at the adopting permit's boundary and refuses the replaced identifier's record; the legacy-file witness takes a pre-column row's boundary from its stored Decision Evidence and refuses boundary_unretained on a row without one. #1861's mutants at c41a03f7, each alone with the source restored: removing the comparison (M1) fails all seven at their refusal; moving it after the claim's settlement (M2) fails six, and after the late correction (M3) all seven, at the unchanged-state assertion alone; moving it after the redemption owner's query (M4) fails the failed and suppressed witnesses at the never-asked assertion; a case-insensitive (M5), record-prefix (M6), boundary-prefix (M7) or URL-normalized (M8) comparison fails the five boundary witnesses; treating a NULL boundary as a match (M9) or as the scope's audience (M10), dropping the backfill (M11) and letting a record with no claim row reach the correction (M12) fail the legacy-file witness; leaving the boundary unchanged at adoption (M13) or comparing the scope's audience (M14) fails the adoption witness; omitting the boundary at the claim (M15) fails six. Re-verified at main 4b4f5192 with the same runner: M1 fails 7 of 7, M2 six, M5 the five boundary witnesses and M13 the adoption witness, the source restored byte-equal after each."
   },
   {
    "id": "evidence.execution.parameter-deviation-remains-valid-and-flagged",
@@ -77951,7 +78358,7 @@
    "id": "core.instance-context.refresh-grant-continuity",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegated-instance-context",
-   "text": "If the exchange issues a refresh token, the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding.",
+   "text": "If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -77967,7 +78374,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added."
+   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added. Re-quoted for the editorial pointer naming when the exchange issues a refresh token (#1871, D1005)."
   },
   {
    "id": "core.instance-context.consumer-attribution",

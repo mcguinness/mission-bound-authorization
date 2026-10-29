@@ -422,7 +422,7 @@ the connector effect, then evidence, then claim settlement.
 | Connectors, txn stores | in memory. The connector ledger is the simulated external resource, and its idempotency table is lost with it, so nothing re-presents an operation under the same key after a restart (#821) | one insert per operation key; atomic first use of a `txn` | lost |
 | Payments store, DPoP replay cache, actor records | in memory, seeded per boot | none | lost or reseeded |
 | Mission kernel (Mission records, lifecycle events, the continuation and delegation-family tables) and the provider's grants, codes and refresh tokens | in memory by default; `MISSION_KERNEL_STORE` keeps the kernel in a file, WAL with `synchronous=FULL` on every open (normal locking; exclusive under a recovery witness; #1684), with a key ring (§12). The provider uses oidc-provider's memory adapter (`provider-integration-port.md` §1) | the floor's | without the kernel file, lost: no Mission, grant or refresh token survives (`control-plane-deployment.md`, Restart inventory); with it, the Missions survive and the provider's grants, codes and refresh tokens do not (§12) |
-| AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring file named by `MISSION_KEY_RING`, or generated per boot under `MISSION_EPHEMERAL_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with a ring, which holds each role's generations through rotation, retirement and compromise (§12); regenerated otherwise. Consumers using `IssuerKeys` hold `/jwks` within the freshness it declares (#831); the Signals receiver pins its Status keys (#1810) |
+| AS signing keys (`as-token`, `as-status`, `as-txn`, `as-continuation`) | a key ring file named by `MISSION_KEY_RING`, or generated per boot under `MISSION_EPHEMERAL_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with a ring, which holds each role's generations through rotation, retirement and compromise (§12); regenerated otherwise. Consumers using `IssuerKeys`, the Signals receiver's Status resynchronization among them (#1810), hold `/jwks` within the freshness it declares (#831) |
 | Evidence keys (the PEP's `ephemeral-pep`, `ephemeral-executor` and `ephemeral-receipt_issuer`, the PDP's `pdp-decision-evidence`) | two evidence key files named by `MISSION_PEP_EVIDENCE_KEYS` and `MISSION_PDP_EVIDENCE_KEYS`, or generated per boot under `MISSION_EPHEMERAL_EVIDENCE_KEYS=1`; the launcher refuses neither or both (§12) | none | kept with the files, so records an earlier boot signed still verify; regenerated otherwise, and they stop verifying (#831) |
 | RAS single-use ID-JAG claims | in memory by default; a SQLite file named by `MISSION_RAS_REDEMPTIONS`, exclusive lock, WAL, `synchronous=FULL`, required with a key ring (§12, #1767) | one claim insert, keyed by issuer and `jti`, before the local token is minted | without the file, lost: an ID-JAG whose signing key survives the restart redeems again; with it, each claim is kept until the grant's `exp` plus 300 s |
 | Other keys (the PEP's `rs-txn`, client keys) | generated per boot under fixed kids (`channel-key-matrix.md`) | none | regenerated (#831) |
@@ -513,9 +513,9 @@ That test uses another member; no test names `max_budget`.
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance is witnessed at the AS, below the stack, and the cases the release fence does not reach stay with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; the revoke-versus-issue cases the release fence does not reach; full approval record/code atomicity), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional).
+- Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; the revoke-versus-issue cases the release fence does not reach), #1863 (approval record/code atomicity: the record commits with its authorization code; the file-backed crash residual is declared), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
-- #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stays #250's.
+- #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stayed #250's and is now #1863's.
 
 ## 9. Pinned adoption closure
 
@@ -803,17 +803,18 @@ its next start; `pnpm keys verify` records what the running AS publishes
 lists it, revoked, in the historical key set at `/historical-jwks`
 (`mission_historical_jwks_uri`). Once the AS restarts with the compromise
 applied, a consumer that holds the AS's keys through the refreshing resolver,
-`IssuerKeys` (the payments resource, the RAS and the separated MAS pilot's
-PDP; `channel-key-matrix.md`), stops accepting the key for a new signature
-verification within the freshness lifetime it cached, 300 s in the
-reference: when its cached `/jwks` set expires, or, for the PDP's Status
-consumer, sooner when it refetches the historical key set, whose compromise
-it never un-learns. The bound is for new verifications only; it is not a
-cutoff for an observation, decision or permit accepted under the key before
-then. A consumer that pins its keys is outside it: the Signals receiver
-verifies Status responses under a fixed local key set that neither refreshes
-nor reads the historical key set, so it accepts the key until its
-configuration drops it (#1810). The deployment also chooses its evidence keys
+`IssuerKeys` (the payments resource, the RAS, the separated MAS pilot's PDP
+and the Signals receiver's resynchronization; `channel-key-matrix.md`),
+stops accepting the key for a new signature verification within the
+freshness lifetime it cached, 300 s in the reference: when its cached
+`/jwks` set expires, or, for the two Status consumers, sooner when it
+refetches the historical key set, whose compromise it never un-learns. No
+reference launcher constructs a Signals receiver; one a deployment wires
+holds its Status keys as the PDP does, `missionStatusIssuer(...).keys`
+(#1810). The bound is for new verifications only; it is not a cutoff for an
+observation, decision or permit accepted under the key before then. A
+consumer that pins a key from its configuration is outside it until its
+configuration drops the key. The deployment also chooses its evidence keys
 (#831, D901): `MISSION_PEP_EVIDENCE_KEYS=<absolute path>` and
 `MISSION_PDP_EVIDENCE_KEYS=<absolute path>` name the PEP's and the PDP's
 evidence key files, created once by `pnpm evidence-keys init`, so a record an

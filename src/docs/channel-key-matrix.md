@@ -97,7 +97,8 @@ another process holding it is refused (#1833).
 The AS publishes every live generation of `as-token`, `as-status`,
 `as-txn` and `as-continuation` at `/jwks`. The payments resource, the RAS
 and the separated MAS pilot's PDP hold that set through `IssuerKeys`
-(#831 C): per role, only the `kid`s their configuration trusts, refreshed
+(#831 C), and so does a Signals receiver a deployment wires, for the Status
+responses that resynchronize it (#1810): per role, only the `kid`s their configuration trusts, refreshed
 within the freshness `/jwks` declares, and refused when a stale set cannot
 be revalidated. A rotation reaches them once their trusted `kid`s name the
 new generation and they reload (`SIGUSR2`); publication alone grants no

@@ -177,6 +177,25 @@ interface DeliveryRow {
   payload_version: number;
 }
 
+/**
+ * A committed transition's event publication failed after its commit. The
+ * transition and its event row are durable, and the request-path drain
+ * retries the publication. A caller that recovers from a post-commit failure
+ * (the approval code save, #1863, D1001) recovers from this type alone, so an
+ * unrelated exception never passes for it. The message keeps the cause's.
+ */
+export class LifecycleNotificationError extends Error {
+  constructor(
+    readonly seq: number,
+    cause: unknown,
+  ) {
+    super(`lifecycle event ${seq} committed, but its publication failed: ${cause instanceof Error ? cause.message : String(cause)}`, {
+      cause,
+    });
+    this.name = "LifecycleNotificationError";
+  }
+}
+
 /** The registry's payload-erased view of a registered subscriber. */
 type ErasedSubscriber = {
   id: string;
@@ -288,7 +307,13 @@ export class LifecycleOutbox {
         )
         .run(seq, subscriber.id, JSON.stringify(payload));
     }
-    afterCommit(this.db, () => this.publishOne(seq));
+    afterCommit(this.db, () => {
+      try {
+        this.publishOne(seq);
+      } catch (e) {
+        throw new LifecycleNotificationError(seq, e);
+      }
+    });
     return persisted;
   }
 

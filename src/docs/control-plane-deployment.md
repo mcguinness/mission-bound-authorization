@@ -214,8 +214,30 @@ observation whose commit point advanced is available as an optional declared
 policy (`strictObservationWatermark`), off by default: the governing rule
 permits delivering an authenticated authoritative observation inside its own
 validity, and refusal costs churn on a busy Mission and reader starvation under
-sustained writes. The fresh-observation claim stays partial until the other
-signed state observations are inventoried and witnessed (#1750).
+sustained writes. That optional policy blocks Lifecycle response recovery and
+its `commit` member falls after boot pruning (#1865); neither re-dates an
+observation.
+
+Signed-artifact inventory: every signed artifact the reference produces,
+classified against the fresh-observation rule. Only a state observation states
+Mission state at a time for a verifier to rely on as current, so only its
+timestamps must belong to its observation point.
+
+| Artifact | Signer | Class | Observation point and timestamps | Replay | Witness |
+|---|---|---|---|---|---|
+| Mission Status response (`mission-status-response+jwt`) | AS, Status key | State observation | One transactional read of the record, its `(version, commit)` watermark captured there; `iat` is that read's clock, and `exp` and `fresh_until` derive from it | Not cached; never re-signed | `control-plane-faults.test.ts` ("stamps an observation with its own observation point, not the clock at signature time"; "leaves a snapshot older when state commits during the signature, and re-dates nothing") |
+| Lifecycle endpoint response (the same type, the discharge envelope included) | AS, Status key | State observation | Observed inside the transition or latch transaction | Final bytes replay for the 600-second nonce window, past the 60-second `exp`, solely as confirmation of the correlated original operation with every other check passing: the replay refreshes no state and authorizes nothing; a committed row re-signs the retained observation with its original `iat`, `exp` and `fresh_until` | `control-plane-responses.test.ts` ("signs a recovered response over the original observation, never re-dating it"; "replays the retained bytes of a signed envelope past its own validity, for the whole nonce window"); `lifecycle-endpoint.test.ts` ("recovers a committed response whose bytes were lost at its original observation: the same iat, exp and fresh_until") |
+| Mission Status List token (`statuslist+jwt`) | AS, Status key | State observation | `iat` is read immediately before the record set, in one synchronous step with no await between them; that ordering is load-bearing | Cached only inside its own `exp` and while no commit is pending; past `exp` it is rebuilt from the records, never re-signed | `status-list.test.ts` (the three "Status List republication" cases) |
+| Mission Signals lifecycle-change SET (`secevent+jwt`) | AS-side transmitter, Status key | Transition record (D993) | Its observation point is `committed_at`, recorded at commit; `iat` is RFC 8417 issuance at the first dispatch, which a crash can delay well past the commit. The receiver orders by `version`, never `iat` | Signed bytes persisted before the first hand-off; every redelivery is byte-identical | `durable-delivery.test.ts` ("signs a job journaled before a crash, hours later, with its commit's own committed_at, and a receiver orders it by version ...") |
+| Join Assertion (`mission-join+jwt`) | AS, Status key | Attestation that a credential joins a Mission: no state, version or `fresh_until` | `iat` is read in the same step as a synchronous re-read of the Mission, which is re-read again after signing | The cache serves the original bytes only inside their `exp`, keyed on the Mission, the token digest and the audience | `join-assertion-endpoint.test.ts` (the cache key and re-read cases) |
+| Discharge Receipt (`mission-discharge-receipt+jwt`) | AS, Status key | Record of a forwarded discharge; no Mission state | `iat` inside the discharge transaction | Retained and recovered like a Lifecycle response | `discharge-carryover.test.ts` (the signed receipt replay case) |
+| Credentials: OAuth JWT access tokens and ID Tokens, ID-JAGs, AAT roots and children, transaction tokens, child grants, Dispatch Handoff grants, cross-org and RAS access tokens, AAuth person, auth and resource tokens, ARAP approvals | AS, RAS, AAuth PS and resource, Access Request Service, holders | Credential | `iat` is issuance time, not a statement of current Mission state. The AS's Mission-bound OAuth access tokens, ID-JAGs and AAT roots gate on Mission state at mint and bound `exp` by the Mission's expiry. A holder mints an offline AAT child with no Mission-state check, under its parent's bounds; an ARAP approval states `approved_until`, carries no JWT `exp`, and checks no Mission state. This inventory makes no mint-time state claim for the other credentials | New per mint; a recorded operation replays its stored bytes | The issuance suites |
+| Records: Approval Governance Records, governed-policy consent attestations, Carryover Evidence, Decision Evidence, Refusal Records, Execution Evidence, Mission Receipts, PDP denial bindings, work-product bindings, transparency statements and receipts | AS, PDP, PEP, mediators, the transparency service | Historical record | Dated by the recorded event time; the AS records are signed inside the transaction that commits the event | Retained byte for byte | Their own suites |
+| Proofs and metadata: DPoP proofs, client assertions, transaction challenges, AAT proofs of possession, AAuth HTTP signatures, the Historical Key Set, the harness scope statement | Clients, holders, resources, the AS | Other | Not a statement of Mission state | n/a | n/a |
+
+Two observations are unsigned: the RFC 7662 introspection response and the
+AAuth Person Server's status response stamp `fresh_until` from the same read,
+with no await between the read and the stamp.
 
 A terminal transition writes its tombstone in that same transaction: canonical
 issuer and Mission identity, terminal state, final version, transition time and
@@ -553,10 +575,14 @@ read and are never restamped; its freshness is 60 seconds, within
 Mission Status List is rebuilt from the record set, and the Signals event is
 the committed lifecycle event, published after its commit. These four are the
 deployment's whole set of state-observation surfaces: it defines no parallel
-signed state-snapshot protocol (a deployment-inventory conclusion, D874).
-Refusing an
-observation whose commit point advanced is an optional policy
-(`strictObservationWatermark`), off. There is no lease and no replica read.
+signed state-snapshot protocol (a deployment-inventory conclusion, D874). The
+Signals surface's signed artifact, the SET, is a transition record dated by its
+`committed_at`, not a signed state observation (D993); the signed-artifact
+inventory under
+[Control-plane implementation boundary](#control-plane-implementation-boundary)
+classifies every signed artifact. Refusing an observation whose commit point
+advanced is an optional policy (`strictObservationWatermark`), off. There is no
+lease and no replica read.
 
 ### Replication and recovery model
 
@@ -655,8 +681,6 @@ makes no claim:
 - `control-plane.consistency.serialization`: a counted derivation and the
   provider token it pays for are not one transaction (#935); no multi-process
   serialization (#641).
-- `control-plane.consistency.fresh-observation`: the other signed state
-  observations are not yet inventoried and witnessed (#1750).
 - `control-plane.consistency.state-surfaces`: the consumer-side reconciliation
   clauses are not witnessed (#1747); the absence of a parallel snapshot protocol
   is a documented inventory conclusion (D874).
@@ -693,7 +717,10 @@ Outside those rows: the provider's Grants and refresh tokens do not survive a
 restart; the delegation accounting and the Dispatch Handoff consumption records
 are invalidated by one; an ambiguous delivery after a crash stays counted
 (#935); and the #914 refresh pre-check window is an accepted single-process
-residual (D772).
+residual (D772). On the file-backed kernel, a crash after the approval commit
+leaves the Mission `active` until `expires_at` or a revocation, and its
+authorization code is lost with provider memory: the same end state as the
+delivery gap (#1863, D1001).
 
 ## Upgrading a kernel written before #1340
 
