@@ -452,6 +452,23 @@ describe("scope projection at the token endpoint (@spec mission#scope-projection
     );
   });
 
+  it("refuses a scope named for the entry's action whose rights, as the target interprets it, exceed the entry", async () => {
+    await withPlain(
+      {
+        version: "local-interpretation-1",
+        mission_aware: false,
+        mode: "scope_only",
+        scopes: { [READ]: { rights: rights([READ, WRITE]), mandatory_controls: {} } },
+      },
+      async () => {
+        const res = await issue([entry([READ])]);
+        expect(res.status, JSON.stringify(res.body)).toBe(400);
+        expect(res.body.error).toBe("invalid_target");
+        expect(res.body.error_description).toMatch(/no safe scope projection/);
+      },
+    );
+  });
+
   it("refuses a prefix scope for an exact entry", async () => {
     await withPlain(
       {
