@@ -48884,6 +48884,55 @@
    "tests": []
   },
   {
+   "id": "evidence.execution.audience-mirrors-decision",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte, mirrored for join-key convenience and so a verifier's key-to-boundary binding ({{decision-evidence-integrity}}) has its input. An outcome for an operation admitted before a boundary identifier change keeps the original identifier",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Execution Evidence record emitted for a permit carries audience byte for byte equal to the audience its linked Decision Evidence recorded, and verifies under a key published for that audience: a permit decided before a declared identifier change and re-presented after it is still refused at use with no effect, and its suppression record keeps the old identifier; a disposition after the change of a permit admitted before it keeps the old identifier; a late record for an effect committed before the change keeps the old identifier; and a fresh permit's records after the change carry the new identifier",
+    "local": "In the reference the execution attempt takes its audience, like its boundary version, from the retained Decision Evidence (services/mcp-payments/src/pep.ts), and every disposition record copies the attempt's: the PEP's own suppressions and completions and the executor's transaction completion (server.ts). The executor's late record from claim reconciliation reads the retained record directly (claim-reconciliation.ts). The boundary established for the current request stays independent: the decision request and pre-decision Refusal Records carry it, and the enforcement_boundary use check compares it with the attempt's. A retained Decision Evidence with no audience, which only a key resolver that binds no audience accepts, is refused decision_evidence_unverifiable before any attempt, with no effect and no Execution Evidence, rather than recorded under the request's boundary."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit decided under the old identifier and re-presented after the change is refused at use as before and releases no effect, and its suppression record carries the old identifier exactly as its Decision Evidence recorded it, while a fresh permit after the change executes and records the new identifier exactly",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a wire committed under the old identifier whose Execution Evidence was lost is recorded late, after the change, by reconciliation from the ledger: the late record carries the old identifier exactly as its Decision Evidence recorded it, and settles the claim",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit whose retained Decision Evidence records no audience, accepted under a key resolver that binds none, is refused decision_evidence_unverifiable before any attempt: no effect, no Execution Evidence, and the Refusal Record names the boundary established for the request",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1868 (D999; fix/1868-producer-audience): the producer half of the audience member, beside the consumer row evidence.execution.audience-bound-at-settlement (D991), whose PDP witnesses establish nothing here. Role PEP covers the enforcement-side emitter: the suppression and the read completion are signed under the PEP role, the wire completion and the late record under the executor role of the same component. Applicability is unconditional with the runtime-enforced profile, as for the other PEP rows at this anchor: any enforcement point that emits Execution Evidence writes the member. Both identifiers of the witnesses' declared change are spelled with upper-case letters and a trailing slash (https://Payments.Example/Legacy/MCP/ replaced by https://Payments.Example/MCP/), so a normalized record differs from its Decision Evidence; a decision point that re-presents a held permit whatever version is in force stands in for a retransmission on the wire. The #853 in-flight witness asserts that the dispositions after the cutover of a read and of a compound action's prepare phase, both admitted before it, keep the old identifier. The idempotency-claim-pep reconciliation witness asserts only that one late record exists, not its audience, so it is not cited. Mutants at 695aa419, each alone with vitest in its own process group and the source restored byte-equal: the attempt taking the request's boundary (MA, the #1868 defect) fails the re-presented witness at the suppression record's audience; a lowercased (MB1) or trailing-slash-trimmed (MB2) copy fails it there too (no key is published for the normalized spelling, so no record is emitted) and fails the fresh-permit control's records; dropping the refusal of a retained record without an audience and falling back to the request's boundary (MC) fails the no-audience witness at its refusal, no-effect, no-record and Refusal Record assertions; the use check reading the copied audience and version instead of the boundary established now (MD) fails the re-presented witness at its refusal, ledger and redemption assertions (the old permit executes), and four existing #853 witnesses; the disposition record taking the boundary established at emission (ME) fails the re-presented and in-flight witnesses at the record's audience; the late record taking the emitter's configured identifier (ML1) or a lowercased copy (ML2) fails the late-record witness at its settlement and record assertions. Rerun with every assertion of the three new witnesses soft, each assertion of the producer's behavior fails on its own under at least one mutant; the seven precondition assertions (the permit issued, the identifier the linked Decision Evidence recorded, the redemption, no record before reconciliation, the record without an audience retained) hold before the producer acts and are killed by none."
+  },
+  {
    "id": "evidence.execution.audience-bound-at-settlement",
    "spec": "draft-mcguinness-mission-runtime-evidence.md",
    "anchor": "execution-evidence-object",
