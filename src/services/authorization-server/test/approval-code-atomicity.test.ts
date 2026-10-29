@@ -454,6 +454,30 @@ describe("the Mission Record commits with its authorization code (@spec mission#
     });
   }
 
+  it("the code save clamps the code again to the hold it reads: a hold replaced after the code's lifetime was computed, with an earlier rendered expiry, never yields a code outliving its Mission", async () => {
+    const h = await start(15615);
+    const flow = await h.open();
+    const decided = await flow.decide();
+    const holds = approvalHoldsOf(h.as.provider);
+    const held = holds.pending(flow.grantId) as { input: { renderedExpiresAt?: string } };
+    // The code's lifetime is computed (60 s) from the hold as decided; then a
+    // retried decision, as it were, replaces it with one rendered to expire in 20 s.
+    const soon = new Date(Date.now() + 20_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const read = holds.prospectiveExpiresAt.bind(holds);
+    vi.spyOn(holds, "prospectiveExpiresAt").mockImplementationOnce((x) => {
+      const value = read(x);
+      held.input.renderedExpiresAt = soon;
+      return value;
+    });
+    const codes = stagedCodes();
+    const out = await flow.resume(decided);
+    expect(out.code, JSON.stringify(out)).toBeTruthy();
+    const record = h.as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(record?.expires_at).toBe(soon);
+    const stored = (await storedCode(codes[0] as string)) as { exp?: number } | undefined;
+    expect(stored?.exp).toBeLessThanOrEqual(Math.floor(Date.parse(soon) / 1000));
+  });
+
   it("the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission", async () => {
     const h = await start(15614);
     const flow = await h.open("floor");
