@@ -2157,7 +2157,12 @@ action identifiers to minimum runtime action classes.<a href="#section-10.1-2.2.
 <p id="appendix-A-1">[[ To be removed from the final specification ]]<a href="#appendix-A-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-A-2.1">
-          <p id="appendix-A-2.1.1">Boundary and Audience: the runtime core's boundary identifier is the
+          <p id="appendix-A-2.1.1">The <code>exp</code> cap citation names the OAuth binding's Mission-Bound Token
+Issuance chapter, the retitled Mission-Bound Access Tokens. No
+requirement changed (#1892).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.2">
+          <p id="appendix-A-2.2.1">Boundary and Audience: the runtime core's boundary identifier is the
 protected resource's resource identifier, spelled as its RFC 9728
 <code>resource</code> value, which trusted static configuration can supply.
 <code>aud</code>, a string or an array, names it directly or through an
@@ -2167,28 +2172,28 @@ by order. An absent, malformed, or nonmatching audience, or an
 ambiguous alias, is refused before any decision, and a stricter
 token profile keeps its rule. The input mapping names the boundary
 identifier and no longer calls the protected resource the target of
-the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.1.1" class="pilcrow">¶</a></p>
+the action. Adds RFC 7519 as a normative reference (#853).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="appendix-A-2.2">
-          <p id="appendix-A-2.2.1">Credential Authority and Current Effective Authority: a
+        <li class="normal" id="appendix-A-2.3">
+          <p id="appendix-A-2.3.1">Credential Authority and Current Effective Authority: a
 <code>mission_resource_access</code> entry's <code>resource</code> matches the operation
 target the PEP establishes from its trusted operation contract,
 under Resource Access's Resource Matching rules; the token's
-audience remains a separate check (#1276).<a href="#appendix-A-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="appendix-A-2.3">
-          <p id="appendix-A-2.3.1">Runtime Input Mapping and Mission State Sources: a state source
-reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
-and the Status List cannot provide the termination reason or its
-references (#705).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
+audience remains a separate check (#1276).<a href="#appendix-A-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-A-2.4">
-          <p id="appendix-A-2.4.1">Establishing Validated Credential Context: the OAuth realization of
+          <p id="appendix-A-2.4.1">Runtime Input Mapping and Mission State Sources: a state source
+reports an expired Mission as <code>terminated</code> with reason <code>expired</code>,
+and the Status List cannot provide the termination reason or its
+references (#705).<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-A-2.5">
+          <p id="appendix-A-2.5.1">Establishing Validated Credential Context: the OAuth realization of
 the runtime core's sender-constraint requirement for high-consequence
 actions: the <code>cnf</code> binding of the validated credential context (a
 JWT's claim, or an opaque token's introspection response), with a
 proof the PEP verified; a context with no binding is a bearer token.
-Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.4.1" class="pilcrow">¶</a></p>
+Adds RFC 8705 and RFC 9449 as normative references.<a href="#appendix-A-2.5.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>

@@ -6408,7 +6408,9 @@ Appendix J.  Document History
       Objects and Missions, Plans, and Execution under The Mission, the
       Derivation Rule Example under Derivation Policy Authoring, and
       Mission Granularity among the deployment patterns; its citations
-      of those sections become local.  No requirement changed (#1892).
+      of those sections become local, and its two citations of the
+      binding's Mission-Bound Access Tokens chapter follow its retitling
+      as Mission-Bound Token Issuance.  No requirement changed (#1892).
 
    *  Mission Invariants' work-products and composition entries cite the
       Security Model's adversary model, which carries the analysis the
