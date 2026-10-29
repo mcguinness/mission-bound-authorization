@@ -1221,8 +1221,7 @@ On a refresh, the AS MUST decide this refusal before it consumes or
 rotates the refresh token.
 
 A token request under an existing Mission-bound grant, such as a
-narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
-for a delegation designation ({{designation}}), needs no
+narrowing refresh or a self-exchange ({{self-exchange}}), needs no
 `mission_intent` under the second rule. This exception opens no
 Mission submission carriage, and every other check still applies to
 the request: Issuance Gating ({{issuance-gating}}), the subset rule
@@ -1649,21 +1648,8 @@ approved audience, or, except as `scope` under a declared `projection`,
 in any form other than exactly as approved, since it cannot prove that a
 transformed copy is still a subset of what was approved.
 
-A type that declares `delegation` without `narrowing` is delegable only
-unchanged: the AS MUST NOT include an entry of such a type in a
-delegated token unless it is equal ({{subset}}) to an entry of the
-presented delegating token, it keeps that entry's approved audience, and
-the type's delegation policy permits the delegate
-({{delegation-constraints}}). The reference is the presented token, not
-the Mission Authority Set, so equality never restores an entry, or any
-part of one, that the presented token omits.
-
-A designation's `aud` names its redeemer ({{designation}}) and
-reassigns no entry's original approved audience: for a designation,
-the audience rules test the resource audiences associated with the
-entries it carries, never the designated client ({{token-response}}).
-Its redemption issues an entry only as the rules above permit,
-including their `narrowing` condition.
+{{delegated-exchange}} and {{designation}} state how these rules apply
+to a delegated token and to a designation.
 
 The AS declares the capabilities through these carriers, in order of
 preference:
@@ -3073,9 +3059,8 @@ returns them as follows:
   identifier or credential MUST carry both. On the authorization-code
   path, the authorization response carrying only the code is not that
   response; the token response redeeming the code is.
-- A delegated exchange response ({{delegated-exchange}}) MUST carry
-  both, because the delegate did not receive the response that
-  created the Mission.
+- A delegated exchange response carries both as
+  {{delegated-exchange}} requires.
 - Any other Mission-bound token response, including a refresh,
   designation ({{designation}}), or self-exchange ({{self-exchange}})
   response, SHOULD carry both.
@@ -3328,16 +3313,8 @@ none of the entries the token would carry, and one whose
 `authorization_details` ({{Section 6 of RFC9396}}) names an entry not
 approved for its audience.
 
-For a designation ({{designation}}), these rules test the resource
-audiences associated with the entries it carries, never the designated
-client its `aud` names ({{token-claims}}). A designation carries only a
-permitted subset of the presented token's entries ({{subset}},
-{{delegation-constraints}}), each keeping its original approved
-audience ({{transformation-capabilities}}). An entry without an
-original approved audience is not carried, and a designation that
-would carry no entry is refused with `invalid_target`. The delegated
-token issued at its redemption is subject to every rule of this
-section unchanged ({{delegated-exchange}}).
+{{designation}} states how these rules apply to a designation and to
+the delegated token issued at its redemption.
 
 The AS returns the granted `authorization_details` in every token
 response, including refresh and Token Exchange responses
@@ -3450,6 +3427,31 @@ requested entry exceeds the presented refresh grant or the Mission
 Authority Set ({{subset}}), and MUST NOT instead issue a narrower set
 than the one requested.
 
+## Self-Exchange Down-Scoping {#self-exchange}
+
+An agent MAY present its own Mission-bound access token as the
+`subject_token` of a Token Exchange ({{RFC8693}}) with no actor, to
+obtain a narrowed token (for example, a single-audience one). Because
+it names no actor, such an exchange does not delegate: it re-scopes
+the agent's own authority downward. A designation ({{designation}})
+names a delegate, so it is not a self-exchange, and these rules do not
+apply to it. An exchange whose `subject_token` is a designation is a
+delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
+even when it carries no `actor_token`. Issuance applies the issuance procedure of
+{{issuance-gating}} as it states for a self-exchange.
+{{authority-proposal}} states a self-exchange request's exemption from
+`mission_intent` and the checks that still apply to it. A no-actor
+exchange is subject to the following:
+
+1. The AS MUST refuse a no-actor exchange with the `invalid_request`
+   error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
+   client is the Mission's approved agent (the Mission Record's
+   `client_id`, {{mission-record}}). A delegate narrows only through a
+   delegated exchange that names it in the `act` chain.
+2. The result MUST be a subset ({{subset}}) of the presented token's
+   authority; it carries the same `mission` claim ({{mission-claim}})
+   and adds no `act` chain.
+
 ## Authentication Claims and Lifetime {#token-authentication-lifetime}
 
 A derived token's authority comes from the Mission, not from a fresh
@@ -3483,12 +3485,9 @@ domain.
 Within that bound, a derived token's lifetime is the AS's policy,
 which {{issuance-gating}} recommends keeping short. Token Exchange
 does not tightly couple an issued token's lifetime to its
-`subject_token`'s ({{Section 2.1 of RFC8693}}): a designation's
-expiry ({{designation}}) bounds when it can be redeemed, not the
-lifetime of the delegated token issued from it, which can outlive
-both the designation and the credential the designation was derived
-from. Revoking the grant state backing that credential still refuses
-every later redemption ({{delegated-exchange}}).
+`subject_token`'s ({{Section 2.1 of RFC8693}}); {{designation}}
+states how this applies to a designation and to the delegated token
+issued from it.
 
 ## Scope Projection {#scope-projection}
 
@@ -3954,9 +3953,10 @@ and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
 Issuing a designation applies the issuance procedure of
-{{issuance-gating}} as it states for a designation. {{authority-proposal}} states a
-designation request's exemption from `mission_intent` and the checks
-that still apply to it.
+{{issuance-gating}} as it states for a designation. A designation request is a token
+request under an existing Mission-bound grant ({{authority-proposal}}):
+it needs no `mission_intent`, and every other check that section names
+still applies to it.
 
 A designation the AS issues:
 
@@ -3973,11 +3973,30 @@ A designation the AS issues:
 - MUST expire shortly after it is issued, and no later than the
   presented token or the Mission's `expires_at`.
 
+A designation's `aud` names its redeemer and reassigns no entry's
+original approved audience ({{transformation-capabilities}}). For a
+designation, the audience rules of {{token-response}} test the resource
+audiences associated with the entries it carries, never the designated
+client its `aud` names ({{token-claims}}). A designation carries only a
+permitted subset of the presented token's entries ({{subset}},
+{{delegation-constraints}}), each keeping its original approved
+audience ({{transformation-capabilities}}). An entry without an
+original approved audience is not carried, and a designation that
+would carry no entry is refused with `invalid_target`. Its redemption
+issues an entry only as {{transformation-capabilities}} and
+{{delegated-exchange}} permit, including their `narrowing` condition.
+The delegated token issued at its redemption is subject to every rule
+of {{token-response}} unchanged.
+
 A designation names a delegate and adds none. Whether one may be
 redeemed more than once within its lifetime is the AS's policy; each
 redemption is a delegated exchange of its own ({{delegated-exchange}}).
 Its expiry bounds when it can be redeemed, not the lifetime of a
 delegated token issued from it ({{token-authentication-lifetime}}).
+That delegated token can outlive both the designation and the
+credential the designation was derived from. Revoking the grant state
+backing that credential still refuses every later redemption
+({{delegated-exchange}}).
 
 A designation authorizes no resource access. A designated client's
 identifier MUST NOT be an audience that any resource server accepts
@@ -3987,8 +4006,9 @@ issues as an audience. The AS MUST refuse, with `invalid_target`
 ({{Section 2.2.2 of RFC8693}}), a designation request naming a client
 for which it cannot establish that separation. A resource server that
 validates a JWT access token's audience ({{Section 4 of RFC9068}})
-therefore rejects a designation, and the AS reports one inactive at
-introspection ({{composite-active}}).
+therefore rejects a designation, and at introspection
+({{composite-active}}) the AS MUST return `active: false` for one,
+with no `mission` member.
 
 ## Delegated Exchange {#delegated-exchange}
 
@@ -4043,7 +4063,15 @@ AS issues the delegated token subject to all of the following:
 - **Authority only narrows.** The delegated token's
   `authorization_details` MUST be a subset ({{subset}}) of the
   designation's authority, hence of the delegating token's and of the
-  Mission Authority Set.
+  Mission Authority Set. A type that declares `delegation` without
+  `narrowing` ({{transformation-capabilities}}) is delegable only
+  unchanged: the AS MUST NOT include an entry of such a type in a
+  delegated token unless it is equal ({{subset}}) to an entry of the
+  presented delegating token, it keeps that entry's approved audience,
+  and the type's delegation policy permits the delegate
+  ({{delegation-constraints}}). The reference is the presented token,
+  not the Mission Authority Set, so equality never restores an entry,
+  or any part of one, that the presented token omits.
 - **The `mission` claim is unchanged.** The delegated token carries
   the delegating token's `mission` claim ({{mission-claim}})
   unchanged, so every actor in the chain operates under the one
@@ -4071,6 +4099,10 @@ AS issues the delegated token subject to all of the following:
   exists, has no lineage to validate; that never excuses dropping or
   ignoring a lineage that does exist. The Mission's `active` state
   never substitutes for backing grant state.
+
+A delegated exchange response MUST carry `mission_id` and
+`mission_expires_at` ({{mission-response-parameters}}), because the
+delegate did not receive the response that created the Mission.
 
 The `act` chain nests (`act.act`) for as long as, and only while,
 authority continues under the same approved Mission. A new approval
@@ -4156,31 +4188,6 @@ and whether instance attribution is required.
 - An issuer also conveying upstream context needs a separately
   specified, authenticated provenance mechanism before its context can
   support presenter attribution.
-
-## Self-Exchange Down-Scoping {#self-exchange}
-
-An agent MAY present its own Mission-bound access token as the
-`subject_token` of a Token Exchange ({{RFC8693}}) with no actor, to
-obtain a narrowed token (for example, a single-audience one). Because
-it names no actor, such an exchange does not delegate: it re-scopes
-the agent's own authority downward. A designation ({{designation}})
-names a delegate, so it is not a self-exchange, and these rules do not
-apply to it. An exchange whose `subject_token` is a designation is a
-delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
-even when it carries no `actor_token`. Issuance applies the issuance procedure of
-{{issuance-gating}} as it states for a self-exchange.
-{{authority-proposal}} states a self-exchange request's exemption from
-`mission_intent` and the checks that still apply to it. A no-actor
-exchange is subject to the following:
-
-1. The AS MUST refuse a no-actor exchange with the `invalid_request`
-   error code ({{Section 2.2.2 of RFC8693}}) unless the authenticated
-   client is the Mission's approved agent (the Mission Record's
-   `client_id`, {{mission-record}}). A delegate narrows only through a
-   delegated exchange that names it in the `act` chain.
-2. The result MUST be a subset ({{subset}}) of the presented token's
-   authority; it carries the same `mission` claim ({{mission-claim}})
-   and adds no `act` chain.
 
 ## Delegation Constraints {#delegation-constraints}
 
@@ -4672,9 +4679,8 @@ authorization, not the token in isolation. Strengthening
 {{Section 4 of RFC7662}}, the AS MUST return `active: true` only when
 the access token passes that section's checks (valid signature,
 unexpired, and not individually revoked) and the Mission is
-`active`. A designation ({{designation}}) authorizes no resource
-access: the AS MUST return `active: false` for one, with no `mission`
-member.
+`active`. A designation, which authorizes no resource access, is
+reported inactive with no `mission` member, as {{designation}} states.
 
 The AS does not verify the token's sender-constraint (`cnf`) at
 introspection; the resource server checks proof of possession when
@@ -7322,6 +7328,14 @@ resolve before interoperating.
   Submission Processing Order drops its Consent Evidence example,
   keeping the rule that a committed approval surface covers the
   normalized provenance facts (#1892, D1026).
+- Editorial, no requirement change: delegation rules that sat in
+  issuance sections move into Delegation Within a Mission, leaving a
+  pointer in each: a designation's audience, lifetime, `mission_intent`
+  exemption and introspection rules move to Designation, and the
+  delegated-exchange response members and the rule for a type delegable
+  only unchanged move to Delegated Exchange. Self-Exchange Down-Scoping,
+  which delegates nothing, moves from that chapter to follow Refresh
+  Tokens (#1892, D1026).
 
 -01
 

@@ -6253,7 +6253,7 @@
    "id": "core.authority-proposal.governed-client-token-request-not-reached",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a delegation designation ({{designation}}), needs no `mission_intent` under the second rule",
+   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh or a self-exchange ({{self-exchange}}), needs no `mission_intent` under the second rule",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -6270,7 +6270,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
+   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work. #1892 Stage 2a moved the designation example out of the quoted list; the general clause still covers a designation request, which the Designation section classifies as such a request."
   },
   {
    "id": "core.mission-claim-reservation.conforming-issuance-only",
@@ -13541,8 +13541,8 @@
   {
    "id": "core.response.mission-members-on-delegated-exchange",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-response-parameters",
-   "text": "A delegated exchange response ({{delegated-exchange}}) MUST carry both",
+   "anchor": "delegated-exchange",
+   "text": "A delegated exchange response MUST carry `mission_id` and `mission_expires_at`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -14768,7 +14768,7 @@
   {
    "id": "core.tokens.backing-grant-revocation-refuses-redemption",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-authentication-lifetime",
+   "anchor": "designation",
    "text": "Revoking the grant state backing that credential still refuses every later redemption",
    "role": "AS",
    "strength": "stated",
@@ -16664,7 +16664,7 @@
   {
    "id": "core.other-types.delegation-only-unchanged",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "other-types",
+   "anchor": "delegated-exchange",
    "text": "the AS MUST NOT include an entry of such a type in a delegated token unless it is equal ({{subset}}) to an entry of the presented delegating token",
    "role": "AS",
    "strength": "MUST NOT",
@@ -16686,8 +16686,8 @@
   {
    "id": "core.other-types.designation-equal-entry-issued",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "A designation's `aud` names its redeemer ({{designation}}) and reassigns no entry's original approved audience",
+   "anchor": "designation",
+   "text": "A designation's `aud` names its redeemer and reassigns no entry's original approved audience",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -17918,8 +17918,8 @@
   {
    "id": "core.introspection.designation-inactive",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "composite-active",
-   "text": "A designation ({{designation}}) authorizes no resource access: the AS MUST return `active: false` for one, with no `mission` member",
+   "anchor": "designation",
+   "text": "the AS MUST return `active: false` for one, with no `mission` member",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -80252,8 +80252,8 @@
   {
    "id": "core.tokens.designation-entry-audiences-tested",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
-   "text": "For a designation ({{designation}}), these rules test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
+   "anchor": "designation",
+   "text": "For a designation, the audience rules of {{token-response}} test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -80282,7 +80282,7 @@
   {
    "id": "core.tokens.designation-permitted-subset-kept-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
+   "anchor": "designation",
    "text": "A designation carries only a permitted subset of the presented token's entries ({{subset}}, {{delegation-constraints}}), each keeping its original approved audience ({{transformation-capabilities}})",
    "role": "AS",
    "strength": "stated",
@@ -80312,7 +80312,7 @@
   {
    "id": "core.tokens.designation-unassociated-entry-not-carried",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
+   "anchor": "designation",
    "text": "An entry without an original approved audience is not carried",
    "role": "AS",
    "strength": "stated",
@@ -80348,8 +80348,8 @@
   {
    "id": "core.tokens.designation-redemption-audience-rules",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
-   "text": "The delegated token issued at its redemption is subject to every rule of this section unchanged",
+   "anchor": "designation",
+   "text": "The delegated token issued at its redemption is subject to every rule of {{token-response}} unchanged",
    "role": "AS",
    "strength": "stated",
    "applicability": {
