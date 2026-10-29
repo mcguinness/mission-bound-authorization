@@ -705,13 +705,18 @@ until such a namespace is allocated and a change controller exists,
 the author-controlled URI remains the deployable identifier.
 
 A consumer anchors freshness to stream liveness, not to per-Mission
-age. The Shared Signals Framework {{OIDC-SSF}} provides a stream
-verification event. A Mission Issuer MAY additionally emit a periodic
-stream-status heartbeat. A stream is verified live when the consumer
-has received a verified verification or heartbeat event within the
-stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered, other
-than an event the gate of {{discharge-compatibility}} withholds.
+age. The liveness event is the Shared Signals Framework Verification
+Event ({{OIDC-SSF}}, Section 8.1.4), whether the consumer requested it
+or the Mission Issuer sent it on its own initiative. A Verification
+Event sent without a request is a heartbeat, and it carries no `state`
+({{OIDC-SSF}}, Section 8.1.4.2). A Mission Issuer MAY send heartbeats.
+A Stream Updated event ({{OIDC-SSF}}, Section 8.1.5) reports the
+stream's status and is not a liveness event. A stream is verified live
+when the consumer has received a verified verification or heartbeat
+event within the stream's heartbeat interval; such an event attests
+that any committed transition for the stream's subjects would have
+been delivered, other than an event the gate of
+{{discharge-compatibility}} withholds.
 
 On a
 stream verified live, silence is freshness-preserving: the consumer
@@ -817,7 +822,7 @@ makes its cached Mission state stale within the longer of
 the stream re-enables, and the consumer re-establishes state through
 the Mission Status operation, which reports the narrowing.
 Liveness resumes only with the first verification or heartbeat event
-after re-enabling; a Stream Updated event is not one.
+after re-enabling ({{consumer-behavior}}).
 
 # Relationship to Revocation Propagation {#event-driven}
 
