@@ -840,7 +840,8 @@ describe("Mission Record immutability (@spec mission#mission-record)", () => {
     );
 
   it("every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke", () => {
-    const record = approve(intent(), 300);
+    // A Mission no other test creates: approvals replay by approval_event_id.
+    const record = approve(intent(), 1873);
     const created = kernel.get(record.id) as MissionRecord;
     const before = members(created);
     expect(created.termination).toBeUndefined();
