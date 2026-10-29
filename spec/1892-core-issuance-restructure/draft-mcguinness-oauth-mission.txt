@@ -217,23 +217,17 @@ Table of Contents
      19.1.  Normative References
      19.2.  Informative References
    Appendix A.  End-to-End Example
-     A.1.  Stage 0: Agent Identity (by Reference)
-     A.2.  Stage 1: Mission Creation
-     A.3.  Stage 2: Mission-Bound Token Issuance
-     A.4.  Stage 3: Resource Server Enforcement
-     A.5.  Stage 4: Resource Server Refusal
-     A.6.  Stage 5: Revocation
+     A.1.  Stage 1: Mission Creation
+     A.2.  Stage 2: Mission-Bound Token Issuance
+     A.3.  Stage 3: Resource Server Enforcement
+     A.4.  Stage 4: Resource Server Refusal
+     A.5.  Stage 5: Revocation
    Appendix B.  Design Context and Boundaries
-     B.1.  Relationship to Existing OAuth Objects
-     B.2.  Missions, Plans, and Execution
-     B.3.  Scope
-     B.4.  Non-Goals
-     B.5.  Client Identification in Delegated Tokens
-   Appendix C.  Role Mapping
-   Appendix D.  Derivation Policy
-     D.1.  Derivation Rule Example
-   Appendix E.  Integrity Anchor Test Vectors
-   Appendix F.  Document History
+     B.1.  Scope
+     B.2.  Non-Goals
+     B.3.  Client Identification in Delegated Tokens
+   Appendix C.  Integrity Anchor Test Vectors
+   Appendix D.  Document History
    Acknowledgments
    Author's Address
 
@@ -268,15 +262,17 @@ Table of Contents
    every grant obtained for it.  Without that linkage, withdrawing task
    approval need not stop issuance under those grants.
 
-   No existing OAuth object fills that role (Appendix B.1); an
-   authorization_details entry ([RFC9396]), for example, expresses
-   authority but not the task it serves or a lifecycle of its own.  A
-   Mission, held by the AS beside the grant, does.  It commits the
-   disclosed task with its approved authority and has an identifier and
-   a lifecycle independent of any grant.  It can be revoked by that
-   identifier through an authenticated means, independent of possession
-   of any token (Section 7.9.2), and a token derived from it by Token
-   Exchange identifies the same Mission (Section 6.5).
+   No existing OAuth object fills that role
+   ([I-D.draft-mcguinness-mission-architecture], Section "Relationship
+   to Existing OAuth Objects"); an authorization_details entry
+   ([RFC9396]), for example, expresses authority but not the task it
+   serves or a lifecycle of its own.  A Mission, held by the AS beside
+   the grant, does.  It commits the disclosed task with its approved
+   authority and has an identifier and a lifecycle independent of any
+   grant.  It can be revoked by that identifier through an authenticated
+   means, independent of possession of any token (Section 7.9.2), and a
+   token derived from it by Token Exchange identifies the same Mission
+   (Section 6.5).
 
    A Mission is created and used in a single chain:
 
@@ -332,20 +328,11 @@ Table of Contents
    defines how a token that carries only a narrowed subset is checked
    against the complete set.
 
-   This chain is the first of two enforcement layers, and a deployment
-   can run it alone: a resource server need not be Mission-aware unless
-   it receives delegated tokens (Section 9.1).  A Mission-unaware
-   resource server that authorizes only from scope operates within the
-   Mission only where the AS establishes that its scope projection and
-   the resource's independent controls cannot over-grant (Section 7.7).
-   The chain provides task-bound issuance, auditability, and a
-   revocation gate over future derivation.
-
-   The chain does not evaluate individual actions, so token lifetime and
-   narrow authority bound the exposure between issuance and use.  The
-   second layer, a separately specified runtime layer (Section 15.3.1),
-   adds a per-action check for the action classes whose consequence
-   needs one.
+   A deployment can run the chain alone
+   ([I-D.draft-mcguinness-mission-architecture], Section "The Issuance-
+   Only Deployment"); a separately specified runtime layer adds a per-
+   action check for the action classes whose consequence needs one
+   (Section 15.3.1).
 
 1.1.  Applicability
 
@@ -363,37 +350,12 @@ Table of Contents
    task is in scope as a service-owned Mission (Section 6.1.7).
 
    The direct realization creates each Mission at an approval
-   interaction on the authorization endpoint.
-   [I-D.draft-mcguinness-mission-architecture] (Section "Mission
-   Creation Paths") maps the paths where an administrator, or a policy a
-   human consented to, decides without one.
-
-   A Mission is intended to cover one concrete task, not an agent's
-   whole lifetime.  Narrow Missions, each separately approved and
-   revocable, are preferred over one broad standing Mission that
-   accumulates authority across unrelated tasks.
-
-   This preference has a consent cost: many narrow Missions can create
-   approval fatigue, and combining unrelated authority into one broad
-   Mission can make approval difficult to evaluate.  A useful boundary
-   is a task whose purpose, authority, and bounds the Approver can
-   evaluate together (Section 6.1.6).
-
-   Optional companions can reduce repeated approvals through standing
-   consent (Section 6.2): for example, a template, an authority ceiling,
-   or a policy that a human approved once governs later Missions.  The
-   template, ceiling, or policy still needs a meaningful human approval,
-   and no such mechanism removes its profile's human-approval
-   requirement for high-consequence authority.
-
-   The unit of governance is the action, not the content.  A Mission
-   bounds where an agent may act (resources, actions) and how much
-   (constraints and, where metered, cumulative bounds).  It does not
-   inspect the content that flows within an authorized action: an
-   approved egress channel carries a status update or an exfiltrated
-   payload with equal authority.  Content-level controls (data loss
-   prevention, redaction) are complementary; under mediated execution
-   they fit at the mediating enforcement component (Section 15.3.1).
+   interaction on the authorization endpoint, and a Mission is intended
+   to cover one concrete task, not an agent's whole lifetime.
+   [I-D.draft-mcguinness-mission-architecture] maps the paths where an
+   administrator, or a policy a human consented to, decides without that
+   interaction (Section "Mission Creation Paths"), and how a deployment
+   sizes its Missions (Section "Mission Granularity").
 
 2.  Overview
 
@@ -707,9 +669,10 @@ Table of Contents
 
    The client writes every Intent member; how it produces them, for
    example through a Mission Shaper working from a natural-language
-   instruction, is out of scope (Appendix B.2).  The prose members
-   (goal, task_bounds) bound authority only through disclosure: the
-   Approver refuses authority the words do not support (Section 5).
+   instruction, is out of scope
+   ([I-D.draft-mcguinness-mission-shaping]).  The prose members (goal,
+   task_bounds) bound authority only through disclosure: the Approver
+   refuses authority the words do not support (Section 5).
 
    An AS that makes no use of an optional member still accepts it and
    records it with the Intent (Section 4.5).  The smallest Intent
@@ -1925,8 +1888,10 @@ Table of Contents
    ([I-D.draft-mcguinness-oauth-mission-consent-evidence]).
 
    The adjudication.governance_record member (Section 6.3) marks an
-   approval such a record backs, and Appendix C shows how each scenario
-   assigns the three approval_basis roles.
+   approval such a record backs, and
+   [I-D.draft-mcguinness-mission-architecture] (Section "Approval Role
+   Mapping") shows how each scenario assigns the three approval_basis
+   roles.
 
    The issuer retains the Approval Governance Record, and this document
    defines no surface that discloses it.  An artifact that refers to it
@@ -2487,7 +2452,7 @@ Table of Contents
    This section defines how the anchors the Approver consents to at the
    approval event (Section 6.1) are constructed, canonicalized, and
    bound.  The Mission Record (Section 6.3) records them, and the test
-   vectors (Appendix E) pin the construction byte-for-byte.
+   vectors (Appendix C) pin the construction byte-for-byte.
 
 6.4.1.  Integrity Anchors
 
@@ -2568,7 +2533,7 @@ Table of Contents
    This document also defines the *Authority Set entry commitment*, the
    envelope above with typ mission-authority-entry, iss the Mission
    issuer, and value a single Authority Set entry object exactly as
-   recorded (Appendix E).  A companion that cites an entry by digest (a
+   recorded (Appendix C).  A companion that cites an entry by digest (a
    decision record naming the entry it evaluated, containment or
    completion state keyed to an entry) computes it this way.
 
@@ -2924,10 +2889,6 @@ Table of Contents
       introspected consumption mode (Section 9.2.4), where introspection
       or issuer-local resolution carries its claims, with the same
       enforcement obligations.
-
-   A deployment whose AS can issue neither deploys a Mission Authority
-   Server ([I-D.draft-mcguinness-mission-authority-server]), which
-   governs ordinary tokens at the enforcement layer.
 
    Section 7.1 states the issuance procedure for every path.
 
@@ -3886,7 +3847,7 @@ Table of Contents
 
    *  *client_id keeps its ordinary meaning.* It names the client that
       requested the token (Section 7.2); the originally-approved agent
-      stays in the Mission Record (Appendix B.5).
+      stays in the Mission Record (Appendix B.3).
 
    *  *The act chain identifies the delegates.* The delegated token
       carries an act claim per Section 4.1 of [RFC8693] and the Actor
@@ -4168,7 +4129,7 @@ Table of Contents
 
    sub is still the user. client_id is tool-runner-7, the delegate that
    authenticated the Token Exchange and requested this token
-   (Appendix B.5); it matches the outermost act only because tool-
+   (Appendix B.3); it matches the outermost act only because tool-
    runner-7 authenticated the exchange itself. client_id does not name
    s6BhdRkqt3, the originally-approved agent, whose identity remains
    recoverable from the Mission Record via mission_id (Section 6.3).
@@ -4228,7 +4189,7 @@ Table of Contents
    4.  MUST NOT infer the Mission's originally-approved agent from
        client_id, which names the client that requested this token, on a
        delegated token or otherwise (Section 4.3 of [RFC8693],
-       Appendix B.5); the approved agent is recorded only in the Mission
+       Appendix B.3); the approved agent is recorded only in the Mission
        Record (Section 6.3) at the issuer.
 
    5.  MUST, when configured to require the mission claim for a Mission-
@@ -5711,7 +5672,7 @@ Table of Contents
 15.4.3.  Client Attribution and Delegation Lineage
 
    Because this document keeps the ordinary [RFC9068] meaning of the
-   client_id claim (Appendix B.5), a generic [RFC9068] resource server,
+   client_id claim (Appendix B.3), a generic [RFC9068] resource server,
    or a logging, SIEM, or audit pipeline, that keys attribution on
    client_id attributes a Mission-derived token, delegated or not, to
    the correct requesting client.  Such a component cannot see the
@@ -5785,7 +5746,7 @@ Table of Contents
    That stable anchor lets a resource server, a cross-domain Resource
    AS, and an auditor bind credentials and evidence to one approved
    Mission.  This document does not provide cross-audience unlinkability
-   (Appendix B.4).
+   (Appendix B.2).
 
    Audience-pairwise (or request-pairwise) Mission references, in which
    the issuer projects a distinct opaque identifier per audience and
@@ -6456,14 +6417,6 @@ Table of Contents
               2026, <https://datatracker.ietf.org/doc/html/draft-hardt-
               oauth-aauth-protocol-11>.
 
-   [I-D.draft-ietf-oauth-spiffe-client-auth]
-              Schwenkschuster, A., Kasselman, P., Rose, S., Thorgersen,
-              S., and N. Cam-Winget, "OAuth SPIFFE Client
-              Authentication", Work in Progress, Internet-Draft, draft-
-              ietf-oauth-spiffe-client-auth-02, 15 June 2026,
-              <https://datatracker.ietf.org/doc/html/draft-ietf-oauth-
-              spiffe-client-auth-02>.
-
    [I-D.draft-ietf-wimse-aims]
               Kasselman, P., Lombardo, J., Rosomakho, Y., Campbell, B.,
               Steele, N., and A. Parecki, "AI Identity Management
@@ -6614,12 +6567,6 @@ Table of Contents
               <https://mcguinness.github.io/mission-bound-authorization/
               draft-mcguinness-oauth-mission-management.html>.
 
-   [I-D.draft-mcguinness-oauth-mission-progressive]
-              McGuinness, K., "Mission Progressive Authorization for
-              OAuth 2.0", 2026, <https://mcguinness.github.io/mission-
-              bound-authorization/draft-mcguinness-oauth-mission-
-              progressive.html>.
-
    [I-D.draft-mcguinness-oauth-mission-resource-access]
               McGuinness, K., "Mission Resource Access Profile for OAuth
               2.0", 2026, <https://mcguinness.github.io/mission-bound-
@@ -6697,18 +6644,7 @@ Appendix A.  End-to-End Example
    reconciles Q3 invoices in the home ERP under Mission
    msn_8RfX2Lqv9TqMv4z7sA2bN1k0YpEdHc9-.
 
-A.1.  Stage 0: Agent Identity (by Reference)
-
-   The agent is an OAuth client with a workload identity, for example
-   one established using WIMSE [I-D.draft-ietf-wimse-arch] or SPIFFE
-   [I-D.draft-ietf-oauth-spiffe-client-auth]. alice has delegated to it
-   through an ordinary authorization code flow, per
-   [I-D.draft-ietf-wimse-aims]: the client_id claim names the agent, and
-   the sub claim identifies alice.  This document adds the Mission layer
-   to that identity; Stage 0 is otherwise unchanged from that
-   specification.
-
-A.2.  Stage 1: Mission Creation
+A.1.  Stage 1: Mission Creation
 
    The following example shows the Submission envelope the agent pushes
    through PAR (Section 4.2), carrying the Mission Intent and no
@@ -6818,7 +6754,7 @@ A.2.  Stage 1: Mission Creation
    intent_hash sha-256:6T-7s_f-mNW9UpfrrZh3r0HRJmU4My_EsNAf1C1U4r0, and
    proposal_hash sha-256:p-s-EzdNQTn6RoPHXESkwVtGdk8yL1PxryNyMwroKGo.
 
-A.3.  Stage 2: Mission-Bound Token Issuance
+A.2.  Stage 2: Mission-Bound Token Issuance
 
    At 08:00:05 the agent redeems the authorization code with its PKCE
    verifier and a DPoP proof ([RFC9449]):
@@ -6913,7 +6849,7 @@ A.3.  Stage 2: Mission-Bound Token Issuance
    stops further derivation, but this token remains valid until its own
    exp (Section 7.9.2).
 
-A.4.  Stage 3: Resource Server Enforcement
+A.3.  Stage 3: Resource Server Enforcement
 
    The agent calls the ERP resource server (erp.example.com) with that
    token.  The resource server:
@@ -6938,7 +6874,7 @@ A.4.  Stage 3: Resource Server Enforcement
    the journal-entries.write entry, as the refresh example in
    Section 7.3 narrows to the read entry.
 
-A.5.  Stage 4: Resource Server Refusal
+A.4.  Stage 4: Resource Server Refusal
 
    The agent then asks the ERP to post a 780.00 USD adjustment with the
    same write-only token.  The amount exceeds the entry's max_amount of
@@ -6954,7 +6890,7 @@ A.5.  Stage 4: Resource Server Refusal
    A fresh token from the same Mission does not help: every token it
    derives is a subset of the same Authority Set (Section 5.4).
 
-A.6.  Stage 5: Revocation
+A.5.  Stage 5: Revocation
 
    At 08:50:00 the agent refreshes for the read-only token of the
    refresh example in Section 7.3, which expires at 08:55:00.
@@ -6987,55 +6923,7 @@ Appendix B.  Design Context and Boundaries
    This appendix explains the design choices behind the Mission and
    records what this document leaves to other work.
 
-B.1.  Relationship to Existing OAuth Objects
-
-   OAuth already has objects near this need, but none is the approved
-   task:
-
-   *  A scope value or an authorization_details entry ([RFC9396])
-      expresses authority but neither the task it serves nor a lifecycle
-      of its own.
-
-   *  An access token is a short-lived projection; its jti claim
-      identifies the token, not the task.
-
-   *  A refresh token preserves the ability to obtain further tokens but
-      commits no bounded, approved authority.
-
-   *  A consent record proves that an approval event happened; it does
-      not govern the resulting work as it continues.
-
-   The Mission is the durable object these project from: the approved
-   task that bounds and outlives them and that every derived token
-   refers back to.  It is not another authorization_details type, since
-   Rich Authorization Requests already express authority; it is the
-   approved task with a lifecycle, which an Authority Set is derived for
-   and gated by.
-
-B.2.  Missions, Plans, and Execution
-
-   The Mission is the durable, AS-held object that commits the approved
-   authority and owns the task's lifecycle.  Two related things an agent
-   produces around a task draw on the Mission's authority but carry none
-   of their own and never enlarge it.
-
-   The agent's *plan* (how it decomposes the task, chooses tools, and
-   delegates to sub-agents) is its own strategy and is out of scope.  It
-   grants nothing: a sub-agent's authority is carried on its delegated
-   token (Section 8), derived from the Mission and only narrowed from it
-   (Section 5.4).
-
-   The agent's *execution* (the tokens it derives, the calls it makes,
-   and the decisions taken on them) references the Mission but cannot
-   expand it.  Revoking the Mission stops further derivation
-   (Section 7.1) but does not undo completed actions.  Evaluating each
-   action against the Mission at the point of use is the runtime layer's
-   concern (Section 15.3.1).
-
-   How a client produces the Intent (for example, a "Mission Shaper"
-   deriving it from a natural-language instruction) is out of scope.
-
-B.3.  Scope
+B.1.  Scope
 
    This document is self-contained: it binds Missions to OAuth 2.0 and
    depends normatively only on the specifications listed as its
@@ -7078,7 +6966,7 @@ B.3.  Scope
    explicit Mission Intent extension members, together with the runtime
    metering that enforces them.
 
-B.4.  Non-Goals
+B.2.  Non-Goals
 
    The following are out of scope for this document:
 
@@ -7141,7 +7029,7 @@ B.4.  Non-Goals
       bound authority works against the identifier and is therefore
       future work (Section 16.1).
 
-B.5.  Client Identification in Delegated Tokens
+B.3.  Client Identification in Delegated Tokens
 
    This document keeps the registered meaning of the client_id claim,
    stated normatively in Section 7.2 and enforced in Section 9.1: the
@@ -7163,177 +7051,7 @@ B.5.  Client Identification in Delegated Tokens
    cannot opt into that processing, so routing a delegated token to one
    is forbidden.
 
-Appendix C.  Role Mapping
-
-   approval_basis separates three questions about a Mission's own
-   creation, which a scenario can assign to different principals:
-
-   *  who is accountable for it (consent_principal);
-
-   *  who or what triggered it (activation_actor); and
-
-   *  what decided it (adjudication).
-
-   The companion profiles cited below define the scenarios; the list
-   shows how each assigns the three roles: its accountability root
-   (consent_principal), activation actor (activation_actor), and
-   adjudication (where a profile or deployment populates it).
-
-   Direct approval:
-      *  Accountability root: The approving human
-
-      *  Activation actor: Equal to consent_principal: the Approver
-         triggers their own approval
-
-      *  Adjudication: kind: human; the deciding human is
-         consent_principal itself
-
-   Relocated human approval
-   ([I-D.draft-mcguinness-oauth-mission-approval]):
-      *  Accountability root: The human who completes the relocated
-         approval event
-
-      *  Activation actor: Equal to consent_principal, unchanged from
-         the direct case: the instance activates at that human's
-         decision, not at any earlier submission
-
-      *  Adjudication: kind: human, as direct
-
-   Template dispatch ([I-D.draft-mcguinness-oauth-mission-template]):
-      *  Accountability root: The template's human approver, fixed at
-         template creation
-
-      *  Activation actor: The Dispatcher that requested the Dispatch,
-         distinct from consent_principal
-
-      *  Adjudication: kind: policy, policy naming the template's
-         dispatch_policy id and version (already carried in the
-         dispatched Mission's template lineage member), never the
-         Template's own id/template_version nor the Dispatcher
-
-   Policy drawdown
-   ([I-D.draft-mcguinness-oauth-mission-child-delegation]):
-      *  Accountability root: The Parent Mission's human Approver
-
-      *  Activation actor: The requesting parent Agent, distinct from
-         consent_principal
-
-      *  Adjudication: kind: policy, naming the child-creation policy's
-         id/version where the entry carries one, otherwise the Parent
-         Mission's approved delegation entry; never the requesting
-         parent Agent
-
-   Ceiling drawdown
-   ([I-D.draft-mcguinness-oauth-mission-progressive]):
-      *  Accountability root: The Approver who consented the ceiling
-
-      *  Activation actor: The requesting client, distinct from
-         consent_principal
-
-      *  Adjudication: kind: policy, naming the drawdown policy's
-         policy_id/policy_version carried in activation; never the
-         requesting client
-
-   Governed policy approval
-   ([I-D.draft-mcguinness-mission-approval-governance]):
-      *  Accountability root: The human who approved the exact policy
-         version the instance activates under
-
-      *  Activation actor: The authenticated client that requested the
-         activation, distinct from consent_principal
-
-      *  Adjudication: kind: policy, policy naming the deciding policy's
-         id/version (the approved policy itself or the evaluator it
-         commits), with governance_record: true; never the requesting
-         client
-
-   AGR-backed direct approval
-   ([I-D.draft-mcguinness-mission-approval-governance]):
-      *  Accountability root: The approving human, whose own human
-         assertion is the Approval Governance Record's accountable
-         assertion
-
-      *  Activation actor: Equal to consent_principal, as for direct
-         approval
-
-      *  Adjudication: kind: human, governance_record: true; how other
-         assertions contribute is Approval Governance's
-
-   AGR-backed template or drawdown activation
-   ([I-D.draft-mcguinness-mission-approval-governance]):
-      *  Accountability root: Unchanged from the underlying basis, whose
-         approval_basis stands in for an accountable assertion
-
-      *  Activation actor: Unchanged from the underlying basis
-
-      *  Adjudication: kind: policy, as the underlying basis assigns it,
-         with governance_record: true; the full assertion set is never
-         collapsed into a single principal
-
-   Direct approval is the degenerate case where one human fills every
-   role.  Where a profile or deployment does not populate adjudication
-   (Section 6.3), the list shows the value it would carry.
-
-Appendix D.  Derivation Policy
-
-   This appendix is illustrative and adds no requirements.  It works one
-   derivation rule through the contract in Section 5; it is not a
-   standardized policy language or an alternative subset relation.
-
-D.1.  Derivation Rule Example
-
-   The following example uses a catalog whose read actions supply no
-   amount for a cap to compare against, while a journal write does.  The
-   ceiling separates those actions:
-
-   [
-     { "type": "mission_resource_access",
-       "resource": "https://erp.example.com",
-       "actions": ["invoices.read", "journal-entries.read"] },
-     { "type": "mission_resource_access",
-       "resource": "https://erp.example.com",
-       "actions": ["journal-entries.write"],
-       "constraints": {
-         "max_amount": { "amount": "500.00", "currency": "USD" } } }
-   ]
-
-   The validated proposal also separates the read from the amount-bound
-   write:
-
-   [
-     { "type": "mission_resource_access",
-       "resource": "https://erp.example.com",
-       "actions": ["invoices.read"] },
-     { "type": "mission_resource_access",
-       "resource": "https://erp.example.com",
-       "actions": ["journal-entries.write"],
-       "constraints": {
-         "max_amount": { "amount": "900.00", "currency": "USD" } } }
-   ]
-
-   Under a declared narrowing capability (Section 5.5.1), the resulting
-   Authority Set contains the proposed invoices.read entry unchanged,
-   and the proposed journal-entries.write entry with max_amount narrowed
-   to 500.00 USD.  The ceiling's unrequested journal-entries.read does
-   not appear.  Each proposed entry intersects the same-resource ceiling
-   entries; an empty action intersection contributes no authority.
-
-   Negative fixtures accompany this positive result; none is a special
-   case that relaxes the type's relation:
-
-   *  A single mixed read and write proposal carrying the amount cap is
-      refused at intake: the read supplies no amount for the cap to
-      compare against, and Authority Set derivation does not drop the
-      cap from the read fragment.
-
-   *  A write proposal naming a different currency cannot produce the
-      USD intersection shown.
-
-   *  A proposal carrying a Common Constraint this deployment does not
-      compare is refused with the invalid_authorization_details error
-      code (Section 10), not derived with the constraint dropped.
-
-Appendix E.  Integrity Anchor Test Vectors
+Appendix C.  Integrity Anchor Test Vectors
 
    These non-normative vectors let an implementation verify its anchor
    computation (Section 6.4.1, Section 6.4.2) byte for byte.  All use
@@ -7508,7 +7226,7 @@ Appendix E.  Integrity Anchor Test Vectors
    exactly.  A divergence indicates a JCS or encoding difference to
    resolve before interoperating.
 
-Appendix F.  Document History
+Appendix D.  Document History
 
    [[ To be removed from the final specification ]]
 
@@ -7902,6 +7620,23 @@ Appendix F.  Document History
       the Effective Ceiling, which the Security Model and Mission Work
       Products carry, are removed with the uncited Work Products
       reference (#1892, D1026).
+
+   *  Editorial, no requirement change: the Architecture carries
+      material on the family rather than the protocol: Relationship to
+      Existing OAuth Objects; Missions, Plans, and Execution; the
+      Derivation Policy appendix's worked example; and the guidance on
+      sizing a Mission to one task, which Applicability now points to.
+      The Introduction's two-layer framing becomes a pointer, and the
+      Mission Authority Server pointer of Mission-Bound Token Issuance
+      and the End-to-End Example's agent-identity stage, each stated
+      elsewhere, are removed with the uncited SPIFFE client
+      authentication reference (#1892, D1026).
+
+   *  Editorial, no requirement change: the Role Mapping appendix moves
+      to the Architecture as Approval Role Mapping, which Single
+      Accountable Approver cites; the companions that cited it now cite
+      Principals and Approval Basis, which defines the three roles
+      (#1892, D1026).
 
    -01
 
