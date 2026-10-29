@@ -702,13 +702,20 @@ verification event. A Mission Issuer MAY additionally emit a periodic
 stream-status heartbeat. A stream is verified live when the consumer
 has received a verified verification or heartbeat event within the
 stream's heartbeat interval; such an event attests that any committed
-transition for the stream's subjects would have been delivered.
+transition for the stream's subjects would have been delivered, other
+than an event the gate of {{discharge-compatibility}} withholds.
 
 On a
 stream verified live, silence is freshness-preserving: the consumer
 MAY continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
-Mission.
+Mission. For a stream whose consumer has not declared
+`authority_changed`, verified liveness does not establish that its
+cached effective authority reflects every narrowing. Continued
+heartbeats can prevent the staleness fallback from firing while a
+narrowing event is withheld ({{discharge-compatibility}}), so such a
+consumer has no narrowing-specific freshness bound; Mission and
+credential expiry still apply.
 
 The staleness fallback applies to a stream that is not verified live.
 A consumer MUST treat cached Mission state as stale once the stream
@@ -1003,8 +1010,9 @@ IETF; Reference this document, {{as-metadata}}.
   formerly Discharge Compatibility: the delivery gate binds every
   event carrying `authority_changed` true, a containment commit as
   well as a discharge, under the one `authority_changed` capability.
-  A withheld event leaves a version gap on the undeclared stream
-  (#1001).
+  A withheld event leaves a version gap on the undeclared stream, and
+  verified liveness gives an undeclared consumer no narrowing-specific
+  freshness bound (#1001).
 
 # Acknowledgments
 {:numbered="false"}
