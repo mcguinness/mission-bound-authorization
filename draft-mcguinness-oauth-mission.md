@@ -3826,18 +3826,10 @@ can treat revoking a Mission's refresh token as revoking the Mission;
 a deployment that couples token revocation to Mission revocation
 documents that behavior.
 
-Token validity and Mission validity are distinct: an already-issued
-access token remains valid until it expires ({{issuance-gating}}), so
-a token can outlive a transition of its Mission by at most the token
-lifetime.
-
-Token introspection ({{introspection}}) is a state-observable overlay
-that lets a resource server see Mission state per request and refuse
-a revoked Mission's token before the token expires; Mission Status
-specifies another, a status surface keyed by `mission_id` with signed
-responses. A deployment whose consumers rely on Mission state beyond
-a token's lifetime offers one of these, so they read current state
-rather than infer it from token validity.
+A deployment whose consumers rely on Mission state beyond a token's
+lifetime offers token introspection ({{introspection}}) or Mission
+Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read
+current state rather than infer it from token validity.
 
 # Delegation Within a Mission {#delegation}
 
@@ -7281,6 +7273,11 @@ resolve before interoperating.
   Policy-Language Types, whose rules Declared Transformation
   Capabilities and the Mission Resource Access Profile state, is
   removed with its Cedar reference (#1892, D1026).
+- Editorial, no requirement change: Revocation no longer restates the
+  token-lifetime bound of Issuance Gating or the introspection overlay;
+  its duty to offer token introspection or Mission Status where
+  consumers rely on Mission state beyond a token's lifetime is
+  unchanged (#1892, D1026).
 
 -01
 

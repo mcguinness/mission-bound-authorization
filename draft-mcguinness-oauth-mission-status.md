@@ -221,8 +221,9 @@ JWS Compact Serialization {{RFC7515}} applies.
 
 This section is OPTIONAL. The issuance profile's stateless baseline
 needs no dedicated status surface
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Revocation"), and a
-consumer that does not use this operation is unaffected.
+({{I-D.draft-mcguinness-oauth-mission}}, Sections "Resource Server
+Enforcement" and "Revocation"), and a consumer that does not use this
+operation is unaffected.
 
 The dedicated Mission Status operation is the canonical status surface
 the issuance profile defers. Unlike token introspection
@@ -1600,10 +1601,11 @@ shortening a Mission's `expires_at`) remain deferred to future work.
 
 This section is OPTIONAL. The issuance profile bounds outstanding
 self-contained tokens by their lifetime and OPTIONAL token
-introspection ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Revocation"). A deployment that needs a Mission state change to take
-effect faster than token lifetime alone combines the propagation
-mechanisms below and sizes token lifetimes to match.
+introspection ({{I-D.draft-mcguinness-oauth-mission}}, Sections
+"Issuance Gating" and "Mission State via Token Introspection"). A
+deployment that needs a Mission state change to take effect faster
+than token lifetime alone combines the propagation mechanisms below
+and sizes token lifetimes to match.
 
 Each mechanism is discovered from its own metadata:
 
@@ -2260,6 +2262,11 @@ Mission Termination Reasons registry
 
 -01
 
+- Mission Status Operation and Revocation Propagation cite the OAuth
+  binding's Resource Server Enforcement, Issuance Gating, and Mission
+  State via Token Introspection sections, where the stateless baseline
+  and the token-lifetime bound are stated, together with or instead of
+  its Revocation section. No requirement changed (#1892).
 - The Mission Status Request gives the client authentication
   parameters of mTLS and private-key JWT as examples; a method that
   carries its credentials in HTTP header fields keeps them there.
