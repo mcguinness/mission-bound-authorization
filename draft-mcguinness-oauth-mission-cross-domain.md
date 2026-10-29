@@ -703,7 +703,7 @@ its invariants, {{origin-principal}}).
 Sender-constraining is REQUIRED for the cross-domain grant, stronger
 than the {{RFC9700}} recommendation the issuance profile adopts for the
 primary access token ({{I-D.draft-mcguinness-oauth-mission}}, Section
-"Mission-Bound Access Tokens"): the grant's position at the trust
+"Mission-Bound Token Issuance"): the grant's position at the trust
 boundary demands it ({{grant-at-boundary}}), and the underlying grant
 provides no replay backstop of its own.
 

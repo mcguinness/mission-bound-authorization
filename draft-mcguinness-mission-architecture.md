@@ -2569,7 +2569,7 @@ claim (`id`, `issuer`) and Mission-derived authorization details,
 issued only under a Mission-binding profile, which ties its issuance to
 the Mission being `active` (the OAuth binding's Claim Reservation). Its
 home is the OAuth
-binding's Mission-Bound Access Tokens and Mission Claim sections.
+binding's Mission-Bound Token Issuance and Mission Claim sections.
 The claim's `id` and `issuer` are the Mission-identity condition; a
 token-carried Authority Set commitment is never required for it, per
 condition 2 of `credential-mission-bound` ({{binding-properties}}).
@@ -4508,7 +4508,7 @@ event, governance gate, and bounded reliance,
    published reliance bound.
 
 Expiry ceiling, where the binding imposes one (the OAuth binding's
-Mission-Bound Access Tokens section,
+Mission-Bound Token Issuance section,
 {{I-D.draft-mcguinness-oauth-mission}}; the UMA and GNAP bindings,
 {{I-D.draft-mcguinness-mission-uma}},
 {{I-D.draft-mcguinness-mission-gnap}}; for AAuth, the expiry profile,
