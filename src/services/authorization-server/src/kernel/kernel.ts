@@ -168,7 +168,7 @@ import {
   GovernedPolicyConsentStore,
   validateGovernedPolicyApprovalConfig,
 } from "./governed-policy-approval.js";
-import { MissionBoundGrantStore } from "./mission-bound-grant-store.js";
+import { BoundGrantIndexWriteError, MissionBoundGrantStore } from "./mission-bound-grant-store.js";
 import { DispatchHandoffStore } from "./dispatch-handoff-store.js";
 import { ContinuationStore } from "./continuation-store.js";
 import { DelegationFamilyStore } from "./delegation-family-store.js";
@@ -2032,7 +2032,13 @@ export class MissionKernel {
     // on its own store handle (it must outlive the record), written once the
     // record commits. A record whose `grant_id` is set resolves through
     // `findByGrant` first, so the gap before this write refuses nothing.
-    if (input.grantId) this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
+    if (input.grantId) {
+      try {
+        this.missionBoundGrants.record({ grantId: input.grantId, missionId: id, kind: "approval" });
+      } catch (e) {
+        throw new BoundGrantIndexWriteError(input.grantId, e);
+      }
+    }
     return record;
   }
 

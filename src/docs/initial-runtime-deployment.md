@@ -513,9 +513,9 @@ That test uses another member; no test names `max_budget`.
 - Acceptance pack (#253 step 3): #1105 is closed, so the pack runs on the launcher's composition (§10, §12); its AS capability set is D332's (§2). The request-time vectors, run to completion, emission failure and the write-reservation restart are witnessed on the assembled path; revoke during issuance is witnessed at the AS, below the stack, and the cases the release fence does not reach stay with #250 (§10).
 - Disclosed residuals, no claim made: the launcher still constructs the cross-domain RAS and SaaS objects in process, unexposed (`provider-integration-port.md` §6 item 10; #253, pending #1331); the launcher wrappers have no tests (§12, #1330).
 - Separated deployment only: #1101 (state source under D293).
-- Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; the revoke-versus-issue cases the release fence does not reach; full approval record/code atomicity), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional).
+- Also open: #831 (keys and verifier refresh), #250 (control-plane atomicity; the revoke-versus-issue cases the release fence does not reach), #1863 (approval record/code atomicity: the record commits with its authorization code; the file-backed crash residual is declared), #830 (identity changes apply at restart), #817 (resource-side execution capabilities), #773 (context-drift vectors, conditional).
 - #917 and #918 are closed as implemented (D245, D247); their leftovers are resolved by #1103 and #1080.
-- #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stays #250's.
+- #826 is closed (D438): Approver and Subject stay separate identities, and the published approval-authentication floor (D425) is enforced. #916 is closed (D461): the approval decision's ordering and retry safety are accepted, and full record/code atomicity stayed #250's and is now #1863's.
 
 ## 9. Pinned adoption closure
 

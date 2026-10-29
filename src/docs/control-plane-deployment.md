@@ -717,7 +717,10 @@ Outside those rows: the provider's Grants and refresh tokens do not survive a
 restart; the delegation accounting and the Dispatch Handoff consumption records
 are invalidated by one; an ambiguous delivery after a crash stays counted
 (#935); and the #914 refresh pre-check window is an accepted single-process
-residual (D772).
+residual (D772). On the file-backed kernel, a crash after the approval commit
+leaves the Mission `active` until `expires_at` or a revocation, and its
+authorization code is lost with provider memory: the same end state as the
+delivery gap (#1863, D1001).
 
 ## Upgrading a kernel written before #1340
 

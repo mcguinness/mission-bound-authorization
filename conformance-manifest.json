@@ -12499,9 +12499,45 @@
      "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a requested expiry that passes while the decision commits gets its mapped refusal, not a request to review it again",
      "level": "endpoint",
      "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a refused commit completes access_denied: an authority source withdrawn after the decision leaves no code, no Mission and a classified grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed before the resume is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed between the code's lifetime and its save is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001) > after a refused commit whose grant deletion failed, the grant stays classified and unusable: an ordinary request on the same session is not answered with it, and a token minted under it is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. #1802: two of the three boundaries have witnesses. The first (an Approver whose authentication fails, or who may not activate the source, is refused before step 5 renders and is shown nothing of it) is witnessed at the approval page on the browser, device, headless and upstream-login paths, including a login that ages out during the page's last await and a refusal whose description would otherwise name the request. The expiry boundary is witnessed by the two decision tests in which the requested expiry passes before or during the commit, each creating no Mission, grant or code. The failed-commit boundary (no active Mission and no usable Mission-bound grant after a failed commit) has no witness here: it rests on the partial record-and-code atomicity row (#250). Each render-time witness was proved by disabling its guard alone."
+   "notes": "#1795 (D919). The ordered MUST is unchanged (D610, D845). Each step's content has its own rows; this row records the order, at the boundaries an observer of the approval surface can distinguish. An ordering with no observable effect, such as computing the independent expiry ceiling before step 3, is not asserted here, and the MUST still governs it. #1802: two of the three boundaries have witnesses. The first (an Approver whose authentication fails, or who may not activate the source, is refused before step 5 renders and is shown nothing of it) is witnessed at the approval page on the browser, device, headless and upstream-login paths, including a login that ages out during the page's last await and a refusal whose description would otherwise name the request. The expiry boundary is witnessed by the two decision tests in which the requested expiry passes before or during the commit, each creating no Mission, grant or code. The failed-commit boundary (no active Mission and no usable Mission-bound grant after a failed commit) has browser-path witnesses since #1863, which commits at the code save: a code-storage failure (both kernels), a refused commit and a lapsed hold each leave no Mission and no redeemable code, and a held grant whose commit was refused and whose deletion failed is not reused and refuses a token mint. A recovery-witness failure releases no code but can leave the record durable under an uncertain kernel, so it is not cited for no active Mission. The row stays partial pending its coverage review (D1001). Each render-time witness was proved by disabling its guard alone."
   },
   {
    "id": "core.approval-event.record-code-atomicity",
@@ -12520,7 +12556,7 @@
    "assertion": "concurrency",
    "observation": {
     "normative": "the Mission Record is created active atomically with the approval decision and the issuance of the authorization code",
-    "local": "decide() prepares the approval (every refusal before any write, except the progressive ceiling consent the commit establishes at its creation instant, which leaves an inert grant), saves the provider grant under an identity derived from the interaction, then commits the record already bound to it (kernel.approve with grantId; bindGrant is compare-and-set). A failure before the commit leaves no Mission, only an inert grant a retry overwrites; a repeated or concurrent decision recovers the one grant and binding. The commits on one approval event run one at a time, cleanup included (in-process, under the single-process fence), so a decision resuming after asynchronous work recovers a commit made meanwhile and never writes over or destroys its grant (#1446). oidc-provider issues the code on the later resume request, so a committed active, grant-bound Mission can precede code creation."
+    "local": "decide() prepares the approval (every refusal before any write, except the commit's revalidation of the authority source and of a consented ceiling's drawdown policy, which refuses at the code save), reserves the approval event, classifies the interaction-derived grant as a held approval grant before its first save (append-only: refusal, hold expiry and failed cleanup never make it an ordinary grant), saves the grant, re-checks the context (#1446) and holds the decision, keyed by the grant, until the interaction expires. The provider's AuthorizationCode adapter fences a code under a held grant: it joins the approval event's serialization, stages the code (stored, not redeemable), then in one synchronous turn runs the final checks (the #1446 context re-check and the approval-authentication floor) and kernel.approve, which commits the record already bound to the grant (a retry's bindGrant is compare-and-set), and releases the code; find returns an unreleased code under a held grant as absent. An IntentError completes access_denied; recovery-witness uncertainty releases nothing; another post-commit failure releases only when the committed record is the held decision. In-process, under the single-process fence (D663): no store spans the kernel and the provider. The device flow commits at its decision (#1202)."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12545,13 +12581,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure at the code save leaves no Mission, no binding and no code, only a classified grant, and the client starts again",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the decision is held, before its interaction finishes, leaves no Mission, and a retry on the interaction completes with one Mission and one binding",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12563,7 +12599,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the held decision's own retry still completes",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12587,18 +12623,126 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first; a change landing between them refuses it, and the held first decision commits nothing",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed commit: a decision by another principal is refused before saving a grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed decision: a decision by another principal is refused before saving a grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: the decision commits nothing; the code save commits the record bound to the grant, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: the decision commits nothing; the code save commits the record bound to the grant, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a code-storage failure commits nothing: no Mission, no binding, no redeemable code, and the grant stays classified",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a refused commit completes access_denied: an authority source withdrawn after the decision leaves no code, no Mission and a classified grant",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a recovery-witness failure at the commit fails closed: the record's state cannot be told, and the staged code is never released",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > in-memory kernel: a notification failure after the commit is recovered: the code redeems under the bound Mission, and the notification is retried",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > file-backed kernel: a notification failure after the commit is recovered: the code redeems under the bound Mission, and the notification is retried",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed before the resume is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a hold that lapsed between the code's lifetime and its save is refused access_denied: no code and no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001) > after a refused commit whose grant deletion failed, the grant stays classified and unusable: an ordinary request on the same session is not answered with it, and a token minted under it is refused",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "a decision racing the resume is ordered by the approval event's serialization (@spec mission#approval-event, #1863, D1001) > a retried decision in its grant save holds the resume's commit back; the code then commits one record, one binding, and agrees with the record",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "a decision racing the resume is ordered by the approval event's serialization (@spec mission#approval-event, #1863, D1001) > a retried decision reaching its commit while the code save commits waits for it and recovers the one binding: one record, and the code redeems under it",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a retry of a held decision after a policy input changed asks for review, and the held decision's commit re-checks the context and refuses access_denied",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the code save clamps the code again to the hold it reads: a hold replaced after the code's lifetime was computed, with an earlier rendered expiry, never yields a code outliving its Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > an exception after the commit that is neither a failed notification nor a failed index write releases nothing: the staged code is never found",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > a failed bound-grant index write after the commit is recovered: the entry is written again and the code redeems under the bound Mission",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "Partial (#916, D415; #916 closed, D461). Witnessed: the record commits bound to the decision's grant, never unbound; a failure before the commit leaves no Mission; repeated and concurrent decisions recover one grant and one binding (a retry or a concurrent decision by another Approver, Subject or client is refused before the grant is touched: a synchronous per-interaction reservation, taken before the asynchronous grant save, so the Mission's Approver and the grant's account always agree); the commit revalidates the prepared authority source (same root and provenance, every gate) and a withdrawn source refuses, and cannot strand the first approval grant outside the derivation count. Not met: the authorization code is issued by oidc-provider on the later resume request, so a failure there, or an abandoned redirect, leaves an active, grant-bound Mission with no code; full record/code atomicity is #250's cross-store work. A second residual is a delivery gap: a code issued whose redirect response is lost, which atomic record/code issuance would not remove, bounded by the code's 60 s lifetime clamped to the Mission's expires_at (provider-integration-port.md section 3.4; code reading, no test). The bound-grant index is written immediately after the record commit on its own store handle (it must outlive the record); a record whose grant_id is set resolves through findByGrant first, so the gap refuses nothing."
+   "notes": "Partial (D1001): the rows' coverage is reviewed after these witnesses land, and nothing here promotes it. #1863 moves the commit from the decision to the code save. Witnessed (approval-code-atomicity.test.ts; both kernels where named): no Mission exists after the decision, and the code save commits the record bound to the grant, whose code redeems under it; a real code-storage failure commits nothing (no Mission, binding, index entry or redeemable code, and the grant stays classified); a refused commit completes access_denied with nothing created; a recovery-witness failure at the commit (file-backed) releases no code, even one whose deletion failed; a notification failure after the commit is recovered and its notification retried; a lapsed hold is refused; a held grant whose commit was refused and whose deletion failed is not reused by an ordinary request on the same session and refuses a token mint; a decision racing the resume is ordered against it, ending with one record and one binding; the commit re-checks the rendered context (approval-context-changes.test.ts) and the approval-authentication floor at its own instant; the code is clamped to the expires_at its commit establishes, again against the hold the code save reads. The #916 witnesses still hold: repeated and concurrent decisions keep one grant and binding, a decision by another Approver, Subject or client is refused before the grant is touched, and the commit revalidates the prepared source. Residuals: on the file-backed kernel a crash after the commit keeps the active Mission and loses its code with provider memory, the end state of the delivery gap (control-plane-deployment.md); the delivery gap itself, a code whose redirect is lost, is bounded by the code's 60 s lifetime clamped to expires_at (provider-integration-port.md section 3.4; code reading, no test). After a recovery-witness failure the record may be durable with the kernel uncertain, and every later write and state-dependent service refuses until reconciliation. Post-commit recovery is typed (#1878 review): a code is released after a commit only on a LifecycleNotificationError or a BoundGrantIndexWriteError, with the record agreeing with the held decision. An unrecognized post-commit exception releases nothing (witnessed), so the Mission it committed has no usable code until expiry or a revocation; a failed index write is recovered (witnessed). Coverage stays partial for the owner's review (D1001)."
   },
   {
    "id": "core.approval-event.every-mission-own-event",
@@ -13303,9 +13447,33 @@
      "name": "the verification page renders only after steps 1 to 3 (@spec mission#approval-preparation, device-authorization#approval, #1802) > asks a login older than the client's requested max_age to sign in again, with nothing of the request",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > the client's requested max_age is measured again at the commit: a browser login that ages past it before the code save completes access_denied with no Mission and no released code",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > within the client's requested max_age at the commit, the held decision commits and its code redeems under the Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-code-atomicity.test.ts",
+     "name": "the Mission Record commits with its authorization code (@spec mission#approval-event, #1863, D1001) > max_age=0, through oidc-provider's prompt=login translation, is measured again at the commit: a login fresh at the decision and seconds old at the code save completes access_denied with no Mission",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
     }
    ],
-   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering."
+   "notes": "The floor clause binds a high-risk Mission (applicability has no kind for that condition, so the row stays unconditional). D425: the shipped high-risk actions are all write-bearing, so they need a distinct Approver (D37) and a delegated request cannot carry acr_values (D305); the floor/request conjunction is therefore witnessed on an AS whose floor policy classifies invoice.read as high-risk, in both directions. The AS admits no consumption bound (derive refuses every constraint key outside SUPPORTED_CONSTRAINT_KEYS), so none can invoke the floor. An Expansion deferral approval (ExpansionDeferralStore.approve, in process) meets the same floor over the successor's derived authority, from the browser login the trusted approval integration records (ExpansionApproval.authentication); without one a high-risk expansion approval refuses and the deferral stays pending. Each guard (the decide-time and expansion-approval checks, fail-closed and whole-set classification, the headless refusal, acr, age, future and malformed context, conjunctive floors) was disabled in turn and its suite failed. Adopted #636 acceptance criterion (approver-vs-subject tests). The requested-strength cases run on self-approvals in a trusted browser session (#826: a delegated request cannot carry acr_values without openid here); the split-principal case moved to no-token-claim-carriage and openid-refused-when-approver-not-subject. The Deferred Mission Approval companion ({{I-D.draft-mcguinness-oauth-mission-approval}} {{deferred-approval}}) that would relocate this same check to an asynchronous reviewer has no reference implementation in src/ (only the unrelated AROP post-Mission-widening deferral is implemented, a different mechanism, {{I-D.ietf-oauth-deferred-token-response}}); a deferred-review wire test is not implementable in this stack and is disclosed here rather than fabricated. A client registration's incompatible OIDC defaults fail closed (#826): `default_acr_values` is invalid client metadata in this deployment, which configures no acr values, so every request from such a client is refused before any interaction; `default_max_age` and `require_auth_time` require `openid`, and with it a delegated approval refuses `invalid_scope`. The `claims` parameter is unsupported (`claims_parameter_supported` false): a request carrying an essential `acr` is served without essential-claim treatment, a disclosed limitation witnessed by \"does not support the claims parameter: discovery says so, and a request carrying an essential acr gets no essential-claim treatment (a disclosed limitation)\", not by this row. The Mission Device Authorization approval (#1202) runs the same decision, so the floor holds there too: a high-risk device approval by a password Approver creates no Mission and ends the session denied, an mfa one approves; proved by not applying the floor's refusal. #1320 (D496): on the as-native target the browser login is an OpenID Connect login at an upstream provider that authenticates the Approver (a password, then a one-time code its device receives; mfa only after both). The AS validates the ID Token (OpenID Connect Core 1.0 Section 3.1.3.7), maps the issuer-qualified identity to the local Approver and records the token's acr and auth_time, which the floor evaluates unchanged: a password-only login and one older than 300 s at the decision are refused before any Mission or code, at the AS and on the assembled target, and an mfa login is admitted. Proved by recording acr from configuration, stamping auth_time at the callback, and disabling the floor's acr and age checks; the ID Token checks themselves witness no clause of this row and are cited in the deployment documents. #1255: the ceiling witnesses were proved by evaluating the floor over the derived set alone (the password Approver's ceiling was approved), by moving the ceiling's floor check after the grant save (only the zero-Grant assertion failed) and after the Mission commit (the zero-Mission assertion failed), and by refusing every ceiling that admits floor-class authority whatever the Approver (the mfa approval failed). #1802: the render-time checks were proved by dropping the floor from the step-up condition (ten renders returned 200), dropping the requested strength from it (four), and always offering the ceiling (the password page showed it); the decision-time checks by disabling the decision's floor branch (eight approval-floor tests, the two aged-at-the-decision witnesses among them) and its requested-strength check (the max_age aged-at-the-decision witness and both rar-carriage refusals). The former ceiling witness for a password Approver is replaced: that login is no longer offered the ceiling, so its consent is refused as one the page did not render, and the decision's floor over a consented ceiling is witnessed by a login that ages past the bound after the rendering. #1863 (#1878 review): a held browser decision measures both again at its commit, when its authorization code is saved: the floor, and the client's acr_values and max_age (max_age=0 through its prompt=login translation). A login that no longer satisfies either completes access_denied with no Mission and no released code; a within-age control commits and redeems."
   },
   {
    "id": "core.approval-authentication.no-token-claim-carriage",
@@ -13994,7 +14162,7 @@
     },
     {
      "file": "src/services/authorization-server/test/exp-clamp.test.ts",
-     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and creates no Mission",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     }
