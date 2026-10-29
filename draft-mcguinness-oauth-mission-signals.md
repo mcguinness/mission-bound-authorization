@@ -999,6 +999,12 @@ IETF; Reference this document, {{as-metadata}}.
 - Editorial, no requirement change: the lifecycle-change examples'
   revocation `reason` describes a revocation, not a completion
   (#1535).
+- Authority Change Compatibility ({{discharge-compatibility}}),
+  formerly Discharge Compatibility: the delivery gate binds every
+  event carrying `authority_changed` true, a containment commit as
+  well as a discharge, under the one `authority_changed` capability.
+  A withheld event leaves a version gap on the undeclared stream
+  (#1001).
 
 # Acknowledgments
 {:numbered="false"}
