@@ -1242,6 +1242,11 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- Visibility ({{visibility}}) and Propagation ({{propagation}}): on a
+  Signals stream, a contain event that narrows effective authority
+  reaches only a consumer that declared `authority_changed`; an
+  undeclared consumer learns of the containment through its next
+  version gap or the staleness rule, not by push (#1001).
 - Protected Events names a change an authority source reports, under
   a declared continuing authority dependency, as a representative
   event class; the mapping stays deployment-defined (#830).
