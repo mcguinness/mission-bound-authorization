@@ -583,7 +583,7 @@ A Mission-bound cross-domain grant:
 - MUST have an `exp` that does not exceed the Mission's
   `expires_at`, per the issuance profile's expiry rule
   ({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound
-  Access Tokens");
+  Token Issuance");
 - MUST be sender-constrained ({{RFC7800}}) to the presenting client by
   the proof-of-possession mechanism the cross-domain grant profile
   defines; this document defines no new PoP mechanism. For the
@@ -1779,9 +1779,9 @@ exceeds the Mission's `expires_at`. The ID-JAG carried identity
 
 - The End-to-End Example starts from the base profile's Stage 1,
   since that profile's example no longer has an agent-identity stage,
-  and the sender-constraint citation names the base profile's
-  Mission-Bound Token Issuance chapter, the retitled Mission-Bound Access
-  Tokens. No requirement changed (#1892).
+  and the expiry-ceiling and sender-constraint citations name the base
+  profile's Mission-Bound Token Issuance chapter, the retitled
+  Mission-Bound Access Tokens. No requirement changed (#1892).
 - Changes a requirement, a normative wire change (#1630, D751): every
   cross-domain grant's `mission` claim carries the Mission's
   `expires_at`, unchanged and never the grant's `exp`. The Resource AS

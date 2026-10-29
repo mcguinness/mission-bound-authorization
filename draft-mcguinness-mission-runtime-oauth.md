@@ -278,8 +278,8 @@ requirement, and a binding whose proof the PEP has not verified for the
 request supplies no confirmation key to the decision. The requirement
 attaches to the action's class, not to issuance: the issuance profile's
 level for the primary access token is unchanged
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Access
-Tokens").
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Token
+Issuance").
 
 Under the issuance profile alone, introspection freshness is per use:
 each response is an observation for one decision, not a cacheable state
@@ -340,8 +340,8 @@ identifier it expects for itself ({{Section 4 of RFC9068}}). `aud`, in
 a validated JWT or an introspection response, is a string or an array
 of strings ({{Section 4.1.3 of RFC7519}}), and the issuance profile
 lets it name a resource server, API, or security domain
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Access
-Tokens"). An `aud` value names the boundary when it equals the
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission-Bound Token
+Issuance"). An `aud` value names the boundary when it equals the
 boundary identifier or is an audience alias for it. An audience alias
 is trusted deployment configuration, scoped to one validated issuer
 and token profile, that maps an `aud` value to exactly one protected
@@ -723,9 +723,9 @@ The Mission-bound token claims this document maps are registered by
 
 \[\[ To be removed from the final specification ]]
 
-- The `exp` cap citation names the OAuth binding's Mission-Bound Token
-  Issuance chapter, the retitled Mission-Bound Access Tokens. No
-  requirement changed (#1892).
+- The sender-constraint, audience and `exp` cap citations name the
+  OAuth binding's Mission-Bound Token Issuance chapter, the retitled
+  Mission-Bound Access Tokens. No requirement changed (#1892).
 
 - Boundary and Audience: the runtime core's boundary identifier is the
   protected resource's resource identifier, spelled as its RFC 9728
