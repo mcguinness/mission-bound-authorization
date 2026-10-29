@@ -10008,9 +10008,9 @@
    "id": "core.mission-record.members-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "Its members are immutable after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
+   "text": "Its members MUST NOT be changed after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -10056,7 +10056,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member; keyword-free here. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
+   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Takes MUST NOT under #1879 (D1014), the exceptions unchanged. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
   },
   {
    "id": "core.mission-record.authority-source-immutable",
