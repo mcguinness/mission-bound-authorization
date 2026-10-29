@@ -9,6 +9,7 @@ import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision, TEST_APP
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
+import { NARROWING_UNDECLARED } from "@mission/core";
 import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -1792,5 +1793,56 @@ describe("the delegated exchange authenticates the designated client (@spec miss
     expect(authenticated.body.error_description).toMatch(/actor_token is not supported/);
     expect(authenticated.body.access_token).toBeUndefined();
     expect(derivations(on, missionId)).toBe(before);
+  });
+});
+
+describe("delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025)", () => {
+  // The configuration meets the rows' precondition: `delegation` declared and
+  // `narrowing` not. The authorization server gates nothing on `delegation`
+  // in this implementation; the equal-only carriage comes from the undeclared
+  // `narrowing`. The ceiling is the Mission's own entry, so the proposal equals
+  // it and derives unchanged.
+  let h: Harness;
+  beforeAll(async () => {
+    h = await harness(14954, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads()] },
+      transformationCapabilities: {
+        declared: { mission_resource_access: { delegation: true } },
+        narrowing: NARROWING_UNDECLARED,
+      },
+    });
+  });
+  afterAll(() => {
+    h?.server.close();
+  });
+  const entriesOf = (jwt: string) => (decodeJwt(jwt) as { authorization_details: Body[] }).authorization_details;
+
+  it("a designation carrying an entry equal to the presented token's is issued with its approved audience kept, and its redemption carries the entry unchanged", async () => {
+    const { missionId, accessToken } = await baseMission(h, [broadReads()]);
+    const [presented] = entriesOf(accessToken);
+    expect(presented?.actions).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(entriesOf(designation.body.access_token as string)).toEqual([presented]);
+    const record = h.as.kernel.get(missionId);
+    expect(record?.approved_audiences?.[0]).toEqual([RESOURCE]);
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presented]);
+  });
+
+  it("once the Mission narrows the entry, a redemption and a new designation are refused invalid_target, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(h, [broadReads()]);
+    const designation = (await designate(h, accessToken, SUBAGENT)).body.access_token as string;
+    contain(h, missionId, ["payments:invoice.list"]);
+    const before = derivations(h, missionId);
+    const redeemed = await redeem(h, designation, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(400);
+    expect(redeemed.body.error).toBe("invalid_target");
+    const designated = await designate(h, accessToken, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(400);
+    expect(designated.body.error).toBe("invalid_target");
+    expect(derivations(h, missionId)).toBe(before);
   });
 });
