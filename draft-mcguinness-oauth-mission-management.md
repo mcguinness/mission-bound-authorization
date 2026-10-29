@@ -748,9 +748,9 @@ reason `completed` is not revoked, and its recorded `termination` is
 unchanged. After
 a partial failure the spent bulk token is not reusable; the caller
 remediates with a fresh dry run over the same filter and a new
-execute: members already transitioned then report `already_terminal`,
-`error` members are retried, and `stale_version` members are reviewed
-again at their current versions.
+execute. Members already terminated report `already_terminal`; other
+members are evaluated under the lifecycle rules and the newly pinned
+versions.
 
 ## Worked Example {#bulk-example}
 
