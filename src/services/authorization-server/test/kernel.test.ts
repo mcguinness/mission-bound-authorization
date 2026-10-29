@@ -820,6 +820,45 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
   });
 });
 
+describe("Mission Record immutability (@spec mission#mission-record)", () => {
+  // Implementation fields that are not Mission Record members, and issuer-held state associated with the Mission outside
+  // the logical record (Status's `schedule`, Containment's `containment`; #1879 option A).
+  const NOT_RECORD_MEMBERS = new Set([
+    "version",
+    "derivation_count",
+    "grant_id",
+    "status_list_idx",
+    "projected_from",
+    "schedule",
+    "containment",
+  ]);
+  const members = (r: MissionRecord) =>
+    Object.fromEntries(
+      Object.entries(structuredClone(r)).filter(
+        ([k]) => k !== "state" && k !== "termination" && !NOT_RECORD_MEMBERS.has(k),
+      ),
+    );
+
+  it("every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke", () => {
+    // A Mission no other test creates: approvals replay by approval_event_id.
+    const record = approve(intent(), 1873);
+    const created = kernel.get(record.id) as MissionRecord;
+    const before = members(created);
+    expect(created.termination).toBeUndefined();
+    kernel.gateDerivation(record.id);
+    expect(members(kernel.get(record.id) as MissionRecord)).toEqual(before);
+    for (const action of ["suspend", "resume", "revoke"] as const) {
+      kernel.transition(record.id, action);
+      const fresh = kernel.get(record.id) as MissionRecord;
+      expect(members(fresh)).toEqual(before);
+      if (action !== "revoke") expect(fresh.termination).toBeUndefined();
+    }
+    const terminated = kernel.get(record.id) as MissionRecord;
+    expect(terminated.state).toBe("terminated");
+    expect(terminated.termination?.reason).toBe("revoked");
+  });
+});
+
 describe("lifecycle (@spec status#legal-transitions)", () => {
   it("enforces the legal-transitions table with idempotent success", () => {
     const r = approve(intent(), 2);
