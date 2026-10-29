@@ -268,8 +268,9 @@ action array, or `{actions, resource_contract}` stating the payments contract
 it grants those actions under (#1847, D989): the credential's authority is
 one entry per stated contract, the values stating none in an entry of their
 own, never combined. A value's contract is never changed, so a new
-contract takes a new scope value; the loader sees one version, so repository
-review holds this; and the
+contract takes a new scope value, and a value stating a contract stays while
+that contract is supported; the loader sees one version, so repository review
+holds both; and the
 mapping contract the join applies (`mapping_contract`). The contract states,
 in a closed vocabulary that names the one behavior this join implements:
 the subject mapping (`identity`: the credential's issuer-qualified subject

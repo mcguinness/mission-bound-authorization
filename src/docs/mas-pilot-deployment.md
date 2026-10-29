@@ -120,7 +120,11 @@ resolution (`MappingContractCache`):
   never changes: an install whose newer version gives an existing value
   another contract, one where it stated none, or none where it stated one is
   refused, so a credential issued under an earlier mapping never gains a
-  contract. A new contract takes a new scope value.
+  contract. A new contract takes a new scope value. A value stating a
+  contract stays available while that contract is supported: an install that
+  no longer maps it is refused while the declarations support its contract
+  for its actions (current, or superseded within retention), judged at the
+  cache's clock. A value stating none may be withdrawn.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§9).
