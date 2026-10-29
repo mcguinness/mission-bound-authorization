@@ -696,6 +696,41 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
     }
   });
 
+  it("refuses to start with a Dispatch Policy whose class-named exception for the irreversible class or the consumption bound states a malformed recency ceiling: zero, negative, fractional, beyond the safe integers, a string, beside another member, a bare number or null (@spec approval-governance#recency-high-risk, #813)", async () => {
+    const malformed: Array<[string, unknown]> = [
+      ["zero", { max_age_s: 0 }],
+      ["negative", { max_age_s: -60 }],
+      ["fractional", { max_age_s: 1.5 }],
+      ["beyond the safe integers", { max_age_s: 2 ** 53 }],
+      ["a string", { max_age_s: "3600" }],
+      ["beside another member", { max_age_s: 3600, scope: "all" }],
+      ["a bare number", 3600],
+      ["null", null],
+    ];
+    // Every form is started and its outcome recorded, so one comparison shows
+    // each form the AS refused and any it started under.
+    const outcomes: Record<string, string> = {};
+    const expected: Record<string, string> = {};
+    for (const cls of ["irreversible_action", "consumption_bound"]) {
+      for (const [i, [label, exception]] of malformed.entries()) {
+        const id = `sp-bad-ceiling-${cls}-${i}`;
+        outcomes[`${cls}: ${label}`] = await startup(
+          id,
+          terms(`ap-bad-ceiling-${cls}-${i}`, {
+            approval_governance: recency({ ...BOTH_EXCEPTIONS, [cls]: exception } as never),
+          }),
+        ).then(
+          () => "started",
+          (e: unknown) =>
+            e instanceof StandingPaymentConfigError ? e.message : `not a StandingPaymentConfigError: ${String(e)}`,
+        );
+        expected[`${cls}: ${label}`] =
+          `Dispatch Policy ${id}: standing_payment: approval_governance.recency.exceptions.${cls} is not {max_age_s} with a positive integer`;
+      }
+    }
+    expect(outcomes).toEqual(expected);
+  });
+
   it("refuses to start with a Dispatch Policy whose budget omits its limit (#813)", async () => {
     const t = terms("ap-no-limit");
     const { limit: _limit, ...budget } = t.budget;
@@ -705,6 +740,22 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
       "budget is not {owner, id, currency, limit, per_instance_max}",
     );
   });
+
+  // The budget members the Template's exception and Metering's
+  // standing-consent budget name beside the limit. Each witness pins the
+  // member-set message: the later non-empty, currency and decimal checks also
+  // refuse an omission, so only the message shows which check refused it.
+  for (const member of ["owner", "id", "currency", "per_instance_max"] as const) {
+    it(`refuses to start with a Dispatch Policy whose budget omits its ${member} (#813)`, async () => {
+      const t = terms(`ap-no-${member}`);
+      const { [member]: _omitted, ...budget } = t.budget;
+      const built = startup(`sp-no-${member}`, { ...t, budget });
+      await expect(built).rejects.toBeInstanceOf(StandingPaymentConfigError);
+      await expect(built).rejects.toThrow(
+        `Dispatch Policy sp-no-${member}: standing_payment: budget is not {owner, id, currency, limit, per_instance_max}`,
+      );
+    });
+  }
 
   it("classifies the designated payment under the shipped mapping as irreversible and no other prohibited class, and refuses to start where the mapping covers it but not as irreversible (#813)", async () => {
     const entry = {

@@ -57,6 +57,7 @@ import {
 } from "../src/evaluate.js";
 import type { Fga } from "../src/fga.js";
 import {
+  CLAIM_SCHEMA_VERSION,
   ClaimDomainConfigError,
   type ClaimRequester,
   type ConsumptionStatusFn,
@@ -72,6 +73,7 @@ import { relationForAction, stalenessBound } from "../src/policy.js";
 import {
   DECISION_EVIDENCE_MEDIA_TYPE,
   EXECUTION_EVIDENCE_MEDIA_TYPE,
+  type EvidenceKeyResolver,
   signEvidenceEnvelope,
   verifyEvidenceEnvelope,
 } from "../src/runtime-evidence-integrity.js";
@@ -139,7 +141,7 @@ async function executionRecord(
   evaluationId: string,
   outcome: "completed" | "failed" | "suppressed",
   executionId = `exe_${randomUUID()}`,
-  o: { error?: string | null; signer?: CryptoKeyLike; missionId?: string; audience?: string; emitterId?: string } = {},
+  o: { error?: string | null; signer?: CryptoKeyLike; kid?: string; missionId?: string; audience?: string; emitterId?: string } = {},
 ): Promise<Record<string, unknown>> {
   const content = {
     execution_id: executionId,
@@ -153,7 +155,7 @@ async function executionRecord(
     ...(outcome === "suppressed" ? { error: o.error ?? "kill_switch" } : o.error !== undefined ? { error: o.error } : {}),
   };
   const evidence_envelope = await signEvidenceEnvelope(content, EXECUTION_EVIDENCE_MEDIA_TYPE, {
-    kid: "pep-exec-816",
+    kid: o.kid ?? "pep-exec-816",
     key: o.signer ?? executionKey.privateKey,
   });
   return { ...content, evidence_envelope };
@@ -194,10 +196,15 @@ function budgetStatement(decl: unknown = declaration(), claimed = true): Enforce
   return statement as unknown as EnforcementScopeStatement;
 }
 
-/** A claim domain on its own file; `open` again is a PDP restart against the same file. */
+/**
+ * A claim domain on its own file; `open` again is a PDP restart against the
+ * same file. `keys` resolves the Execution Evidence keys settlement verifies
+ * under: by default this PEP's key for this boundary only.
+ */
 function domainOnFile(
   c: Clock,
   hooks: { held?: HeldReservation[]; overspent?: BudgetOverspend[]; released?: ReleasedReservation[]; conflicts?: SettlementConflict[] } = {},
+  keys: EvidenceKeyResolver = settlementKeys,
 ) {
   const file = join(mkdtempSync(join(tmpdir(), "budget-816-")), "claims.sqlite");
   const open = (statement: EnforcementScopeStatement = budgetStatement()) =>
@@ -206,7 +213,7 @@ function domainOnFile(
       owner: CLAIM_OWNER,
       statement,
       now: c.now,
-      settlementKeys,
+      settlementKeys: keys,
       ...(hooks.held ? { onReservationHeld: (r: HeldReservation) => hooks.held?.push(r) } : {}),
       ...(hooks.overspent ? { onBudgetOverspend: (o: BudgetOverspend) => hooks.overspent?.push(o) } : {}),
       ...(hooks.released ? { onReservationReleased: (r: ReleasedReservation) => hooks.released?.push(r) } : {}),
@@ -2436,6 +2443,110 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
     });
 
+    it("after a completed payment, a retry under its key, a reversal carrying the payment's amount refused constraint_unsupported, a compensation request missing its metering projection followed by synthetic completed evidence for it, a non-execution record for the payment, and a retry after each leave the payment's claim completed and its 300.00 committed on both counters (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, v, { key, amount: "300.00" });
+      const executed = await executionRecord(a, "completed");
+      expect(await claims.settle(REQUESTER, executed)).toEqual({ accepted: true, state: "completed", duplicate: false });
+      const stillCommitted = (label: string) => {
+        expect(claims.reservationsFor(a).map((r) => r.state), label).toEqual(["committed", "committed"]);
+        expect(claims.budgetCounter(SHARED), label).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "0.00" }, committed: { amount: "300.00" } });
+        expect(claims.budgetCounter(instanceCounter("msn_a")), label).toMatchObject({
+          reserved: { amount: "0.00" },
+          held: { amount: "0.00" },
+          committed: { amount: "300.00" },
+        });
+      };
+      const retry = async (label: string) => {
+        const d = await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v));
+        expect(d.decision, label).toBe(false);
+        expect(d.context.denial_reason, label).toBe("duplicate_suppressed");
+        stillCommitted(label);
+      };
+      // A retry is safe, not a voiding of the first attempt: suppressed, it reserves and releases nothing.
+      await retry("retry after completion");
+      // The reversal the reference PEP decides carries the wire's amount, as the metered action's own compensate phase would: both are refused (decision h), claiming and reserving nothing.
+      const reversal: RequestOptions = { action: REVERSE, phase: "compensate", compensates: a, amount: "300.00" };
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      expectDenied(await evaluate(request(c, { ...reversal, action: EXECUTE }), options(claims, c, v)), "constraint_unsupported");
+      stillCommitted("refused reversal");
+      await retry("retry after the refused reversal");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      stillCommitted("repeated reversal");
+      // A compensation request missing its metering projection: context.amount is deleted while the normalized parameters still carry
+      // the amount. It is permitted, linked to the payment, claimed under its own key and charged nothing. It is not a zero-cost or
+      // executable payment reversal (D991); the reference PEP's priced reversal stays refused above.
+      const unpriced = request(c, { action: REVERSE, phase: "compensate", compensates: a });
+      delete (unpriced.context as { amount?: unknown }).amount;
+      const compensation = await evaluate(unpriced, options(claims, c, v));
+      expectPermit(compensation);
+      const r = compensation.context.evaluation_id as string;
+      const compensationEvidence = compensation.context.decision_evidence as DecisionEvidenceObject;
+      expect(compensationEvidence.compensates_evaluation_id).toBe(a);
+      expect(compensationEvidence.metering).toBeUndefined();
+      // Synthetic completed evidence for that request settles its own claim, never the payment's.
+      expect(await claims.settle(REQUESTER, await executionRecord(r, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(r)).toEqual([]);
+      stillCommitted("compensation request missing its metering projection");
+      await retry("retry after the compensation request");
+      // A record presenting the reversed payment as not executed is a conflicting settlement: refused, and nothing is released.
+      const notExecuted = await executionRecord(a, "suppressed");
+      expect((await claims.settle(REQUESTER, notExecuted, () => String(notExecuted.execution_id))).accepted).toBe(false);
+      stillCommitted("non-execution record");
+      claims.close();
+      // The payment's claim keeps its own completed settlement: neither the reversal nor any retry is taken as its non-execution.
+      expect(claimRowOf(file, a)).toMatchObject({ state: "completed", outcome: "completed", execution_id: executed.execution_id });
+      expect(claimRowOf(file, r)).toMatchObject({ state: "completed", outcome: "completed" });
+      expect(countsOf(file)).toEqual({ claims: 2, reservations: 2, counters: 2 });
+    });
+
+    it("while a payment's outcome is unknown, a retry under its key and a reversal carrying its amount reserve and release nothing, its lease elapsing holds it, and a retry under a new key that completes commits its own 300.00 while the first attempt's 300.00 stays held (@spec metering#settlement-states, metering#retry, #816, D974)", async () => {
+      const c = clock();
+      const { file, open } = domainOnFile(c);
+      const claims = open();
+      const v = view("msn_a", binding("msn_a"));
+      const key = freshKey();
+      const a = await permitted(claims, c, v, { key, amount: "300.00" });
+      const reversal: RequestOptions = { action: REVERSE, phase: "compensate", compensates: a, amount: "300.00" };
+      const charged = (label: string, state: "reserved" | "held") => {
+        expect(claims.reservationsFor(a).map((r) => r.state), label).toEqual([state, state]);
+        for (const counter of [SHARED, instanceCounter("msn_a")]) {
+          expect(claims.budgetCounter(counter), label).toMatchObject({
+            reserved: { amount: state === "reserved" ? "300.00" : "0.00" },
+            held: { amount: state === "held" ? "300.00" : "0.00" },
+            committed: { amount: "0.00" },
+          });
+        }
+      };
+      // Open: the retry and the reversal leave the reservation reserved.
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v)), "duplicate_suppressed");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      charged("open", "reserved");
+      // No evidence within the lease: held, never released.
+      c.set(c.now().getTime() + PAST_LEASE_MS);
+      claims.sweep();
+      charged("lease elapsed", "held");
+      expectDenied(await evaluate(request(c, { key, amount: "300.00" }), options(claims, c, v)), "duplicate_suppressed");
+      expectDenied(await evaluate(request(c, reversal), options(claims, c, v)), "constraint_unsupported");
+      charged("held", "held");
+      // The retry as a new operation under a new key is permitted, charged afresh, and completes.
+      const b = await permitted(claims, c, v, { amount: "300.00" });
+      expect(await claims.settle(REQUESTER, await executionRecord(b, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+      expect(claims.reservationsFor(b).map((r) => r.state)).toEqual(["committed", "committed"]);
+      // Its success voids nothing: the first attempt stays held beside it.
+      expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+      for (const counter of [SHARED, instanceCounter("msn_a")]) {
+        expect(claims.budgetCounter(counter)).toMatchObject({ reserved: { amount: "0.00" }, held: { amount: "300.00" }, committed: { amount: "300.00" } });
+      }
+      claims.close();
+      expect(claimRowOf(file, a)).toMatchObject({ state: "unresolved", execution_id: null, outcome: null });
+      expect(countsOf(file)).toEqual({ claims: 2, reservations: 4, counters: 2 });
+    });
+
     it("containing a Mission that holds an open reservation settles nothing: the contained request is refused authority_contained, no counter moves, and the permit's later completed settlement still commits (@spec metering#settlement-states, #816)", async () => {
       const c = clock();
       const { open } = domainOnFile(c);
@@ -2535,5 +2646,267 @@ describe("PDP exact budget reservations, slice 4 (@spec metering#settlement-cont
       claims.close();
       expect(countsOf(file)).toEqual({ claims: 1, reservations: 2, counters: 2 });
     });
+  });
+});
+
+describe("settlement binds the record's audience to the settled permit's boundary (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)", () => {
+  /**
+   * Boundaries other than the permit's (RESOURCE), each publishing its own
+   * Execution Evidence keys in one declaration: another port, the permit's
+   * identifier with its host in upper case, the identifier extended by a
+   * trailing slash, and the identifier truncated to its origin. A record
+   * bound to any of them verifies, and none is this permit's boundary.
+   */
+  const FOREIGN = ["http://localhost:4499/mcp", "http://LOCALHOST:4403/mcp", "http://localhost:4403/mcp/", "http://localhost:4403"];
+  const ROLES = ["executor", "pep"] as const;
+  const kidOf = (boundary: string, role: string) => `${boundary === RESOURCE ? "own" : `foreign-${FOREIGN.indexOf(boundary)}`}-${role}`;
+  const keyOf = new Map([[RESOURCE, executionKey], ...FOREIGN.map((b) => [b, generateKeyPairSync("ec", { namedCurve: "P-256" })] as const)]);
+  const declared: EnforcementBoundaries = {
+    versions: [
+      {
+        version: "1",
+        effective_at: "2026-01-01T00:00:00Z",
+        boundaries: [RESOURCE, ...FOREIGN].map((boundary, i) => ({
+          boundary,
+          pep_locations: [`pep-${i}`],
+          evidence_keys: ROLES.map((role) => ({ kid: kidOf(boundary, role), emitter: boundary, role })),
+        })),
+      },
+    ],
+  };
+  const resolver = buildBoundaryEvidenceKeyResolver(
+    declared,
+    [RESOURCE, ...FOREIGN].flatMap((boundary) =>
+      ROLES.map((role): BoundaryEvidenceKey => ({ kid: kidOf(boundary, role), publicKey: keyOf.get(boundary)?.publicKey as BoundaryEvidenceKey["publicKey"], emitterId: boundary, role })),
+    ),
+  );
+
+  /** An Execution Evidence Object validly signed for `boundary`: its emitter, its audience and the key it publishes for the record's role. */
+  async function recordFor(
+    boundary: string,
+    evaluationId: string,
+    outcome: "completed" | "failed" | "suppressed",
+    executionId?: string,
+  ): Promise<Record<string, unknown>> {
+    const record = await executionRecord(evaluationId, outcome, executionId, {
+      audience: boundary,
+      emitterId: boundary,
+      kid: kidOf(boundary, outcome === "completed" ? "executor" : "pep"),
+      signer: keyOf.get(boundary)?.privateKey,
+    });
+    expect(await verifyEvidenceEnvelope(record, EXECUTION_EVIDENCE_MEDIA_TYPE, resolver), boundary).toEqual({ valid: true });
+    return record;
+  }
+
+  /** Every row a settlement of `evaluationId` could write, and every counter, read on the domain's own connection. */
+  function settlementState(claims: IdempotencyClaimDomain, evaluationId: string): Record<string, unknown[]> {
+    const db = (claims as unknown as { db: Database }).db;
+    const rows = (sql: string) => db.prepare(sql).all(evaluationId);
+    return {
+      claim: rows("SELECT * FROM claims WHERE evaluation_id = ?"),
+      transitions: rows("SELECT * FROM claim_transitions WHERE evaluation_id = ? ORDER BY seq"),
+      conflicts: rows("SELECT * FROM settlement_conflicts WHERE evaluation_id = ? ORDER BY seq"),
+      reservations: rows("SELECT * FROM budget_reservations WHERE evaluation_id = ? ORDER BY counter_id"),
+      reservationTransitions: rows("SELECT * FROM budget_transitions WHERE evaluation_id = ? ORDER BY seq"),
+      counters: db.prepare("SELECT * FROM budget_counters ORDER BY counter_id").all(),
+    };
+  }
+
+  /** A claim domain on its own file over the declaration's key resolver, with every operator alert collected. */
+  function boundDomain(c: Clock) {
+    const alerts = { held: [] as HeldReservation[], released: [] as ReleasedReservation[], overspent: [] as BudgetOverspend[], conflicts: [] as SettlementConflict[] };
+    const { file, open } = domainOnFile(c, alerts, resolver);
+    return { file, open, alerts };
+  }
+
+  const MISMATCH = { accepted: false, reason: "audience_mismatch" };
+
+  it("on an unsettled claim, a completed record validly signed for another boundary, naming this permit's evaluation_id and delivered by its own PEP, is refused audience_mismatch at settlement and through the reconciler, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the record for the permit's own boundary commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)", async () => {
+    const c = clock();
+    const { open, alerts } = boundDomain(c);
+    const claims = open();
+    const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    const before = settlementState(claims, a);
+    for (const boundary of FOREIGN) {
+      const record = await recordFor(boundary, a, "completed");
+      expect(await claims.settle(REQUESTER, record), boundary).toEqual(MISMATCH);
+      expect(await claims.reconcile(REQUESTER, a, { kind: "execution_evidence", record }), boundary).toEqual(MISMATCH);
+      expect(settlementState(claims, a), boundary).toEqual(before);
+    }
+    expect(alerts).toEqual({ held: [], released: [], overspent: [], conflicts: [] });
+    // Control: the same record for the permit's own boundary settles the claim and commits both reservations.
+    expect(await claims.settle(REQUESTER, await recordFor(RESOURCE, a, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "300.00" } });
+    claims.close();
+  });
+
+  it("on an unsettled claim, a failed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's failed record holds both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)", async () => {
+    const c = clock();
+    const { open, alerts } = boundDomain(c);
+    const claims = open();
+    const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    let asked = 0;
+    let redeeming = "";
+    const redeemer = () => {
+      asked += 1;
+      return redeeming;
+    };
+    const before = settlementState(claims, a);
+    for (const boundary of FOREIGN) {
+      const record = await recordFor(boundary, a, "failed");
+      redeeming = String(record.execution_id);
+      expect(await claims.settle(REQUESTER, record, redeemer), boundary).toEqual(MISMATCH);
+      expect(settlementState(claims, a), boundary).toEqual(before);
+    }
+    expect(asked).toBe(0);
+    expect(alerts).toEqual({ held: [], released: [], overspent: [], conflicts: [] });
+    // Control: the permit's own boundary's failed record, named as the redeeming attempt, settles and holds.
+    const own = await recordFor(RESOURCE, a, "failed");
+    redeeming = String(own.execution_id);
+    expect(await claims.settle(REQUESTER, own, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: false });
+    expect(asked).toBe(1);
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+    expect(alerts.held).toHaveLength(1);
+    claims.close();
+  });
+
+  it("on an unsettled claim, a suppressed record validly signed for another boundary and named by the redemption owner as the redeeming attempt is refused audience_mismatch before the redemption owner is asked, leaving the claim, its transitions, the conflict table, both reservations and both counters unchanged with no alert, while the permit's own boundary's suppressed record releases both reservations (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, metering#settlement-states, #1841, D974)", async () => {
+    const c = clock();
+    const { open, alerts } = boundDomain(c);
+    const claims = open();
+    const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    let asked = 0;
+    let redeeming = "";
+    const redeemer = () => {
+      asked += 1;
+      return redeeming;
+    };
+    const before = settlementState(claims, a);
+    for (const boundary of FOREIGN) {
+      const record = await recordFor(boundary, a, "suppressed");
+      redeeming = String(record.execution_id);
+      expect(await claims.settle(REQUESTER, record, redeemer), boundary).toEqual(MISMATCH);
+      expect(settlementState(claims, a), boundary).toEqual(before);
+    }
+    expect(asked).toBe(0);
+    expect(alerts).toEqual({ held: [], released: [], overspent: [], conflicts: [] });
+    // Control: the permit's own boundary's suppressed record, named as the redeeming attempt, settles and releases.
+    const own = await recordFor(RESOURCE, a, "suppressed");
+    redeeming = String(own.execution_id);
+    expect(await claims.settle(REQUESTER, own, redeemer)).toEqual({ accepted: true, state: "failed", duplicate: false });
+    expect(asked).toBe(1);
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+    expect(claims.budgetCounter(SHARED)).toMatchObject({ reserved: { amount: "0.00" }, committed: { amount: "0.00" } });
+    claims.close();
+  });
+
+  it("after an applied failed settlement, a conflicting completed record, the applied attempt's suppressed record and a redelivery of the applied record's members, each validly signed for another boundary, are refused audience_mismatch: nothing is retained or alarmed, the held reservations stay held and the claim and both counters are unchanged, while the conflicting completed record for the permit's own boundary is retained, alarmed and commits (@spec runtime-evidence#execution-evidence-object, metering#settlement-contract, #1841, D974)", async () => {
+    const c = clock();
+    const { open, alerts } = boundDomain(c);
+    const claims = open();
+    const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    const applied = await recordFor(RESOURCE, a, "failed");
+    const appliedId = String(applied.execution_id);
+    expect(await claims.settle(REQUESTER, applied, () => appliedId)).toEqual({ accepted: true, state: "failed", duplicate: false });
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["held", "held"]);
+    const before = settlementState(claims, a);
+    const alerted = JSON.stringify(alerts);
+    for (const boundary of FOREIGN) {
+      // Another attempt's completed record: as a conflict it would be retained, alarmed and commit the held reservations.
+      expect(await claims.settle(REQUESTER, await recordFor(boundary, a, "completed")), boundary).toEqual(MISMATCH);
+      // The applied attempt with another outcome: as a conflict it would be retained and alarmed.
+      expect(await claims.settle(REQUESTER, await recordFor(boundary, a, "suppressed", appliedId), () => undefined), boundary).toEqual(MISMATCH);
+      // The applied record's attempt, outcome and error under another boundary: never acknowledged as the duplicate.
+      expect(await claims.settle(REQUESTER, await recordFor(boundary, a, "failed", appliedId)), boundary).toEqual(MISMATCH);
+      expect(settlementState(claims, a), boundary).toEqual(before);
+    }
+    expect(claims.settlementConflicts(a)).toEqual([]);
+    expect(JSON.stringify(alerts)).toBe(alerted);
+    // Control: the conflicting completed record for the permit's own boundary is retained, alarmed once and commits.
+    const own = await recordFor(RESOURCE, a, "completed");
+    expect(await claims.settle(REQUESTER, own)).toEqual({ accepted: false, reason: "already_settled" });
+    expect(claims.settlementConflicts(a).map((r) => r.execution_id)).toEqual([own.execution_id]);
+    expect(alerts.conflicts.map((r) => r.execution_id)).toEqual([own.execution_id]);
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+    claims.close();
+  });
+
+  it("after an incorrect operator release and the claim's reconciliation window, a completed record validly signed for another boundary is refused audience_mismatch and corrects nothing: the reservations stay released, the claim and both counters are unchanged and no overspend is reported, while the permit's own boundary's record commits the correction (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)", async () => {
+    const c = clock();
+    const { open, alerts } = boundDomain(c);
+    const claims = open();
+    const a = await incorrectlyReleased(claims, c);
+    // The released headroom is spent by another instance meanwhile, so a correction would overspend.
+    await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "800.00" });
+    c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+    claims.sweep();
+    const before = settlementState(claims, a);
+    const alerted = JSON.stringify(alerts);
+    for (const boundary of FOREIGN) {
+      expect(await claims.settle(REQUESTER, await recordFor(boundary, a, "completed")), boundary).toEqual(MISMATCH);
+      expect(settlementState(claims, a), boundary).toEqual(before);
+    }
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["released", "released"]);
+    expect(JSON.stringify(alerts)).toBe(alerted);
+    // Control: the permit's own boundary's record commits the released reservations and reports the overspend.
+    expect(await claims.settle(REQUESTER, await recordFor(RESOURCE, a, "completed"))).toEqual({
+      accepted: true,
+      state: "completed",
+      duplicate: false,
+      budget_corrected: true,
+    });
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+    expect(alerts.overspent.map((o) => o.evaluation_id)).toEqual([a]);
+    claims.close();
+  });
+
+  it("on a claim file from before the boundary column, an unsettled permit takes the boundary its stored Decision Evidence recorded and settles only on that boundary's record, a settled claim whose decision was tombstoned keeps none and refuses even its own boundary's conflicting record boundary_unretained, and a reservation whose claim row is gone is not corrected from a record, each refusal leaving the claim, the conflict table, the reservations and both counters unchanged (@spec runtime-evidence#execution-evidence-object, metering#settlement-states, #1841, D974)", async () => {
+    const c = clock();
+    const { file, open, alerts } = boundDomain(c);
+    let claims = open();
+    // b settles completed; its stored decision is tombstoned past the window below.
+    const b = await permitted(claims, c, view("msn_b", binding("msn_b")), { amount: "200.00" });
+    expect((await claims.settle(REQUESTER, await recordFor(RESOURCE, b, "completed"))).accepted).toBe(true);
+    // d is released by an operator after its lease; its claim row is removed from the file below.
+    const d = await incorrectlyReleased(claims, c, "msn_d", "100.00");
+    c.set(c.now().getTime() + PAST_WINDOW_MS + 1_000);
+    claims.sweep();
+    // a is issued just before the upgrade and never settled.
+    const a = await permitted(claims, c, view("msn_a", binding("msn_a")), { amount: "300.00" });
+    claims.close();
+    // The file as a build before the column left it: the previous schema version, no audience column, and d's claim row gone.
+    const raw = openDurableStore({ file, migrations: claimSchemaPlaceholders(), owner: CLAIM_OWNER });
+    try {
+      raw.exec("ALTER TABLE claims DROP COLUMN audience");
+      raw.prepare("DELETE FROM claims WHERE evaluation_id = ?").run(d);
+      raw.pragma(`user_version = ${CLAIM_SCHEMA_VERSION - 1}`);
+    } finally {
+      raw.close();
+    }
+    claims = open();
+    const db = (claims as unknown as { db: Database }).db;
+    expect(db.pragma("user_version", { simple: true })).toBe(CLAIM_SCHEMA_VERSION);
+    expect(db.prepare("SELECT evaluation_id, audience FROM claims ORDER BY claimed_at_ms").all()).toEqual([
+      { evaluation_id: b, audience: null },
+      { evaluation_id: a, audience: RESOURCE },
+    ]);
+    const before = { b: settlementState(claims, b), d: settlementState(claims, d) };
+    const alerted = JSON.stringify(alerts);
+    // b: no retained boundary, so not even its own boundary's conflicting completed record is retained, alarmed or applied.
+    expect(await claims.settle(REQUESTER, await recordFor(RESOURCE, b, "completed"))).toEqual({ accepted: false, reason: "boundary_unretained" });
+    // d: no claim row, so its released reservations are not corrected from a record.
+    expect(await claims.settle(REQUESTER, await recordFor(RESOURCE, d, "completed"))).toEqual({ accepted: false, reason: "unknown_evaluation" });
+    expect({ b: settlementState(claims, b), d: settlementState(claims, d) }).toEqual(before);
+    expect(claims.settlementConflicts(b)).toEqual([]);
+    expect(claims.reservationsFor(d).map((r) => r.state)).toEqual(["released", "released"]);
+    // a: the backfilled boundary is compared, and the permit's own boundary's record settles it.
+    const beforeA = settlementState(claims, a);
+    expect(await claims.settle(REQUESTER, await recordFor(FOREIGN[0] as string, a, "completed"))).toEqual(MISMATCH);
+    expect(settlementState(claims, a)).toEqual(beforeA);
+    expect(JSON.stringify(alerts)).toBe(alerted);
+    expect(await claims.settle(REQUESTER, await recordFor(RESOURCE, a, "completed"))).toEqual({ accepted: true, state: "completed", duplicate: false });
+    expect(claims.reservationsFor(a).map((r) => r.state)).toEqual(["committed", "committed"]);
+    claims.close();
   });
 });
