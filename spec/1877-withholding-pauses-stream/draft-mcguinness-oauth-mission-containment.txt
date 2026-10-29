@@ -402,8 +402,12 @@ Table of Contents
 
 6.  The Containment Overlay
 
-   A Mission participating in this profile carries a containment overlay
-   on its Mission record:
+   The Mission Issuer holds a containment overlay for each Mission
+   participating in this profile.  The overlay is issuer-held state
+   associated with the Mission, outside its Mission Record
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record"): an
+   issuer may store it with the record, and a signed or exchanged
+   Mission Record does not carry it.  The overlay has these members:
 
    containment_version:  REQUIRED.  An integer, 0 at the approval event,
       incremented by each contain transition, strictly monotonic per
@@ -1262,6 +1266,12 @@ Table of Contents
 23.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  The Containment Overlay (Section 6): the overlay is issuer-held
+      state associated with the Mission, outside its Mission Record; an
+      issuer may store it with the record, and a signed or exchanged
+      Mission Record does not carry it.  The overlay's members and every
+      rule on it are unchanged (#1879).
 
    *  Visibility (Section 13) and Propagation (Section 14): on a Signals
       stream, a contain event that narrows effective authority reaches

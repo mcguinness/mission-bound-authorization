@@ -7341,8 +7341,8 @@ reproduce the eligibility decision.<a href="#section-13.3-2.4.1" class="pilcrow"
 <a href="#section-14" class="section-number selfRef">14. </a><a href="#name-mission-record" class="section-name selfRef">Mission Record</a>
       </h2>
 <p id="section-14-1">A Mission is the durable record created at the approval event; a
-Mission Identifier (<a href="#mission-id" class="auto internal xref">Section 14.5</a>) identifies it. Its members are
-immutable after creation, except <code>state</code> and the <code>termination</code> member
+Mission Identifier (<a href="#mission-id" class="auto internal xref">Section 14.5</a>) identifies it. Its members <span class="bcp14">MUST NOT</span>
+be changed after creation, except <code>state</code> and the <code>termination</code> member
 written once when the Mission terminates (<a href="#termination" class="auto internal xref">Section 7.1</a>).<a href="#section-14-1" class="pilcrow">¶</a></p>
 <p id="section-14-2">The record is a logical object: this document constrains its members
 and their values and requires no storage form. Where a surface or
@@ -11822,6 +11822,13 @@ can return to <code>active</code> is not reported with a termination reason
 (Issuance Gating). Editorial, no requirement change: Instance Context
 in Delegated Tokens names the grant lineage a delegated exchange
 establishes when it issues a refresh token (#1871, D1005).<a href="#appendix-F-3.36.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.37">
+          <p id="appendix-F-3.37.1">Mission Record: its members <span class="bcp14">MUST NOT</span> be changed after creation,
+except <code>state</code> and the <code>termination</code> member written once, with no
+new requirement; a companion's containment overlay or suspension
+schedule is issuer-held state associated with the Mission, outside
+the record (#1873, #1879, D1014).<a href="#appendix-F-3.37.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-F-4">-01<a href="#appendix-F-4" class="pilcrow">¶</a></p>

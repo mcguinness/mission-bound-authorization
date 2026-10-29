@@ -1611,8 +1611,12 @@ scope, never the generic statement that a binding supports Missions.<a href="#se
       <h2 id="name-the-containment-overlay">
 <a href="#section-6" class="section-number selfRef">6. </a><a href="#name-the-containment-overlay" class="section-name selfRef">The Containment Overlay</a>
       </h2>
-<p id="section-6-1">A Mission participating in this profile carries a containment
-overlay on its Mission record:<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-1">The Mission Issuer holds a containment overlay for each Mission
+participating in this profile. The overlay is issuer-held state
+associated with the Mission, outside its Mission Record
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Mission Record"): an
+issuer may store it with the record, and a signed or exchanged
+Mission Record does not carry it. The overlay has these members:<a href="#section-6-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-6-2">
         <dt id="section-6-2.1">
 <code>containment_version</code>:</dt>
@@ -2752,59 +2756,66 @@ Karl McGuinness <a href="mailto:public@karlmcguinness.com">public@karlmcguinness
 <p id="section-23-1">[[ To be removed from the final specification ]]<a href="#section-23-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-23-2.1">
-          <p id="section-23-2.1.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>) and Propagation (<a href="#propagation" class="auto internal xref">Section 14</a>): on a
+          <p id="section-23-2.1.1">The Containment Overlay (<a href="#overlay" class="auto internal xref">Section 6</a>): the overlay is issuer-held
+state associated with the Mission, outside its Mission Record; an
+issuer may store it with the record, and a signed or exchanged
+Mission Record does not carry it. The overlay's members and every
+rule on it are unchanged (#1879).<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-23-2.2">
+          <p id="section-23-2.2.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>) and Propagation (<a href="#propagation" class="auto internal xref">Section 14</a>): on a
 Signals stream, a contain event that narrows effective authority
 reaches only a consumer that declared <code>authority_changed</code>; an
 undeclared consumer learns of the containment through its next
-version gap or the staleness rule, not by push (#1001).<a href="#section-23-2.1.1" class="pilcrow">¶</a></p>
+version gap or the staleness rule, not by push (#1001).<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-23-2.2">
-          <p id="section-23-2.2.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): Signals pauses the stream of a consumer
+        <li class="normal" id="section-23-2.3">
+          <p id="section-23-2.3.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): Signals pauses the stream of a consumer
 that has not declared <code>authority_changed</code> when it withholds a contain
 event, so that consumer's staleness rule sends it to Mission Status
 within <code>mission_max_stale_seconds</code>, or the stream's heartbeat
 interval if longer, of its last verification or heartbeat event
-(#1877).<a href="#section-23-2.2.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-23-2.3">
-          <p id="section-23-2.3.1">Protected Events names a change an authority source reports, under
-a declared continuing authority dependency, as a representative
-event class; the mapping stays deployment-defined (#830).<a href="#section-23-2.3.1" class="pilcrow">¶</a></p>
+(#1877).<a href="#section-23-2.3.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.4">
-          <p id="section-23-2.4.1">The authority_contained Denial Reason (<a href="#denial-reason" class="auto internal xref">Section 12</a>) now holds
+          <p id="section-23-2.4.1">Protected Events names a change an authority source reports, under
+a declared continuing authority dependency, as a representative
+event class; the mapping stays deployment-defined (#830).<a href="#section-23-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-23-2.5">
+          <p id="section-23-2.5.1">The authority_contained Denial Reason (<a href="#denial-reason" class="auto internal xref">Section 12</a>) now holds
 the causal-attribution rule that the Mission Issuance Grant profile
 stated: a token endpoint's refusal carries <code>authority_contained</code>
 only where Containment causally removed the requested authority,
 and a refusal from any other cause must not carry it merely because
-Containment is composed.<a href="#section-23-2.4.1" class="pilcrow">¶</a></p>
+Containment is composed.<a href="#section-23-2.5.1" class="pilcrow">¶</a></p>
 </li>
-        <li class="normal" id="section-23-2.5">
-          <p id="section-23-2.5.1">Selector Matching (<a href="#selector-matching" class="auto internal xref">Section 6.1</a>): a contained-capability
+        <li class="normal" id="section-23-2.6">
+          <p id="section-23-2.6.1">Selector Matching (<a href="#selector-matching" class="auto internal xref">Section 6.1</a>): a contained-capability
 entry is a selector with <code>resource_match</code>, <code>exact</code> by default and
 <code>prefix</code> by declaration. It applies to every approved entry whose
 resource set overlaps it, removals from several selectors form a
 union, and a selector finer than an approved entry removes its
 actions from the whole entry, a conservative over-containment
-(#1463).<a href="#section-23-2.5.1" class="pilcrow">¶</a></p>
-</li>
-        <li class="normal" id="section-23-2.6">
-          <p id="section-23-2.6.1">The Contain Transition (<a href="#contain-transition" class="auto internal xref">Section 7</a>): a contain
-transition is refused for a <code>terminated</code> Mission, whatever its
-termination reason (#705).<a href="#section-23-2.6.1" class="pilcrow">¶</a></p>
+(#1463).<a href="#section-23-2.6.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.7">
-          <p id="section-23-2.7.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
-contained capability at action grain, keeping an entry's uncontained
-remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.7.1" class="pilcrow">¶</a></p>
+          <p id="section-23-2.7.1">The Contain Transition (<a href="#contain-transition" class="auto internal xref">Section 7</a>): a contain
+transition is refused for a <code>terminated</code> Mission, whatever its
+termination reason (#705).<a href="#section-23-2.7.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-23-2.8">
-          <p id="section-23-2.8.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
+          <p id="section-23-2.8.1">Visibility (<a href="#visibility" class="auto internal xref">Section 13</a>): current-authority surfaces omit
+contained capability at action grain, keeping an entry's uncontained
+remainder; an annotation no longer substitutes for exclusion.<a href="#section-23-2.8.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-23-2.9">
+          <p id="section-23-2.9.1">Restoration Through Expansion (<a href="#restoration" class="auto internal xref">Section 15</a>): containing
 capability places a restriction on the Mission's expansion chain,
 retained across later successors and surfaced in any later
 expansion consent whose authority overlaps it, until a fresh human
 approval explicitly restores that authority with its cause
-disclosed. A successor's overlay still starts empty.<a href="#section-23-2.8.1" class="pilcrow">¶</a></p>
+disclosed. A successor's overlay still starts empty.<a href="#section-23-2.9.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 </section>
