@@ -714,8 +714,9 @@ Mission. For a stream whose consumer has not declared
 its cached effective authority reflects every narrowing. The Mission
 Issuer pauses such a stream when it withholds a narrowing
 ({{discharge-compatibility}}), so the staleness fallback below ends
-the consumer's reliance within `mission_max_stale_seconds` of its last
-verification or heartbeat event.
+the consumer's reliance within the longer of
+`mission_max_stale_seconds` and the stream's heartbeat interval after
+its last verification or heartbeat event.
 
 The staleness fallback applies to a stream that is not verified live.
 A consumer MUST treat cached Mission state as stale once the stream
@@ -778,9 +779,10 @@ further on the stream ({{OIDC-SSF}}, Section 8.1.5), and it holds the
 stream's later events, each with its own `version`. A paused stream
 transmits no event ({{OIDC-SSF}}, Section 8.1.2.1), so it carries no
 verification or heartbeat event. The Mission Issuer MUST NOT re-enable
-the stream until more than `mission_max_stale_seconds` have passed
-since the last verification or heartbeat event it delivered on that
-stream. On re-enabling, it sends the Stream Updated event with
+the stream until more than the longer of `mission_max_stale_seconds`
+and the stream's heartbeat interval has passed since the last
+verification or heartbeat event it delivered on that stream. On
+re-enabling, it sends the Stream Updated event with
 `status` `enabled` ({{OIDC-SSF}}, Section 8.1.5), then the held
 events. A Mission Issuer that serves a stream whose consumer has not
 declared `authority_changed`, in a deployment that produces events
@@ -790,10 +792,12 @@ carrying `authority_changed` true, MUST advertise
 
 The pause bounds the withheld consumer's reliance through rules it
 already applies. Its last verification or heartbeat event precedes the
-pause, so the staleness rule of {{consumer-behavior}} makes its cached
-Mission state stale within `mission_max_stale_seconds` of that event,
-before the stream re-enables, and the consumer re-establishes state
-through the Mission Status operation, which reports the narrowing.
+pause. The stream stops being verified live once its heartbeat
+interval has passed, so the staleness rule of {{consumer-behavior}}
+makes its cached Mission state stale within the longer of
+`mission_max_stale_seconds` and that interval after the event, before
+the stream re-enables, and the consumer re-establishes state through
+the Mission Status operation, which reports the narrowing.
 Liveness resumes only with the first verification or heartbeat event
 after re-enabling; a Stream Updated event is not one.
 
@@ -1042,9 +1046,10 @@ IETF; Reference this document, {{as-metadata}}.
 - Authority Change Compatibility ({{discharge-compatibility}}): a
   withholding pauses the stream through Shared Signals Framework
   stream status. The Mission Issuer re-enables it only after more than
-  `mission_max_stale_seconds` without a verification or heartbeat
-  event, and advertises that bound, so the staleness rule ends an
-  undeclared consumer's reliance within it (#1877).
+  the longer of `mission_max_stale_seconds` and the heartbeat interval
+  without a verification or heartbeat event, and advertises
+  `mission_max_stale_seconds`, so the staleness rule ends an
+  undeclared consumer's reliance within that bound (#1877).
 
 # Acknowledgments
 {:numbered="false"}
