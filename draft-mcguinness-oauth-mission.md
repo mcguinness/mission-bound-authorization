@@ -521,7 +521,7 @@ carry under that entry's type ({{rs-requirements}}).
 The following index names every section an implementer of each
 operation needs, by phase, including delegation, which the starting
 path excludes; the cited sections govern. Each issuing operation
-names the issuance checks ({{issuance-checks}}) and the sections they
+names the issuance procedure ({{issuance-gating}}) and the sections they
 cite for it.
 
 Mission creation (client, AS):
@@ -544,7 +544,7 @@ Mission creation (client, AS):
     {{record-identity-members}}, {{record-content-members}},
     {{record-principal-members}}, {{record-provenance-members}},
     {{mission-id}}, {{integrity-anchors}}, {{canonicalization}};
-  - code redemption: {{issuance-checks}}, with
+  - code redemption: {{issuance-gating}}, with
     {{mission-response-parameters}}, {{issuance-gating}},
     {{token-claims}}, {{token-response}}, {{refresh-tokens}},
     {{token-authentication-lifetime}}, {{scope-projection}},
@@ -558,7 +558,7 @@ Refresh (client, AS):
 
   - request and grant: {{refresh-tokens}}, {{authority-proposal}},
     {{grant-binding-resolution}}, {{grant-binding-state}};
-  - issuance: {{issuance-checks}}, with {{subset}},
+  - issuance: {{issuance-gating}}, with {{subset}},
     {{transformation-capabilities}}, {{lifecycle}}, {{termination}},
     {{revocation}}, {{mission-response-parameters}},
     {{issuance-gating}}, {{token-claims}}, {{token-response}},
@@ -580,7 +580,7 @@ Designation and delegated exchange (delegating party, delegate, AS):
     {{grant-binding-state}}, {{rs-mission-unaware}},
     {{delegated-instance-context}}, {{delegation-constraints}},
     {{worked-example-delegated-token}}, {{client-id-rebinding}};
-  - issuance, for both: {{issuance-checks}}, with {{subset}},
+  - issuance, for both: {{issuance-gating}}, with {{subset}},
     {{transformation-capabilities}}, {{lifecycle}},
     {{mission-response-parameters}}, {{issuance-gating}},
     {{token-claims}}, {{token-response}},
@@ -1969,8 +1969,8 @@ method) or, equivalently, issue a DPoP-bound authorization code
 ({{RFC9449}}). Redemption is then verified as
 {{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
 This prevents authorization-code injection from yielding the Mission
-grant. Issuance at the code's redemption applies the checks of
-{{issuance-checks}} as that list states for code redemption.
+grant. Issuance at the code's redemption applies the issuance procedure of
+{{issuance-gating}} as it states for code redemption.
 
 The AS SHOULD include the `iss` authorization-response parameter
 ({{RFC9207}}) on the authorization response, so the client can detect
@@ -2524,78 +2524,7 @@ A deployment whose AS can issue neither deploys a Mission Authority
 Server ({{I-D.draft-mcguinness-mission-authority-server}}), which
 governs ordinary tokens at the enforcement layer.
 
-{{issuance-checks}} lists the checks an issuance applies on each path.
-The next four subsections follow one issuance: resolving the Mission
-from the presented grant ({{grant-binding}}), gating the issuance
-({{issuance-gating}}), and the token ({{token-claims}}) and its
-response ({{token-response}}).
-
-## Issuance Checks {#issuance-checks}
-
-This document defines five issuance paths: code redemption, the token
-response that redeems a newly created Mission's authorization code
-({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
-designation ({{designation}}); a delegated exchange
-({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
-Each is a derivation ({{issuance-gating}}); companion profiles define
-further derivations. Each item below names a check, the sections that
-state it, and the paths it applies to, with any difference by path. A
-path's own section states its further rules, and {{error-mapping}}
-gives the error codes.
-
-1. Mission resolution ({{grant-binding-resolution}}): every path, from
-   the presented grant: the code, the refresh token, or the
-   `subject_token`, which on a delegated exchange is the designation.
-2. Client and sender binding: every path, as its own section states
-   for the code ({{approval-code-protection}}), the refresh token
-   ({{refresh-tokens}}), the token a designation request presents
-   ({{designation}}), the delegate ({{delegated-exchange}}), and the
-   self-exchanging agent ({{self-exchange}}).
-3. Mission state ({{issuance-gating}}, {{lifecycle}}): every path; a
-   delegated exchange evaluates each redemption afresh
-   ({{delegated-exchange}}).
-4. Mission-governed resources ({{authority-proposal}}): every path; a
-   refresh, a self-exchange, or a designation request needs no
-   `mission_intent`.
-5. Subset ({{subset}}): every path, against the Mission Authority Set,
-   and also against the presented refresh grant on a refresh
-   ({{refresh-tokens}}), the presented token on a designation or a
-   self-exchange, and the designation on a delegated exchange; on
-   those two delegation exchanges, only as {{delegation-constraints}}
-   permits.
-6. Declared transformation capabilities
-   ({{transformation-capabilities}}): every path that narrows an entry,
-   issues it to another audience, delegates it, as a delegated
-   exchange does, or projects it to `scope`.
-7. Audience ({{token-response}}): every path, by each entry's original
-   approved audience ({{transformation-capabilities}}); for a
-   designation, the resource audiences of its entries, not the client
-   its `aud` names, with designated-client separation
-   ({{designation}}); for a delegated token, also an audience that
-   processes the `act` chain ({{delegated-exchange}}).
-8. Scope projection ({{scope-projection}}): every path that emits
-   `scope`, whose request names a `scope` value, or whose target
-   consumes only `scope`; on a refresh, with that section's protection
-   of the refresh token.
-9. Token claims ({{token-claims}}, {{mission-claim}},
-   {{mission-claim-reservation}}): every path; the three exchanges keep
-   the presented token's `mission` claim. A designation's `aud` names
-   the designated client, it carries `may_act` and no `cnf` or `act`
-   ({{designation}}), and it creates no key-publication duty by
-   itself; a delegated token adds the `act` chain and the delegate's
-   own key ({{delegated-exchange}}); a self-exchange adds no `act`
-   chain.
-10. Lifetime and authentication claims
-    ({{token-authentication-lifetime}}): every path, kept short as
-    {{issuance-gating}} recommends; a designation also has its own
-    expiry ({{designation}}), which does not bound a delegated token
-    issued from it.
-11. Response members ({{token-response}},
-    {{mission-response-parameters}}): every path echoes the granted
-    `authorization_details`; {{mission-response-parameters}} requires
-    `mission_id` and `mission_expires_at` on code redemption and
-    delegated-exchange responses and recommends them on refresh,
-    designation, and self-exchange responses.
+{{issuance-gating}} states the issuance procedure for every path.
 
 ## Binding the Mission to the Grant {#grant-binding}
 
@@ -2813,16 +2742,55 @@ handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A
 companion profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
-A derivation passes these checks, each stated where cited:
+This document defines five issuance paths: code redemption, the token
+response that redeems a newly created Mission's authorization code
+({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
+designation ({{designation}}); a delegated exchange
+({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
+Companion profiles define further derivations. A derivation passes
+every check below, each stated where cited, with any difference by
+path; a path's own section states its further rules. The numbering is
+presentation order: it imposes no execution order and no error
+precedence ({{error-mapping}}, which gives the error codes). Sequencing
+that a rule requires still applies: the revocation refusal below
+applies at the AS's final decision to release the result, and a
+companion profile that sequences a check within a path keeps that
+sequence.
 
-1. the Mission resolves from the presented grant
-   ({{grant-binding-resolution}});
-2. the Mission is `active` ({{lifecycle}}, and below);
-3. each emitted entry is a subset of a Mission Authority Set entry
-   ({{subset}});
-4. any emitted `scope` meets {{scope-projection}}; and
-5. each token's `exp` does not exceed the Mission's `expires_at`
-   ({{token-authentication-lifetime}}).
+1. Mission resolution from the presented grant
+   ({{grant-binding-resolution}}): the code, the refresh token, or the
+   `subject_token`, which on a delegated exchange is the designation.
+2. Client and sender binding, as the path's section states for the
+   code, the refresh token, the token a designation request presents,
+   the delegate, and the self-exchanging agent.
+3. Mission state: the Mission is `active` (below, {{lifecycle}}); a
+   delegated exchange evaluates each redemption afresh
+   ({{delegated-exchange}}).
+4. Mission-governed resources ({{authority-proposal}}); a refresh, a
+   self-exchange, or a designation request needs no `mission_intent`.
+5. Subset ({{subset}}): against the Mission Authority Set, and also
+   against the presented refresh grant on a refresh, the presented
+   token on a designation or a self-exchange, and the designation on a
+   delegated exchange; on those two delegation exchanges, only as
+   {{delegation-constraints}} permits. An entry is narrowed, issued to
+   another audience, delegated, or projected only under a declared
+   capability ({{transformation-capabilities}}).
+6. Audience ({{token-claims}}, {{token-response}}): by each entry's
+   original approved audience; for a designation, the resource
+   audiences of its entries, not the client its `aud` names; for a
+   delegated token, also an audience that processes the `act` chain
+   ({{rs-mission-unaware}}).
+7. Scope projection ({{scope-projection}}), wherever `scope` is
+   emitted, requested, or the only form the target consumes.
+8. Claims and lifetime ({{token-claims}}, {{mission-claim}},
+   {{mission-claim-reservation}}, {{token-authentication-lifetime}}):
+   each token's `exp` does not exceed the Mission's `expires_at`; the
+   three exchanges keep the presented token's `mission` claim, with
+   the differences {{designation}} and {{delegated-exchange}} state.
+9. Response members ({{token-response}},
+   {{mission-response-parameters}}).
+10. Release: the revocation refusal below applies at the AS's final
+    decision to release the result.
 
 Unless the referenced Mission is `active`, the AS MUST refuse a
 request to derive a token at the token endpoint: a Token Exchange
@@ -3080,8 +3048,8 @@ intact:
 
 ## Refresh Tokens {#refresh-tokens}
 
-Issuance on a refresh applies the checks of {{issuance-checks}} as
-that list states for a refresh. {{authority-proposal}} states a
+Issuance on a refresh applies the issuance procedure of
+{{issuance-gating}} as it states for a refresh. {{authority-proposal}} states a
 refresh's exemption from `mission_intent` and, for a Mission-governed
 resource, the refusal's precedence and its timing relative to consuming
 or rotating the refresh token.
@@ -4109,8 +4077,8 @@ the Mission's approved agent for a token that carries no `act` claim,
 and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
-Issuing a designation applies the checks of {{issuance-checks}} as
-that list states for a designation. {{authority-proposal}} states a
+Issuing a designation applies the issuance procedure of
+{{issuance-gating}} as it states for a designation. {{authority-proposal}} states a
 designation request's exemption from `mission_intent` and the checks
 that still apply to it.
 
@@ -4150,8 +4118,8 @@ introspection ({{composite-active}}).
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
-obtained for it ({{designation}}). Issuance applies the checks of
-{{issuance-checks}} as that list states for a delegated exchange. The
+obtained for it ({{designation}}). Issuance applies the issuance procedure of
+{{issuance-gating}} as it states for a delegated exchange. The
 AS issues the delegated token subject to all of the following:
 
 - **The exchange is explicit.** The `subject_token` is a designation
@@ -4323,8 +4291,8 @@ the agent's own authority downward. A designation ({{designation}})
 names a delegate, so it is not a self-exchange, and these rules do not
 apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
-even when it carries no `actor_token`. Issuance applies the checks of
-{{issuance-checks}} as that list states for a self-exchange.
+even when it carries no `actor_token`. Issuance applies the issuance procedure of
+{{issuance-gating}} as it states for a self-exchange.
 {{authority-proposal}} states a self-exchange request's exemption from
 `mission_intent` and the checks that still apply to it. A no-actor
 exchange is subject to the following:
@@ -4337,8 +4305,6 @@ exchange is subject to the following:
 2. The result MUST be a subset ({{subset}}) of the presented token's
    authority; it carries the same `mission` claim ({{mission-claim}})
    and adds no `act` chain.
-3. The exchange is a derivation, gated on the Mission being `active`
-   ({{issuance-gating}}).
 
 ## Delegation Constraints {#delegation-constraints}
 
@@ -7698,6 +7664,13 @@ resolve before interoperating.
   new requirement; a companion's containment overlay or suspension
   schedule is issuer-held state associated with the Mission, outside
   the record (#1873, #1879, D1014).
+- Editorial, no requirement change: Issuance Gating opens with the
+  issuance procedure, the numbered checks every issuance path passes,
+  in presentation order with no execution order or error precedence;
+  the release-time revocation refusal and any sequencing a companion
+  profile defines are unchanged. The Issuance Checks index is removed:
+  the procedure and the sections it cites state its paths and per-path
+  details (#1892, D1026).
 
 -01
 
