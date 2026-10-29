@@ -1865,9 +1865,10 @@ The subject-representation discipline is the same in every source:
   MUST be an authorization subject the AS recognizes as a resource
   owner in its own right (the `sub` model of {{RFC9068}}), not only
   the task's beneficiary.
-- The actor model does not vary by source: `client_id` names the
-  Agent, and delegates are carried in the `act` chain
-  ({{delegation}}).
+- The actor model does not vary by source: the Mission Record's
+  `client_id` names the Agent, a token's `client_id` names the client
+  that requested it ({{token-claims}}), and delegates are carried in
+  the `act` chain ({{delegation}}).
 
 ### Approver Authentication Strength {#approval-authentication}
 
@@ -6876,6 +6877,11 @@ resolve before interoperating.
   new requirement; a companion's containment overlay or suspension
   schedule is issuer-held state associated with the Mission, outside
   the record (#1873, #1879, D1014).
+- Editorial correction, no requirement change: Authority Sources says
+  the Mission Record's `client_id` names the Agent and a token's
+  `client_id` names the client that requested it, as Token Claims
+  states, so it no longer reads as saying a delegated token's
+  `client_id` names the Agent (#1851, D971).
 - Editorial, no requirement change: Issuance Gating opens with the
   issuance procedure, the numbered checks every issuance path passes,
   in presentation order with no execution order or error precedence;
