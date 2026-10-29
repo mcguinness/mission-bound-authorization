@@ -9981,6 +9981,42 @@
    ]
   },
   {
+   "id": "core.mission-record.members-immutable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "Its members are immutable after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after creation, a derivation and the lifecycle transitions leave every member of the stored Mission Record but `state` and `termination` unchanged, and `termination` is written once, at the terminating transition"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "Mission Record immutability (@spec mission#mission-record) > every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approved context commitment (@spec mission-substrate#approved-context) > all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Keyword-free until #1879 settles whether a companion (Containment's overlay, Status's schedule) may change a Mission after creation; the witness excludes those two companion fields and the implementation's own fields. Mutation-proved: a suspend that rewrites `expires_at` fails the first witness while the Approved Context witnesses still pass."
+  },
+  {
    "id": "core.mission-record.authority-source-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
