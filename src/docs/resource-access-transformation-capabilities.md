@@ -12,7 +12,7 @@ profile either:
 that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
 relates to the reference's domain.
 
-Every statement here is true of the reference implementation at `0d0eaf3e`
+Every statement here is true of the reference implementation at `272263fe`
 (paths relative to `src/`). Each rule names the code that applies or refuses
 it and the test (`it` title, in the named file) or case
 (`vectors/mission-resource-access/`) that witnesses it. Test files are under
@@ -59,19 +59,38 @@ initial Common Constraints with `vendors` and `terminal_when`, and the
 to start on a declaration naming a missing, malformed or mismatched
 document, or one listing a key this implementation does not implement.
 
-These narrowing sites apply the declaration (`isSubsetEntryUnder` and
-`carriedUnder`, `packages/mission-core/src/narrowing-declaration.ts`):
-approval-time derivation, the Token Exchange, refresh and code-exchange
-narrowing, dispatch handoff, transaction authorization, and the delegated
-exchanges. Within the domain the reference narrows as §2 describes; an entry
-outside it is carried only as approved, a subset established only by
-equality. The cross-domain paths do not consult it yet: projection to a
-Resource AS (`kernel/cross-domain.ts`), the continuation ID-JAG's grant
-authority (`adapters/continuation-grant.ts`) and cross-org inbound narrowing
-(`adapters/cross-org-grant.ts`). In the shipped configuration every entry
-they see is within the domain. `qualified-narrowing-endpoint.test.ts` witnesses both, with
-`narrowing` undeclared and with an `exact`-only domain, and that the block
-above equals the metadata entry's value.
+The declaration governs every path that issues an entry of the type
+(`narrowingPermits`, `isSubsetEntryUnder` and `carriedUnder`,
+`packages/mission-core/src/narrowing-declaration.ts`):
+
+- explicitly requested `authorization_details`: approval-time derivation, the
+  Token Exchange, refresh and code-exchange narrowing, dispatch handoff,
+  deferred approval and transaction authorization apply the subset relation
+  under it, equality where narrowing is not permitted for the pair;
+- automatic projection: the effective set itself (`effectiveEntriesWithOrigin`,
+  `services/authorization-server/src/kernel/kernel.ts`) contains an entry whole
+  where containment would remove some of its actions and the declaration does
+  not permit narrowing it, as a selector finer than its entry already
+  over-contains (D606). Every refresh, code, device, child, dispatch,
+  deferred, successor and continuation mint that projects or copies the
+  effective set therefore issues no modified entry, and a Mission left with
+  none is refused (`authority_contained`; `invalid_grant` at refresh);
+- the delegated exchanges carry a projected entry only where narrowing is
+  permitted for it or it equals the presented one;
+- cross-domain issuance: audience projection to a Resource AS counts as
+  narrowing, so a grant conveys an entry only where the declaration permits
+  narrowing it (`signAdmittedGrant`, `kernel/cross-domain.ts`, and the
+  continuation pre-check), and a grant left with none is refused
+  `invalid_target`.
+
+Cross-org inbound narrowing (`narrowToCeiling`, `adapters/cross-org-grant.ts`)
+keeps or drops each one-action entry whole and modifies none. Within the domain
+the reference narrows as §2 describes.
+`qualified-narrowing-endpoint.test.ts`,
+`qualified-narrowing-cross-domain.test.ts` and the delegation-without-narrowing
+cases of `delegation-exchange.test.ts` witness each path with `narrowing`
+undeclared and with an `exact`-only domain, and that the block above equals
+the metadata entry's value.
 
 Why `narrowing` is qualified: `true` claims the subset rule "over every
 member this document specifies". The reference implements none of the

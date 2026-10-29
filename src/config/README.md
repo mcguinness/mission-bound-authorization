@@ -441,8 +441,8 @@ bytes never change for its `id`; a changed domain is a new file with a new
 
 The loader refuses to start on a declaration naming a missing, malformed or
 mismatched document, or a domain listing a `constraints` key or member the AS
-does not implement. Derivation, the Token Exchange, refresh and code-exchange
-narrowing, dispatch handoff, transaction authorization and the delegated
-exchanges apply the resolved declaration: an entry outside the domain is
-carried only as approved. The cross-domain paths do not consult it yet
-(`src/docs/resource-access-transformation-capabilities.md`, section 1).
+does not implement. Every path that issues an entry of the type applies the
+resolved declaration (`src/docs/resource-access-transformation-capabilities.md`,
+section 1): an entry outside the domain is carried only as approved,
+containment that would remove some of its actions contains it whole, and it is
+never projected to a Resource AS.
