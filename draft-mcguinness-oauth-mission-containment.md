@@ -766,11 +766,17 @@ authorization-bearing field. Containment history stays in the records
 this profile retains, for audit and restoration disclosure
 ({{restoration}}).
 
-A consumer that does not understand `containment_version` ignores it;
-the state version already makes the change observable
-({{contain-transition}}). A consumer that reads it holds a precise
-question: whether the authority view it materialized predates the
-current overlay.
+A consumer that does not understand `containment_version` ignores
+it. On Mission Status and introspection, the state version makes the
+change observable ({{contain-transition}}). On a Signals stream, a
+contain event that narrows effective authority carries
+`authority_changed` true and reaches only a consumer that declared
+that capability. An undeclared consumer gets no push: it learns of
+the containment through its next version gap or, on a stream not
+verified live, the staleness rule
+({{I-D.draft-mcguinness-oauth-mission-signals}}). A consumer that
+reads `containment_version` holds a precise question: whether the
+authority view it materialized predates the current overlay.
 
 # Propagation {#propagation}
 
