@@ -959,8 +959,8 @@ the author-controlled `schemas.karlmcguinness.com` namespace:
   `state` is `terminated`), `suspend_until` with `on_expiry` (present
   only on a transition to `suspended` under a deadline), and
   `authority_changed` (required true on any event whose commit
-  narrows effective authority without changing `state`, the discharge
-  commit being the current case, delivery subject to the gate of
+  narrows effective authority without changing `state`, for example a
+  discharge or containment commit, delivery subject to the gate of
   {{discharge-compatibility}}; optional and defaulting to false
   otherwise). Optional event-body claims: `tenant` and `reason`. See
   {{lifecycle-event}} for the schema.
