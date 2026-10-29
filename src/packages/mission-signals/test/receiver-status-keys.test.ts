@@ -98,9 +98,19 @@ const historicalSet = (signer: StatusKey, listed: Record<string, unknown>[]) =>
     .setIssuedAt(Math.floor(t / 1000))
     .sign(signer.key);
 
+/** What the issuer serves; `requests` records every URL fetched. */
+interface IssuerState {
+  published: JWK[];
+  historical?: string;
+  requests: string[];
+}
+
+const fetched = (state: IssuerState, url: string) => state.requests.filter((u) => u === url).length;
+
 /** The issuer's jwks_uri and historical key set, each fresh for five minutes. */
-function issuer(state: { published: JWK[]; historical?: string }) {
+function issuer(state: IssuerState) {
   return async (url: string) => {
+    state.requests.push(url);
     if (url === JWKS) {
       return new Response(JSON.stringify({ keys: state.published }), {
         headers: { "cache-control": "max-age=300" },
@@ -116,10 +126,7 @@ function issuer(state: { published: JWK[]; historical?: string }) {
 }
 
 /** The issuer as the consumer configures it, from its metadata, on the shared clock. */
-const configure = (
-  state: { published: JWK[]; historical?: string },
-  advertised: Record<string, unknown> = {},
-) =>
+const configure = (state: IssuerState, advertised: Record<string, unknown> = {}) =>
   missionStatusIssuer(ISS, {
     read: async () => metadata(advertised),
     kids: KIDS,
@@ -201,9 +208,10 @@ describe("the Signals receiver's Status keys (@spec status#signing-key-retention
     const compromised = first;
     const current = second;
     // The AS has withdrawn as-status as compromised; this consumer's jwks_uri response still carries it.
-    const state = {
+    const state: IssuerState = {
       published: [current.jwk, compromised.jwk],
       historical: await historicalSet(current, [revoked(compromised.jwk)]),
+      requests: [],
     };
     const configured = await configure(state, { mission_historical_jwks_uri: HISTORICAL });
     const r = await held(configured.keys);
@@ -214,6 +222,9 @@ describe("the Signals receiver's Status keys (@spec status#signing-key-retention
         reason: "unverified",
       });
       expect(r.recovering("msn_a")).toBe(true);
+      // That first verification read both the jwks_uri, which carries the key, and the historical set.
+      expect(fetched(state, JWKS)).toBeGreaterThan(0);
+      expect(fetched(state, HISTORICAL)).toBeGreaterThan(0);
       // The current key releases it.
       expect(await resync(r, current, "msn_a")).toMatchObject({
         status: "resynchronized",
@@ -242,26 +253,34 @@ describe("the Signals receiver's Status keys (@spec status#signing-key-retention
     }
   });
 
-  it("follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes at once, and a withdrawn one stops once the cached set's lifetime ends", async () => {
+  it("follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes before the cached set's lifetime ends, and a withdrawn one stops once it ends, when the set is fetched again", async () => {
     t = Date.now();
     const old = first;
     const next = second;
-    const state: { published: JWK[] } = { published: [old.jwk] };
+    const state: IssuerState = { published: [old.jwk], requests: [] };
     const configured = await configure(state);
     const r = await held(configured.keys);
     try {
       expect(await resync(r, old, "msn_a")).toMatchObject({ status: "resynchronized" });
-      // The AS publishes the next generation, which the configuration already trusts: it verifies at once.
+      // The AS publishes the next generation, which the configuration already trusts. Its unknown kid
+      // refetches the set (at most once per the resolver's 30 s refresh interval), so it verifies
+      // before the cached set's lifetime ends.
       state.published = [old.jwk, next.jwk];
       t += 1_000;
+      const beforeRotation = fetched(state, JWKS);
       expect(await resync(r, next, "msn_b")).toMatchObject({ status: "resynchronized" });
+      expect(fetched(state, JWKS)).toBe(beforeRotation + 1);
       // The AS withdraws the old generation. Within the cached set's lifetime the old key still verifies...
       state.published = [next.jwk];
       t += 1_000;
       expect(await resync(r, old, "msn_c")).toMatchObject({ status: "resynchronized" });
-      // ...and once that lifetime (300 s) ends, the set is revalidated and the old key no longer verifies.
+      expect(fetched(state, JWKS)).toBe(beforeRotation + 1);
+      // ...without a fetch, and once that lifetime (300 s) ends, the set is fetched again and the old key no
+      // longer verifies.
+      const withinLifetime = fetched(state, JWKS);
       t += 300_000;
       expect(await resync(r, old, "msn_d")).toEqual({ status: "refused", reason: "unverified" });
+      expect(fetched(state, JWKS)).toBeGreaterThan(withinLifetime);
       expect(r.recovering("msn_d")).toBe(true);
       expect(await resync(r, next, "msn_d")).toMatchObject({ status: "resynchronized" });
     } finally {
