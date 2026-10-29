@@ -1358,9 +1358,7 @@ The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
 that commitment MUST cover the normalized provenance facts, at least
 as a digest of their canonical `submission_evidence` representation
-({{mission-record}}). For example, the consent-evidence companion
-binds them with a `submission_provenance_hash` inside its committed
-disclosure ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
+({{mission-record}}).
 
 # Mission Authority {#authorization-derivation}
 
@@ -1952,30 +1950,11 @@ AS rendered them faithfully nor that the Approver understood them
 human-meaningful rendering; comprehension cannot be inferred from an
 approval or its integrity anchors.
 
-A short task can legitimately have a large or varied Authority Set:
-an erasure request whose proposal or configured lookup
-({{authorization-derivation}}) yields dozens of delete entries across
-resources. The consent object remains the complete derived Authority
-Set. The following non-normative practices can help make it
-reviewable:
-
-- **Group** entries by resource and action, keeping visible an entry
-  whose constraints, such as its resource range or consumption bound,
-  differ materially from the rest of its group.
-- **Summarize with drill-down**: cover every resource, action, and
-  bound, with each complete entry one interaction away; a summary is a
-  view of the set, never a substitute for it.
-- **Surface high-risk entries**: make the high-risk authority of
-  {{approval-authentication}} prominent in the initial view,
-  distinguishing materially different risks and bounds.
-- **Split rather than approve** when the set is too large or varied
-  for one decision ({{applicability}}).
-
 Mission Consent Evidence
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
 layered rendering of a committed disclosure, including what its first
-layer carries, and lets the Approver ask the basis for an entry before
-deciding.
+layer carries and practices for a large or varied Authority Set, and
+lets the Approver ask the basis for an entry before deciding.
 
 ### Authority Sources {#authority-sources}
 
@@ -7337,6 +7316,12 @@ resolve before interoperating.
   a deployment was required to provide that means; Conformance Roles
   lists it among the Mission Issuer's surfaces; revoking a token does
   not by itself revoke a Mission (#1892, D1026).
+- Editorial, no requirement change: Approval Comprehension's practices
+  for reviewing a large or varied Authority Set move to Mission Consent
+  Evidence, which carries them beside its layered rendering, and
+  Submission Processing Order drops its Consent Evidence example,
+  keeping the rule that a committed approval surface covers the
+  normalized provenance facts (#1892, D1026).
 
 -01
 
