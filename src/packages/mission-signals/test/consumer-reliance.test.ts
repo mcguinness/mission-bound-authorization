@@ -308,6 +308,12 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
         version: 4,
       });
       expect(r.viewState("msn_a")).toMatchObject({ state: "active", version: 4 });
+      // It skipped version 4's event, which may have narrowed authority, so
+      // the state is taken but the lease waits for the consumer's
+      // acknowledgement at version 4 (#1824 review).
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      expect(r.markRematerialized("msn_a", { version: 4 })).toBe(true);
       expect(r.lease("msn_a", nowIso())).toMatchObject({
         state: "active",
         version: 4,
@@ -346,6 +352,65 @@ describe("Signals consumer reliance (@spec control-plane#state-surfaces, signals
       });
     } finally {
       reopened.close();
+    }
+  });
+
+  it("raises the rematerialization latch at the observed version when a state-only Status refresh advances past the receiver's known history, so a narrowing it never received opens no lease (#1824 review)", async () => {
+    const r = receiver();
+    try {
+      await r.verifyAndApply(await set("msn_a", 1, "active", nowIso()));
+      expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 1 });
+      // The narrowing at version 2 is delayed; a state-only Status read reports version 2.
+      const narrowing = await set("msn_a", 2, "active", nowIso(), { authority_changed: true });
+      expect(await refresh(r, "msn_a", 2, "active")).toMatchObject({
+        status: "resynchronized",
+        version: 2,
+      });
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // The delayed narrowing then arrives behind the refreshed state.
+      expect((await r.verifyAndApply(narrowing)).status).toBe("stale");
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      // Only an acknowledgement covering version 2 opens the lease.
+      expect(r.markRematerialized("msn_a", { version: 1 })).toBe(false);
+      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 2 });
+
+      // A Mission the receiver holds no row for has no known history: its
+      // first Status read latches too.
+      expect(await refresh(r, "msn_b", 3, "active")).toMatchObject({
+        status: "resynchronized",
+        version: 3,
+      });
+      expect(r.needsRematerialization("msn_b")).toBe(true);
+      expect(r.lease("msn_b", nowIso())).toBeUndefined();
+      expect(r.markRematerialized("msn_b", { version: 3 })).toBe(true);
+      expect(r.lease("msn_b", nowIso())).toMatchObject({ state: "active", version: 3 });
+    } finally {
+      r.close();
+    }
+  });
+
+  it("advances an open latch's marker to the observed version when a Status refresh passes a later narrowing it never received, so an acknowledgement of only the earlier one opens no lease (#1824 review)", async () => {
+    const r = receiver();
+    try {
+      await r.verifyAndApply(await set("msn_a", 1, "active", nowIso()));
+      await r.verifyAndApply(
+        await set("msn_a", 2, "active", nowIso(), { authority_changed: true }),
+      );
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      // The narrowing at version 3 is delayed; a state-only Status read reports version 3.
+      expect(await refresh(r, "msn_a", 3, "active")).toMatchObject({
+        status: "resynchronized",
+        version: 3,
+      });
+      expect(r.markRematerialized("msn_a", { version: 2 })).toBe(false);
+      expect(r.needsRematerialization("msn_a")).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toBeUndefined();
+      expect(r.markRematerialized("msn_a", { version: 3 })).toBe(true);
+      expect(r.lease("msn_a", nowIso())).toMatchObject({ state: "active", version: 3 });
+    } finally {
+      r.close();
     }
   });
 });

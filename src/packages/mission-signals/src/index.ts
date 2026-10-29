@@ -1334,9 +1334,12 @@ export class MissionSignalReceiver {
         // re-establishes state, not effective authority, so it never clears
         // the rematerialization latch; the consumer acknowledges that through
         // markRematerialized once it has refreshed its audience-scoped
-        // effective authority. A Mission released after a restore is latched
-        // at the released version: the events the restore lost are unknown,
-        // and any of them may have narrowed authority.
+        // effective authority. A read that advances past this receiver's known
+        // history (a Mission it holds no row for, or a version above the
+        // stored one) skipped events it never saw, as does a Mission released
+        // after a restore; any of them may have narrowed authority, so the
+        // latch is raised, or its marker advanced, to the observed version.
+        // Accepting newer state does not establish newer authority.
         // The containment cursor never moves back; at the stored version the
         // artifact that established the state is kept.
         const containmentVersion =
@@ -1344,6 +1347,7 @@ export class MissionSignalReceiver {
             ? (stored?.containment_version ?? null)
             : Math.max(containment, stored?.containment_version ?? containment);
         const sameVersion = stored !== undefined && (version as number) === stored.version;
+        const latch = recovering || stored === undefined || (version as number) > stored.version;
         this.witnessWrite();
         this.db
           .prepare(
@@ -1369,9 +1373,9 @@ export class MissionSignalReceiver {
             version,
             m.expires_at,
             containmentVersion,
-            recovering ? 1 : (stored?.remat_needed ?? 0),
-            recovering ? version : (stored?.remat_version ?? null),
-            recovering ? containmentVersion : (stored?.remat_containment_version ?? null),
+            latch ? 1 : (stored?.remat_needed ?? 0),
+            latch ? version : (stored?.remat_version ?? null),
+            latch ? containmentVersion : (stored?.remat_containment_version ?? null),
             sameVersion ? (stored as ReceiverMissionRow).retained_set : statusResponse,
             // The Status observation point and the response's own reliance bound.
             new Date((verified.payload.iat as number) * 1000).toISOString(),
