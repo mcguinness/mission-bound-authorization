@@ -194,6 +194,9 @@ describe("PAR refuses a delegation member the authorization server does not supp
       body: JSON.stringify({ decision: "approve", render_revision }),
     });
     expect(decided.status, await decided.clone().text()).toBe(303);
+    // The resume saves the code, which commits the held decision (#1863).
+    const resumed = await fetch(decided.headers.get("location") as string, { redirect: "manual", headers: { cookie } });
+    expect(new URL(resumed.headers.get("location") as string).searchParams.get("code")).toBeTruthy();
     const record = as.kernel.findByApprovalEvent(`apev_${uid}`);
     expect(record).toBeDefined();
     // The shipped ceiling grants children { max_children: 5, max_child_depth: 2,

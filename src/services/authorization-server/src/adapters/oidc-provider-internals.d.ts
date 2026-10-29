@@ -13,3 +13,22 @@ declare module "oidc-provider/lib/actions/grants/authorization_code.js" {
   export const parameters: Set<string>;
   export const grantType: "authorization_code";
 }
+
+/**
+ * @spec mission#approval-event (step 7) (#1863): the provider's in-memory
+ * adapter, which the reference AS's `adapter` factory (approval-hold.ts)
+ * keeps for every model and wraps for `AuthorizationCode`.
+ */
+declare module "oidc-provider/lib/adapters/memory_adapter.js" {
+  import type { Adapter } from "oidc-provider";
+  export default class MemoryAdapter implements Adapter {
+    constructor(model: string);
+    upsert: Adapter["upsert"];
+    find: Adapter["find"];
+    findByUserCode: Adapter["findByUserCode"];
+    findByUid: Adapter["findByUid"];
+    consume: Adapter["consume"];
+    destroy: Adapter["destroy"];
+    revokeByGrantId: Adapter["revokeByGrantId"];
+  }
+}

@@ -26,6 +26,7 @@ import {
   serviceRenderKey,
 } from "./approval-render-revision.js";
 import { APPROVER_LOGIN_CALLBACK_PATH, ApproverLoginError, type ApproverLoginRelyingParty } from "./approver-login.js";
+import { ApprovalHolds, approvalHoldsOf, missionProviderAdapter, registerApprovalHolds } from "./approval-hold.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   DERIVATION_POLICY,
@@ -1306,6 +1307,11 @@ export function accountFinder(knownSubjects: ReadonlySet<string>) {
 
 export function buildProvider(opts: AdapterOptions): Provider {
   const { kernel } = opts;
+  // @spec mission#approval-event (step 7) (#1863, D1001): the direct
+  // approval decisions held until their authorization code is saved, and the
+  // provider this build creates, which the code fence serializes on.
+  const approvalHolds = new ApprovalHolds(kernel);
+  let built: Provider | undefined;
   // @spec expansion#creation-idempotency — idempotency is NOT optional wiring:
   // default the store over the kernel database (any instance over the same
   // kernel sees the same table, so a caller-supplied store is equivalent).
@@ -1478,10 +1484,20 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * the state gate cannot be evaluated, so the profile fails closed. Returns
    * undefined only for an index MISS, the one case a token-plane hook may pass
    * through unchanged (an ordinary OAuth grant this AS never bound).
+   *
+   * @spec mission#approval-event (step 7) (#1863, D1001): a held approval
+   * grant (its decision commits only when its code is issued) that no
+   * Mission binds yet also refuses: before its commit, and for good after a
+   * refused or failed one, it is Mission-bound with no Mission to gate.
    */
   function missionForBoundGrant(grantId: string): MissionRecord | undefined {
     const bound = kernel.missionBoundGrants.resolve(grantId);
-    if (!bound) return undefined;
+    if (!bound) {
+      if (kernel.missionBoundGrants.heldApproval(grantId)) {
+        throw new errors.InvalidGrant("the grant's Mission approval has not committed");
+      }
+      return undefined;
+    }
     const record = kernel.get(bound.missionId);
     if (!record) {
       throw new errors.InvalidGrant("mission-bound grant's Mission no longer resolves");
@@ -1491,9 +1507,11 @@ export function buildProvider(opts: AdapterOptions): Provider {
 
   /**
    * @spec mission#grant-binding-resolution (#1259): whether this AS ever bound
-   * `grantId` to a Mission, by any of its three records: a Mission's own grant,
-   * the delegation-family store (a terminal family included), and the durable
-   * bound-grant index (an entry whose Mission no longer resolves included).
+   * `grantId` to a Mission, by any of its four records: a Mission's own grant,
+   * the delegation-family store (a terminal family included), the durable
+   * bound-grant index (an entry whose Mission no longer resolves included),
+   * and the held approval grants (#1863: a decision whose Mission commits at
+   * code issuance, pending, refused or failed).
    * Liveness plays no part, so a known binding never passes as an ordinary
    * grant, and nothing here throws.
    */
@@ -1501,7 +1519,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     return (
       kernel.findByGrant(grantId) !== undefined ||
       opts.familyStore?.wasEverFamily(grantId) === true ||
-      kernel.missionBoundGrants.resolve(grantId) !== undefined
+      kernel.missionBoundGrants.resolve(grantId) !== undefined ||
+      kernel.missionBoundGrants.heldApproval(grantId) !== undefined
     );
   }
 
@@ -1695,12 +1714,29 @@ export function buildProvider(opts: AdapterOptions): Provider {
             "expired",
             exchange,
           );
+    // @spec mission#approval-event (step 7) (#1863, D1001): a code under a
+    // held approval grant is saved before its Mission exists, and commits it.
+    // It is clamped to the `expires_at` that commit establishes, which is no
+    // earlier than the one the held decision would establish now. A held
+    // grant with no live hold resolves below, and refuses.
+    const held = authorization && grantId ? approvalHolds.pending(grantId) : undefined;
+    if (held) {
+      const remaining = Math.floor((Date.parse(approvalHolds.prospectiveExpiresAt(held)) - Date.now()) / 1000);
+      if (remaining >= 1) return Math.min(configured, remaining);
+      throw expiring();
+    }
     let record: MissionRecord | undefined;
     try {
       record = missionForGrant(grantId);
     } catch (e) {
       if (authorization && e instanceof errors.InvalidGrant) {
-        throw new errors.AccessDenied("the Mission is not available");
+        // A held approval grant with no live hold names no Mission: its
+        // decision lapsed, or was refused, before any Mission existed.
+        throw new errors.AccessDenied(
+          grantId && kernel.missionBoundGrants.heldApproval(grantId)
+            ? "the approval decision is no longer pending"
+            : "the Mission is not available",
+        );
       }
       throw e;
     }
@@ -2150,6 +2186,18 @@ export function buildProvider(opts: AdapterOptions): Provider {
   }
 
   const configuration: Configuration = {
+    // @spec mission#approval-event (step 7) (#1863, D1001): oidc-provider's
+    // in-memory storage for every model, its authorization codes fenced so a
+    // held approval commits when, and only when, its code is stored
+    // (approval-hold.ts).
+    adapter: missionProviderAdapter({
+      kernel,
+      holds: approvalHolds,
+      provider: () => {
+        if (!built) throw new Error("the provider is not built yet");
+        return built;
+      },
+    }),
     clients: clients as never,
     jwks: opts.jwks as never,
     // @spec mission#scope-projection — the OIDC vocabulary only (the prior
@@ -2784,6 +2832,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
   };
 
   const provider = new Provider(opts.issuer, configuration);
+  built = provider;
+  registerApprovalHolds(provider, approvalHolds);
 
   // @spec mission#introspection (issue #541 P1-2) — record EVERY minted access
   // token's issuance binding: (iss, jti) -> the grantId it was ACTUALLY minted
@@ -7558,8 +7608,8 @@ async function decide(
   // user agent whose provider session belongs to another account completes
   // isolated, as a headless approval does. Otherwise its resume meets
   // oidc-provider's account switch (the logout confirmation): that session
-  // is saved with logout state and its cookie sent again, and, once the
-  // Mission exists, no code is issued. The Approver's own session, or none,
+  // is saved with logout state and its cookie sent again, and no code is
+  // issued, so the held decision never commits. The Approver's own session, or none,
   // keeps the ordinary browser completion.
   const sessionAccount = details.session?.accountId;
   const isolated = !interactive || (sessionAccount !== undefined && sessionAccount !== principal.sub);
@@ -7715,8 +7765,10 @@ async function decide(
   const achievedAcr = principal.acr;
   const achievedAuthTime = principal.auth_time;
   const requestedPrompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
-  if (
-    !approverAuthenticationSatisfies(
+  // Run at the decision and again at a held decision's commit (#1863, D1001),
+  // on the AS's clock at each instant.
+  const clientAuthenticationSatisfied = (): boolean =>
+    approverAuthenticationSatisfies(
       {
         ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
         ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
@@ -7728,8 +7780,8 @@ async function decide(
       },
       { ...(achievedAcr ? { acr: achievedAcr } : {}), ...(achievedAuthTime !== undefined ? { authTime: achievedAuthTime } : {}) },
       Math.floor(opts.kernel.nowDate().getTime() / 1000),
-    )
-  ) {
+    );
+  if (!clientAuthenticationSatisfied()) {
     await finish({
       error: "access_denied",
       error_description: "approver authentication did not satisfy the requested acr_values/max_age",
@@ -7886,24 +7938,30 @@ async function decide(
   // effective expiry atomically. Submission acceptance did not freeze time, so a
   // requested ceiling that passes while the approval is pending refuses HERE and
   // creates no Mission. Mapped like the derivation refusal above: the
-  // interaction finishes with the error, never a 500.
+  // interaction finishes with the error, never a 500. On the browser path the
+  // commit runs when the authorization code is saved (#1863), and refuses the
+  // same way, as an `access_denied` authorization response.
   //
-  // @spec mission#approval-event (step 7) (#916) — the order of writes. The
-  // approval is prepared first, so every refusal (above, and in
+  // @spec mission#approval-event (step 7) (#916, #1863): the order of
+  // writes. The approval is prepared first, so every refusal (above, and in
   // `prepareApproval`) happens before anything is written; a consented
   // ceiling's entries, its drawdown policy and their floor are checked above.
   // The commit revalidates the prepared authority source and mints the
   // drawdown policy reference again at its creation instant, so a source or
-  // policy change after these checks refuses after the grant save (an inert
-  // grant a retry overwrites). The provider grant
-  // is saved next, under an identity derived from this interaction, and the
-  // record then commits already bound to it. A failure before that commit
-  // leaves an inert grant (no code, no Mission, no index entry) that a retry
-  // overwrites. A failure after it leaves an `active`, bound Mission whose code
-  // is not issued yet: the window #250's cross-store atomicity owns. A repeated
-  // or concurrent decision on this interaction names the same grant and the
-  // same approval event, so it recovers the one binding instead of creating
-  // another.
+  // policy change after these checks refuses after the grant save. The
+  // provider grant is saved next, under an identity derived from this
+  // interaction. On the browser path that grant is first classified as a held
+  // approval grant (Mission-bound for good, so it never passes as an ordinary
+  // grant), and the decision is HELD rather than committed: the record commits
+  // already bound to the grant when the resume request saves the grant's
+  // authorization code, in one synchronous turn with the final checks
+  // (approval-hold.ts). A failure before then leaves no Mission and no
+  // redeemable code; a failure in this request leaves a classified, inert
+  // grant that a retry overwrites. On the device path the record commits
+  // here, bound to the grant, and the device code is activated after it
+  // (#1202). A repeated or concurrent decision on this interaction names the
+  // same grant and the same approval event, so it replaces the hold or
+  // recovers the one binding instead of creating another.
   // @spec mission#approval-context-changes (#1446, D583): an approval rests on
   // the rendering its Approver was shown. The decision names that rendering's
   // revision, the latest made to this principal for this client; the context
@@ -7992,16 +8050,59 @@ async function decide(
     ...(rendered ? { renderedExpiresAt: rendered.context.expires_at } : {}),
   };
 
-  // The commit, shared by the browser and device paths: the retry check, the
-  // prepared approval, the reservation, the provider grant, and the record
-  // bound to it, in the order above. It returns undefined when it has already
-  // answered the request (a refusal or an `approval_forbidden`), having
-  // written nothing a retry cannot overwrite. It runs alone on its approval
-  // event, cleanup included (serializeApprovalEvent), and reads the event
-  // afresh once its turn comes: a decision that waited recovers a commit made
-  // meanwhile, and never writes over or destroys that commit's grant.
-  const commitApproval = (): Promise<
-    { record: MissionRecord; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
+  // @spec mission#approval-context-changes (#1446, D583): whether the context
+  // or the prepared candidate changed since `held` was rendered: the changed
+  // parts, or undefined. Synchronous, so a caller can commit with nothing
+  // awaited after it. Throws what source resolution throws (an IntentError).
+  const contextChange = (held: RenderRevision, preparedSet: readonly AuthorityEntry[]): string[] | undefined => {
+    const now = currentContext(opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey)), held);
+    const again = opts.kernel.prepareApproval(approveInput);
+    if (now.commitment !== held.commitment) return changedParts(held.context, now.context);
+    if (candidateHash(opts.issuer, again.authoritySet) !== candidateHash(opts.issuer, preparedSet)) return ["authority_hash"];
+    return undefined;
+  };
+  // @spec mission#approval-event (step 7) (#1863, D1001): the final checks a
+  // held decision runs again at its commit, when its authorization code is
+  // saved, with nothing awaited before the commit: the context its rendering
+  // showed (#1446), the client's requested `acr_values`/`max_age` (max_age=0
+  // included, through its prompt=login translation), and the
+  // approval-authentication floor at that instant (#826). The Approver's own
+  // checks and, where direct approvals are recorded, the rule and its floor run
+  // inside `kernel.approve`. Any refusal is an IntentError, which completes
+  // `access_denied`.
+  const finalChecks = (held: RenderRevision, preparedSet: readonly AuthorityEntry[]) => (): void => {
+    if (contextChange(held, preparedSet)) {
+      throw new IntentError("access_denied", "the request changed after it was approved; no Mission was created");
+    }
+    if (!clientAuthenticationSatisfied()) {
+      throw new IntentError(
+        "access_denied",
+        "approver authentication no longer satisfies the requested acr_values/max_age; no Mission was created",
+      );
+    }
+    const atCommit = evaluateApprovalFloor(
+      opts.approvalFloor,
+      [...authority, ...ceilingEntries],
+      { acr: principal.acr, auth_time: principal.auth_time },
+      { interactive, nowSeconds: Math.floor(opts.kernel.nowDate().getTime() / 1000) },
+    );
+    if (atCommit.outcome === "refused") throw new IntentError("access_denied", atCommit.reason);
+  };
+  const holds = approvalHoldsOf(provider);
+
+  // The approval's writes, shared by the browser and device paths: the retry
+  // check, the prepared approval, the reservation and the provider grant, in
+  // the order above; then `commit` (the device path) commits the record bound
+  // to the grant, and `hold` (the browser path) holds the decision for its
+  // authorization code's save (#1863). It returns undefined when it has
+  // already answered the request (a refusal or an `approval_forbidden`),
+  // having written nothing a retry cannot overwrite. It runs alone on its
+  // approval event, cleanup included (serializeApprovalEvent), as the code
+  // save's commit does, and reads the event afresh once its turn comes: a
+  // decision that waited recovers a commit made meanwhile, and never writes
+  // over or destroys that commit's grant.
+  const commitApproval = (mode: "commit" | "hold"): Promise<
+    { record: MissionRecord | undefined; effective: ReturnType<typeof opts.kernel.effectiveAuthoritySet> } | undefined
   > => serializeApprovalEvent(provider, approvalEventId, async () => {
     const existing = opts.kernel.findByApprovalEvent(approvalEventId);
     // A retry recovers the committed approval only when it is the same decision:
@@ -8056,6 +8157,13 @@ async function decide(
       return undefined;
     }
 
+    // @spec mission#approval-event (step 7), mission#grant-binding-resolution
+    // (#1863, D1001): a held decision's grant is classified as Mission-bound
+    // before it is first saved, so it is never reusable as an ordinary grant,
+    // whatever becomes of the decision.
+    if (mode === "hold" && !existing) {
+      opts.kernel.missionBoundGrants.recordHeldApproval({ grantId, approvalEventId });
+    }
     // @spec mission#approval-authentication (#826): the provider account is the
     // authenticated Approver; the Mission records the Subject, and every
     // Mission-bound token projects it (the JWT customizer).
@@ -8087,23 +8195,16 @@ async function decide(
     } else {
       // @spec mission#approval-context-changes (#1446, D583): the context and
       // the prepared candidate are checked again here, after the last
-      // asynchronous step and with none between this check and the commit, so
-      // a change while the grant saved (or the device session loaded) cannot
-      // commit an unseen context: the policy, source and bound entries the
-      // commit reads are the ones checked. A changed context leaves no grant.
+      // asynchronous step and with none between this check and the commit (or
+      // the hold, whose commit checks them again in the same way), so a change
+      // while the grant saved (or the device session loaded) cannot commit an
+      // unseen context: the policy, source and bound entries the commit reads
+      // are the ones checked. A changed context leaves no grant and no hold.
       const held = rendered as RenderRevision;
+      const preparedSet = (prepared as PreparedApproval).authoritySet;
       let changed: string[] | undefined;
       try {
-        const now = currentContext(opts.kernel.resolveFreshCapabilities(opts.kernel.derive(intent, proposedAuthority, scopeKey)), held);
-        const again = opts.kernel.prepareApproval(approveInput);
-        const parts = changedParts(held.context, now.context);
-        if (now.commitment !== held.commitment) changed = parts;
-        else if (
-          candidateHash(opts.issuer, again.authoritySet) !==
-          candidateHash(opts.issuer, (prepared as PreparedApproval).authoritySet)
-        ) {
-          changed = ["authority_hash"];
-        }
+        changed = contextChange(held, preparedSet);
       } catch (e) {
         if (e instanceof IntentError) {
           await finish(decisionRefusal(e));
@@ -8112,10 +8213,26 @@ async function decide(
         throw e;
       }
       if (changed) {
+        holds.drop(grantId);
         await grant.destroy();
         retireRenderRevision(provider, details.uid, principalKey as string, held.revision);
         askToReview("approval_context_changed", "the request changed while the decision was committed; review it again", changed);
         return undefined;
+      }
+      if (mode === "hold") {
+        // @spec mission#approval-event (step 7) (#1863, D1001): held, keyed by
+        // the grant, until its authorization code is saved, and no longer
+        // than the interaction the code completes. A retried decision
+        // replaces the hold.
+        holds.hold({
+          grantId,
+          approvalEventId,
+          input: { ...approveInput, grantId },
+          prepared: prepared as PreparedApproval,
+          expiresAt: (details.exp ?? Math.floor(Date.now() / 1000)) * 1000,
+          finalChecks: finalChecks(held, preparedSet),
+        });
+        return { record: undefined, effective: preparedSet };
       }
       try {
         record = opts.kernel.approve({ ...approveInput, grantId }, prepared);
@@ -8152,9 +8269,10 @@ async function decide(
       devicePendingRefusal();
       return;
     }
-    const committed = await commitApproval();
+    const committed = await commitApproval("commit");
     if (!committed) return;
-    if (committed.record.state !== "active") {
+    // The commit mode always returns the record.
+    if ((committed.record as MissionRecord).state !== "active") {
       await finish({ error: "access_denied", error_description: "the Mission this decision committed is no longer active" });
       return;
     }
@@ -8191,7 +8309,9 @@ async function decide(
     return;
   }
 
-  const committed = await commitApproval();
+  // @spec mission#approval-event (step 7) (#1863, D1001): the browser path
+  // holds the decision; its Mission commits with its authorization code.
+  const committed = await commitApproval("hold");
   if (!committed) return;
   const { effective } = committed;
 

@@ -4,10 +4,13 @@
  * was shown: each rendering to an authenticated principal gets a protected
  * revision committing the complete context it showed, the decision names the
  * latest revision rendered to that principal, and the AS re-establishes and
- * compares the context at the decision and again, synchronously, before the
- * commit. A change (the derived Authority Set, the authority source, or a
- * policy input, even one that leaves every anchor equal) creates no Mission,
- * grant or code and asks for a fresh decision on the page rendered again.
+ * compares the context at the decision, again after the grant save, and
+ * again, synchronously, at the commit, which a browser decision makes when
+ * its authorization code is saved (#1863). A change (the derived Authority
+ * Set, the authority source, or a policy input, even one that leaves every
+ * anchor equal) creates no Mission, grant or code: at the decision it asks
+ * for a fresh decision on the page rendered again, and at the commit it
+ * completes the request `access_denied`.
  */
 
 import { createHash } from "node:crypto";
@@ -16,6 +19,7 @@ import { authorityHash, capabilitySourceDigest, extractMcpToolDefinition, intent
 import { DERIVATION_POLICY, SCOPE_PROJECTION, TRUSTED_TOOL_CATALOGS } from "@mission/demo-data";
 import { type CryptoKey, importJWK, SignJWT } from "jose";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { approvalHoldsOf } from "../src/adapters/approval-hold.js";
 import { RENDER_REVISION_HEADER } from "../src/adapters/approval-render-revision.js";
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs } from "../src/index.js";
@@ -168,6 +172,23 @@ async function decide(uid: string, headers: Record<string, string>, body: Record
 }
 
 const approve = (render_revision?: string | null) => ({ decision: "approve", ...(render_revision ? { render_revision } : {}) });
+
+/**
+ * Follow a decision's redirect to the client: the code or error the request
+ * completes with. A held decision's Mission commits when its code is saved
+ * (#1863), so a record is read after this.
+ */
+async function resume(decided: { status: number; location: string | null }, cookie: string): Promise<{ code: string | null; error: string | null }> {
+  expect(decided.status).toBe(303);
+  let location = decided.location ?? "";
+  while (location.startsWith(ISSUER)) {
+    const res = await fetch(location, { redirect: "manual", headers: { cookie } });
+    location = new URL(res.headers.get("location") ?? "", ISSUER).toString();
+    if (!res.headers.get("location")) return { code: null, error: null };
+  }
+  const q = new URL(location).searchParams;
+  return { code: q.get("code"), error: q.get("error") };
+}
 const grantIdFor = (uid: string) => createHash("sha256").update(`mission-approval-grant:${uid}`).digest("base64url");
 
 /** Nothing was created for this interaction: no Mission, no provider grant (and so no code). */
@@ -204,6 +225,7 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const rendered = derivedNow();
     const decided = await decide(flow.uid, headers, approve(revision));
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    expect((await resume(decided, flow.cookie)).code).toBeTruthy();
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(withoutSources(record?.authority_set as unknown[])).toEqual(rendered);
     expectAnchorsOverApproved(record);
@@ -246,6 +268,7 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     const narrower = derivedNow();
     const decided = await decide(flow.uid, headers, approve(again.revision));
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    expect((await resume(decided, flow.cookie)).code).toBeTruthy();
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(withoutSources(record?.authority_set as unknown[])).toEqual(narrower);
     expect(narrower.flatMap((e) => e.actions)).not.toContain("payments:invoice.list");
@@ -305,8 +328,11 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     clockAt(t0 + 5_000);
     const decided = await decide(flow.uid, headers, approve(revision));
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
+    // The record is created at the commit, when the code is saved (#1863): later still.
+    clockAt(t0 + 10_000);
+    expect((await resume(decided, flow.cookie)).code).toBeTruthy();
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
-    expect(record?.created_at).toBe(new Date(t0 + 5_000).toISOString());
+    expect(record?.created_at).toBe(new Date(t0 + 10_000).toISOString());
     expect(record?.expires_at).toBe(shown);
   });
 
@@ -324,7 +350,8 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(stale.json.changed).toEqual(["expires_at"]);
     await expectNothingCreated(flow.uid);
     const again = await render(flow.uid, headers);
-    expect((await decide(flow.uid, headers, approve(again.revision))).status).toBe(303);
+    const decided = await decide(flow.uid, headers, approve(again.revision));
+    expect((await resume(decided, flow.cookie)).code).toBeTruthy();
     expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.expires_at).toBe(new Date(t0 + 121_000).toISOString());
   });
 
@@ -445,6 +472,7 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(a.status, JSON.stringify(a.json)).toBe(409);
     expect(a.json.error).toBe("approval_context_changed");
     expect(b.status, JSON.stringify(b.json)).toBe(303);
+    expect((await resume(b, flow.cookie)).code).toBeTruthy();
     const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
     expect(record?.state).toBe("active");
     expect(record?.grant_id).toBe(grantIdFor(flow.uid));
@@ -469,16 +497,16 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     expect(decided.status, JSON.stringify(decided.json)).toBe(303);
   });
 
-  it("a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them", async () => {
+  it("a second decision on the same rendering waits for the first; a change landing between them refuses it, and the held first decision commits nothing", async () => {
     const flow = await open();
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const { revision } = await render(flow.uid, headers);
-    const commit = as.kernel.approve.bind(as.kernel);
-    vi.spyOn(as.kernel, "approve").mockImplementationOnce((...args: Parameters<typeof commit>) => {
-      const record = commit(...args);
-      // The ceiling narrows right after the first commit, while the second decision waits its turn.
+    const holds = approvalHoldsOf(as.provider);
+    const holdDecision = holds.hold.bind(holds);
+    vi.spyOn(holds, "hold").mockImplementationOnce((held) => {
+      holdDecision(held);
+      // The ceiling narrows right after the first decision is held, while the second decision waits its turn.
       narrowCeiling();
-      return record;
     });
     const hold = holdFirstGrantSave();
     const first = decide(flow.uid, headers, approve(revision));
@@ -489,25 +517,41 @@ describe("Changes Before the Decision (@spec mission#approval-context-changes, #
     hold.release();
     const [a, b] = await Promise.all([first, second]);
     expect(a.status, JSON.stringify(a.json)).toBe(303);
-    expect(b.status, JSON.stringify(b.json)).toBe(303);
-    const record = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
-    expect(record?.grant_id).toBe(grantIdFor(flow.uid));
-    // The committed decision's grant, as committed: the wider set the first decision approved.
-    const grant = (await as.provider.Grant.find(grantIdFor(flow.uid))) as { rar?: { actions: string[] }[] } | undefined;
-    expect(grant?.rar).toEqual(record?.authority_set);
-    expect(grant?.rar?.flatMap((e) => e.actions)).toContain("payments:invoice.list");
+    // Nothing commits at a decision (#1863), so the second decision meets the
+    // change at its own re-check: it asks for review, and removes the hold
+    // and the grant it shares with the first.
+    expect(b.status, JSON.stringify(b.json)).toBe(409);
+    expect(b.json.error).toBe("approval_context_changed");
+    expect(b.json.changed).toEqual(expect.arrayContaining(["authority_hash"]));
+    expect(holds.pending(grantIdFor(flow.uid))).toBeUndefined();
+    // The first decision's resume finds its grant gone: it completes
+    // access_denied, with no code and no Mission.
+    const completed = await resume(a, flow.cookie);
+    expect(completed.error).toBe("access_denied");
+    expect(completed.code).toBeNull();
+    expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
+    expect(as.kernel.findByGrant(grantIdFor(flow.uid))).toBeUndefined();
   });
 
-  it("a retry of a committed decision recovers it, even after a policy input changed", async () => {
+  it("a retry of a held decision after a policy input changed asks for review, and the held decision's commit re-checks the context and refuses access_denied", async () => {
     const flow = await open();
     const headers = floorApprovalHeaders(SESSIONS, flow.uid, flow.cookie);
     const { revision } = await render(flow.uid, headers);
-    expect((await decide(flow.uid, headers, approve(revision))).status).toBe(303);
-    const committed = as.kernel.findByApprovalEvent(`apev_${flow.uid}`);
+    const decided = await decide(flow.uid, headers, approve(revision));
+    expect(decided.status).toBe(303);
     narrowCeiling();
+    // Nothing is committed until the code is saved (#1863): the retry meets the change.
     const retry = await decide(flow.uid, headers, approve(revision));
-    expect(retry.status, JSON.stringify(retry.json)).toBe(303);
-    expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.id).toBe(committed?.id);
+    expect(retry.status, JSON.stringify(retry.json)).toBe(409);
+    expect(retry.json.error).toBe("approval_context_changed");
+    // The held decision is still pending; its commit, at the code save, finds
+    // the context changed since its rendering.
+    expect(approvalHoldsOf(as.provider).pending(grantIdFor(flow.uid))).toBeDefined();
+    const completed = await resume(decided, flow.cookie);
+    expect(completed.error).toBe("access_denied");
+    expect(completed.code).toBeNull();
+    expect(as.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
+    expect(as.kernel.missionBoundGrants.heldApproval(grantIdFor(flow.uid))).toBeDefined();
   });
 
   it("a context that no longer admits approval gets its mapped refusal, not a request to review it again", async () => {
@@ -632,7 +676,7 @@ describe("capability bindings on the approval page (@spec capability-binding#cap
     expect(read.body).toContain(`Source: the trusted catalog at <code>${catalog().source_uri}</code>, configured here as <q>AP Payments (internal MCP)</q>.`);
     expect(read.body).toContain("Publisher: unknown; this server has not established one.");
     expect(read.body).toContain("A later change to this tool's definition is refused.");
-    expect((await decide(flow.uid, headers, approve(revision))).status).toBe(303);
+    expect((await resume(await decide(flow.uid, headers, approve(revision)), flow.cookie)).code).toBeTruthy();
     const committed = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? []).flatMap((e) => e.capability_sources ?? []);
     expect(committed.map(machine).sort(byAction)).toEqual(items.map(machine).sort(byAction));
   });
@@ -651,7 +695,7 @@ describe("capability bindings on the approval page (@spec capability-binding#cap
       await expectNothingCreated(flow.uid);
       const again = await render(flow.uid, headers);
       expect(again.html).toContain('<q class="binding-description">Read one invoice, and its payment history</q>');
-      expect((await decide(flow.uid, headers, approve(again.revision))).status).toBe(303);
+      expect((await resume(await decide(flow.uid, headers, approve(again.revision)), flow.cookie)).code).toBeTruthy();
       const binding = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? [])
         .flatMap((e) => e.capability_sources ?? [])
         .find((b) => b.action === "payments:invoice.read");
@@ -680,7 +724,7 @@ describe("capability bindings on the approval page (@spec capability-binding#cap
       const shown = await render(flow.uid, headers);
       expect(shown.html).not.toContain("<script>");
       expect(shown.html).toContain("Read one invoice &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;");
-      expect((await decide(flow.uid, headers, approve(shown.revision))).status).toBe(303);
+      expect((await resume(await decide(flow.uid, headers, approve(shown.revision)), flow.cookie)).code).toBeTruthy();
       const binding = (as.kernel.findByApprovalEvent(`apev_${flow.uid}`)?.authority_set ?? [])
         .flatMap((e) => e.capability_sources ?? [])
         .find((b) => b.action === "payments:invoice.read");
