@@ -25133,7 +25133,217 @@
      "surface": "signals"
     }
    ],
-   "notes": "#1001 (D1002). A real kernel contain commit (version 2) is withheld from the undeclared stream; the suspend that follows reaches that stream as version 3 and its receiver reports a gap (expected 2, received 3), while the declared stream sees 1, 2, 3. Proved by mutation: renumbering versions per stream in the emitter's journal fails the test (the undeclared stream receives 1, 2)."
+   "notes": "#1001 (D1002). A real kernel contain commit (version 2) is withheld from the undeclared stream; the suspend that follows, held while the withholding pauses that stream (#1877), reaches it after the stream is re-enabled as version 3 and its receiver reports a gap (expected 2, received 3), while the declared stream sees 1, 2, 3. Proved by mutation: renumbering versions per stream in the emitter's journal fails the test (the undeclared stream receives 1, 2)."
+  },
+  {
+   "id": "signals.discharge.withholding-pauses-stream",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "When the gate withholds an event from a stream, the Mission Issuer MUST pause that stream: it sends the Shared Signals Framework Stream Updated event with `status` `paused` before it transmits anything further on the stream ({{OIDC-SSF}}, Section 8.1.5), and it holds the stream's later events, each with its own `version`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the gate withholds an event from a stream, the stream's next transmission is a Stream Updated event whose status is paused and whose sub_id is the opaque stream id; the stream's later lifecycle events, and earlier ones not yet acknowledged, are held rather than transmitted or dropped, and each is later delivered with the Mission's own version",
+    "local": "the pause applies where the deployment produces events carrying authority_changed true, which needs the Status profile's discharge capability or the containment profile; the emitter is in process, so the Stream Updated and verification SETs go to registered sinks, not an SSF HTTP transport, and the stream id is the consumer's configured stream_id or its audience; the stream status and the Stream Updated notice are written in one transaction in the emitter's outbox store"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > pauses the stream with Stream Updated first; with liveness attested on schedule, the consumer's staleness rule ends reliance within mission_max_stale_seconds of its last liveness event, before the stream is re-enabled",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > re-enables after the window: Stream Updated enabled, then the held events in order with their original versions; the withheld Mission's next event shows the gap",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > holds another Mission's lifecycle event committed during the pause, and a verification its receiver requested, and delivers both after re-enable, never dropping either",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > does not deliver the discharge event to a stream that has not declared authority_changed",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1877 (D1017). A real kernel contain commit withheld from the undeclared stream is followed on that stream by a Stream Updated SET (status paused, sub_id the configured stream id) and nothing else, while the declared stream receives the contain event; a discharge withheld the same way pauses the stream too. Events committed during the pause, for the narrowed Mission and for another Mission, are held and delivered after re-enable with versions 3 and 4 (the undeclared receiver reports the gap the withheld version 2 left) and the other Mission's version 2. Proved by mutation: removing the pause on withholding fails seven tests (all five stream-pause tests, the discharge gate test and the containment gap test); marking held jobs done instead of holding them fails the re-enable, held-events, restart and containment gap tests."
+  },
+  {
+   "id": "signals.discharge.paused-stream-carries-no-liveness",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "A paused stream transmits no event ({{OIDC-SSF}}, Section 8.1.2.1), so it carries no verification or heartbeat event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "while a stream is paused, a liveness attestation delivers no verification event to it, though other streams keep receiving theirs, and a verification its receiver requests is held and delivered only after the stream is re-enabled, echoing the requested state",
+    "local": "the pause applies where the deployment produces events carrying authority_changed true, which needs the Status profile's discharge capability or the containment profile; the emitter is in process, so the Stream Updated and verification SETs go to registered sinks, not an SSF HTTP transport, and the stream id is the consumer's configured stream_id or its audience; the caller drives attestLiveness on its own schedule, and the emitter records a verification as liveness when its hand-off is acknowledged"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > pauses the stream with Stream Updated first; with liveness attested on schedule, the consumer's staleness rule ends reliance within mission_max_stale_seconds of its last liveness event, before the stream is re-enabled",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > holds another Mission's lifecycle event committed during the pause, and a verification its receiver requested, and delivers both after re-enable, never dropping either",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > keeps the pause across a restart: a fresh emitter over the same store stays paused, holds the event and attests no liveness until the window has passed",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1877 (D1017). With liveness attested every 10 seconds and mission_max_stale_seconds 60, the declared stream receives six verification events after the withholding and the paused stream none; a restarted emitter over the same store attests none to the paused stream either; a requested verification (state echoed) reaches the stream only after the Stream Updated enabled event. Proved by mutation: attesting liveness without the held check fails the acceptance and restart tests; transmitting a requested verification on a held stream fails the held-events test."
+  },
+  {
+   "id": "signals.discharge.reenable-after-staleness-window",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "The Mission Issuer MUST NOT re-enable the stream until more than `mission_max_stale_seconds` have passed since the last verification or heartbeat event it delivered on that stream",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a paused stream receives no Stream Updated enabled event, verification event or held event at or before the instant mission_max_stale_seconds after the last verification event delivered on it, including across an emitter restart over a persistent store, and a second withholding during the pause does not bring that instant forward; a consumer applying the staleness rule as written has ended its reliance on cached Mission state by that instant",
+    "local": "the emitter's maxStaleSeconds option is the issuer's advertised mission_max_stale_seconds, configured at the construction site; without it a paused stream is never re-enabled automatically. A second withholding during the pause extends the pause to at least that withholding plus the window, stricter than the requirement, so a Mission Status response the consumer fetched during the pause, before that narrowing, expires before liveness resumes"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > pauses the stream with Stream Updated first; with liveness attested on schedule, the consumer's staleness rule ends reliance within mission_max_stale_seconds of its last liveness event, before the stream is re-enabled",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > re-enables after the window: Stream Updated enabled, then the held events in order with their original versions; the withheld Mission's next event shows the gap",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > keeps the pause across a restart: a fresh emitter over the same store stays paused, holds the event and attests no liveness until the window has passed",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > never shortens a pause on a second withholding: it extends it to that withholding plus mission_max_stale_seconds",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1877 (D1017). The acceptance case: liveness attested every 10 seconds, a contain commit withheld 5 seconds after the last verification delivered on the undeclared stream; at exactly that verification plus 60 seconds the stream is still paused and a model of Signals' staleness rule (stale after more than mission_max_stale_seconds without a verification or heartbeat event, latched until state is re-established) still permits reliance; 1 millisecond later the model has ended reliance while the stream has received only the paused notice; the stream re-enables after that, and the first verification after it does not restore reliance. Proved by mutation: halving the window fails all five stream-pause tests; re-enabling at the bound rather than after it fails the acceptance, re-enable and restart tests; keeping the stream status in a TEMP table (not persisted) fails the restart test; keeping the first window on a second withholding fails the second-withholding test."
+  },
+  {
+   "id": "signals.discharge.reenable-announced-first",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "On re-enabling, it sends the Stream Updated event with `status` `enabled` ({{OIDC-SSF}}, Section 8.1.5), then the held events",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "when a paused stream is re-enabled, its first transmission is a Stream Updated event whose status is enabled, and the held events follow it",
+    "local": "the pause applies where the deployment produces events carrying authority_changed true, which needs the Status profile's discharge capability or the containment profile; the emitter is in process, so the Stream Updated and verification SETs go to registered sinks, not an SSF HTTP transport, and the stream id is the consumer's configured stream_id or its audience; the stream stays held until the enabled notice is acknowledged, and each dispatch pass delivers Stream Updated notices before lifecycle events"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > re-enables after the window: Stream Updated enabled, then the held events in order with their original versions; the withheld Mission's next event shows the gap",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > holds another Mission's lifecycle event committed during the pause, and a verification its receiver requested, and delivers both after re-enable, never dropping either",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "a withheld narrowing pauses the undeclared stream (@spec signals#discharge-compatibility, #1877) > keeps the pause across a restart: a fresh emitter over the same store stays paused, holds the event and attests no liveness until the window has passed",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1877 (D1017). After the window the undeclared stream receives the Stream Updated enabled event, then the held lifecycle events (and a held requested verification). Proved by mutation: re-enabling without journaling the enabled notice fails six tests; delivering lifecycle jobs before the stream-control jobs, with the hold released on the status flip alone, fails the re-enable, held-events and restart tests."
+  },
+  {
+   "id": "signals.discharge.advertise-max-stale",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "A Mission Issuer that serves a stream whose consumer has not declared `authority_changed`, in a deployment that produces events carrying `authority_changed` true, MUST advertise `mission_max_stale_seconds`",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "deployment-documentation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authorization server metadata of a Mission Issuer that can withhold an event carrying authority_changed true from an undeclared stream carries mission_max_stale_seconds",
+    "local": "the reference authorization server advertises mission_max_stale_seconds in every deployment, so the condition never needs evaluating; the demo stack does not yet wire the Signals emitter, whose maxStaleSeconds option must equal the advertised value"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/tracer.test.ts",
+     "name": "M1 tracer slice > AS metadata advertises mission_bound_authorization_supported, the adapter introspection endpoint, and the mission_max_stale_seconds ceiling",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "#1877 (D1017). The reference AS sets mission_max_stale_seconds in its metadata unconditionally (adapters/provider.ts), and the tracer test reads it from the discovery document. The witness covers the advertisement, not the binding between that value and an emitter's maxStaleSeconds, which is construction-site wiring."
   },
   {
    "id": "signals.delivery.persist-until-acknowledged",
