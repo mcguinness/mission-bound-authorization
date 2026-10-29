@@ -6,10 +6,11 @@ claim (#1377, Sketch step 1). Resource Access names deployment documentation
 as a declaration carrier (§ Transformation Capabilities,
 `{#transformation-capabilities}`). **This note is not a declaration.** It
 declares no transformation capability for the type and leaves all three
-undeclared. It is not the interoperable supported-subset profile either: D414
-reserves that profile and its vectors for #819, after #249.
+undeclared. It is not the interoperable supported-subset profile either:
+that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
+relates to the reference's domain.
 
-Every statement here is true of the reference implementation at `405f153c`
+Every statement here is true of the reference implementation at `57312dbf`
 (paths relative to `src/`). Each rule names the code that applies or refuses
 it and the test (`it` title, in the named file) or case
 (`vectors/mission-resource-access/`) that witnesses it. Test files are under
@@ -71,8 +72,8 @@ Resource Access § Subset Rule, steps 1 and 2.
 | Rule | Status | Code | Witness |
 |---|---|---|---|
 | `exact` A under `exact` B: literal equality | implemented | `isSubsetEntry` (`packages/mission-core/src/authority-subset.ts`); derivation pairs entries by equal `resource` (`deriveAuthoritySetWithProvenance`, `services/authorization-server/src/kernel/derive.ts`) | cases sub-res-01, sub-res-02, sub-res-03 |
-| `exact` A under `prefix` B; `prefix` A under `prefix` B; `prefix` A under `exact` B | implemented through the shared matcher: an `exact` A within `prefix` B's base, a `prefix` A's base within B's, never a `prefix` A under an `exact` B. Configured `prefix` ceilings load beside containment rules: containment applies a removal to every approved entry whose resource set overlaps it (#1463) | `resourceWithin` over `prefixAdmits` (`packages/mission-core/src/authority-subset.ts`, `operation-target.ts`); `derivedResource` (`derive.ts`); `ceilingResourceMatch` (`packages/demo-data/src/index.ts`); `selectorOverlapsEntry` (`packages/mission-core/src/containment-selector.ts`) | cases sub-res-04 to sub-res-08; `prefix-ceiling-endpoint.test.ts` (derivation under a configured `prefix` ceiling beside the shipped containment rules, a `prefix` request refused against an `exact` grant, and a containment selector reaching an entry approved beneath the ceiling); `resource-match-unsupported.test.ts` "loads prefix ceiling entries in policy.json, governed-policy.json and authority-sources.json beside the configured containment rules (@spec containment#selector-matching, #1463)" |
-| The authorization server compares with the resource server's matcher | implemented for `exact`: both compare the decoded strings literally (`matchResource`, `packages/mission-core/src/operation-target.ts`) | as above | none; row `resource-access.subset.same-matcher` is `todo` |
+| `exact` A under `prefix` B; `prefix` A under `prefix` B; `prefix` A under `exact` B | implemented through the shared matcher: an `exact` A within `prefix` B's base, a `prefix` A's base within B's, never a `prefix` A under an `exact` B. Configured `prefix` ceilings load beside containment rules: containment applies a removal to every approved entry whose resource set overlaps it (#1463) | `resourceWithin` over `prefixAdmits` (`packages/mission-core/src/authority-subset.ts`, `operation-target.ts`); `derivedResource` (`derive.ts`); `ceilingResourceMatch` (`packages/demo-data/src/index.ts`); `selectorOverlapsEntry` (`packages/mission-core/src/containment-selector.ts`) | cases sub-res-04 to sub-res-08; `prefix-ceiling-endpoint.test.ts` (derivation under a configured `prefix` ceiling beside the shipped containment rules, a Token Exchange from a `prefix` entry issuing a narrower `prefix` or an `exact` resource beneath it and refusing a broader `prefix` or a sibling, a `prefix` request refused against an `exact` grant, and a containment selector reaching an entry approved beneath the ceiling); `resource-match-unsupported.test.ts` "loads prefix ceiling entries in policy.json, governed-policy.json and authority-sources.json beside the configured containment rules (@spec containment#selector-matching, #1463)" |
+| The authorization server compares with the resource server's matcher | implemented: the subset rule's resource step calls `prefixAdmits`, the function the resource servers' matcher (`matchResource`, `packages/mission-core/src/operation-target.ts`) calls, over the same normalized forms | as above | `resource-access-cases.test.ts` "the subset test draws the resource servers' boundary: an exact candidate naming each resource-matching case's target is within the case's entry exactly when the matcher admits the target (@spec resource-access#subset, #1276)"; row `resource-access.subset.same-matcher` is `partial`: unit level, and no endpoint compares an authorization server decision with a resource server decision |
 | An action is within an equal action | implemented: literal membership | `isSubsetEntry`; `intersect` and `intersectForProjection` (`derive.ts`) | `token-request-rar-narrowing.test.ts` "an action outside the grant is refused invalid_authorization_details, saving no refresh token, and the same token still refreshes" |
 | A literal action within a family; a family within a family | not implemented: an action family is unsupported input, refused before approval or transformation at every boundary that admits an entry (#1377, D538, D684), so no comparison ever sees one | `unsupportedActionFamily` (`packages/mission-core/src/authority-subset.ts`), consulted wherever `unsupportedEntryMember` is: `refusedMemberViolation` (`authorization-details-metadata.ts`), `isAuthorityEntry`, `isSubsetEntry`, derivation and projection (`derive.ts`), template consent (`template.ts`) and the config loaders (`packages/demo-data/src/index.ts`) | `action-family-refused.test.ts`; `entry-validation.test.ts` "refuses an action family the grammar admits as unsupported input, not as a grammar violation, creating no Mission (#1377)"; the refresh-narrowing, template-consent and RAS witnesses; case sub-act-01 skips (`action-families`) |
 | A family is never within a literal action | not reached: a family is refused before any comparison (#1377) | as above | as above |
@@ -94,15 +95,17 @@ their semantics from one table (`SEMANTICS`, read by
 `requires_action_approval` are compared in `isSubsetEntry` and intersected in
 `intersect` and `intersectForProjection`. Each key's cases
 (`constraints.json`, `cc-<key>-*`) run. Tests named below without a file are
-in `common-constraints-endpoint.test.ts`.
+in `common-constraints-endpoint.test.ts`. Every key has endpoint evidence for
+both rules, a narrower value issued as well as a broader one refused (D444),
+each proved by disabling the comparison it covers.
 
 | Key | Subset witness | Intersection witness |
 |---|---|---|
-| `max_amount` | `derivation-delegation.test.ts` "a candidate 1 unit above the granted cap is NOT a subset, even though both amounts round to the same double" | `rar-carriage.test.ts` "refuses a proposal whose max_amount currency differs from the ceiling's, creating no Mission"; the smaller amount only at helper level: case der-02, `effective-set-projection.test.ts` "intersects max_amount to the SMALLER value: a candidate capped at 1000 through a survivor capped at 100 yields 100" |
-| `requires_action_approval` | cases sub-ra-01, sub-ra-02 | helper level only: case der-08, `effective-set-projection.test.ts` "ORs requires_action_approval: true on either side rides through" |
+| `max_amount` | "a Token Exchange naming a lower max_amount is issued with it; a higher amount, another currency or a dropped cap is refused"; `derivation-delegation.test.ts` "a candidate 1 unit above the granted cap is NOT a subset, even though both amounts round to the same double" | "a proposal's max_amount and the ceiling's derive the smaller amount, in either order"; `rar-carriage.test.ts` "refuses a proposal whose max_amount currency differs from the ceiling's, creating no Mission" |
+| `requires_action_approval` | "a Token Exchange adding requires_action_approval where the reference omits it is issued; dropping a true requirement or restating it as false is refused"; cases sub-ra-01, sub-ra-02 | "a proposal's requires_action_approval and the ceiling's derive their logical OR" |
 | `resource_issued_after`, `resource_issued_before` | "a Token Exchange that drops or widens a bound is refused invalid_authorization_details" | "the approval derives the intersection and the code-exchanged access token carries it"; "a proposal whose window cannot meet the ceiling's is refused at the approval decision, creating no Mission" |
 | `tenant` | "a Token Exchange that drops the tenant or names another is refused invalid_authorization_details" | "a proposal naming another tenant is refused at the approval decision, creating no Mission" |
-| `recipient_domain` | "a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused" | "a proposal naming a subdomain derives it, and refresh and introspection carry it" |
+| `recipient_domain` | "a Token Exchange naming a subdomain is issued, and the token carries the subdomain"; "a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused" | "a proposal naming a subdomain derives it, and refresh and introspection carry it" |
 | `time_window` | "a Token Exchange that drops a window bound or extends it is refused; one that narrows it is issued" | "a proposal narrowing the window derives the overlap, and refresh and introspection carry it" |
 | `data_classification` | "a Token Exchange that adds a label or drops the bound is refused; one naming fewer labels is issued" | "a proposal naming some of the ceiling's labels derives the common labels, and refresh and introspection carry them" |
 | `allowed_tools` | "a Token Exchange that adds a tool or drops the bound is refused; one naming fewer tools is issued" | "a proposal naming some of the ceiling's tools derives the common tools, and refresh and introspection carry them" |
@@ -117,7 +120,7 @@ rows and, for decimal amounts, by `compareAmounts`'s tests
 |---|---|---|---|
 | `vendors` (deployment-defined) and `terminal_when` (Discharge), compared by their own rules | implemented | `isSubsetEntry`, `intersect`, `intersectForProjection` | `packages/mission-core/test/authority-subset.test.ts` "never drops vendor, approval, or completion restrictions to meet a ceiling"; `token-request-rar-narrowing.test.ts` "relaxing a constraint (an entry without the grant's vendors) is refused, not re-narrowed" |
 | A `constraints` key outside `SUPPORTED_CONSTRAINT_KEYS` (unknown, or a Common Constraint registered later), on the ceiling or the candidate | refused at intake, configuration load and derivation (`assertSupportedConstraints`); a projection fragment carrying one is dropped (`onlyProjectableConstraints`) | `SUPPORTED_CONSTRAINT_KEYS` (`authority-subset.ts`) | `unsupported-constraint-keys.test.ts` "configured-mapping mode refuses a Common Constraint registered after this implementation on a directly-supplied ceiling entry" and "submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine"; cases der-07, der-09, cc-unsupported-extension |
-| A key present only in the candidate narrows only when it has defined semantics | implemented | as above | cases der-08 (narrows), der-09 (refused) |
+| A key present only in the candidate narrows only when it has defined semantics and the resource server serving the entry can enforce it (D712) | implemented: a key without defined semantics is refused as above; a defined key the target audience is not known to enforce (its `mission_constraints_supported`) is refused at issuance with `invalid_target`, after a Token Exchange's subset gates, never issued with the key removed | as above; `unenforcedConstraintRefusal` (`packages/mission-core/src/scope-projection.ts`), called by `projectScope` | "a Token Exchange adding tenant to an untenanted entry is issued for an audience that enforces tenant, and the token carries it" and "a Token Exchange adding tenant for an audience not known to enforce it is refused invalid_target; the same entry without it is issued" (`common-constraints-endpoint.test.ts`); cases sub-enf-01 to sub-enf-07 (enforcement context), der-08 (narrows), der-09 (refused) |
 | `locations` | refused, by presence | `REFUSED_ENTRY_MEMBERS`, `refusedEntryMember` (`authority-subset.ts`) | `rar-carriage.test.ts` "refuses a proposal entry carrying locations, whatever its value, before any interaction, creating no Mission"; case fc-08 |
 | An unknown top-level member, on the ceiling or the candidate | refused, by presence, against the supported set (the type's own members and `capability_sources`): at intake (the published schema's top level is closed) and at every requested-authority exchange, refresh narrowing included, with `invalid_authorization_details`; at configuration load and template consent; and by derivation over the ceiling and the proposal. A projection pairing carrying one is dropped, and the subset relation refuses any comparison involving one except a byte-identical pair, so an exchange that issues requested entries unprojected never drops an approved entry's member (#1399, D538) | `SUPPORTED_ENTRY_MEMBERS`, `unsupportedEntryMember` (`authority-subset.ts`) | `unknown-entry-member.test.ts` "refuses a ceiling entry carrying an unsupported member, whatever its value" and "refuses a submitted proposal entry carrying an unsupported member, whatever its value"; `rar-carriage.test.ts` "refuses a proposal entry carrying an unsupported member, whatever its value, before any interaction, creating no Mission" |
 
@@ -133,7 +136,7 @@ is compared by `capabilitySourcesNoBroader` (`authority-subset.ts`).
 | Derivation preserves it: a proposal's reference (validated against configuration) is carried under a policy ceiling, an approved ceiling's reference is carried to an entry derived from it, and a proposal replacing an approved ceiling's reference is refused | implemented | `intersect` (`derive.ts`); `assertCarriedContractsResolvable` (`kernel/resource-contract.ts`) | `resource-contract.test.ts` "derivation carries a proposed reference under a policy ceiling that has none, and an approved ceiling's reference to an entry derived from it" and "derivation refuses a proposal replacing an approved entry's reference: replacing is never narrowing" |
 | The effective-set projection (refresh, code exchange, introspection) keeps it and drops a pairing whose sides differ in it | implemented | `intersectForProjection` (`derive.ts`) | `resource-contract.test.ts` "the effective-set projection (refresh, code and introspection re-projection) keeps the reference, and yields nothing for a candidate that removes, replaces or adds one" |
 | A configured policy ceiling need not carry one | implemented: a ceiling comparison sets the member aside on both sides and keeps the entry's own | `entryWithinCeiling`, `narrowToCeiling` (`authority-subset.ts`) | `packages/mission-core/test/resource-contract.test.ts` "a configured ceiling need not carry one: the ceiling comparison sets the member aside and keeps the entry's own" |
-| Template consent | refused: a template ceiling entry carrying one is refused at consent, since consent does not assemble it from configuration | `createTemplate` (`kernel/template.ts`) | `resource-contract.test.ts` "template consent refuses a ceiling entry carrying resource_contract, naming it" |
+| Template consent | implemented: consent assembles the ceiling's references from configuration at the proposal, the consent page and the commit, never substituting one after the Approver saw the ceiling, and a Dispatch preserves them (#249, D875) | `assembleResourceContracts` (`kernel/resource-contract.ts`), called by `kernel/template.ts` | `resource-contract.test.ts` "records the current reference in a ceiling entry whose resource requires one, at a commit with no consent page", "the consent page refuses a ceiling whose references configuration would now assemble differently, never substituting one" and "a Dispatcher reference the template ceiling does not carry is refused, never added" |
 
 ### 2.4 The `delegation` member under narrowing
 
@@ -209,13 +212,32 @@ initial Common Constraints, `vendors` and `terminal_when`, and the
 `delegation` rules of §2.4, with one limitation: delegate and child-actor
 matchers are compared by `(sub, sub_profile)` identity, not by the actors
 they permit, so a candidate list narrower by containment is refused (§2.4).
-Outside that domain, an action family and an unknown top-level member are
-refused as unsupported input.
+A key only the candidate carries narrows only where the serving audience is
+known to enforce it (§2.3). Outside that domain, an action family and an
+unknown top-level member are refused as unsupported input.
 
-D414 selects the same shape for #819's first interoperable subset:
-"exact-resource matching, explicit actions and agreed typed constraints",
-with prefix behavior only under separately enabled vectors. This note does
-not define that profile or its vectors.
+### 5.1 The supported-subset fixture
+
+#249's fixture `payments-exact-explicit/2026-10-27`
+(`vectors/mission-resource-access-subset/supported-subset-2026-10-27.json`)
+is the initial interoperable subset D414 selects, and #819's second consumer
+(`packages/resource-access-subset-consumer/`) runs it (D676, D712). The
+reference's domain contains it:
+
+| Dimension | Fixture | Reference |
+|---|---|---|
+| Resource matching | `exact` only | `exact` and `prefix` |
+| Actions | literal identifiers; a family refused | the same |
+| Members | `type`, `resource`, `resource_match`, `actions`, `constraints`, `resource_contract`; `delegation` and `capability_sources` outside | all eight (§2.3, §2.4) |
+| Constraints | the nine initial Common Constraints; `terminal_when` and `vendors` outside (D684) | the nine, `vendors` and `terminal_when` |
+| A key only the candidate carries | narrows only where `enforced_constraints` names it | narrows only where the serving audience enforces it |
+
+`resource-access-subset.test.ts` checks that containment against the case
+files: "selects expected-outcome cases this implementation runs, except a
+refusal of input the subset excludes and this implementation supports". A
+declaration whose domain is the fixture's would claim less than the
+reference implements. One whose domain is the reference's own (§6) also
+claims `prefix`, which #1377 asks the owner to rule on (ruling B).
 
 ## 6. Route to a declaration
 
@@ -227,10 +249,18 @@ declaration is published yet. Before one is made:
   members (§2.3), is refused consistently before approval or transformation
   (done: #1421 for members, #1377 for families);
 - this inventory is kept correct as that handling changes;
-- each claimed transformation has its own evidence; and
-- the declaration states its domain: `exact` resources, literal actions, the
-  supported members and constraints, the matcher-comparison limitation of
-  §2.4, and each transformation's scope.
+- each claimed transformation has its own evidence (for `narrowing`, §2.2
+  and §2.3 now give endpoint evidence for all nine Common Constraints and
+  the candidate-only condition; `delegation` and `projection` need their
+  own); and
+- the declaration states its domain: `exact` resources (and `prefix`, if
+  ruling B in #1377 includes it), literal actions, the supported members and
+  constraints, the matcher-comparison limitation of §2.4, and each
+  transformation's scope.
+
+The form a qualified declaration takes is #1377's ruling A: the binding's
+`mission_transformation_capabilities` value is three booleans, and D538
+forbids an unqualified whole-type boolean narrowed by prose.
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
 A qualified `narrowing` choice establishes no `projection` evidence, and the
