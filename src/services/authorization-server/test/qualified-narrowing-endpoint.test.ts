@@ -174,7 +174,7 @@ async function approve(s: Srv, proposal: AuthorityEntry[] | undefined, targets: 
 }
 
 /** The full issuance: approval, then the code exchange. */
-async function issue(s: Srv, proposal: AuthorityEntry[]): Promise<{ at: string; keys: Keys }> {
+async function issue(s: Srv, proposal: AuthorityEntry[]): Promise<{ at: string; rt: string; keys: Keys; missionId: string }> {
   const redirect = await approve(s, proposal);
   const code = redirect.searchParams.get("code");
   expect(code, redirect.toString()).toBeTruthy();
@@ -185,7 +185,32 @@ async function issue(s: Srv, proposal: AuthorityEntry[]): Promise<{ at: string; 
     keys,
   );
   expect(exchanged.status, JSON.stringify(exchanged.body)).toBe(200);
-  return { at: exchanged.body.access_token as string, keys };
+  const at = exchanged.body.access_token as string;
+  return { at, rt: exchanged.body.refresh_token as string, keys, missionId: (claims(at).mission as { id: string }).id };
+}
+
+/** Remove `actions` from the Mission's entries for the payments resource (an authoritative narrowing). */
+function contain(s: Srv, missionId: string, actions: string[]): void {
+  s.as.kernel.contain(missionId, {
+    event: { type: "test.narrowing", source: "qualified-narrowing-endpoint.test", observed_at: new Date().toISOString(), event_id: crypto.randomUUID() },
+    remove: [{ resource: RESOURCE, actions }],
+  });
+}
+
+const refresh = (s: Srv, rt: string, keys: Keys) => token(s, { grant_type: "refresh_token", refresh_token: rt, resource: RESOURCE }, keys);
+
+/** Run `fn`, counting the refresh tokens the provider saves meanwhile. */
+async function countingRefreshSaves<T>(s: Srv, fn: () => Promise<T>): Promise<{ result: T; saved: number }> {
+  let saved = 0;
+  const onSaved = () => {
+    saved += 1;
+  };
+  s.as.provider.on("refresh_token.saved", onSaved);
+  try {
+    return { result: await fn(), saved };
+  } finally {
+    s.as.provider.removeListener("refresh_token.saved", onSaved);
+  }
 }
 
 /** The async-delegation Token Exchange over the base token's delegation handle. */
@@ -207,7 +232,9 @@ async function exchange(s: Srv, base: string, keys: Keys, requested: AuthorityEn
   );
 }
 
-const claims = (jwt: string): Json => JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString()) as Json;
+function claims(jwt: string): Json {
+  return JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString()) as Json;
+}
 const entriesOf = (jwt: string) => claims(jwt).authorization_details as AuthorityEntry[];
 /**
  * The derived authority as the Mission records it, with the members approval
@@ -346,5 +373,36 @@ describe("a narrowing domain is read: an entry outside it is carried only as app
     const narrowedUnderShipped = await decide(shipped, [{ ...CEILING, resource: INVOICES } as AuthorityEntry], [RESOURCE, INVOICES]);
     expect(narrowedUnderShipped.error).toBeNull();
     expect(narrowedUnderShipped.created[0]?.[0]?.resource).toBe(INVOICES);
+  });
+});
+
+describe("automatic projection after partial containment: an entry the declaration does not let the AS narrow is contained whole (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
+  it("under the shipped declaration, a refresh after partial containment issues the narrowed entry", async () => {
+    const issued = await issue(shipped, [structuredClone(CEILING)]);
+    contain(shipped, issued.missionId, ["payments:invoice.list"]);
+    const refreshed = await refresh(shipped, issued.rt, issued.keys);
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(entriesOf(refreshed.body.access_token as string)[0]?.actions).toEqual(["payments:invoice.read", "payments:vendor.read"]);
+  });
+
+  it("with narrowing undeclared, the partially contained entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token", async () => {
+    const issued = await issue(undeclared, [structuredClone(CEILING)]);
+    contain(undeclared, issued.missionId, ["payments:invoice.list"]);
+    expect(undeclared.as.kernel.effectiveAuthoritySet(undeclared.as.kernel.get(issued.missionId) as never)).toEqual([]);
+    const refused = await countingRefreshSaves(undeclared, () => refresh(undeclared, issued.rt, issued.keys));
+    expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
+    expect(refused.result.body.error).toBe("invalid_grant");
+    expect(refused.saved).toBe(0);
+  });
+
+  it("under an exact-only domain, a partially contained prefix entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token", async () => {
+    expect(CEILING.resource_match).toBe("prefix");
+    const issued = await issue(exactOnly, [structuredClone(CEILING)]);
+    contain(exactOnly, issued.missionId, ["payments:invoice.list"]);
+    expect(exactOnly.as.kernel.effectiveAuthoritySet(exactOnly.as.kernel.get(issued.missionId) as never)).toEqual([]);
+    const refused = await countingRefreshSaves(exactOnly, () => refresh(exactOnly, issued.rt, issued.keys));
+    expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
+    expect(refused.result.body.error).toBe("invalid_grant");
+    expect(refused.saved).toBe(0);
   });
 });

@@ -1879,4 +1879,17 @@ describe("delegation declared without narrowing: a delegated token carries an en
     expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
     expect(entriesOf(delegated.body.access_token as string)).toEqual([reads]);
   });
+
+  it("a refresh after partial containment of one of two entries carries the other unchanged and omits the contained one whole (@spec resource-access#qualified-narrowing, D1025)", async () => {
+    const { missionId, accessToken, refreshToken } = await baseMission(h, [broadReads(), vendorReads()]);
+    const vendor = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:vendor.read")) as Body;
+    contain(h, missionId, ["payments:invoice.list"]);
+    const refreshed = await token(h, "ap-agent", dpop.get("ap-agent") as Keys, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      resource: RESOURCE,
+    });
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(entriesOf(refreshed.body.access_token as string)).toEqual([vendor]);
+  });
 });

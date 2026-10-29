@@ -4180,6 +4180,10 @@ export class MissionKernel {
       if (removal.whole) continue; // a selector with no actions -> entry dropped
       const actions = entry.actions.filter((a) => !removal.actions.has(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
+      if (actions.length === entry.actions.length) {
+        out.push({ origin: entry, entry }); // no action of this entry contained -> unchanged
+        continue;
+      }
       const contained = { ...entry, actions };
       // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
       // (#1377, D1025): removing some of an entry's actions modifies it, which
