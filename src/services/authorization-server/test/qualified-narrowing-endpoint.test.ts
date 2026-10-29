@@ -29,7 +29,7 @@ const hoisted = await vi.hoisted(async () => {
   return { dir, previous };
 });
 
-import { rmSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import type { Server } from "node:http";
 import { type JsonValue, NARROWING_UNDECLARED, narrowingDomainDigest, resolveNarrowing } from "@mission/core";
 import { DERIVATION_POLICY, TRANSFORMATION_CAPABILITIES, type TransformationCapabilities } from "@mission/demo-data";
@@ -272,6 +272,14 @@ describe("the types metadata entry carries the declared transformation capabilit
     const entry = (await metadata(shipped)).mission_resource_access as Json;
     expect(entry.mission_transformation_capabilities).toEqual(TRANSFORMATION_CAPABILITIES.declared.mission_resource_access);
     expect(Object.keys(entry.mission_transformation_capabilities as Json)).toEqual(["narrowing"]);
+  });
+
+  it("the deployment documentation states the same declaration as the metadata entry (step 7)", async () => {
+    const doc = readFileSync(new URL("../../../docs/resource-access-transformation-capabilities.md", import.meta.url), "utf8");
+    const block = /<!-- declaration: mission_resource_access -->\n```json\n([\s\S]*?)\n```/.exec(doc);
+    expect(block, "the inventory states the declaration").not.toBeNull();
+    const entry = (await metadata(shipped)).mission_resource_access as Json;
+    expect(JSON.parse(block?.[1] as string)).toEqual(entry.mission_transformation_capabilities);
   });
 
   it("a server declaring nothing carries no member, so every capability falls through to deployment documentation", async () => {

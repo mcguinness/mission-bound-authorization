@@ -1,16 +1,18 @@
 # Resource Access transformation capabilities
 
 The reference Authorization Server's inventory of every rule a `narrowing`,
-`delegation` or `projection` declaration for `mission_resource_access` would
-claim (#1377, Sketch step 1). Resource Access names deployment documentation
-as a declaration carrier (§ Transformation Capabilities,
-`{#transformation-capabilities}`). **This note is not a declaration.** It
-declares no transformation capability for the type and leaves all three
-undeclared. It is not the interoperable supported-subset profile either:
+`delegation` or `projection` declaration for `mission_resource_access`
+claims (#1377). Resource Access names deployment documentation as a
+declaration carrier (§ Transformation Capabilities,
+`{#transformation-capabilities}`). **This note is that carrier for the
+reference** (§1): it declares `narrowing` for the type as a qualified value
+naming a narrowing domain (§ Qualified Narrowing), and leaves `delegation`
+and `projection` undeclared. It is not the interoperable supported-subset
+profile either:
 that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
 relates to the reference's domain.
 
-Every statement here is true of the reference implementation at `ed2e0896`
+Every statement here is true of the reference implementation at `0d0eaf3e`
 (paths relative to `src/`). Each rule names the code that applies or refuses
 it and the test (`it` title, in the named file) or case
 (`vectors/mission-resource-access/`) that witnesses it. Test files are under
@@ -27,41 +29,60 @@ Status values:
 
 ## 1. What is declared, and why
 
-No carrier declares a capability for the type:
+The reference declares, from `config/transformation-capabilities.json`, in
+both carriers it uses:
 
-- The `mission_resource_access` entry of `AUTHORIZATION_DETAILS_TYPES_METADATA`
-  (`services/authorization-server/src/kernel/authorization-details-metadata.ts`),
-  served at the `authorization_details_types_metadata_endpoint`, carries no
-  `mission_transformation_capabilities` member.
-- Its `documentation_uri` names this repository, whose documentation, this
-  note included, declares none.
+- the `mission_resource_access` entry of the
+  `authorization_details_types_metadata_endpoint` response carries it as
+  `mission_transformation_capabilities` (`authorizationDetailsTypesMetadata`,
+  `services/authorization-server/src/kernel/authorization-details-metadata.ts`);
+- this note states it, as deployment documentation:
 
-The reference nonetheless narrows entries of this type (derivation, Token
-Exchange, and refresh and code-exchange requests), delegates them (the
-delegated exchange's eligibility gate), and projects them to `scope`
-(`projectScope` on every Mission-bound mint). The OAuth binding states: "The
-AS MUST NOT narrow, delegate, or project to `scope` an entry of a type for
-which it has not declared the corresponding capability; on an undeclared
-capability the entry is carried as approved." Ledger rows
-`core.other-types.transformation-boundary-declared` and the four
-`resource-access.transformation-capabilities.*` rows are `todo`.
+<!-- declaration: mission_resource_access -->
+```json
+{
+  "narrowing": {
+    "domain": {
+      "id": "https://mission-reference.example/narrowing-domains/mission-resource-access/2026-10-29",
+      "digest": "sha-256:rvNN2eeexb_xw1lWEjn9-tAO-wP2P8LSK-2kHDQEHeQ"
+    }
+  }
+}
+```
 
-Why nothing is declared:
+The narrowing domain document is
+`config/narrowing-domains/mission-resource-access-2026-10-29.json`: `exact`
+and `prefix` resources (D1025, ruling B), the eight members of §2.3, the nine
+initial Common Constraints with `vendors` and `terminal_when`, and the
+`delegate-matcher-identity` limitation of §2.4. The loader
+(`loadTransformationCapabilities`, `packages/demo-data/src/index.ts`) refuses
+to start on a declaration naming a missing, malformed or mismatched
+document, or one listing a key this implementation does not implement.
 
-- **`narrowing`** claims the subset rule "over every member this document
-  specifies" and the Common Constraint intersection rules. The reference
-  implements none of the action-family clauses, refusing family input (§2.1),
-  and compares delegate matchers structurally (§2.4), so it does not implement the
-  whole relation. D444: "refusing unsupported input
-  does not establish the `narrowing` capability". The nine Common Constraint
-  comparisons (§2.2) are necessary evidence, not the whole claim.
-- **`delegation`** is inventoried in §3; #1377 audits its declaration
-  separately. A `delegation` declaration without `narrowing` would also not
-  describe the reference: the OAuth binding then permits a delegated entry
-  only when it is equal to a presented one, and the reference narrows
-  delegated entries (§2.4).
-- **`projection`** is applied conservatively (§4) and needs its own
-  evidence (§6).
+Every narrowing site applies the declaration (`isSubsetEntryUnder` and
+`carriedUnder`, `packages/mission-core/src/narrowing-declaration.ts`):
+approval-time derivation, the Token Exchange, refresh and code-exchange
+narrowing, dispatch handoff, transaction authorization, and the delegated
+exchanges. Within the domain the reference narrows as §2 describes; an entry
+outside it is carried only as approved, a subset established only by
+equality. `qualified-narrowing-endpoint.test.ts` witnesses both, with
+`narrowing` undeclared and with an `exact`-only domain, and that the block
+above equals the metadata entry's value.
+
+Why `narrowing` is qualified: `true` claims the subset rule "over every
+member this document specifies". The reference implements none of the
+action-family clauses, refusing family input (§2.1), and compares delegate
+matchers structurally (§2.4). The domain states what it implements instead
+(D538, D1025).
+
+`delegation` and `projection` stay undeclared. The reference still delegates
+(§3) and projects to `scope` (§4) without declaring them, so the OAuth
+binding's rule that "the AS MUST NOT narrow, delegate, or project to `scope`
+an entry of a type for which it has not declared the corresponding
+capability" is not met for those two:
+`core.other-types.transformation-boundary-declared` and
+`resource-access.transformation-capabilities.projection-undeclared-fallback`
+stay `todo`, each for its own audit (D1025).
 
 ## 2. `narrowing`
 
@@ -239,33 +260,24 @@ declaration whose domain is the fixture's would claim less than the
 reference implements. The reference's qualified domain is its own (§6),
 `prefix` included, while the fixture stays `exact`-only (D1025, ruling B).
 
-## 6. Route to a declaration
+## 6. The declaration's route
 
-D538 rules the route: a qualified supported-subset declaration aligned with
-D414, made through a reviewable specification and declaration change. No
-declaration is published yet. Before one is made:
+D538 ruled the route, a qualified supported-subset declaration through a
+reviewable specification and declaration change, and D1025 its form and
+domain. Before it was made:
 
 - unsupported input, including action families (§2.1) and unknown top-level
-  members (§2.3), is refused consistently before approval or transformation
-  (done: #1421 for members, #1377 for families);
-- this inventory is kept correct as that handling changes;
-- each claimed transformation has its own evidence (for `narrowing`, §2.2
-  and §2.3 now give endpoint evidence for all nine Common Constraints and
-  the candidate-only condition; `delegation` and `projection` need their
-  own); and
-- the declaration states its domain: `exact` and `prefix` resources (D1025,
-  ruling B), literal actions, the supported members and constraints, the
-  matcher-comparison limitation of §2.4, and each transformation's scope.
-
-D1025 (ruling A) adopts a structured `narrowing` value that Resource Access
-defines, referencing a versioned domain document by identifier and digest,
-through the existing carrier and deployment documentation: boolean meanings
-and carrier precedence are preserved, and an unknown or malformed
-qualification, or an unavailable or mismatched domain, fails closed rather
-than counting as whole-type support. #249's fixture and #819's
-independent-consumer subset stay `exact`-only.
+  members (§2.3), was refused consistently before approval or transformation
+  (#1421 for members, #1377 for families);
+- each claimed transformation gained its own evidence: for `narrowing`, §2.2
+  and §2.3 give endpoint evidence for all nine Common Constraints and the
+  candidate-only condition; and
+- the domain states `exact` and `prefix` resources, literal actions, the
+  supported members and constraints, and the matcher-comparison limitation
+  of §2.4.
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
-A qualified `narrowing` choice establishes no `projection` evidence, and the
-four per-entry, per-target projection conditions of §4 still apply. The
-`delegation` declaration remains a separate audit.
+The qualified `narrowing` establishes no `projection` evidence, and the four
+per-entry, per-target projection conditions of §4 still apply. The
+`delegation` declaration remains a separate audit. #249's fixture and #819's
+independent-consumer subset stay `exact`-only.
