@@ -11149,7 +11149,7 @@
    "id": "core.revocation.revoke-by-mission-id",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "revocation",
-   "text": "A deployment MUST provide an authenticated means, independent of possession of any token, by which a party its policy authorizes revokes a Mission by `mission_id`",
+   "text": "A Mission Issuer MUST accept, through an authenticated means independent of possession of any token, a revocation by `mission_id` from a party the deployment's policy authorizes",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11162,8 +11162,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a party the deployment's policy authorizes to revoke the Mission, authenticated and holding none of the Mission's tokens, revokes it by its identifier, after which every derivation under the Mission refuses",
-    "local": "the authorized parties are a lifecycle client at the advertised Mission Lifecycle endpoint and a service principal at the development route, each holding the deployment's `mission_lifecycle` grant"
+    "normative": "a party the deployment's policy authorizes to revoke the Mission, authenticated through a means independent of possession of any token, revokes it by its `mission_id`, after which every derivation under the Mission refuses",
+    "local": "the token-independent means is the advertised Mission Lifecycle endpoint: a lifecycle client registered with no grant at the token endpoint authenticates by private_key_jwt with its own key, presents no access, refresh or service token, and holds the deployment's configured `mission_lifecycle` authorization. The reference also serves an additional, token-authenticated path, which the requirement neither requires nor forbids: a service principal presenting a service token at the development route, under the same `mission_lifecycle` authorization"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11181,7 +11181,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1182 (D378). #1503 finding 14 (D620): the obligation names a party the deployment's policy authorizes, not the Subject, the Approver or an administrator by role, so the former partial gap (Subject and Approver access to the surface not exercised) no longer describes an obligation; that no role alone authorizes revocation is core.revocation.no-role-entitlement."
+   "notes": "#1182 (D378). #1503 finding 14 (D620): the obligation names a party the deployment's policy authorizes, not the Subject, the Approver or an administrator by role, so the former partial gap (Subject and Approver access to the surface not exercised) no longer describes an obligation; that no role alone authorizes revocation is core.revocation.no-role-entitlement. #1892 ruling 9 (D1026): re-quoted to the Mission Issuer's duty; the observation follows the text's \"independent of possession of any token\", replacing \"holding none of the Mission's tokens\", which a token-authenticated path also meets. The two witnesses prove different things. The revoke-only Lifecycle test carries every clause: a security tool registered with no grant at the token endpoint authenticates by private_key_jwt with its own key, presents no token, revokes by mission_id under its configured lifecycle authorization, and the refresh, the family refresh and a new exchange then refuse with nothing saved. The workload-principal test (step 8) authenticates by a service token at the development route: it witnesses an additional, token-authenticated revocation path, used by a party holding none of the Mission's tokens, and the refusals after it, not the token-independent means."
   },
   {
    "id": "core.revocation.authorized-revoker",
@@ -11375,6 +11375,38 @@
     }
    ],
    "notes": "#830 Q-e (D798); witnessed by #830 Q-d's reference reconciler (owner review of #1695). partial: two clauses of the observation have no witness. An owner's departure: the reference records no accountable owner apart from the Subject and the Approver. The non-recall of already-issued tokens: no witness observes token storage; the reference's revocation is the lifecycle commit alone. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed). Mutation-proved for the witnessed clauses: deprovisioning committing suspend instead of revoke, skipping a suspended Mission, evaluating the Approver in place of the recorded Subject, a source outage revoking, and matching the principal by sub alone, each failed its witness."
+  },
+  {
+   "id": "core.revocation.token-revocation-not-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "Revoking a token does not by itself revoke a Mission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "a revocation of a token issued under the Mission, an access token or a refresh token, takes effect on that token and leaves the Mission `active`, unless the deployment's revocation policy couples token revocation to Mission revocation",
+    "local": "the reference does not couple token revocation to Mission revocation: its RFC 7009 route revokes the token and its grant, and its revocation hooks cancel only deferral codes, never committing a Mission lifecycle transition"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 9 (iv) (D1026). Shares its witness with status.lifecycle.rfc7009-not-by-itself, Mission Status's statement of the same rule. The witness revokes, at the RFC 7009 endpoint, the refresh token of an async-delegation family under the Mission (a Token Exchange refresh lineage), asserts the 200 and the family's grant destroyed, and asserts the Mission's state is still active. Partial: it runs with the delegation capability on, and no test revokes an access token or a code-redemption refresh token and then checks the Mission."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
