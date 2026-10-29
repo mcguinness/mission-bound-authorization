@@ -10036,9 +10036,27 @@
      "name": "approved context commitment (@spec mission-substrate#approved-context) > all three Approved Context components (intent, proposal, derived authority_set) and their anchors survive successive state transitions unchanged",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated revoked keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated completed keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a terminated child keeps its own reason when its parent later terminates",
+     "level": "unit",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Keyword-free until #1879 settles whether a companion (Containment's overlay, Status's schedule) may change a Mission after creation; the witness excludes those two companion fields and the implementation's own fields. Mutation-proved: a suspend that rewrites `expires_at` fails the first witness while the Approved Context witnesses still pass."
+   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member; keyword-free here. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
   },
   {
    "id": "core.mission-record.authority-source-immutable",

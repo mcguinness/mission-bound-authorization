@@ -821,8 +821,8 @@ describe("mission reference unguessability (@spec mission-substrate#reference)",
 });
 
 describe("Mission Record immutability (@spec mission#mission-record)", () => {
-  // Implementation fields that are not Mission Record members, and the two companion members whose post-creation writes
-  // are an open scope question against the core rule (Status's `schedule`, Containment's `containment`; #1879).
+  // Implementation fields that are not Mission Record members, and issuer-held state associated with the Mission outside
+  // the logical record (Status's `schedule`, Containment's `containment`; #1879 option A).
   const NOT_RECORD_MEMBERS = new Set([
     "version",
     "derivation_count",
