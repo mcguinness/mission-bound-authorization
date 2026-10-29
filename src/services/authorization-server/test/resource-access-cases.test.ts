@@ -143,12 +143,17 @@ function intakeViolation(operand: unknown): string | undefined {
  * and the resource server serving A.`resource` can enforce it." The case's `enforced_constraints` is that server's
  * known keys; absent, it is known to enforce none. Decided by this authorization server's own issuance refusal
  * ({@link unenforcedConstraintRefusal}), which a Token Exchange applies after its subset gates, over the keys only
- * the candidate carries: a key both operands carry is compared by its own rule.
+ * the candidate carries: a key both operands carry is compared by its own rule. Presence is effective presence (D1025):
+ * Resource Access makes `requires_action_approval: false` "equivalent to omitting the member", so on either operand
+ * that value does not make the key present. Neither entry is rewritten, and the issuance check stays presence-keyed:
+ * that stricter issuance policy is not the comparison.
  */
 function candidateOnlyUnenforced(input: Record<string, unknown>): string | undefined {
   const candidate = input.candidate as AuthorityEntry;
-  const referenceKeys = Object.keys((input.reference as AuthorityEntry).constraints ?? {});
-  const only = Object.fromEntries(Object.entries(candidate.constraints ?? {}).filter(([k]) => !referenceKeys.includes(k)));
+  const present = (entry: AuthorityEntry): [string, unknown][] =>
+    Object.entries(entry.constraints ?? {}).filter(([k, v]) => !(k === "requires_action_approval" && v === false));
+  const referenceKeys = present(input.reference as AuthorityEntry).map(([k]) => k);
+  const only = Object.fromEntries(present(candidate).filter(([k]) => !referenceKeys.includes(k)));
   if (Object.keys(only).length === 0) return undefined;
   const enforced = input.enforced_constraints as string[] | undefined;
   const audience = {
@@ -549,6 +554,12 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     });
     it("sub-enf-06: a key without defined semantics is refused even where the serving resource server lists it", () => {
       runCited("sub-enf-06");
+    });
+    it("sub-enf-08: a candidate's false against an absent key adds no key and needs no enforcement context", () => {
+      runCited("sub-enf-08");
+    });
+    it("sub-enf-09: a candidate's true against a reference's false is a key only the candidate carries, refused without enforcement context", () => {
+      runCited("sub-enf-09");
     });
   });
 
