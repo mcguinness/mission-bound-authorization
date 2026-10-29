@@ -159,7 +159,10 @@ interface Wired {
   reopen: () => MissionSignalEmitter;
 }
 
-async function wire(store?: { file: string }): Promise<Wired> {
+async function wire(
+  store?: { file: string },
+  opts: { undeclaredFirst?: boolean } = {},
+): Promise<Wired> {
   const statusKeys = await generateKeyPair("ES256", { extractable: true });
   const statusPub: JWK = {
     ...(await exportJWK(statusKeys.publicKey)),
@@ -169,10 +172,15 @@ async function wire(store?: { file: string }): Promise<Wired> {
   };
   let clock = T0;
   const now = () => clock;
-  const consumers = [
-    { audience: DECLARED_AUD, mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY] },
-    { audience: UNDECLARED_AUD, stream_id: UNDECLARED_STREAM },
-  ];
+  const declaredConsumer = {
+    audience: DECLARED_AUD,
+    mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY],
+  };
+  const undeclaredConsumer = { audience: UNDECLARED_AUD, stream_id: UNDECLARED_STREAM };
+  // Consumer order is journal order: the first consumer's job is claimed first.
+  const consumers = opts.undeclaredFirst
+    ? [undeclaredConsumer, declaredConsumer]
+    : [declaredConsumer, undeclaredConsumer];
   const makeEmitter = () =>
     new MissionSignalEmitter({
       key: statusKeys.privateKey,
@@ -441,6 +449,28 @@ describe("a withheld narrowing pauses the undeclared stream (@spec signals#disch
     expect(eventBody(verification)).toEqual({ state: "state-held-1" });
     expect(w.undeclared.viewState(other.id)).toMatchObject({ state: "terminated", version: 2 });
     expect(w.emitter.pending()).toBe(0);
+  });
+
+  it("holds an event committed before the withholding and not yet delivered: the stream receives Stream Updated paused, then nothing until it is re-enabled", async () => {
+    // The undeclared stream's job is journaled first, so its dispatch claims
+    // it and starts signing before the withholding.
+    const w = await wire(undefined, { undeclaredFirst: true });
+    await w.tick();
+    const lastLiveness = w.now();
+    w.advance(1_000);
+    // No drain between the commits: the activating event (version 1) is
+    // journaled, and its dispatch started, before the withholding pauses
+    // the undeclared stream.
+    const mission = approve(w.kernel);
+    containRead(w, mission.id, "evt-pause-contain-early");
+    await w.emitter.drain();
+    expect(trace(w.declaredLog.filter((r) => r.kind === "lifecycle")).sort()).toEqual(["v1", "v2"]);
+    expect(trace(w.undeclaredLog)).toEqual(["verify", "paused"]);
+    expect(w.emitter.pending()).toBe(1);
+
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    await w.emitter.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["verify", "paused", "enabled", "v1"]);
   });
 
   it("keeps the pause across a restart: a fresh emitter over the same store stays paused, holds the event and attests no liveness until the window has passed", async () => {
