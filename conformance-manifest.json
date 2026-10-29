@@ -47,8 +47,8 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "552acb8c415969604ed2053786be955198d52785",
-    "content_sha256": "001ce4ec9ebaafee625fab3271656ff873d2073739b14e1d0e338ae57bce5943"
+    "revision": "3e427937e568e6d3ddc0dcdca7d6221836200391",
+    "content_sha256": "9534986cf5c06f303145287839936647af64608c90c304bafdd031390af59c6e"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
@@ -155,8 +155,8 @@
     "content_sha256": "c7b1f59acd41bc0698559c4b9123aa7283d7599e73d635bc61b0fde0c1725e87"
    },
    "draft-mcguinness-oauth-mission-containment.md": {
-    "revision": "b2e4e9571e1c7173a778eb52bb888483ac09d3f5",
-    "content_sha256": "665929b2d3917e67c8460beac4de5e21b3a974edc710a684d3d2ca1e7eab3555"
+    "revision": "536e657927ec6f14c405df18c3edf4d163ea54ef",
+    "content_sha256": "d826301a7d93d759b48011f1bebb4fb6a6643e66d29e80ca583c5d054898ee7a"
    },
    "draft-mcguinness-mission-harness.md": {
     "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
@@ -24838,7 +24838,7 @@
    "id": "signals.discharge.producer-gating-undeclared-stream",
    "spec": "draft-mcguinness-oauth-mission-signals.md",
    "anchor": "discharge-compatibility",
-   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event whose effective-authority change is represented by `authority_changed` alone (a discharge commit, {{I-D.draft-mcguinness-oauth-mission-discharge}}) to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
+   "text": "a Mission Issuer MUST NOT deliver a `mission.lifecycle-change` event that carries `authority_changed` true to a stream whose consumer has not declared `authority_changed` in `mission_capabilities_supported`",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -24849,8 +24849,8 @@
    "surface": "signals",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true",
-    "local": "requires the deployment to also adopt the Status profile's completion/discharge capability"
+    "normative": "a stream whose consumer has not declared authority_changed in mission_capabilities_supported never receives a mission.lifecycle-change event carrying authority_changed true, whether a discharge commit or a containment commit narrowed the Mission's effective authority",
+    "local": "the discharge case requires the deployment to also adopt the Status profile's completion/discharge capability, and the containment case the containment profile"
    },
    "level": "cross-component",
    "coverage": "tested",
@@ -24863,12 +24863,60 @@
     },
     {
      "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
-     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > withholds a real kernel contain() commit from an undeclared stream and delivers it to a declared one, whose receiver rematerializes",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
+     "level": "cross-component",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate survives an emitter restart: it reads the commit's authority_changed, never emitter history > withholds a containment commit first observed above version 1 from an undeclared stream and delivers it to a declared one",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: every event carrying `authority_changed` true, a discharge commit and a containment commit alike, is withheld from an undeclared stream and delivered to a declared one (#1001, D1002). The gate reads only the commit's own `authority_changed` and the consumer's declaration, never emitter-side history, so a restarted emitter decides alike; the kernel's former `containment_advanced` provenance marker, which let a contain commit through, is removed. A discharge on a previously contained Mission carries `containment_version` beside `authority_changed` and is still gated. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter. Proved by mutation: letting any event with a `containment_version` through the gate fails five tests: the previously-contained discharge test, the end-to-end contain witness, the gap test, and both fresh-emitter tests; reinstating the former contain-only pass-through (the kernel marker on contain commits) fails the previously-contained discharge test, the end-to-end contain witness and the gap test, while the discharge-only tests pass."
+  },
+  {
+   "id": "signals.discharge.withholding-keeps-version",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "discharge-compatibility",
+   "text": "Withholding an event changes no other event's `version`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "after the gate withholds an event from a stream, the next event delivered to that stream for the Mission carries the Mission's own committed version, not a stream-local renumbering, so the stream's consumer sees a version gap",
+    "local": "the reference journals each commit once per deliverable consumer with the kernel's committed version, and signLifecycleEvent writes that version unchanged; the receiver reports the resulting gap (ApplyResult status gap, hasGap) and leaves the Mission Status refetch to the consumer"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
+     "name": "the delivery gate covers containment (@spec signals#discharge-compatibility, #1001) > keeps the Mission's own version on the undeclared stream's next event, so its receiver detects the gap a withheld contain commit left",
      "level": "cross-component",
      "surface": "signals"
     }
    ],
-   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
+   "notes": "#1001 (D1002). A real kernel contain commit (version 2) is withheld from the undeclared stream; the suspend that follows reaches that stream as version 3 and its receiver reports a gap (expected 2, received 3), while the declared stream sees 1, 2, 3. Proved by mutation: renumbering versions per stream in the emitter's journal fails the test (the undeclared stream receives 1, 2)."
   },
   {
    "id": "signals.delivery.persist-until-acknowledged",
