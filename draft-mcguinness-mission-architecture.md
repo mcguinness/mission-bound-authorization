@@ -2047,8 +2047,9 @@ Work products:
   Work Products companion carries the rule through non-transitive
   Mission-to-Mission handoff
   ({{I-D.draft-mcguinness-oauth-mission-work-products}}), and the
-  OAuth binding states it in its "Authority and Propagated
-  Information" section ({{I-D.draft-mcguinness-oauth-mission}}).
+  Mission Security Model catalogs the threat it answers
+  ({{I-D.draft-mcguinness-mission-security-model}}, Section
+  "Adversary Model and Coverage").
 
 Composition:
 : An approval bounds the authority each derivation under the Mission
@@ -2074,9 +2075,10 @@ Composition:
   metering profile's lineage budget) and is never rendered as in force
   otherwise ({{I-D.draft-mcguinness-oauth-mission-cross-domain}},
   {{I-D.draft-mcguinness-oauth-mission-child-delegation}},
-  {{I-D.draft-mcguinness-mission-metering}}). The OAuth binding
-  states the same property in its "Composition and the Effective
-  Ceiling" section ({{I-D.draft-mcguinness-oauth-mission}}).
+  {{I-D.draft-mcguinness-mission-metering}}). The Mission Security
+  Model analyzes the same property
+  ({{I-D.draft-mcguinness-mission-security-model}}, Section
+  "Adversary Model and Coverage").
 
   Cross-issuer joint authorization is outside the family's scope.
   Independent issuers run independent Missions, each bounded on its
@@ -4882,6 +4884,12 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Mission Invariants' work-products and composition entries cite the
+  Security Model's adversary model, which carries the analysis the
+  OAuth binding's Authority and Propagated Information and Composition
+  and the Effective Ceiling sections restated. No requirement changed
+  (#1892).
 
 - Gains, from the OAuth binding, the OAuth Binding Mapping Assessment,
   pinned to and citing a commit-pinned Editor's Draft snapshot of that

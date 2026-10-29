@@ -2475,8 +2475,7 @@
     "draft-mcguinness-oauth-mission-signals",
     "draft-mcguinness-oauth-mission-status",
     "draft-mcguinness-oauth-mission-submission-evidence",
-    "draft-mcguinness-oauth-mission-template",
-    "draft-mcguinness-oauth-mission-work-products"
+    "draft-mcguinness-oauth-mission-template"
    ]
   },
   {
@@ -2510,6 +2509,7 @@
    ],
    "references": [
     "draft-mcguinness-mission-metering",
+    "draft-mcguinness-mission-security-model",
     "draft-mcguinness-oauth-mission",
     "draft-mcguinness-oauth-mission-child-delegation",
     "draft-mcguinness-oauth-mission-consent-evidence",

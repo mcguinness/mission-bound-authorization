@@ -300,14 +300,6 @@ informative:
         ins: K. McGuinness
         name: Karl McGuinness
     date: 2026
-  I-D.draft-mcguinness-oauth-mission-work-products:
-    title: "Mission Work Products for OAuth 2.0"
-    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-work-products.html
-    author:
-      -
-        ins: K. McGuinness
-        name: Karl McGuinness
-    date: 2026
   I-D.draft-mcguinness-oauth-mission-resource-access:
     title: "Mission Resource Access Profile for OAuth 2.0"
     target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-oauth-mission-resource-access.html
@@ -5368,22 +5360,10 @@ commitment. {{authority-proposal}}, {{discovery}}, and
 {{rs-enforcement}} address this downgrade at issuance, at the client,
 and at enforcement.
 
-A held ordinary credential needs no request to the AS, and neither an
-AS nor a resource server can generally tell that a request made with
-one serves a Mission:
-
-- Classifying a resource as Mission-governed closes this path at that
-  resource.
-- Mandatory mediation closes it where the client's requests must pass
-  through a runtime layer that holds custody of the client's
-  credentials ({{I-D.draft-mcguinness-mission-runtime}}).
-- A decision-time join of an ordinary credential to the Mission, such
-  as the Mission Join of
-  {{I-D.draft-mcguinness-mission-authority-server}}, is one realization
-  of the enforcement path that {{discovery}} permits.
-- An unmediated ordinary workflow at a resource that is not
-  Mission-governed remains a residual that only the client's own
-  conformance closes.
+The Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes the path
+that an ordinary credential the client already holds leaves open, and
+where mediation closes it.
 
 The integrity of the `mission_bound_authorization_supported`
 ({{discovery}}) and `mission_bound_authorization_required`
@@ -5396,19 +5376,7 @@ considerations apply.
 ### Prompt Injection and Data Exfiltration {#prompt-injection}
 
 This document assumes that an agent reading attacker-influenceable
-content can be prompt-injected, and does not try to make the agent
-immune. Injection is dangerous when one agent combines access to
-private data, exposure to untrusted content, and the ability to
-communicate externally; the Mission Security Model
-({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
-combination and its architectural defenses.
-
-This document constrains the data-access leg: a Mission narrows
-authority from everything the agent's standing credentials allow to the
-resources the approved task needs, and per-task Missions
-({{applicability}}) further limit the effect of a compromise.
-
-Against the untrusted-content leg, authority is fixed at the approval
+content can be prompt-injected. Authority is fixed at the approval
 event, so injected text cannot expand an approved Mission. `purpose`
 supplies candidate authority only as a lookup key of the pre-approval
 Authority Set derivation whose result the Approver reads and
@@ -5416,47 +5384,12 @@ consents to, and otherwise can only refuse or tighten; `goal` and
 `task_bounds` bound it only through that disclosure
 ({{mission-intent}}, {{authorization-derivation}}).
 
-This document does not constrain the external-communication leg. It
-models authority over resources and actions, not how an agent uses
-authority it holds:
-within an approved Authority Set, an injected agent can read what the
-Mission permits and write to a sink the Mission permits.
-
-Constraining exfiltration by a compromised agent is the runtime layer's
-role ({{runtime-boundary}}), and even there it is bounded, not closed
-({{I-D.draft-mcguinness-mission-runtime}}). Preventing misuse of data
-within the authorized scope needs a taint or information-flow layer
-this document does not define.
-
-### Authority and Propagated Information {#information-propagation}
-
-Issuance gating bounds escalation by token acquisition
-({{issuance-gating}}, {{subset}}): an agent cannot exceed the approved
-Authority Set by acquiring additional tokens. The same bound holds for
-information: an agent can inherit another agent's knowledge, but not its
-authority.
-
-A work product of one Mission (a file, message, memory entry, queue
-event, or other durable shared artifact) is input, not authority, to
-an agent under another Mission that reads it. The
-receiving Mission determines what can be done with the information
-under its own Authority Set ({{subset}}); the producing Mission's
-authority does not transfer through the artifact by copying,
-referencing, embedding, or communicating it.
-
-An agent that needs authority to act on what it read acquires it only
-through an authorized derivation or delegation bounded by the Mission
-({{delegation}}), not from the artifact.
-
-The threat is emergent authority through coordination: independent
-Missions communicating through shared state, so that individually
-acceptable actions compose into behavior no single Mission authorized
-({{I-D.draft-mcguinness-mission-security-model}}). Mission Work
-Products {{I-D.draft-mcguinness-oauth-mission-work-products}}
-specifies the mechanism that upholds the invariant across such a
-carrier (work-product provenance and a non-transitive
-Mission-to-Mission handoff); this document takes no normative
-dependency on it.
+Within an approved Authority Set, an injected agent can still read
+what the Mission permits and write to a sink the Mission permits. The
+Mission Security Model
+({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
+residual; constraining it is the runtime layer's role
+({{runtime-boundary}}).
 
 ## Enforcement Boundaries {#sec-enforcement}
 
@@ -5630,31 +5563,6 @@ the one `jwks_uri` lets high-value, low-volume signing (long-lived
 evidence and portable artifacts) sit under stricter custody than
 high-volume token signing. Verification is `kid`-indexed, so this needs
 no wire change.
-
-## Composition and Residual Authority {#sec-composition}
-
-### Composition and the Effective Ceiling {#composition-and-the-effective-ceiling}
-
-Delegation depth ({{delegation-constraints}}) resets to 0 at each
-cross-domain hop ({{I-D.draft-mcguinness-oauth-mission-cross-domain}})
-and, where a deployment runs the child-delegation profile, at each child
-generation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}).
-
-The aggregate surface that a Mission's descendants can reach (the
-product of delegation depth, the number of trust domains projected into,
-and the number of child generations, each bounded independently) can
-therefore exceed what a single approval appears to bound at consent
-time. {{I-D.draft-mcguinness-mission-security-model}} analyzes this
-composition, including why per-Mission child limits do not add up to a
-lifetime total, and the child-delegation profile states how an
-approval renders the subtree's figures
-({{I-D.draft-mcguinness-oauth-mission-child-delegation}}). Where a
-single approval's apparent bound must hold in practice, a deployment
-can impose a global cap out of band.
-
-Bounding aggregate consumption (calls, spend, or activity over the life
-of a Mission and its descendants) is the metering profile's role
-({{I-D.draft-mcguinness-mission-metering}}).
 
 # Privacy Considerations {#privacy-considerations}
 
@@ -7278,6 +7186,12 @@ resolve before interoperating.
   its duty to offer token introspection or Mission Status where
   consumers rely on Mission state beyond a token's lifetime is
   unchanged (#1892, D1026).
+- Editorial, no requirement change: Prompt Injection and Data
+  Exfiltration and Downgrade by Omission keep their rules and residuals
+  and point to the Mission Security Model for the analysis; Authority
+  and Propagated Information and Composition and the Effective Ceiling,
+  which the Security Model and Mission Work Products carry, are removed
+  with the uncited Work Products reference (#1892, D1026).
 
 -01
 
