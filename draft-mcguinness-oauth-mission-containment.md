@@ -805,7 +805,10 @@ none:
   consumer as an authorization change, rather than an opaque version
   increment. A dedicated containment event type is deferred; carrying
   `containment_version` on the existing event is what keeps that
-  change legible in the interim.
+  change legible in the interim. Signals delivers a contain event that
+  narrows effective authority only to a stream whose consumer declared
+  `authority_changed` ({{I-D.draft-mcguinness-oauth-mission-signals}},
+  Section "Authority Change Compatibility").
 
 How quickly a consumer must adopt the narrowed view is bounded by the
 freshness and staleness rules it already operates under
