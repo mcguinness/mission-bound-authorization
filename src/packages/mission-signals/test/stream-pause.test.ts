@@ -184,8 +184,11 @@ interface Wired {
   advance: (ms: number) => void;
   /** One heartbeat: advance the clock, attest liveness, dispatch. */
   tick: () => Promise<void>;
-  /** Wire a fresh emitter over the same store, as after a restart. */
-  reopen: () => MissionSignalEmitter;
+  /**
+   * Wire a fresh emitter over the same store, as after a restart, optionally
+   * with a heartbeat interval configured where none was.
+   */
+  reopen: (heartbeatIntervalSeconds?: number) => MissionSignalEmitter;
 }
 
 async function wire(
@@ -217,7 +220,7 @@ async function wire(
     : [declaredConsumer, undeclaredConsumer];
   // The agreed heartbeat interval: the liveness schedule unless a test sets
   // another, or none at all.
-  const heartbeatIntervalSeconds =
+  let heartbeatIntervalSeconds =
     opts.heartbeatIntervalSeconds === undefined
       ? HEARTBEAT_MS / 1000
       : opts.heartbeatIntervalSeconds;
@@ -294,8 +297,9 @@ async function wire(
       await emitter.attestLiveness();
       await emitter.drain();
     },
-    reopen: () => {
+    reopen: (interval?: number) => {
       emitter.close();
+      if (interval !== undefined) heartbeatIntervalSeconds = interval;
       emitter = makeEmitter();
       sinks(emitter);
       return emitter;
@@ -977,8 +981,10 @@ describe("delivery uncertainty and liveness ordering (@spec signals#discharge-co
     ]);
   });
 
-  it("never re-enables a paused stream automatically when no heartbeat interval is configured", async () => {
-    const w = await wire(undefined, { heartbeatIntervalSeconds: null });
+  it("never re-enables a paused stream automatically when no heartbeat interval is configured; once one is, the window runs from the reopening instant", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "signals-stream-interval-"));
+    tmpDirs.push(dir);
+    const w = await wire({ file: join(dir, "outbox.db") }, { heartbeatIntervalSeconds: null });
     const mission = approve(w.kernel);
     await w.emitter.drain();
     await w.tick();
@@ -999,6 +1005,20 @@ describe("delivery uncertainty and liveness ordering (@spec signals#discharge-co
     expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
     expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
     expect(w.emitter.pending()).toBe(1);
+
+    // Restarted with the agreed interval configured: the window runs from now.
+    const reopenedAt = w.now();
+    const reopened = w.reopen(HEARTBEAT_MS / 1000);
+    expect(reopened.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(reopenedAt + MAX_STALE_MS),
+    );
+    w.advance(MAX_STALE_MS);
+    await reopened.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
+    w.advance(1);
+    await reopened.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused", "enabled", "v3"]);
+    reopened.close();
   });
 
   it("adds the clock tolerance it allows its consumers to the window: a consumer whose clock runs behind by that tolerance has ended its reliance before the stream re-enables", async () => {

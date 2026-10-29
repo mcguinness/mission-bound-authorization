@@ -1908,6 +1908,17 @@ export class MissionSignalEmitter {
         false,
         reopened,
       );
+    // A stream paused while no window was configured has no re-enable
+    // instant. Once one is configured, its window runs from this reopening
+    // instant, which is no earlier than its withholding and the end of any
+    // attempt on it.
+    if (this.reenableWindowMs !== undefined)
+      this.db
+        .prepare(
+          `UPDATE signal_stream SET reenable_after = ?
+           WHERE status = 'paused' AND reenable_after IS NULL`,
+        )
+        .run(reopened + this.reenableWindowMs);
   }
 
   /** Register a receiver to be handed every SET for its own audience. */
