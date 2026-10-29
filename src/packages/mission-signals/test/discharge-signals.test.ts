@@ -61,6 +61,8 @@ const CLOSE_EVENT = "accounting-period-closed";
 const CLOSE_POLICY = "close-management-2026-q3";
 /** The issuer's advertised `mission_max_stale_seconds` in these tests. */
 const MAX_STALE_SECONDS = 60;
+/** The stream's agreed heartbeat interval, shorter than `MAX_STALE_SECONDS`. */
+const HEARTBEAT_INTERVAL_SECONDS = 10;
 
 /** True for a `mission.lifecycle-change` SET; false for an SSF stream-control SET. */
 const isLifecycle = (set: string): boolean =>
@@ -148,6 +150,9 @@ async function wire(): Promise<Wired> {
       { audience: UNDECLARED_AUD },
     ],
     maxStaleSeconds: MAX_STALE_SECONDS,
+    // The agreed heartbeat interval: without one, a paused stream is never
+    // re-enabled automatically (D1023 ruling 3).
+    heartbeatIntervalSeconds: HEARTBEAT_INTERVAL_SECONDS,
     now: () => new Date(clock),
   });
   const declared = new MissionSignalReceiver({

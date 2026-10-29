@@ -1549,6 +1549,14 @@ export interface SignalStreamStatus {
   notice_pending: boolean;
   /** When the last verification event on the stream was acknowledged. */
   last_liveness_at?: Date;
+  /**
+   * When the latest attempt to deliver a verification event on the stream
+   * ended, acknowledged or failed: after it, that attempt can no longer be
+   * received. The re-enable window runs from here.
+   */
+  liveness_resolved_at?: Date;
+  /** Verification delivery attempts on the stream that have not yet ended. */
+  liveness_unresolved: number;
   /** A paused stream is re-enabled only after this instant; absent, never automatically. */
   reenable_after?: Date;
 }
@@ -1611,20 +1619,31 @@ export interface EmitterOptions {
    * @spec signals#discharge-compatibility (#1877): the issuer's advertised
    * `mission_max_stale_seconds`. A withholding pauses the stream, and the
    * emitter re-enables it only once more than the re-enable window, the
-   * longer of this and `heartbeatIntervalSeconds`, has passed since the last
-   * verification event acknowledged on it. Absent, a paused stream has no
-   * window to wait out and is never re-enabled automatically (fail closed).
+   * longer of this and `heartbeatIntervalSeconds` plus
+   * `clockToleranceSeconds`, has passed since the latest verification
+   * delivery attempt on it ended. Absent, a paused stream has no window to
+   * wait out and is never re-enabled automatically (fail closed).
    */
   maxStaleSeconds?: number;
   /**
-   * @spec signals#consumer-behavior (#1877): the stream's heartbeat
-   * interval, within which a verification or heartbeat event keeps the
-   * stream verified live. A consumer's staleness rule applies only once
-   * the stream is no longer verified live, so the re-enable window is the
-   * longer of this and `maxStaleSeconds`. Absent, the window is
-   * `maxStaleSeconds`.
+   * @spec signals#discharge-compatibility (#1877, D1023 ruling 3): the
+   * finite heartbeat interval agreed with the stream's consumer, within
+   * which a verification or heartbeat event keeps the stream verified live.
+   * A consumer's staleness rule applies only once the stream is no longer
+   * verified live, so the re-enable window is the longer of this and
+   * `maxStaleSeconds`. It has no default: an unknown interval is neither
+   * zero nor `maxStaleSeconds`, either of which could re-enable the stream
+   * while the consumer is still verified live. Absent, a paused stream is
+   * never re-enabled automatically (fail closed).
    */
   heartbeatIntervalSeconds?: number;
+  /**
+   * @spec signals#discharge-compatibility (#1877, D1023 ruling 1): the clock
+   * tolerance the issuer allows its consumers, added to the re-enable
+   * window. Signals defines no value for it, so it is configured; 0 when
+   * absent.
+   */
+  clockToleranceSeconds?: number;
 }
 
 /**
@@ -1633,15 +1652,23 @@ export interface EmitterOptions {
  * keeps a pause. One row per consumer audience, written on the first
  * withholding or verification event; no row is an enabled stream that has
  * carried no verification event. `last_liveness_at` is when the last
- * verification event was acknowledged on the stream; `withheld_at` is the
- * last withholding; `reenable_after` is the instant a paused stream is
- * re-enabled only after, NULL while enabled or when no `maxStaleSeconds`
- * bounds the pause; `issuer` is the `iss` of the stream's Stream Updated
- * notices.
+ * verification event was acknowledged on the stream;
+ * `liveness_resolved_at` is when the latest verification delivery attempt
+ * on it ended, acknowledged or failed; `withheld_at` is the last
+ * withholding; `reenabled_at` is when the stream was last re-enabled;
+ * `reenable_after` is the instant a paused stream is re-enabled only after,
+ * NULL while enabled or when no window bounds the pause; `issuer` is the
+ * `iss` of the stream's Stream Updated notices.
  *
  * `signal_stream_outbox` journals each stream's Stream Updated notices and
  * the verification events its receiver requested. A job is signed once and
  * redelivered byte for byte, as a lifecycle job is.
+ *
+ * `signal_liveness_attempt` journals each verification delivery attempt,
+ * Transmitter-initiated or requested, before its hand-off begins, and the
+ * attempt's row is removed in the transaction that records how it ended.
+ * A row is an attempt whose receipt the emitter cannot yet exclude
+ * (#1877 review, D1023).
  */
 const STREAM_SCHEMA = `
 CREATE TABLE IF NOT EXISTS signal_stream (
@@ -1649,8 +1676,16 @@ CREATE TABLE IF NOT EXISTS signal_stream (
   status TEXT NOT NULL CHECK (status IN ('enabled', 'paused')),
   issuer TEXT NOT NULL,
   last_liveness_at INTEGER,
+  liveness_resolved_at INTEGER,
   withheld_at INTEGER,
+  reenabled_at INTEGER,
   reenable_after INTEGER
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_liveness_attempt (
+  attempt_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  audience TEXT NOT NULL,
+  issuer TEXT NOT NULL,
+  started_at INTEGER NOT NULL
 ) STRICT;
 CREATE TABLE IF NOT EXISTS signal_stream_outbox (
   job_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1673,7 +1708,9 @@ interface StreamRow {
   status: "enabled" | "paused";
   issuer: string;
   last_liveness_at: number | null;
+  liveness_resolved_at: number | null;
   withheld_at: number | null;
+  reenabled_at: number | null;
   reenable_after: number | null;
 }
 
@@ -1788,6 +1825,11 @@ interface OutboxRow {
  * stream carries no lifecycle event and no verification event, and its jobs
  * stay pending. Each pass re-enables a stream whose window has passed, then
  * delivers Stream Updated notices before anything else.
+ *
+ * @spec signals#delivery (#1877 review, D1023): a verification event attests
+ * that every committed transition would have been delivered, so none goes
+ * out on a stream while an earlier lifecycle event for it is undelivered:
+ * pending, backing off after a failure, or claimed and in flight.
  */
 export class MissionSignalEmitter {
   private readonly deliveries: Array<{ audience: string; deliver: (set: string) => unknown }> = [];
@@ -1797,7 +1839,11 @@ export class MissionSignalEmitter {
   private readonly retryBaseMs: number;
   private readonly retryCapMs: number;
   private readonly leaseMs: number;
-  /** The re-enable window: the longer of `maxStaleSeconds` and the heartbeat interval. */
+  /**
+   * The re-enable window: the longer of `maxStaleSeconds` and the heartbeat
+   * interval, plus the clock tolerance. Undefined, and a paused stream is
+   * never re-enabled automatically, unless both are configured.
+   */
   private readonly reenableWindowMs: number | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
 
@@ -1808,6 +1854,9 @@ export class MissionSignalEmitter {
     const heartbeat = opts.heartbeatIntervalSeconds;
     if (heartbeat !== undefined && (!Number.isSafeInteger(heartbeat) || heartbeat <= 0))
       throw new Error("heartbeatIntervalSeconds must be a positive integer");
+    const tolerance = opts.clockToleranceSeconds ?? 0;
+    if (!Number.isSafeInteger(tolerance) || tolerance < 0)
+      throw new Error("clockToleranceSeconds must be a non-negative integer");
     this.db = openStore(OUTBOX_SCHEMA + STREAM_SCHEMA, opts.store);
     // @spec control-plane#isolation — event_id is an issuer-qualified storage
     // key; the original wire jti stays in commit_json. Upgrade existing jobs
@@ -1831,8 +1880,34 @@ export class MissionSignalEmitter {
     this.retryBaseMs = opts.retry?.baseMs ?? 250;
     this.retryCapMs = opts.retry?.capMs ?? 30_000;
     this.leaseMs = opts.leaseMs ?? 30_000;
+    // @spec signals#discharge-compatibility (#1877 review, D1023 ruling 3):
+    // the window needs both bounds. A heartbeat interval taken as zero or as
+    // maxStaleSeconds could re-enable a stream whose consumer is still
+    // verified live, so without it a paused stream stays paused (fail closed).
     this.reenableWindowMs =
-      maxStale === undefined ? undefined : Math.max(maxStale, heartbeat ?? 0) * 1000;
+      maxStale === undefined || heartbeat === undefined
+        ? undefined
+        : (Math.max(maxStale, heartbeat) + tolerance) * 1000;
+    // @spec signals#discharge-compatibility (#1877 review, D1023): a
+    // verification delivery attempt an earlier process left unresolved ends
+    // now, at this reopening instant. That process may have handed the event
+    // off at any moment before it stopped, and its receipt cannot be excluded
+    // any earlier than this, so the choice is conservative: the stream's
+    // window runs from here. It assumes the earlier process has stopped; a
+    // second process sharing the store while the first is mid-attempt would
+    // end that attempt early.
+    const reopened = this.nowFn().getTime();
+    const unresolved = this.db
+      .prepare("SELECT attempt_id, audience, issuer FROM signal_liveness_attempt")
+      .all() as Array<{ attempt_id: number; audience: string; issuer: string }>;
+    for (const attempt of unresolved)
+      this.endLivenessAttempt(
+        attempt.attempt_id,
+        attempt.audience,
+        attempt.issuer,
+        false,
+        reopened,
+      );
   }
 
   /** Register a receiver to be handed every SET for its own audience. */
@@ -1915,11 +1990,19 @@ export class MissionSignalEmitter {
    * deliver the stream-control jobs, then claim every runnable lifecycle job
    * on a stream that is not held and attempt its delivery. With no runnable
    * stream-control job, the lifecycle jobs are claimed without an await, as
-   * they were before stream status existed.
+   * they were before stream status existed. A requested verification waits
+   * behind its stream's undelivered lifecycle events, so a last stream pass
+   * sends it once this pass has delivered them: on re-enabling, the Stream
+   * Updated notice, then the held events, then liveness.
    */
   private async dispatchOnce(): Promise<void> {
     this.resumeDueStreams();
     if (this.hasRunnableStreamJob()) await this.dispatchStreamJobs();
+    await this.dispatchLifecycleJobs();
+    if (this.hasRunnableStreamJob()) await this.dispatchStreamJobs();
+  }
+
+  private async dispatchLifecycleJobs(): Promise<void> {
     const now = this.nowFn().getTime();
     const candidates = this.db
       .prepare(
@@ -2012,10 +2095,107 @@ export class MissionSignalEmitter {
   private streamRow(audience: string): StreamRow | undefined {
     return this.db
       .prepare(
-        `SELECT audience, status, issuer, last_liveness_at, withheld_at, reenable_after
+        `SELECT audience, status, issuer, last_liveness_at, liveness_resolved_at, withheld_at,
+                reenabled_at, reenable_after
          FROM signal_stream WHERE audience = ?`,
       )
       .get(audience) as StreamRow | undefined;
+  }
+
+  private unresolvedLiveness(audience: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS n FROM signal_liveness_attempt WHERE audience = ?`)
+      .get(audience) as { n: number };
+    return row.n;
+  }
+
+  /** True while a lifecycle job for `audience` is undelivered: pending, backing off or in flight. */
+  private lifecyclePending(audience: string): boolean {
+    return (
+      this.db
+        .prepare(`SELECT 1 FROM signal_outbox WHERE audience = ? AND done = 0 LIMIT 1`)
+        .get(audience) !== undefined
+    );
+  }
+
+  /**
+   * @spec signals#delivery (#1877 review, D1023): true while `audience`'s
+   * stream may not carry a verification event: it is held, or an earlier
+   * lifecycle event for it is undelivered, including one backing off after a
+   * failed hand-off or claimed and in flight. A withheld event is never
+   * journaled on the stream, so the gate's exception needs no case here. A
+   * lifecycle event that can never be delivered blocks liveness for good,
+   * which fails closed: the consumer's staleness rule ends its reliance.
+   */
+  private livenessBlocked(audience: string): boolean {
+    return this.held(audience) || this.lifecyclePending(audience);
+  }
+
+  /**
+   * Journal a verification delivery attempt on `audience`'s stream before
+   * its hand-off begins (#1877 review, D1023). Until it ends the stream is
+   * not re-enabled, since the receiver may process the event before the
+   * transport reports the outcome.
+   */
+  private beginLivenessAttempt(audience: string, issuer: string): number {
+    const result = this.db
+      .prepare(
+        `INSERT INTO signal_liveness_attempt (audience, issuer, started_at) VALUES (?, ?, ?)`,
+      )
+      .run(audience, issuer, this.nowFn().getTime());
+    return Number(result.lastInsertRowid);
+  }
+
+  /**
+   * @spec signals#discharge-compatibility (#1877 review, D1023): a
+   * verification delivery attempt ended at `at`, acknowledged or failed: the
+   * transport finished, so the attempt can no longer be received after it.
+   * The stream's `liveness_resolved_at` takes the later of its value and
+   * `at`, an acknowledgement also records `last_liveness_at`, and a paused
+   * stream's re-enable instant moves to at least `at` plus the window. The
+   * attempt's row is removed in the same transaction. A store closed before
+   * the hand-off settles keeps the row, and the next open ends it.
+   */
+  private endLivenessAttempt(
+    attemptId: number,
+    audience: string,
+    issuer: string,
+    acknowledged: boolean,
+    at = this.nowFn().getTime(),
+  ): void {
+    if (!this.db.open) return;
+    withTransaction(this.db, () => {
+      this.db.prepare(`DELETE FROM signal_liveness_attempt WHERE attempt_id = ?`).run(attemptId);
+      const row = this.streamRow(audience);
+      if (row === undefined) {
+        this.db
+          .prepare(
+            `INSERT INTO signal_stream (audience, status, issuer, last_liveness_at,
+                                        liveness_resolved_at)
+             VALUES (?, 'enabled', ?, ?, ?)`,
+          )
+          .run(audience, issuer, acknowledged ? at : null, at);
+        return;
+      }
+      const reenableAfter =
+        row.status === "paused" &&
+        row.reenable_after !== null &&
+        this.reenableWindowMs !== undefined
+          ? Math.max(row.reenable_after, at + this.reenableWindowMs)
+          : row.reenable_after;
+      this.db
+        .prepare(
+          `UPDATE signal_stream
+           SET last_liveness_at = ?, liveness_resolved_at = ?, reenable_after = ?
+           WHERE audience = ?`,
+        )
+        .run(
+          acknowledged ? Math.max(row.last_liveness_at ?? at, at) : row.last_liveness_at,
+          Math.max(row.liveness_resolved_at ?? at, at),
+          reenableAfter,
+          audience,
+        );
+    });
   }
 
   private noticePending(audience: string): boolean {
@@ -2063,26 +2243,33 @@ export class MissionSignalEmitter {
    * dropped.
    *
    * The pause lasts until more than the re-enable window, the longer of
-   * `maxStaleSeconds` and the heartbeat interval, has passed since the last
-   * verification event acknowledged on the stream, or since this withholding
-   * when none was acknowledged after the stream's previous withholding. The
+   * `maxStaleSeconds` and the heartbeat interval plus the clock tolerance,
+   * has passed since the latest verification delivery attempt on the stream
+   * ended, acknowledged or failed (#1877 review, D1023), and while any
+   * attempt is unresolved. When no attempt has ended since the stream was
+   * last re-enabled, the window runs from this withholding instead. The
    * consumer's stream is then no longer verified live and its staleness rule
    * has fired before the stream attests liveness again. A withholding while
-   * the stream is paused, or while its `enabled` notice is unacknowledged,
-   * never shortens the pause; it extends the pause to at least this
-   * withholding plus the window, so a Mission Status response the consumer
-   * fetched during the pause, before this narrowing, expires before liveness
-   * resumes.
+   * the stream is paused never shortens the pause; it extends the pause to
+   * at least this withholding plus the window, so a Mission Status response
+   * the consumer fetched during the pause, before this narrowing, expires
+   * before liveness resumes.
    */
   private pauseStream(consumer: SignalConsumer, commit: LifecycleCommit): void {
     const now = this.nowFn().getTime();
     withTransaction(this.db, () => {
       const row = this.streamRow(consumer.audience);
       const issuer = this.opts.issuer ?? row?.issuer ?? commit.issuer;
-      const lastLiveness = row?.last_liveness_at ?? null;
-      const livenessSince =
-        lastLiveness !== null && (row?.withheld_at == null || lastLiveness > row.withheld_at);
-      const base = livenessSince && lastLiveness !== null ? lastLiveness : now;
+      // An attempt that ended after the stream was last re-enabled is
+      // liveness the consumer may hold. Without one, the consumer may rely on
+      // state it re-established after an earlier pause, at most now.
+      const resolved = row?.liveness_resolved_at ?? null;
+      const base =
+        row?.status !== "paused" &&
+        resolved !== null &&
+        (row?.reenabled_at == null || resolved > row.reenabled_at)
+          ? resolved
+          : now;
       let reenableAfter: number | null = null;
       if (this.reenableWindowMs !== undefined) {
         reenableAfter = base + this.reenableWindowMs;
@@ -2119,9 +2306,11 @@ export class MissionSignalEmitter {
    * @spec signals#discharge-compatibility (#1877): re-enable every paused
    * stream whose `paused` notice was acknowledged and whose re-enable
    * instant has passed (strictly: the consumer's staleness rule fires after
-   * MORE than the window). The status flips and the
-   * `enabled` notice is journaled in one transaction; the stream stays held
-   * until that notice is acknowledged, so it precedes the held events.
+   * MORE than the window). A stream with a verification delivery attempt
+   * that has not ended stays paused, since its receipt cannot yet be
+   * excluded (#1877 review, D1023). The status flips and the `enabled`
+   * notice is journaled in one transaction; the stream stays held until
+   * that notice is acknowledged, so it precedes the held events.
    */
   private resumeDueStreams(): void {
     const now = this.nowFn().getTime();
@@ -2131,17 +2320,19 @@ export class MissionSignalEmitter {
          WHERE status = 'paused' AND reenable_after IS NOT NULL AND reenable_after < ?
            AND NOT EXISTS (
              SELECT 1 FROM signal_stream_outbox o
-             WHERE o.audience = s.audience AND o.kind = 'stream-updated' AND o.done = 0)`,
+             WHERE o.audience = s.audience AND o.kind = 'stream-updated' AND o.done = 0)
+           AND NOT EXISTS (
+             SELECT 1 FROM signal_liveness_attempt a WHERE a.audience = s.audience)`,
       )
       .all(now) as Array<{ audience: string; issuer: string }>;
     for (const stream of due) {
       withTransaction(this.db, () => {
         const flipped = this.db
           .prepare(
-            `UPDATE signal_stream SET status = 'enabled', reenable_after = NULL
+            `UPDATE signal_stream SET status = 'enabled', reenable_after = NULL, reenabled_at = ?
              WHERE audience = ? AND status = 'paused'`,
           )
-          .run(stream.audience);
+          .run(now, stream.audience);
         if (flipped.changes !== 1) return;
         this.journalNotice(
           stream.audience,
@@ -2169,7 +2360,8 @@ export class MissionSignalEmitter {
   /**
    * Deliver the stream-control jobs in journal order. A Stream Updated
    * notice is never overtaken by a later one for the same stream; a
-   * requested verification waits while its stream is held.
+   * requested verification waits while its stream is held or an earlier
+   * lifecycle event for it is undelivered.
    */
   private async dispatchStreamJobs(): Promise<void> {
     const now = this.nowFn().getTime();
@@ -2189,7 +2381,7 @@ export class MissionSignalEmitter {
         // Until this notice is acknowledged, a later one for the stream waits.
         blocked.add(row.audience);
         if (!runnable) continue;
-      } else if (!runnable || this.held(row.audience)) {
+      } else if (!runnable || this.livenessBlocked(row.audience)) {
         continue;
       }
       const claimed = this.db
@@ -2205,8 +2397,13 @@ export class MissionSignalEmitter {
     }
   }
 
-  /** Sign once, hand off, and on acknowledgement mark the job done. */
+  /**
+   * Sign once, hand off, and on acknowledgement mark the job done. Each
+   * hand-off of a requested verification is its own liveness attempt,
+   * journaled before it begins and ended however it settles.
+   */
   private async deliverStreamJob(row: StreamJobRow): Promise<boolean> {
+    let attempt: number | undefined;
     try {
       let set = row.set_jwt;
       if (set === null) {
@@ -2230,8 +2427,9 @@ export class MissionSignalEmitter {
           .get(row.job_id) as { set_jwt: string | null } | undefined;
         set = persisted?.set_jwt ?? fresh;
       }
-      // Signing awaited: a withholding may have paused the stream meanwhile.
-      if (row.kind === "verification" && this.held(row.audience)) {
+      // Signing awaited: a withholding may have paused the stream, or a
+      // lifecycle event been committed on it, meanwhile.
+      if (row.kind === "verification" && this.livenessBlocked(row.audience)) {
         this.db
           .prepare(`UPDATE signal_stream_outbox SET claimed_until = NULL WHERE job_id = ?`)
           .run(row.job_id);
@@ -2239,13 +2437,20 @@ export class MissionSignalEmitter {
       }
       const sinks = this.deliveries.filter((d) => d.audience === row.audience);
       if (sinks.length === 0) throw new Error(`no delivery sink for ${row.audience}`);
+      if (row.kind === "verification")
+        attempt = this.beginLivenessAttempt(row.audience, row.issuer);
       for (const d of sinks) await d.deliver(set);
-      this.db
-        .prepare(`UPDATE signal_stream_outbox SET done = 1, claimed_until = NULL WHERE job_id = ?`)
-        .run(row.job_id);
-      if (row.kind === "verification") this.recordLiveness(row.audience, row.issuer);
+      withTransaction(this.db, () => {
+        this.db
+          .prepare(
+            `UPDATE signal_stream_outbox SET done = 1, claimed_until = NULL WHERE job_id = ?`,
+          )
+          .run(row.job_id);
+        if (attempt !== undefined) this.endLivenessAttempt(attempt, row.audience, row.issuer, true);
+      });
       return true;
     } catch {
+      if (attempt !== undefined) this.endLivenessAttempt(attempt, row.audience, row.issuer, false);
       const attempts = row.attempts + 1;
       const delay = Math.min(this.retryBaseMs * 2 ** (attempts - 1), this.retryCapMs);
       this.db
@@ -2260,52 +2465,23 @@ export class MissionSignalEmitter {
   }
 
   /**
-   * Record an acknowledged verification event on `audience`'s stream. A
-   * stream paused while the event was in flight keeps its pause until more
-   * than the re-enable window after this acknowledgement.
-   */
-  private recordLiveness(audience: string, issuer: string): void {
-    const now = this.nowFn().getTime();
-    withTransaction(this.db, () => {
-      const row = this.streamRow(audience);
-      if (row === undefined) {
-        this.db
-          .prepare(
-            `INSERT INTO signal_stream (audience, status, issuer, last_liveness_at)
-             VALUES (?, 'enabled', ?, ?)`,
-          )
-          .run(audience, issuer, now);
-        return;
-      }
-      const reenableAfter =
-        row.status === "paused" &&
-        row.reenable_after !== null &&
-        this.reenableWindowMs !== undefined
-          ? Math.max(row.reenable_after, now + this.reenableWindowMs)
-          : row.reenable_after;
-      this.db
-        .prepare(
-          `UPDATE signal_stream SET last_liveness_at = ?, reenable_after = ? WHERE audience = ?`,
-        )
-        .run(now, reenableAfter, audience);
-    });
-  }
-
-  /**
    * @spec signals#consumer-behavior @spec signals#discharge-compatibility
-   * (#1877): the liveness attestation. Delivers a signed SSF Verification
-   * Event (SSF 1.0 Section 8.1.4.1; Transmitter-initiated, so no `state`) to
-   * every stream that is not held, and records each acknowledgement as that
-   * stream's last liveness. A paused stream receives none: nothing is
-   * transmitted while paused, and that silence is what lets the consumer's
-   * staleness rule fire. A failed hand-off records nothing. The caller
-   * schedules it, at the stream's heartbeat interval or more often.
+   * @spec signals#delivery (#1877): the liveness attestation. Delivers a
+   * signed SSF Verification Event (SSF 1.0 Section 8.1.4.1;
+   * Transmitter-initiated, so no `state`) to every stream that is not held
+   * and has no undelivered lifecycle event. A paused stream receives none:
+   * nothing is transmitted while paused, and that silence is what lets the
+   * consumer's staleness rule fire. Each hand-off is a liveness attempt,
+   * journaled before it begins and ended when it settles, acknowledged or
+   * failed: a receiver may process the event before its transport reports
+   * a failure (#1877 review, D1023). The caller schedules it, at the
+   * stream's heartbeat interval or more often.
    */
   async attestLiveness(): Promise<void> {
     const issuer = this.opts.issuer;
     if (issuer === undefined) throw new Error("attestLiveness needs the emitter's issuer");
     for (const consumer of this.opts.consumers) {
-      if (this.held(consumer.audience)) continue;
+      if (this.livenessBlocked(consumer.audience)) continue;
       const set = await signStreamEvent(
         SSF_VERIFICATION_EVENT_URI,
         {},
@@ -2318,16 +2494,22 @@ export class MissionSignalEmitter {
           kid: this.opts.kid,
         },
       );
-      // Signing awaited: a withholding may have paused the stream meanwhile.
-      if (this.held(consumer.audience)) continue;
+      // Signing awaited: a withholding may have paused the stream, or a
+      // lifecycle event been committed on it, meanwhile.
+      if (this.livenessBlocked(consumer.audience)) continue;
       const sinks = this.deliveries.filter((d) => d.audience === consumer.audience);
       if (sinks.length === 0) continue;
+      const attempt = this.beginLivenessAttempt(consumer.audience, issuer);
+      let acknowledged = false;
       try {
         for (const d of sinks) await d.deliver(set);
+        acknowledged = true;
       } catch {
-        continue;
+        // Not acknowledged, yet possibly received: the attempt still ends,
+        // and the stream's window runs from its end.
+      } finally {
+        this.endLivenessAttempt(attempt, consumer.audience, issuer, acknowledged);
       }
-      this.recordLiveness(consumer.audience, issuer);
     }
   }
 
@@ -2335,7 +2517,8 @@ export class MissionSignalEmitter {
    * @spec signals#discharge-compatibility (#1877): a verification the
    * stream's receiver requested (SSF 1.0 Section 8.1.4.2). It is journaled
    * and echoes `state`; on a held stream it is held, not transmitted, and is
-   * delivered once the stream is re-enabled.
+   * delivered once the stream is re-enabled. It also waits behind the
+   * stream's undelivered lifecycle events (#1877 review, D1023).
    */
   requestVerification(audience: string, state?: string): void {
     const issuer = this.opts.issuer;
@@ -2360,6 +2543,10 @@ export class MissionSignalEmitter {
       ...(row?.last_liveness_at != null
         ? { last_liveness_at: new Date(row.last_liveness_at) }
         : {}),
+      ...(row?.liveness_resolved_at != null
+        ? { liveness_resolved_at: new Date(row.liveness_resolved_at) }
+        : {}),
+      liveness_unresolved: this.unresolvedLiveness(audience),
       ...(row?.reenable_after != null ? { reenable_after: new Date(row.reenable_after) } : {}),
     };
   }

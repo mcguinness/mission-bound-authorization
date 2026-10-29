@@ -111,7 +111,9 @@ const trace = (log: Received[]): string[] =>
  * the stream has gone longer than `mission_max_stale_seconds` without a
  * liveness event. So it goes stale after the longer of the two, and once
  * stale it stays stale until the consumer re-establishes state through
- * Mission Status. A Stream Updated event is not a liveness event.
+ * Mission Status: neither a Stream Updated event nor a later verification
+ * or heartbeat event ends it (D1023 ruling 4). A Stream Updated event is not
+ * a liveness event.
  */
 class StalenessRule {
   private lastLiveness: number | undefined;
@@ -125,6 +127,12 @@ class StalenessRule {
     if (r.kind !== "verification") return;
     this.check(r.at);
     this.lastLiveness = r.at;
+  }
+
+  /** The consumer re-established current state through Mission Status at `at`. */
+  reestablish(at: number): void {
+    this.stale = false;
+    this.lastLiveness = at;
   }
 
   private check(at: number): void {
@@ -150,6 +158,18 @@ afterAll(() => {
   for (const d of tmpDirs) rmSync(d, { recursive: true, force: true });
 });
 
+/**
+ * A fault on the undeclared stream's transport. `before` runs before the
+ * receiver sees the SET: throwing there is a delivery that never arrived.
+ * `after` runs once the receiver has processed it: throwing there is an
+ * acknowledgement lost on the way back, and a promise that has not settled
+ * is a hand-off still in flight after receipt.
+ */
+interface Fault {
+  before?: (r: Received) => unknown;
+  after?: (r: Received) => unknown;
+}
+
 interface Wired {
   kernel: MissionKernel;
   emitter: MissionSignalEmitter;
@@ -158,6 +178,8 @@ interface Wired {
   undeclaredResults: ApplyResult[];
   undeclared: MissionSignalReceiver;
   rule: StalenessRule;
+  /** The undeclared stream's transport fault, if any. */
+  fault: Fault;
   now: () => number;
   advance: (ms: number) => void;
   /** One heartbeat: advance the clock, attest liveness, dispatch. */
@@ -168,7 +190,12 @@ interface Wired {
 
 async function wire(
   store?: { file: string },
-  opts: { undeclaredFirst?: boolean; heartbeatIntervalSeconds?: number } = {},
+  opts: {
+    undeclaredFirst?: boolean;
+    /** The agreed heartbeat interval; `null` configures none. */
+    heartbeatIntervalSeconds?: number | null;
+    clockToleranceSeconds?: number;
+  } = {},
 ): Promise<Wired> {
   const statusKeys = await generateKeyPair("ES256", { extractable: true });
   const statusPub: JWK = {
@@ -188,6 +215,12 @@ async function wire(
   const consumers = opts.undeclaredFirst
     ? [undeclaredConsumer, declaredConsumer]
     : [declaredConsumer, undeclaredConsumer];
+  // The agreed heartbeat interval: the liveness schedule unless a test sets
+  // another, or none at all.
+  const heartbeatIntervalSeconds =
+    opts.heartbeatIntervalSeconds === undefined
+      ? HEARTBEAT_MS / 1000
+      : opts.heartbeatIntervalSeconds;
   const makeEmitter = () =>
     new MissionSignalEmitter({
       key: statusKeys.privateKey,
@@ -195,8 +228,9 @@ async function wire(
       issuer: ISS,
       consumers,
       maxStaleSeconds: MAX_STALE_SECONDS,
-      ...(opts.heartbeatIntervalSeconds !== undefined
-        ? { heartbeatIntervalSeconds: opts.heartbeatIntervalSeconds }
+      ...(heartbeatIntervalSeconds !== null ? { heartbeatIntervalSeconds } : {}),
+      ...(opts.clockToleranceSeconds !== undefined
+        ? { clockToleranceSeconds: opts.clockToleranceSeconds }
         : {}),
       now: () => new Date(clock),
       ...(store ? { store } : {}),
@@ -205,25 +239,27 @@ async function wire(
     jwks: { keys: [statusPub] },
     issuer: ISS,
     audience: UNDECLARED_AUD,
+    maxStaleSeconds: MAX_STALE_SECONDS,
   });
   const declaredLog: Received[] = [];
   const undeclaredLog: Received[] = [];
   const undeclaredResults: ApplyResult[] = [];
   const rule = new StalenessRule(
     MAX_STALE_MS,
-    opts.heartbeatIntervalSeconds !== undefined
-      ? opts.heartbeatIntervalSeconds * 1000
-      : HEARTBEAT_MS,
+    heartbeatIntervalSeconds !== null ? heartbeatIntervalSeconds * 1000 : HEARTBEAT_MS,
   );
+  const fault: Fault = {};
   const sinks = (emitter: MissionSignalEmitter) => {
     emitter.onDeliver(DECLARED_AUD, (set) => {
       declaredLog.push({ at: clock, kind: kindOf(set), set });
     });
     emitter.onDeliver(UNDECLARED_AUD, async (set) => {
       const r: Received = { at: clock, kind: kindOf(set), set };
+      if (fault.before) await fault.before(r);
       undeclaredLog.push(r);
       rule.receive(r);
       if (r.kind === "lifecycle") undeclaredResults.push(await undeclared.verifyAndApply(set));
+      if (fault.after) await fault.after(r);
     });
   };
   let emitter = makeEmitter();
@@ -250,6 +286,7 @@ async function wire(
     undeclaredResults,
     undeclared,
     rule,
+    fault,
     now,
     advance,
     tick: async () => {
@@ -449,11 +486,12 @@ describe("a withheld narrowing pauses the undeclared stream (@spec signals#disch
 
     w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
     await w.emitter.drain();
-    await w.emitter.drain();
     const after = w.undeclaredLog.slice(4);
     expect(after[0]?.kind).toBe("stream-updated");
     expect(eventBody(after[0] as Received)).toMatchObject({ status: "enabled" });
-    expect(trace(after).sort()).toEqual(["enabled", "v2", "verify"].sort());
+    // The enabled notice, the held lifecycle event, then the requested
+    // verification, which waits behind it (#1877 review, D1023).
+    expect(trace(after)).toEqual(["enabled", "v2", "verify"]);
     const revoked = after.find((r) => r.kind === "lifecycle") as Received;
     expect(eventBody(revoked)).toMatchObject({
       mission: { id: other.id },
@@ -604,5 +642,430 @@ describe("a withheld narrowing pauses the undeclared stream (@spec signals#disch
     w.advance(secondWithheld + MAX_STALE_MS + 1 - w.now());
     await w.emitter.drain();
     expect(trace(w.undeclaredLog)).toEqual(["v1", "v1", "verify", "paused", "enabled"]);
+  });
+});
+
+/** The undeclared stream's private sink, as the owner's review probes reach it. */
+type Sinks = Array<{ audience: string; deliver: (set: string) => unknown }>;
+const undeclaredSink = (emitter: MissionSignalEmitter) =>
+  (emitter as unknown as { deliveries: Sinks }).deliveries.find(
+    (s) => s.audience === UNDECLARED_AUD,
+  ) as Sinks[number];
+
+/** A promise and the means to settle it, for a hand-off a test holds in flight. */
+function deferred(): {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (e: Error) => void;
+} {
+  let resolve!: () => void;
+  let reject!: (e: Error) => void;
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+describe("delivery uncertainty and liveness ordering (@spec signals#discharge-compatibility, signals#delivery, #1877 review, D1023)", () => {
+  it("does not re-enable before a verification received but not acknowledged has aged past the window: the window runs from the end of that delivery attempt (review probe 1)", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick(); // acknowledged at t10
+    const sink = undeclaredSink(w.emitter);
+    const deliver = sink.deliver;
+    let loseAck = true;
+    sink.deliver = async (set) => {
+      const result = await deliver(set);
+      if (loseAck && kindOf(set) === "verification") {
+        loseAck = false;
+        throw new Error("response lost after receiver accepted verification");
+      }
+      return result;
+    };
+    await w.tick(); // received at t20, ack lost: emitter still records t10
+    expect(w.rule.lastLivenessAt).toBe(T0 + 20_000);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).last_liveness_at?.getTime()).toBe(T0 + 10_000);
+    // The failed attempt still ended at t20, and the window runs from there.
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      liveness_resolved_at: new Date(T0 + 20_000),
+      liveness_unresolved: 0,
+    });
+    w.advance(1_000);
+    containRead(w, mission.id, "review-lost-ack");
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(T0 + 20_000 + MAX_STALE_MS),
+    );
+    w.advance(T0 + 70_001 - w.now());
+    await w.emitter.drain();
+    expect(w.rule.mayRely(w.now())).toBe(true);
+    const prematurelyEnabled = w.emitter.streamStatus(UNDECLARED_AUD).status;
+    await w.emitter.attestLiveness();
+    for (let i = 0; i < 6; i++) await w.tick();
+    expect({
+      statusAt70Seconds: prematurelyEnabled,
+      mayRelyAt130Seconds: w.rule.mayRely(w.now()),
+      cachedVersion: w.undeclared.viewState(mission.id)?.version,
+    }).toEqual({ statusAt70Seconds: "paused", mayRelyAt130Seconds: false, cachedVersion: 1 });
+  });
+
+  it("does not attest liveness while an ordinary lifecycle event awaits delivery: a verification never overtakes a failed suspension delivery (review probe 2)", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const sink = undeclaredSink(w.emitter);
+    const deliver = sink.deliver;
+    sink.deliver = async (set) => {
+      if (kindOf(set) === "lifecycle") throw new Error("lifecycle delivery unavailable");
+      return deliver(set);
+    };
+    w.kernel.transition(mission.id, "suspend");
+    await w.emitter.drain();
+    expect(w.emitter.pending()).toBeGreaterThan(0);
+    expect(w.undeclared.viewState(mission.id)?.state).toBe("active");
+    const count = w.undeclaredLog.filter((r) => r.kind === "verification").length;
+    w.advance(10_000);
+    await w.emitter.attestLiveness();
+    expect(w.undeclaredLog.filter((r) => r.kind === "verification")).toHaveLength(count);
+    // The declared stream, with nothing undelivered, keeps receiving liveness.
+    expect(since(w.declaredLog, w.now()).map((r) => r.kind)).toEqual(["verification"]);
+
+    // Once the suspension is delivered, liveness follows it.
+    sink.deliver = deliver;
+    w.advance(30_000);
+    await w.emitter.drain();
+    await w.emitter.attestLiveness();
+    const from = T0 + HEARTBEAT_MS + 1;
+    expect(trace(since(w.undeclaredLog, from))).toEqual(["v2", "verify"]);
+    expect(w.undeclared.viewState(mission.id)?.state).toBe("suspended");
+  });
+
+  it("does not re-enable before a requested verification whose acknowledgement was lost has aged past the window", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick(); // acknowledged at 10 s
+    w.fault.after = (r) => {
+      if (r.kind !== "verification") return undefined;
+      w.fault.after = undefined;
+      throw new Error("response lost after the receiver accepted the verification");
+    };
+    w.advance(HEARTBEAT_MS);
+    const receivedAt = w.now();
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-lost-ack");
+    await w.emitter.drain();
+    expect(w.rule.lastLivenessAt).toBe(receivedAt);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      last_liveness_at: new Date(T0 + HEARTBEAT_MS),
+      liveness_resolved_at: new Date(receivedAt),
+    });
+
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-requested-lost-ack");
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(receivedAt + MAX_STALE_MS),
+    );
+
+    // Past the window from the last acknowledged verification, the consumer
+    // that received the requested one may still rely: the stream stays paused.
+    w.advance(T0 + HEARTBEAT_MS + MAX_STALE_MS + 1 - w.now());
+    await w.emitter.drain();
+    expect(w.rule.mayRely(w.now())).toBe(true);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+
+    w.advance(receivedAt + MAX_STALE_MS + 1 - w.now());
+    expect(w.rule.mayRely(w.now())).toBe(false);
+    await w.emitter.drain();
+    // Re-enabled; the requested verification is redelivered after the
+    // enabled notice, byte for byte.
+    const after = since(w.undeclaredLog, receivedAt);
+    expect(trace(after)).toEqual(["verify", "paused", "enabled", "verify"]);
+    expect(after[3]?.set).toBe(after[0]?.set);
+    expect(w.rule.mayRely(w.now())).toBe(false);
+  });
+
+  it("keeps the stream paused past the window while a verification hand-off is in flight, then runs the window from when it ends, failed", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick(); // acknowledged at 10 s
+    const received = deferred();
+    const outcome = deferred();
+    w.fault.after = (r) => {
+      if (r.kind !== "verification") return undefined;
+      w.fault.after = undefined;
+      received.resolve();
+      return outcome.promise;
+    };
+    w.advance(HEARTBEAT_MS);
+    const attested = w.emitter.attestLiveness();
+    await received.promise;
+    const receivedAt = w.now();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).liveness_unresolved).toBe(1);
+
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-in-flight");
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(T0 + HEARTBEAT_MS + MAX_STALE_MS),
+    );
+
+    // Past that instant the attempt is still unresolved: the stream stays paused.
+    w.advance(T0 + HEARTBEAT_MS + MAX_STALE_MS + 5_000 - w.now());
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      liveness_unresolved: 1,
+    });
+    expect(trace(since(w.undeclaredLog, receivedAt))).toEqual(["verify", "paused"]);
+
+    // The transport reports a failure at 90 s: the attempt ends then.
+    w.advance(15_000);
+    const endedAt = w.now();
+    outcome.reject(new Error("connection reset after the receiver processed the event"));
+    await attested;
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      liveness_unresolved: 0,
+      last_liveness_at: new Date(T0 + HEARTBEAT_MS),
+      liveness_resolved_at: new Date(endedAt),
+      reenable_after: new Date(endedAt + MAX_STALE_MS),
+    });
+    await w.emitter.drain();
+    w.advance(endedAt + MAX_STALE_MS - w.now());
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+    w.advance(1);
+    await w.emitter.drain();
+    expect(trace(since(w.undeclaredLog, receivedAt))).toEqual(["verify", "paused", "enabled"]);
+    expect(w.rule.mayRely(w.now())).toBe(false);
+  });
+
+  it("ends a verification attempt left unresolved by an earlier process at the reopening instant, and keeps the stream paused until the window from then has passed", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "signals-stream-attempt-"));
+    tmpDirs.push(dir);
+    const w = await wire({ file: join(dir, "outbox.db") });
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick(); // acknowledged at 10 s
+    const received = deferred();
+    w.fault.after = (r) => {
+      if (r.kind !== "verification") return undefined;
+      w.fault.after = undefined;
+      received.resolve();
+      // The process stops before the acknowledgement comes back.
+      return new Promise(() => {});
+    };
+    w.advance(HEARTBEAT_MS);
+    void w.emitter.attestLiveness();
+    await received.promise;
+    const receivedAt = w.now();
+    expect(w.rule.lastLivenessAt).toBe(receivedAt);
+
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-unresolved-restart");
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      liveness_unresolved: 1,
+      reenable_after: new Date(T0 + HEARTBEAT_MS + MAX_STALE_MS),
+    });
+
+    // Restart past that instant, with the attempt still unresolved.
+    w.advance(T0 + HEARTBEAT_MS + MAX_STALE_MS + 10_000 - w.now());
+    const reopenedAt = w.now();
+    const reopened = w.reopen();
+    expect(reopened.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      liveness_unresolved: 0,
+      liveness_resolved_at: new Date(reopenedAt),
+      reenable_after: new Date(reopenedAt + MAX_STALE_MS),
+    });
+    await reopened.drain();
+    await reopened.attestLiveness();
+    w.advance(reopenedAt + MAX_STALE_MS - w.now());
+    await reopened.drain();
+    expect(reopened.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+    expect(trace(since(w.undeclaredLog, receivedAt))).toEqual(["verify", "paused"]);
+    w.advance(1);
+    await reopened.drain();
+    expect(trace(since(w.undeclaredLog, receivedAt))).toEqual(["verify", "paused", "enabled"]);
+    expect(w.rule.mayRely(w.now())).toBe(false);
+    reopened.close();
+  });
+
+  it("holds a requested verification behind a lifecycle event whose delivery failed, and sends it only after that event is acknowledged", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const from = w.now() + 1;
+    w.fault.before = (r) => {
+      if (r.kind === "lifecycle") throw new Error("lifecycle delivery unavailable");
+      return undefined;
+    };
+    w.advance(1);
+    w.kernel.transition(mission.id, "suspend");
+    await w.emitter.drain();
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-behind-suspend");
+    await w.emitter.drain();
+    w.advance(5_000);
+    await w.emitter.drain();
+    expect(w.emitter.pending()).toBe(1);
+    expect(trace(since(w.undeclaredLog, from))).toEqual([]);
+    expect(w.undeclared.viewState(mission.id)?.state).toBe("active");
+
+    w.fault.before = undefined;
+    w.advance(30_000);
+    await w.emitter.drain();
+    const after = since(w.undeclaredLog, from);
+    expect(trace(after)).toEqual(["v2", "verify"]);
+    expect(eventBody(after[1] as Received)).toEqual({ state: "state-behind-suspend" });
+    expect(w.undeclared.viewState(mission.id)?.state).toBe("suspended");
+  });
+
+  it("on re-enabling sends Stream Updated enabled, then the held events, and liveness only once every held event is acknowledged", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const lastLiveness = w.now();
+    w.advance(1_000);
+    const withheldAt = w.now();
+    containRead(w, mission.id, "evt-resume-order"); // version 2: withheld
+    w.kernel.transition(mission.id, "suspend"); // version 3: held
+    w.kernel.transition(mission.id, "resume"); // version 4: held
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-resume-order");
+    await w.emitter.drain();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual(["paused"]);
+
+    // The last held event's first delivery after re-enabling fails.
+    let failures = 1;
+    w.fault.before = (r) => {
+      if (r.kind === "lifecycle" && eventBody(r).version === 4 && failures-- > 0)
+        throw new Error("delivery of version 4 failed");
+      return undefined;
+    };
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    await w.emitter.drain();
+    await w.emitter.attestLiveness();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual(["paused", "enabled", "v3"]);
+
+    // Once version 4 is acknowledged, the requested verification follows it,
+    // and attested liveness after that.
+    w.advance(1_000);
+    await w.emitter.drain();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual([
+      "paused",
+      "enabled",
+      "v3",
+      "v4",
+      "verify",
+    ]);
+    await w.emitter.attestLiveness();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual([
+      "paused",
+      "enabled",
+      "v3",
+      "v4",
+      "verify",
+      "verify",
+    ]);
+  });
+
+  it("never re-enables a paused stream automatically when no heartbeat interval is configured", async () => {
+    const w = await wire(undefined, { heartbeatIntervalSeconds: null });
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-no-interval");
+    w.kernel.transition(mission.id, "suspend"); // held
+    await w.emitter.drain();
+    const status = w.emitter.streamStatus(UNDECLARED_AUD);
+    expect(status.status).toBe("paused");
+    expect(status.reenable_after).toBeUndefined();
+
+    // A day of dispatcher passes and liveness attestations later: still paused.
+    for (let hour = 0; hour < 24; hour++) {
+      w.advance(3_600_000);
+      await w.emitter.attestLiveness();
+      await w.emitter.drain();
+    }
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
+    expect(w.emitter.pending()).toBe(1);
+  });
+
+  it("adds the clock tolerance it allows its consumers to the window: a consumer whose clock runs behind by that tolerance has ended its reliance before the stream re-enables", async () => {
+    const TOLERANCE_SECONDS = 5;
+    const toleranceMs = TOLERANCE_SECONDS * 1000;
+    const w = await wire(undefined, { clockToleranceSeconds: TOLERANCE_SECONDS });
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const lastLiveness = w.now();
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-tolerance");
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(lastLiveness + MAX_STALE_MS + toleranceMs),
+    );
+    // A consumer that measures from the event against a clock running behind
+    // the issuer's by the tolerance.
+    const slow = new StalenessRule(MAX_STALE_MS, HEARTBEAT_MS);
+    for (const r of w.undeclaredLog) slow.receive(r);
+    const slowNow = () => w.now() - toleranceMs;
+
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    await w.emitter.drain();
+    expect(w.rule.mayRely(w.now())).toBe(false);
+    expect(slow.mayRely(slowNow())).toBe(true);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+
+    w.advance(lastLiveness + MAX_STALE_MS + toleranceMs - w.now());
+    await w.emitter.drain();
+    expect(slow.mayRely(slowNow())).toBe(true);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+
+    w.advance(1);
+    expect(slow.mayRely(slowNow())).toBe(false);
+    await w.emitter.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused", "enabled"]);
+  });
+
+  it("keeps reliance ended after the stream re-enables: neither Stream Updated enabled nor resumed liveness restores it, only re-established state does", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const lastLiveness = w.now();
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-latch");
+    await w.emitter.drain();
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    expect(w.rule.mayRely(w.now())).toBe(false);
+    await w.emitter.drain();
+    await w.tick();
+    const resumed = since(w.undeclaredLog, lastLiveness + 1);
+    expect(trace(resumed)).toEqual(["paused", "enabled", "verify"]);
+    // The spec-rule model: still stale after the enabled notice and liveness.
+    expect(w.rule.mayRely(w.now())).toBe(false);
+
+    // The reference receiver: no lease past its bound, and neither the
+    // Stream Updated event nor the verification event restores one.
+    const at = () => new Date(w.now()).toISOString();
+    expect(w.undeclared.lease(mission.id, at())).toBeUndefined();
+    for (const r of resumed.filter((e) => e.kind !== "lifecycle"))
+      expect(await w.undeclared.verifyAndApply(r.set)).toMatchObject({ status: "refused" });
+    expect(w.undeclared.lease(mission.id, at())).toBeUndefined();
+
+    // Only re-established current state ends the staleness.
+    w.rule.reestablish(w.now());
+    expect(w.rule.mayRely(w.now())).toBe(true);
   });
 });
