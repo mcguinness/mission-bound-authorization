@@ -8,12 +8,20 @@
  * scope mapping, and the audit record of every mapping decision.
  */
 
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { initSharedStore, openSharedStore } from "@mission/store";
 import { describe, expect, it } from "vitest";
 import { RESOURCE_CONTRACTS } from "@mission/demo-data";
-import { FileScopeBindingLedger, MemoryScopeBindingLedger, type ScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
+import {
+  initScopeBindingLedger,
+  MemoryScopeBindingLedger,
+  type ScopeBindingLedger,
+  SqliteScopeBindingLedger,
+} from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, parseMasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
@@ -565,28 +573,172 @@ describe("mapping contract cache: the scope binding ledger (@spec authority-serv
     const document = withScopes({ legacy: READ, "invoices.read.contract-current": stated(current) }, 1);
     expect(cacheOver(ledger).install(document).ok).toBe(true);
     expect(cacheOver(ledger).install(document).ok).toBe(true);
-    expect(ledger.load()).toHaveLength(2);
+    expect(stateOf(ledger).bindings).toHaveLength(2);
   });
 
-  it("a file ledger outlives the process that wrote it, and an unreadable or unwritable one refuses the install", () => {
-    const dir = mkdtempSync(join(tmpdir(), "scope-bindings-"));
-    const path = join(dir, "scope-bindings.json");
+  // D1019: the version high-water mark is kept with the bindings.
+  it("refuses an older version and another document under the recorded version; the identical document loads again in another cache, recording nothing", () => {
+    const ledger = new MemoryScopeBindingLedger();
+    const v2 = withScopes({ legacy: READ }, 2);
+    expect(cacheOver(ledger).install(v2).ok).toBe(true);
+    refusedFor(cacheOver(ledger).install(withScopes({ legacy: READ }, 1)), /below the recorded version 2/);
+    refusedFor(cacheOver(ledger).install(withScopes({ legacy: READ, other: READ }, 2)), /version 2 is recorded with another document/);
+    const before = stateOf(ledger);
+    expect(cacheOver(ledger).install(v2)).toMatchObject({ ok: true, version: 2 });
+    expect(stateOf(ledger)).toEqual(before);
+    expect(cacheOver(ledger).install(withScopes({ legacy: READ, other: READ }, 3)).ok).toBe(true);
+    expect(stateOf(ledger).highWater?.version).toBe(3);
+  });
+
+  it("an initialized ledger file outlives its handle: another handle, as in another process or after a restart, keeps its bindings and high-water mark", () => {
+    const file = initializedLedger();
     const current = contractAt(CURRENT_VERSION);
-    expect(cacheOver(new FileScopeBindingLedger(path)).install(withScopes({ legacy: READ }, 1)).ok).toBe(true);
-    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
-      scope_bindings: [{ issuer: ESTATE, scope: "legacy", resource: RESOURCE, resource_contract: null }],
-    });
-    // Another process's cache, over the same file.
-    refusedFor(cacheOver(new FileScopeBindingLedger(path)).install(withScopes({ legacy: stated(current) }, 2)), /repoints scope/);
-
-    writeFileSync(path, "{ not json");
-    const unreadable = cacheOver(new FileScopeBindingLedger(path));
-    refusedFor(unreadable.install(withScopes({ legacy: READ }, 1)), /scope binding ledger cannot be read/);
-    expect(unreadable.current().usable(clock().now())).toBe(false);
-
-    const blocked = join(dir, "blocked");
-    mkdirSync(join(blocked, "scope-bindings.json"), { recursive: true });
-    const unwritable = cacheOver(new FileScopeBindingLedger(join(blocked, "scope-bindings.json")));
-    refusedFor(unwritable.install(withScopes({ legacy: READ }, 1)), /scope binding ledger cannot (be read|be written)/);
+    const first = SqliteScopeBindingLedger.open(file);
+    expect(cacheOver(first).install(withScopes({ legacy: READ }, 2)).ok).toBe(true);
+    first.close();
+    const second = SqliteScopeBindingLedger.open(file);
+    try {
+      expect(stateOf(second)).toMatchObject({
+        bindings: [{ issuer: ESTATE, scope: "legacy", resource: RESOURCE, resource_contract: null }],
+        highWater: { version: 2 },
+      });
+      refusedFor(cacheOver(second).install(withScopes({ legacy: stated(current) }, 3)), /repoints scope/);
+      refusedFor(cacheOver(second).install(withScopes({ legacy: READ }, 1)), /below the recorded version 2/);
+      refusedFor(cacheOver(second).install(withScopes({ legacy: READ, other: READ }, 2)), /recorded with another document/);
+      expect(cacheOver(second).install(withScopes({ legacy: READ }, 2)).ok).toBe(true);
+    } finally {
+      second.close();
+    }
   });
+
+  it("refuses at open a ledger that is missing, removed after use, not a database, or another component's; initializes only once, at an absolute path", () => {
+    const dir = mkdtempSync(join(tmpdir(), "scope-bindings-"));
+    expect(() => SqliteScopeBindingLedger.open(join(dir, "never.db"))).toThrow(/does not exist/);
+
+    const used = initializedLedger();
+    const ledger = SqliteScopeBindingLedger.open(used);
+    expect(cacheOver(ledger).install(withScopes({ legacy: READ }, 1)).ok).toBe(true);
+    ledger.close();
+    for (const suffix of ["", "-wal", "-shm"]) rmSync(`${used}${suffix}`, { force: true });
+    expect(() => SqliteScopeBindingLedger.open(used)).toThrow(/does not exist/);
+
+    const garbage = join(dir, "garbage.db");
+    writeFileSync(garbage, "not a ledger, only bytes ".repeat(200));
+    expect(() => SqliteScopeBindingLedger.open(garbage)).toThrow(/cannot read|not a database/);
+
+    const foreign = join(dir, "foreign.db");
+    initSharedStore({ file: foreign, owner: "another-component", schema: "", schemaVersion: 1 });
+    expect(() => SqliteScopeBindingLedger.open(foreign)).toThrow(/owned by another-component/);
+
+    const once = initializedLedger();
+    expect(() => initScopeBindingLedger(once)).toThrow(/already exists/);
+    expect(() => initScopeBindingLedger("relative/scope-bindings.db")).toThrow(/absolute path/);
+  });
+
+  it("the store itself refuses changing or removing a recorded binding, and lowering or replacing the high-water mark", () => {
+    const file = initializedLedger();
+    const ledger = SqliteScopeBindingLedger.open(file);
+    expect(cacheOver(ledger).install(withScopes({ legacy: READ }, 2)).ok).toBe(true);
+    ledger.close();
+    const db = openSharedStore({ file, owner: "mas-pilot-scope-bindings", schemaVersion: 1, lockTimeoutMs: 1000 });
+    try {
+      expect(() => db.prepare("UPDATE scope_binding SET contract_id = 'x', contract_version = 'v', contract_digest = 'd'").run()).toThrow(/never changed/);
+      expect(() => db.prepare("DELETE FROM scope_binding").run()).toThrow(/never removed/);
+      expect(() => db.prepare("UPDATE mapping_high_water SET version = 1").run()).toThrow(/never falls/);
+      expect(() => db.prepare("UPDATE mapping_high_water SET digest = 'sha-256:other'").run()).toThrow(/never falls or changes in place/);
+      expect(() => db.prepare("DELETE FROM mapping_high_water").run()).toThrow(/never removed/);
+    } finally {
+      db.close();
+    }
+  });
+});
+
+/** An empty, initialized SQLite ledger in a fresh directory. */
+function initializedLedger(): string {
+  const file = join(mkdtempSync(join(tmpdir(), "scope-bindings-")), "scope-bindings.db");
+  initScopeBindingLedger(file);
+  return file;
+}
+
+/** The ledger's state, read under its lock. */
+const stateOf = (ledger: ScopeBindingLedger) => ledger.commit((state) => ({ result: state }));
+
+/**
+ * @spec resource-access#resource-contract (#1847, D1019): installs in two
+ * processes over one ledger take turns. The first holds the write lock inside
+ * its commit; the second, already installing, waits for it, then reads the
+ * first one's binding under the lock and is refused, whichever binding came
+ * first, and the ledger keeps the first one's.
+ */
+describe("the scope binding ledger serializes installs across processes (@spec authority-server#mapping-contract, resource-access#resource-contract, #1847, D1019)", () => {
+  const DEMO = fileURLToPath(new URL("..", import.meta.url));
+  const READ = ["payments:invoice.read"];
+  const pinned = () => ({ actions: READ, resource_contract: contractAt(CURRENT_VERSION) });
+  const run = (args: string[]) => {
+    const child = spawn(process.execPath, ["--import", "tsx", "test/scope-binding-install.helper.ts", ...args], {
+      cwd: DEMO,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = "";
+    let err = "";
+    child.stdout.on("data", (b) => {
+      out += String(b);
+    });
+    child.stderr.on("data", (b) => {
+      err += String(b);
+    });
+    const done = new Promise<{ code: number | null; out: string; err: string }>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code) => resolve({ code, out, err }));
+    });
+    return { child, done };
+  };
+  const until = async (path: string, child: { exitCode: number | null }) => {
+    const deadline = Date.now() + 20_000;
+    while (!existsSync(path)) {
+      if (Date.now() > deadline || child.exitCode !== null) throw new Error(`${path} never appeared`);
+      await new Promise((r) => setTimeout(r, 20));
+    }
+  };
+
+  it.each([
+    ["a value stating none first, then the same value stating a contract", READ, pinned()],
+    ["a value stating a contract first, then the same value stating none", pinned(), READ],
+  ])("%s: the second waits for the lock, then is refused", async (_case, first, second) => {
+    const dir = mkdtempSync(join(tmpdir(), "scope-bindings-race-"));
+    const file = join(dir, "scope-bindings.db");
+    initScopeBindingLedger(file);
+    const doc1 = join(dir, "v1.json");
+    const doc2 = join(dir, "v2.json");
+    writeFileSync(doc1, JSON.stringify(doc({ version: 1, scopes: { resource: RESOURCE, issuers: { [ESTATE]: { legacy: first } } } as never })));
+    writeFileSync(doc2, JSON.stringify(doc({ version: 2, scopes: { resource: RESOURCE, issuers: { [ESTATE]: { legacy: second } } } as never })));
+    const a = run([file, doc1, join(dir, "a.attempting"), join(dir, "a.holding"), join(dir, "a.release")]);
+    let b: ReturnType<typeof run> | undefined;
+    try {
+      await until(join(dir, "a.holding"), a.child);
+      b = run([file, doc2, join(dir, "b.attempting")]);
+      await until(join(dir, "b.attempting"), b.child);
+      await new Promise((r) => setTimeout(r, 500));
+      // Installing for half a second yet not done: it waits on the lock.
+      expect(b.child.exitCode).toBeNull();
+      writeFileSync(join(dir, "a.release"), "go");
+      const firstDone = await a.done;
+      expect(firstDone.code, firstDone.err).toBe(0);
+      const secondDone = await b.done;
+      expect(secondDone.code, secondDone.err).toBe(3);
+      expect(secondDone.out).toMatch(/repoints scope .* legacy/);
+      const ledger = SqliteScopeBindingLedger.open(file);
+      try {
+        const state = stateOf(ledger);
+        expect(state.bindings).toHaveLength(1);
+        expect(state.bindings[0]?.resource_contract).toEqual(Array.isArray(first) ? null : contractAt(CURRENT_VERSION));
+        expect(state.highWater?.version).toBe(1);
+      } finally {
+        ledger.close();
+      }
+    } finally {
+      a.child.kill();
+      b?.child.kill();
+    }
+  }, 60_000);
 });

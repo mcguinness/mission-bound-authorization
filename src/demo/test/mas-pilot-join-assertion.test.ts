@@ -26,7 +26,7 @@ import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAs
 import type { EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, type JWTPayload, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
+import { initScopeBindingLedger, MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { composeMasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
@@ -135,7 +135,7 @@ beforeAll(async () => {
     keyRing,
     keyBindings,
     joinIntrospectionSecret,
-    scopeBindings: join(dir, "scope-bindings.json"),
+    scopeBindings: initializedLedgerAt(join(dir, "scope-bindings.db")),
     // Delegate edges are recorded only at the MAS's operator console (#1561).
     operatorConsole: true,
   });
@@ -724,3 +724,9 @@ describe("the launcher refuses a Join Assertion path it cannot run, before anyth
     }
   });
 });
+
+/** Initialize a scope binding ledger at `file` and return its path (D1019). */
+function initializedLedgerAt(file: string): string {
+  initScopeBindingLedger(file);
+  return file;
+}

@@ -18,7 +18,7 @@
  * invalidation is recorded in the cache's audit log.
  */
 
-import type { ResourceContractDeclarations, ResourceContractRef } from "@mission/core";
+import { canonicalDigest, type JsonValue, type ResourceContractDeclarations, type ResourceContractRef } from "@mission/core";
 import { keyedRecord, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
 import { bindingKey, type ScopeBinding, type ScopeBindingLedger, sameBinding } from "./scope-binding-ledger.js";
 import {
@@ -422,49 +422,70 @@ export class MappingContractCache {
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
     };
-    // @spec resource-access#resource-contract (#1847, D989, #1866 review):
-    // every binding this deployment has installed, whatever version, cache or
-    // process installed it. An unreadable ledger refuses every install.
-    let recorded: Map<string, ScopeBinding>;
-    try {
-      recorded = new Map(this.ledger.load().map((b) => [bindingKey(b), b]));
-    } catch (e) {
-      return refuse(`mapping contract: the scope binding ledger cannot be read: ${(e as Error).message}`);
-    }
+    // @spec resource-access#resource-contract (#1847, D989, D1019): the
+    // ledger holds every binding and the version high-water mark this
+    // deployment has installed, whatever version, cache or process installed
+    // them. The install is judged and recorded in one commit under the
+    // ledger's write lock, against the history as it stands then, and a
+    // ledger that cannot be read, locked or written refuses it.
+    const digest = canonicalDigest(raw as JsonValue);
     const incoming = scopeBindingsOf(doc);
-    // A scope value's contract never changes: a version that maps a value
-    // recorded under another contract, under one where it was recorded with
-    // none, or under none where it was recorded with one, is refused, even
-    // where versions between withdrew the value. A new contract takes a new
-    // value, so a credential issued under the value never gains a contract.
-    for (const b of incoming) {
-      const was = recorded.get(bindingKey(b));
-      if (was && !sameBinding(was, b)) {
-        return refuse(
-          `mapping contract: version ${doc.version} repoints scope ${b.issuer} ${b.scope} to another contract; a new contract takes a new scope value`,
-        );
-      }
-    }
-    // A supported older mapping remains available while its contract is
-    // supported: a version that no longer maps a recorded value whose
-    // contract the declarations still support (current, or superseded within
-    // retention) is refused. A value recorded with none, or whose contract is
-    // no longer supported, may be withdrawn.
-    const mapped = new Set(incoming.map(bindingKey));
-    for (const was of recorded.values()) {
-      if (was.resource_contract === null || mapped.has(bindingKey(was))) continue;
-      const entry = { resource: was.resource, actions: [], resource_contract: was.resource_contract };
-      if (this.contracts.carriedViolation(entry, at) === undefined) {
-        return refuse(`mapping contract: version ${doc.version} withdraws scope ${was.issuer} ${was.scope}, whose contract is still supported`);
-      }
-    }
-    // Recorded before the snapshot serves, so no binding is ever relied on
-    // unrecorded.
+    let judged: { ok: true } | { ok: false; reason: string };
     try {
-      this.ledger.record(incoming.filter((b) => !recorded.has(bindingKey(b))));
+      judged = this.ledger.commit<{ ok: true } | { ok: false; reason: string }>((state) => {
+        const no = (reason: string) => ({ result: { ok: false as const, reason } });
+        // The high-water mark: an older version is refused, and so is
+        // another document under the recorded version; the identical
+        // document may load again, in another cache or after a restart.
+        const hw = state.highWater;
+        if (hw && doc.version < hw.version) {
+          return no(`mapping contract: version ${doc.version} is below the recorded version ${hw.version}`);
+        }
+        if (hw && doc.version === hw.version && digest !== hw.digest) {
+          return no(`mapping contract: version ${doc.version} is recorded with another document; a change takes a new version`);
+        }
+        const recorded = new Map(state.bindings.map((b) => [bindingKey(b), b]));
+        // A scope value's contract never changes: a version that maps a value
+        // recorded under another contract, under one where it was recorded
+        // with none, or under none where it was recorded with one, is
+        // refused, even where versions between withdrew the value. A new
+        // contract takes a new value, so a credential issued under the value
+        // never gains a contract.
+        for (const b of incoming) {
+          const was = recorded.get(bindingKey(b));
+          if (was && !sameBinding(was, b)) {
+            return no(
+              `mapping contract: version ${doc.version} repoints scope ${b.issuer} ${b.scope} to another contract; a new contract takes a new scope value`,
+            );
+          }
+        }
+        // A supported older mapping remains available while its contract is
+        // supported: a version that no longer maps a recorded value whose
+        // contract the declarations still support (current, or superseded
+        // within retention) is refused. A value recorded with none, or whose
+        // contract is no longer supported, may be withdrawn.
+        const mapped = new Set(incoming.map(bindingKey));
+        for (const was of recorded.values()) {
+          if (was.resource_contract === null || mapped.has(bindingKey(was))) continue;
+          const entry = { resource: was.resource, actions: [], resource_contract: was.resource_contract };
+          if (this.contracts.carriedViolation(entry, at) === undefined) {
+            return no(`mapping contract: version ${doc.version} withdraws scope ${was.issuer} ${was.scope}, whose contract is still supported`);
+          }
+        }
+        // Recorded before the snapshot serves, so no binding is ever relied
+        // on unrecorded.
+        return {
+          result: { ok: true as const },
+          record: {
+            bindings: incoming.filter((b) => !recorded.has(bindingKey(b))),
+            ...(hw === null || doc.version > hw.version ? { highWater: { version: doc.version, digest } } : {}),
+          },
+        };
+      });
     } catch (e) {
-      return refuse(`mapping contract: the scope binding ledger cannot be written: ${(e as Error).message}`);
+      return refuse(`mapping contract: the scope binding ledger cannot be read, locked or written: ${(e as Error).message}`);
     }
+    if (!judged.ok) return refuse(judged.reason);
     this.highestVersion = doc.version;
     this.snapshot = new MappingSnapshot(doc, at.getTime(), this.maxStaleMs, (entry) => this.log.push(entry));
     this.log.push({

@@ -127,12 +127,23 @@ resolution (`MappingContractCache`):
   with a contract stays available while that contract is supported: an
   install that no longer maps it is refused while the declarations support
   the contract (current, or superseded within retention), judged at the
-  cache's clock; a value recorded with none may be withdrawn. The ledger is
-  read on every install, and one that cannot be read or written refuses the
-  install. The gateway's cache and the MAS's Join Assertion path read the
-  same ledger. `MAS_PILOT_SCOPE_BINDINGS` names its file, replaced whole
-  through a synced temporary file; with `MAS_PILOT_DEVELOPMENT_STORE=1`
-  alone it is held in memory and a restart loses it.
+  cache's clock; a value recorded with none may be withdrawn. The ledger
+  also holds the mapping's version high-water mark, the highest version
+  installed and its document's digest, committed with the bindings (D1019):
+  an older version is refused, and so is another document under the
+  recorded version, while the identical document may load again in another
+  cache or after a restart.
+- Each install reads, judges and records in one transaction under the
+  ledger's write lock, so the gateway's cache and the MAS's Join Assertion
+  path, which share the ledger across processes, take turns, and each judges
+  the history the other left (D1019). A ledger that cannot be read, locked or
+  written refuses the install. `MAS_PILOT_SCOPE_BINDINGS` names the ledger, a
+  SQLite file in WAL mode with `synchronous=FULL`, created once with
+  `pnpm scope-bindings init --file <path>`; a missing, malformed or foreign
+  file refuses startup, so lost history is never read as empty. The store
+  itself refuses changing or removing a binding and lowering the high-water
+  mark. With `MAS_PILOT_DEVELOPMENT_STORE=1` alone, the ledger is held in
+  memory and a restart loses it.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§9).
@@ -537,12 +548,14 @@ Gaps:
 - **In the in-process configuration, Mission state is a kernel read**, as on
   the AS-native target (D293). The separated configuration (§11) reads it
   through the MAS's signed Mission Status instead.
-- **The scope binding ledger's file is trusted as found.** A missing file is
-  an empty ledger, so deleting it, or restoring an older copy, forgets
-  bindings; nothing witnesses it as the kernel store's recovery witness does.
-  The installed version's high-water mark is not in the ledger either, so a
-  restarted cache accepts an older mapping version, though never one that
-  changes a recorded binding.
+- **Restoring an older copy of the scope binding ledger rolls it back.** A
+  missing or malformed ledger refuses startup, but a restored backup is a
+  valid ledger whose later bindings and high-water mark are gone, and the
+  ledger does not detect that: nothing witnesses it as the kernel store's
+  recovery witness does. This is an administrative limitation (D1019).
+  Recovery restores the ledger's complete history (its `.db` and `-wal`
+  files together), and never initializes a new empty ledger to make startup
+  succeed.
 - **The mapping audit log is in memory**, unsigned and not retained. Decision
   Evidence carries `join_view_id`, which commits the authenticated (estate)
   client, not the mapping version.

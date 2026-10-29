@@ -332,6 +332,8 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
     let masProcess: ChildProcess | undefined;
     let masConsole: string | undefined;
     let pilotConsole: OperatorConsole;
+    // The launch owns the ledger it was handed: closed with everything else.
+    scope.register(() => options.scopeBindings.ledger.close());
     const common = {
       openfga: options.openfga,
       resourcePolicyStore: options.resourcePolicyStore,

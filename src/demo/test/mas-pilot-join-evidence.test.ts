@@ -43,6 +43,7 @@ import { startEstateAuthorizationServer } from "../src/mas-pilot/estate-as.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
 import { buildPilotMas, newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, type MasProcessOptions, startMasProcess } from "../src/mas-pilot/mas-process.js";
+import { initScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { masConsoleRoutes, startOperatorConsole } from "../src/mas-pilot/operator-console.js";
 import { relocateEstate } from "./mas-pilot-support.js";
 
@@ -302,6 +303,9 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
     });
     closers.push(() => estate.close());
 
+    const ledgerFile = join(dir, "scope-bindings", "scope-bindings.db");
+    mkdirSync(dirname(ledgerFile), { recursive: true });
+    initScopeBindingLedger(ledgerFile);
     const options: MasProcessOptions = {
       configPath,
       statusClients: [pdp.registration],
@@ -310,8 +314,8 @@ describe("the separated MAS process keeps its join evidence across a restart (@s
       kernelStore: join(dir, "state", "kernel.db"),
       kernelWitness: kernelWitnessFor(join(dir, "state", "kernel.db"), join(dir, "witness", "kernel.witness")),
       joinIntrospectionSecret,
-      // The restarted process reads the same scope binding ledger (#1866 review).
-      scopeBindings: join(dir, "state", "scope-bindings.json"),
+      // The restarted process reopens the same scope binding ledger (D1019).
+      scopeBindings: ledgerFile,
       operatorConsole: true,
     };
     let mas: MasProcess = await startMasProcess(options);
