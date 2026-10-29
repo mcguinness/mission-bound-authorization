@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "c64512ff61df5fc5875a26eef068ceb60d700612",
-    "content_sha256": "4be63385aec0dd7355fe3e1450f1c4deaf28eba8a44491fe8179fa4805d6d732"
+    "revision": "14b64c99afa1b8e4033b7e8f9e8767b68eef3290",
+    "content_sha256": "07372758b94daa68b313365e60817e67d29be6f209305acba22f74b9ef2a83fc"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -6419,9 +6419,9 @@
    "id": "core.authority-proposal.governed-resource-default-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`",
+   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`: the AS MUST refuse the request if any of them is Mission-governed",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6456,15 +6456,15 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness. Quote extended to the operative MUST under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-any-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "the AS refuses the request if any of them is Mission-governed, and does not issue the token for the others",
+   "text": "the AS MUST refuse the request if any of them is Mission-governed, and MUST NOT issue the token for the others",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6493,7 +6493,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness. Takes MUST and MUST NOT under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",
@@ -10957,9 +10957,9 @@
    "id": "core.issuance-gating.reversible-state-not-termination",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
-   "text": "A Mission in a state from which it can return to `active` is never reported with a termination reason.",
+   "text": "A Mission in a state from which it can return to `active` MUST NOT be reported with a termination reason.",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "capability",
     "capability": "status.lifecycle"
@@ -10987,7 +10987,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error."
+   "notes": "#1721 item 3 (D845). Scoped to status.lifecycle, the companion that gives this AS a state from which a Mission returns to active. Proved by mutation: making lifecycleMissionError report revoked for a suspended Mission fails both cited tests on mission_error. Takes MUST NOT under #1871 (D1005); applicability unchanged."
   },
   {
    "id": "core.revocation.revoke-by-mission-id",
@@ -14508,6 +14508,43 @@
      "surface": "token-endpoint"
     }
    ]
+  },
+  {
+   "id": "core.scope-projection.local-interpretation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection-subset",
+   "text": "carries rights the target's local `scope` interpretation implies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope whose effective rights, as the target interprets it, exceed what a constraints-free entry grants fails the projection condition, whatever its name suggests."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope named for the entry's action whose rights, as the target interprets it, exceed the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > local interpretation: a value named for the entry's action is judged by the rights the target grants for it, not by its name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1871 (D1005): the fourth case of the Subset Condition list, sibling of action-aggregation-fails, resource-path-aggregation-fails and union-widening-fails. Witnesses: a value named for the entry's action, whose rights as the target declares them add an action, is refused invalid_target. Mutation-proved: treating a value whose name matches an entry action as safe without its declared rights fails both witnesses while the action-aggregation witnesses still pass."
   },
   {
    "id": "core.scope-projection.per-audience-proof",
@@ -23851,7 +23888,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides. The Signals receiver's resynchronization (#1810) holds the Status keys as the PDP does (`missionStatusIssuer(...).keys`): a response under a key the set lists is refused, as its first verification (which fetches the set) and after one under the current key, and the held Mission stays held, though its configured kids and cached jwks_uri still carry the key; the same issuer advertising no set resynchronizes on it."
    },
    "level": "unit",
    "coverage": "partial",
@@ -23879,9 +23916,15 @@
      "name": "the historical key set through the configured issuer (@spec status#historical-key-set, status#mission-status, #831 B3, D901) > refuses, through missionStatusIssuer, a key the advertised set lists while the cached jwks_uri still carries it",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > refuses a resynchronization response signed under a key the issuer's historical key set lists, though its configured kids and its cached jwks_uri still carry it; the set is what refuses it",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gap: the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness. #1810 (option A, on the owner's go): the Signals receiver's resynchronization took a pinned key set and never read the historical key set; it now takes the Status keys as a key resolver, held through `missionStatusIssuer`, and refuses a listed key. Witnessed with a control: the same issuer advertising no set resynchronizes on the key. Proven by restoring the pinned key set and by dropping the set's refusal; each fails the witness at the refusal. Stays partial for the Lifecycle consumer."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -24007,7 +24050,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime",
-    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
+    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime. The Signals receiver's resynchronization holds its Status keys the same way (#1810): a key withdrawn from the jwks_uri still verifies within the cached set's declared lifetime, without a fetch, and once it ends the set is fetched again and the key refused."
    },
    "level": "unit",
    "coverage": "tested",
@@ -24017,9 +24060,15 @@
      "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > relies on a cached jwks_uri only within the freshness lifetime its response declares",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes before the cached set's lifetime ends, and a withdrawn one stops once it ends, when the set is fetched again",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache. #1810: the Signals receiver's resynchronization holds the jwks_uri through `missionStatusIssuer` (`IssuerKeys`), witnessed by a withdrawn key that verifies within the declared lifetime and is refused once it ends; proven by using the cached set past its lifetime, which fails the witness at the refusal."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
@@ -78080,7 +78129,7 @@
    "id": "core.instance-context.refresh-grant-continuity",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "delegated-instance-context",
-   "text": "If the exchange issues a refresh token, the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding.",
+   "text": "If the exchange issues a refresh token, and so establishes a redeemable grant lineage ({{grant-binding-related}}), the grant-continuity rules of {{Section 5.1 of I-D.draft-mcguinness-oauth-client-instance-id}} apply alongside {{grant-binding}}; instance continuity alone does not authorize replacement of the recorded instance or key rebinding.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -78096,7 +78145,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added."
+   "notes": "#1566. Keyword-free obligation of the instance-context composition. Optional capability; not claimed by the reference deployment, which has no instance-context provider switch. Positive and negative implementation coverage remains to be added. Re-quoted for the editorial pointer naming when the exchange issues a refresh token (#1871, D1005)."
   },
   {
    "id": "core.instance-context.consumer-attribution",
