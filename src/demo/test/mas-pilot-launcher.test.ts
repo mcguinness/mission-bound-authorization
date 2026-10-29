@@ -20,6 +20,7 @@ import { join } from "node:path";
 import { Fga } from "@mission/pdp";
 import { decodeJwt, decodeProtectedHeader, generateKeyPair, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { FileScopeBindingLedger, MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
 import { newStatusClientKey, parseStatusClients } from "../src/mas-pilot/mas-as.js";
@@ -306,12 +307,33 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
     expect(() =>
       masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m", MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process"),
     ).toThrow(/not both/);
-    expect(masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m" }, "in-process").resourcePolicyStore).toEqual({
+    expect(
+      masPilotLaunchOptions(
+        { ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m", MAS_PILOT_SCOPE_BINDINGS: "/tmp/b.json" },
+        "in-process",
+      ).resourcePolicyStore,
+    ).toEqual({
       attach: { storeId: "s", modelId: "m" },
     });
     expect(masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process").resourcePolicyStore).toEqual({
       bootstrap: "development",
     });
+  });
+
+  // @spec resource-access#resource-contract (#1847, #1866 review): the scope
+  // binding ledger is named like the Resource-policy store: a file, or one in
+  // memory only when development is asked for by name; and a MAS process the
+  // launcher starts opens the same one.
+  it("refuses an attached store with no scope binding ledger; a named file is the ledger, forwarded to the MAS process; development alone keeps one in memory", () => {
+    const config = configFile(14862, 14863);
+    const attach = { ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m" };
+    expect(() => masPilotLaunchOptions(attach, "in-process")).toThrow(/no scope binding ledger/);
+    const filed = masPilotLaunchOptions({ ...attach, MAS_PILOT_SCOPE_BINDINGS: "/var/lib/mas-pilot/scope-bindings.json" }, "separated");
+    expect(filed.scopeBindings.ledger).toBeInstanceOf(FileScopeBindingLedger);
+    expect(filed.scopeBindings.env).toEqual({ MAS_PILOT_SCOPE_BINDINGS: "/var/lib/mas-pilot/scope-bindings.json" });
+    const development = masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process");
+    expect(development.scopeBindings.ledger).toBeInstanceOf(MemoryScopeBindingLedger);
+    expect(development.scopeBindings.ledger.describe()).toMatch(/lost at restart/);
   });
 
   it("refuses a configuration file that is absent, or whose mapping contract is missing or does not load", () => {
@@ -396,6 +418,7 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
       const options = {
         openfga: { apiUrl: "http://unused.test", presharedKey: "unused" },
         resourcePolicyStore: { bootstrap: "development" } as const,
+        scopeBindings: new MemoryScopeBindingLedger(),
         config,
       };
       advertised = { issuer: url, jwks_uri: `${url}/jwks`, mission_max_stale_seconds: 300 };

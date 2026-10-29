@@ -116,15 +116,23 @@ resolution (`MappingContractCache`):
   stating the contract it grants those actions under, validated against the
   payments contract declarations when the document is parsed (#1847, D989).
   The credential's authority is one entry per stated contract, the values
-  stating none in an entry of their own, never combined. A value's contract
-  never changes: an install whose newer version gives an existing value
-  another contract, one where it stated none, or none where it stated one is
-  refused, so a credential issued under an earlier mapping never gains a
-  contract. A new contract takes a new scope value. A value stating a
-  contract stays available while that contract is supported: an install that
-  no longer maps it is refused while the declarations support its contract
-  for its actions (current, or superseded within retention), judged at the
-  cache's clock. A value stating none may be withdrawn.
+  stating none in an entry of their own, never combined.
+- Each scope value's binding, the contract it states or none, is recorded in
+  the deployment's scope binding ledger (`scope-binding-ledger.ts`) the
+  first time a version maps it, and is never changed or removed (#1847,
+  #1866 review). An install that maps a value under another binding than the
+  recorded one is refused, a value withdrawn by an earlier version included,
+  so no version, withdrawal or restart lets a credential issued under a value
+  gain a contract; a new contract takes a new scope value. A value recorded
+  with a contract stays available while that contract is supported: an
+  install that no longer maps it is refused while the declarations support
+  the contract (current, or superseded within retention), judged at the
+  cache's clock; a value recorded with none may be withdrawn. The ledger is
+  read on every install, and one that cannot be read or written refuses the
+  install. The gateway's cache and the MAS's Join Assertion path read the
+  same ledger. `MAS_PILOT_SCOPE_BINDINGS` names its file, replaced whole
+  through a synced temporary file; with `MAS_PILOT_DEVELOPMENT_STORE=1`
+  alone it is held in memory and a restart loses it.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§9).
@@ -529,6 +537,12 @@ Gaps:
 - **In the in-process configuration, Mission state is a kernel read**, as on
   the AS-native target (D293). The separated configuration (§11) reads it
   through the MAS's signed Mission Status instead.
+- **The scope binding ledger's file is trusted as found.** A missing file is
+  an empty ledger, so deleting it, or restoring an older copy, forgets
+  bindings; nothing witnesses it as the kernel store's recovery witness does.
+  The installed version's high-water mark is not in the ledger either, so a
+  restarted cache accepts an older mapping version, though never one that
+  changes a recorded binding.
 - **The mapping audit log is in memory**, unsigned and not retained. Decision
   Evidence carries `join_view_id`, which commits the authenticated (estate)
   client, not the mapping version.

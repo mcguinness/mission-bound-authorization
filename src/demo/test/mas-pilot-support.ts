@@ -9,6 +9,7 @@
  */
 
 import { generateKeyPair } from "jose";
+import { MemoryScopeBindingLedger, type ScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { validateMissionIntent } from "@mission/authorization-server";
 import { TOPOLOGY } from "@mission/demo-data";
 import { CANONICAL_RESOURCE, canonicalHtu, createHttpMediatedClient, type DpopKeys, dpopProofFor } from "@mission/mcp-payments";
@@ -64,6 +65,7 @@ export async function composeRecorded(
     config?: MasPilotConfig;
     mappingNow?: () => Date;
     resourcePolicyStore?: ResourcePolicyStore;
+    scopeBindings?: ScopeBindingLedger;
     introspectionEndpoint?: string;
     introspectionNow?: () => Date;
   } = {},
@@ -72,6 +74,7 @@ export async function composeRecorded(
   const pilot = await composeMasPilot({
     openfga: OPENFGA,
     resourcePolicyStore: extra.resourcePolicyStore ?? { bootstrap: "development" },
+    scopeBindings: extra.scopeBindings ?? new MemoryScopeBindingLedger(),
     observeDecisionRequest: (request) => {
       requests.push(request);
     },

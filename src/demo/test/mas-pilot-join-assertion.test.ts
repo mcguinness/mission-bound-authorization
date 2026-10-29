@@ -26,6 +26,7 @@ import { accessTokenHash, CANONICAL_RESOURCE, type DecisionEvidence, type JoinAs
 import type { EvaluationRequest } from "@mission/pdp";
 import { calculateJwkThumbprint, decodeJwt, exportJWK, generateKeyPair, importJWK, type JWK, type JWTPayload, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { composeMasPilot } from "../src/mas-pilot/compose.js";
 import { loadMasPilotConfig, type MasPilotConfig, parseMasPilotConfig } from "../src/mas-pilot/config.js";
 import { obtainEstateToken } from "../src/mas-pilot/estate-client.js";
@@ -139,7 +140,7 @@ beforeAll(async () => {
   });
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
-    resourcePolicyStore: { bootstrap: "development" },
+    resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
     observeDecisionRequest: (r) => requests.push(r),
     config,
     mas: { url: MAS_URL, pdpKey },
@@ -544,7 +545,7 @@ describe("the Join Assertion path is declared, and runs only where it can (#1454
 
   it("the in-process composition refuses a configuration that declares the path, before it builds anything", async () => {
     await expect(
-      composeMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, config: joinConfig() }),
+      composeMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(), config: joinConfig() }),
     ).rejects.toThrow(/separated topology only/);
   });
 });
@@ -552,7 +553,7 @@ describe("the Join Assertion path is declared, and runs only where it can (#1454
 d("the separated MAS pilot refuses a declared Join Assertion path it cannot run (#1454)", () => {
   it("refuses to compose without the MAS's introspection client secret, and the MAS process refuses a secret its configuration does not declare", async () => {
     await expect(
-      composeSeparatedMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, config, mas: { url: MAS_URL, pdpKey } }),
+      composeSeparatedMasPilot({ openfga: OPENFGA, resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(), config, mas: { url: MAS_URL, pdpKey } }),
     ).rejects.toThrow(/no secret for the MAS's introspection client/);
     // A PDP allowlist sharing no algorithm with what the MAS advertises (ES256)
     // refuses at composition, before the estate or any listener starts.
@@ -560,7 +561,7 @@ d("the separated MAS pilot refuses a declared Join Assertion path it cannot run 
     await expect(
       composeSeparatedMasPilot({
         openfga: OPENFGA,
-        resourcePolicyStore: { bootstrap: "development" },
+        resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
         config: { ...config, join_assertion: { ...declared, pdp_algorithms: ["ES384", "none"] } },
         mas: { url: MAS_URL, pdpKey },
         joinIntrospectionSecret: joinSecret,

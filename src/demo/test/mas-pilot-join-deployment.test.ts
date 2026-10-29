@@ -20,6 +20,7 @@ import { CANONICAL_RESOURCE } from "@mission/demo-data";
 import { ActorRecords } from "@mission/mcp-payments";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { pilotJoinAssertions } from "../src/mas-pilot/mas-join-assertions.js";
 import { relocateEstate } from "./mas-pilot-support.js";
@@ -78,7 +79,7 @@ function deploymentAtStub(trustedKids = ["stub-estate-1"]) {
     introspection: { ...moved.introspection, timeout_ms: 300, cache_max_seconds: 0 },
     join_assertion: { introspection_client_id: "mas-join-introspector", required: false, required_classes: [], pdp_algorithms: ["ES256"] },
   };
-  return pilotJoinAssertions(config, { introspectionSecret: "stub-secret", actorRecords: new ActorRecords() });
+  return pilotJoinAssertions(config, { introspectionSecret: "stub-secret", actorRecords: new ActorRecords(), scopeBindings: new MemoryScopeBindingLedger() });
 }
 
 /** A JWT access token the stub estate issued, which validates locally under its published key. */

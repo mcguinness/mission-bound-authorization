@@ -69,7 +69,8 @@ In process, both consoles are the one printed URL.
 | Variable | Meaning |
 |---|---|
 | `OPENFGA_STORE_ID`, `OPENFGA_MODEL_ID` | Attach to the administered Resource-policy store and model: verified, never written (deployment §4). |
-| `MAS_PILOT_DEVELOPMENT_STORE=1` | Instead, bootstrap a fresh store seeded from `config/mas-pilot.json` `resource_policy`. Its store and model are printed, and a later start can attach to them. |
+| `MAS_PILOT_DEVELOPMENT_STORE=1` | Instead, bootstrap a fresh store seeded from `config/mas-pilot.json` `resource_policy`. Its store and model are printed, and a later start can attach to them. Without `MAS_PILOT_SCOPE_BINDINGS`, it also keeps the scope binding ledger in memory, which a restart loses. |
+| `MAS_PILOT_SCOPE_BINDINGS=<path>` | The scope binding ledger's file: every scope value's contract binding, kept across versions, withdrawals and restarts (deployment §3). Required with an attached store; the MAS process the separated launcher starts opens the same file. |
 | `MISSION_KEY_RING=<absolute path>` (with `MISSION_KEY_BINDINGS=<absolute path>`) or `MISSION_EPHEMERAL_KEYS=1` | Where the MAS's signing keys come from, as for the as-native target. A ring and its key binding record, outside the ring's directory, are created once with `pnpm keys init --ring <path> --bindings <path> --issuer http://127.0.0.1:14834` (#1815). |
 | `MISSION_KERNEL_STORE=<absolute path>` | Optional: keeps the MAS's Missions, and its join evidence (§3.8), across a restart. It needs `MISSION_KERNEL_WITNESS`. |
 | `MISSION_KERNEL_WITNESS=<absolute path>` | With a kernel store: its recovery witness, in another directory, created once with `pnpm kernel-recovery init --store <path> --witness <path>`. A store restored from before it refuses to start (control-plane-deployment, Restore admission). |
@@ -84,6 +85,8 @@ line and exits 1:
 - no Resource-policy store (neither an attached one nor
   `MAS_PILOT_DEVELOPMENT_STORE=1`), both, or only one of the two store
   identifiers;
+- no scope binding ledger (neither `MAS_PILOT_SCOPE_BINDINGS` nor
+  `MAS_PILOT_DEVELOPMENT_STORE=1`);
 - a `MAS_PILOT_CONFIG` that names no file, a configuration with no
   `mapping_contract` (the configuration loader), or one whose contract does
   not load (`requireDeclaredMappingContract`, the compositions' own guard,

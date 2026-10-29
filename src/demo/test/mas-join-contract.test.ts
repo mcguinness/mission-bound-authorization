@@ -16,6 +16,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
+import { MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import {
   CANONICAL_RESOURCE,
   MAS_JOIN,
@@ -93,6 +94,7 @@ describe("every join-enabling deployment declares the mapping contract its joins
     const pilotOptions = {
       openfga: { apiUrl: "http://unused.test", presharedKey: "unused" },
       resourcePolicyStore: { bootstrap: "development" } as const,
+      scopeBindings: new MemoryScopeBindingLedger(),
       config: withoutContract,
     };
     await expect(composeMasPilot(pilotOptions)).rejects.toThrow(/declares no usable mapping contract/);

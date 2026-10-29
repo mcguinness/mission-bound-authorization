@@ -18,8 +18,9 @@
  * invalidation is recorded in the cache's audit log.
  */
 
-import { type ResourceContractDeclarations, type ResourceContractRef, sameResourceContract } from "@mission/core";
+import type { ResourceContractDeclarations, ResourceContractRef } from "@mission/core";
 import { keyedRecord, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
+import { bindingKey, type ScopeBinding, type ScopeBindingLedger, sameBinding } from "./scope-binding-ledger.js";
 import {
   type AuthorityEntry,
   type DelegatePolicy,
@@ -375,20 +376,30 @@ class MappingSnapshot implements JoinMappingContract {
 export class MappingContractCache {
   private snapshot: MappingSnapshot | undefined;
   private highestVersion = 0;
-  /** The last installed document: a newer version may not repoint its scopes (#1847). */
-  private installed: MappingContractDocument | undefined;
   private readonly log: MappingAuditRecord[] = [];
   private readonly maxStaleMs: number;
   private readonly now: () => Date;
   private readonly contracts: ResourceContractDeclarations;
+  private readonly ledger: ScopeBindingLedger;
 
-  constructor(opts: { maxStaleSeconds: number; now?: () => Date; contracts?: ResourceContractDeclarations }) {
+  /**
+   * `ledger` keeps every scope value's contract binding across versions,
+   * withdrawals and restarts (#1847, #1866 review); it has no default, so a
+   * deployment names where its bindings live.
+   */
+  constructor(opts: {
+    maxStaleSeconds: number;
+    ledger: ScopeBindingLedger;
+    now?: () => Date;
+    contracts?: ResourceContractDeclarations;
+  }) {
     if (!Number.isInteger(opts.maxStaleSeconds) || opts.maxStaleSeconds <= 0) {
       throw new MappingContractError("maxStaleSeconds must be a positive integer");
     }
     this.maxStaleMs = opts.maxStaleSeconds * 1000;
     this.now = opts.now ?? (() => new Date());
     this.contracts = opts.contracts ?? RESOURCE_CONTRACTS;
+    this.ledger = opts.ledger;
   }
 
   /** Install a newer contract version, or refuse it and say why. */
@@ -407,31 +418,54 @@ export class MappingContractCache {
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
     }
-    // @spec resource-access#resource-contract (#1847, D989): a scope value's
-    // contract never repoints. A newer version that grants an existing value
-    // under another contract, or under one where it stated none, or none
-    // where it stated one, is refused: a new contract takes a new value, so a
-    // credential issued under the earlier mapping never gains a contract.
-    const repointed = this.installed ? repointedScope(this.installed, doc) : undefined;
-    if (repointed !== undefined) {
-      const reason = `mapping contract: version ${doc.version} repoints scope ${repointed} to another contract; a new contract takes a new scope value`;
+    const refuse = (reason: string): { ok: false; reason: string } => {
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
+    };
+    // @spec resource-access#resource-contract (#1847, D989, #1866 review):
+    // every binding this deployment has installed, whatever version, cache or
+    // process installed it. An unreadable ledger refuses every install.
+    let recorded: Map<string, ScopeBinding>;
+    try {
+      recorded = new Map(this.ledger.load().map((b) => [bindingKey(b), b]));
+    } catch (e) {
+      return refuse(`mapping contract: the scope binding ledger cannot be read: ${(e as Error).message}`);
     }
-    // @spec resource-access#resource-contract (#1847, D989): a supported older
-    // mapping remains available while its contract is supported. A newer
-    // version that no longer maps a value stating a contract the declarations
-    // still support for its actions (current, or superseded within retention)
-    // is refused; once that contract is not supported, or for a value stating
-    // none, the value may be withdrawn.
-    const withdrawn = this.installed ? withdrawnScope(this.installed, doc, this.contracts, at) : undefined;
-    if (withdrawn !== undefined) {
-      const reason = `mapping contract: version ${doc.version} withdraws scope ${withdrawn}, whose contract is still supported`;
-      this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
-      return { ok: false, reason };
+    const incoming = scopeBindingsOf(doc);
+    // A scope value's contract never changes: a version that maps a value
+    // recorded under another contract, under one where it was recorded with
+    // none, or under none where it was recorded with one, is refused, even
+    // where versions between withdrew the value. A new contract takes a new
+    // value, so a credential issued under the value never gains a contract.
+    for (const b of incoming) {
+      const was = recorded.get(bindingKey(b));
+      if (was && !sameBinding(was, b)) {
+        return refuse(
+          `mapping contract: version ${doc.version} repoints scope ${b.issuer} ${b.scope} to another contract; a new contract takes a new scope value`,
+        );
+      }
+    }
+    // A supported older mapping remains available while its contract is
+    // supported: a version that no longer maps a recorded value whose
+    // contract the declarations still support (current, or superseded within
+    // retention) is refused. A value recorded with none, or whose contract is
+    // no longer supported, may be withdrawn.
+    const mapped = new Set(incoming.map(bindingKey));
+    for (const was of recorded.values()) {
+      if (was.resource_contract === null || mapped.has(bindingKey(was))) continue;
+      const entry = { resource: was.resource, actions: [], resource_contract: was.resource_contract };
+      if (this.contracts.carriedViolation(entry, at) === undefined) {
+        return refuse(`mapping contract: version ${doc.version} withdraws scope ${was.issuer} ${was.scope}, whose contract is still supported`);
+      }
+    }
+    // Recorded before the snapshot serves, so no binding is ever relied on
+    // unrecorded.
+    try {
+      this.ledger.record(incoming.filter((b) => !recorded.has(bindingKey(b))));
+    } catch (e) {
+      return refuse(`mapping contract: the scope binding ledger cannot be written: ${(e as Error).message}`);
     }
     this.highestVersion = doc.version;
-    this.installed = doc;
     this.snapshot = new MappingSnapshot(doc, at.getTime(), this.maxStaleMs, (entry) => this.log.push(entry));
     this.log.push({
       kind: "install",
@@ -477,46 +511,14 @@ export class MappingContractCache {
   }
 }
 
-/**
- * The first `issuer scope` both documents map whose stated contract differs
- * (a reference against none counts), or undefined (#1847, D989).
- */
-function repointedScope(before: MappingContractDocument, after: MappingContractDocument): string | undefined {
-  for (const [iss, values] of Object.entries(after.scopes.issuers)) {
-    const earlier = ownValue(before.scopes.issuers, iss);
-    if (!earlier) continue;
+/** Every scope value `doc` maps, with the contract it states or none (#1847). */
+function scopeBindingsOf(doc: MappingContractDocument): ScopeBinding[] {
+  const out: ScopeBinding[] = [];
+  for (const [issuer, values] of Object.entries(doc.scopes.issuers)) {
+    const stated = ownValue(doc.scopes.contracts, issuer);
     for (const scope of Object.keys(values)) {
-      if (!Object.hasOwn(earlier, scope)) continue;
-      const wasStated = ownValue(before.scopes.contracts, iss);
-      const nowStated = ownValue(after.scopes.contracts, iss);
-      const was = wasStated && ownValue(wasStated, scope);
-      const now = nowStated && ownValue(nowStated, scope);
-      if (!sameResourceContract(was, now) && !(was === undefined && now === undefined)) return `${iss} ${scope}`;
+      out.push({ issuer, scope, resource: doc.scopes.resource, resource_contract: (stated && ownValue(stated, scope)) ?? null });
     }
   }
-  return undefined;
-}
-
-/**
- * The first `issuer scope` the earlier document maps under a stated contract
- * that the newer one no longer maps while the declarations still support that
- * contract for the value's actions at `now`, or undefined (#1847, D989).
- */
-function withdrawnScope(
-  before: MappingContractDocument,
-  after: MappingContractDocument,
-  contracts: ResourceContractDeclarations,
-  now: Date,
-): string | undefined {
-  for (const [iss, stated] of Object.entries(before.scopes.contracts)) {
-    for (const [scope, ref] of Object.entries(stated)) {
-      const kept = ownValue(after.scopes.issuers, iss);
-      if (kept && ownValue(kept, scope) !== undefined) continue;
-      const earlier = ownValue(before.scopes.issuers, iss);
-      const actions = (earlier && ownValue(earlier, scope)) ?? [];
-      const entry = { resource: before.scopes.resource, actions, resource_contract: ref };
-      if (contracts.carriedViolation(entry, now) === undefined) return `${iss} ${scope}`;
-    }
-  }
-  return undefined;
+  return out;
 }

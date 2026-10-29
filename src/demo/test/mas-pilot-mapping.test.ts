@@ -8,9 +8,12 @@
  * scope mapping, and the audit record of every mapping decision.
  */
 
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { RESOURCE_CONTRACTS } from "@mission/demo-data";
+import { FileScopeBindingLedger, MemoryScopeBindingLedger, type ScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, parseMasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import {
   MappingContractCache,
@@ -106,25 +109,25 @@ describe("mapping contract loader (@spec authority-server#mapping-contract, #818
 
 describe("mapping contract cache: resolution (@spec authority-server#mission-join rules 3 and 4, #818)", () => {
   it("maps an issuer-qualified estate subject and client into the Mission's namespace", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     expect(cache.install(doc()).ok).toBe(true);
     expect(cache.current().resolveIdentity(ask("u-1001"))).toEqual({ subject: { iss: MAS, sub: "alice" }, clientId: "ap-agent" });
   });
 
   it("resolves nothing for the same sub and client strings under another issuer", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     expect(cache.current().resolveIdentity(ask("u-1001", "estate-bot", "https://other-estate.test"))).toBeUndefined();
   });
 
   it("resolves nothing for a disabled account, though its row maps to the Mission's subject", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     expect(cache.current().resolveIdentity(ask("u-1003"))).toBeUndefined();
   });
 
   it("resolves two estate accounts mapped to one Mission subject, and audits which account each decision resolved", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     expect(cache.current().resolveIdentity(ask("u-1001"))?.subject.sub).toBe("alice");
     expect(cache.current().resolveIdentity(ask("u-1002"))?.subject.sub).toBe("alice");
@@ -136,7 +139,7 @@ describe("mapping contract cache: resolution (@spec authority-server#mission-joi
   });
 
   it("resolves nothing for a Mission at another Mission Issuer than the contract's", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     expect(cache.current().resolveIdentity({ ...ask("u-1001"), missionIssuer: "https://other-mas.test" })).toBeUndefined();
     expect(cache.audit().at(-1)).toMatchObject({ kind: "identity", outcome: "wrong_mission_issuer" });
@@ -145,7 +148,7 @@ describe("mapping contract cache: resolution (@spec authority-server#mission-joi
 
 describe("mapping contract cache: versions and freshness (@spec authority-server#mapping-contract, #818)", () => {
   it("a newer version reassigning an estate account changes the join: the account no longer resolves to its former owner", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     expect(cache.current().resolveIdentity(ask("u-1001"))?.subject.sub).toBe("alice");
     const reassigned = doc({
@@ -158,7 +161,7 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
   });
 
   it("refuses an install at or below the installed version, keeping the installed one", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc({ version: 2 }));
     const rollback = cache.install(doc({ version: 1, subjects: [] }));
     expect(rollback.ok).toBe(false);
@@ -169,7 +172,7 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
 
   it("fails closed once the installed version is older than the staleness bound, and recovers on the next install", () => {
     const c = clock();
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: c.now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: c.now });
     cache.install(doc());
     c.advance(300);
     expect(cache.current().resolveIdentity(ask("u-1001", "estate-bot", ESTATE, c.now()))?.subject.sub).toBe("alice");
@@ -185,7 +188,7 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
 
   it("reports a snapshot usable within the staleness bound and unusable once stale, invalidated, or never installed", () => {
     const c = clock();
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: c.now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: c.now });
     expect(cache.current().usable(c.now())).toBe(false);
     cache.install(doc());
     expect(cache.current().usable(c.now())).toBe(true);
@@ -198,7 +201,7 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
   });
 
   it("an invalidated cache resolves nothing, and records each refused decision", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     cache.invalidate();
     expect(cache.current().resolveIdentity(ask("u-1001"))).toBeUndefined();
@@ -208,7 +211,7 @@ describe("mapping contract cache: versions and freshness (@spec authority-server
 
 describe("mapping contract cache: the scope mapping (@spec authority-server#mission-join rule 8, #818)", () => {
   it("maps each covered scope value to its actions at the contract's resource, and an uncovered value to nothing", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     const now = new Date("2026-10-19T12:00:00Z");
     expect(cache.current().credentialAuthority({ issuer: ESTATE, scope: "invoices.read admin.all", resource: RESOURCE, now })).toEqual([
@@ -218,7 +221,7 @@ describe("mapping contract cache: the scope mapping (@spec authority-server#miss
   });
 
   it("maps nothing for another issuer's identical scope value, another resource, or a credential with no scope", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     cache.install(doc());
     const now = new Date("2026-10-19T12:00:00Z");
     const current = cache.current();
@@ -374,7 +377,7 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
     doc({ version, scopes: { resource: RESOURCE, issuers: { [ESTATE]: values } } as never });
 
   it("confers an entry carrying a value's stated contract, a legacy value's entry without one, never combining contracts", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     const current = contractAt(CURRENT_VERSION);
     const older = contractAt(OLDER_VERSION);
     expect(
@@ -410,7 +413,7 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
   });
 
   it("refuses a newer version that repoints an existing value's contract, and accepts one that adds a new value", () => {
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     const current = contractAt(CURRENT_VERSION);
     const older = contractAt(OLDER_VERSION);
     expect(cache.install(withScopes({ "invoices.read": READ, "invoices.read.contract-older": { actions: READ, resource_contract: older } }, 1))).toMatchObject({ ok: true });
@@ -440,7 +443,7 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
 
   it("refuses a newer version that withdraws a value whose stated contract is still supported, and accepts the withdrawal of a value stating none, or once its contract is not supported", () => {
     const c = clock();
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: c.now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: c.now });
     const current = contractAt(CURRENT_VERSION);
     const older = contractAt(OLDER_VERSION);
     const stated = (ref: typeof current) => ({ actions: READ, resource_contract: ref });
@@ -485,7 +488,7 @@ describe("mapping contract cache: only the mapping's own entries confer authorit
   it.each(["constructor", "toString", "hasOwnProperty", "valueOf", "__proto__"])(
     "a credential scope or issuer named %s confers nothing and never throws, alone or beside a mapped value",
     (name) => {
-      const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+      const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
       expect(cache.install(doc()).ok).toBe(true);
       const authority = (scope: string, issuer = ESTATE) =>
         cache.current().credentialAuthority({ issuer, scope, resource: RESOURCE, now });
@@ -497,10 +500,93 @@ describe("mapping contract cache: only the mapping's own entries confer authorit
 
   it("parses a mapping key named __proto__ as an ordinary scope value", () => {
     const raw = JSON.parse(JSON.stringify(doc()).replace('"invoices.read":', '"__proto__":["payments:invoice.list"],"invoices.read":'));
-    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    const cache = new MappingContractCache({ ledger: new MemoryScopeBindingLedger(), maxStaleSeconds: 300, now: clock().now });
     expect(cache.install(raw).ok).toBe(true);
     expect(cache.current().credentialAuthority({ issuer: ESTATE, scope: "__proto__", resource: RESOURCE, now })).toEqual([
       { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.list"] },
     ]);
+  });
+});
+
+/**
+ * @spec resource-access#resource-contract (#1847, D989, #1866 review): a scope
+ * value's binding, its stated contract or none, is kept in the deployment's
+ * scope binding ledger, never removed and never changed. A withdrawn value
+ * keeps it, and a cache started again over the same ledger reads it, so no
+ * version, withdrawal or restart lets an issued credential gain a contract;
+ * and the keep-while-supported rule reads the same history.
+ */
+describe("mapping contract cache: the scope binding ledger (@spec authority-server#mapping-contract, resource-access#resource-contract, #1847, #1866 review)", () => {
+  const READ = ["payments:invoice.read"];
+  const withScopes = (values: Record<string, unknown>, version: number) =>
+    doc({ version, scopes: { resource: RESOURCE, issuers: { [ESTATE]: values } } as never });
+  const stated = (ref: ReturnType<typeof contractAt>) => ({ actions: READ, resource_contract: ref });
+  const cacheOver = (ledger: ScopeBindingLedger, now = clock().now) => new MappingContractCache({ ledger, maxStaleSeconds: 300, now });
+  const refusedFor = (r: { ok: boolean; reason?: string }, why: RegExp) => {
+    expect(r.ok).toBe(false);
+    expect((r as { reason: string }).reason).toMatch(why);
+  };
+
+  it("refuses reintroducing a withdrawn value under another binding, a value stating none included", () => {
+    const current = contractAt(CURRENT_VERSION);
+    const cache = cacheOver(new MemoryScopeBindingLedger());
+    expect(cache.install(withScopes({ legacy: READ, other: READ }, 1)).ok).toBe(true);
+    expect(cache.install(withScopes({ other: READ }, 2)).ok).toBe(true);
+    refusedFor(cache.install(withScopes({ other: READ, legacy: stated(current) }, 3)), /repoints scope .* legacy/);
+    // Reintroduced as it was bound: accepted.
+    expect(cache.install(withScopes({ other: READ, legacy: READ }, 3))).toMatchObject({ ok: true, version: 3 });
+  });
+
+  it("refuses reintroducing a value withdrawn after its contract's retention under the current contract", () => {
+    const c = clock();
+    const current = contractAt(CURRENT_VERSION);
+    const older = contractAt(OLDER_VERSION);
+    const cache = cacheOver(new MemoryScopeBindingLedger(), c.now);
+    expect(cache.install(withScopes({ "invoices.read.contract-older": stated(older) }, 1)).ok).toBe(true);
+    const retainedUntil = PAYMENTS_DECLARED?.versions.find((v) => v.version === OLDER_VERSION)?.retained_until as string;
+    c.advance((Date.parse(retainedUntil) - c.now().getTime()) / 1000 + 1);
+    expect(cache.install(withScopes({}, 2)).ok).toBe(true);
+    refusedFor(cache.install(withScopes({ "invoices.read.contract-older": stated(current) }, 3)), /repoints scope/);
+  });
+
+  it("a cache started again over the same ledger keeps every binding and the keep-while-supported rule", () => {
+    const current = contractAt(CURRENT_VERSION);
+    const ledger = new MemoryScopeBindingLedger();
+    expect(cacheOver(ledger).install(withScopes({ legacy: READ, "invoices.read.contract-current": stated(current) }, 1)).ok).toBe(true);
+    const restarted = cacheOver(ledger);
+    refusedFor(restarted.install(withScopes({ legacy: stated(current), "invoices.read.contract-current": stated(current) }, 2)), /repoints scope/);
+    refusedFor(restarted.install(withScopes({ legacy: READ }, 2)), /withdraws scope .* invoices\.read\.contract-current/);
+    expect(restarted.install(withScopes({ legacy: READ, "invoices.read.contract-current": stated(current) }, 2)).ok).toBe(true);
+  });
+
+  it("two caches over one ledger, as the gateway and the MAS's Join Assertion path are, install the same document", () => {
+    const ledger = new MemoryScopeBindingLedger();
+    const current = contractAt(CURRENT_VERSION);
+    const document = withScopes({ legacy: READ, "invoices.read.contract-current": stated(current) }, 1);
+    expect(cacheOver(ledger).install(document).ok).toBe(true);
+    expect(cacheOver(ledger).install(document).ok).toBe(true);
+    expect(ledger.load()).toHaveLength(2);
+  });
+
+  it("a file ledger outlives the process that wrote it, and an unreadable or unwritable one refuses the install", () => {
+    const dir = mkdtempSync(join(tmpdir(), "scope-bindings-"));
+    const path = join(dir, "scope-bindings.json");
+    const current = contractAt(CURRENT_VERSION);
+    expect(cacheOver(new FileScopeBindingLedger(path)).install(withScopes({ legacy: READ }, 1)).ok).toBe(true);
+    expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({
+      scope_bindings: [{ issuer: ESTATE, scope: "legacy", resource: RESOURCE, resource_contract: null }],
+    });
+    // Another process's cache, over the same file.
+    refusedFor(cacheOver(new FileScopeBindingLedger(path)).install(withScopes({ legacy: stated(current) }, 2)), /repoints scope/);
+
+    writeFileSync(path, "{ not json");
+    const unreadable = cacheOver(new FileScopeBindingLedger(path));
+    refusedFor(unreadable.install(withScopes({ legacy: READ }, 1)), /scope binding ledger cannot be read/);
+    expect(unreadable.current().usable(clock().now())).toBe(false);
+
+    const blocked = join(dir, "blocked");
+    mkdirSync(join(blocked, "scope-bindings.json"), { recursive: true });
+    const unwritable = cacheOver(new FileScopeBindingLedger(join(blocked, "scope-bindings.json")));
+    refusedFor(unwritable.install(withScopes({ legacy: READ }, 1)), /scope binding ledger cannot (be read|be written)/);
   });
 });
