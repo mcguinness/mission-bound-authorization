@@ -67756,8 +67756,8 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "a constraints key only the candidate carries narrows it only when the key has defined semantics and the resource server serving the candidate's resource is known to enforce it: a Token Exchange adding a defined key the serving audience enforces is issued carrying it; one adding a key that audience is not known to enforce, or a key without defined semantics, is refused, never issued with the key removed",
-    "local": "the reference decides enforcement at issuance (unenforcedConstraintRefusal, invalid_target), after the Token Exchange subset gates, against the audience's mission_constraints_supported; a key without defined semantics is refused at intake and derivation (invalid_authorization_details)"
+    "normative": "a constraints key only the candidate carries narrows it only when the key has defined semantics and the resource server serving the candidate's resource is known to enforce it: a Token Exchange adding a defined key the serving audience enforces is issued carrying it; one adding a key that audience is not known to enforce, or a key without defined semantics, is refused, never issued with the key removed; a value equivalent to omission (requires_action_approval false) does not make the key present on either operand",
+    "local": "the reference decides enforcement at issuance (unenforcedConstraintRefusal, invalid_target), after the Token Exchange subset gates, against the audience's mission_constraints_supported; a key without defined semantics is refused at intake and derivation (invalid_authorization_details); that issuance check is presence-keyed, stricter than the comparison, so it never emits a key, whatever its value, to an audience not known to enforce it"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -67799,13 +67799,25 @@
      "surface": "token-endpoint"
     },
     {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-enf-08: a candidate's false against an absent key adds no key and needs no enforcement context",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-access-cases.test.ts",
+     "name": "Mission Resource Access expected-outcome cases (#1258, D452) > witnesses the conformance ledger cites > sub-enf-09: a candidate's true against a reference's false is a key only the candidate carries, refused without enforcement context",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
      "file": "src/services/authorization-server/test/unsupported-constraint-keys.test.ts",
      "name": "direct derivation (deriveAuthoritySet) refuses an unsupported constraint key with no config loader or PAR intake in the call path (#784, review on PR #803) > submitted-proposal mode refuses an unsupported key on a proposal entry no ceiling entry shares a resource with, even though a sibling entry derives fine",
      "level": "unit",
      "surface": "derivation"
     }
    ],
-   "notes": "#1258 item 6, #1377 step 8 (D712). Endpoint: a Token Exchange adding tenant to an untenanted payments entry is issued while the payments audience's mission_constraints_supported names tenant, and refused invalid_target, the same entry without it still issued, while the list omits tenant. Cases sub-enf-01 to sub-enf-07 (subset.json) give enforcement context (enforced_constraints) and run through the reader, which composes intake, the issuance refusal over the keys only the candidate carries, and the subset relation; the second consumer models the same rule. A key without defined semantics is also refused at direct derivation (the unit test) and by case der-09; der-08 (positive) derives, enforcement being checked at issuance. Proved by mutation: an issuance check that ignores the audience's list fails the refusal test and cases sub-enf-02 and sub-enf-03; a subset rule refusing every key only the candidate carries fails the issuance test and case sub-enf-01."
+   "notes": "#1258 item 6, #1377 step 8 (D712). Endpoint: a Token Exchange adding tenant to an untenanted payments entry is issued while the payments audience's mission_constraints_supported names tenant, and refused invalid_target, the same entry without it still issued, while the list omits tenant. Cases sub-enf-01 to sub-enf-11 (subset.json) give enforcement context (enforced_constraints) and run through the reader, which composes intake, the issuance refusal over the keys only the candidate carries, and the subset relation; the second consumer models the same rule. A key without defined semantics is also refused at direct derivation (the unit test) and by case der-09; der-08 (positive) derives, enforcement being checked at issuance. Proved by mutation: an issuance check that ignores the audience's list fails the refusal test and cases sub-enf-02 and sub-enf-03; a subset rule refusing every key only the candidate carries fails the issuance test and case sub-enf-01. D1025: presence is effective presence on both operands, so a requires_action_approval false neither adds a key nor makes the reference carry one (sub-enf-08 to sub-enf-11, and cc-requires_action_approval-positive now states the enforcement its true needs); the reader decides presence before the candidate-only test and rewrites neither entry. Dropping that effective-presence filter from the reader fails sub-enf-08 and sub-enf-09."
   },
   {
    "id": "resource-access.subset.inherited-allowed-delegates",

@@ -555,6 +555,12 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     it("sub-enf-06: a key without defined semantics is refused even where the serving resource server lists it", () => {
       runCited("sub-enf-06");
     });
+    it("sub-enf-08: a candidate's false against an absent key adds no key and needs no enforcement context", () => {
+      runCited("sub-enf-08");
+    });
+    it("sub-enf-09: a candidate's true against a reference's false is a key only the candidate carries, refused without enforcement context", () => {
+      runCited("sub-enf-09");
+    });
   });
 
   for (const { name, doc } of files) {
