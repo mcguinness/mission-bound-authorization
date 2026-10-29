@@ -25,6 +25,7 @@ import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
   type ApplyResult,
+  AUTHORITY_CHANGED_CAPABILITY,
   LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
   MissionSignalReceiver,
@@ -68,10 +69,15 @@ describe("contain commit propagated by Mission Signals (metadata-only)", () => {
       use: "sig",
     };
 
+    // The receiver applies the rematerialization rule, so its stream declares
+    // `authority_changed`: the contain commit below narrows effective
+    // authority and the Signals gate delivers it only to a declared stream.
     const emitter = new MissionSignalEmitter({
       key: statusKeys.privateKey,
       kid: "as-status",
-      consumers: [{ audience: CONSUMER_AUD }],
+      consumers: [
+        { audience: CONSUMER_AUD, mission_capabilities_supported: [AUTHORITY_CHANGED_CAPABILITY] },
+      ],
     });
     const receiver = new MissionSignalReceiver({
       jwks: { keys: [statusPub] },

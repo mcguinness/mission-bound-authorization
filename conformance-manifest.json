@@ -24839,12 +24839,12 @@
     },
     {
      "file": "src/packages/mission-signals/test/discharge-signals.test.ts",
-     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance",
+     "name": "discharge compatibility: authority_changed emission and the delivery gate > gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate",
      "level": "cross-component",
      "surface": "signals"
     }
    ],
-   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: an event whose effective-authority change is represented by `authority_changed` ALONE is withheld from an undeclared stream. The gate keys on a `containment_version` ADVANCE rather than its presence, tracked per Mission with the same cursor discipline the receiver uses, so the composite case is caught: a discharge on a PREVIOUSLY CONTAINED Mission carries containment_version unchanged and is still gated, while the contain commit before it (an actual advance) still reaches the undeclared stream, leaving containment's delivery rules unchanged. With no cursor yet, only containment_version 1 counts as an advance; a higher first-seen value is ambiguous and the gate withholds. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
+   "notes": "MissionSignalEmitter gates delivery on the receiver-declared `mission_capabilities_supported`: every event carrying `authority_changed` true, a discharge commit and a containment commit alike, is withheld from an undeclared stream and delivered to a declared one (#1001, D1002). The gate reads only the commit's own `authority_changed` and the consumer's declaration, never emitter-side history, so a restarted emitter decides alike; the kernel's former `containment_advanced` provenance marker, which let a contain commit through, is removed. A discharge on a previously contained Mission carries `containment_version` beside `authority_changed` and is still gated. The Stream Configuration object itself is not modeled (no SSF stream-management endpoints exist here): the declaration is a registered consumer's property on the emitter."
   },
   {
    "id": "signals.delivery.persist-until-acknowledged",

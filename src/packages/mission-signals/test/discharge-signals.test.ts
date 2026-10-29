@@ -13,11 +13,14 @@
  *    `authority_changed` in `mission_capabilities_supported` never receives
  *    that event, while a declared stream does;
  *  - the COMPOSITE case: a discharge on a PREVIOUSLY CONTAINED Mission carries
- *    `containment_version` (present, unchanged) and is still gated, because
- *    only an ADVANCE represents the narrowing to an undeclared consumer;
- *  - containment's own delivery rules are unchanged: a contain commit, whose
- *    narrowing IS represented by a `containment_version` advance, still reaches
- *    an undeclared stream.
+ *    `containment_version` and is still gated;
+ *  - the gate covers containment too (#1001, D1002): a contain commit that
+ *    narrows effective authority carries `authority_changed` true and is
+ *    withheld from an undeclared stream, while a declared stream receives it
+ *    and its receiver rematerializes;
+ *  - withholding renumbers nothing: the undeclared stream's next delivered
+ *    event carries the Mission's own `version`, so its receiver detects the
+ *    gap the withheld event left.
  */
 
 import {
@@ -209,12 +212,11 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
   });
 
-  it("gates a discharge on a PREVIOUSLY CONTAINED Mission too: presence of containment_version is not an advance", async () => {
+  it("gates a discharge on a PREVIOUSLY CONTAINED Mission too: a containment_version on the event does not open the gate", async () => {
     const w = await wire();
     const mission = approve(w.kernel);
-    // A contain commit first: its narrowing IS represented by a
-    // containment_version advance, so containment's rules apply unchanged and
-    // BOTH streams receive it.
+    // A contain commit first. It narrows effective authority, so it carries
+    // authority_changed true and only the declared stream receives it.
     w.kernel.contain(mission.id, {
       event: {
         type: "anomaly.detected",
@@ -226,19 +228,19 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     });
     await w.emitter.drain();
     expect(w.declaredSets).toHaveLength(2);
-    expect(w.undeclaredSets).toHaveLength(2);
+    expect(w.undeclaredSets).toHaveLength(1);
 
     // Now discharge the OTHER entry. The commit carries containment_version 1
-    // (unchanged), so the narrowing is represented by authority_changed alone.
+    // beside authority_changed true; the gate reads authority_changed alone.
     w.kernel.discharge(mission.id, { ...selectors(mission), event_id: "close-composite-1" });
     await w.emitter.drain();
     expect(w.declaredSets).toHaveLength(3);
-    expect(w.undeclaredSets).toHaveLength(2); // still gated
+    expect(w.undeclaredSets).toHaveLength(1); // still gated
     expect(w.declared.needsRematerialization(mission.id)).toBe(true);
   });
 });
 
-describe("the delivery gate survives an emitter restart: provenance is commit-carried, never cursor-inferred", () => {
+describe("the delivery gate survives an emitter restart: it reads the commit's authority_changed, never emitter history", () => {
   const baseCommit = (over: Partial<LifecycleCommit>): LifecycleCommit => ({
     id: "msn_restart_1",
     issuer: ISS,
@@ -282,17 +284,16 @@ describe("the delivery gate survives an emitter restart: provenance is commit-ca
     expect(undeclared).toHaveLength(0);
   });
 
-  it("a real containment advance first observed above version 1 still reaches an undeclared stream on a fresh emitter", async () => {
+  it("withholds a containment commit first observed above version 1 from an undeclared stream and delivers it to a declared one", async () => {
     const { emitter, declared, undeclared } = await freshEmitter();
-    // The converse failure: a cursor-inferring gate WITHHELD a genuine
-    // containment event whose first observed version exceeds 1. The kernel's
-    // commit-carried discriminator makes it deliverable regardless of what
-    // this emitter has seen before.
-    emitter.onCommit(
-      baseCommit({ authority_changed: true, containment_version: 5, containment_advanced: true }),
-    );
+    // A contain commit narrows effective authority, so it carries
+    // authority_changed true and the gate binds it like a discharge (#1001,
+    // D1002): an undeclared consumer would accept the in-order increment and
+    // keep the contained authority. The decision needs no history, so a fresh
+    // emitter seeing the Mission first at containment_version 5 decides alike.
+    emitter.onCommit(baseCommit({ authority_changed: true, containment_version: 5 }));
     await emitter.drain();
     expect(declared).toHaveLength(1);
-    expect(undeclared).toHaveLength(1);
+    expect(undeclared).toHaveLength(0);
   });
 });
