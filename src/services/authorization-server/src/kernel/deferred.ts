@@ -31,7 +31,7 @@ import type { AudienceReference } from "./approved-audience.js";
 import { CreationIdempotencyStore } from "./creation-idempotency.js";
 import { APPROVAL_FLOOR, type ApprovalFloorPolicy } from "@mission/demo-data";
 import { evaluateApprovalFloor } from "./approval-floor.js";
-import { authorityHash, type ContainmentSelector, isSubsetSetIgnoringCapabilitySources, type JsonValue } from "@mission/core";
+import { authorityHash, type ContainmentSelector, isSubsetSetUnderIgnoringCapabilitySources, type JsonValue } from "@mission/core";
 import {
   createExpansion,
   type ReconciliationStatus,
@@ -175,7 +175,14 @@ export class DeferralStore {
     // @spec D42: AROP grant is a subset of the active Mission; widening -> Expansion.
     // Containment: the ceiling is the EFFECTIVE set, so a contained capability
     // is not deferrable.
-    if (!isSubsetSetIgnoringCapabilitySources(input.requested, this.kernel.effectiveAuthoritySet(mission))) {
+    // @spec resource-access#qualified-narrowing (#1377, D1025): under the declared `narrowing`.
+    if (
+      !isSubsetSetUnderIgnoringCapabilitySources(
+        this.kernel.narrowingDeclaration(),
+        input.requested,
+        this.kernel.effectiveAuthoritySet(mission),
+      )
+    ) {
       throw new DeferralError(
         "out_of_authority",
         "requested authority is not within the active Mission; use Expansion to widen",
@@ -289,7 +296,13 @@ export class DeferralStore {
     const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[]; c?: string };
     // Re-verify subset at redemption (the Mission may have changed) against the
     // EFFECTIVE set: containment applied between approval and redemption refuses.
-    if (!isSubsetSetIgnoringCapabilitySources(parsed.r, this.kernel.effectiveAuthoritySet(mission))) {
+    if (
+      !isSubsetSetUnderIgnoringCapabilitySources(
+        this.kernel.narrowingDeclaration(),
+        parsed.r,
+        this.kernel.effectiveAuthoritySet(mission),
+      )
+    ) {
       this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);
       return { error: "access_denied" };
     }

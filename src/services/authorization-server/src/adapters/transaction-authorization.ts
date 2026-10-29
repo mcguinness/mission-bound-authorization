@@ -1014,7 +1014,13 @@ async function completionChecks(
   // Containment may have narrowed the Mission since admission, so the subset
   // rule is recomputed against the CURRENT effective set, never the pinned one.
   const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
-  if (!isSubsetSetIgnoringCapabilitySources(permitted, deps.kernel.effectiveAuthoritySet(gated))) {
+  if (
+    !isSubsetSetUnderIgnoringCapabilitySources(
+      deps.kernel.narrowingDeclaration(),
+      permitted,
+      deps.kernel.effectiveAuthoritySet(gated),
+    )
+  ) {
     return {
       ok: false,
       error: "access_denied",

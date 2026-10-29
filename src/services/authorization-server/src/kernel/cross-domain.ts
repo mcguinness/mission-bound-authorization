@@ -12,7 +12,7 @@
 import { randomBytes } from "node:crypto";
 import type { ActObject } from "@mission/actor-chain";
 import { SignJWT, type CryptoKey, type JWTPayload } from "jose";
-import { isSubsetEntry, isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { isSubsetEntry, isSubsetEntryUnder, isSubsetSetUnderIgnoringCapabilitySources } from "@mission/core";
 import type { DelegateCandidate } from "./delegate-matcher.js";
 import { type OriginProjection, projectThroughEffective } from "./derive.js";
 import { combineOrigins, type DelegationCandidate, retainedOrigins } from "./eligibility-provenance.js";
@@ -372,10 +372,21 @@ async function signAdmittedGrant(
   // eligibility is the gate's alone; before the requested-authority check, so
   // a request that keeps an omitted `delegation` exceeds the conveyed copy
   // under the subset rule ("introduces delegation the grantor lacks").
-  const carried = conveyedCopy(record, candidates, filtered);
+  // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+  // (#1377, D1025): an entry the conveyed copy or a filter changed (dropping
+  // `delegation`, narrowing resources) crosses the domain only where the
+  // declared `narrowing` permits narrowing it from an approved entry;
+  // otherwise only an entry equal to an approved one is conveyed.
+  const narrowing = kernel.narrowingDeclaration();
+  const carried = conveyedCopy(record, candidates, filtered).filter((e) =>
+    record.authority_set.some((approved) => isSubsetEntryUnder(narrowing, e, approved)),
+  );
+  if (carried.length === 0) {
+    throw new AuthorityNarrowedToEmptyError("no audience-scoped authority remains that this grant may convey");
+  }
   let granted = carried;
   if (input.requestedAuthority !== undefined) {
-    if (!isSubsetSetIgnoringCapabilitySources(input.requestedAuthority, carried)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, input.requestedAuthority, carried)) {
       throw new RequestedAuthorityExceededError("requested authorization_details exceed the Mission authority for the target");
     }
     granted = projectThroughEffective(input.requestedAuthority, carried);

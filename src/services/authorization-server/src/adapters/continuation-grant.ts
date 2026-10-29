@@ -68,6 +68,7 @@ import {
   entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
   isSubsetSetUnderIgnoringCapabilitySources,
+  isSubsetEntryUnder,
   carriedUnder,
   projectScope,
   splitScope,
@@ -852,7 +853,20 @@ export async function handleTokenExchangeGrant(
   // derivation is reserved or counted, like every other requested-authority
   // refusal at this exchange.
   const resourceFilter = continuationResourceFilter(resources);
-  const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable));
+  // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+  // (#1377, D1025): an entry the conveyed copy or a filter changed (dropping
+  // `delegation`, narrowing resources) crosses the domain only where the
+  // declared `narrowing` permits narrowing it from an approved entry;
+  // otherwise only an entry equal to an approved one is conveyed.
+  // Decided here, before anything is reserved or counted, as the grant's
+  // signing decides it again.
+  const grantable = conveyedCopy(record, audienceCandidates, resourceFilter(delegable)).filter((e) =>
+    record.authority_set.some((approved) => isSubsetEntryUnder(opts.kernel.narrowingDeclaration(), e, approved)),
+  );
+  if (effective.length > 0 && grantable.length === 0) {
+    txError(ctx, 400, "invalid_target", "no audience-scoped authority remains that this grant may convey");
+    return;
+  }
   // @spec id-continuation-assertion — a requested authorization_details is
   // evaluated by type, and the requested set MUST fit the grant's authority:
   // the Mission's Effective Authority Set for this audience, as this delegate
