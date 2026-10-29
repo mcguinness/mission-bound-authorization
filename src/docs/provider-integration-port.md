@@ -177,7 +177,9 @@ the store.
   Mission, Grant or code. The floor is evaluated again at the commit, when
   the authorization code is saved (§3.4, #1863): an authentication that ages
   past it before the resume completes `access_denied` with no Mission. The
-  requested `acr_values` and `max_age` are checked at the decision.
+  requested `acr_values` and `max_age` (with `max_age=0` through its
+  `prompt=login` translation) are checked at the decision and again at the
+  commit, on the AS's clock at each instant.
 - **The approval page runs steps 1 to 3 before it renders (#1802).** `GET
   /interaction/{uid}` resolves its principal through `renderPrincipal`: the
   approval session this user agent holds for the interaction, or, with
@@ -568,8 +570,9 @@ the store.
   8. It stages the code: stored, but not redeemable. A storage failure here
      commits nothing.
   9. With nothing awaited until the release: the hold's final checks (the
-     #1446 context re-check, and the approval-authentication floor at this
-     instant), then `kernel.approve({..., grantId}, prepared)`, which
+     #1446 context re-check, the client's requested `acr_values` and
+     `max_age`, and the approval-authentication floor, all at this instant),
+     then `kernel.approve({..., grantId}, prepared)`, which
      revalidates the prepared authority source (the same root with the same
      provenance must still pass every gate; no other root is substituted),
      runs `insertRecord`, the authoritative Mission commit (§4.1), with
@@ -582,14 +585,20 @@ the store.
 
   An `IntentError` from step 9 completes `access_denied`. Recovery-witness
   uncertainty (`RecoveryUncertainError`, or a guard already uncertain) fails
-  closed: nothing is released. Any other throw is recovered only where the
-  record for the approval event exists, is bound to the grant, records the
-  held Approver, Subject and client, and the guard is not uncertain: a
-  notification failure after the commit, whose delivery row is durable and
-  retried by the request-path drain. The fence then writes the bound-grant
-  index entry `approve` did not reach and releases the code. Every other
-  failure removes the staged code and the grant best effort; a deletion that
-  fails leaves a code that is never released under a grant still classified.
+  closed: nothing is released. Two post-commit failures are recovered, each
+  by its type, and only where the record for the approval event exists, is
+  bound to the grant, and records the held Approver, Subject and client: a
+  failed notification (`LifecycleNotificationError`, thrown by the outbox's
+  post-commit publication; its event row is durable and the request-path
+  drain retries it), and a failed bound-grant index write
+  (`BoundGrantIndexWriteError`, thrown by `approve` after its transaction).
+  The fence then writes the index entry and releases the code. Any other
+  exception after a commit releases nothing: the Mission it committed has no
+  usable code until its expiry or a revocation, the residual before #1863,
+  now reached only by a failure the fence does not recognize. Every failure
+  before a commit removes the staged code and the grant best effort; a
+  deletion that fails leaves a code that is never released under a grant
+  still classified.
 
   The authorization code's lifetime is clamped to the `expires_at` the held
   decision's commit would establish (`clampToMission` reads the hold, and the
@@ -627,10 +636,12 @@ the store.
   [control-plane-deployment.md](control-plane-deployment.md)).
 - **Crash and recovery.** A failure in the decision leaves an inert,
   classified grant (no code, no Mission, no index entry) that a retry on the
-  interaction overwrites. A failure at the code save leaves no Mission and no
-  redeemable code, and nothing to retry: oidc-provider destroys the
-  interaction before the code step (`lib/actions/authorization/resume.js`),
-  so the client starts again. On the file-backed kernel a crash after the
+  interaction overwrites. A failure at the code save before the commit leaves
+  no Mission and no redeemable code, and nothing to retry: oidc-provider
+  destroys the interaction before the code step
+  (`lib/actions/authorization/resume.js`), so the client starts again. An
+  exception after the commit that the fence does not recognize leaves the
+  Mission with no released code (above). On the file-backed kernel a crash after the
   commit keeps the Mission and loses its code with provider memory: the end
   state of the delivery gap, declared in
   [control-plane-deployment.md](control-plane-deployment.md). It stays
