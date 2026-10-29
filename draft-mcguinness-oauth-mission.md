@@ -115,7 +115,6 @@ informative:
     date: 2026-09-25
     seriesinfo:
       Internet-Draft: draft-hardt-oauth-aauth-protocol-11
-  I-D.draft-cecchetti-oauth-rar-cedar:
   I-D.draft-mcguinness-oauth-client-attesters:
   I-D.draft-mcguinness-oauth-mission-attenuation:
     title: "Mission Offline Attenuation for OAuth 2.0"
@@ -519,13 +518,10 @@ they fit at the mediating enforcement component
 
 ## Protocol Flow {#protocol-flow}
 
-Besides the agent (the OAuth client) and the Mission Issuer (the
-AS), the flow involves two principals: the Subject, on whose behalf
-the Mission is approved, and the Approver, who approves it.
-{{conventions-and-terminology}} defines these and the other terms.
-
-The following figure shows the protocol flow between the agent and
-the Mission Issuer:
+The following figure shows the protocol flow between the agent (the
+OAuth client) and the Mission Issuer (the AS);
+{{conventions-and-terminology}} defines the Subject, the Approver, and
+the other terms:
 
 ~~~
  Agent (client)                       Mission Issuer (AS)
@@ -543,24 +539,6 @@ the Mission Issuer:
       |                                     |   + mission claim
       v
 ~~~
-
-After token issuance, resource access and lifecycle management proceed
-as follows:
-
-(4) The agent calls the resource server with the token. The resource
-server enforces the `authorization_details` statelessly and can check
-the `mission` claim ({{rs-enforcement}}), with no callback to the AS
-required.
-
-(5) A revocation ({{revocation}}), or `expires_at`
-passing, moves the Mission
-to `terminated`, with reason `revoked` or `expired`, after which the
-AS refuses further issuance and refresh. A deployment can also treat
-{{RFC7009}} revocation of the refresh token as revoking the Mission
-({{revocation}}).
-
-The end-to-end example ({{e2e-example}}) walks this flow with
-concrete messages.
 
 ## Introductory Example {#first-mission}
 
@@ -1488,22 +1466,7 @@ The approval surface renders the prose beside the derived Authority Set
 ({{direct-approval-steps}}) as the human check that the structure
 matches the words, not as a machine enforcement mechanism.
 
-## Derivation Policy and Open-Ended Tasks {#derivation-policy-tasks}
-
-For an open-ended task whose concrete objects cannot be enumerated at
-approval (for example, "reconcile this customer's ledger," where the
-individual invoices are not yet known), the derived authority is better
-bounded by `constraints` that hold as invariants over those objects
-than by an exhaustive `resource` enumeration. Such invariants include
-the owning customer, the tenant, an amount ceiling, read-only except
-named write actions, and a validity window. The runtime layer
-({{runtime-boundary}}) checks each concrete object against the
-constraint at the point of use.
-
-`mission_resource_access` is defined by the Mission Resource Access
-Profile ({{I-D.draft-mcguinness-oauth-mission-resource-access}}); the
-Authority Set carries it on the same type-agnostic terms as any
-supported type ({{other-types}}).
+## Authority Set Example {#derivation-policy-tasks}
 
 The following is an example of an Authority Set. The read entry is
 delegable to depth 2 and bounded to a Q3 issuance window by the
@@ -1673,31 +1636,6 @@ declares the member governs, whether it declares `true` or `false`; a
 later carrier does not override it. A declared capability permits a
 transformation without requiring it, and waives no check this document
 requires and no local policy under which the AS refuses one.
-
-### Policy-Language Types {#policy-language-types}
-
-Type-agnosticism lets policy-language profiles compose without this
-document defining them: for example, an entry carrying a Cedar policy
-set ({{I-D.draft-cecchetti-oauth-rar-cedar}}), or an analogous AuthZEN
-policy entry, for an audience that evaluates it, alongside a
-general-purpose type such as `mission_resource_access`
-({{I-D.draft-mcguinness-oauth-mission-resource-access}}).
-
-The AS derives such an entry from the Mission Intent and bounds it by
-the Intent like any other, but does not interpret the carried policy
-beyond its type's declared capabilities; the resource server or policy
-decision point (PDP) evaluates it at request time.
-
-Because the Cedar profile defines no subset or delegation rule over
-policy sets, the AS carries a Cedar entry as approved, so it does not
-appear in a delegated token or cross-domain grant. Delegation controls
-on other entries in the same Authority Set, such as a
-`mission_resource_access` entry, apply to those entries only.
-
-Invoking a Model Context Protocol tool or a function call is modeled
-as a `mission_resource_access` entry with no separate type; the
-mapping is specified in
-{{I-D.draft-mcguinness-oauth-mission-resource-access}}.
 
 # Mission Creation {#mission-creation}
 
@@ -7336,6 +7274,13 @@ resolve before interoperating.
   only unchanged move to Delegated Exchange. Self-Exchange Down-Scoping,
   which delegates nothing, moves from that chapter to follow Refresh
   Tokens (#1892, D1026).
+- Editorial, no requirement change: Protocol Flow keeps its figure
+  without the prose the Introduction's flow states; Derivation Policy
+  and Open-Ended Tasks becomes Authority Set Example, its open-ended-task
+  guidance being Mission Intent Shaping's and the Architecture's; and
+  Policy-Language Types, whose rules Declared Transformation
+  Capabilities and the Mission Resource Access Profile state, is
+  removed with its Cedar reference (#1892, D1026).
 
 -01
 
