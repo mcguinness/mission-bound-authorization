@@ -10,11 +10,13 @@
  * subscribes to the kernel's synchronous lifecycle-commit hook
  * ({@link MissionSignalEmitter}).
  *
- * Deferred (named, not built): the SSF Transmitter/stream-config/add-subject
- * endpoints and `mission_event_stream_endpoint` metadata; the RFC 8935 push and
- * RFC 8936 poll HTTP transports (this module hands SETs to registered receivers
- * in-process); stream verification / heartbeat liveness and its staleness
- * fallback; automatic Mission Status refetch on a detected version gap or a
+ * Deferred (named, not built): the SSF Transmitter/stream-config/add-subject,
+ * stream status and verification endpoints and `mission_event_stream_endpoint`
+ * metadata; the RFC 8935 push and RFC 8936 poll HTTP transports (this module
+ * hands SETs to registered receivers in-process); a receiver's reading of
+ * stream verification events and its staleness fallback; a periodic
+ * heartbeat schedule (the caller drives {@link
+ * MissionSignalEmitter.attestLiveness}); automatic Mission Status refetch on a detected version gap or a
  * detected rematerialization need (this module detects each condition only;
  * the refetch itself is the consumer's job); and the `tenant` member (no
  * model exists in the kernel). With a recovery witness, a restore of the
@@ -25,6 +27,12 @@
  * ({@link MissionSignalEmitter}) is implemented: a stream that has not
  * declared `authority_changed` is not delivered any event carrying
  * `authority_changed` true, a discharge or a containment commit alike.
+ * The emitter's side of SSF stream status is implemented, in process (#1877):
+ * a withholding pauses the stream with a Stream Updated event, holds its
+ * events, and re-enables it only once more than `mission_max_stale_seconds`
+ * have passed since its last verification event; {@link
+ * MissionSignalEmitter.attestLiveness} delivers verification events to every
+ * stream not paused. The stream status is durable in the outbox store.
  * Delivery durability (#641) is implemented: the emitter journals one durable
  * job per (event, consumer) in its own outbox store, redelivers byte-identical
  * SETs under a bounded backoff until the hand-off is acknowledged, and offers
@@ -56,6 +64,7 @@ import {
 } from "@mission/store";
 import {
   createLocalJWKSet,
+  decodeJwt,
   type JWK,
   type JWTPayload,
   type JWTVerifyGetKey,
@@ -1365,6 +1374,32 @@ function parseEvent(payload: JWTPayload): ParsedEvent | undefined {
 export const AUTHORITY_CHANGED_CAPABILITY = "authority_changed";
 
 /**
+ * @spec signals#consumer-behavior: the SSF Verification Event type (SSF 1.0
+ * Section 8.1.4.1), the liveness attestation a stream carries.
+ */
+export const SSF_VERIFICATION_EVENT_URI =
+  "https://schemas.openid.net/secevent/ssf/event-type/verification";
+
+/**
+ * @spec signals#discharge-compatibility: the SSF Stream Updated event type
+ * (SSF 1.0 Section 8.1.5), which announces a stream's `paused` or `enabled`
+ * status.
+ */
+export const SSF_STREAM_UPDATED_EVENT_URI =
+  "https://schemas.openid.net/secevent/ssf/event-type/stream-updated";
+
+/** A stream's status as the emitter keeps it (SSF 1.0 Section 8.1.2.1). */
+export interface SignalStreamStatus {
+  status: "enabled" | "paused";
+  /** A Stream Updated notice for the stream is journaled and not yet acknowledged. */
+  notice_pending: boolean;
+  /** When the last verification event on the stream was acknowledged. */
+  last_liveness_at?: Date;
+  /** A paused stream is re-enabled only after this instant; absent, never automatically. */
+  reenable_after?: Date;
+}
+
+/**
  * A consumer this issuer emits to, identified by its registered audience.
  *
  * @spec signals#discharge-compatibility — `mission_capabilities_supported` is
@@ -1379,6 +1414,12 @@ export const AUTHORITY_CHANGED_CAPABILITY = "authority_changed";
 export interface SignalConsumer {
   audience: string;
   mission_capabilities_supported?: string[];
+  /**
+   * The SSF stream id: the `sub_id` of the stream's verification and Stream
+   * Updated events (SSF 1.0 Sections 8.1.4.1 and 8.1.5). The audience when
+   * absent.
+   */
+  stream_id?: string;
 }
 
 export interface EmitterOptions {
@@ -1407,6 +1448,124 @@ export interface EmitterOptions {
    * a claim loses it at lease end and the job is redelivered.
    */
   leaseMs?: number;
+  /**
+   * The Mission Issuer: the `iss` of the verification events. A Stream
+   * Updated notice takes the withheld commit's issuer when this is absent.
+   */
+  issuer?: string;
+  /**
+   * @spec signals#discharge-compatibility (#1877): the issuer's advertised
+   * `mission_max_stale_seconds`. A withholding pauses the stream, and the
+   * emitter re-enables it only once more than this many seconds have passed
+   * since the last verification event acknowledged on it. Absent, a paused
+   * stream has no window to wait out and is never re-enabled automatically
+   * (fail closed).
+   */
+  maxStaleSeconds?: number;
+}
+
+/**
+ * @spec signals#discharge-compatibility (#1877): each consumer's stream
+ * status, kept in the outbox store beside its delivery jobs, so a restart
+ * keeps a pause. One row per consumer audience, written on the first
+ * withholding or verification event; no row is an enabled stream that has
+ * carried no verification event. `last_liveness_at` is when the last
+ * verification event was acknowledged on the stream; `withheld_at` is the
+ * last withholding; `reenable_after` is the instant a paused stream is
+ * re-enabled only after, NULL while enabled or when no `maxStaleSeconds`
+ * bounds the pause; `issuer` is the `iss` of the stream's Stream Updated
+ * notices.
+ *
+ * `signal_stream_outbox` journals each stream's Stream Updated notices and
+ * the verification events its receiver requested. A job is signed once and
+ * redelivered byte for byte, as a lifecycle job is.
+ */
+const STREAM_SCHEMA = `
+CREATE TABLE IF NOT EXISTS signal_stream (
+  audience TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('enabled', 'paused')),
+  issuer TEXT NOT NULL,
+  last_liveness_at INTEGER,
+  withheld_at INTEGER,
+  reenable_after INTEGER
+) STRICT;
+CREATE TABLE IF NOT EXISTS signal_stream_outbox (
+  job_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  audience TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('stream-updated', 'verification')),
+  issuer TEXT NOT NULL,
+  body_json TEXT NOT NULL,
+  set_jwt TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at INTEGER NOT NULL DEFAULT 0,
+  claimed_until INTEGER,
+  done INTEGER NOT NULL DEFAULT 0
+) STRICT;
+CREATE INDEX IF NOT EXISTS signal_stream_outbox_pending
+  ON signal_stream_outbox (done, audience, job_id);
+`;
+
+interface StreamRow {
+  audience: string;
+  status: "enabled" | "paused";
+  issuer: string;
+  last_liveness_at: number | null;
+  withheld_at: number | null;
+  reenable_after: number | null;
+}
+
+interface StreamJobRow {
+  job_id: number;
+  audience: string;
+  kind: "stream-updated" | "verification";
+  issuer: string;
+  body_json: string;
+  set_jwt: string | null;
+  attempts: number;
+  next_attempt_at: number;
+  claimed_until: number | null;
+}
+
+/**
+ * @spec signals#discharge-compatibility: sign one SSF stream-control SET, a
+ * verification event or a Stream Updated event, whose top-level `sub_id` is
+ * the opaque stream id (SSF 1.0 Sections 8.1.4.1 and 8.1.5).
+ */
+async function signStreamEvent(
+  eventUri: string,
+  body: Record<string, unknown>,
+  opts: {
+    issuer: string;
+    audience: string;
+    streamId: string;
+    issuedAt: number;
+    key: Parameters<SignJWT["sign"]>[0];
+    kid: string;
+  },
+): Promise<string> {
+  return new SignJWT({
+    sub_id: { format: "opaque", id: opts.streamId },
+    events: { [eventUri]: body },
+  })
+    .setProtectedHeader({ alg: "ES256", kid: opts.kid, typ: SET_TYP })
+    .setIssuer(opts.issuer)
+    .setAudience(opts.audience)
+    .setIssuedAt(Math.floor(opts.issuedAt / 1000))
+    .setJti(`set_${randomBytes(15).toString("base64url")}`)
+    .sign(opts.key);
+}
+
+/** True when the SET carries an SSF stream-control event rather than a lifecycle change. */
+function isStreamControlSet(set: string): boolean {
+  try {
+    const events = decodeJwt(set).events as Record<string, unknown> | undefined;
+    return (
+      events !== undefined &&
+      (SSF_VERIFICATION_EVENT_URI in events || SSF_STREAM_UPDATED_EVENT_URI in events)
+    );
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -1459,6 +1618,13 @@ interface OutboxRow {
  * process; the `store.file` escape hatch is what makes it survive a restart.
  * `drain` settles all in-flight work and dispatches everything runnable now
  * (tests, graceful shutdown); `startDispatcher` adds the recurring drive.
+ *
+ * @spec signals#discharge-compatibility (#1877): the emitter keeps each
+ * consumer's SSF stream status. A withholding pauses the stream; while it is
+ * paused, or while a Stream Updated notice for it is unacknowledged, the
+ * stream carries no lifecycle event and no verification event, and its jobs
+ * stay pending. Each pass re-enables a stream whose window has passed, then
+ * delivers Stream Updated notices before anything else.
  */
 export class MissionSignalEmitter {
   private readonly deliveries: Array<{ audience: string; deliver: (set: string) => unknown }> = [];
@@ -1468,10 +1634,14 @@ export class MissionSignalEmitter {
   private readonly retryBaseMs: number;
   private readonly retryCapMs: number;
   private readonly leaseMs: number;
+  private readonly maxStaleMs: number | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
 
   constructor(private readonly opts: EmitterOptions) {
-    this.db = openStore(OUTBOX_SCHEMA, opts.store);
+    const maxStale = opts.maxStaleSeconds;
+    if (maxStale !== undefined && (!Number.isSafeInteger(maxStale) || maxStale <= 0))
+      throw new Error("maxStaleSeconds must be a positive integer");
+    this.db = openStore(OUTBOX_SCHEMA + STREAM_SCHEMA, opts.store);
     // @spec control-plane#isolation — event_id is an issuer-qualified storage
     // key; the original wire jti stays in commit_json. Upgrade existing jobs
     // atomically without changing signed bytes, delivery state or timestamps.
@@ -1494,6 +1664,7 @@ export class MissionSignalEmitter {
     this.retryBaseMs = opts.retry?.baseMs ?? 250;
     this.retryCapMs = opts.retry?.capMs ?? 30_000;
     this.leaseMs = opts.leaseMs ?? 30_000;
+    this.maxStaleMs = maxStale === undefined ? undefined : maxStale * 1000;
   }
 
   /** Register a receiver to be handed every SET for its own audience. */
@@ -1503,6 +1674,9 @@ export class MissionSignalEmitter {
     // The job stays pending under the backoff, and its redelivery is judged
     // afresh once Mission Status has resynchronized the Mission.
     this.onDeliver(receiver.audience, async (set) => {
+      // This receiver reads no verification or Stream Updated event: it takes
+      // the hand-off and applies nothing.
+      if (isStreamControlSet(set)) return undefined;
       const result = await receiver.verifyAndApply(set);
       if (result.status === "held") {
         throw new Error("the receiver holds this Mission until Mission Status resynchronizes it");
@@ -1553,8 +1727,12 @@ export class MissionSignalEmitter {
     );
     for (const consumer of this.opts.consumers) {
       // @spec signals#discharge-compatibility — an undeclared stream is not
-      // delivered an event carrying `authority_changed` true.
-      if (!this.deliverable(commit, consumer)) continue;
+      // delivered an event carrying `authority_changed` true, and the
+      // withholding pauses that stream (#1877).
+      if (!this.deliverable(commit, consumer)) {
+        this.pauseStream(consumer, commit);
+        continue;
+      }
       insert.run(
         JSON.stringify([commit.issuer, eventId]),
         consumer.audience,
@@ -1564,8 +1742,16 @@ export class MissionSignalEmitter {
     this.inflight.push(this.dispatchOnce());
   };
 
-  /** One dispatch pass: claim every runnable job and attempt its delivery. */
+  /**
+   * One dispatch pass: re-enable every stream whose window has passed,
+   * deliver the stream-control jobs, then claim every runnable lifecycle job
+   * on a stream that is not held and attempt its delivery. With no runnable
+   * stream-control job, the lifecycle jobs are claimed without an await, as
+   * they were before stream status existed.
+   */
   private async dispatchOnce(): Promise<void> {
+    this.resumeDueStreams();
+    if (this.hasRunnableStreamJob()) await this.dispatchStreamJobs();
     const now = this.nowFn().getTime();
     const candidates = this.db
       .prepare(
@@ -1577,6 +1763,9 @@ export class MissionSignalEmitter {
       )
       .all(now, now) as OutboxRow[];
     for (const row of candidates) {
+      // @spec signals#discharge-compatibility (#1877): a held stream's jobs
+      // stay pending, unclaimed, with their attempts and schedule unchanged.
+      if (this.held(row.audience)) continue;
       const claimed = this.db
         .prepare(
           `UPDATE signal_outbox SET claimed_until = ?
@@ -1615,6 +1804,16 @@ export class MissionSignalEmitter {
       // not wired yet keeps its jobs pending, so a late-registered sink (or a
       // restarted process that wires delivery after the commit) still gets
       // the event. Acknowledged means handed off, never "nobody to hand to".
+      // @spec signals#discharge-compatibility (#1877): signing awaited, so a
+      // withholding may have paused the stream since the claim. Checked with
+      // no await before the first hand-off; the claim is released and the
+      // job waits for the stream to re-enable.
+      if (this.held(row.audience)) {
+        this.db
+          .prepare(`UPDATE signal_outbox SET claimed_until = NULL WHERE job_id = ?`)
+          .run(row.job_id);
+        return;
+      }
       const sinks = this.deliveries.filter((d) => d.audience === row.audience);
       if (sinks.length === 0) throw new Error(`no delivery sink for ${row.audience}`);
       for (const d of sinks) await d.deliver(set);
@@ -1635,6 +1834,363 @@ export class MissionSignalEmitter {
         )
         .run(attempts, this.nowFn().getTime() + delay, row.job_id);
     }
+  }
+
+  /** The SSF stream id of `audience`'s stream: its configured id, else the audience. */
+  private streamIdFor(audience: string): string {
+    return this.opts.consumers.find((c) => c.audience === audience)?.stream_id ?? audience;
+  }
+
+  private streamRow(audience: string): StreamRow | undefined {
+    return this.db
+      .prepare(
+        `SELECT audience, status, issuer, last_liveness_at, withheld_at, reenable_after
+         FROM signal_stream WHERE audience = ?`,
+      )
+      .get(audience) as StreamRow | undefined;
+  }
+
+  private noticePending(audience: string): boolean {
+    return (
+      this.db
+        .prepare(
+          `SELECT 1 FROM signal_stream_outbox
+           WHERE audience = ? AND kind = 'stream-updated' AND done = 0 LIMIT 1`,
+        )
+        .get(audience) !== undefined
+    );
+  }
+
+  /**
+   * @spec signals#discharge-compatibility (#1877): true while `audience`'s
+   * stream carries no lifecycle event and no verification event: it is
+   * paused, or a Stream Updated notice for it is unacknowledged (the
+   * `enabled` notice precedes everything the pause held).
+   */
+  private held(audience: string): boolean {
+    return this.streamRow(audience)?.status === "paused" || this.noticePending(audience);
+  }
+
+  private journalNotice(
+    audience: string,
+    issuer: string,
+    status: "paused" | "enabled",
+    reason: string,
+  ): void {
+    this.db
+      .prepare(
+        `INSERT INTO signal_stream_outbox (audience, kind, issuer, body_json)
+         VALUES (?, 'stream-updated', ?, ?)`,
+      )
+      .run(audience, issuer, JSON.stringify({ status, reason }));
+  }
+
+  /**
+   * @spec signals#discharge-compatibility (#1877): the gate withheld `commit`
+   * from `consumer`'s stream, so the stream pauses. An enabled stream
+   * journals a Stream Updated notice with `status` `paused`, delivered before
+   * anything else on the stream (SSF 1.0 Section 8.1.5); from then on the
+   * stream's lifecycle jobs, earlier unacknowledged ones included, are held
+   * (SSF 1.0 Section 8.1.2.1: nothing is transmitted while paused), never
+   * dropped.
+   *
+   * The pause lasts until more than `maxStaleSeconds` have passed since the
+   * last verification event acknowledged on the stream, or since this
+   * withholding when none was acknowledged after the stream's previous
+   * withholding. The consumer's staleness rule therefore fires before the
+   * stream attests liveness again. A withholding while the stream is paused,
+   * or while its `enabled` notice is unacknowledged, never shortens the
+   * pause; it extends the pause to at least this withholding plus
+   * `maxStaleSeconds`, so a Mission Status response the consumer fetched
+   * during the pause, before this narrowing, expires before liveness
+   * resumes.
+   */
+  private pauseStream(consumer: SignalConsumer, commit: LifecycleCommit): void {
+    const now = this.nowFn().getTime();
+    withTransaction(this.db, () => {
+      const row = this.streamRow(consumer.audience);
+      const issuer = this.opts.issuer ?? row?.issuer ?? commit.issuer;
+      const lastLiveness = row?.last_liveness_at ?? null;
+      const livenessSince =
+        lastLiveness !== null && (row?.withheld_at == null || lastLiveness > row.withheld_at);
+      const base = livenessSince && lastLiveness !== null ? lastLiveness : now;
+      let reenableAfter: number | null = null;
+      if (this.maxStaleMs !== undefined) {
+        reenableAfter = base + this.maxStaleMs;
+        if (row?.status === "paused" && row.reenable_after !== null)
+          reenableAfter = Math.max(reenableAfter, row.reenable_after);
+      }
+      if (row?.status === "paused") {
+        this.db
+          .prepare(
+            `UPDATE signal_stream SET withheld_at = ?, reenable_after = ? WHERE audience = ?`,
+          )
+          .run(now, reenableAfter, consumer.audience);
+        return;
+      }
+      this.db
+        .prepare(
+          `INSERT INTO signal_stream (audience, status, issuer, withheld_at, reenable_after)
+           VALUES (?, 'paused', ?, ?, ?)
+           ON CONFLICT (audience) DO UPDATE SET
+             status = 'paused', issuer = excluded.issuer,
+             withheld_at = excluded.withheld_at, reenable_after = excluded.reenable_after`,
+        )
+        .run(consumer.audience, issuer, now, reenableAfter);
+      this.journalNotice(
+        consumer.audience,
+        issuer,
+        "paused",
+        "withheld an event carrying authority_changed, which this stream has not declared",
+      );
+    });
+  }
+
+  /**
+   * @spec signals#discharge-compatibility (#1877): re-enable every paused
+   * stream whose `paused` notice was acknowledged and whose re-enable
+   * instant has passed (strictly: the consumer's staleness rule fires after
+   * MORE than `mission_max_stale_seconds`). The status flips and the
+   * `enabled` notice is journaled in one transaction; the stream stays held
+   * until that notice is acknowledged, so it precedes the held events.
+   */
+  private resumeDueStreams(): void {
+    const now = this.nowFn().getTime();
+    const due = this.db
+      .prepare(
+        `SELECT audience, issuer FROM signal_stream s
+         WHERE status = 'paused' AND reenable_after IS NOT NULL AND reenable_after < ?
+           AND NOT EXISTS (
+             SELECT 1 FROM signal_stream_outbox o
+             WHERE o.audience = s.audience AND o.kind = 'stream-updated' AND o.done = 0)`,
+      )
+      .all(now) as Array<{ audience: string; issuer: string }>;
+    for (const stream of due) {
+      withTransaction(this.db, () => {
+        const flipped = this.db
+          .prepare(
+            `UPDATE signal_stream SET status = 'enabled', reenable_after = NULL
+             WHERE audience = ? AND status = 'paused'`,
+          )
+          .run(stream.audience);
+        if (flipped.changes !== 1) return;
+        this.journalNotice(
+          stream.audience,
+          stream.issuer,
+          "enabled",
+          "the staleness window has passed",
+        );
+      });
+    }
+  }
+
+  private hasRunnableStreamJob(): boolean {
+    const now = this.nowFn().getTime();
+    return (
+      this.db
+        .prepare(
+          `SELECT 1 FROM signal_stream_outbox
+           WHERE done = 0 AND next_attempt_at <= ?
+             AND (claimed_until IS NULL OR claimed_until <= ?) LIMIT 1`,
+        )
+        .get(now, now) !== undefined
+    );
+  }
+
+  /**
+   * Deliver the stream-control jobs in journal order. A Stream Updated
+   * notice is never overtaken by a later one for the same stream; a
+   * requested verification waits while its stream is held.
+   */
+  private async dispatchStreamJobs(): Promise<void> {
+    const now = this.nowFn().getTime();
+    const rows = this.db
+      .prepare(
+        `SELECT job_id, audience, kind, issuer, body_json, set_jwt, attempts,
+                next_attempt_at, claimed_until
+         FROM signal_stream_outbox WHERE done = 0 ORDER BY job_id`,
+      )
+      .all() as StreamJobRow[];
+    const blocked = new Set<string>();
+    for (const row of rows) {
+      if (blocked.has(row.audience)) continue;
+      const runnable =
+        row.next_attempt_at <= now && (row.claimed_until === null || row.claimed_until <= now);
+      if (row.kind === "stream-updated") {
+        // Until this notice is acknowledged, a later one for the stream waits.
+        blocked.add(row.audience);
+        if (!runnable) continue;
+      } else if (!runnable || this.held(row.audience)) {
+        continue;
+      }
+      const claimed = this.db
+        .prepare(
+          `UPDATE signal_stream_outbox SET claimed_until = ?
+           WHERE job_id = ? AND done = 0
+             AND (claimed_until IS NULL OR claimed_until <= ?)`,
+        )
+        .run(now + this.leaseMs, row.job_id, now);
+      if (claimed.changes !== 1) continue;
+      const delivered = await this.deliverStreamJob(row);
+      if (delivered && row.kind === "stream-updated") blocked.delete(row.audience);
+    }
+  }
+
+  /** Sign once, hand off, and on acknowledgement mark the job done. */
+  private async deliverStreamJob(row: StreamJobRow): Promise<boolean> {
+    try {
+      let set = row.set_jwt;
+      if (set === null) {
+        const eventUri =
+          row.kind === "stream-updated" ? SSF_STREAM_UPDATED_EVENT_URI : SSF_VERIFICATION_EVENT_URI;
+        const fresh = await signStreamEvent(eventUri, JSON.parse(row.body_json), {
+          issuer: row.issuer,
+          audience: row.audience,
+          streamId: this.streamIdFor(row.audience),
+          issuedAt: this.nowFn().getTime(),
+          key: this.opts.key,
+          kid: this.opts.kid,
+        });
+        this.db
+          .prepare(
+            `UPDATE signal_stream_outbox SET set_jwt = ? WHERE job_id = ? AND set_jwt IS NULL`,
+          )
+          .run(fresh, row.job_id);
+        const persisted = this.db
+          .prepare(`SELECT set_jwt FROM signal_stream_outbox WHERE job_id = ?`)
+          .get(row.job_id) as { set_jwt: string | null } | undefined;
+        set = persisted?.set_jwt ?? fresh;
+      }
+      // Signing awaited: a withholding may have paused the stream meanwhile.
+      if (row.kind === "verification" && this.held(row.audience)) {
+        this.db
+          .prepare(`UPDATE signal_stream_outbox SET claimed_until = NULL WHERE job_id = ?`)
+          .run(row.job_id);
+        return false;
+      }
+      const sinks = this.deliveries.filter((d) => d.audience === row.audience);
+      if (sinks.length === 0) throw new Error(`no delivery sink for ${row.audience}`);
+      for (const d of sinks) await d.deliver(set);
+      this.db
+        .prepare(`UPDATE signal_stream_outbox SET done = 1, claimed_until = NULL WHERE job_id = ?`)
+        .run(row.job_id);
+      if (row.kind === "verification") this.recordLiveness(row.audience, row.issuer);
+      return true;
+    } catch {
+      const attempts = row.attempts + 1;
+      const delay = Math.min(this.retryBaseMs * 2 ** (attempts - 1), this.retryCapMs);
+      this.db
+        .prepare(
+          `UPDATE signal_stream_outbox
+           SET attempts = ?, next_attempt_at = ?, claimed_until = NULL
+           WHERE job_id = ? AND done = 0`,
+        )
+        .run(attempts, this.nowFn().getTime() + delay, row.job_id);
+      return false;
+    }
+  }
+
+  /**
+   * Record an acknowledged verification event on `audience`'s stream. A
+   * stream paused while the event was in flight keeps its pause until more
+   * than `maxStaleSeconds` after this acknowledgement.
+   */
+  private recordLiveness(audience: string, issuer: string): void {
+    const now = this.nowFn().getTime();
+    withTransaction(this.db, () => {
+      const row = this.streamRow(audience);
+      if (row === undefined) {
+        this.db
+          .prepare(
+            `INSERT INTO signal_stream (audience, status, issuer, last_liveness_at)
+             VALUES (?, 'enabled', ?, ?)`,
+          )
+          .run(audience, issuer, now);
+        return;
+      }
+      const reenableAfter =
+        row.status === "paused" && row.reenable_after !== null && this.maxStaleMs !== undefined
+          ? Math.max(row.reenable_after, now + this.maxStaleMs)
+          : row.reenable_after;
+      this.db
+        .prepare(
+          `UPDATE signal_stream SET last_liveness_at = ?, reenable_after = ? WHERE audience = ?`,
+        )
+        .run(now, reenableAfter, audience);
+    });
+  }
+
+  /**
+   * @spec signals#consumer-behavior @spec signals#discharge-compatibility
+   * (#1877): the liveness attestation. Delivers a signed SSF Verification
+   * Event (SSF 1.0 Section 8.1.4.1; Transmitter-initiated, so no `state`) to
+   * every stream that is not held, and records each acknowledgement as that
+   * stream's last liveness. A paused stream receives none: nothing is
+   * transmitted while paused, and that silence is what lets the consumer's
+   * staleness rule fire. A failed hand-off records nothing. The caller
+   * schedules it, at an interval no longer than `maxStaleSeconds`.
+   */
+  async attestLiveness(): Promise<void> {
+    const issuer = this.opts.issuer;
+    if (issuer === undefined) throw new Error("attestLiveness needs the emitter's issuer");
+    for (const consumer of this.opts.consumers) {
+      if (this.held(consumer.audience)) continue;
+      const set = await signStreamEvent(
+        SSF_VERIFICATION_EVENT_URI,
+        {},
+        {
+          issuer,
+          audience: consumer.audience,
+          streamId: this.streamIdFor(consumer.audience),
+          issuedAt: this.nowFn().getTime(),
+          key: this.opts.key,
+          kid: this.opts.kid,
+        },
+      );
+      // Signing awaited: a withholding may have paused the stream meanwhile.
+      if (this.held(consumer.audience)) continue;
+      const sinks = this.deliveries.filter((d) => d.audience === consumer.audience);
+      if (sinks.length === 0) continue;
+      try {
+        for (const d of sinks) await d.deliver(set);
+      } catch {
+        continue;
+      }
+      this.recordLiveness(consumer.audience, issuer);
+    }
+  }
+
+  /**
+   * @spec signals#discharge-compatibility (#1877): a verification the
+   * stream's receiver requested (SSF 1.0 Section 8.1.4.2). It is journaled
+   * and echoes `state`; on a held stream it is held, not transmitted, and is
+   * delivered once the stream is re-enabled.
+   */
+  requestVerification(audience: string, state?: string): void {
+    const issuer = this.opts.issuer;
+    if (issuer === undefined) throw new Error("requestVerification needs the emitter's issuer");
+    if (!this.opts.consumers.some((c) => c.audience === audience))
+      throw new Error(`no stream for ${audience}`);
+    this.db
+      .prepare(
+        `INSERT INTO signal_stream_outbox (audience, kind, issuer, body_json)
+         VALUES (?, 'verification', ?, ?)`,
+      )
+      .run(audience, issuer, JSON.stringify(state === undefined ? {} : { state }));
+    this.inflight.push(this.dispatchOnce());
+  }
+
+  /** `audience`'s stream status as the emitter keeps it, for observability and tests. */
+  streamStatus(audience: string): SignalStreamStatus {
+    const row = this.streamRow(audience);
+    return {
+      status: row?.status ?? "enabled",
+      notice_pending: this.noticePending(audience),
+      ...(row?.last_liveness_at != null
+        ? { last_liveness_at: new Date(row.last_liveness_at) }
+        : {}),
+      ...(row?.reenable_after != null ? { reenable_after: new Date(row.reenable_after) } : {}),
+    };
   }
 
   /**
