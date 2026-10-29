@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-29T15:32:58Z
-Source repository commit: c41642de439e2af6aa91376fe005a7e03a62d552
+Generated: 2026-10-29T16:40:53Z
+Source repository commit: 1100a43ac38fd1391cc36cd38cd6d5342e523613
 Member count: 9
 
 Reading order:
@@ -17091,9 +17091,11 @@ Table of Contents
       narrowing mechanism adds or restores authority.  Membership in
       this set is necessary, never sufficient, for an action to proceed.
 
-   Metadata-only change:  A committed change to a Mission that leaves
-      its state and termination unchanged: a schedule replacement
-      (Section 5.6), or a change a companion profile defines as one.
+   Metadata-only change:  A committed change to issuer-held state
+      associated with a Mission, outside its Mission Record, that leaves
+      the Mission's state and termination unchanged: a schedule
+      replacement (Section 5.6), or a change a companion profile defines
+      as one.
 
    Transition event:  The lifecycle event a state-distribution companion
       defines for a committed transition or metadata-only change
@@ -18000,7 +18002,11 @@ Table of Contents
    (Section 12).
 
    A suspend MAY carry suspend_until with a REQUIRED on_expiry; the pair
-   is the Mission's schedule.  When the suspend_until of a current
+   is the Mission's schedule.  The schedule is issuer-held state
+   associated with the Mission, outside its Mission Record
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission Record"): an
+   AS may store it with the record, and a signed or exchanged Mission
+   Record does not carry it.  When the suspend_until of a current
    schedule passes, the AS MUST apply on_expiry (transition to active
    for resume, or to terminated with reason revoked for revoke) and emit
    the corresponding transition, without a further request, unless
@@ -19408,6 +19414,12 @@ Appendix A.  Document History
    *  IANA Considerations adds the Mission Status and Mission Lifecycle
       endpoints as usage locations for invalid_request and
       invalid_client.
+
+   *  A metadata-only change and a schedule are issuer-held state
+      associated with the Mission, outside its Mission Record; an AS may
+      store them with the record, and a signed or exchanged Mission
+      Record does not carry them.  Authorization, atomicity, versioning
+      and scheduling rules are unchanged (#1879).
 
    -00
 
