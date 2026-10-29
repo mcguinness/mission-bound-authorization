@@ -34,10 +34,11 @@ import {
   validateMissionIntent,
 } from "@mission/authorization-server";
 import { testAuthoritySourceCatalog } from "@mission/authorization-server/test-support";
-import { exportJWK, generateKeyPair } from "jose";
+import { decodeJwt, exportJWK, generateKeyPair } from "jose";
 import { describe, expect, it } from "vitest";
 import {
   AUTHORITY_CHANGED_CAPABILITY,
+  LIFECYCLE_CHANGE_EVENT_URI,
   MissionSignalEmitter,
   MissionSignalReceiver,
 } from "../src/index.js";
@@ -237,6 +238,62 @@ describe("discharge compatibility: authority_changed emission and the delivery g
     expect(w.declaredSets).toHaveLength(3);
     expect(w.undeclaredSets).toHaveLength(1); // still gated
     expect(w.declared.needsRematerialization(mission.id)).toBe(true);
+  });
+});
+
+/** The `mission.lifecycle-change` event body a delivered SET carries. */
+const eventOf = (set: string | undefined): Record<string, unknown> =>
+  (decodeJwt(set as string).events as Record<string, Record<string, unknown>>)[
+    LIFECYCLE_CHANGE_EVENT_URI
+  ] as Record<string, unknown>;
+
+/** A contain commit that narrows effective authority: the read entry loses its only action. */
+function containRead(kernel: MissionKernel, missionId: string, eventId: string): void {
+  kernel.contain(missionId, {
+    event: {
+      type: "anomaly.detected",
+      source: "svc:soc",
+      observed_at: NOW.toISOString(),
+      event_id: eventId,
+    },
+    remove: [{ resource: RESOURCE, actions: ["payments:invoice.read"] }],
+  });
+}
+
+describe("the delivery gate covers containment (@spec signals#discharge-compatibility, #1001)", () => {
+  it("withholds a real kernel contain() commit from an undeclared stream and delivers it to a declared one, whose receiver rematerializes", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    expect(w.declaredSets).toHaveLength(1);
+    expect(w.undeclaredSets).toHaveLength(1);
+
+    containRead(w.kernel, mission.id, "evt-gate-contain-1");
+    await w.emitter.drain();
+
+    // The declared stream receives the contain event: same state, the next
+    // version, containment_version 1 and authority_changed true. Its receiver
+    // applies it in order and latches rematerialization.
+    expect(w.declaredSets).toHaveLength(2);
+    expect(eventOf(w.declaredSets[1])).toMatchObject({
+      state: "active",
+      prior_state: "active",
+      version: 2,
+      containment_version: 1,
+      authority_changed: true,
+    });
+    expect(w.declared.viewState(mission.id)).toMatchObject({
+      state: "active",
+      version: 2,
+      containment_version: 1,
+    });
+    expect(w.declared.needsRematerialization(mission.id)).toBe(true);
+
+    // The undeclared stream receives nothing: its view stays at the
+    // activating event, with no narrowing it would misread as current.
+    expect(w.undeclaredSets).toHaveLength(1);
+    expect(w.undeclared.viewState(mission.id)).toMatchObject({ state: "active", version: 1 });
+    expect(w.undeclared.needsRematerialization(mission.id)).toBe(false);
   });
 });
 
