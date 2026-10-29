@@ -198,7 +198,8 @@ Effective Authority Set:
   sufficient, for an action to proceed.
 
 Metadata-only change:
-: A committed change to a Mission that leaves its `state` and
+: A committed change to issuer-held state associated with a Mission,
+  outside its Mission Record, that leaves the Mission's `state` and
   `termination` unchanged: a schedule replacement ({{idempotency}}),
   or a change a companion profile defines as one.
 
@@ -1085,7 +1086,11 @@ its own specification; no IANA registry holds `operation` values
 ({{iana}}).
 
 A `suspend` MAY carry `suspend_until` with a REQUIRED `on_expiry`; the
-pair is the Mission's schedule. When the `suspend_until` of a current
+pair is the Mission's schedule. The schedule is issuer-held state
+associated with the Mission, outside its Mission Record
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record"): an
+AS may store it with the record, and a signed or exchanged Mission
+Record does not carry it. When the `suspend_until` of a current
 schedule passes, the AS MUST apply `on_expiry` (transition to
 `active` for `resume`, or to `terminated` with reason `revoked` for
 `revoke`) and emit the corresponding transition, without a further
@@ -2261,6 +2266,11 @@ Mission Termination Reasons registry
 - IANA Considerations adds the Mission Status and Mission Lifecycle
   endpoints as usage locations for `invalid_request` and
   `invalid_client`.
+- A metadata-only change and a schedule are issuer-held state
+  associated with the Mission, outside its Mission Record; an AS may
+  store them with the record, and a signed or exchanged Mission
+  Record does not carry them. Authorization, atomicity, versioning
+  and scheduling rules are unchanged (#1879).
 
 -00
 

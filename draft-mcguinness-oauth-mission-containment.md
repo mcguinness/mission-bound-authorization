@@ -421,8 +421,12 @@ scope, never the generic statement that a binding supports Missions.
 
 # The Containment Overlay {#overlay}
 
-A Mission participating in this profile carries a containment
-overlay on its Mission record:
+The Mission Issuer holds a containment overlay for each Mission
+participating in this profile. The overlay is issuer-held state
+associated with the Mission, outside its Mission Record
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Mission Record"): an
+issuer may store it with the record, and a signed or exchanged
+Mission Record does not carry it. The overlay has these members:
 
 `containment_version`:
 : REQUIRED. An integer, 0 at the approval event, incremented by each
@@ -1242,6 +1246,11 @@ This document registers two media types per {{RFC6838}}.
 
 \[\[ To be removed from the final specification ]]
 
+- The Containment Overlay ({{overlay}}): the overlay is issuer-held
+  state associated with the Mission, outside its Mission Record; an
+  issuer may store it with the record, and a signed or exchanged
+  Mission Record does not carry it. The overlay's members and every
+  rule on it are unchanged (#1879).
 - Visibility ({{visibility}}) and Propagation ({{propagation}}): on a
   Signals stream, a contain event that narrows effective authority
   reaches only a consumer that declared `authority_changed`; an
