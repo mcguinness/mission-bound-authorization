@@ -6419,9 +6419,9 @@
    "id": "core.authority-proposal.governed-resource-default-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`",
+   "text": "The rule applies to every audience the token would carry, including one the AS infers or applies by default when the request names no `resource`: the AS MUST refuse the request if any of them is Mission-governed",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6456,15 +6456,15 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): gating only an explicit `resource` parameter failed the inferred-code witness; ignoring the refresh token's own resource failed the inferred-refresh witness. Quote extended to the operative MUST under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-any-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "the AS refuses the request if any of them is Mission-governed, and does not issue the token for the others",
+   "text": "the AS MUST refuse the request if any of them is Mission-governed, and MUST NOT issue the token for the others",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST",
    "applicability": {
     "kind": "unconditional"
    },
@@ -6493,7 +6493,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness."
+   "notes": "#1531 (D733, D741). Mutation-proved (#1531 reference PR): checking only the first named audience failed the two-audience refresh witness. Takes MUST and MUST NOT under #1871 (D1005)."
   },
   {
    "id": "core.authority-proposal.governed-resource-refresh-before-rotation",

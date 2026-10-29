@@ -1424,10 +1424,10 @@ or expired grant keeps its error, and a request under a grant bound to
 a Mission that is not `active` keeps the refusal of
 {{issuance-gating}}. The rule applies to every audience the token
 would carry, including one the AS infers or applies by default when the
-request names no `resource`: the AS refuses the request if any of them
-is Mission-governed, and does not issue the token for the others. On a
-refresh, the AS MUST decide this refusal before it consumes or rotates
-the refresh token.
+request names no `resource`: the AS MUST refuse the request if any of
+them is Mission-governed, and MUST NOT issue the token for the others.
+On a refresh, the AS MUST decide this refusal before it consumes or
+rotates the refresh token.
 
 A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange
