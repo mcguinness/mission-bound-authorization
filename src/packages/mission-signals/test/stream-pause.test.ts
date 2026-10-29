@@ -1193,6 +1193,26 @@ describe("the heartbeat and the liveness event (@spec signals#consumer-behavior,
     });
   });
 
+  it("takes the agreed heartbeat interval only as a finite, positive whole number of seconds: an infinite, NaN, zero, negative or fractional interval is refused at construction", async () => {
+    const { privateKey } = await generateKeyPair("ES256");
+    const make = (heartbeatIntervalSeconds: number) => () =>
+      new MissionSignalEmitter({
+        key: privateKey,
+        kid: "as-status",
+        issuer: ISS,
+        consumers: [{ audience: UNDECLARED_AUD }],
+        maxStaleSeconds: MAX_STALE_SECONDS,
+        heartbeatIntervalSeconds,
+      });
+    for (const interval of [Number.POSITIVE_INFINITY, Number.NaN, 0, -10, 1.5])
+      expect(make(interval), String(interval)).toThrow(
+        "heartbeatIntervalSeconds must be a positive integer",
+      );
+    const emitter = make(90)();
+    expect(emitter.streamStatus(UNDECLARED_AUD).status).toBe("enabled");
+    emitter.close();
+  });
+
   it("records liveness only for verification attempts: a Stream Updated notice, paused or enabled, in flight or acknowledged, never moves the stream's liveness record", async () => {
     const w = await wire();
     const mission = approve(w.kernel);
