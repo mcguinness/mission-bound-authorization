@@ -36,6 +36,7 @@ export {
   entryValidationCheck,
   IMPLEMENTED_CHECKS,
   parseCurrentContracts,
+  parseEnforcedConstraints,
   runCase,
   SCOPED_OUT_CHECKS,
   type Selection,

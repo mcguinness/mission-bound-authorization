@@ -137,6 +137,23 @@ export function parseCurrentContracts(value: unknown): readonly CurrentContract[
 }
 
 /**
+ * A subset case's `enforced_constraints` (vectors README, Checks, `subset`):
+ * the constraints keys the resource server serving the candidate's resource is
+ * known to understand and enforce, "by registration, deployment policy or its
+ * mission_constraints_supported metadata". An absent one is no enforcement
+ * context, kept distinct from an empty list, which names no key. It is trusted
+ * context, so a malformed one is a malformed case and throws.
+ */
+export function parseEnforcedConstraints(value: unknown): readonly string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error("enforced_constraints is not an array");
+  return value.map((key: unknown, i) => {
+    if (typeof key !== "string") throw new Error(`enforced_constraints[${i}] is not a string`);
+    return key;
+  });
+}
+
+/**
  * Run one selected case. `definitions` are the contract versions whose
  * documents the consumer holds; which version is current for which resource
  * comes from the case alone.
@@ -145,7 +162,11 @@ export function runCase(c: VectorCase, definitions: readonly ContractDefinition[
   const input = c.input;
   switch (c.check) {
     case "subset":
-      return subsetCheck(input.candidate, input.reference);
+      return subsetCheck(
+        input.candidate,
+        input.reference,
+        parseEnforcedConstraints(input.enforced_constraints),
+      );
     case "entry-validation":
       return entryValidationCheck(input.entry, {
         currentContracts: parseCurrentContracts(input.contracts),

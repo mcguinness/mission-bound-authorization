@@ -1,6 +1,7 @@
-// The Subset Rule (resource-access#subset), steps 1 to 4, over the supported
-// subset: exact resources, explicit actions, the nine initial Common
-// Constraints and resource_contract.
+// The Subset Rule (resource-access#subset), steps 1 to 4 and the condition on
+// a key present only in the candidate, over the supported subset: exact
+// resources, explicit actions, the nine initial Common Constraints and
+// resource_contract.
 
 import { CONSTRAINT_RULES } from "./constraints.js";
 import { type ParsedEntry, type ParseResult, parseEntry } from "./entry.js";
@@ -53,20 +54,69 @@ function failure(operand: string, parsed: ParseResult): string | undefined {
  *   (resource-access#decimal-values, resource-access#initial-common-constraints,
  *   resource-access#entry-validation); and
  * - an entry carrying locations is refused by name
- *   (resource-access#entry-validation).
+ *   (resource-access#entry-validation); and
+ * - a constraints key only the candidate carries is refused unless `enforced`
+ *   names it (see candidateOnlyRefusal).
+ *
+ * `enforced` is the case's `enforced_constraints`: the keys the resource
+ * server serving the candidate's resource is known to understand and enforce.
+ * Undefined means no such context was given.
  *
  * `not-subset` is returned only for valid, supported inputs that fail the
  * relation, which they can do without the candidate being broader (disjoint
  * actions, or different currencies).
  */
-export function subsetCheck(candidate: unknown, reference: unknown): SubsetResult {
+export function subsetCheck(
+  candidate: unknown,
+  reference: unknown,
+  enforced?: readonly string[],
+): SubsetResult {
   const a = parseEntry(candidate);
   const b = parseEntry(reference);
   const failures = [failure("candidate", a), failure("reference", b)].filter(
     (f): f is string => f !== undefined,
   );
   if (!a.ok || !b.ok) return refuse(`not comparable: ${failures.join("; ")}`);
+  const unenforced = candidateOnlyRefusal(a.entry, b.entry, enforced);
+  if (unenforced !== undefined) return unenforced;
   return compare(a.entry, b.entry);
+}
+
+/**
+ * resource-access#subset, after the steps: "A key present only in A narrows A
+ * only when it has defined semantics and the resource server serving
+ * A.resource can enforce it." Defined semantics is settled by parseEntry,
+ * which refuses a key outside the nine as unsupported input before this runs,
+ * so enforcement by the resource server never gives an unknown key a rule.
+ *
+ * Enforcement comes from the case (vectors README, Checks, `subset`): when the
+ * candidate carries a key the reference lacks, the outcome is refuse "if
+ * enforced_constraints is absent (missing comparison context) or does not
+ * name the key (the key cannot narrow, and is never compared as absent)". No
+ * value is exempt, an omission-equivalent one included. "Like operand
+ * validation, this check comes before the relation", so a not-subset result
+ * never conceals it. A key both operands carry is compared by its own rule in
+ * step 3 and needs no enforcement context.
+ */
+function candidateOnlyRefusal(
+  a: ParsedEntry,
+  b: ParsedEntry,
+  enforced: readonly string[] | undefined,
+): SubsetResult | undefined {
+  const added = [...a.constraints.keys()].filter((key) => !b.constraints.has(key));
+  if (added.length === 0) return undefined;
+  if (enforced === undefined) {
+    return refuse(
+      `missing comparison context: the candidate alone carries ${added.join(", ")}, and no enforced_constraints is given`,
+    );
+  }
+  const unenforced = added.filter((key) => !enforced.includes(key));
+  if (unenforced.length > 0) {
+    return refuse(
+      `the candidate alone carries ${unenforced.join(", ")}, which the resource server serving ${a.resource} is not known to enforce, so it cannot narrow`,
+    );
+  }
+  return undefined;
 }
 
 function compare(a: ParsedEntry, b: ParsedEntry): SubsetResult {
@@ -102,10 +152,9 @@ function compare(a: ParsedEntry, b: ParsedEntry): SubsetResult {
       return notSubset(`step 3: the candidate ${key} is not within the reference`);
     }
   }
-  // A key present only in A narrows A: every key parseEntry admits is one of
-  // the nine, each with defined semantics (resource-access#subset, after the
-  // steps: "A key present only in A narrows A only when it has defined
-  // semantics").
+  // A key present only in A narrows A: candidateOnlyRefusal, run before the
+  // relation, has already refused any such key without defined semantics or
+  // without enforcement by the resource server serving A.resource.
 
   // resource-access#subset step 4: "A carries resource_contract exactly when B
   // does, and then with id, version, and digest each equal to B's". Compared
