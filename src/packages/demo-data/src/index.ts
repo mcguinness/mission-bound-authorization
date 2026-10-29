@@ -716,6 +716,23 @@ export function parseScopeMappingValue(
 }
 
 /**
+ * The value `record` holds under `key` as its own property, or undefined: a
+ * key a token or a document supplies (a scope value, an issuer) never reaches
+ * an inherited member such as `constructor` (#1847).
+ */
+export function ownValue<T>(record: Readonly<Record<string, T>>, key: string): T | undefined {
+  return Object.hasOwn(record, key) ? record[key] : undefined;
+}
+
+/**
+ * A record keyed by strings from a token or a document, with no prototype, so
+ * a key such as `__proto__` is stored as an ordinary entry (#1847).
+ */
+export function keyedRecord<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>;
+}
+
+/**
  * @spec authority-server#mission-join rule 8 (bound 1), resource-access#resource-contract
  * (#1847, D989): the authority a credential's scope values confer on
  * `resource` under a scope mapping: one entry per distinct contract
@@ -740,9 +757,9 @@ export function scopeMappingEntries(
   | undefined {
   const groups = new Map<string, { ref?: ResourceContractRef; actions: Set<string> }>();
   for (const value of values) {
-    const actions = mapping.actions[value];
+    const actions = ownValue(mapping.actions, value);
     if (!actions) continue;
-    const ref = mapping.contracts[value];
+    const ref = ownValue(mapping.contracts, value);
     const key = ref === undefined ? "" : `${ref.id}|${ref.version}|${ref.digest}`;
     const group = groups.get(key) ?? { ...(ref ? { ref } : {}), actions: new Set<string>() };
     for (const a of actions) group.actions.add(a);
@@ -2089,8 +2106,8 @@ export function parseMasJoinPolicy(raw: unknown): MasJoinPolicy {
     delegates[clientId] = { max_depth: maxDepth };
   }
   const scopeActionsRaw = asObject(file, root.scope_actions, "mas_join.scope_actions");
-  const scope_actions: Record<string, string[]> = {};
-  const scope_contracts: Record<string, ResourceContractRef> = {};
+  const scope_actions = keyedRecord<string[]>();
+  const scope_contracts = keyedRecord<ResourceContractRef>();
   for (const [scope, value] of Object.entries(scopeActionsRaw)) {
     // @spec resource-access#resource-contract (#1847, D989): the bound this
     // route computes names the payments resource.

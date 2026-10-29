@@ -204,3 +204,38 @@ describe("the shared-namespace join's scope mapping states a scope value's contr
     expect(scopeMappingEntries(["unmapped"], mapping, CANONICAL_RESOURCE)).toBeUndefined();
   });
 });
+
+/**
+ * @spec authority-server#mission-join rule 8 (#1847, #1866 review): a scope
+ * value is looked up as the mapping's own entry. A value naming an inherited
+ * member confers nothing and never throws, alone or beside a mapped value, and
+ * a mapping key such as `__proto__` is an ordinary entry.
+ */
+describe("the shared-namespace scope mapping reads only its own entries (@spec authority-server#mission-join, #1847)", () => {
+  const INHERITED = ["constructor", "toString", "hasOwnProperty", "valueOf", "__proto__"];
+  const READ = ["payments:invoice.read"];
+
+  it.each(INHERITED)("an unmapped value named %s confers nothing alone, and beside a mapped value only that value's entry", (name) => {
+    const mapping = { actions: { legacy: READ }, contracts: {} };
+    expect(scopeMappingEntries([name], mapping, CANONICAL_RESOURCE)).toBeUndefined();
+    expect(scopeMappingEntries([name, "legacy"], mapping, CANONICAL_RESOURCE)).toEqual([
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: READ },
+    ]);
+  });
+
+  it("loads mapping keys named __proto__ and constructor as ordinary scope values, and a stated contract under one", () => {
+    const current = contractAt(CURRENT_VERSION);
+    const raw = JSON.parse(
+      JSON.stringify({ constructor: READ }).replace("{", `{"__proto__": ${JSON.stringify({ actions: READ, resource_contract: current })},`),
+    ) as Record<string, unknown>;
+    expect(Object.keys(raw)).toEqual(["__proto__", "constructor"]);
+    const policy = parseMasJoinPolicy(joinWith(raw));
+    expect(Object.keys(policy.scope_actions)).toEqual(["__proto__", "constructor"]);
+    expect(policy.scope_contracts.__proto__).toEqual(current);
+    const mapping = { actions: policy.scope_actions, contracts: policy.scope_contracts };
+    expect(scopeMappingEntries(["__proto__"], mapping, CANONICAL_RESOURCE)).toEqual([
+      { type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions: READ, resource_contract: current },
+    ]);
+    expect(scopeMappingEntries(["toString"], mapping, CANONICAL_RESOURCE)).toBeUndefined();
+  });
+});

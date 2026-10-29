@@ -19,7 +19,7 @@
  */
 
 import { type ResourceContractDeclarations, type ResourceContractRef, sameResourceContract } from "@mission/core";
-import { parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
+import { keyedRecord, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
 import {
   type AuthorityEntry,
   type DelegatePolicy,
@@ -184,14 +184,14 @@ export function parseMappingContract(
   if (issuersRaw === null || typeof issuersRaw !== "object" || Array.isArray(issuersRaw)) {
     throw new MappingContractError("scopes.issuers must be an object");
   }
-  const issuers: Record<string, Record<string, string[]>> = {};
-  const scopeContracts: Record<string, Record<string, ResourceContractRef>> = {};
+  const issuers = keyedRecord<Record<string, string[]>>();
+  const scopeContracts = keyedRecord<Record<string, ResourceContractRef>>();
   for (const [iss, valuesRaw] of Object.entries(issuersRaw as Record<string, unknown>)) {
     if (valuesRaw === null || typeof valuesRaw !== "object" || Array.isArray(valuesRaw)) {
       throw new MappingContractError(`scopes.issuers.${iss} must be an object`);
     }
-    const values: Record<string, string[]> = {};
-    const stated: Record<string, ResourceContractRef> = {};
+    const values = keyedRecord<string[]>();
+    const stated = keyedRecord<ResourceContractRef>();
     for (const [scope, value] of Object.entries(valuesRaw as Record<string, unknown>)) {
       // @spec resource-access#resource-contract (#1847, D989): an action list,
       // or `{actions, resource_contract}` under a contract the declarations
@@ -352,13 +352,13 @@ class MappingSnapshot implements JoinMappingContract {
     now: Date;
   }): AuthorityEntry[] | undefined {
     if (!this.fresh(input.now) || input.resource !== this.doc.scopes.resource || input.scope === undefined) return undefined;
-    const values = this.doc.scopes.issuers[input.issuer];
+    const values = ownValue(this.doc.scopes.issuers, input.issuer);
     if (!values) return undefined;
     // @spec resource-access#resource-contract (#1847, D989): one entry per
     // contract a scope value states, the values stating none in their own.
     return scopeMappingEntries(
       input.scope.split(" "),
-      { actions: values, contracts: this.doc.scopes.contracts[input.issuer] ?? {} },
+      { actions: values, contracts: ownValue(this.doc.scopes.contracts, input.issuer) ?? {} },
       input.resource,
     );
   }
@@ -483,12 +483,14 @@ export class MappingContractCache {
  */
 function repointedScope(before: MappingContractDocument, after: MappingContractDocument): string | undefined {
   for (const [iss, values] of Object.entries(after.scopes.issuers)) {
-    const earlier = before.scopes.issuers[iss];
+    const earlier = ownValue(before.scopes.issuers, iss);
     if (!earlier) continue;
     for (const scope of Object.keys(values)) {
-      if (!(scope in earlier)) continue;
-      const was = before.scopes.contracts[iss]?.[scope];
-      const now = after.scopes.contracts[iss]?.[scope];
+      if (!Object.hasOwn(earlier, scope)) continue;
+      const wasStated = ownValue(before.scopes.contracts, iss);
+      const nowStated = ownValue(after.scopes.contracts, iss);
+      const was = wasStated && ownValue(wasStated, scope);
+      const now = nowStated && ownValue(nowStated, scope);
       if (!sameResourceContract(was, now) && !(was === undefined && now === undefined)) return `${iss} ${scope}`;
     }
   }
@@ -508,8 +510,10 @@ function withdrawnScope(
 ): string | undefined {
   for (const [iss, stated] of Object.entries(before.scopes.contracts)) {
     for (const [scope, ref] of Object.entries(stated)) {
-      if (after.scopes.issuers[iss]?.[scope] !== undefined) continue;
-      const actions = before.scopes.issuers[iss]?.[scope] ?? [];
+      const kept = ownValue(after.scopes.issuers, iss);
+      if (kept && ownValue(kept, scope) !== undefined) continue;
+      const earlier = ownValue(before.scopes.issuers, iss);
+      const actions = (earlier && ownValue(earlier, scope)) ?? [];
       const entry = { resource: before.scopes.resource, actions, resource_contract: ref };
       if (contracts.carriedViolation(entry, now) === undefined) return `${iss} ${scope}`;
     }

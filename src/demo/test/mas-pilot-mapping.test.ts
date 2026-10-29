@@ -472,3 +472,35 @@ describe("mapping contract cache: a scope value's stated contract (@spec authori
     expect(cache.install(withScopes({ "invoices.read.contract-current": stated(current) }, 3))).toMatchObject({ ok: true, version: 3 });
   });
 });
+
+/**
+ * @spec authority-server#mapping-contract, authority-server#mission-join rule 8
+ * (#1847, #1866 review): the pilot's snapshot reads only the mapping's own
+ * entries, for a credential's scope values and for its issuer.
+ */
+describe("mapping contract cache: only the mapping's own entries confer authority (@spec authority-server#mapping-contract, #1847)", () => {
+  const now = new Date("2026-10-19T12:00:00Z");
+  const READ = ["payments:invoice.read"];
+
+  it.each(["constructor", "toString", "hasOwnProperty", "valueOf", "__proto__"])(
+    "a credential scope or issuer named %s confers nothing and never throws, alone or beside a mapped value",
+    (name) => {
+      const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+      expect(cache.install(doc()).ok).toBe(true);
+      const authority = (scope: string, issuer = ESTATE) =>
+        cache.current().credentialAuthority({ issuer, scope, resource: RESOURCE, now });
+      expect(authority(name)).toBeUndefined();
+      expect(authority(`${name} invoices.read`)).toEqual([{ type: "mission_resource_access", resource: RESOURCE, actions: READ }]);
+      expect(authority("invoices.read", name)).toBeUndefined();
+    },
+  );
+
+  it("parses a mapping key named __proto__ as an ordinary scope value", () => {
+    const raw = JSON.parse(JSON.stringify(doc()).replace('"invoices.read":', '"__proto__":["payments:invoice.list"],"invoices.read":'));
+    const cache = new MappingContractCache({ maxStaleSeconds: 300, now: clock().now });
+    expect(cache.install(raw).ok).toBe(true);
+    expect(cache.current().credentialAuthority({ issuer: ESTATE, scope: "__proto__", resource: RESOURCE, now })).toEqual([
+      { type: "mission_resource_access", resource: RESOURCE, actions: ["payments:invoice.list"] },
+    ]);
+  });
+});
