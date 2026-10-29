@@ -229,6 +229,16 @@ const read = (constraints: Record<string, unknown> = {}): AuthorityEntry[] => [
   } as AuthorityEntry,
 ];
 
+/** A payment-scheduling entry, beneath the ceiling's `max_amount` of 500.00 USD. */
+const schedule = (constraints: Record<string, unknown> = {}): AuthorityEntry[] => [
+  {
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:payment.schedule"],
+    constraints: { vendors: ["acme"], ...constraints },
+  } as AuthorityEntry,
+];
+
 beforeAll(async () => {
   as = await buildAuthorizationServer({
     issuer: ISSUER,
@@ -472,6 +482,15 @@ describe("recipient_domain at the endpoints (@spec resource-access#initial-commo
     expect(as.kernel.allMissions().length).toBe(before);
   });
 
+  it("a Token Exchange naming a subdomain is issued, and the token carries the subdomain", async () => {
+    const issued = await issue(read());
+    const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
+    const narrower = { ...derived, recipient_domain: `billing.${DOMAIN}` };
+    const ok = await exchange(issued.at, issued.keys, read(narrower));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([narrower]);
+  });
+
   it("a Token Exchange compares domains on whole labels, case-insensitively: a parent or sibling is refused", async () => {
     const issued = await issue(read());
     const derived = { vendors: ["acme"], ...hoisted.CEILING_CONSTRAINTS };
@@ -481,6 +500,50 @@ describe("recipient_domain at the endpoints (@spec resource-access#initial-commo
     const { recipient_domain: _dropped, ...dropped } = derived;
     for (const requested of [dropped, { ...derived, recipient_domain: "example" }, { ...derived, recipient_domain: "other.example" }]) {
       const res = await exchange(issued.at, issued.keys, read(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
+  });
+});
+
+describe("max_amount and requires_action_approval at the endpoints (@spec resource-access#initial-common-constraints)", () => {
+  const CAP = { amount: "500.00", currency: "USD" };
+
+  it("a Token Exchange naming a lower max_amount is issued with it; a higher amount, another currency or a dropped cap is refused", async () => {
+    const issued = await issue(schedule());
+    const base = constraintsOf(claims(issued.at).authorization_details)[0] as Record<string, unknown>;
+    expect(base.max_amount).toEqual(CAP);
+    const lower = { ...base, max_amount: { amount: "100.00", currency: "USD" } };
+    const ok = await exchange(issued.at, issued.keys, schedule(lower));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([lower]);
+    const { max_amount: _dropped, ...dropped } = base;
+    for (const requested of [
+      { ...base, max_amount: { amount: "600.00", currency: "USD" } },
+      { ...base, max_amount: { amount: "100.00", currency: "EUR" } },
+      dropped,
+    ]) {
+      const res = await exchange(issued.at, issued.keys, schedule(requested));
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
+  });
+
+  it("a Token Exchange that requires action approval where the reference says false is issued; dropping a true requirement is refused", async () => {
+    const issued = await issue(schedule());
+    const base = constraintsOf(claims(issued.at).authorization_details)[0] as Record<string, unknown>;
+    // Resource Access: "A value of `false` is equivalent to omitting the member"; the derived entry may omit it.
+    expect(base.requires_action_approval ?? false).toBe(false);
+    const stricter = { ...base, requires_action_approval: true };
+    const ok = await exchange(issued.at, issued.keys, schedule(stricter));
+    expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+    expect(constraintsOf(claims(ok.body.access_token as string).authorization_details)).toEqual([stricter]);
+    const required = await issue(schedule({ requires_action_approval: true }));
+    const strict = constraintsOf(claims(required.at).authorization_details)[0] as Record<string, unknown>;
+    expect(strict.requires_action_approval).toBe(true);
+    const { requires_action_approval: _dropped, ...dropped } = strict;
+    for (const requested of [dropped, { ...strict, requires_action_approval: false }]) {
+      const res = await exchange(required.at, required.keys, schedule(requested));
       expect(res.status, JSON.stringify(requested)).toBe(400);
       expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
     }
