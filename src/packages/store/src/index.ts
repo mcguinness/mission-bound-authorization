@@ -5,6 +5,7 @@
  * specs imply (idempotency keys, id non-reuse, single-use redemption).
  */
 
+import { existsSync } from "node:fs";
 import Database from "better-sqlite3";
 
 export type { Database } from "better-sqlite3";
@@ -188,6 +189,113 @@ export function openDurableStore(options: DurableStoreOptions): Database.Databas
     db.close();
     if (e instanceof DurableStoreError) throw e;
     throw new DurableStoreError(`cannot initialize ${file}: ${(e as Error).message}`);
+  }
+  return db;
+}
+
+export interface SharedStoreOptions {
+  /** The store file, from configuration. It must exist: {@link initSharedStore} creates it. */
+  file: string;
+  /** The component the store was initialized for; another owner refuses. */
+  owner: string;
+  /** The schema version the store must be at; any other refuses. */
+  schemaVersion: number;
+  /**
+   * Milliseconds a write waits for another handle's write lock, in this
+   * process or another, before refusing. Positive: writers sharing the store
+   * take turns rather than refuse each other.
+   */
+  lockTimeoutMs: number;
+}
+
+const refuseMemoryName = (file: string): void => {
+  if (typeof file !== "string" || file.trim().length === 0)
+    throw new DurableStoreError("no store file is configured");
+  if (
+    IN_MEMORY_NAMES.has(file) ||
+    file.startsWith("file::memory:") ||
+    /[?&]mode=memory\b/.test(file)
+  ) {
+    throw new DurableStoreError("an in-memory store is not durable");
+  }
+};
+
+/**
+ * Create a store that several handles and processes share (#1866 review):
+ * WAL, recorded for `owner` at `schemaVersion` with `schema` applied, in one
+ * transaction. A file that already exists refuses, so initializing is an
+ * explicit, one-time act, never a way to replace history.
+ */
+export function initSharedStore(options: {
+  file: string;
+  owner: string;
+  schema: string;
+  schemaVersion: number;
+}): void {
+  refuseMemoryName(options.file);
+  if (existsSync(options.file))
+    throw new DurableStoreError(`${options.file} already exists: a store is initialized once`);
+  const db = new Database(options.file);
+  try {
+    const mode = db.pragma("journal_mode = WAL", { simple: true });
+    if (String(mode).toLowerCase() !== "wal")
+      throw new DurableStoreError(`journal_mode is ${String(mode)}, not wal`);
+    db.pragma("synchronous = FULL");
+    db.transaction(() => {
+      db.exec("CREATE TABLE store_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL) STRICT");
+      db.exec(options.schema);
+      db.prepare("INSERT INTO store_meta (k, v) VALUES ('owner', ?)").run(options.owner);
+      db.pragma(`user_version = ${options.schemaVersion}`);
+    }).immediate();
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Open a store {@link initSharedStore} created, shared with other handles and
+ * processes: WAL and `synchronous=FULL`, read back, with no exclusive lock.
+ * SQLite's write lock serializes writers, each waiting up to `lockTimeoutMs`,
+ * and a write transaction begun IMMEDIATE reads under that lock. A missing
+ * file, one that is not a database, one in another journal mode, or one
+ * recorded for another owner or schema version refuses: missing or foreign
+ * history is never read as empty.
+ */
+export function openSharedStore(options: SharedStoreOptions): Database.Database {
+  const file = options.file;
+  refuseMemoryName(file);
+  if (!(options.lockTimeoutMs > 0))
+    throw new DurableStoreError("a shared store needs a positive lock timeout");
+  if (!existsSync(file)) throw new DurableStoreError(`${file} does not exist: initialize it first`);
+  let db: Database.Database;
+  try {
+    db = new Database(file, { fileMustExist: true, timeout: options.lockTimeoutMs });
+  } catch (e) {
+    throw new DurableStoreError(`cannot open ${file}: ${(e as Error).message}`);
+  }
+  try {
+    const mode = db.pragma("journal_mode", { simple: true });
+    if (String(mode).toLowerCase() !== "wal")
+      throw new DurableStoreError(`${file} is in journal_mode ${String(mode)}, not wal`);
+    db.pragma("synchronous = FULL");
+    if (db.pragma("synchronous", { simple: true }) !== 2)
+      throw new StoreDurabilityError("the store did not accept synchronous=FULL");
+    const owner = db.prepare("SELECT v FROM store_meta WHERE k = 'owner'").get() as
+      | { v: string }
+      | undefined;
+    if (owner?.v !== options.owner)
+      throw new DurableStoreError(
+        `${file} is owned by ${owner?.v ?? "no one"}, not ${options.owner}`,
+      );
+    const version = db.pragma("user_version", { simple: true }) as number;
+    if (version !== options.schemaVersion)
+      throw new DurableStoreError(
+        `${file} is at schema version ${version}, not ${options.schemaVersion}`,
+      );
+  } catch (e) {
+    db.close();
+    if (e instanceof DurableStoreError || e instanceof StoreDurabilityError) throw e;
+    throw new DurableStoreError(`cannot read ${file}: ${(e as Error).message}`);
   }
   return db;
 }

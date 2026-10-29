@@ -35,7 +35,7 @@ import {
   startupRemediationNotices,
   validateMissionIntent,
 } from "@mission/authorization-server";
-import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
+import { ACTION_APPROVAL_POLICY, APPROVAL_FLOOR, AUDIT_HORIZON_SECONDS, AUTHORITY_SOURCES, CATALOG_SERVICES, CONTAINMENT_POLICY, DERIVATION_POLICY, RAS_LOCAL_POLICY, MAS_JOIN, type MasJoinPolicy, readTopologyKeys, RUNTIME_SCOPE_CONFIG, scopeMappingEntries, type SeededTrustedSource, TOPOLOGY, trustedKids, USERS } from "@mission/demo-data";
 import { type DurableEvidenceKey, evidenceKeyBundle, loadEvidenceKeyFile } from "./evidence-key-files.js";
 import { composedTrustAnchor } from "./ras-trust-anchor.js";
 import {
@@ -1389,13 +1389,15 @@ export async function composeStack(opts: {
    * authority, and the joined route then refuses `out_of_authority` rather
    * than treating an unmapped scope as unbounded.
    */
+  // @spec resource-access#resource-contract (#1847, D989): one entry per
+  // contract a scope value states, the values stating none in their own.
   const resolveOrdinaryAuthority = (token: TokenFacts): PdpAuthorityEntry[] | undefined => {
     if (token.mission || !token.scope) return undefined;
-    const actions = [
-      ...new Set(token.scope.split(/\s+/).flatMap((value) => masJoin.scope_actions[value] ?? [])),
-    ];
-    if (actions.length === 0) return undefined;
-    return [{ type: "mission_resource_access", resource: CANONICAL_RESOURCE, actions }];
+    return scopeMappingEntries(
+      token.scope.split(/\s+/),
+      { actions: masJoin.scope_actions, contracts: masJoin.scope_contracts ?? {} },
+      CANONICAL_RESOURCE,
+    );
   };
 
   const runtimeDecisionPolicy = {

@@ -20,6 +20,12 @@ import { join } from "node:path";
 import { Fga } from "@mission/pdp";
 import { decodeJwt, decodeProtectedHeader, generateKeyPair, SignJWT } from "jose";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import {
+  initScopeBindingLedger,
+  MemoryScopeBindingLedger,
+  scopeBindingsAdmin,
+  SqliteScopeBindingLedger,
+} from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "../src/mas-pilot/config.js";
 import { launchMasPilot, type MasPilotLaunch, masPilotLaunchOptions, type MasPilotTopology, spawnMasProcess } from "../src/mas-pilot/launcher.js";
 import { newStatusClientKey, parseStatusClients } from "../src/mas-pilot/mas-as.js";
@@ -306,12 +312,44 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
     expect(() =>
       masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m", MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process"),
     ).toThrow(/not both/);
-    expect(masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m" }, "in-process").resourcePolicyStore).toEqual({
+    const attached = masPilotLaunchOptions(
+      { ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m", MAS_PILOT_SCOPE_BINDINGS: initializedLedger() },
+      "in-process",
+    );
+    attached.scopeBindings.ledger.close();
+    expect(attached.resourcePolicyStore).toEqual({
       attach: { storeId: "s", modelId: "m" },
     });
     expect(masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process").resourcePolicyStore).toEqual({
       bootstrap: "development",
     });
+  });
+
+  // @spec resource-access#resource-contract (#1847, D1019): the scope
+  // binding ledger is named like the Resource-policy store: an initialized
+  // file, or one in memory only when development is asked for by name; and a
+  // MAS process the launcher starts opens the same one. A missing or
+  // malformed file refuses startup, before anything starts.
+  it("refuses an attached store with no scope binding ledger, or a missing or malformed one; an initialized file is the ledger, forwarded to the MAS process; development alone keeps one in memory", () => {
+    const config = configFile(14862, 14863);
+    const attach = { ...keys, MAS_PILOT_CONFIG: config, OPENFGA_STORE_ID: "s", OPENFGA_MODEL_ID: "m" };
+    expect(() => masPilotLaunchOptions(attach, "in-process")).toThrow(/no scope binding ledger/);
+    const dir = mkdtempSync(join(tmpdir(), "mas-pilot-bindings-"));
+    const missing = join(dir, "missing.db");
+    expect(() => masPilotLaunchOptions({ ...attach, MAS_PILOT_SCOPE_BINDINGS: missing }, "in-process")).toThrow(
+      /MAS_PILOT_SCOPE_BINDINGS: .*does not exist.*pnpm scope-bindings init --file/,
+    );
+    const garbage = join(dir, "garbage.db");
+    writeFileSync(garbage, "not a ledger ".repeat(100));
+    expect(() => masPilotLaunchOptions({ ...attach, MAS_PILOT_SCOPE_BINDINGS: garbage }, "in-process")).toThrow(/MAS_PILOT_SCOPE_BINDINGS: /);
+    const file = initializedLedger();
+    const filed = masPilotLaunchOptions({ ...attach, MAS_PILOT_SCOPE_BINDINGS: file }, "separated");
+    expect(filed.scopeBindings.ledger).toBeInstanceOf(SqliteScopeBindingLedger);
+    expect(filed.scopeBindings.env).toEqual({ MAS_PILOT_SCOPE_BINDINGS: file });
+    filed.scopeBindings.ledger.close();
+    const development = masPilotLaunchOptions({ ...keys, MAS_PILOT_CONFIG: config, MAS_PILOT_DEVELOPMENT_STORE: "1" }, "in-process");
+    expect(development.scopeBindings.ledger).toBeInstanceOf(MemoryScopeBindingLedger);
+    expect(development.scopeBindings.ledger.describe()).toMatch(/lost at restart/);
   });
 
   it("refuses a configuration file that is absent, or whose mapping contract is missing or does not load", () => {
@@ -396,6 +434,7 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
       const options = {
         openfga: { apiUrl: "http://unused.test", presharedKey: "unused" },
         resourcePolicyStore: { bootstrap: "development" } as const,
+        scopeBindings: new MemoryScopeBindingLedger(),
         config,
       };
       advertised = { issuer: url, jwks_uri: `${url}/jwks`, mission_max_stale_seconds: 300 };
@@ -432,5 +471,30 @@ describe("the MAS pilot launcher refuses to start, before anything connects (#81
       );
     }
     expect(masPilotLaunchOptions({ ...env, MAS_PILOT_PDP_KEY: JSON.stringify(privateJwk) }, "separated").mas?.pdpKey).toEqual(privateJwk);
+  });
+});
+
+/** An empty, initialized scope binding ledger in a fresh directory. */
+function initializedLedger(): string {
+  const file = join(mkdtempSync(join(tmpdir(), "mas-pilot-bindings-")), "scope-bindings.db");
+  initScopeBindingLedger(file);
+  return file;
+}
+
+/**
+ * @spec resource-access#resource-contract (#1847, D1019): `pnpm scope-bindings
+ * init` creates the ledger once; it never replaces one, so recovery restores
+ * history rather than starting an empty ledger.
+ */
+describe("pnpm scope-bindings init (#1847, D1019)", () => {
+  it("initializes an empty ledger once, refuses an existing one, and refuses any other usage", () => {
+    const file = join(mkdtempSync(join(tmpdir(), "mas-pilot-bindings-")), "scope-bindings.db");
+    expect(scopeBindingsAdmin(["init", "--file", file])).toMatch(/initialized an empty ledger/);
+    const ledger = SqliteScopeBindingLedger.open(file);
+    expect(ledger.commit((state) => ({ result: state }))).toEqual({ bindings: [], highWater: null });
+    ledger.close();
+    expect(() => scopeBindingsAdmin(["init", "--file", file])).toThrow(/already exists/);
+    expect(() => scopeBindingsAdmin(["init"])).toThrow(/usage: scope-bindings init --file/);
+    expect(() => scopeBindingsAdmin(["reset", "--file", file])).toThrow(/usage/);
   });
 });

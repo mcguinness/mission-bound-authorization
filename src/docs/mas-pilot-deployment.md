@@ -112,6 +112,38 @@ resolution (`MappingContractCache`):
   authority: the PEP refuses it `out_of_authority` before any decision.
 - The scope mapping is part of the contract, so the credential-authority
   mapping has the same freshness.
+- A scope value is an action array, or `{actions, resource_contract}`
+  stating the contract it grants those actions under, validated against the
+  payments contract declarations when the document is parsed (#1847, D989).
+  The credential's authority is one entry per stated contract, the values
+  stating none in an entry of their own, never combined.
+- Each scope value's binding, the contract it states or none, is recorded in
+  the deployment's scope binding ledger (`scope-binding-ledger.ts`) the
+  first time a version maps it, and is never changed or removed (#1847,
+  #1866 review). An install that maps a value under another binding than the
+  recorded one is refused, a value withdrawn by an earlier version included,
+  so no version, withdrawal or restart lets a credential issued under a value
+  gain a contract; a new contract takes a new scope value. A value recorded
+  with a contract stays available while that contract is supported: an
+  install that no longer maps it is refused while the declarations support
+  the contract (current, or superseded within retention), judged at the
+  cache's clock; a value recorded with none may be withdrawn. The ledger
+  also holds the mapping's version high-water mark, the highest version
+  installed and its document's digest, committed with the bindings (D1019):
+  an older version is refused, and so is another document under the
+  recorded version, while the identical document may load again in another
+  cache or after a restart.
+- Each install reads, judges and records in one transaction under the
+  ledger's write lock, so the gateway's cache and the MAS's Join Assertion
+  path, which share the ledger across processes, take turns, and each judges
+  the history the other left (D1019). A ledger that cannot be read, locked or
+  written refuses the install. `MAS_PILOT_SCOPE_BINDINGS` names the ledger, a
+  SQLite file in WAL mode with `synchronous=FULL`, created once with
+  `pnpm scope-bindings init --file <path>`; a missing, malformed or foreign
+  file refuses startup, so lost history is never read as empty. The store
+  itself refuses changing or removing a binding and lowering the high-water
+  mark. With `MAS_PILOT_DEVELOPMENT_STORE=1` alone, the ledger is held in
+  memory and a restart loses it.
 - The cache keeps an audit record of every identity decision (version, export
   identifier, the estate identities, the outcome), every install, refused
   install and invalidation. The record is in memory only (§9).
@@ -516,6 +548,14 @@ Gaps:
 - **In the in-process configuration, Mission state is a kernel read**, as on
   the AS-native target (D293). The separated configuration (§11) reads it
   through the MAS's signed Mission Status instead.
+- **Restoring an older copy of the scope binding ledger rolls it back.** A
+  missing or malformed ledger refuses startup, but a restored backup is a
+  valid ledger whose later bindings and high-water mark are gone, and the
+  ledger does not detect that: nothing witnesses it as the kernel store's
+  recovery witness does. This is an administrative limitation (D1019).
+  Recovery restores the ledger's complete history (its `.db` and `-wal`
+  files together), and never initializes a new empty ledger to make startup
+  succeed.
 - **The mapping audit log is in memory**, unsigned and not retained. Decision
   Evidence carries `join_view_id`, which commits the authenticated (estate)
   client, not the mapping version.

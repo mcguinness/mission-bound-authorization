@@ -18,6 +18,9 @@
  * invalidation is recorded in the cache's audit log.
  */
 
+import { canonicalDigest, type JsonValue, type ResourceContractDeclarations, type ResourceContractRef } from "@mission/core";
+import { keyedRecord, ownValue, parseScopeMappingValue, RESOURCE_CONTRACTS, scopeMappingEntries } from "@mission/demo-data";
+import { bindingKey, type ScopeBinding, type ScopeBindingLedger, sameBinding } from "./scope-binding-ledger.js";
 import {
   type AuthorityEntry,
   type DelegatePolicy,
@@ -50,8 +53,16 @@ export interface MappingContractDocument {
   mission_issuer: string;
   subjects: SubjectMappingRow[];
   clients: ClientMappingRow[];
-  /** Scope value to actions at `resource`, per credential issuer. */
-  scopes: { resource: string; issuers: Record<string, Record<string, string[]>> };
+  /**
+   * Scope value to actions at `resource`, per credential issuer, and the
+   * contract each contract-stating value grants them under (#1847, D989):
+   * a value absent from `contracts` states none.
+   */
+  scopes: {
+    resource: string;
+    issuers: Record<string, Record<string, string[]>>;
+    contracts: Record<string, Record<string, ResourceContractRef>>;
+  };
   /** Rule 4's enumerated delegates, keyed by Mission-namespace client. */
   delegates: Record<string, { max_depth: number }>;
   instance: { supported: false; required: false };
@@ -120,7 +131,11 @@ const keyOf = (iss: string, id: string): string => JSON.stringify([iss, id]);
  * accepted: each row is still one decision, and the audit log records which
  * estate identity was resolved.
  */
-export function parseMappingContract(raw: unknown): MappingContractDocument {
+export function parseMappingContract(
+  raw: unknown,
+  contracts: ResourceContractDeclarations = RESOURCE_CONTRACTS,
+  now: Date = new Date(),
+): MappingContractDocument {
   const root = object(raw, "contract", TOP_LEVEL);
   const version = root.version;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
@@ -165,23 +180,38 @@ export function parseMappingContract(raw: unknown): MappingContractDocument {
   });
 
   const scopesRaw = object(root.scopes, "scopes", ["resource", "issuers"]);
+  const scopesResource = text(scopesRaw.resource, "scopes.resource");
   const issuersRaw = scopesRaw.issuers;
   if (issuersRaw === null || typeof issuersRaw !== "object" || Array.isArray(issuersRaw)) {
     throw new MappingContractError("scopes.issuers must be an object");
   }
-  const issuers: Record<string, Record<string, string[]>> = {};
+  const issuers = keyedRecord<Record<string, string[]>>();
+  const scopeContracts = keyedRecord<Record<string, ResourceContractRef>>();
   for (const [iss, valuesRaw] of Object.entries(issuersRaw as Record<string, unknown>)) {
     if (valuesRaw === null || typeof valuesRaw !== "object" || Array.isArray(valuesRaw)) {
       throw new MappingContractError(`scopes.issuers.${iss} must be an object`);
     }
-    const values: Record<string, string[]> = {};
-    for (const [scope, actions] of Object.entries(valuesRaw as Record<string, unknown>)) {
-      if (!Array.isArray(actions) || actions.length === 0) {
-        throw new MappingContractError(`scopes.issuers.${iss}.${scope} must be a non-empty array`);
-      }
-      values[scope] = actions.map((a, i) => text(a, `scopes.issuers.${iss}.${scope}[${i}]`));
+    const values = keyedRecord<string[]>();
+    const stated = keyedRecord<ResourceContractRef>();
+    for (const [scope, value] of Object.entries(valuesRaw as Record<string, unknown>)) {
+      // @spec resource-access#resource-contract (#1847, D989): an action list,
+      // or `{actions, resource_contract}` under a contract the declarations
+      // support for the mapped resource.
+      const mapped = parseScopeMappingValue(
+        value,
+        `scopes.issuers.${iss}.${scope}`,
+        scopesResource,
+        (message) => {
+          throw new MappingContractError(message);
+        },
+        contracts,
+        now,
+      );
+      values[scope] = mapped.actions;
+      if (mapped.resource_contract) stated[scope] = mapped.resource_contract;
     }
     issuers[iss] = values;
+    scopeContracts[iss] = stated;
   }
 
   const delegatesRaw = root.delegates;
@@ -218,7 +248,7 @@ export function parseMappingContract(raw: unknown): MappingContractDocument {
     mission_issuer: missionIssuer,
     subjects,
     clients,
-    scopes: { resource: text(scopesRaw.resource, "scopes.resource"), issuers },
+    scopes: { resource: scopesResource, issuers, contracts: scopeContracts },
     delegates,
     instance: { supported: false, required: false },
     failure: "mission_binding_failed",
@@ -247,7 +277,7 @@ class MappingSnapshot implements JoinMappingContract {
   readonly delegatePolicy: DelegatePolicy;
   private readonly subjects = new Map<string, SubjectMappingRow>();
   private readonly clients = new Map<string, ClientMappingRow>();
-  private readonly scopes = new Map<string, Map<string, string[]>>();
+  
 
   constructor(
     private readonly doc: MappingContractDocument,
@@ -262,7 +292,6 @@ class MappingSnapshot implements JoinMappingContract {
     };
     for (const row of doc.subjects) this.subjects.set(keyOf(row.from.iss, row.from.sub), row);
     for (const row of doc.clients) this.clients.set(keyOf(row.from.iss, row.from.client_id), row);
-    for (const [iss, values] of Object.entries(doc.scopes.issuers)) this.scopes.set(iss, new Map(Object.entries(values)));
   }
 
   /** Usable from install until `maxStaleSeconds` later, and never before install. */
@@ -324,11 +353,15 @@ class MappingSnapshot implements JoinMappingContract {
     now: Date;
   }): AuthorityEntry[] | undefined {
     if (!this.fresh(input.now) || input.resource !== this.doc.scopes.resource || input.scope === undefined) return undefined;
-    const values = this.scopes.get(input.issuer);
+    const values = ownValue(this.doc.scopes.issuers, input.issuer);
     if (!values) return undefined;
-    const actions = [...new Set(input.scope.split(" ").flatMap((value) => values.get(value) ?? []))];
-    if (actions.length === 0) return undefined;
-    return [{ type: "mission_resource_access", resource: input.resource, actions }];
+    // @spec resource-access#resource-contract (#1847, D989): one entry per
+    // contract a scope value states, the values stating none in their own.
+    return scopeMappingEntries(
+      input.scope.split(" "),
+      { actions: values, contracts: ownValue(this.doc.scopes.contracts, input.issuer) ?? {} },
+      input.resource,
+    );
   }
 }
 
@@ -346,13 +379,27 @@ export class MappingContractCache {
   private readonly log: MappingAuditRecord[] = [];
   private readonly maxStaleMs: number;
   private readonly now: () => Date;
+  private readonly contracts: ResourceContractDeclarations;
+  private readonly ledger: ScopeBindingLedger;
 
-  constructor(opts: { maxStaleSeconds: number; now?: () => Date }) {
+  /**
+   * `ledger` keeps every scope value's contract binding across versions,
+   * withdrawals and restarts (#1847, #1866 review); it has no default, so a
+   * deployment names where its bindings live.
+   */
+  constructor(opts: {
+    maxStaleSeconds: number;
+    ledger: ScopeBindingLedger;
+    now?: () => Date;
+    contracts?: ResourceContractDeclarations;
+  }) {
     if (!Number.isInteger(opts.maxStaleSeconds) || opts.maxStaleSeconds <= 0) {
       throw new MappingContractError("maxStaleSeconds must be a positive integer");
     }
     this.maxStaleMs = opts.maxStaleSeconds * 1000;
     this.now = opts.now ?? (() => new Date());
+    this.contracts = opts.contracts ?? RESOURCE_CONTRACTS;
+    this.ledger = opts.ledger;
   }
 
   /** Install a newer contract version, or refuse it and say why. */
@@ -360,7 +407,7 @@ export class MappingContractCache {
     const at = this.now();
     let doc: MappingContractDocument;
     try {
-      doc = parseMappingContract(raw);
+      doc = parseMappingContract(raw, this.contracts, at);
     } catch (e) {
       const reason = (e as Error).message;
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
@@ -371,6 +418,74 @@ export class MappingContractCache {
       this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
       return { ok: false, reason };
     }
+    const refuse = (reason: string): { ok: false; reason: string } => {
+      this.log.push({ kind: "install_refused", at: at.toISOString(), reason });
+      return { ok: false, reason };
+    };
+    // @spec resource-access#resource-contract (#1847, D989, D1019): the
+    // ledger holds every binding and the version high-water mark this
+    // deployment has installed, whatever version, cache or process installed
+    // them. The install is judged and recorded in one commit under the
+    // ledger's write lock, against the history as it stands then, and a
+    // ledger that cannot be read, locked or written refuses it.
+    const digest = canonicalDigest(raw as JsonValue);
+    const incoming = scopeBindingsOf(doc);
+    let judged: { ok: true } | { ok: false; reason: string };
+    try {
+      judged = this.ledger.commit<{ ok: true } | { ok: false; reason: string }>((state) => {
+        const no = (reason: string) => ({ result: { ok: false as const, reason } });
+        // The high-water mark: an older version is refused, and so is
+        // another document under the recorded version; the identical
+        // document may load again, in another cache or after a restart.
+        const hw = state.highWater;
+        if (hw && doc.version < hw.version) {
+          return no(`mapping contract: version ${doc.version} is below the recorded version ${hw.version}`);
+        }
+        if (hw && doc.version === hw.version && digest !== hw.digest) {
+          return no(`mapping contract: version ${doc.version} is recorded with another document; a change takes a new version`);
+        }
+        const recorded = new Map(state.bindings.map((b) => [bindingKey(b), b]));
+        // A scope value's contract never changes: a version that maps a value
+        // recorded under another contract, under one where it was recorded
+        // with none, or under none where it was recorded with one, is
+        // refused, even where versions between withdrew the value. A new
+        // contract takes a new value, so a credential issued under the value
+        // never gains a contract.
+        for (const b of incoming) {
+          const was = recorded.get(bindingKey(b));
+          if (was && !sameBinding(was, b)) {
+            return no(
+              `mapping contract: version ${doc.version} repoints scope ${b.issuer} ${b.scope} to another contract; a new contract takes a new scope value`,
+            );
+          }
+        }
+        // A supported older mapping remains available while its contract is
+        // supported: a version that no longer maps a recorded value whose
+        // contract the declarations still support (current, or superseded
+        // within retention) is refused. A value recorded with none, or whose
+        // contract is no longer supported, may be withdrawn.
+        const mapped = new Set(incoming.map(bindingKey));
+        for (const was of recorded.values()) {
+          if (was.resource_contract === null || mapped.has(bindingKey(was))) continue;
+          const entry = { resource: was.resource, actions: [], resource_contract: was.resource_contract };
+          if (this.contracts.carriedViolation(entry, at) === undefined) {
+            return no(`mapping contract: version ${doc.version} withdraws scope ${was.issuer} ${was.scope}, whose contract is still supported`);
+          }
+        }
+        // Recorded before the snapshot serves, so no binding is ever relied
+        // on unrecorded.
+        return {
+          result: { ok: true as const },
+          record: {
+            bindings: incoming.filter((b) => !recorded.has(bindingKey(b))),
+            ...(hw === null || doc.version > hw.version ? { highWater: { version: doc.version, digest } } : {}),
+          },
+        };
+      });
+    } catch (e) {
+      return refuse(`mapping contract: the scope binding ledger cannot be read, locked or written: ${(e as Error).message}`);
+    }
+    if (!judged.ok) return refuse(judged.reason);
     this.highestVersion = doc.version;
     this.snapshot = new MappingSnapshot(doc, at.getTime(), this.maxStaleMs, (entry) => this.log.push(entry));
     this.log.push({
@@ -415,4 +530,16 @@ export class MappingContractCache {
   audit(): readonly MappingAuditRecord[] {
     return this.log;
   }
+}
+
+/** Every scope value `doc` maps, with the contract it states or none (#1847). */
+function scopeBindingsOf(doc: MappingContractDocument): ScopeBinding[] {
+  const out: ScopeBinding[] = [];
+  for (const [issuer, values] of Object.entries(doc.scopes.issuers)) {
+    const stated = ownValue(doc.scopes.contracts, issuer);
+    for (const scope of Object.keys(values)) {
+      out.push({ issuer, scope, resource: doc.scopes.resource, resource_contract: (stated && ownValue(stated, scope)) ?? null });
+    }
+  }
+  return out;
 }

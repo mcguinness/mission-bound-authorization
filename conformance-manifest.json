@@ -55,8 +55,8 @@
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "7fb899a89a52b917a2711977ed0aef449e874836",
-    "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
+    "revision": "040c91142da925de4b9e32fbf358fdce2e9f402f",
+    "content_sha256": "05784187f2dc142cc3887e93d8f8b0eee9bcefe33b39efb3d7ff1f07119b1c98"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "cb963b585961949baf7fdfa82223b544cf8a4712",
@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "14b64c99afa1b8e4033b7e8f9e8767b68eef3290",
-    "content_sha256": "07372758b94daa68b313365e60817e67d29be6f209305acba22f74b9ef2a83fc"
+    "revision": "317b32d43274b867bfdbf8fcbcffe9c3f1d4f408",
+    "content_sha256": "52938b83baf22e9af8f251e28ae6217b1fe9f60eaa3269ffd25da421db8da73a"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "7c97a20bd5274cea953f08947f09356ad1325d84",
@@ -5057,7 +5057,7 @@
    "surface": "lifecycle-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim. Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface."
+    "normative": "A binding claiming this profile MUST map its state observations onto the existing Status, introspection, Mission Status List, or Signals semantics, rather than define a parallel signed state-snapshot protocol. A binding-native realization can map those semantics without adopting another binding's endpoint or claim."
    },
    "level": "cross-component",
    "coverage": "partial",
@@ -5069,7 +5069,79 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. Not witnessed: the consumer-side clauses (#1747), that push delivery is not the sole evidence of active state after freshness confidence is lost and that conflicting observations are reconciled by version and freshness, never by the more permissive surface. The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+   "notes": "Partial (#250): the issuer's mapping is witnessed. One committed transition is reported at one version by the Status observation and introspection, by its bit on the Mission Status List, and by the lifecycle commit that is the Signals event's source; a refused stale request moves none of them. Each surface's leg is proved by disabling it, as is the refusal ordering. That no parallel snapshot protocol exists is a documented deployment-inventory conclusion (control-plane-deployment.md, Deployment declaration; accepted, D874), not a test. The consumer-side clauses are their own row, control-plane.consistency.state-surfaces-consumer (#1747). The test reads the surfaces in the kernel, not over HTTP. No waiver of existing binding-level requirements."
+  },
+  {
+   "id": "control-plane.consistency.state-surfaces-consumer",
+   "spec": "draft-mcguinness-mission-control-plane.md",
+   "anchor": "state-surfaces",
+   "text": "Push delivery supplies invalidation and ordered-transition information; it is not the sole evidence of active state after freshness confidence is lost. Conflicting observations are reconciled under the version and freshness rules, never by selecting the more permissive surface.",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "control-plane.consistency"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer does not rely on push-derived state alone once its freshness confidence is lost, and reconciles a Status observation with retained state by version, never by taking the more permissive one",
+    "local": "the Signals receiver's lease (#1747) gives no lease while the rematerialization latch or a version gap is open, or once an active state's reliance bound has passed, and reports the issuer's observation time and bound unchanged at every read; Mission Status (resynchronize, under a nonce from statusNonce) re-establishes the state: a response below the stored version is refused whatever its state, one at the stored version refreshes the observation time and bound and clears the gap, and one above it replaces the state, a higher-version active over a stored suspended included. A Status refresh never clears the rematerialization latch, since a state-only response carries no effective authority: the consumer acknowledges it (markRematerialized) once it refreshed its audience-scoped effective authority (D950). A refresh that advances past the receiver's known history (a Mission it holds no row for, or a version above the stored one) raises the latch, or advances an open latch's marker, to the observed version, since the events it skipped may have narrowed authority: accepting newer state does not establish newer authority, so the lease waits for an acknowledgement covering that version (#1824 review). A version gap holds across later events, contiguous ones included, until Status covers it, and also latches rematerialization, since the missing event may have narrowed authority; a Mission released after a restore is latched at the released version. A row a store wrote before the observation columns gives no lease until a Status refresh"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > gives no lease while the rematerialization latch is set; a state-only Mission Status refresh does not clear it, only the consumer's acknowledgement does (D950)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > keeps a version gap across later contiguous events until a Mission Status refresh covers it, and latches rematerialization for the missing event (D950)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > reports the issuer's observation time and reliance bound at every read, and gives no lease past the bound",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > re-establishes a push-only state past its bound from a Mission Status refresh, at the Status observation point",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > never lets an older Status observation override newer retained state, and takes a newer one whatever its state",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > gives no lease for a row a store wrote before the observation columns existed, until a Mission Status refresh",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > raises the rematerialization latch at the observed version when a state-only Status refresh advances past the receiver's known history, so a narrowing it never received opens no lease (#1824 review)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > advances an open latch's marker to the observed version when a Status refresh passes a later narrowing it never received, so an acknowledgement of only the earlier one opens no lease (#1824 review)",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "Split from control-plane.consistency.state-surfaces, whose role is the binding (#1747, D942). Partial: Freshness confidence is anchored to each observation: the issuer's observation point (a SET's committed_at, a Status response's iat) plus the issuer's advertised mission_max_stale_seconds for an active state, never past expires_at. That is a stricter stand-in for the Signals rule, which anchors freshness to stream liveness (verification and heartbeat events); the receiver does not read those events, so a live stream's silence never extends a lease here. The consumer performs the Status read; the receiver verifies and applies it. Package-only: no shipped service runs a receiver. Each gate is proved by removing it, the two owner-review probes of D950 and the two of the #1824 review included."
   },
   {
    "id": "control-plane.consistency.rollback",
@@ -5342,9 +5414,15 @@
      "name": "Signals receiver restore admission: review fixes (@spec control-plane#rollback, D910) > stops writing when the witness changes underneath a running receiver",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > never lets an older Status observation override newer retained state, and takes a newer one whatever its state",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "Partial (D898, D910): for a receiver configured with its recovery witness, recovery from an older backup of the consumer's store is witnessed: the owner's reproduction is held and the Status read re-establishes the termination; a Mission absent from the restored store is held; an unavailable or unverifiable Status response, one past its freshness bound, an interrupted recovery, a response to a request made before a later restore and one behind the store release nothing; a store it witnesses refuses an unwitnessed open; one witnessed writer is admitted; each proved by removing its check. The owner's ruling (D910): the row stays partial, because the package also supports a receiver configured without a witness, which does not detect a restore; explicitly scoped coverage for witnessed receivers can be tested separately, and qualifying only this row's local observation does not remove that residual. No shipped service runs a receiver. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. The rollback paragraph's next sentence (a legitimate higher-version resume to active is accepted) has no receiver test of its own and stays on the rollback row's observation."
+   "notes": "Partial (D898, D910): for a receiver configured with its recovery witness, recovery from an older backup of the consumer's store is witnessed: the owner's reproduction is held and the Status read re-establishes the termination; a Mission absent from the restored store is held; an unavailable or unverifiable Status response, one past its freshness bound, an interrupted recovery, a response to a request made before a later restore and one behind the store release nothing; a store it witnesses refuses an unwitnessed open; one witnessed writer is admitted; each proved by removing its check. The owner's ruling (D910): the row stays partial, because the package also supports a receiver configured without a witness, which does not detect a restore; explicitly scoped coverage for witnessed receivers can be tested separately, and qualifying only this row's local observation does not remove that residual. No shipped service runs a receiver. Split from control-plane.consistency.rollback, whose role is the Mission Issuer. The Signals receiver is the reference's retaining consumer; a consumer that does not retain state has no high-water to keep. A lower-version Mission Status observation is refused too, and the paragraph's next sentence (a legitimate higher-version resume to active is accepted) is witnessed for the receiver by the consumer-reliance version test (#1747); it stays on the rollback row's observation, whose role is the issuer."
   },
   {
    "id": "control-plane.consistency.tombstones",
@@ -10008,9 +10086,9 @@
    "id": "core.mission-record.members-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "Its members are immutable after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
+   "text": "Its members MUST NOT be changed after creation, except `state` and the `termination` member written once when the Mission terminates ({{termination}}).",
    "role": "AS",
-   "strength": "stated",
+   "strength": "MUST NOT",
    "applicability": {
     "kind": "unconditional"
    },
@@ -10056,7 +10134,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member; keyword-free here. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
+   "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Takes MUST NOT under #1879 (D1014), the exceptions unchanged. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
   },
   {
    "id": "core.mission-record.authority-source-immutable",
@@ -24980,6 +25058,84 @@
    "notes": "#705 (D359). The reference implementation has no Management bulk endpoint. #705 closed under D675: this witness is deferred, not passed; it is tracked here until the reference implementation builds the surface."
   },
   {
+   "id": "signals.consumer.stale-after-max-stale",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A consumer MUST treat cached Mission state as stale once the stream has gone without a verified verification or heartbeat event for longer than the Mission Issuer's advertised `mission_max_stale_seconds`",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer stops relying on cached Mission state that is older than the issuer's mission_max_stale_seconds without liveness evidence",
+    "local": "the receiver's lease bounds an active state at its observation point plus maxStaleSeconds (the issuer's advertised mission_max_stale_seconds, default 300), never past expires_at, and reports the same observation time and bound at every read"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > reports the issuer's observation time and reliance bound at every read, and gives no lease past the bound",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > re-establishes a push-only state past its bound from a Mission Status refresh, at the Status observation point",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > gives no lease for a row a store wrote before the observation columns existed, until a Mission Status refresh",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1747 (D942). Partial: Freshness confidence is anchored to each observation: the issuer's observation point (a SET's committed_at, a Status response's iat) plus the issuer's advertised mission_max_stale_seconds for an active state, never past expires_at. That is a stricter stand-in for the Signals rule, which anchors freshness to stream liveness (verification and heartbeat events); the receiver does not read those events, so a live stream's silence never extends a lease here. Package-only: no shipped service runs a receiver."
+  },
+  {
+   "id": "signals.consumer.reestablish-before-reliance",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "Once its cached state is stale, the consumer MUST re-establish current state before further reliance.",
+   "role": "RS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer whose cached state is stale re-establishes current state before relying on it again",
+    "local": "past the bound the receiver gives no lease until a verified Mission Status response re-establishes the state (resynchronize), which refreshes the observation time and bound"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > re-establishes a push-only state past its bound from a Mission Status refresh, at the Status observation point",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > reports the issuer's observation time and reliance bound at every read, and gives no lease past the bound",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1747 (D942). Partial: Freshness confidence is anchored to each observation: the issuer's observation point (a SET's committed_at, a Status response's iat) plus the issuer's advertised mission_max_stale_seconds for an active state, never past expires_at. That is a stricter stand-in for the Signals rule, which anchors freshness to stream liveness (verification and heartbeat events); the receiver does not read those events, so a live stream's silence never extends a lease here. Package-only: no shipped service runs a receiver."
+  },
+  {
    "id": "management.bulk.version-pinned-per-member",
    "spec": "draft-mcguinness-oauth-mission-management.md",
    "anchor": "dry-run",
@@ -25083,9 +25239,15 @@
      "name": "Signals receiver state in the consumer's store (#250) > keeps the high-water, the observation, the gap and rematerialization markers, the retained SET and the seen jti values across a restart",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > gives no lease while the rematerialization latch is set; a state-only Mission Status refresh does not clear it, only the consumer's acknowledgement does (D950)",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance. With a file-backed receiver store (#250) the latch and its marker survive a restart, and an acknowledgement that covers the marker clears it durably."
+   "notes": "#562: implemented and tested is the DETECTION half only (the receiver flags the need). Not covered: the actual Mission Status refetch (no consumer in this repo calls it off this signal). See signals.discharge.producer-authority-changed-emit and signals.discharge.producer-gating-undeclared-stream for the producer-side rows this issue left todo (no discharge funnel or mission_capabilities_supported gate exists in src/). #572 (review of #562) fixed two defects and added markRematerialized(missionId, observedBaseline) so the latch this row's tests exercise is no longer permanent; also fixed contain()'s authority_changed to key on an actual EFFECTIVE-set narrowing rather than merely reaching the metadata-only commit path (see containment.test.ts and this file's builder-emission describe block). Coverage stays 'partial': the acknowledgement is still consumer-invoked bookkeeping over the detect-only latch, and the actual Mission Status refetch this row's normative text requires 'before further consequential reliance' remains unwired in this repo. #287 residual (discharge implementation): the producer side is now real, so this row gains an end-to-end mapping in which a KERNEL DISCHARGE commit (not only a contain commit) drives the receiver to latch rematerialization, which is the case the rule was written for. Coverage stays 'partial' for the unchanged reason: the receiver DETECTS the need and no consumer in this repo performs the Mission Status refetch the clause requires before further consequential reliance. With a file-backed receiver store (#250) the latch and its marker survive a restart, and an acknowledgement that covers the marker clears it durably. #1747 (D942, D950): the receiver withholds its lease while the latch is set. A Mission Status response re-establishes state but never clears the latch, since a state-only response carries no effective authority; the latch clears only on the consumer's acknowledgement (markRematerialized) after it refreshed its audience-scoped effective authority, so no lease is relied on before that. The refresh itself is still the consumer's, so the row stays partial."
   },
   {
    "id": "signals.discharge.producer-authority-changed-emit",
@@ -32433,7 +32595,7 @@
     },
     {
      "file": "src/packages/mission-core/test/resource-contract.test.ts",
-     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree",
+     "name": "declared contract versions (@spec runtime#resource-contract, #249) > accepts a required operation any current or superseded version defines, without every supported version defining it, and both readers then agree on every required operation",
      "level": "unit",
      "surface": "deployment-documentation"
     },
@@ -37858,9 +38020,15 @@
      "name": "the PDP decides the contract across the decision channel (@spec runtime#resource-contract, authzen#context-resource-contract, authzen#context-approval, #249) > a reference the PEP resolves and the PDP's declarations no longer do is denied resource_contract_drift, parameters identical: a v1 entry at a PDP serving only v2",
      "level": "cross-component",
      "surface": "decision-request"
+    },
+    {
+     "file": "src/services/pdp/test/evaluate-resource-contract.test.ts",
+     "name": "a joined credential and the Mission entry agree only on the same contract, absence included (@spec runtime#resource-contract, authzen#context-resource-contract, #1847, D989) > whichever reference the request presents, %s",
+     "level": "unit",
+     "surface": "decision-request"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Absent while the entry references a contract, unequal to the entry's though it resolves, unequal to the credential's, and not resolving: each is denied resource_contract_drift with no permit. Proved by relying on the first matched entry whatever its reference, and by keeping credential entries under another reference. Re-proved under #1375's narrowing: judging only the first applicable entry's reference fails the witness that relies on the applicable entry whose reference equals the request's."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Absent while the entry references a contract, unequal to the entry's though it resolves, unequal to the credential's, and not resolving: each is denied resource_contract_drift with no permit. Proved by relying on the first matched entry whatever its reference, and by keeping credential entries under another reference. Re-proved under #1375's narrowing: judging only the first applicable entry's reference fails the witness that relies on the applicable entry whose reference equals the request's. #1847 (D989): a joined credential's bound and the Mission entry agree only on the same contract, absence included: a pinned entry with an unpinned bound, an unpinned entry with a pinned bound, and an entry and a bound on two supported versions are each denied resource_contract_drift whichever of the two references the request presents, and an unpinned entry with an unpinned bound permits (control). Proved by mutation, each alone: ignoring the Mission entry's reference when deciding whether a contract applies, or ignoring the credential's reference, fails the witness."
   },
   {
    "id": "authzen.context-resource-contract.binding-and-cache-key",
@@ -67550,7 +67718,8 @@
    "surface": "par",
    "assertion": "output-bound",
    "observation": {
-    "normative": "for a resource whose configuration requires a reference, the approved Authority Set entry carries the configured current contract's id, version and digest even when the proposal carried none"
+    "normative": "for a resource whose configuration requires a reference, the approved Authority Set entry carries the configured current contract's id, version and digest even when the proposal carried none",
+    "local": "the requirement is per resource (#1847, D989): where configuration requires a reference for any operation of the entry's resource, a read-only entry and a mixed read and write entry record the current reference alike; an entry no single current contract defines whole, or that two current contracts cover, is refused invalid_authorization_details with no Mission created, never approved without a reference or under combined contracts"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -67620,9 +67789,27 @@
      "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > an Expansion's ceiling re-consent renders the assembled offer, and its decision refuses a configuration change since the render",
      "level": "unit",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "an approval records the reference for every entry on a resource that requires one for any operation (@spec resource-access#resource-contract, #1847, D989) > records the current reference in a read-only entry and in a mixed read and write entry alike, the execute alone being required",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "an approval records the reference for every entry on a resource that requires one for any operation (@spec resource-access#resource-contract, #1847, D989) > refuses an entry the current contract does not cover whole, and one two current contracts cover, never leaving it unpinned or combining them",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a reference-requiring resource pins new read-only approvals and leaves earlier ones unpinned through refresh and exchange (@spec resource-access#resource-contract, #1847, D989) > a new read-only approval records the current reference, the read itself not being required",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for the entry's action, the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses. A progressive ceiling consent (#249 B.4, D875) is a new approval: the offer is assembled before the authorization page and an Expansion's review render it, and the consent commits the assembled ceiling. Proved by mutation, each alone: the page's offer, the review's offer or assembledCeilingOffer not assembling, or a consent commit not handed the declarations, fails a witness."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). Where configuration requires a reference for any operation of the entry's resource (#1847, D989: the approval rule is per resource, enforcement per operation), the rendered set (kernel.derive), the approved record and the issued token carry the current reference; where it does not, none is attached. Enforcement is optional as shipped: the declaration requires no reference, so the endpoint witness configures one that does; mandatory adoption and the migration of unpinned approvals are separate (#249). Proved by not recording it. Template consent (#249 B.1, D875) is a new approval: the proposal, the consent page and the commit assemble the ceiling's references, the commit of the service-token stand-in and of the boot seed (no page) assembles at the commit only, and the template commits exactly the rendered ceiling. Proved by mutation, each alone: the proposal, the page, the decision's commit, the stand-in's commit, or createTemplate not assembling fails a witness. Governed adjudication (#249 B.2, D875) is a new approval: the bounded set is assembled before any rule or model evaluates it, so the preview, the committed Authority Set and the re-check carry the same reference. Proved by mutation: removing the assembly fails the witness. An Expansion (#249 B.3, D875) is a new approval: successorAuthority, which its page, decision, completion check and createExpansion share, assembles the successor's references. Proved by mutation: removing that assembly fails the witnesses. A progressive ceiling consent (#249 B.4, D875) is a new approval: the offer is assembled before the authorization page and an Expansion's review render it, and the consent commits the assembled ceiling. Proved by mutation, each alone: the page's offer, the review's offer or assembledCeilingOffer not assembling, or a consent commit not handed the declarations, fails a witness. #1847 (D989): with only the execute required, a read-only entry and a mixed read and write entry record the current reference, at the kernel and through /token, and an uncovered or doubly covered entry is refused with no Mission. Proved by mutation, each alone: deciding the requirement per listed action fails the read-only witnesses; approving an uncovered entry without a reference, or taking the first of two current contracts, fails the refusal witness."
   },
   {
    "id": "resource-access.resource-contract.authority-hash-commits",
@@ -67767,7 +67954,7 @@
    "text": "An entry approved without a reference gains one only through a new approval of an entry that carries it",
    "observation": {
     "normative": "no derivation gives a reference to an entry approved without one: a child of a parent entry without resource_contract carries none",
-    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; refresh and token exchange of an unpinned grant are the cutover PR's to witness (D875)"
+    "local": "witnessed for child delegation and a ceiling drawdown (a ceiling consented without a reference yields drawdowns without one, #249 B.4), and for an Expansion, the new approval through which an unpinned predecessor's successor gains one while the predecessor is not re-pinned; and, once configuration requires a reference for an operation of the resource, a refresh and a Token Exchange through a delegation handle of a grant approved without one, and a template Dispatch from a ceiling consented without one, carry none, with the Mission record and its authority_hash unchanged (#1847, D989); the delegated exchange without a handle, the designation exchange, a child-creation exchange and carryover of a grant approved without a reference are not yet witnessed"
    },
    "tests": [
     {
@@ -67787,9 +67974,21 @@
      "name": "progressive ceiling consent assembles the ceiling's references and a drawdown preserves them (@spec resource-access#resource-contract, #249, D875) > a drawdown carries the consented ceiling's reference, and one consented without a reference stays without one",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract-endpoint.test.ts",
+     "name": "a reference-requiring resource pins new read-only approvals and leaves earlier ones unpinned through refresh and exchange (@spec resource-access#resource-contract, #1847, D989) > a Mission approved without a reference before the requirement keeps none through a refresh and a Token Exchange after it",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/resource-contract.test.ts",
+     "name": "template consent assembles the ceiling's references and Dispatch preserves them (@spec resource-access#resource-contract, #249, D875) > a Dispatch from a ceiling consented without a reference carries none after configuration requires one for the resource (#1847)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1751, D875 (fresh approval, never retroactive pinning). Partial until refresh and token exchange are witnessed."
+   "notes": "#1751, D875 (fresh approval, never retroactive pinning). #1847 (D989): refresh and a Token Exchange through a delegation handle are witnessed through /token, and template Dispatch at the kernel, each after configuration starts requiring a reference for the resource. Proved by mutation, each alone: re-assembling the refreshed grant's projection fails the refresh assertion; re-assembling the delegation family's token authority fails the exchange assertion; re-assembling the Dispatch instance fails the Dispatch witness; and re-assembling the effective Authority Set every token path reads fails the endpoint witness. Partial until the other derivations are witnessed: re-assembling at the delegated exchange without a handle, at a child-creation derivation, or at mintMissionAccessToken is caught by no witness, and carryover of an unpinned grant is untested."
   },
   {
    "id": "resource-access.resource-contract.unimplemented-refused-not-dropped",

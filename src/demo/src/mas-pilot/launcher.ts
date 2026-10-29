@@ -42,6 +42,7 @@ import { TOPOLOGY } from "@mission/demo-data";
 import type { JWK } from "jose";
 import type { ResourcePolicyStore } from "../resource-policy-store.js";
 import { composeMasPilot, type MasPilotParts, requireDeclaredMappingContract } from "./compose.js";
+import { type ScopeBindingLedger, scopeBindingsFromEnv } from "./scope-binding-ledger.js";
 import { loadMasPilotConfig, type MasPilotConfig, relocateMissionIssuer } from "./config.js";
 import { buildPilotMas, masIssuer, newStatusClientKey } from "./mas-as.js";
 import { masConsoleRoutes, type OperatorConsole, pilotConsoleRoutes, startOperatorConsole } from "./operator-console.js";
@@ -58,6 +59,12 @@ export interface MasPilotLaunchOptions {
   configPath?: string;
   openfga: { apiUrl: string; presharedKey: string; caCertPath?: string };
   resourcePolicyStore: ResourcePolicyStore;
+  /**
+   * @spec resource-access#resource-contract (#1847, #1866 review): the scope
+   * binding ledger, and the environment a MAS process this launcher starts
+   * opens the same one with.
+   */
+  scopeBindings: { ledger: ScopeBindingLedger; env: Record<string, string> };
   /** The MAS's signing keys and kernel file, where this launcher runs the MAS. */
   signingKeys?: SigningKeySource;
   kernelStore?: KernelStoreConfig;
@@ -119,6 +126,10 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
     );
   }
 
+  // @spec resource-access#resource-contract (#1847, #1866 review): the scope
+  // binding ledger, a file, or one in memory only when asked for by name.
+  const scopeBindings = scopeBindingsFromEnv(env);
+
   const masUrl = env.MAS_PILOT_MAS_URL;
   const pdpKeyRaw = env.MAS_PILOT_PDP_KEY;
   if (topology === "in-process" && (masUrl !== undefined || pdpKeyRaw !== undefined)) {
@@ -144,6 +155,7 @@ export function masPilotLaunchOptions(env: Readonly<Record<string, string | unde
     ...(configPath ? { configPath } : {}),
     openfga: { apiUrl, presharedKey: env.OPENFGA_PRESHARED_KEY ?? TOPOLOGY.openfga.presharedKey, ...(ca ? { caCertPath: ca } : {}) },
     resourcePolicyStore,
+    scopeBindings,
   };
   // @spec authority-server#join-assertion (#1454): the path runs separated
   // only; a running MAS's introspection secret comes from the environment,
@@ -320,7 +332,15 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
     let masProcess: ChildProcess | undefined;
     let masConsole: string | undefined;
     let pilotConsole: OperatorConsole;
-    const common = { openfga: options.openfga, resourcePolicyStore: options.resourcePolicyStore, config, startup: scope };
+    // The launch owns the ledger it was handed: closed with everything else.
+    scope.register(() => options.scopeBindings.ledger.close());
+    const common = {
+      openfga: options.openfga,
+      resourcePolicyStore: options.resourcePolicyStore,
+      scopeBindings: options.scopeBindings.ledger,
+      config,
+      startup: scope,
+    };
     if (options.topology === "in-process") {
       if (options.kernelStore) mkdirSync(dirname(options.kernelStore.file), { recursive: true });
       const mas = await scope.acquire(
@@ -349,11 +369,19 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         const pdp = await newStatusClientKey(config.separated_mas.pdp_client_id, { disclose: ["provenance"] });
         pdpKey = pdp.privateJwk;
         const env: NodeJS.ProcessEnv = { ...process.env };
-        for (const name of ["NODE_OPTIONS", ...KEY_ENV, "MAS_PILOT_CONFIG", "MAS_PILOT_JOIN_INTROSPECTION_SECRET"]) delete env[name];
+        for (const name of [
+          "NODE_OPTIONS",
+          ...KEY_ENV,
+          "MAS_PILOT_CONFIG",
+          "MAS_PILOT_JOIN_INTROSPECTION_SECRET",
+          "MAS_PILOT_SCOPE_BINDINGS",
+          "MAS_PILOT_DEVELOPMENT_STORE",
+        ])
+          delete env[name];
         // @spec authority-server#join-assertion-request (#1454): the MAS's
         // introspection client secret, generated here for the MAS and the estate.
         if (config.join_assertion) joinIntrospectionSecret = crypto.randomUUID();
-        Object.assign(env, options.masKeyEnv ?? {}, {
+        Object.assign(env, options.masKeyEnv ?? {}, options.scopeBindings.env, {
           ...(options.configPath ? { MAS_PILOT_CONFIG: options.configPath } : {}),
           MAS_PILOT_STATUS_CLIENTS: JSON.stringify([pdp.registration]),
           MAS_PILOT_OPERATOR_TOKEN: token,
@@ -399,6 +427,7 @@ export async function launchMasPilot(options: MasPilotLaunchOptions, control: Ma
         `  gateway            ${pilot.gateway.url}  (estate credentials, joined under the mapping contract)`,
         `  resource route     ${pilot.resourceRoute.url}  (Mission-bound credentials only)`,
         `  Resource policy    ${pilot.resourcePolicy.development ? "development store" : "attached store"} ${pilot.resourcePolicy.storeId} model ${pilot.resourcePolicy.modelId}`,
+        `  scope bindings     ${options.scopeBindings.ledger.describe()}`,
         ...(config.join_assertion
           ? [
               `  Join Assertions    requested by the PEP from the MAS; required ${

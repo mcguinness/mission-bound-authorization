@@ -25,6 +25,7 @@ import { CANONICAL_RESOURCE, type DecisionEvidence, type RefusalRecord } from "@
 import { type EvaluationRequest, type MissionView, policyViewId, privateKeyJwtClient } from "@mission/pdp";
 import { decodeJwt, generateKeyPair, importJWK, type JWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { MemoryScopeBindingLedger } from "../src/mas-pilot/scope-binding-ledger.js";
 import { loadMasPilotConfig, type MasPilotConfig } from "../src/mas-pilot/config.js";
 import { newStatusClientKey } from "../src/mas-pilot/mas-as.js";
 import { type MasProcess, startMasProcess } from "../src/mas-pilot/mas-process.js";
@@ -214,7 +215,7 @@ beforeAll(async () => {
   mas = await startMasProcess(masOptions);
   pilot = await composeSeparatedMasPilot({
     openfga: OPENFGA,
-    resourcePolicyStore: { bootstrap: "development" },
+    resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
     observeDecisionRequest: (r) => requests.push(r),
     config,
     now,
@@ -342,7 +343,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
   it("an unenrolled PDP reads no Subject or client, so the join denies mission_binding_failed and nothing is permitted", async () => {
     const other = await composeSeparatedMasPilot({
       openfga: OPENFGA,
-      resourcePolicyStore: { bootstrap: "development" },
+      resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
       // Another Status client: it holds mission_status, and no enrollment.
       config: { ...separatedConfig(UNENROLLED_ESTATE_PORT), separated_mas: { ...separatedConfig(UNENROLLED_ESTATE_PORT).separated_mas, pdp_client_id: READER_CLIENT } },
       now,
@@ -370,7 +371,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     const via = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`;
     const slow = await composeSeparatedMasPilot({
       openfga: OPENFGA,
-      resourcePolicyStore: { bootstrap: "development" },
+      resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
       config: separatedConfig(TIMEOUT_ESTATE_PORT, 300),
       now,
       mas: { url: MAS_URL, pdpKey },
@@ -423,7 +424,7 @@ d("the separated MAS pilot: a PDP the MAS has not enrolled, a slow source, an an
     const at = `http://127.0.0.1:${(double.address() as AddressInfo).port}`;
     const forged = await composeSeparatedMasPilot({
       openfga: OPENFGA,
-      resourcePolicyStore: { bootstrap: "development" },
+      resourcePolicyStore: { bootstrap: "development" }, scopeBindings: new MemoryScopeBindingLedger(),
       config: separatedConfig(DOUBLE_ESTATE_PORT),
       now,
       mas: { url: MAS_URL, pdpKey },

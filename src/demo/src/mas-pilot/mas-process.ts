@@ -28,6 +28,11 @@ export interface MasProcessOptions {
   kernelWitness?: string;
   /** The MAS's introspection client secret at the estate, where the configuration declares `join_assertion` (#1454). */
   joinIntrospectionSecret?: string;
+  /**
+   * The scope binding ledger's file, which the MAS's Join Assertion path reads
+   * where the configuration declares `join_assertion` (#1847, #1866 review).
+   */
+  scopeBindings?: string;
   /** Serve the MAS's operator console on an ephemeral loopback port behind a bearer generated here (#1561). */
   operatorConsole?: boolean;
 }
@@ -57,6 +62,8 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     "MAS_PILOT_JOIN_INTROSPECTION_SECRET",
     "MAS_PILOT_OPERATOR_TOKEN",
     "MAS_PILOT_OPERATOR_CONSOLE_PORT",
+    "MAS_PILOT_SCOPE_BINDINGS",
+    "MAS_PILOT_DEVELOPMENT_STORE",
   ]) {
     delete env[name];
   }
@@ -69,6 +76,7 @@ export async function startMasProcess(opts: MasProcessOptions): Promise<MasProce
     ...(opts.kernelStore ? { MISSION_KERNEL_STORE: opts.kernelStore } : {}),
     ...(opts.kernelWitness ? { MISSION_KERNEL_WITNESS: opts.kernelWitness } : {}),
     ...(opts.joinIntrospectionSecret ? { MAS_PILOT_JOIN_INTROSPECTION_SECRET: opts.joinIntrospectionSecret } : {}),
+    ...(opts.scopeBindings ? { MAS_PILOT_SCOPE_BINDINGS: opts.scopeBindings } : {}),
     ...(consoleToken ? { MAS_PILOT_OPERATOR_TOKEN: consoleToken, MAS_PILOT_OPERATOR_CONSOLE_PORT: "0" } : {}),
   });
   const child = spawn(process.execPath, ["--import", TSX_LOADER, SERVE_ENTRY], { env, stdio: ["ignore", "pipe", "pipe", "ipc"] });

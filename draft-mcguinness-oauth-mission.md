@@ -4604,8 +4604,8 @@ older than the ceiling. Where ceilings are declared:
 # Mission Record {#mission-record}
 
 A Mission is the durable record created at the approval event; a
-Mission Identifier ({{mission-id}}) identifies it. Its members are
-immutable after creation, except `state` and the `termination` member
+Mission Identifier ({{mission-id}}) identifies it. Its members MUST NOT
+be changed after creation, except `state` and the `termination` member
 written once when the Mission terminates ({{termination}}).
 
 The record is a logical object: this document constrains its members
@@ -7693,6 +7693,11 @@ resolve before interoperating.
   (Issuance Gating). Editorial, no requirement change: Instance Context
   in Delegated Tokens names the grant lineage a delegated exchange
   establishes when it issues a refresh token (#1871, D1005).
+- Mission Record: its members MUST NOT be changed after creation,
+  except `state` and the `termination` member written once, with no
+  new requirement; a companion's containment overlay or suspension
+  schedule is issuer-held state associated with the Mission, outside
+  the record (#1873, #1879, D1014).
 
 -01
 
