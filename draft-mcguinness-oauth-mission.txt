@@ -1497,8 +1497,8 @@ Table of Contents
    Mission that is not active keeps the refusal of Section 8.3.  The
    rule applies to every audience the token would carry, including one
    the AS infers or applies by default when the request names no
-   resource: the AS refuses the request if any of them is Mission-
-   governed, and does not issue the token for the others.  On a refresh,
+   resource: the AS MUST refuse the request if any of them is Mission-
+   governed, and MUST NOT issue the token for the others.  On a refresh,
    the AS MUST decide this refusal before it consumes or rotates the
    refresh token.
 
@@ -2973,7 +2973,8 @@ Table of Contents
    Lifecycle Endpoint") and Derivation Limits does for an exhausted
    limit ([I-D.draft-mcguinness-oauth-mission-derivation-limits],
    Section "Enforcement at Issuance").  A Mission in a state from which
-   it can return to active is never reported with a termination reason.
+   it can return to active MUST NOT be reported with a termination
+   reason.
 
    The mission_error member is diagnostic only and optional, whichever
    document defines its value: it grants nothing, an unrecognized value
@@ -4647,10 +4648,12 @@ Table of Contents
       association with the delegate and output key cannot be
       established.  Section 10 gives the error codes for these refusals.
 
-   *  If the exchange issues a refresh token, the grant-continuity rules
-      of Section 5.1 of [I-D.draft-mcguinness-oauth-client-instance-id]
-      apply alongside Section 8.2; instance continuity alone does not
-      authorize replacement of the recorded instance or key rebinding.
+   *  If the exchange issues a refresh token, and so establishes a
+      redeemable grant lineage (Section 8.2.2), the grant-continuity
+      rules of Section 5.1 of
+      [I-D.draft-mcguinness-oauth-client-instance-id] apply alongside
+      Section 8.2; instance continuity alone does not authorize
+      replacement of the recorded instance or key rebinding.
 
    *  Consumers establish presenter attribution under Sections 7.3 and
       7.5 of [I-D.draft-mcguinness-oauth-client-instance-id].  A
@@ -8597,6 +8600,16 @@ Appendix F.  Document History
       response list of Mission Identifier and Expiry in Responses, and
       Self-Exchange Down-Scoping points to its mission_intent exemption
       in Authority Proposal (#1723, D971).
+
+   *  Two rules already stated as obligations carry BCP 14 keywords,
+      with no new requirement: the AS refuses a token request outside a
+      Mission any of whose audiences is Mission-governed, and issues no
+      token for the others (Authority Proposal); and a Mission in a
+      state from which it can return to active is not reported with a
+      termination reason (Issuance Gating).  Editorial, no requirement
+      change: Instance Context in Delegated Tokens names the grant
+      lineage a delegated exchange establishes when it issues a refresh
+      token (#1871, D1005).
 
    -01
 

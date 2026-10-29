@@ -3303,10 +3303,10 @@ or expired grant keeps its error, and a request under a grant bound to
 a Mission that is not <code>active</code> keeps the refusal of
 <a href="#issuance-gating" class="auto internal xref">Section 8.3</a>. The rule applies to every audience the token
 would carry, including one the AS infers or applies by default when the
-request names no <code>resource</code>: the AS refuses the request if any of them
-is Mission-governed, and does not issue the token for the others. On a
-refresh, the AS <span class="bcp14">MUST</span> decide this refusal before it consumes or rotates
-the refresh token.<a href="#section-4.3-10" class="pilcrow">¶</a></p>
+request names no <code>resource</code>: the AS <span class="bcp14">MUST</span> refuse the request if any of
+them is Mission-governed, and <span class="bcp14">MUST NOT</span> issue the token for the others.
+On a refresh, the AS <span class="bcp14">MUST</span> decide this refusal before it consumes or
+rotates the refresh token.<a href="#section-4.3-10" class="pilcrow">¶</a></p>
 <p id="section-4.3-11">A token request under an existing Mission-bound grant, such as a
 narrowing refresh, a self-exchange (<a href="#self-exchange" class="auto internal xref">Section 12.4</a>) or an exchange
 for a delegation designation (<a href="#designation" class="auto internal xref">Section 12.1</a>), needs no
@@ -5059,7 +5059,7 @@ Mission (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-status" class="cite
 exhausted limit
 (<span>[<a href="#I-D.draft-mcguinness-oauth-mission-derivation-limits" class="cite xref">I-D.draft-mcguinness-oauth-mission-derivation-limits</a>]</span>, Section
 "Enforcement at Issuance"). A Mission in a state from which it can
-return to <code>active</code> is never reported with a termination reason.<a href="#section-8.3-7" class="pilcrow">¶</a></p>
+return to <code>active</code> <span class="bcp14">MUST NOT</span> be reported with a termination reason.<a href="#section-8.3-7" class="pilcrow">¶</a></p>
 <p id="section-8.3-8">The <code>mission_error</code> member is diagnostic only and optional, whichever
 document defines its value: it grants nothing, an unrecognized value
 is ignored and is not authoritative about the Mission's state, and it
@@ -6961,7 +6961,9 @@ association with the delegate and output key cannot be established.
 <a href="#error-mapping" class="auto internal xref">Section 10</a> gives the error codes for these refusals.<a href="#section-12.3-4.3.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-12.3-4.4">
-            <p id="section-12.3-4.4.1">If the exchange issues a refresh token, the grant-continuity rules of
+            <p id="section-12.3-4.4.1">If the exchange issues a refresh token, and so establishes a
+redeemable grant lineage (<a href="#grant-binding-related" class="auto internal xref">Section 8.2.2</a>), the
+grant-continuity rules of
 <span><a href="https://datatracker.ietf.org/doc/html/draft-mcguinness-oauth-client-instance-id-00#section-5.1" class="relref">Section 5.1</a> of [<a href="#I-D.draft-mcguinness-oauth-client-instance-id" class="cite xref">I-D.draft-mcguinness-oauth-client-instance-id</a>]</span> apply
 alongside <a href="#grant-binding" class="auto internal xref">Section 8.2</a>; instance continuity alone does not
 authorize replacement of the recorded instance or key rebinding.<a href="#section-12.3-4.4.1" class="pilcrow">¶</a></p>
@@ -11810,6 +11812,16 @@ approved audience, the creation-replay rule joins the response list
 of Mission Identifier and Expiry in Responses, and Self-Exchange
 Down-Scoping points to its <code>mission_intent</code> exemption in Authority
 Proposal (#1723, D971).<a href="#appendix-F-3.35.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="appendix-F-3.36">
+          <p id="appendix-F-3.36.1">Two rules already stated as obligations carry BCP 14 keywords, with no
+new requirement: the AS refuses a token request outside a Mission any
+of whose audiences is Mission-governed, and issues no token for the
+others (Authority Proposal); and a Mission in a state from which it
+can return to <code>active</code> is not reported with a termination reason
+(Issuance Gating). Editorial, no requirement change: Instance Context
+in Delegated Tokens names the grant lineage a delegated exchange
+establishes when it issues a refresh token (#1871, D1005).<a href="#appendix-F-3.36.1" class="pilcrow">¶</a></p>
 </li>
       </ul>
 <p id="appendix-F-4">-01<a href="#appendix-F-4" class="pilcrow">¶</a></p>
