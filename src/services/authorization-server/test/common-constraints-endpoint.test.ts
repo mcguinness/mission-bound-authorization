@@ -568,7 +568,7 @@ describe("max_amount and requires_action_approval at the endpoints (@spec resour
     }
   });
 
-  it("a Token Exchange that requires action approval where the reference says false is issued; dropping a true requirement is refused", async () => {
+  it("a Token Exchange adding requires_action_approval where the reference omits it is issued; dropping a true requirement or restating it as false is refused", async () => {
     const issued = await issue(schedule());
     const base = constraintsOf(claims(issued.at).authorization_details)[0] as Record<string, unknown>;
     // Resource Access: "A value of `false` is equivalent to omitting the member"; the derived entry may omit it.
