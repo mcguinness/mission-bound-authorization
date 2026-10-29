@@ -1301,7 +1301,8 @@ source's authority.
 The kernel's Approver is whoever makes the approval decision through
 the binding's native ceremony, which can be a policy authority.  The
 family separates three roles that this one term can combine
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"):
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis"):
 `consent_principal`, the accountable human (the Mission record's
 `approval_basis.consent_principal`); `activation_actor`, who
 triggered the instance; and `adjudication`, the mechanism that
@@ -1336,6 +1337,11 @@ reference to it; no change is ever made solely to move words.
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Family Use cites the three approval roles in the OAuth binding's
+  Principals and Approval Basis section, which defines them, since that
+  binding's Role Mapping appendix moved to the architecture document.
+  No requirement changed (#1892).
 
 - The Mapping Assessment of the OAuth binding is published by the
   architecture document; this document's Mission Substrate Statement,

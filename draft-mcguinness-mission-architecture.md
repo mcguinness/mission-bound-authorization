@@ -1688,6 +1688,94 @@ agent, and `consent_principal` names the administrator.
 }
 ~~~
 
+### Approval Role Mapping {#role-mapping}
+
+In the OAuth binding, `approval_basis` separates three questions about
+a Mission's own creation, which a scenario can assign to different
+principals:
+
+- who is accountable for it (`consent_principal`);
+- who or what triggered it (`activation_actor`); and
+- what decided it (`adjudication`).
+
+The companion profiles cited below define the scenarios; the list
+shows how each assigns the three roles: its accountability root
+(`consent_principal`), activation actor (`activation_actor`), and
+adjudication (where a profile or deployment populates it).
+
+Direct approval:
+: - Accountability root: The approving human
+  - Activation actor: Equal to `consent_principal`: the Approver
+    triggers their own approval
+  - Adjudication: `kind: human`; the deciding human is
+    `consent_principal` itself
+
+Relocated human approval ({{I-D.draft-mcguinness-oauth-mission-approval}}):
+: - Accountability root: The human who completes the relocated approval
+    event
+  - Activation actor: Equal to `consent_principal`, unchanged from the
+    direct case: the instance activates at that human's decision, not at
+    any earlier submission
+  - Adjudication: `kind: human`, as direct
+
+Template dispatch ({{I-D.draft-mcguinness-oauth-mission-template}}):
+: - Accountability root: The template's human approver, fixed at
+    template creation
+  - Activation actor: The Dispatcher that requested the Dispatch,
+    distinct from `consent_principal`
+  - Adjudication: `kind: policy`, `policy` naming the template's
+    `dispatch_policy` `id` and `version` (already carried in the
+    dispatched Mission's `template` lineage member), never the
+    Template's own `id`/`template_version` nor the Dispatcher
+
+Policy drawdown ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}):
+: - Accountability root: The Parent Mission's human Approver
+  - Activation actor: The requesting parent Agent, distinct from
+    `consent_principal`
+  - Adjudication: `kind: policy`, naming the child-creation policy's
+    `id`/`version` where the entry carries one, otherwise the Parent
+    Mission's approved delegation entry; never the requesting parent
+    Agent
+
+Ceiling drawdown ({{I-D.draft-mcguinness-oauth-mission-progressive}}):
+: - Accountability root: The Approver who consented the ceiling
+  - Activation actor: The requesting client, distinct from
+    `consent_principal`
+  - Adjudication: `kind: policy`, naming the drawdown policy's
+    `policy_id`/`policy_version` carried in `activation`; never the
+    requesting client
+
+Governed policy approval ({{I-D.draft-mcguinness-mission-approval-governance}}):
+: - Accountability root: The human who approved the exact policy version
+    the instance activates under
+  - Activation actor: The authenticated client that requested the
+    activation, distinct from `consent_principal`
+  - Adjudication: `kind: policy`, `policy` naming the deciding policy's
+    `id`/`version` (the approved policy itself or the evaluator it
+    commits), with `governance_record: true`; never the requesting
+    client
+
+AGR-backed direct approval ({{I-D.draft-mcguinness-mission-approval-governance}}):
+: - Accountability root: The approving human, whose own `human`
+    assertion is the Approval Governance Record's accountable assertion
+  - Activation actor: Equal to `consent_principal`, as for direct
+    approval
+  - Adjudication: `kind: human`, `governance_record: true`; how other
+    assertions contribute is Approval Governance's
+
+AGR-backed template or drawdown activation ({{I-D.draft-mcguinness-mission-approval-governance}}):
+: - Accountability root: Unchanged from the underlying basis, whose
+    `approval_basis` stands in for an accountable assertion
+  - Activation actor: Unchanged from the underlying basis
+  - Adjudication: `kind: policy`, as the underlying basis assigns it,
+    with `governance_record: true`; the full assertion set is never
+    collapsed into a single principal
+
+Direct approval is the degenerate case where one human fills every
+role. Where a profile or deployment does not populate `adjudication`
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis"), the list shows the value it would carry.
+
 ## Govern
 
 Question:
@@ -4261,7 +4349,7 @@ it that has not already left the issuer's reach
 
 # OAuth Binding Mapping Assessment {#oauth-statement}
 
-<!-- assessed-substrate-digest: fad30b610b02d683 -->
+<!-- assessed-substrate-digest: f2b396959fa4779f -->
 <!-- assessed-binding-snapshot: 5da6d7822aefd1bfd360209c74846d586e53b817 8e0495d9bd83e62b9a71abfa8ed14aa119052f524f5ced05aff5e88df463a09a -->
 
 This appendix is a Mapping Assessment of the OAuth binding
@@ -5016,6 +5104,11 @@ with no `suspended` state and its own termination reasons, served by
 # Document History {#document-history}
 
 \[\[ To be removed from the final specification ]]
+
+- Gains, from the OAuth binding, Approval Role Mapping under Mission
+  Creation Paths: how each creation scenario assigns the three
+  `approval_basis` roles. The OAuth binding's Single Accountable
+  Approver section points here. No requirement changed (#1892).
 
 - Gains, from the OAuth binding, Relationship to Existing OAuth Objects
   and Missions, Plans, and Execution under The Mission, the Derivation

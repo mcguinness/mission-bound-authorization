@@ -622,7 +622,8 @@ policy at the authorization server covers the proposal, that policy
 is the decision mechanism, not the Approver: the approval event
 records the policy identity and version as that mechanism, the
 resource owner who registered it stays the accountable person
-({{I-D.draft-mcguinness-oauth-mission}}, Section "Role Mapping"), and
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis"), and
 the anchors commit as in the interactive case. A
 deployment SHOULD reserve policy approval for Missions within bounds
 the owner has expressly pre-consented and route everything else to
