@@ -775,9 +775,11 @@ it. On Mission Status and introspection, the state version makes the
 change observable ({{contain-transition}}). On a Signals stream, a
 contain event that narrows effective authority carries
 `authority_changed` true and reaches only a consumer that declared
-that capability. An undeclared consumer gets no push: it learns of
-the containment through its next version gap or, on a stream not
-verified live, the staleness rule
+that capability. An undeclared consumer gets no push: Signals pauses
+its stream, which brings on the consumer's staleness rule within
+`mission_max_stale_seconds`, or the stream's heartbeat interval if
+longer, of its last verification or heartbeat event, and Mission
+Status then reports the containment
 ({{I-D.draft-mcguinness-oauth-mission-signals}}). A consumer that
 reads `containment_version` holds a precise question: whether the
 authority view it materialized predates the current overlay.
@@ -1256,6 +1258,12 @@ This document registers two media types per {{RFC6838}}.
   reaches only a consumer that declared `authority_changed`; an
   undeclared consumer learns of the containment through its next
   version gap or the staleness rule, not by push (#1001).
+- Visibility ({{visibility}}): Signals pauses the stream of a consumer
+  that has not declared `authority_changed` when it withholds a contain
+  event, so that consumer's staleness rule sends it to Mission Status
+  within `mission_max_stale_seconds`, or the stream's heartbeat
+  interval if longer, of its last verification or heartbeat event
+  (#1877).
 - Protected Events names a change an authority source reports, under
   a declared continuing authority dependency, as a representative
   event class; the mapping stays deployment-defined (#830).
