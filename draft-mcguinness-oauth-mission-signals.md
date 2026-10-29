@@ -1085,6 +1085,14 @@ IETF; Reference this document, {{as-metadata}}.
   verification or heartbeat event never overtakes an undelivered
   earlier event on its stream ({{delivery}}), and a Stream Updated or
   verification event does not re-establish stale state (#1877).
+- Consumer Behavior on Receipt ({{consumer-behavior}}): the liveness
+  event is the Shared Signals Framework Verification Event, and a
+  heartbeat is one the Mission Issuer sends without a request, carrying
+  no `state`; a Stream Updated event is not a liveness event. The
+  stream's heartbeat interval is the longest time after a verification
+  or heartbeat event during which the stream stays verified live,
+  finite and agreed through configuration or discovery; a stream whose
+  interval the consumer does not know is not verified live (#1886).
 
 # Acknowledgments
 {:numbered="false"}
