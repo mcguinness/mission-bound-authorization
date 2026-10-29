@@ -5087,7 +5087,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer does not rely on push-derived state alone once its freshness confidence is lost, and reconciles a Status observation with retained state by version, never by taking the more permissive one",
-    "local": "the Signals receiver's lease (#1747) gives no lease while the rematerialization latch or a version gap is open, or once an active state's reliance bound has passed, and reports the issuer's observation time and bound unchanged at every read; Mission Status (resynchronize, under a nonce from statusNonce) re-establishes the state: a response below the stored version is refused whatever its state, one at the stored version refreshes the observation time and bound and clears the gap, and one above it replaces the state, a higher-version active over a stored suspended included. A Status refresh never clears the rematerialization latch, since a state-only response carries no effective authority: the consumer acknowledges it (markRematerialized) once it refreshed its audience-scoped effective authority (D950). A version gap holds across later events, contiguous ones included, until Status covers it, and also latches rematerialization, since the missing event may have narrowed authority; a Mission released after a restore is latched at the released version. A row a store wrote before the observation columns gives no lease until a Status refresh"
+    "local": "the Signals receiver's lease (#1747) gives no lease while the rematerialization latch or a version gap is open, or once an active state's reliance bound has passed, and reports the issuer's observation time and bound unchanged at every read; Mission Status (resynchronize, under a nonce from statusNonce) re-establishes the state: a response below the stored version is refused whatever its state, one at the stored version refreshes the observation time and bound and clears the gap, and one above it replaces the state, a higher-version active over a stored suspended included. A Status refresh never clears the rematerialization latch, since a state-only response carries no effective authority: the consumer acknowledges it (markRematerialized) once it refreshed its audience-scoped effective authority (D950). A refresh that advances past the receiver's known history (a Mission it holds no row for, or a version above the stored one) raises the latch, or advances an open latch's marker, to the observed version, since the events it skipped may have narrowed authority: accepting newer state does not establish newer authority, so the lease waits for an acknowledgement covering that version (#1824 review). A version gap holds across later events, contiguous ones included, until Status covers it, and also latches rematerialization, since the missing event may have narrowed authority; a Mission released after a restore is latched at the released version. A row a store wrote before the observation columns gives no lease until a Status refresh"
    },
    "level": "unit",
    "coverage": "partial",
@@ -5127,9 +5127,21 @@
      "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > gives no lease for a row a store wrote before the observation columns existed, until a Mission Status refresh",
      "level": "unit",
      "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > raises the rematerialization latch at the observed version when a state-only Status refresh advances past the receiver's known history, so a narrowing it never received opens no lease (#1824 review)",
+     "level": "unit",
+     "surface": "signals"
+    },
+    {
+     "file": "src/packages/mission-signals/test/consumer-reliance.test.ts",
+     "name": "Signals consumer reliance (@spec control-plane#state-surfaces, signals#consumer-behavior, #1747) > advances an open latch's marker to the observed version when a Status refresh passes a later narrowing it never received, so an acknowledgement of only the earlier one opens no lease (#1824 review)",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "Split from control-plane.consistency.state-surfaces, whose role is the binding (#1747, D942). Partial: Freshness confidence is anchored to each observation: the issuer's observation point (a SET's committed_at, a Status response's iat) plus the issuer's advertised mission_max_stale_seconds for an active state, never past expires_at. That is a stricter stand-in for the Signals rule, which anchors freshness to stream liveness (verification and heartbeat events); the receiver does not read those events, so a live stream's silence never extends a lease here. The consumer performs the Status read; the receiver verifies and applies it. Package-only: no shipped service runs a receiver. Each gate is proved by removing it, the two owner-review probes of D950 included."
+   "notes": "Split from control-plane.consistency.state-surfaces, whose role is the binding (#1747, D942). Partial: Freshness confidence is anchored to each observation: the issuer's observation point (a SET's committed_at, a Status response's iat) plus the issuer's advertised mission_max_stale_seconds for an active state, never past expires_at. That is a stricter stand-in for the Signals rule, which anchors freshness to stream liveness (verification and heartbeat events); the receiver does not read those events, so a live stream's silence never extends a lease here. The consumer performs the Status read; the receiver verifies and applies it. Package-only: no shipped service runs a receiver. Each gate is proved by removing it, the two owner-review probes of D950 and the two of the #1824 review included."
   },
   {
    "id": "control-plane.consistency.rollback",
