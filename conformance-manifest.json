@@ -59,8 +59,8 @@
     "content_sha256": "24679c3f1f44c932c73edf6cf831fdaacc86f3d9597e75c1c373cb36912b6d23"
    },
    "draft-mcguinness-oauth-mission-management.md": {
-    "revision": "984303ad6d05f54acf371966dcb1f7cd6a0f41af",
-    "content_sha256": "07d75d7759e8fa751fe357884de4981471c1ff7623a08ca2ff50957b32e27b81"
+    "revision": "cb963b585961949baf7fdfa82223b544cf8a4712",
+    "content_sha256": "a975b4b5579699e3f3b5855589e2369b6bfb942e6a6aea20ffc9103b82b02420"
    },
    "draft-mcguinness-oauth-mission-template.md": {
     "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
@@ -24712,7 +24712,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#997 (D995). No reference implementation of Mission Management exists; `bulk_token` is unimplemented. Planned test surface: the Mission Management endpoint. Dry run a bulk `resume` over two suspended members; through the status endpoint, resume and re-suspend one of them; then execute. That member reports `stale_version` and stays suspended, the other reports `applied`, and a member terminated in between reports `already_terminal`."
+   "notes": "#997 (D995). No reference implementation of Mission Management exists; `bulk_token` is unimplemented. Planned test surface: the Mission Management endpoint. Dry run a bulk `resume` over two suspended members; through the status endpoint, resume and re-suspend one of them; then execute. That member reports `stale_version` and stays suspended, the other reports `applied`, and a member terminated in between reports `already_terminal`. The witness also covers a concurrent change between the version comparison and the commit: the guard protects each member's transition without requiring a transaction across the batch (owner review of #1870)."
   },
   {
    "id": "signals.discharge.authority-changed-rematerialize",
