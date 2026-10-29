@@ -538,6 +538,18 @@ describe("Mission Resource Access expected-outcome cases (#1258, D452)", () => {
     it("dg-inherit-07: a proposal-added list over a policy-deferring ceiling entry admits a delegate both permit", () => {
       runCited("dg-inherit-07");
     });
+    it("sub-enf-01: a key only the candidate carries narrows where the serving resource server enforces it", () => {
+      runCited("sub-enf-01");
+    });
+    it("sub-enf-02: a key only the candidate carries that the serving resource server is not known to enforce is refused", () => {
+      runCited("sub-enf-02");
+    });
+    it("sub-enf-03: a key only the candidate carries, with no enforcement context, is refused", () => {
+      runCited("sub-enf-03");
+    });
+    it("sub-enf-06: a key without defined semantics is refused even where the serving resource server lists it", () => {
+      runCited("sub-enf-06");
+    });
   });
 
   for (const { name, doc } of files) {
