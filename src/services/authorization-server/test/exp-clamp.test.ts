@@ -383,10 +383,12 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
     }
   });
 
-  it("an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry", async () => {
+  it("an authorization resumed after expires_at redirects access_denied, never invalid_grant, and creates no Mission", async () => {
     const expiresAt = inSeconds(30);
-    // Past expires_at by both the lifetime clock and the kernel's own clock,
-    // so the hook's state-gate branch is the one that refuses.
+    const missions = as.kernel.allMissions().length;
+    // Past expires_at by both the lifetime clock and the kernel's own clock.
+    // The decision was held (#1863), so the code's lifetime is measured
+    // against the expires_at its commit would establish, which has passed.
     const late = Date.parse(expiresAt) + 1_000;
     const redirect = await authorizationRedirect(expiresAt, {}, () => {
       vi.spyOn(Date, "now").mockReturnValue(late);
@@ -398,8 +400,8 @@ describe("credentials never outlive the Mission (@spec mission#mission-bound-tok
       "the Mission expires before the authorization can complete",
     );
     expect(redirect.searchParams.get("code")).toBeNull();
-    const mission = as.kernel.allMissions().find((m) => Date.parse(m.expires_at) === Date.parse(expiresAt));
-    expect(mission?.termination?.reason).toBe("expired");
+    expect(as.kernel.allMissions()).toHaveLength(missions);
+    expect(as.kernel.allMissions().find((m) => Date.parse(m.expires_at) === Date.parse(expiresAt))).toBeUndefined();
   });
 
   it("a token under a grant that is not Mission-bound keeps oidc-provider's configured lifetimes", async () => {

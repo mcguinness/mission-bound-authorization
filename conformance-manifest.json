@@ -12521,13 +12521,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a commit failure at the code save leaves no Mission, no binding and no code, only a classified grant, and the client starts again",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a failure after the decision is held, before its interaction finishes, leaves no Mission, and a retry on the interaction completes with one Mission and one binding",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12539,7 +12539,7 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the held decision's own retry still completes",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
@@ -12563,13 +12563,13 @@
     },
     {
      "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
-     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first and recovers its commit, even when a change lands between them",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > a second decision on the same rendering waits for the first; a change landing between them refuses it, and the held first decision commits nothing",
      "level": "endpoint",
      "surface": "approval-ceremony"
     },
     {
      "file": "src/services/authorization-server/test/approval-grant-binding.test.ts",
-     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed commit: a decision by another principal is refused before saving a grant",
+     "name": "the approval decision's order of writes (@spec mission#approval-event, #916, D415) > a reservation outlives a failed decision: a decision by another principal is refused before saving a grant",
      "level": "endpoint",
      "surface": "approval-ceremony"
     }
@@ -13970,7 +13970,7 @@
     },
     {
      "file": "src/services/authorization-server/test/exp-clamp.test.ts",
-     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and commits the expiry",
+     "name": "credentials never outlive the Mission (@spec mission#mission-bound-tokens) > an authorization resumed after expires_at redirects access_denied, never invalid_grant, and creates no Mission",
      "level": "endpoint",
      "surface": "authorization-endpoint"
     }

@@ -1,17 +1,20 @@
 /**
- * @spec mission#approval-event (step 7) (#916, D415) — the approval decision's
- * order of writes, over HTTP. The approval is prepared first (every refusal
- * before any write), the provider grant is saved under an identity derived
- * from the interaction, and the record then commits already bound to it. So:
+ * @spec mission#approval-event (step 7) (#916, D415, #1863) — the approval
+ * decision's order of writes, over HTTP. The approval is prepared first (every
+ * refusal before any write), the provider grant is saved under an identity
+ * derived from the interaction (classified as a held approval grant first),
+ * and the decision is held; the record commits already bound to that grant
+ * when the resume saves its authorization code (adapters/approval-hold.ts).
+ * So:
  *
- * - a repeated or concurrent decision on one interaction recovers its one
- *   grant and binding, and can never rebind the Mission and strand the first
- *   approval grant outside the derivation count;
- * - a failure before the record commit leaves no Mission, only an inert grant
- *   that a retry overwrites;
- * - a failure after the commit leaves an `active`, bound Mission whose code is
- *   not issued yet, which a retry on the interaction completes. That window,
- *   full record/code atomicity, stays #250's.
+ * - a repeated or concurrent decision on one interaction replaces its one
+ *   hold, commits one grant and binding, and can never rebind the Mission and
+ *   strand the first approval grant outside the derivation count;
+ * - a failure in the decision leaves no Mission, only an inert, classified
+ *   grant that a retry overwrites;
+ * - a failure at the code save leaves no Mission and no redeemable code
+ *   (approval-code-atomicity.test.ts has the failure witnesses). The former
+ *   window of an `active`, bound Mission whose code is not issued yet is gone.
  */
 import { createHash } from "node:crypto";
 import { type Server } from "node:http";
@@ -176,6 +179,19 @@ async function open(intentOver: Json = {}) {
     }
     return new URL(location).searchParams.get("error");
   };
+  /** Follow a decision's redirect: the last status, and the code or error the client receives, if any. */
+  const outcome = async (decided: Response) => {
+    let location = decided.headers.get("location") ?? "";
+    let status = decided.status;
+    while (location.startsWith(ISSUER)) {
+      const r = await fetch(location, { redirect: "manual", headers: { cookie: cookie() } });
+      keep(r);
+      status = r.status;
+      location = r.headers.get("location") ?? "";
+    }
+    const q = location ? new URL(location).searchParams : undefined;
+    return { status, code: q?.get("code") ?? null, error: q?.get("error") ?? null };
+  };
   /** Redeem a code: the Mission and its refresh token. */
   const redeem = async (code: string) => {
     const keys = await newKeys();
@@ -189,7 +205,7 @@ async function open(intentOver: Json = {}) {
     ) as { mission: { id: string } };
     return { missionId: claims.mission.id, refreshToken: exchanged.body.refresh_token as string, keys };
   };
-  return { uid, approvalEventId: `apev_${uid}`, decide, finish, errorOf, redeem };
+  return { uid, approvalEventId: `apev_${uid}`, decide, finish, errorOf, outcome, redeem };
 }
 
 /** The grant identity the approval decision derives from the interaction. */
@@ -210,25 +226,26 @@ const until = async (done: () => boolean) => {
 describe("the approval decision's order of writes (@spec mission#approval-event, #916, D415)", () => {
   it("an overlapping approval retry cannot bypass the derivation limit: the binding never moves, and the first approval grant keeps counting", async () => {
     const flow = await open({ requested_derivation_limit: 1 });
-    // The commits on one approval event run one at a time (#1446), so the
-    // overlapping retry recovers the first decision's commit. Hold it at its
-    // grant save until the first decision has been redeemed and refused at the
-    // limit.
+    // The commits on one approval event run one at a time (#1446, #1863), and
+    // the first decision commits when its code is saved. The overlapping retry
+    // has loaded the interaction; hold it before its commit until the first
+    // decision's code has been redeemed and refused at the limit. Then it
+    // recovers that commit.
     let release!: () => void;
     const gate = new Promise<void>((r) => {
       release = r;
     });
-    const save = as.provider.Grant.prototype.save;
-    let saves = 0;
-    vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: object, ...args: unknown[]) {
-      saves += 1;
-      if (saves === 2) await gate;
-      return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
-    });
+    let reached = false;
     const first = await flow.decide();
     expect(first.status).toBe(303);
+    const verify = as.kernel.verifySubmissionEvidence.bind(as.kernel);
+    vi.spyOn(as.kernel, "verifySubmissionEvidence").mockImplementationOnce(async (...args: Parameters<typeof verify>) => {
+      reached = true;
+      await gate;
+      return verify(...args);
+    });
     const held = flow.decide();
-    await until(() => saves >= 2);
+    await until(() => reached);
     const { missionId, refreshToken, keys } = await flow.redeem(await flow.finish(first));
     expect(as.kernel.get(missionId)?.derivation_count).toBe(1);
     const refused = await token({ grant_type: "refresh_token", refresh_token: refreshToken }, keys);
@@ -259,7 +276,11 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     });
     const [a, b] = await Promise.all([flow.decide(), flow.decide()]);
     expect([a.status, b.status]).toContain(303);
+    // Both decisions held the one decision; its code's save commits it.
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
+    const { missionId } = await flow.redeem(await flow.finish(a.status === 303 ? a : b));
     const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(record?.id).toBe(missionId);
     expect(record?.state).toBe("active");
     expect(record?.version).toBe(1);
     expect([...saved]).toEqual([grantIdFor(flow.uid)]);
@@ -272,15 +293,15 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(grant.rar).toEqual(record?.authority_set);
   });
 
-  it("a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the committed decision's own retry still completes", async () => {
+  it("a retry by another Approver, or selecting another Subject, is refused before the grant is touched, and the held decision's own retry still completes", async () => {
     const flow = await open();
     const first = await flow.decide();
     expect(first.status).toBe(303);
     const grantId = grantIdFor(flow.uid);
-    const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
-    expect(record?.grant_id).toBe(grantId);
+    // Held: the record commits with the code.
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
     // Alice approving for herself, and Bob selecting another Subject, are not
-    // this committed decision.
+    // this held decision.
     const otherApprover = await flow.decide(trustedApprovalHeaders("alice", {}, null));
     expect(otherApprover.status).toBe(403);
     expect(((await otherApprover.json()) as { error?: string }).error).toBe("approval_forbidden");
@@ -288,12 +309,14 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(otherSubject.status).toBe(403);
     const grant = (await as.provider.Grant.find(grantId)) as unknown as { accountId?: string };
     expect(grant.accountId).toBe("bob");
-    expect(as.kernel.get(record?.id as string)?.grant_id).toBe(grantId);
-    expect(as.kernel.get(record?.id as string)?.subject.sub).toBe("alice");
     const retried = await flow.decide();
     expect(retried.status).toBe(303);
     const { missionId } = await flow.redeem(await flow.finish(retried));
-    expect(missionId).toBe(record?.id);
+    const record = as.kernel.get(missionId);
+    expect(record?.approval_event_id).toBe(flow.approvalEventId);
+    expect(record?.grant_id).toBe(grantId);
+    expect(record?.subject.sub).toBe("alice");
+    expect(record?.approval_basis.consent_principal?.sub).toBe("bob");
   });
 
   it("a grant-save failure commits no Mission, and a retry on the interaction recovers one grant and one binding", async () => {
@@ -310,38 +333,41 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(boundGrantsOf(missionId)).toEqual([grantIdFor(flow.uid)]);
   });
 
-  it("a commit failure after the grant save leaves only an inert grant, no Mission and no binding, and the retry recovers through that grant", async () => {
+  it("a commit failure at the code save leaves no Mission, no binding and no code, only a classified grant, and the client starts again", async () => {
     const flow = await open();
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
     vi.spyOn(as.kernel, "approve").mockImplementationOnce(() => {
       throw new Error("injected record-commit failure");
     });
-    const failed = await flow.decide();
+    const failed = await flow.outcome(decided);
     expect(failed.status).toBe(500);
+    expect(failed.code).toBeNull();
     expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
     const grantId = grantIdFor(flow.uid);
-    expect(await as.provider.Grant.find(grantId)).toBeDefined();
     expect(as.kernel.missionBoundGrants.resolve(grantId)).toBeUndefined();
     expect(as.kernel.findByGrant(grantId)).toBeUndefined();
+    expect(as.kernel.missionBoundGrants.heldApproval(grantId)).toEqual({ approvalEventId: flow.approvalEventId });
+    expect(await as.provider.Grant.find(grantId)).toBeUndefined();
+    // The resume consumed the interaction: there is nothing to retry on it.
     vi.restoreAllMocks();
-    const retried = await flow.decide();
-    expect(retried.status).toBe(303);
-    const { missionId } = await flow.redeem(await flow.finish(retried));
-    expect(as.kernel.get(missionId)?.grant_id).toBe(grantId);
+    expect((await flow.decide()).status).not.toBe(303);
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
   });
 
-  it("a failure after the record commit leaves an active, bound Mission whose code is not issued yet (the #250 window), which a retry on the interaction completes", async () => {
+  it("a failure after the decision is held, before its interaction finishes, leaves no Mission, and a retry on the interaction completes with one Mission and one binding", async () => {
     const flow = await open();
     vi.spyOn(as.provider, "interactionFinished").mockRejectedValueOnce(new Error("injected failure before code creation"));
     const failed = await flow.decide();
     expect(failed.status).toBe(500);
-    const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
-    expect(record?.state).toBe("active");
-    expect(record?.grant_id).toBe(grantIdFor(flow.uid));
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)).toBeUndefined();
+    expect(as.kernel.findByGrant(grantIdFor(flow.uid))).toBeUndefined();
     vi.restoreAllMocks();
     const retried = await flow.decide();
     expect(retried.status).toBe(303);
     const { missionId } = await flow.redeem(await flow.finish(retried));
-    expect(missionId).toBe(record?.id);
+    expect(as.kernel.findByApprovalEvent(flow.approvalEventId)?.id).toBe(missionId);
+    expect(as.kernel.get(missionId)?.state).toBe("active");
     expect(boundGrantsOf(missionId)).toEqual([grantIdFor(flow.uid)]);
   });
 
@@ -349,6 +375,7 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     const flow = await open();
     const decided = await flow.decide();
     expect(decided.status).toBe(303);
+    await flow.finish(decided);
     const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
     const bound = record?.grant_id as string;
     expect(() => as.kernel.bindGrant(record?.id as string, bound)).not.toThrow();
@@ -359,7 +386,9 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
 
   it("the minting paths' first bind adopts the winner: bindFirstGrant binds an unbound Mission once and returns that grant to every later caller", async () => {
     const flow = await open();
-    expect((await flow.decide()).status).toBe(303);
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    await flow.finish(decided);
     const record = as.kernel.findByApprovalEvent(flow.approvalEventId);
     const id = record?.id as string;
     // A Mission minted outside the approval decision starts unbound.
@@ -406,16 +435,16 @@ describe("the approval decision's order of writes (@spec mission#approval-event,
     expect(grant.accountId).toBe("bob");
   });
 
-  it("a reservation outlives a failed commit: a decision by another principal is refused before saving a grant", async () => {
+  it("a reservation outlives a failed decision: a decision by another principal is refused before saving a grant", async () => {
     const flow = await open();
     const save = as.provider.Grant.prototype.save;
     const accounts: string[] = [];
+    // Bob's decision fails after its reservation, at its grant save; the
+    // record commits only with a code, so this is where a decision fails.
     vi.spyOn(as.provider.Grant.prototype, "save").mockImplementation(async function (this: { accountId?: string }, ...args: unknown[]) {
       accounts.push(this.accountId as string);
+      if (accounts.length === 1) throw new Error("injected grant-save failure");
       return (save as (...a: unknown[]) => Promise<string>).apply(this, args);
-    });
-    vi.spyOn(as.kernel, "approve").mockImplementationOnce(() => {
-      throw new Error("injected record-commit failure");
     });
     const failed = await flow.decide();
     expect(failed.status).toBe(500);
@@ -473,20 +502,25 @@ describe("the approval event as the idempotency key (@spec mission#mission-recor
     const flow = await open();
     const first = await flow.decide();
     expect(first.status).toBe(303);
-    const committed = as.kernel.findByApprovalEvent(flow.approvalEventId);
-    expect(committed?.state).toBe("active");
-    expect(missionsFor(flow.approvalEventId)).toEqual([committed?.id]);
+    // Held: the code's save commits the one Mission (#1863).
+    expect(missionsFor(flow.approvalEventId)).toEqual([]);
 
     // The same decision delivered again on the interaction (a double-submitted
     // consent form): the same Approver, Subject, client and rendering, so the
-    // same approval_event_id.
+    // same approval_event_id. It replaces the hold and creates nothing.
     const repeated = await flow.decide();
-    expect(missionsFor(flow.approvalEventId), "a second Mission was created for the approval event").toEqual([
-      committed?.id,
-    ]);
-    expect(as.kernel.get(committed?.id as string)?.version).toBe(committed?.version);
     expect(repeated.status).toBe(303);
+    expect(missionsFor(flow.approvalEventId), "a Mission was created before the code").toEqual([]);
     const { missionId } = await flow.redeem(await flow.finish(repeated));
-    expect(missionId).toBe(committed?.id);
+    expect(missionsFor(flow.approvalEventId)).toEqual([missionId]);
+    const committed = as.kernel.get(missionId);
+    expect(committed?.state).toBe("active");
+    expect(committed?.version).toBe(1);
+
+    // Delivered again after the code: the interaction is consumed, and still
+    // the event has its one Mission, at an unchanged version.
+    expect((await flow.decide()).status).not.toBe(303);
+    expect(missionsFor(flow.approvalEventId), "a second Mission was created for the approval event").toEqual([missionId]);
+    expect(as.kernel.get(missionId)?.version).toBe(committed?.version);
   });
 });
