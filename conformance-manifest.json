@@ -4959,7 +4959,7 @@
     "normative": "A signer of a state observation MUST NOT manufacture freshness by assigning a new `iat` or `fresh_until` to an older observation without establishing that its value reflects the authoritative committed state at the new observation point. The issuer establishes an authenticated observation/commit watermark justified by its consistency mechanism. An authoritative transactional read, quorum/read-index, or correctly defined lease mechanism can provide that guarantee; a lease alone does not prove inclusion of a committed transition. Without it, the signer may replay an original authenticated snapshot only within that snapshot's original validity and audience binding, or refuse. Signature validity proves producer and integrity, not recency. The Status freshness ceiling is unchanged."
    },
    "level": "cross-component",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/status-list.test.ts",
@@ -5014,9 +5014,33 @@
      "name": "control-plane retained signed responses > replays the retained bytes of a signed envelope past its own validity, for the whole nonce window",
      "level": "cross-component",
      "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-endpoint.test.ts",
+     "name": "Mission Lifecycle endpoint retries (@spec status#idempotency, control-plane#serialization, #1191) > recovers a committed response whose bytes were lost at its original observation: the same iat, exp and fresh_until",
+     "level": "cross-component",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until or exp beyond the advertised ceiling on a direct call",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "signed status freshness cap (@spec status#mission-status-caching) > never publishes fresh_until later than the response's own exp, at any requested lifetime (#1535)",
+     "level": "unit",
+     "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/durable-delivery.test.ts",
+     "name": "a Signals SET is a transition record (@spec control-plane#fresh-observation, #1750, D993) > signs a job journaled before a crash, hours later, with its commit's own committed_at, and a receiver orders it by version: a SET for an older version with a newer iat is stale",
+     "level": "unit",
+     "surface": "signals"
     }
    ],
-   "notes": "The Mission Status List publisher serves a signed token only inside the validity it carries, rebuilds from the authoritative record set rather than re-signing cached bits, keeps a failed rebuild from republishing the superseded token, and lets no older in-flight snapshot land after a newer commit. The signed Status observation is now taken in one authoritative transactional read that carries its own (version, commit) watermark, its timestamps belong to the observation point rather than to the clock at signature time, and a recovered response is signed over the recorded observation and never re-dated. A retained signed envelope replays its exact retained bytes for the whole nonce window, including past its own validity: replaying a retained acknowledgement of a completed operation is a historical record, not a manufactured fresh observation, and the envelope's own `exp` states its span. Refusing an observation whose commit point advanced is available as a declared optional policy, not a requirement: the invariant permits delivering an authenticated authoritative observation inside its own validity. The other signed state observations are not yet inventoried and witnessed (#1750). No current Status draft specifies a conditional-request surface, so none is owed (D874)."
+   "notes": "The signed-artifact inventory in src/docs/control-plane-deployment.md classifies every signed artifact the reference produces (#1750). Three are state observations, each witnessed with a mutation that re-dates it. The Mission Status response is taken in one authoritative transactional read that carries its (version, commit) watermark, and its iat, exp and fresh_until belong to that read, never to the clock at signature time; a commit during the signature leaves it older, not re-dated. Lifecycle responses: a recovered response is signed over the recorded observation with its original iat, exp and fresh_until, and a retained envelope replays its exact bytes for the nonce window, past its own validity, solely as confirmation of the correlated original operation with every other check passing: it refreshes no state and authorizes nothing, and it is not a general exception that holding a watermark confers. The Mission Status List publisher serves a token only inside its own validity, rebuilds from the record set rather than re-signing cached bits, and lets no older in-flight snapshot land after a newer commit. A Mission Signals SET is a transition record (D993): its observation point is the committed_at recorded at commit, its iat is RFC 8417 issuance time, and a SET first signed hours after its commit keeps that committed_at; the receiver orders by version, never iat. The Join Assertion is an attestation with no state, version or fresh_until, whose cache replays original bytes only inside its exp and audience binding. Credentials take iat as issuance time, not a statement of current state: the AS's Mission-bound OAuth access tokens, ID-JAGs and AAT roots are gated on Mission state at mint with exp bounded by the Mission's expiry, while a holder-minted offline AAT child and an ARAP approval (bounded by approved_until, with no JWT exp) check no Mission state, and no mint-time state claim is made for the other credentials; records carry their recorded event times. The Status freshness ceiling is witnessed by the cap tests. Refusing an observation whose commit point advanced is a declared optional policy, off; its defects (it blocks Lifecycle response recovery, and its commit member falls after boot pruning) are #1865, availability under that option, not freshness. No current Status draft specifies a conditional-request surface, so none is owed (D874)."
   },
   {
    "id": "control-plane.consistency.state-surfaces",
@@ -49147,6 +49171,55 @@
    "level": "unit",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "evidence.execution.audience-mirrors-decision",
+   "spec": "draft-mcguinness-mission-runtime-evidence.md",
+   "anchor": "execution-evidence-object",
+   "text": "The boundary identifier the linked Decision Evidence recorded, byte for byte, mirrored for join-key convenience and so a verifier's key-to-boundary binding ({{decision-evidence-integrity}}) has its input. An outcome for an operation admitted before a boundary identifier change keeps the original identifier",
+   "role": "PEP",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "runtime-enforced"
+   ],
+   "surface": "evidence-emission",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Execution Evidence record emitted for a permit carries audience byte for byte equal to the audience its linked Decision Evidence recorded, and verifies under a key published for that audience: a permit decided before a declared identifier change and re-presented after it is still refused at use with no effect, and its suppression record keeps the old identifier; a disposition after the change of a permit admitted before it keeps the old identifier; a late record for an effect committed before the change keeps the old identifier; and a fresh permit's records after the change carry the new identifier",
+    "local": "In the reference the execution attempt takes its audience, like its boundary version, from the retained Decision Evidence (services/mcp-payments/src/pep.ts), and every disposition record copies the attempt's: the PEP's own suppressions and completions and the executor's transaction completion (server.ts). The executor's late record from claim reconciliation reads the retained record directly (claim-reconciliation.ts). The boundary established for the current request stays independent: the decision request and pre-decision Refusal Records carry it, and the enforcement_boundary use check compares it with the attempt's. A retained Decision Evidence with no audience, which only a key resolver that binds no audience accepts, is refused decision_evidence_unverifiable before any attempt, with no effect and no Execution Evidence, rather than recorded under the request's boundary."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit decided under the old identifier and re-presented after the change is refused at use as before and releases no effect, and its suppression record carries the old identifier exactly as its Decision Evidence recorded it, while a fresh permit after the change executes and records the new identifier exactly",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a wire committed under the old identifier whose Execution Evidence was lost is recorded late, after the change, by reconciliation from the ledger: the late record carries the old identifier exactly as its Decision Evidence recorded it, and settles the claim",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "Execution Evidence carries its linked Decision Evidence's audience byte for byte across a declared identifier change (@spec runtime-evidence#execution-evidence-object, runtime#boundary-identifier-change, #1868, D999) > a permit whose retained Decision Evidence records no audience, accepted under a key resolver that binds none, is refused decision_evidence_unverifiable before any attempt: no effect, no Execution Evidence, and the Refusal Record names the boundary established for the request",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    },
+    {
+     "file": "src/services/mcp-payments/test/boundary-identifier.test.ts",
+     "name": "a declared change of boundary identifier (@spec runtime#boundary-identifier-change, runtime-evidence#decision-evidence-integrity, #853) > invalidates permits decided before the cutover, switches every producer together, keeps aliased tokens usable and old records verifiable byte for byte",
+     "level": "endpoint",
+     "surface": "evidence-emission"
+    }
+   ],
+   "notes": "#1868 (D999; fix/1868-producer-audience): the producer half of the audience member, beside the consumer row evidence.execution.audience-bound-at-settlement (D991), whose PDP witnesses establish nothing here. Role PEP covers the enforcement-side emitter: the suppression and the read completion are signed under the PEP role, the wire completion and the late record under the executor role of the same component. Applicability is unconditional with the runtime-enforced profile, as for the other PEP rows at this anchor: any enforcement point that emits Execution Evidence writes the member. Both identifiers of the witnesses' declared change are spelled with upper-case letters and a trailing slash (https://Payments.Example/Legacy/MCP/ replaced by https://Payments.Example/MCP/), so a normalized record differs from its Decision Evidence; a decision point that re-presents a held permit whatever version is in force stands in for a retransmission on the wire. The #853 in-flight witness asserts that the dispositions after the cutover of a read and of a compound action's prepare phase, both admitted before it, keep the old identifier. The idempotency-claim-pep reconciliation witness asserts only that one late record exists, not its audience, so it is not cited. Mutants at 695aa419, each alone with vitest in its own process group and the source restored byte-equal: the attempt taking the request's boundary (MA, the #1868 defect) fails the re-presented witness at the suppression record's audience; a lowercased (MB1) or trailing-slash-trimmed (MB2) copy fails it there too (no key is published for the normalized spelling, so no record is emitted) and fails the fresh-permit control's records; dropping the refusal of a retained record without an audience and falling back to the request's boundary (MC) fails the no-audience witness at its refusal, no-effect, no-record and Refusal Record assertions; the use check reading the copied audience and version instead of the boundary established now (MD) fails the re-presented witness at its refusal, ledger and redemption assertions (the old permit executes), and four existing #853 witnesses; the disposition record taking the boundary established at emission (ME) fails the re-presented and in-flight witnesses at the record's audience; the late record taking the emitter's configured identifier (ML1) or a lowercased copy (ML2) fails the late-record witness at its settlement and record assertions. Rerun with every assertion of the three new witnesses soft, each assertion of the producer's behavior fails on its own under at least one mutant; the seven precondition assertions (the permit issued, the identifier the linked Decision Evidence recorded, the redemption, no record before reconciliation, the record without an audience retained) hold before the producer acts and are killed by none."
   },
   {
    "id": "evidence.execution.audience-bound-at-settlement",
