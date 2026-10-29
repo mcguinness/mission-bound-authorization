@@ -7934,7 +7934,7 @@ async function decide(
   // commit runs when the authorization code is saved (#1863), and refuses the
   // same way, as an `access_denied` authorization response.
   //
-  // @spec mission#approval-event (step 7) (#916, #1863) — the order of
+  // @spec mission#approval-event (step 7) (#916, #1863): the order of
   // writes. The approval is prepared first, so every refusal (above, and in
   // `prepareApproval`) happens before anything is written; a consented
   // ceiling's entries, its drawdown policy and their floor are checked above.

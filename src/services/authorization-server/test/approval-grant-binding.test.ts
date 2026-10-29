@@ -1,5 +1,5 @@
 /**
- * @spec mission#approval-event (step 7) (#916, D415, #1863) — the approval
+ * @spec mission#approval-event (step 7) (#916, D415, #1863): the approval
  * decision's order of writes, over HTTP. The approval is prepared first (every
  * refusal before any write), the provider grant is saved under an identity
  * derived from the interaction (classified as a held approval grant first),
