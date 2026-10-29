@@ -23851,7 +23851,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer refuses to rely, for a current decision, on a Mission Status Response whose signing key the AS has published as compromised, although the archived response still verifies for audit under the key's historical public JWK",
-    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides."
+    "local": "The PDP's Status consumer (refreshingStatusKeys with the issuer's mission_historical_jwks_uri) refuses, for current reliance, a key its held historical key set lists, even while its cached jwks_uri still carries it, and keeps every key it has learned as compromised: no later set, replaying or replacing, removes one, a set a learned-compromised key signed is refused, and a failed refetch keeps them; with none ever verified, the jwks_uri rule alone decides. The Signals receiver's resynchronization (#1810) holds the Status keys as the PDP does (`missionStatusIssuer(...).keys`): a response under a key the set lists is refused, as its first verification and after one under the current key, and the held Mission stays held, though its configured kids and cached jwks_uri still carry the key; the same issuer advertising no set resynchronizes on it."
    },
    "level": "unit",
    "coverage": "partial",
@@ -23879,9 +23879,15 @@
      "name": "the historical key set through the configured issuer (@spec status#historical-key-set, status#mission-status, #831 B3, D901) > refuses, through missionStatusIssuer, a key the advertised set lists while the cached jwks_uri still carries it",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > refuses a resynchronization response signed under a key the issuer's historical key set lists, though its configured kids and its cached jwks_uri still carry it; the set is what refuses it",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gaps: the Signals receiver's resynchronization (`packages/mission-signals`, #1749) verifies under keys pinned from configuration and never consults the historical key set, so it would accept a response under a key the AS has published as compromised (#1810); and the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness."
+   "notes": "#1535 finding 8 (D649). History: specified but not implemented (D405) until the ring's compromise operation withdrew the key from the jwks_uri (#831 B2 (#1681, D809)), the Status consumers refreshed it (#831 C (#1697, #1705, D833)), and they refused a key the historical key set lists (#831 B3 (#1766)). The Mandate profile's compromise-time classification stays an informative pointer and is not a Status consumer duty. #831 B1 (D774): re-anchored to the retention section. #831 B3: the witness shows the same response accepted by a consumer holding no set, so the set is what refuses it. Proven by dropping the refusal. D887 (owner review of #1766): a replacement or replayed set could erase a learned revocation; the holder keeps what it learned, witnessed by an empty replacement signed under the compromised key and a replayed empty set signed under the current key, and proven by replacing the learned set on refresh. D931 per-row review: stays partial. Witnessed for the PDP's Status consumer: a listed key is refused while a cached jwks_uri still carries it, through `refreshingStatusKeys` and through `missionStatusIssuer`, and learned compromise survives replacement and replayed sets and failed refetches. Gap: the reference's Lifecycle consumer (`demo/src/lifecycle-client.ts`, `verifyLifecycleResponse`) fetches the `jwks_uri` for every verification and keeps no cache, so it never relies on a cached copy and a failed fetch accepts nothing, but no cited test exercises it. D901: the consumer configured from issuer metadata (`missionStatusIssuer`, which the separated MAS pilot uses) takes the set's URI from the validated metadata and refuses a listed key its cached jwks_uri still carries; a present but malformed `mission_historical_jwks_uri` is refused rather than ignored. Mutation: dropping the URI from the helper fails that witness. #1810 (option A, on the owner's go): the Signals receiver's resynchronization took a pinned key set and never read the historical key set; it now takes the Status keys as a key resolver, held through `missionStatusIssuer`, and refuses a listed key. Witnessed with a control: the same issuer advertising no set resynchronizes on the key. Proven by restoring the pinned key set and by dropping the set's refusal; each fails the witness at the refusal. Stays partial for the Lifecycle consumer."
   },
   {
    "id": "status.signing-keys.retention-audit-horizon",
@@ -24007,7 +24013,7 @@
    "assertion": "refusal",
    "observation": {
     "normative": "a consumer relies on a cached jwks_uri only within the freshness lifetime its response explicitly declares, then re-fetches and replaces its cached key set with the fetched one, never adding to it, so a removed key stops verifying within that lifetime",
-    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime."
+    "local": "The PDP's Status consumer holds the jwks_uri through IssuerKeys (#831 C), which uses a fetched set only within its explicit freshness lifetime. The Signals receiver's resynchronization holds its Status keys the same way (#1810): a key withdrawn from the jwks_uri still verifies within the cached set's declared lifetime and is refused once it ends."
    },
    "level": "unit",
    "coverage": "tested",
@@ -24017,9 +24023,15 @@
      "name": "the Status consumer's jwks_uri freshness (@spec status#signing-key-retention, #831 B3) > relies on a cached jwks_uri only within the freshness lifetime its response declares",
      "level": "unit",
      "surface": "verification"
+    },
+    {
+     "file": "src/packages/mission-signals/test/receiver-status-keys.test.ts",
+     "name": "the Signals receiver's Status keys (@spec status#signing-key-retention, status#historical-key-set, #1810) > follows a Status key rotation within the jwks_uri's declared freshness: a newly published trusted key resynchronizes at once, and a withdrawn one stops once the cached set's lifetime ends",
+     "level": "unit",
+     "surface": "verification"
     }
    ],
-   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache; the Signals receiver pins configured keys rather than caching the jwks_uri (its gap is on `compromised-not-relied-on`, #1810)."
+   "notes": "History: specified at #831 B1 (D774); implemented in the Status consumers by #831 C (#1697, #1705, D833). #831 B3: witnessed at the Status consumer, not the library. Proven by a fixed ten-minute lifetime. D931 per-row review: tested. Obligation: a cached jwks_uri is relied on only within the freshness lifetime its response explicitly declares, then replaced, never added to. Witness: within the lifetime the cached copy serves without a fetch; at its end the set is refetched and the withdrawn key refused. The Lifecycle client keeps no cache. #1810: the Signals receiver's resynchronization holds the jwks_uri through `missionStatusIssuer` (`IssuerKeys`), witnessed by a withdrawn key that verifies within the declared lifetime and is refused once it ends; proven by using the cached set past its lifetime, which fails the witness at the refusal."
   },
   {
    "id": "status.signing-keys.no-heuristic-freshness",
