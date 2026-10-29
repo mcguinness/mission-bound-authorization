@@ -558,6 +558,51 @@ describe("the Mission Record commits with its authorization code (@spec mission#
     expectNoMission(h, flow);
   });
 
+  it("an exception after the commit that is neither a failed notification nor a failed index write releases nothing: the staged code is never found", async () => {
+    const h = await start(15623);
+    const flow = await h.open();
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    const approve = h.as.kernel.approve.bind(h.as.kernel);
+    vi.spyOn(h.as.kernel, "approve").mockImplementation((input, prepared) => {
+      approve(input, prepared);
+      throw new Error("an unrecognized failure after the commit");
+    });
+    const codes = stagedCodes();
+    const out = await flow.resume(decided);
+    expect(out.code).toBeNull();
+    expect(codes).toHaveLength(1);
+    expect(await h.as.provider.AuthorizationCode.find(codes[0] as string)).toBeUndefined();
+    // The commit happened and no code was released: the residual an
+    // unrecognized post-commit failure leaves (an active Mission with no usable
+    // code, until its expiry or a revocation), never a released code.
+    expect(h.as.kernel.findByApprovalEvent(flow.approvalEventId)?.state).toBe("active");
+  });
+
+  it("a failed bound-grant index write after the commit is recovered: the entry is written again and the code redeems under the bound Mission", async () => {
+    const h = await start(15624);
+    const flow = await h.open();
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    const write = h.as.kernel.missionBoundGrants.record.bind(h.as.kernel.missionBoundGrants);
+    let failed = false;
+    vi.spyOn(h.as.kernel.missionBoundGrants, "record").mockImplementation((input) => {
+      if (!failed) {
+        failed = true;
+        throw new Error("injected index write failure");
+      }
+      return write(input);
+    });
+    const out = await flow.resume(decided);
+    expect(failed).toBe(true);
+    expect(out.code, JSON.stringify(out)).toBeTruthy();
+    const record = h.as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(record?.state).toBe("active");
+    expect(h.as.kernel.missionBoundGrants.resolve(flow.grantId)?.missionId).toBe(record?.id);
+    const redeemed = await flow.redeem(out.code as string);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    expect(flow.missionOf(redeemed.body)).toBe(record?.id);
+  });
 });
 
 describe("the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001)", () => {

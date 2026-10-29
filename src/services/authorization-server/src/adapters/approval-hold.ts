@@ -26,9 +26,14 @@
  * never released under a grant that stays classified as Mission-bound
  * (`MissionBoundGrantStore.recordHeldApproval`), so nothing is usable.
  * After the commit, recovery-witness uncertainty fails closed with nothing
- * released; a failed notification (a post-commit publication whose delivery
- * row stays durable and is retried) is recovered when the committed record
- * agrees with the held decision.
+ * released. Only two post-commit failures are recovered, each by its type and
+ * only when the committed record agrees with the held decision: a failed
+ * notification (`LifecycleNotificationError`: the event row is durable and the
+ * drain retries it) and a failed bound-grant index write
+ * (`BoundGrantIndexWriteError`: the entry is written again). Any other
+ * exception after the commit releases nothing, so an unrelated failure never
+ * releases a code; the Mission it committed then has no usable code, as before
+ * #1863, until its expiry or a revocation.
  *
  * In-process: the reference AS runs as one process (D663), and these holds
  * live in its memory, as the provider's codes and grants do.
@@ -38,6 +43,8 @@ import { type Adapter, type AdapterFactory, type AdapterPayload, errors } from "
 import type Provider from "oidc-provider";
 import { IntentError } from "../kernel/intent.js";
 import type { ApproveInput, MissionKernel, PreparedApproval } from "../kernel/kernel.js";
+import { LifecycleNotificationError } from "../kernel/lifecycle-outbox.js";
+import { BoundGrantIndexWriteError } from "../kernel/mission-bound-grant-store.js";
 import { RecoveryUncertainError } from "../kernel/recovery-witness.js";
 import type { MissionRecord } from "../kernel/types.js";
 import { serializeApprovalEvent } from "./approval-render-revision.js";
@@ -190,12 +197,13 @@ function fenceAuthorizationCodes(
     }
     const record = kernel.findByApprovalEvent(held.approvalEventId);
     if (record) {
-      // Committed, and a post-commit step failed after it: a notification
-      // whose delivery row is durable and retried by the request-path drain.
-      // `approve` writes the bound-grant index after its transaction, so the
-      // entry is made sure of here, and the code is released, with nothing
-      // awaited since the commit.
-      if (isHeldDecision(record, held)) {
+      // Committed, and a known post-commit step failed after it: a
+      // notification whose delivery row is durable and retried by the
+      // request-path drain, or the bound-grant index write `approve` makes
+      // after its transaction. The entry is made sure of here, and the code is
+      // released, with nothing awaited since the commit. Any other exception
+      // after a commit is not recognized and releases nothing.
+      if (isHeldDecision(record, held) && (e instanceof LifecycleNotificationError || e instanceof BoundGrantIndexWriteError)) {
         kernel.missionBoundGrants.record({ grantId: held.grantId, missionId: record.id, kind: "approval" });
         holds.release(id, seconds);
         return;

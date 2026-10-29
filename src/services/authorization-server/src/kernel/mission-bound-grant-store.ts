@@ -63,6 +63,25 @@ export interface MissionBoundGrant {
   backingGrantId?: string;
 }
 
+/**
+ * An approval's record committed, but writing its grant's bound-grant index
+ * entry, which follows the record's transaction on this store's own handle,
+ * failed. The record resolves through `findByGrant` meanwhile; a caller that
+ * recovers (the approval code save, #1863, D1001) writes the entry again,
+ * and recovers from this type alone.
+ */
+export class BoundGrantIndexWriteError extends Error {
+  constructor(
+    readonly grantId: string,
+    cause: unknown,
+  ) {
+    super(`the approval committed, but its bound-grant index entry was not written: ${cause instanceof Error ? cause.message : String(cause)}`, {
+      cause,
+    });
+    this.name = "BoundGrantIndexWriteError";
+  }
+}
+
 interface GrantRow {
   mission_id: string;
   kind: string;
