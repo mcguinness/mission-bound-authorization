@@ -7685,11 +7685,11 @@ resolve before interoperating.
   of Mission Identifier and Expiry in Responses, and Self-Exchange
   Down-Scoping points to its `mission_intent` exemption in Authority
   Proposal (#1723, D971).
-- Two rules already stated as obligations carry BCP 14 keywords, with
-  no new requirement: the AS refuses a token request any of whose
-  audiences is Mission-governed and issues no token for the others
-  (Authority Proposal); and a Mission in a state from which it can
-  return to `active` is not reported with a termination reason
+- Two rules already stated as obligations carry BCP 14 keywords, with no
+  new requirement: the AS refuses a token request outside a Mission any
+  of whose audiences is Mission-governed, and issues no token for the
+  others (Authority Proposal); and a Mission in a state from which it
+  can return to `active` is not reported with a termination reason
   (Issuance Gating). Editorial, no requirement change: Instance Context
   in Delegated Tokens names the grant lineage a delegated exchange
   establishes when it issues a refresh token (#1871, D1005).
