@@ -148,7 +148,7 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
    * Alice's Intent-only report read with `openid`, or with no goal an ordinary
    * request.
    */
-  async function push(kind: "headless" | "floor" | "browser" | "ordinary"): Promise<string> {
+  async function push(kind: "headless" | "floor" | "browser" | "ordinary", extra: Record<string, string> = {}): Promise<string> {
     const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
     const target = kind === "headless" || kind === "floor" ? RESOURCE : PLAIN;
     const res = await fetch(`${issuer}/request`, {
@@ -172,6 +172,7 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
         ...(kind === "browser"
           ? { mission_intent: JSON.stringify({ intent: { goal: "Read the quarterly reports", target_resources: [PLAIN], expires_at: FAR_EXP } }) }
           : {}),
+        ...extra,
         client_assertion: await clientAssertion(),
         client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
       }).toString(),
@@ -204,9 +205,9 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
    * approval service, by Bob for Alice in his browser with the suite's `mfa`
    * login (the floor), or by Alice in her browser.
    */
-  async function open(kind: "headless" | "floor" | "browser" = "headless") {
+  async function open(kind: "headless" | "floor" | "browser" = "headless", extra: Record<string, string> = {}) {
     const jar: Jar = new Map();
-    const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: await push(kind) })}`, {
+    const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: await push(kind, extra) })}`, {
       redirect: "manual",
     });
     keep(jar, res);
@@ -497,6 +498,66 @@ describe("the Mission Record commits with its authorization code (@spec mission#
     expect(await h.as.provider.AuthorizationCode.find(codes[0] as string)).toBeUndefined();
     expectNoMission(h, flow);
   });
+
+  it("the client's requested max_age is measured again at the commit: a browser login that ages past it before the code save completes access_denied with no Mission and no released code", async () => {
+    const h = await start(15620);
+    const flow = await h.open("browser", { max_age: "60" });
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    // At the commit the clocks read 90 s later: Alice's login, fresh at the
+    // decision, is past the client's max_age of 60 s. Nothing else changed.
+    const later = Date.now() + 90_000;
+    vi.spyOn(Date, "now").mockReturnValue(later);
+    vi.spyOn(h.as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(later));
+    const codes = stagedCodes();
+    const out = await flow.resume(decided);
+    expect(out.error).toBe("access_denied");
+    expect(out.description).toMatch(/acr_values\/max_age/);
+    expect(out.code).toBeNull();
+    expect(codes).toHaveLength(1);
+    expect(await h.as.provider.AuthorizationCode.find(codes[0] as string)).toBeUndefined();
+    expectNoMission(h, flow);
+  });
+
+  it("within the client's requested max_age at the commit, the held decision commits and its code redeems under the Mission", async () => {
+    const h = await start(15621);
+    const flow = await h.open("browser", { max_age: "60" });
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    const later = Date.now() + 30_000;
+    vi.spyOn(Date, "now").mockReturnValue(later);
+    vi.spyOn(h.as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(later));
+    const out = await flow.resume(decided);
+    expect(out.code, JSON.stringify(out)).toBeTruthy();
+    const record = h.as.kernel.findByApprovalEvent(flow.approvalEventId);
+    expect(record?.state).toBe("active");
+    expect(record?.grant_id).toBe(flow.grantId);
+    const redeemed = await flow.redeem(out.code as string);
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(200);
+    expect(flow.missionOf(redeemed.body)).toBe(record?.id);
+  });
+
+  it("max_age=0, through oidc-provider's prompt=login translation, is measured again at the commit: a login fresh at the decision and seconds old at the code save completes access_denied with no Mission", async () => {
+    const h = await start(15622);
+    // The decision runs at one frozen instant, so the fresh login satisfies
+    // max_age=0 there; the code save runs 5 s later.
+    const t0 = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(t0);
+    vi.spyOn(h.as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(Date.now()));
+    const flow = await h.open("browser", { max_age: "0" });
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    vi.spyOn(Date, "now").mockReturnValue(t0 + 5_000);
+    const codes = stagedCodes();
+    const out = await flow.resume(decided);
+    expect(out.error).toBe("access_denied");
+    expect(out.description).toMatch(/acr_values\/max_age/);
+    expect(out.code).toBeNull();
+    expect(codes).toHaveLength(1);
+    expect(await h.as.provider.AuthorizationCode.find(codes[0] as string)).toBeUndefined();
+    expectNoMission(h, flow);
+  });
+
 });
 
 describe("the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001)", () => {

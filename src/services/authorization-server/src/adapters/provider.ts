@@ -7765,8 +7765,10 @@ async function decide(
   const achievedAcr = principal.acr;
   const achievedAuthTime = principal.auth_time;
   const requestedPrompts = typeof params.prompt === "string" ? params.prompt.split(" ") : [];
-  if (
-    !approverAuthenticationSatisfies(
+  // Run at the decision and again at a held decision's commit (#1863, D1001),
+  // on the AS's clock at each instant.
+  const clientAuthenticationSatisfied = (): boolean =>
+    approverAuthenticationSatisfies(
       {
         ...(typeof params.acr_values === "string" ? { acrValues: params.acr_values } : {}),
         ...(typeof params.max_age === "string" ? { maxAge: params.max_age } : {}),
@@ -7778,8 +7780,8 @@ async function decide(
       },
       { ...(achievedAcr ? { acr: achievedAcr } : {}), ...(achievedAuthTime !== undefined ? { authTime: achievedAuthTime } : {}) },
       Math.floor(opts.kernel.nowDate().getTime() / 1000),
-    )
-  ) {
+    );
+  if (!clientAuthenticationSatisfied()) {
     await finish({
       error: "access_denied",
       error_description: "approver authentication did not satisfy the requested acr_values/max_age",
@@ -8062,13 +8064,21 @@ async function decide(
   // @spec mission#approval-event (step 7) (#1863, D1001): the final checks a
   // held decision runs again at its commit, when its authorization code is
   // saved, with nothing awaited before the commit: the context its rendering
-  // showed (#1446), and the approval-authentication floor at that instant
-  // (#826). The Approver's own checks and, where direct approvals are
-  // recorded, the rule and its floor run inside `kernel.approve`. Any refusal
-  // is an IntentError, which completes `access_denied`.
+  // showed (#1446), the client's requested `acr_values`/`max_age` (max_age=0
+  // included, through its prompt=login translation), and the
+  // approval-authentication floor at that instant (#826). The Approver's own
+  // checks and, where direct approvals are recorded, the rule and its floor run
+  // inside `kernel.approve`. Any refusal is an IntentError, which completes
+  // `access_denied`.
   const finalChecks = (held: RenderRevision, preparedSet: readonly AuthorityEntry[]) => (): void => {
     if (contextChange(held, preparedSet)) {
       throw new IntentError("access_denied", "the request changed after it was approved; no Mission was created");
+    }
+    if (!clientAuthenticationSatisfied()) {
+      throw new IntentError(
+        "access_denied",
+        "approver authentication no longer satisfies the requested acr_values/max_age; no Mission was created",
+      );
     }
     const atCommit = evaluateApprovalFloor(
       opts.approvalFloor,
