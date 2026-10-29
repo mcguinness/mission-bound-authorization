@@ -14,6 +14,8 @@ import {
   entryOverlapsResource,
   intentHash,
   type JsonValue,
+  NARROWING_IN_FULL,
+  type NarrowingDeclaration,
   proposalHash,
   type ResourceContractDeclarations,
 } from "@mission/core";
@@ -884,6 +886,13 @@ export interface KernelOptions {
    */
   resourceContracts?: ResourceContractDeclarations;
   /**
+   * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+   * (#1377, D1025): the `narrowing` capability this server declares for
+   * `mission_resource_access`, as it resolves it. Absent: declared in full,
+   * so a kernel constructed without it narrows as before.
+   */
+  narrowing?: NarrowingDeclaration;
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -1376,6 +1385,11 @@ export class MissionKernel {
     return this.opts.resourceContracts ?? RESOURCE_CONTRACTS;
   }
 
+  /** @spec resource-access#qualified-narrowing (#1377, D1025): the declared `narrowing` capability every narrowing site applies. */
+  narrowingDeclaration(): NarrowingDeclaration {
+    return this.opts.narrowing ?? NARROWING_IN_FULL;
+  }
+
   /**
    * {@link derive}, with each derived entry's delegate eligibility origin
    * (@spec resource-access#delegate-eligibility, #1275), index-aligned with
@@ -1397,6 +1411,7 @@ export class MissionKernel {
       undefined,
       undefined,
       requestedScope,
+      this.narrowingDeclaration(),
     );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps

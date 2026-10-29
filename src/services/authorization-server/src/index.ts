@@ -25,6 +25,8 @@ import {
   RESOURCE_CONTRACTS,
   SCOPE_PROJECTION,
   TOPOLOGY,
+  TRANSFORMATION_CAPABILITIES,
+  type TransformationCapabilities,
   USERS,
   APPROVAL_FLOOR,
   WRITE_ACTIONS,
@@ -1526,6 +1528,14 @@ export async function buildAuthorizationServer(opts: {
    */
   scopeProjection?: ScopeProjectionMapping;
   /**
+   * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+   * (#1377, D1025): the transformation capabilities this server declares per
+   * supported type, emitted in the type's metadata entry, and the resolved
+   * `narrowing` declaration every narrowing site applies. Absent: the shipped
+   * `transformation-capabilities.json`.
+   */
+  transformationCapabilities?: TransformationCapabilities;
+  /**
    * The deployment's enabled capabilities (`adapters/capabilities.ts`).
    * Absent: every capability is on, which is the full reference assembly. A
    * disabled capability refuses with its path's standard error, and with
@@ -1825,9 +1835,13 @@ export async function buildAuthorizationServer(opts: {
     timer.unref();
     dependencyTimers.push(timer);
   }
+  const transformationCapabilities = opts.transformationCapabilities ?? TRANSFORMATION_CAPABILITIES;
   const kernel = new MissionKernel({
     capabilityResolver: trustedCapabilityResolver(),
     issuer: opts.issuer,
+    // @spec resource-access#qualified-narrowing (#1377, D1025): derivation and
+    // every later narrowing apply the declared capability.
+    narrowing: transformationCapabilities.narrowing,
     ...(authorityDependencyGate ? { authorityDependencyGate } : {}),
     // @spec mission#transformation-capabilities (#1503 finding 7, D733): the
     // trusted entry-to-audience mapping (the same mapping the provider reads
@@ -2266,6 +2280,7 @@ export async function buildAuthorizationServer(opts: {
     ...(joinAssertionService ? { joinAssertionService } : {}),
     // @spec mission#scope-projection — the trusted out-of-band mapping.
     scopeProjection: opts.scopeProjection ?? SCOPE_PROJECTION,
+    transformationCapabilities,
     processBootId,
     ...(opts.capabilities ? { capabilities: opts.capabilities } : {}),
     ...(progressive ? { progressive } : {}),

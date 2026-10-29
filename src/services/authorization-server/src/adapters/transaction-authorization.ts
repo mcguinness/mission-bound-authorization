@@ -32,6 +32,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   delegatedRoutingRefusal,
   isSubsetSetIgnoringCapabilitySources,
+  isSubsetSetUnderIgnoringCapabilitySources,
   type ScopeProjectionMapping,
   unenforcedConstraintRefusal,
 } from "@mission/core";
@@ -536,7 +537,12 @@ async function admit(
   }
   const subjectAuthority = (subject.authorization_details as AuthorityEntry[] | undefined) ?? [];
   const effective = deps.kernel.effectiveAuthoritySet(active);
-  if (!isSubsetSetIgnoringCapabilitySources(requested, subjectAuthority) || !isSubsetSetIgnoringCapabilitySources(requested, effective)) {
+  // @spec resource-access#qualified-narrowing (#1377, D1025): under the declared `narrowing`.
+  const narrowing = deps.kernel.narrowingDeclaration();
+  if (
+    !isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, subjectAuthority) ||
+    !isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, effective)
+  ) {
     fail(ctx, 400, "invalid_grant", "challenge authority is outside the Authority Set");
     return;
   }

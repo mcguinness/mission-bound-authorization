@@ -14,6 +14,7 @@ import {
   capabilitySourceIdentity,
   compareAmounts,
   delegateMatcherListViolation,
+  entriesEqual,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   carriesHttpUserinfo,
@@ -22,6 +23,9 @@ import {
   isSubsetEntry,
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
+  NARROWING_IN_FULL,
+  type NarrowingDeclaration,
+  narrowingPermits,
   refusedEntryMember,
   resourceMatchViolation,
   resourceWithin,
@@ -446,6 +450,7 @@ export function deriveAuthoritySetWithProvenance(
   proposalProvenance?: readonly RetainedOrigin[],
   proposalChildActorProvenance?: readonly RetainedOrigin[],
   requestedScope?: readonly AuthorityEntry[],
+  narrowing: NarrowingDeclaration = NARROWING_IN_FULL,
 ): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
@@ -538,7 +543,17 @@ export function deriveAuthoritySetWithProvenance(
     const inheritedChildActor: RetainedOrigin =
       hasProposal && proposalChildActorProvenance ? (proposalChildActorProvenance[p] ?? null) : "list";
     for (const ceiling of matchingCeilings) {
-      const entry = intersect(proposal, ceiling);
+      // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+      // (#1720 item 7, #1377, D1025): "The `narrowing` capability also
+      // governs Authority Set derivation". Where the declaration does not
+      // permit narrowing this pair, the candidate is retained unchanged only
+      // when it equals the ceiling entry, and is never modified under a
+      // claimed subset relation.
+      const entry = narrowingPermits(narrowing, proposal, ceiling)
+        ? intersect(proposal, ceiling)
+        : entriesEqual(proposal, ceiling)
+          ? proposal
+          : null;
       if (!entry) continue;
       derived.push(entry);
       // @spec resource-access#delegate-eligibility: the origin is recorded

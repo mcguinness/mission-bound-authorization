@@ -16,7 +16,7 @@ import { randomBytes } from "node:crypto";
 import { createLocalJWKSet, type CryptoKey, type JSONWebKeySet, jwtVerify, SignJWT } from "jose";
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { carriedUnder, isSubsetSetUnderIgnoringCapabilitySources } from "@mission/core";
 import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
 import { issuedWhole, projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
@@ -277,14 +277,17 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     throw e;
   }
   let authority: AuthorityEntry[];
+  const narrowing = opts.kernel.narrowingDeclaration();
   if (requested === undefined) {
-    authority = projectThroughEffective(presented, effective);
+    // @spec resource-access#qualified-narrowing (#1377, D1025): a modified
+    // entry is carried only where the declared `narrowing` permits it.
+    authority = carriedUnder(narrowing, projectThroughEffective(presented, effective), presented);
   } else {
-    if (!isSubsetSetIgnoringCapabilitySources(requested, presented)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, presented)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the presented token's authority");
       return;
     }
-    if (!isSubsetSetIgnoringCapabilitySources(requested, effective)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }

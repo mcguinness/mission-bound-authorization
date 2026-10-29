@@ -67,6 +67,8 @@ import {
   DPOP_PROOF_REPLAY_WINDOW_S,
   entryOverlapsResource,
   isSubsetSetIgnoringCapabilitySources,
+  isSubsetSetUnderIgnoringCapabilitySources,
+  carriedUnder,
   projectScope,
   splitScope,
 } from "@mission/core";
@@ -874,7 +876,8 @@ export async function handleTokenExchangeGrant(
     }
     if (
       effective.length > 0 &&
-      !isSubsetSetIgnoringCapabilitySources(
+      !isSubsetSetUnderIgnoringCapabilitySources(
+        opts.kernel.narrowingDeclaration(),
         requestedDetails as unknown as AuthorityEntry[],
         grantable,
       )
@@ -1310,14 +1313,22 @@ export async function handleAsyncDelegationExchange(
   // is bounded by the presented token's own authority (read above) as well as
   // the Mission's: a down-scoped token never opens a family broader than itself.
   let confinedSubset: AuthorityEntry[];
+  const narrowing = opts.kernel.narrowingDeclaration();
   if (requestedSubset === undefined) {
-    confinedSubset = projectThroughEffective(presentedAuthority, effective);
+    // @spec resource-access#qualified-narrowing (#1377, D1025): an entry the
+    // projection modified is carried only where the declared `narrowing`
+    // permits it; otherwise only an entry equal to the presented one is.
+    confinedSubset = carriedUnder(narrowing, projectThroughEffective(presentedAuthority, effective), presentedAuthority);
   } else {
-    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, presentedAuthority)) {
+    // @spec resource-access#qualified-narrowing (#1377, D1025): a requested
+    // entry is within the presented and the Mission authority under the
+    // declared `narrowing`: by the subset rule where it is permitted for the
+    // pair, and only by equality otherwise.
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requestedSubset, presentedAuthority)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the presented token's authority");
       return;
     }
-    if (!isSubsetSetIgnoringCapabilitySources(requestedSubset, effective)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requestedSubset, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }

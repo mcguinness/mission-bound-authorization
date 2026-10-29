@@ -10,7 +10,7 @@ import {
   MissionStatusRateLimiter,
 } from "./status-rate-limit.js";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
+import { MISSION_MAX_STALE_SECONDS, type TransformationCapabilities } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import {
   approvalContext,
@@ -62,7 +62,7 @@ import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
   entryOverlapsResource,
-  isSubsetSetIgnoringCapabilitySources,
+  isSubsetSetUnderIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
   readMissionAccessProfile,
@@ -1206,6 +1206,14 @@ export interface AdapterOptions {
    */
   scopeProjection?: ScopeProjectionMapping;
   /**
+   * @spec mission#transformation-capabilities (#1377, D1025): the declared
+   * transformation capabilities, emitted as each type's
+   * `mission_transformation_capabilities` in its metadata entry. Absent: no
+   * carrier member, so every capability falls through to deployment
+   * documentation.
+   */
+  transformationCapabilities?: TransformationCapabilities;
+  /**
    * The deployment's enabled capabilities (`adapters/capabilities.ts`).
    * Absent: every capability is on, which is the full reference provider. A
    * disabled capability refuses with its path's standard error.
@@ -2055,7 +2063,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const granted = Array.isArray(ceiling) ? (ceiling as AuthorityEntry[]) : [];
     // Every requested entry is within the grant and issued whole, or the
     // request is refused (#1508, #1513).
-    if (!isSubsetSetIgnoringCapabilitySources(requested, granted) || !issuedWhole(requested, granted)) {
+    // @spec resource-access#qualified-narrowing (#1377, D1025): within the
+    // grant under the declared `narrowing`, and only by equality where it is
+    // not permitted for the pair.
+    if (
+      !isSubsetSetUnderIgnoringCapabilitySources(opts.kernel.narrowingDeclaration(), requested, granted) ||
+      !issuedWhole(requested, granted)
+    ) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return projectThroughEffective(requested, granted);
@@ -5174,7 +5188,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (ctx.path === "/authorization-details-types" && ctx.method === "GET") {
       ctx.status = 200;
       ctx.set("content-type", "application/json");
-      ctx.body = authorizationDetailsTypesMetadata();
+      ctx.body = authorizationDetailsTypesMetadata(opts.transformationCapabilities?.declared);
       return;
     }
 

@@ -1093,6 +1093,8 @@ export function dispatchFromTemplate(
       derived,
       first.provenance,
       first.childActorProvenance,
+      undefined,
+      kernel.narrowingDeclaration(),
     ));
   } catch (e) {
     if (e instanceof IntentError) {
