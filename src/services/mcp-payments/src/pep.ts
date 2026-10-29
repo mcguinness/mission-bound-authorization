@@ -1558,11 +1558,15 @@ export interface ExecutionAttempt {
   /** The governing Mission, from `resolvedMission`, never `token.mission`. */
   mission: { id: string; issuer: string; authority_hash?: string };
   /**
-   * @spec runtime#permit-binding (#853, D487): the enforcement boundary the
-   * permit was decided at, exactly as this PEP sent it in
-   * `resource.properties.audience`. Every disposition record of this permit
-   * carries it, and the `enforcement_boundary` use check compares the
-   * boundary this PEP establishes now against it before every release.
+   * @spec runtime#permit-binding (#853, D487), runtime-evidence#execution-evidence-object
+   * `audience` (#1868, D999): the enforcement boundary the permit was decided
+   * at, read from the permit's retained Decision Evidence (its `audience`,
+   * byte for byte), never from the request that received the permit: a PDP
+   * retransmission re-presents an earlier permit, whose boundary can be an
+   * identifier a declared change has since replaced. Every disposition record
+   * of this permit carries it, and the `enforcement_boundary` use check
+   * compares the boundary this PEP establishes now against it before every
+   * release.
    */
   audience: string;
   /**
@@ -3526,6 +3530,28 @@ export class Pep {
     // earlier permit; given the version now in force it would pass the
     // `enforcement_boundary` use check after a cutover.
     const permitVersion = retention.retained ? retention.record.boundary_version : undefined;
+    // @spec runtime-evidence#execution-evidence-object `audience` (#1868,
+    // D999): "The boundary identifier the linked Decision Evidence recorded,
+    // byte for byte". The attempt's boundary, like its version above, is the
+    // retained record's own, never the boundary established for this request
+    // and never normalized: a permit decided before a declared identifier
+    // change and re-presented after it keeps its original identifier on every
+    // disposition record. The boundary established now stays independent:
+    // the `enforcement_boundary` use check compares it with this one and
+    // refuses the old permit. A permit reaches here only with its Decision
+    // Evidence retained (refused above otherwise); a retained record with no
+    // `audience` (a key resolver that binds no audience accepted it) leaves
+    // nothing to mirror, so the permit is refused the same way rather than
+    // recorded under this request's boundary. Unlike an absent version, an
+    // absent audience cannot reach the use check: a disposition record would
+    // have to invent its REQUIRED `audience`.
+    const permitAudience = typeof retained?.audience === "string" ? retained.audience : undefined;
+    if (permitAudience === undefined) {
+      return this.refuse(boundary, token, "decision_evidence_unverifiable", mapping.action, view, undefined, {
+        evaluationRequest: req,
+        resource: req.resource,
+      });
+    }
     const attempt: ExecutionAttempt = {
       evaluationId: decision.context.decision_id as string,
       mission: {
@@ -3533,7 +3559,7 @@ export class Pep {
         issuer: missionAnchor.issuer,
         ...(missionAnchor.authority_hash !== undefined ? { authority_hash: missionAnchor.authority_hash } : {}),
       },
-      audience: boundary,
+      audience: permitAudience,
       ...(permitVersion !== undefined ? { boundaryVersion: permitVersion } : {}),
       operationTarget,
       operationArguments: Object.freeze({ ...args }),
