@@ -105,16 +105,21 @@ const trace = (log: Received[]): string[] =>
 
 /**
  * Signals' consumer rule, taken literally (@spec signals#consumer-behavior):
- * a verification or heartbeat event attests liveness; cached Mission state is
- * stale once the stream has gone longer than `mission_max_stale_seconds`
- * without one, and once stale it stays stale until the consumer
- * re-establishes state through Mission Status. A Stream Updated event is not
- * a liveness event.
+ * a verification or heartbeat event attests liveness, and the stream stays
+ * verified live for the heartbeat interval after one. The staleness rule
+ * applies to a stream not verified live: cached Mission state is stale once
+ * the stream has gone longer than `mission_max_stale_seconds` without a
+ * liveness event. So it goes stale after the longer of the two, and once
+ * stale it stays stale until the consumer re-establishes state through
+ * Mission Status. A Stream Updated event is not a liveness event.
  */
 class StalenessRule {
   private lastLiveness: number | undefined;
   private stale = false;
-  constructor(private readonly maxStaleMs: number) {}
+  constructor(
+    private readonly maxStaleMs: number,
+    private readonly heartbeatIntervalMs: number,
+  ) {}
 
   receive(r: Received): void {
     if (r.kind !== "verification") return;
@@ -123,8 +128,10 @@ class StalenessRule {
   }
 
   private check(at: number): void {
-    if (this.lastLiveness !== undefined && at - this.lastLiveness > this.maxStaleMs)
-      this.stale = true;
+    if (this.lastLiveness === undefined) return;
+    const silence = at - this.lastLiveness;
+    const verifiedLive = silence <= this.heartbeatIntervalMs;
+    if (!verifiedLive && silence > this.maxStaleMs) this.stale = true;
   }
 
   /** Whether the consumer may still rely on its cached Mission state at `at`. */
@@ -161,7 +168,7 @@ interface Wired {
 
 async function wire(
   store?: { file: string },
-  opts: { undeclaredFirst?: boolean } = {},
+  opts: { undeclaredFirst?: boolean; heartbeatIntervalSeconds?: number } = {},
 ): Promise<Wired> {
   const statusKeys = await generateKeyPair("ES256", { extractable: true });
   const statusPub: JWK = {
@@ -188,6 +195,9 @@ async function wire(
       issuer: ISS,
       consumers,
       maxStaleSeconds: MAX_STALE_SECONDS,
+      ...(opts.heartbeatIntervalSeconds !== undefined
+        ? { heartbeatIntervalSeconds: opts.heartbeatIntervalSeconds }
+        : {}),
       now: () => new Date(clock),
       ...(store ? { store } : {}),
     });
@@ -199,7 +209,12 @@ async function wire(
   const declaredLog: Received[] = [];
   const undeclaredLog: Received[] = [];
   const undeclaredResults: ApplyResult[] = [];
-  const rule = new StalenessRule(MAX_STALE_MS);
+  const rule = new StalenessRule(
+    MAX_STALE_MS,
+    opts.heartbeatIntervalSeconds !== undefined
+      ? opts.heartbeatIntervalSeconds * 1000
+      : HEARTBEAT_MS,
+  );
   const sinks = (emitter: MissionSignalEmitter) => {
     emitter.onDeliver(DECLARED_AUD, (set) => {
       declaredLog.push({ at: clock, kind: kindOf(set), set });
@@ -509,6 +524,49 @@ describe("a withheld narrowing pauses the undeclared stream (@spec signals#disch
     await reopened.drain();
     expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused", "enabled", "v3"]);
     reopened.close();
+  });
+
+  it("waits out a heartbeat interval longer than mission_max_stale_seconds: no re-enable before the last liveness plus the interval, while the consumer is still verified live", async () => {
+    const HEARTBEAT_INTERVAL_SECONDS = 90;
+    const intervalMs = HEARTBEAT_INTERVAL_SECONDS * 1000;
+    const w = await wire(undefined, { heartbeatIntervalSeconds: HEARTBEAT_INTERVAL_SECONDS });
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    // Heartbeats at the stream's interval, longer than the staleness bound.
+    w.advance(intervalMs);
+    await w.emitter.attestLiveness();
+    await w.emitter.drain();
+    const lastLiveness = w.rule.lastLivenessAt as number;
+    expect(lastLiveness).toBe(w.now());
+
+    w.advance(1_000);
+    containRead(w, mission.id, "evt-pause-contain-interval");
+    await w.emitter.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).reenable_after).toEqual(
+      new Date(lastLiveness + intervalMs),
+    );
+
+    // Past mission_max_stale_seconds the consumer is still verified live, so
+    // its staleness rule has not fired; the stream stays paused.
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    expect(w.rule.mayRely(w.now())).toBe(true);
+    await w.emitter.drain();
+    expect(w.emitter.streamStatus(UNDECLARED_AUD).status).toBe("paused");
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
+
+    // At exactly the interval: still verified live, still paused.
+    w.advance(lastLiveness + intervalMs - w.now());
+    expect(w.rule.mayRely(w.now())).toBe(true);
+    await w.emitter.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused"]);
+
+    // Past the interval the consumer's reliance has ended, and only then is
+    // the stream re-enabled.
+    w.advance(1);
+    expect(w.rule.mayRely(w.now())).toBe(false);
+    await w.emitter.drain();
+    expect(trace(w.undeclaredLog)).toEqual(["v1", "verify", "paused", "enabled"]);
   });
 
   it("never shortens a pause on a second withholding: it extends it to that withholding plus mission_max_stale_seconds", async () => {

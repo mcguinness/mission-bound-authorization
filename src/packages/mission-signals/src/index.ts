@@ -29,8 +29,9 @@
  * `authority_changed` true, a discharge or a containment commit alike.
  * The emitter's side of SSF stream status is implemented, in process (#1877):
  * a withholding pauses the stream with a Stream Updated event, holds its
- * events, and re-enables it only once more than `mission_max_stale_seconds`
- * have passed since its last verification event; {@link
+ * events, and re-enables it only once more than the longer of
+ * `mission_max_stale_seconds` and the stream's heartbeat interval have
+ * passed since its last verification event; {@link
  * MissionSignalEmitter.attestLiveness} delivers verification events to every
  * stream not paused. The stream status is durable in the outbox store.
  * Delivery durability (#641) is implemented: the emitter journals one durable
@@ -1456,12 +1457,21 @@ export interface EmitterOptions {
   /**
    * @spec signals#discharge-compatibility (#1877): the issuer's advertised
    * `mission_max_stale_seconds`. A withholding pauses the stream, and the
-   * emitter re-enables it only once more than this many seconds have passed
-   * since the last verification event acknowledged on it. Absent, a paused
-   * stream has no window to wait out and is never re-enabled automatically
-   * (fail closed).
+   * emitter re-enables it only once more than the re-enable window, the
+   * longer of this and `heartbeatIntervalSeconds`, has passed since the last
+   * verification event acknowledged on it. Absent, a paused stream has no
+   * window to wait out and is never re-enabled automatically (fail closed).
    */
   maxStaleSeconds?: number;
+  /**
+   * @spec signals#consumer-behavior (#1877): the stream's heartbeat
+   * interval, within which a verification or heartbeat event keeps the
+   * stream verified live. A consumer's staleness rule applies only once
+   * the stream is no longer verified live, so the re-enable window is the
+   * longer of this and `maxStaleSeconds`. Absent, the window is
+   * `maxStaleSeconds`.
+   */
+  heartbeatIntervalSeconds?: number;
 }
 
 /**
@@ -1634,13 +1644,17 @@ export class MissionSignalEmitter {
   private readonly retryBaseMs: number;
   private readonly retryCapMs: number;
   private readonly leaseMs: number;
-  private readonly maxStaleMs: number | undefined;
+  /** The re-enable window: the longer of `maxStaleSeconds` and the heartbeat interval. */
+  private readonly reenableWindowMs: number | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
 
   constructor(private readonly opts: EmitterOptions) {
     const maxStale = opts.maxStaleSeconds;
     if (maxStale !== undefined && (!Number.isSafeInteger(maxStale) || maxStale <= 0))
       throw new Error("maxStaleSeconds must be a positive integer");
+    const heartbeat = opts.heartbeatIntervalSeconds;
+    if (heartbeat !== undefined && (!Number.isSafeInteger(heartbeat) || heartbeat <= 0))
+      throw new Error("heartbeatIntervalSeconds must be a positive integer");
     this.db = openStore(OUTBOX_SCHEMA + STREAM_SCHEMA, opts.store);
     // @spec control-plane#isolation — event_id is an issuer-qualified storage
     // key; the original wire jti stays in commit_json. Upgrade existing jobs
@@ -1664,7 +1678,8 @@ export class MissionSignalEmitter {
     this.retryBaseMs = opts.retry?.baseMs ?? 250;
     this.retryCapMs = opts.retry?.capMs ?? 30_000;
     this.leaseMs = opts.leaseMs ?? 30_000;
-    this.maxStaleMs = maxStale === undefined ? undefined : maxStale * 1000;
+    this.reenableWindowMs =
+      maxStale === undefined ? undefined : Math.max(maxStale, heartbeat ?? 0) * 1000;
   }
 
   /** Register a receiver to be handed every SET for its own audience. */
@@ -1894,15 +1909,16 @@ export class MissionSignalEmitter {
    * (SSF 1.0 Section 8.1.2.1: nothing is transmitted while paused), never
    * dropped.
    *
-   * The pause lasts until more than `maxStaleSeconds` have passed since the
-   * last verification event acknowledged on the stream, or since this
-   * withholding when none was acknowledged after the stream's previous
-   * withholding. The consumer's staleness rule therefore fires before the
-   * stream attests liveness again. A withholding while the stream is paused,
-   * or while its `enabled` notice is unacknowledged, never shortens the
-   * pause; it extends the pause to at least this withholding plus
-   * `maxStaleSeconds`, so a Mission Status response the consumer fetched
-   * during the pause, before this narrowing, expires before liveness
+   * The pause lasts until more than the re-enable window, the longer of
+   * `maxStaleSeconds` and the heartbeat interval, has passed since the last
+   * verification event acknowledged on the stream, or since this withholding
+   * when none was acknowledged after the stream's previous withholding. The
+   * consumer's stream is then no longer verified live and its staleness rule
+   * has fired before the stream attests liveness again. A withholding while
+   * the stream is paused, or while its `enabled` notice is unacknowledged,
+   * never shortens the pause; it extends the pause to at least this
+   * withholding plus the window, so a Mission Status response the consumer
+   * fetched during the pause, before this narrowing, expires before liveness
    * resumes.
    */
   private pauseStream(consumer: SignalConsumer, commit: LifecycleCommit): void {
@@ -1915,8 +1931,8 @@ export class MissionSignalEmitter {
         lastLiveness !== null && (row?.withheld_at == null || lastLiveness > row.withheld_at);
       const base = livenessSince && lastLiveness !== null ? lastLiveness : now;
       let reenableAfter: number | null = null;
-      if (this.maxStaleMs !== undefined) {
-        reenableAfter = base + this.maxStaleMs;
+      if (this.reenableWindowMs !== undefined) {
+        reenableAfter = base + this.reenableWindowMs;
         if (row?.status === "paused" && row.reenable_after !== null)
           reenableAfter = Math.max(reenableAfter, row.reenable_after);
       }
@@ -1950,7 +1966,7 @@ export class MissionSignalEmitter {
    * @spec signals#discharge-compatibility (#1877): re-enable every paused
    * stream whose `paused` notice was acknowledged and whose re-enable
    * instant has passed (strictly: the consumer's staleness rule fires after
-   * MORE than `mission_max_stale_seconds`). The status flips and the
+   * MORE than the window). The status flips and the
    * `enabled` notice is journaled in one transaction; the stream stays held
    * until that notice is acknowledged, so it precedes the held events.
    */
@@ -2093,7 +2109,7 @@ export class MissionSignalEmitter {
   /**
    * Record an acknowledged verification event on `audience`'s stream. A
    * stream paused while the event was in flight keeps its pause until more
-   * than `maxStaleSeconds` after this acknowledgement.
+   * than the re-enable window after this acknowledgement.
    */
   private recordLiveness(audience: string, issuer: string): void {
     const now = this.nowFn().getTime();
@@ -2109,8 +2125,10 @@ export class MissionSignalEmitter {
         return;
       }
       const reenableAfter =
-        row.status === "paused" && row.reenable_after !== null && this.maxStaleMs !== undefined
-          ? Math.max(row.reenable_after, now + this.maxStaleMs)
+        row.status === "paused" &&
+        row.reenable_after !== null &&
+        this.reenableWindowMs !== undefined
+          ? Math.max(row.reenable_after, now + this.reenableWindowMs)
           : row.reenable_after;
       this.db
         .prepare(
@@ -2128,7 +2146,7 @@ export class MissionSignalEmitter {
    * stream's last liveness. A paused stream receives none: nothing is
    * transmitted while paused, and that silence is what lets the consumer's
    * staleness rule fire. A failed hand-off records nothing. The caller
-   * schedules it, at an interval no longer than `maxStaleSeconds`.
+   * schedules it, at the stream's heartbeat interval or more often.
    */
   async attestLiveness(): Promise<void> {
     const issuer = this.opts.issuer;
