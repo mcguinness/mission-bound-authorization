@@ -14510,6 +14510,43 @@
    ]
   },
   {
+   "id": "core.scope-projection.local-interpretation-fails",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "scope-projection-subset",
+   "text": "carries rights the target's local `scope` interpretation implies",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a scope whose effective rights, as the target interprets it, exceed what a constraints-free entry grants fails the projection condition, whatever its name suggests."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope named for the entry's action whose rights, as the target interprets it, exceed the entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > local interpretation: a value named for the entry's action is judged by the rights the target grants for it, not by its name",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1871 (D1005): the fourth case of the Subset Condition list, sibling of action-aggregation-fails, resource-path-aggregation-fails and union-widening-fails. Witnesses: a value named for the entry's action, whose rights as the target declares them add an action, is refused invalid_target. Mutation-proved: treating a value whose name matches an entry action as safe without its declared rights fails both witnesses while the action-aggregation witnesses still pass."
+  },
+  {
    "id": "core.scope-projection.per-audience-proof",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "scope-projection-subset",
