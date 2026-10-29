@@ -34,7 +34,13 @@ import { ApprovalSessionStore, buildAuthorizationServer, type BuiltAs, reconcile
 import type { AuthoritySourceResolver } from "../src/kernel/authority-source.js";
 import { IntentError } from "../src/kernel/intent.js";
 import type { LifecycleCommit } from "../src/kernel/types.js";
-import { browserApprovalHeaders, renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import {
+  browserApprovalHeaders,
+  floorApprovalHeaders,
+  renderedRevision,
+  TEST_APPROVAL_PRINCIPALS,
+  trustedApprovalHeaders,
+} from "./approval-fixture.js";
 
 const REDIRECT_URI = "http://localhost:9999/cb";
 const RESOURCE = CANONICAL_RESOURCE;
@@ -136,10 +142,15 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
   };
   const cookieOf = (jar: Jar) => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
 
-  /** A pushed request: Bob's read of Acme invoices for Alice, or Alice's Intent-only report read with `openid`, or with no goal an ordinary request. */
-  async function push(kind: "headless" | "browser" | "ordinary"): Promise<string> {
+  /**
+   * A pushed request: Bob's read of Acme invoices for Alice, Bob's Intent-only
+   * payment of them for Alice (high-risk authority, under the approval floor),
+   * Alice's Intent-only report read with `openid`, or with no goal an ordinary
+   * request.
+   */
+  async function push(kind: "headless" | "floor" | "browser" | "ordinary"): Promise<string> {
     const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER))).toString("base64url");
-    const target = kind === "headless" ? RESOURCE : PLAIN;
+    const target = kind === "headless" || kind === "floor" ? RESOURCE : PLAIN;
     const res = await fetch(`${issuer}/request`, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -155,7 +166,9 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
               mission_intent: JSON.stringify({ intent: { goal: "Read Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP } }),
               authorization_details: JSON.stringify(READ),
             }
-          : { scope: "openid" }),
+          : kind === "floor"
+            ? { mission_intent: JSON.stringify({ intent: { goal: "Pay the approved Acme invoices", target_resources: [RESOURCE], expires_at: FAR_EXP } }) }
+            : { scope: "openid" }),
         ...(kind === "browser"
           ? { mission_intent: JSON.stringify({ intent: { goal: "Read the quarterly reports", target_resources: [PLAIN], expires_at: FAR_EXP } }) }
           : {}),
@@ -186,8 +199,12 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
     return { status, code: null, error: null, description: null };
   }
 
-  /** An approval interaction, decided by Bob for Alice through the trusted approval service, or by Alice in her browser. */
-  async function open(kind: "headless" | "browser" = "headless") {
+  /**
+   * An approval interaction, decided by Bob for Alice through the trusted
+   * approval service, by Bob for Alice in his browser with the suite's `mfa`
+   * login (the floor), or by Alice in her browser.
+   */
+  async function open(kind: "headless" | "floor" | "browser" = "headless") {
     const jar: Jar = new Map();
     const res = await fetch(`${issuer}/auth?${new URLSearchParams({ client_id: "ap-agent", request_uri: await push(kind) })}`, {
       redirect: "manual",
@@ -197,7 +214,11 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
     expect(uid, res.headers.get("location") ?? "").toBeTruthy();
     let rendering: Promise<string> | undefined;
     const approvalHeaders = () =>
-      kind === "browser" ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice", acr: "mfa" }, cookieOf(jar)) : { ...trustedApprovalHeaders(), cookie: cookieOf(jar) };
+      kind === "browser"
+        ? browserApprovalHeaders(SESSIONS, uid, { sub: "alice", acr: "mfa" }, cookieOf(jar))
+        : kind === "floor"
+          ? floorApprovalHeaders(SESSIONS, uid, cookieOf(jar))
+          : { ...trustedApprovalHeaders(), cookie: cookieOf(jar) };
     let headers: Record<string, string> | undefined;
     /** A decision on the one rendering: every repeated or concurrent decision submits that form. */
     const decide = async () => {
@@ -221,7 +242,7 @@ function harness(issuer: string, as: BuiltAs, clientKey: CryptoKey) {
           code,
           redirect_uri: REDIRECT_URI,
           code_verifier: VERIFIER,
-          resource: kind === "headless" ? RESOURCE : PLAIN,
+          resource: kind === "browser" ? PLAIN : RESOURCE,
         },
         keys,
       );
@@ -432,6 +453,25 @@ describe("the Mission Record commits with its authorization code (@spec mission#
       expectNoMission(h, flow);
     });
   }
+
+  it("the approval-authentication floor is measured again at the commit: an Approver login that ages past it before the code save completes access_denied with no Mission", async () => {
+    const h = await start(15614);
+    const flow = await h.open("floor");
+    const decided = await flow.decide();
+    expect(decided.status).toBe(303);
+    // At the commit the AS's clock reads 400 s later: the suite's mfa login is
+    // past the high-risk floor's 300 s bound. Nothing else about the context changed.
+    const later = Date.now() + 400_000;
+    vi.spyOn(h.as.kernel as unknown as { now: () => Date }, "now").mockImplementation(() => new Date(later));
+    const codes = stagedCodes();
+    const out = await flow.resume(decided);
+    expect(out.error).toBe("access_denied");
+    expect(out.description).toMatch(/older than the high-risk-authority floor allows/);
+    expect(out.code).toBeNull();
+    expect(codes).toHaveLength(1);
+    expect(await h.as.provider.AuthorizationCode.find(codes[0] as string)).toBeUndefined();
+    expectNoMission(h, flow);
+  });
 });
 
 describe("the held approval grant is Mission-bound from its first save (@spec mission#grant-binding-resolution, #1863, D1001)", () => {
