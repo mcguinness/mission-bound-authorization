@@ -710,12 +710,12 @@ stream verified live, silence is freshness-preserving: the consumer
 MAY continue to rely on cached Mission state for those subjects up to
 the next heartbeat interval, without polling Mission Status per
 Mission. For a stream whose consumer has not declared
-`authority_changed`, verified liveness does not establish that its
-cached effective authority reflects every narrowing. Continued
-heartbeats can prevent the staleness fallback from firing while a
-narrowing event is withheld ({{discharge-compatibility}}), so such a
-consumer has no narrowing-specific freshness bound; Mission and
-credential expiry still apply.
+`authority_changed`, verified liveness alone does not establish that
+its cached effective authority reflects every narrowing. The Mission
+Issuer pauses such a stream when it withholds a narrowing
+({{discharge-compatibility}}), so the staleness fallback below ends
+the consumer's reliance within `mission_max_stale_seconds` of its last
+verification or heartbeat event.
 
 The staleness fallback applies to a stream that is not verified live.
 A consumer MUST treat cached Mission state as stale once the stream
@@ -765,11 +765,37 @@ changes no other event's `version`, so the consumer's next delivered
 event for that Mission shows a version gap, and the consumer
 re-establishes state through the Mission Status operation
 ({{consumer-behavior}}). Until then the withheld consumer has no
-notice of the narrowing; its fallback is that gap or, on a stream not
-verified live, the staleness rule of {{consumer-behavior}}.
+notice of the narrowing; the stream pause below bounds its reliance on
+its cached state.
 Where Signals is used, a Mission Issuer MUST emit
 `authority_changed` true on the `mission.lifecycle-change` event a
 discharge commit produces.
+
+When the gate withholds an event from a stream, the Mission Issuer
+MUST pause that stream: it sends the Shared Signals Framework Stream
+Updated event with `status` `paused` before it transmits anything
+further on the stream ({{OIDC-SSF}}, Section 8.1.5), and it holds the
+stream's later events, each with its own `version`. A paused stream
+transmits no event ({{OIDC-SSF}}, Section 8.1.2.1), so it carries no
+verification or heartbeat event. The Mission Issuer MUST NOT re-enable
+the stream until more than `mission_max_stale_seconds` have passed
+since the last verification or heartbeat event it delivered on that
+stream. On re-enabling, it sends the Stream Updated event with
+`status` `enabled` ({{OIDC-SSF}}, Section 8.1.5), then the held
+events. A Mission Issuer that serves a stream whose consumer has not
+declared `authority_changed`, in a deployment that produces events
+carrying `authority_changed` true, MUST advertise
+`mission_max_stale_seconds`
+({{I-D.draft-mcguinness-oauth-mission-status}}).
+
+The pause bounds the withheld consumer's reliance through rules it
+already applies. Its last verification or heartbeat event precedes the
+pause, so the staleness rule of {{consumer-behavior}} makes its cached
+Mission state stale within `mission_max_stale_seconds` of that event,
+before the stream re-enables, and the consumer re-establishes state
+through the Mission Status operation, which reports the narrowing.
+Liveness resumes only with the first verification or heartbeat event
+after re-enabling; a Stream Updated event is not one.
 
 # Relationship to Revocation Propagation {#event-driven}
 
@@ -868,7 +894,8 @@ This document is OPTIONAL. An implementation that claims it:
   {{delivery}}, advertises
   `mission_event_stream_endpoint` ({{as-metadata}}), and, where a
   committed transition would carry `authority_changed` true, gates its
-  delivery per {{discharge-compatibility}};
+  delivery and pauses each stream it withholds the event from, per
+  {{discharge-compatibility}};
 - as a **consumer**, verifies and applies received events per
   {{set-protection}} and {{consumer-behavior}}.
 
@@ -1010,9 +1037,14 @@ IETF; Reference this document, {{as-metadata}}.
   formerly Discharge Compatibility: the delivery gate binds every
   event carrying `authority_changed` true, a containment commit as
   well as a discharge, under the one `authority_changed` capability.
-  A withheld event leaves a version gap on the undeclared stream, and
-  verified liveness gives an undeclared consumer no narrowing-specific
-  freshness bound (#1001).
+  A withheld event leaves a version gap on the undeclared stream
+  (#1001).
+- Authority Change Compatibility ({{discharge-compatibility}}): a
+  withholding pauses the stream through Shared Signals Framework
+  stream status. The Mission Issuer re-enables it only after more than
+  `mission_max_stale_seconds` without a verification or heartbeat
+  event, and advertises that bound, so the staleness rule ends an
+  undeclared consumer's reliance within it (#1877).
 
 # Acknowledgments
 {:numbered="false"}
