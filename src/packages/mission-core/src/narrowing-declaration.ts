@@ -240,10 +240,8 @@ export function unimplementedDomainClaim(domain: NarrowingDomain): string | unde
 export function entryWithinDomain(entry: AuthorityEntry, domain: NarrowingDomain): boolean {
   const match = entry.resource_match === undefined ? "exact" : entry.resource_match;
   if (typeof match !== "string" || !domain.resource_match.includes(match)) return false;
-  // Members are counted on the canonical form, where `resource_match` is
-  // present only when it is not `exact`.
-  const members = Object.keys(entry).filter((m) => m !== "resource_match" || match !== "exact");
-  if (!members.every((m) => domain.members.includes(m))) return false;
+  // Every member the entry carries counts, an explicit `exact` included.
+  if (!Object.keys(entry).every((m) => domain.members.includes(m))) return false;
   const constraints = entry.constraints;
   if (constraints !== undefined) {
     if (constraints === null || typeof constraints !== "object" || Array.isArray(constraints))
@@ -271,19 +269,21 @@ export function narrowingPermits(
   );
 }
 
-/** An entry in canonical form: `resource_match` present only when it is not `exact`. */
+/** The JCS serialization of an entry as it stands, or undefined when it has none. */
 function canonicalEntry(entry: AuthorityEntry): string | undefined {
-  const { resource_match, ...rest } = entry as AuthorityEntry & { resource_match?: unknown };
-  const form =
-    resource_match === undefined || resource_match === "exact" ? rest : { ...rest, resource_match };
   try {
-    return canonicalize(form as unknown as JsonValue);
+    return canonicalize(entry as unknown as JsonValue);
   } catch {
     return undefined;
   }
 }
 
-/** @spec mission#subset "equal ({{subset}})": the two entries are equal under the canonical form. */
+/**
+ * @spec mission#subset "equal ({{subset}})": the two entries, as they stand,
+ * have byte-identical JCS serializations. Nothing is normalized first: a
+ * member that is semantically equivalent to its absence (an explicit
+ * `resource_match` of `exact`) still makes the entries unequal (D1025 review).
+ */
 export function entriesEqual(a: AuthorityEntry, b: AuthorityEntry): boolean {
   const ca = canonicalEntry(a);
   return ca !== undefined && ca === canonicalEntry(b);

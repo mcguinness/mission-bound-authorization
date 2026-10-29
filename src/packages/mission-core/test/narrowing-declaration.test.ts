@@ -181,10 +181,23 @@ describe("domain applicability and the subset relation under a declaration (@spe
     expect(isSubsetEntryUnder(declared, entry({ ...prefixRef }), prefixRef)).toBe(true);
   });
 
-  it("equality is under the canonical form: an explicit exact match equals an absent one, any other difference does not", () => {
+  it("equality is byte identity of the JCS serializations as the entries stand: an explicit exact match does not equal an absent one", () => {
     expect(
       entriesEqual(entry({ resource_match: "exact" } as Partial<AuthorityEntry>), entry()),
+    ).toBe(false);
+    expect(
+      entriesEqual(
+        entry({ resource_match: "exact" } as Partial<AuthorityEntry>),
+        entry({ resource_match: "exact" } as Partial<AuthorityEntry>),
+      ),
     ).toBe(true);
+    // Member order does not matter to JCS.
+    const reordered = {
+      actions: entry().actions,
+      resource: RES,
+      type: "mission_resource_access",
+    } as AuthorityEntry;
+    expect(entriesEqual(reordered, entry())).toBe(true);
     expect(entriesEqual(entry({ actions: ["invoices.list", "invoices.read"] }), entry())).toBe(
       false,
     );
