@@ -1714,6 +1714,17 @@ export function buildProvider(opts: AdapterOptions): Provider {
             "expired",
             exchange,
           );
+    // @spec mission#approval-event (step 7) (#1863, D1001): a code under a
+    // held approval grant is saved before its Mission exists, and commits it.
+    // It is clamped to the `expires_at` that commit establishes, which is no
+    // earlier than the one the held decision would establish now. A held
+    // grant with no live hold resolves below, and refuses.
+    const held = authorization && grantId ? approvalHolds.pending(grantId) : undefined;
+    if (held) {
+      const remaining = Math.floor((Date.parse(approvalHolds.prospectiveExpiresAt(held)) - Date.now()) / 1000);
+      if (remaining >= 1) return Math.min(configured, remaining);
+      throw expiring();
+    }
     let record: MissionRecord | undefined;
     try {
       record = missionForGrant(grantId);
