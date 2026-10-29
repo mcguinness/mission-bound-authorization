@@ -723,7 +723,7 @@ surface. A consumer that cannot verify its stream, or that was down
 and may have missed events, applies the same rule rather than
 continuing on possibly stale state.
 
-# Discharge Compatibility {#discharge-compatibility}
+# Authority Change Compatibility {#discharge-compatibility}
 
 `authority_changed` true ({{lifecycle-event}}) is a breaking change
 for a consumer built before this member existed: such a consumer
