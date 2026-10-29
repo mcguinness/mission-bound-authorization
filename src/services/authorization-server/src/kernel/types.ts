@@ -889,18 +889,6 @@ export interface LifecycleCommit {
    */
   authority_changed?: boolean;
   /**
-   * @spec signals#discharge-compatibility — event PROVENANCE discriminator:
-   * true exactly when THIS commit advanced `containment_version` (it came
-   * through `contain()`), absent otherwise. The Signals emitter's delivery
-   * gate keys on it directly: a narrowing commit with `authority_changed`
-   * and NO containment advance is a discharge commit, deliverable to a
-   * consumer only under the declared `authority_changed` capability. Set by
-   * the kernel at commit, never inferred from emitter-side version history,
-   * which does not survive an emitter restart. Internal discriminator only:
-   * the SET builder does not copy it to the wire.
-   */
-  containment_advanced?: boolean;
-  /**
    * @spec containment#propagation — the Mission's current
    * {@link MissionContainment.containment_version}, present whenever
    * containment has ever been applied (absent-means-none, mirroring
