@@ -113,7 +113,7 @@ async function token(s: Srv, params: Record<string, string>, keys: Keys): Promis
 }
 
 /** PAR and the approval decision: the final redirect (a code, or the refusal). */
-async function approve(s: Srv, proposal: AuthorityEntry[], targets: string[] = [RESOURCE]): Promise<URL> {
+async function approve(s: Srv, proposal: AuthorityEntry[] | undefined, targets: string[] = [RESOURCE]): Promise<URL> {
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER)),
   ).toString("base64url");
@@ -124,14 +124,14 @@ async function approve(s: Srv, proposal: AuthorityEntry[], targets: string[] = [
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      resource: RESOURCE,
+      resource: targets[0] as string,
       code_challenge: challenge,
       code_challenge_method: "S256",
       login_hint: "alice",
       mission_intent: JSON.stringify({
         intent: { goal: "Review third-quarter Acme invoices", target_resources: targets, expires_at: FAR_EXP },
       }),
-      authorization_details: JSON.stringify(proposal),
+      ...(proposal ? { authorization_details: JSON.stringify(proposal) } : {}),
       client_assertion: await clientAssertion(s),
       client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
     }).toString(),
@@ -219,7 +219,7 @@ const recorded = (entries: readonly AuthorityEntry[]) =>
   entries.map(({ resource_contract: _assembled, capability_sources: _bindings, ...authority }) => authority as AuthorityEntry);
 
 /** The approval for `proposal`: the entries of the Mission it created, or the refusal's error. */
-async function decide(s: Srv, proposal: AuthorityEntry[], targets?: string[]) {
+async function decide(s: Srv, proposal: AuthorityEntry[] | undefined, targets?: string[]) {
   const before = new Set(s.as.kernel.allMissions().map((m) => m.id));
   const redirect = await approve(s, proposal, targets);
   const created = s.as.kernel.allMissions().filter((m) => !before.has(m.id));
@@ -234,7 +234,7 @@ const EXACT_ONLY = {
   type: "mission_resource_access",
   capability: "narrowing",
   resource_match: ["exact"],
-  members: ["type", "resource", "actions", "constraints", "delegation", "capability_sources", "resource_contract"],
+  members: ["type", "resource", "resource_match", "actions", "constraints", "delegation", "capability_sources", "resource_contract"],
   constraints: ["max_amount", "vendors", "tenant", "requires_action_approval"],
 };
 
@@ -280,6 +280,7 @@ describe("the types metadata entry carries the declared transformation capabilit
     expect(block, "the inventory states the declaration").not.toBeNull();
     const entry = (await metadata(shipped)).mission_resource_access as Json;
     expect(JSON.parse(block?.[1] as string)).toEqual(entry.mission_transformation_capabilities);
+    expect(doc).toContain("config/narrowing-domains/mission-resource-access-2026-10-29.json");
   });
 
   it("a server declaring nothing carries no member, so every capability falls through to deployment documentation", async () => {
@@ -302,6 +303,14 @@ describe("narrowing undeclared: derivation and the Token Exchange carry entries 
     const narrowed = await decide(shipped, [narrowerActions]);
     expect(narrowed.error).toBeNull();
     expect(narrowed.created[0]?.[0]?.actions).toEqual(["payments:invoice.read"]);
+  });
+
+  it("configured-mapping derivation with no proposal yields each mapped ceiling entry unchanged", async () => {
+    // The reports ceiling entry, so the approval meets no high-risk floor.
+    const reports = DERIVATION_POLICY.ceiling[3] as AuthorityEntry;
+    const { error, created } = await decide(undeclared, undefined, [reports.resource as string]);
+    expect(error).toBeNull();
+    expect(created).toEqual([[reports]]);
   });
 
   it("a Token Exchange requesting the presented entry unchanged is issued; one requesting it narrowed is refused", async () => {

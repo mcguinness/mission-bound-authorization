@@ -29,7 +29,7 @@ const EXACT_ONLY = {
   type: "mission_resource_access",
   capability: "narrowing",
   resource_match: ["exact"],
-  members: ["type", "resource", "actions", "constraints"],
+  members: ["type", "resource", "resource_match", "actions", "constraints"],
   constraints: ["max_amount", "tenant"],
 } as const;
 const DIGEST = narrowingDomainDigest(EXACT_ONLY as unknown as JsonValue);
