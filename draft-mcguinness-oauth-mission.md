@@ -6846,6 +6846,14 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: Submission via PAR is retitled
+  Submitting a Mission Intent, with subsections for the Submission
+  envelope, its carriage through PAR, and other carriages. Authority
+  Proposal, Preparing the Approval, Approver Authentication Strength,
+  and Issuance Gating are restructured into subsections, shorter
+  sentences, and lists; numbered steps, checks, and rules keep their
+  numbers, and Issuance Gating keeps its numbered procedure at its
+  head (#1908, D1042).
 - Editorial, no requirement change: the Introduction states the
   problem and the approach and points to the Overview; it no longer
   restates the flow that Protocol Flow and the Introductory Example
