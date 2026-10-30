@@ -2423,7 +2423,9 @@ export class MissionSignalEmitter {
   /**
    * Sign once, hand off, and on acknowledgement mark the job done. Each
    * hand-off of a requested verification is its own liveness attempt,
-   * journaled before it begins and ended however it settles.
+   * journaled before it begins and ended however it settles. A Stream
+   * Updated notice is not a liveness event (@spec signals#consumer-behavior,
+   * #1886), so its hand-off is never one.
    */
   private async deliverStreamJob(row: StreamJobRow): Promise<boolean> {
     let attempt: number | undefined;
@@ -2489,9 +2491,10 @@ export class MissionSignalEmitter {
 
   /**
    * @spec signals#consumer-behavior @spec signals#discharge-compatibility
-   * @spec signals#delivery (#1877): the liveness attestation. Delivers a
-   * signed SSF Verification Event (SSF 1.0 Section 8.1.4.1;
-   * Transmitter-initiated, so no `state`) to every stream that is not held
+   * @spec signals#delivery (#1877, #1886): the heartbeat. Delivers a
+   * signed SSF Verification Event sent without a request (SSF 1.0 Section
+   * 8.1.4; Transmitter-initiated, so no `state`, Section 8.1.4.2) to every
+   * stream that is not held
    * and has no undelivered lifecycle event. A paused stream receives none:
    * nothing is transmitted while paused, and that silence is what lets the
    * consumer's staleness rule fire. Each hand-off is a liveness attempt,

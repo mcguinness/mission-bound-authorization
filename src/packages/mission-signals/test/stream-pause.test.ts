@@ -1144,3 +1144,138 @@ describe("delivery uncertainty and liveness ordering (@spec signals#discharge-co
     expect(since(w.undeclaredLog, w.now())).toHaveLength(2);
   });
 });
+
+describe("the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886)", () => {
+  it("sends a heartbeat as an SSF Verification Event on the Mission Issuer's own initiative, with no state and the stream id as its sub_id; a requested verification echoes the requester's state, and one requested without state carries none", async () => {
+    const w = await wire();
+    approve(w.kernel);
+    await w.emitter.drain();
+
+    // The heartbeat: no request precedes it.
+    w.advance(HEARTBEAT_MS);
+    const heartbeatAt = w.now();
+    await w.emitter.attestLiveness();
+    const [heartbeat] = since(w.undeclaredLog, heartbeatAt);
+    expect(heartbeat?.kind).toBe("verification");
+    const claims = decodeJwt((heartbeat as Received).set);
+    expect(claims).toMatchObject({
+      iss: ISS,
+      aud: UNDECLARED_AUD,
+      sub_id: { format: "opaque", id: UNDECLARED_STREAM },
+    });
+    expect(Object.keys(claims.events as Record<string, unknown>)).toEqual([
+      SSF_VERIFICATION_EVENT_URI,
+    ]);
+    expect(eventBody(heartbeat as Received)).toEqual({});
+    // A stream with no configured stream id is named by its audience.
+    const [declaredHeartbeat] = since(w.declaredLog, heartbeatAt);
+    expect(eventBody(declaredHeartbeat as Received)).toEqual({});
+    expect(decodeJwt((declaredHeartbeat as Received).set).sub_id).toEqual({
+      format: "opaque",
+      id: DECLARED_AUD,
+    });
+
+    // A requested verification echoes the state its request carried.
+    w.advance(1_000);
+    const requestedAt = w.now();
+    w.emitter.requestVerification(UNDECLARED_AUD, "state-requested-1886");
+    await w.emitter.drain();
+    w.advance(1_000);
+    w.emitter.requestVerification(UNDECLARED_AUD);
+    await w.emitter.drain();
+    const requested = since(w.undeclaredLog, requestedAt);
+    expect(requested.map((r) => r.kind)).toEqual(["verification", "verification"]);
+    expect(eventBody(requested[0] as Received)).toEqual({ state: "state-requested-1886" });
+    expect(eventBody(requested[1] as Received)).toEqual({});
+    expect(decodeJwt((requested[0] as Received).set).sub_id).toEqual({
+      format: "opaque",
+      id: UNDECLARED_STREAM,
+    });
+  });
+
+  it("takes the agreed heartbeat interval only as a finite, positive whole number of seconds: an infinite, NaN, zero, negative or fractional interval is refused at construction", async () => {
+    const { privateKey } = await generateKeyPair("ES256");
+    const make = (heartbeatIntervalSeconds: number) => () =>
+      new MissionSignalEmitter({
+        key: privateKey,
+        kid: "as-status",
+        issuer: ISS,
+        consumers: [{ audience: UNDECLARED_AUD }],
+        maxStaleSeconds: MAX_STALE_SECONDS,
+        heartbeatIntervalSeconds,
+      });
+    for (const interval of [Number.POSITIVE_INFINITY, Number.NaN, 0, -10, 1.5])
+      expect(make(interval), String(interval)).toThrow(
+        "heartbeatIntervalSeconds must be a positive integer",
+      );
+    const emitter = make(90)();
+    expect(emitter.streamStatus(UNDECLARED_AUD).status).toBe("enabled");
+    emitter.close();
+  });
+
+  it("records liveness only for verification attempts: a Stream Updated notice, paused or enabled, in flight or acknowledged, never moves the stream's liveness record", async () => {
+    const w = await wire();
+    const mission = approve(w.kernel);
+    await w.emitter.drain();
+    await w.tick();
+    const lastLiveness = w.now();
+    const record = {
+      last_liveness_at: new Date(lastLiveness),
+      liveness_resolved_at: new Date(lastLiveness),
+      liveness_unresolved: 0,
+    };
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject(record);
+
+    // The paused notice, held in flight after the receiver processed it.
+    const received = deferred();
+    const outcome = deferred();
+    w.fault.after = (r) => {
+      if (r.kind !== "stream-updated") return undefined;
+      w.fault.after = undefined;
+      received.resolve();
+      return outcome.promise;
+    };
+    w.advance(1_000);
+    const withheldAt = w.now();
+    containRead(w, mission.id, "evt-1886-notice");
+    const drained = w.emitter.drain();
+    await received.promise;
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual(["paused"]);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      notice_pending: true,
+      ...record,
+      reenable_after: new Date(lastLiveness + MAX_STALE_MS),
+    });
+
+    // Acknowledged later: the record and the re-enable instant stay put.
+    w.advance(5_000);
+    outcome.resolve();
+    await drained;
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "paused",
+      notice_pending: false,
+      ...record,
+      reenable_after: new Date(lastLiveness + MAX_STALE_MS),
+    });
+
+    // The enabled notice on re-enabling moves nothing either.
+    w.advance(lastLiveness + MAX_STALE_MS + 1 - w.now());
+    await w.emitter.drain();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual(["paused", "enabled"]);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      status: "enabled",
+      notice_pending: false,
+      ...record,
+    });
+
+    // A verification attempt does move it.
+    await w.tick();
+    expect(trace(since(w.undeclaredLog, withheldAt))).toEqual(["paused", "enabled", "verify"]);
+    expect(w.emitter.streamStatus(UNDECLARED_AUD)).toMatchObject({
+      last_liveness_at: new Date(w.now()),
+      liveness_resolved_at: new Date(w.now()),
+      liveness_unresolved: 0,
+    });
+  });
+});
