@@ -2386,19 +2386,9 @@ profile that uses it.
       record, an evidence store, or the requesting or dispatching
       party.
 
-    `governance_record`:
-    : OPTIONAL. A boolean. `true` when an Approval Governance Record is
-      recorded for this approval event
-      ({{I-D.draft-mcguinness-mission-approval-governance}}), joined by
-      this Mission's own `approval_event_id`.
-
-      - It never changes `kind`, which follows the basis (below and
-        {{standing-consent-bases}}).
-      - Approval Governance aligns the record's accountable assertion,
-        where it carries one, with that `kind`: a governed decision
-        still names its mechanism, and the record supplies the fuller
-        assertion set behind it, including any multi-assertion set,
-        never flattened into it.
+    A companion profile can define further members of `adjudication`;
+    Approval Governance defines `governance_record`
+    ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
     For `kind: human`: no additional kind-specific members; the
     deciding human is `consent_principal`.
@@ -6907,8 +6897,9 @@ resolve before interoperating.
   new Implementation Considerations section. The unrecognized-value
   rule for `approval_basis.type`, `adjudication.kind`, and
   `authority_source.type` is stated once, and a consumer neither
-  interprets nor removes a record member it does not recognize
-  (#1912, D1047).
+  interprets nor removes a record member it does not recognize.
+  Approval Governance defines `governance_record` (#1912, D1047,
+  D1048).
 - Editorial, no requirement change: citations elsewhere in the
   document name the subsection that states the cited rule, not its
   parent section, where #1908's subsections make one precise (#1910,

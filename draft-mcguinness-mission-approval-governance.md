@@ -297,6 +297,24 @@ under the runtime profile's re-evaluation surfaces
 ({{I-D.draft-mcguinness-mission-runtime}}) is a different layer and
 never joins this record.
 
+This document defines one member of the Mission Record's
+`approval_basis.adjudication` object
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
+Approval Basis"):
+
+`governance_record`:
+: OPTIONAL. A boolean. `true` when an Approval Governance Record is
+  recorded for this approval event, joined by the Mission's own
+  `approval_event_id`.
+
+  - It never changes `kind`, which follows the basis
+    ({{I-D.draft-mcguinness-oauth-mission}}, Section "Standing-Consent
+    Bases").
+  - This document aligns the record's accountable assertion, where it
+    carries one, with that `kind`: a governed decision still names its
+    mechanism, and the record supplies the fuller assertion set behind
+    it, including any multi-assertion set, never flattened into it.
+
 Where the governed Mission populates `approval_basis.adjudication`
 ({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals and
 Approval Basis") and
@@ -2261,6 +2279,11 @@ disclosed mismatch is definitive.
 
 \[\[ To be removed from the final specification ]]
 
+- Relationship to the Issuance Profile defines the `governance_record`
+  member of `approval_basis.adjudication`, which the OAuth binding no
+  longer defines; its definition and its alignment with the
+  accountable assertion move here unchanged. No requirement changed
+  (#1912).
 - Relationship to the Issuance Profile cites the OAuth binding's
   Principals and Approval Basis section, which defines
   `approval_basis.adjudication`, since that binding's Role Mapping
