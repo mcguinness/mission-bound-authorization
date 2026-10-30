@@ -2239,9 +2239,9 @@ required members are its invariants: `id`, `issuer`, `state`,
 `approval_basis` and `authority_source` with the members each
 requires, `client_id`, `approval_event_id`, `created_at`, and
 `expires_at`, and, under the condition each states, `termination`,
-`proposed_authority`, `proposal_hash`, and `submission_evidence`.
-Every other member is optional or defined by the profile that uses
-it.
+`proposed_authority`, `proposal_hash`, `submission_evidence`, and
+`policy_version`. Every other member is optional or defined by the
+profile that uses it.
 
 ### Identity and Lifecycle Members {#record-identity-members}
 
@@ -2465,9 +2465,10 @@ fabricate the human, policy, or Approval Governance Record standing
 behind it, and MUST refuse only a profile operation that itself
 requires recognized adjudication semantics to proceed (for example,
 evaluating a policy-approval recency ceiling); for
-`authority_source.type`, that operation is one that itself requires
-recognized source semantics (for example, applying the source's
-authority ceiling or its governed policy). Unlike an unrecognized
+`authority_source.type`, the operation refused is any operation, of
+this document or a profile, that itself requires recognized source
+semantics (for example, applying the source's authority ceiling or
+its governed policy). Unlike an unrecognized
 lifecycle state ({{lifecycle}}), such a value does not by itself
 invalidate or deactivate the Mission.
 
@@ -5402,8 +5403,8 @@ no requirement from the substrate contract
 
 # Implementation Considerations {#implementation-considerations}
 
-This section states two Mission Issuer requirements: approval
-idempotency and the retention of the Mission Record.
+This section states two requirements: approval idempotency and the
+retention of the Mission Record.
 
 ## Approval Idempotency {#approval-idempotency}
 

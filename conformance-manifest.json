@@ -11171,7 +11171,7 @@
    "id": "core.mission-record.authority-source-type-unrecognized",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "for `authority_source.type`, that operation is one that itself requires recognized source semantics (for example, applying the source's authority ceiling or its governed policy)",
+   "text": "for `authority_source.type`, the operation refused is any operation, of this document or a profile, that itself requires recognized source semantics (for example, applying the source's authority ceiling or its governed policy)",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
