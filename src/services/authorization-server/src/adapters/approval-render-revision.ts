@@ -9,7 +9,8 @@
  * revision it was shown; a missing, unknown, expired, superseded or foreign
  * revision never approves. The decision recomputes the context and compares
  * commitments: the anchors (`intent_hash`, `proposal_hash` where a proposal was
- * submitted, `authority_hash` over the derived set), the established authority
+ * submitted, `authority_hash` over the derived set), the material verified
+ * provenance (the normalized submission facts, #1897), the established authority
  * source (its root, catalog revision and provenance), the effective
  * `expires_at` the rendering showed, and the policy inputs that establish
  * them: the derivation policy's content (which carries
@@ -23,12 +24,14 @@ import type Provider from "oidc-provider";
 import type { AuthoritySourceResolution } from "../kernel/authority-source.js";
 import type { ExpiryCeilings } from "../kernel/derive.js";
 import type { MissionKernel } from "../kernel/kernel.js";
-import type { AuthorityEntry, MissionIntent } from "../kernel/types.js";
+import type { AuthorityEntry, IntentSubmissionEvidenceFact, MissionIntent } from "../kernel/types.js";
 
 /** The committed parts of an approval context; each is compared as one value. */
 export interface ApprovalContext {
   intent_hash: string;
   proposal_hash: string | null;
+  /** The material verified provenance the page shows ({@link approvalContext}); null where none was presented. */
+  submission_evidence: string | null;
   authority_hash: string;
   source: { provenance: unknown; root_id?: string; catalog_revision?: string };
   expires_at: string;
@@ -62,6 +65,8 @@ export function approvalContext(input: {
   scopeProjection: unknown;
   /** The effective `expires_at`: a rendering's own, or a decision's ({@link decisionExpiry}). */
   expiresAt: string;
+  /** The verified submission facts: those the rendering showed, or those the decision re-verified. */
+  submissionEvidence?: readonly IntentSubmissionEvidenceFact[];
 }): { context: ApprovalContext; commitment: string } {
   const { kernel, issuer } = input;
   const resolved =
@@ -75,6 +80,13 @@ export function approvalContext(input: {
   const context: ApprovalContext = {
     intent_hash: intentHash(issuer, input.intent as unknown as JsonValue),
     proposal_hash: input.proposal?.length ? proposalHash(issuer, input.proposal as unknown as JsonValue[]) : null,
+    // @spec mission#submission-processing (step 8), mission#approval-context-changes
+    // (#1897, D1031): the normalized verified facts the page shows, without
+    // each verification's own instant, so a change to the facts alone asks
+    // for a fresh decision on the page rendered again.
+    submission_evidence: input.submissionEvidence?.length
+      ? digest(input.submissionEvidence.map(({ verified_at: _at, ...fact }) => fact))
+      : null,
     authority_hash: authorityHash(issuer, input.authority as unknown as JsonValue[]),
     source,
     expires_at: input.expiresAt,

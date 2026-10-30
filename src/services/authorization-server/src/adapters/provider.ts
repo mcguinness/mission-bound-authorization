@@ -4845,6 +4845,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
           resolved: established,
           scopeProjection: opts.scopeProjection,
           expiresAt,
+          ...(provenance ? { submissionEvidence: provenance } : {}),
         });
       } catch (e) {
         if (e instanceof IntentError) {
@@ -8016,6 +8017,7 @@ async function decide(
       subject,
       scopeProjection: opts.scopeProjection,
       expiresAt: decisionExpiry(opts.kernel, (intent as MissionIntent).expires_at, held.context.expires_at),
+      ...(submissionEvidence ? { submissionEvidence } : {}),
     });
   let rendered: RenderRevision | undefined;
   if (!committedEarlier) {
