@@ -173,14 +173,15 @@ export class DeferralStore {
       throw new DeferralError("mission_not_active", "mission is not active");
     }
     // @spec D42: AROP grant is a subset of the active Mission; widening -> Expansion.
-    // Containment: the ceiling is the EFFECTIVE set, so a contained capability
-    // is not deferrable.
+    // Containment: the ceiling is the ISSUABLE set (the effective set issuance
+    // may carry), so a contained capability, or an entry containment modified
+    // where narrowing it is not permitted, is not deferrable.
     // @spec resource-access#qualified-narrowing (#1377, D1025): under the declared `narrowing`.
     if (
       !isSubsetSetUnderIgnoringCapabilitySources(
         this.kernel.narrowingDeclaration(),
         input.requested,
-        this.kernel.effectiveAuthoritySet(mission),
+        this.kernel.issuableAuthoritySet(mission),
       )
     ) {
       throw new DeferralError(
@@ -295,12 +296,12 @@ export class DeferralStore {
 
     const parsed = JSON.parse(row.requested_json as string) as { m: string; r: AuthorityEntry[]; c?: string };
     // Re-verify subset at redemption (the Mission may have changed) against the
-    // EFFECTIVE set: containment applied between approval and redemption refuses.
+    // ISSUABLE set: containment applied between approval and redemption refuses.
     if (
       !isSubsetSetUnderIgnoringCapabilitySources(
         this.kernel.narrowingDeclaration(),
         parsed.r,
-        this.kernel.effectiveAuthoritySet(mission),
+        this.kernel.issuableAuthoritySet(mission),
       )
     ) {
       this.db.prepare("UPDATE deferrals SET state = 'access_denied' WHERE deferral_code = ?").run(deferralCode);

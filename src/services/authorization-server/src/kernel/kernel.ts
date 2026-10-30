@@ -4201,10 +4201,12 @@ export class MissionKernel {
    * overlays modified otherwise is not carried, never issued as if approved.
    */
   issuableEntriesWithOrigin(record: MissionRecord): Array<{ origin: AuthorityEntry; entry: AuthorityEntry }> {
-    const declaration = this.narrowingDeclaration();
-    return this.effectiveEntriesWithOrigin(record).filter(
-      (e) => e.entry === e.origin || isSubsetEntryUnder(declaration, e.entry, e.origin),
-    );
+    return this.effectiveEntriesWithOrigin(record).filter((e) => this.issuable(e));
+  }
+
+  /** Whether issuance may carry an effective entry computed from `origin` ({@link issuableEntriesWithOrigin}). */
+  issuable(e: { origin: AuthorityEntry; entry: AuthorityEntry }): boolean {
+    return e.entry === e.origin || isSubsetEntryUnder(this.narrowingDeclaration(), e.entry, e.origin);
   }
 
   /** {@link issuableEntriesWithOrigin}'s entries: the effective set issuance may carry. */
@@ -4602,9 +4604,15 @@ export class MissionKernel {
     // containment is the only overlay effectiveAuthoritySet composes, so the
     // exhausted branch means an empty approved set; the branch is structural for
     // the next mechanism (discharge), which will not live in `containment`.
-    if (this.effectiveAuthoritySet(record).length === 0) {
+    //
+    // @spec resource-access#qualified-narrowing (#1377, D1025): derivation
+    // issues only what issuance may carry, so the gate reads the issuable set.
+    // A Mission whose remaining entries the containment left modified, where
+    // the declaration does not permit narrowing them, has nothing left to
+    // derive; its Status still reports their remainder.
+    if (this.issuableAuthoritySet(record).length === 0) {
       const { containment: _overlay, ...withoutOverlay } = record;
-      if (this.effectiveAuthoritySet(withoutOverlay).length === 0) {
+      if (this.issuableAuthoritySet(withoutOverlay).length === 0) {
         throw new GateError("authority_exhausted", `mission ${id} has no effective authority to derive`);
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);

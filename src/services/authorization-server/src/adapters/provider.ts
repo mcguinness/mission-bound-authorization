@@ -3911,8 +3911,10 @@ async function handleChildJwtBearerGrant(
   //    AccessToken name the SAME client (record.client_id == the authenticated
   //    client, guaranteed by steps 3-4), which oidc-provider requires.
   // Containment: every copy of the child's authority into rar/authorization_
-  // details projects the EFFECTIVE set (approved minus containment overlay).
-  const effective = kernel.effectiveAuthoritySet(record);
+  // details projects the ISSUABLE set: the effective set (approved minus the
+  // containment overlay) as far as the narrowing declaration lets issuance
+  // carry it (#1377, D1025).
+  const effective = kernel.issuableAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
   let grantId: string;
   if (record.grant_id) {
@@ -7360,7 +7362,7 @@ async function handleMissionDispatchGrant(
   // because there record.client_id IS the authenticated client.
   // Containment: every copy of the instance's authority into rar/authorization_
   // details projects the EFFECTIVE set (approved minus containment overlay).
-  const effective = kernel.effectiveAuthoritySet(record);
+  const effective = kernel.issuableAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
   // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
   // dispatch_event_id is gated to the previously committed instance rather
@@ -8195,11 +8197,11 @@ async function decide(
     if (requestedScope.resource.length && audience) {
       grant.addResourceScope(audience, requestedScope.resource.join(" "));
     }
-    // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
-    // committed record's; otherwise the prepared set, which is exactly what the
+    // Containment: the grant's rar copies the ISSUABLE set (the effective set
+    // issuance may carry; #1377, D1025): on a retry, the committed record's; otherwise the prepared set, which is exactly what the
     // commit records (a freshly approved Mission has no containment).
     const grantAuthority = existing
-      ? opts.kernel.effectiveAuthoritySet(existing)
+      ? opts.kernel.issuableAuthoritySet(existing)
       : (prepared as PreparedApproval).authoritySet;
     for (const entry of grantAuthority) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);

@@ -24,7 +24,8 @@
  */
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
-import { projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { carriedUnder } from "@mission/core";
+import { projectThroughEffectiveUnder, SourceUnavailableError } from "../kernel/derive.js";
 import { GateError } from "../kernel/kernel.js";
 import type { AuthorityEntry } from "../kernel/types.js";
 import {
@@ -135,7 +136,12 @@ export async function handleDelegationHandleExchange(
     }
     throw e;
   }
-  const authority = projectThroughEffective(presented, effective);
+  // @spec resource-access#qualified-narrowing (#1377, D1025): only the
+  // effective entries issuance may carry, whatever source supplied them; a
+  // modified entry is carried only where the declared `narrowing` permits it,
+  // and an unchanged one as it stands.
+  const narrowing = kernel.narrowingDeclaration();
+  const authority = projectThroughEffectiveUnder(narrowing, presented, carriedUnder(narrowing, effective, active.authority_set));
   if (authority.length === 0) {
     txError(ctx, 400, "invalid_grant", "the presented authority is no longer within the Mission's effective authority");
     return;

@@ -536,7 +536,9 @@ async function admit(
     return;
   }
   const subjectAuthority = (subject.authorization_details as AuthorityEntry[] | undefined) ?? [];
-  const effective = deps.kernel.effectiveAuthoritySet(active);
+  // The issuable set: a request equal to a remainder containment modified,
+  // where narrowing it is not permitted, is not carried (#1377, D1025).
+  const effective = deps.kernel.issuableAuthoritySet(active);
   // @spec resource-access#qualified-narrowing (#1377, D1025): under the declared `narrowing`.
   const narrowing = deps.kernel.narrowingDeclaration();
   if (
@@ -1012,13 +1014,13 @@ async function completionChecks(
     throw e;
   }
   // Containment may have narrowed the Mission since admission, so the subset
-  // rule is recomputed against the CURRENT effective set, never the pinned one.
+  // rule is recomputed against the CURRENT issuable set, never the pinned one.
   const permitted = wf.challenge.authorization_details as unknown as AuthorityEntry[];
   if (
     !isSubsetSetUnderIgnoringCapabilitySources(
       deps.kernel.narrowingDeclaration(),
       permitted,
-      deps.kernel.effectiveAuthoritySet(gated),
+      deps.kernel.issuableAuthoritySet(gated),
     )
   ) {
     return {

@@ -61,6 +61,7 @@ import {
   projectRarThroughMission,
   issuedWhole,
   projectThroughEffective,
+  projectThroughEffectiveUnder,
   SourceUnavailableError,
 } from "../kernel/derive.js";
 import {
@@ -1332,13 +1333,15 @@ export async function handleAsyncDelegationExchange(
   // D312) — this is a no-actor exchange of the agent's own token, so the family
   // is bounded by the presented token's own authority (read above) as well as
   // the Mission's: a down-scoped token never opens a family broader than itself.
-  let confinedSubset: AuthorityEntry[];
+  // @spec resource-access#qualified-narrowing (#1377, D1025): only the
+  // effective entries issuance may carry, whatever source supplied them; an
+  // entry the projection modified is carried only where the declared
+  // `narrowing` permits it, and an unchanged one as it stands.
   const narrowing = opts.kernel.narrowingDeclaration();
+  effective = carriedUnder(narrowing, effective, active.authority_set);
+  let confinedSubset: AuthorityEntry[];
   if (requestedSubset === undefined) {
-    // @spec resource-access#qualified-narrowing (#1377, D1025): an entry the
-    // projection modified is carried only where the declared `narrowing`
-    // permits it; otherwise only an entry equal to the presented one is.
-    confinedSubset = carriedUnder(narrowing, projectThroughEffective(presentedAuthority, effective), presentedAuthority);
+    confinedSubset = projectThroughEffectiveUnder(narrowing, presentedAuthority, effective);
   } else {
     // @spec resource-access#qualified-narrowing (#1377, D1025): a requested
     // entry is within the presented and the Mission authority under the
@@ -1352,7 +1355,7 @@ export async function handleAsyncDelegationExchange(
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }
-    confinedSubset = projectThroughEffective(requestedSubset, effective);
+    confinedSubset = projectThroughEffectiveUnder(narrowing, requestedSubset, effective);
     // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
     // requested entry is issued whole, or the request is refused.
     if (!issuedWhole(requestedSubset, effective)) {
@@ -2047,7 +2050,7 @@ async function mintMissionAccessToken(
     txError(ctx, 400, "invalid_grant", "acting client is not the mission client");
     return false;
   }
-  const effective = opts.kernel.effectiveAuthoritySet(mission);
+  const effective = opts.kernel.issuableAuthoritySet(mission);
   const resource = tokenRar[0]?.resource ?? effective[0]?.resource ?? opts.issuer;
   let grantId: string;
   if (mission.grant_id) {
@@ -2911,7 +2914,7 @@ export async function handleExpansionExchange(
     opts.progressive && active.authority_ceiling
       ? drawdownRequested(opts.kernel, intent, proposedAuthority, active.authority_ceiling)
       : opts.kernel.derive(intent, proposedAuthority);
-  const effective = opts.kernel.effectiveAuthoritySet(active);
+  const effective = opts.kernel.issuableAuthoritySet(active);
   if (isSubsetSetIgnoringCapabilitySources(requested, effective)) {
     ctx.status = 400;
     ctx.body = { error: "invalid_request", mission_denial_reason: "nothing_to_expand" };
@@ -3181,7 +3184,7 @@ export async function pollDeferredExpansion(
     provider,
     ctx,
     r.successor,
-    opts.kernel.effectiveAuthoritySet(r.successor),
+    opts.kernel.issuableAuthoritySet(r.successor),
     jkt,
   );
   if (minted && r.carryover) {
@@ -3360,7 +3363,7 @@ async function completeCeilingDrawdown(
     provider,
     ctx,
     successor,
-    opts.kernel.effectiveAuthoritySet(successor),
+    opts.kernel.issuableAuthoritySet(successor),
     d.jkt,
   );
   if (minted) {
@@ -3479,7 +3482,7 @@ async function recoverExpansion(
       // recomputed for this response.
       mission_id: successor.id,
       mission_expires_at: successor.expires_at,
-      authorization_details: opts.kernel.effectiveAuthoritySet(successor),
+      authorization_details: opts.kernel.issuableAuthoritySet(successor),
     };
     ctx.set("cache-control", "no-store");
     return;
@@ -3489,7 +3492,7 @@ async function recoverExpansion(
     provider,
     ctx,
     successor,
-    opts.kernel.effectiveAuthoritySet(successor),
+    opts.kernel.issuableAuthoritySet(successor),
     presenterJkt,
   );
   if (minted) {

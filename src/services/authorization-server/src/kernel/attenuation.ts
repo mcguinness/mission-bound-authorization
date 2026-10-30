@@ -453,7 +453,7 @@ async function mintAttenuationRoot(
   if (replayed) return replayed;
   const record: MissionRecord = admitted.record;
 
-  const { delMaxDepth, authority } = rootAuthority(kernel.effectiveAuthoritySet(record), input);
+  const { delMaxDepth, authority } = rootAuthority(kernel.issuableAuthoritySet(record), input);
 
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
@@ -720,7 +720,7 @@ async function mintCrossOrgRoot(
     return JSON.parse(admitted.reservation.reservation.completion) as CrossOrgRoot;
   }
   const record: MissionRecord = admitted.record;
-  const { delMaxDepth, authority } = rootAuthority(kernel.effectiveAuthoritySet(record), input);
+  const { delMaxDepth, authority } = rootAuthority(kernel.issuableAuthoritySet(record), input);
   const nowS = Math.floor(kernel.nowDate().getTime() / 1000);
   const missionExp = Math.floor(Date.parse(record.expires_at) / 1000);
   const exp = Math.min(nowS + (input.lifetimeSeconds ?? MAX_ROOT_LIFETIME_S), missionExp);
