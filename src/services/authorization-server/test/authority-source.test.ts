@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { generateKeyPair } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  type ApprovalBasisDirect,
   assertLocalPrincipal,
   type AuthorityEntry,
   type AuthoritySourceCatalog,
@@ -1292,7 +1293,15 @@ describe("principal-specific source resolution (@spec mission#authority-sources,
     const kernel = k();
     const resolved = kernel.resolveAuthoritySource({ clientId: "ap-agent", subject: { iss: ISS, sub: "alice" } });
     const record = approveFor(kernel, "alice", "ap-agent", [grant(READS, "acme")]);
-    const forged = { ...record, id: `${record.id}x`, approval_event_id: `apev-827-forged-${seq++}` };
+    const forgedEvent = `apev-827-forged-${seq++}`;
+    // The copy's explicit activation names its own approval event
+    // (@spec mission#record-principal-members), so the source checks decide.
+    const forged = {
+      ...record,
+      id: `${record.id}x`,
+      approval_event_id: forgedEvent,
+      approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: forgedEvent } },
+    };
     refusedWith(
       () =>
         kernel.insertRecord({ ...forged, authority_source: { type: "service_owned" } } as never, undefined, {

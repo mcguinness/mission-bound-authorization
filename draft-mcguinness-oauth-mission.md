@@ -1231,6 +1231,20 @@ Supporting an evidence type is optional, but these rules are not: an
 AS that supports none still applies them and refuses every presented
 entry ({{conformance-roles}}).
 
+`submission_evidence` ({{record-content-members}}) is provenance, not
+enforcement input, and is not carried on the `mission` claim
+({{mission-claim}}). Recorded facts, such as a verified consent
+reference, are provenance and policy input only; a resource domain
+validates them under its own current policy
+({{third-party-data-subjects}}).
+
+No integrity anchor commits `submission_evidence`: its digests are
+only as trustworthy as the Mission Record that holds them and do not
+independently prove which artifacts were presented at admission. A
+profile whose threat model requires that proof commits normalized
+provenance under its own anchor `typ` ({{integrity-anchors}},
+{{extensibility}}).
+
 Mission Intent Submission Evidence for OAuth 2.0
 ({{I-D.draft-mcguinness-oauth-mission-submission-evidence}}) specifies
 the evidence framework, including required-evidence resolution and the
@@ -1380,8 +1394,8 @@ subset relation admits a narrower `resource` (for
 token entry that `target_resources` does not name, and a candidate
 outside every Authority Set entry fails that rule.
 
-The Mission records the policy version in force as `policy_version`
-({{mission-record}}).
+Where recorded, the Mission's `policy_version` names the policy
+version in force ({{mission-record}}).
 
 Generative Authority Set derivation is not one of this document's
 modes. As a local-policy extension, a model's output can be a
@@ -1712,15 +1726,20 @@ Refusals follow {{error-mapping}}.
    These are distinct checks: an organizational owner may be
    authorized to activate policy without personally holding every
    operational permission. The AS MUST refuse when either relationship
-   cannot be established. {{record-principal-members}} states the
-   refusal to approve a Mission whose authority source the AS does not
-   recognize.
+   cannot be established. An AS MUST NOT approve a Mission whose
+   authority source it does not recognize.
 
 4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
    any ceiling an applicable Mission-creating profile defines. The
    value is bounded as `expires_at` requires ({{mission-record}}) and
    is rechecked at the creation commit (step 7).
+
+   Shortening under applicable AS policy, or under an already-approved
+   parent, predecessor, or standing-consent bound a Mission-creating
+   profile defines, is ordinary narrowing of the granted lifetime, not
+   Authority Set derivation; for direct creation under this document
+   the only additional ceiling is applicable AS policy.
 
 5. **Render for consent** the derived Authority Set in human-meaningful
    terms, with the `goal`, `task_bounds`, and the effective
@@ -1784,8 +1803,8 @@ The same procedure continues from step 5:
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
-{{record-provenance-members}} states how the AS deduplicates a retried
-or duplicate delivery of the same approval decision on
+{{approval-idempotency}} states how the AS deduplicates a retried or
+duplicate delivery of the same approval decision on
 `approval_event_id`.
 
 ### Subject Establishment {#subject-establishment}
@@ -1891,6 +1910,18 @@ Approval activates only authority the source already holds: the AS
 establishes the source and verifies the derived Authority Set against
 it before approval ({{direct-approval-steps}},
 {{standing-consent-instances}}).
+
+An organizational Mission's `authority_source.policy` reference
+({{record-principal-members}}) commits to the governed policy through
+its `digest`:
+
+- `digest` is a prefixed commitment ({{commitment-mechanisms}})
+  whose exact committed input and construction the policy's format
+  specifies: its species and, for an envelope anchor, its `typ`,
+  `iss`, and `value`.
+- The party that produces the reference computes `digest`; a
+  consumer holding the policy can reproduce it, and one that does
+  not compares it as an opaque value.
 
 The subject-representation discipline is the same in every source:
 
@@ -2046,10 +2077,6 @@ define. The `type` values form a specification-defined namespace with
 no registry ({{namespace-taxonomy}}): each further basis is defined by
 the companion profile that introduces it.
 
-For a standing-consent `type`, `activation` takes the shape that its
-companion profile defines, and `activation_actor` names a dispatching
-or requesting party distinct from the consenting human.
-
 An unrecognized `type` or `adjudication.kind` is handled as
 {{record-principal-members}} states for every record consumer.
 
@@ -2062,6 +2089,25 @@ carries for an instance it activates. That value identifies this
 instance's approval event, never the standing approval, so a retried
 activation deduplicates and each distinct activation creates its own
 Mission.
+
+A standing-consent basis carries the following `approval_basis`
+members ({{record-principal-members}}):
+
+`activation`:
+: REQUIRED for every standing-consent `type`. An object naming what
+  activated this Mission instance, in the shape that the basis's
+  companion profile defines.
+
+`activation_actor`:
+: REQUIRED for every standing-consent `type`. An object with `iss`
+  and `sub`. Who or what triggered this instance: a dispatching or
+  requesting party distinct from the consenting human.
+
+`root_commitment`:
+: REQUIRED for every standing-consent `type`. A string. The
+  commitment to the consented root: an integrity anchor where the
+  root is a committed object, otherwise the committed reference that
+  identifies it.
 
 `approved_at`:
 : REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
@@ -2080,6 +2126,15 @@ standing-consent `type` populates `adjudication`, `kind` MUST be
 that adjudicated the instance. A companion profile MUST NOT flatten a
 policy's or an Approval Governance Record's assertion set into a
 single principal member.
+
+For `kind: policy`, `adjudication` carries `policy`, a REQUIRED object
+with `id` and `version` identifying the deciding policy or workflow.
+It decides deterministically over recorded inputs, so re-evaluating
+that `version` over them re-checks the decision. A model's output can
+be one such input, recorded with the model's identifier and version:
+it can refuse an activation or narrow the authority it activates, and
+the AS MUST NOT let it supply or widen authority. A model is never
+itself the deciding policy or workflow.
 
 ### Standing-Consent Instances {#standing-consent-instances}
 
@@ -2118,8 +2173,8 @@ snapshot it evaluates, and MUST NOT activate the instance under that
 policy when the result differs; the companion profile fixes what
 follows, as it does for an activation the policy does not authorize.
 The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{record-provenance-members}}) of every Mission it activates
-under that snapshot, so an auditor can reproduce the digest.
+audit horizon ({{audit-horizon}}) of every Mission it activates under
+that snapshot, so an auditor can reproduce the digest.
 Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
@@ -2162,24 +2217,31 @@ and their values and requires no storage form. Where a surface or
 profile exchanges or signs the record, the record's JSON form, with
 the members this section defines, governs.
 
-Record member names omit the `mission` prefix because the record is
-the Mission. Prefixed names, such as the `mission_intent` request
-parameter and the `mission_id` response parameter, belong to surfaces
-that reference a Mission from outside it.
-
-Member names are spelled out (`issuer`, `expires_at`, `created_at`)
-and spelled identically on every surface. The compact JWT names
-(`iss`, `exp`, `iat`) describe a signed artifact's own envelope, or
-identify a party in an `{iss, sub}` object, not the Mission.
+Record member names omit the `mission` prefix, which marks surfaces
+that reference a Mission from outside it, such as the `mission_id`
+response parameter. They are spelled out (`issuer`, `expires_at`,
+`created_at`) and spelled identically on every surface; the compact
+JWT names (`iss`, `exp`, `iat`) belong to a signed artifact's own
+envelope or to an `{iss, sub}` party object, not the Mission.
 
 Like the `mission` claim ({{mission-claim}}), the record is open
 ({{extensibility}}): a companion profile of this document MAY record
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
-collision-resistant names.
+collision-resistant names. A consumer does not interpret a member it
+does not recognize, and does not remove it from a record it retains
+or commits.
 
-The following subsections define the record's members.
+The following subsections define the record's members. The record's
+required members are its invariants: `id`, `issuer`, `state`,
+`intent`, `authority_set`, `authority_hash`, `intent_hash`, `subject`,
+`approval_basis` and `authority_source` with the members each
+requires, `client_id`, `approval_event_id`, `created_at`, and
+`expires_at`, and, under the condition each states, `termination`,
+`proposed_authority`, `proposal_hash`, `submission_evidence`, and
+`policy_version`. Every other member is optional or defined by the
+profile that uses it.
 
 ### Identity and Lifecycle Members {#record-identity-members}
 
@@ -2260,19 +2322,6 @@ The following subsections define the record's members.
     specification selects for recording, nested so type-owned
     facts cannot collide with the common members.
 
-  `submission_evidence` is provenance, not enforcement input, and is
-  not carried on the `mission` claim ({{mission-claim}}). Recorded
-  facts, such as a verified consent reference, are provenance and
-  policy input only; a resource domain validates them under its own
-  current policy ({{third-party-data-subjects}}).
-
-  No integrity anchor commits `submission_evidence`: its digests are
-  only as trustworthy as the Mission Record that holds them and do not
-  independently prove which artifacts were presented at admission. A
-  profile whose threat model requires that proof commits normalized
-  provenance under its own anchor `typ` ({{integrity-anchors}},
-  {{extensibility}}).
-
 ### Principals and Approval Basis {#record-principal-members}
 
 `subject`:
@@ -2294,36 +2343,31 @@ The following subsections define the record's members.
   : REQUIRED. A string: `direct`, or a standing-consent value that a
     companion profile defines ({{standing-consent-bases}}).
 
-  An unrecognized `type`, and likewise an unrecognized
-  `adjudication.kind` ({{mission-record}}), is preserved unchanged as
-  opaque provenance on an otherwise valid record: a consumer MUST NOT
-  infer or fabricate the human, policy, or Approval Governance Record
-  standing behind it, and MUST refuse only a profile operation that
-  itself requires recognized adjudication semantics to proceed (for
-  example, evaluating a policy-approval recency ceiling). Unlike an
-  unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
-  here does not by itself invalidate or deactivate the Mission.
-
   `consent_principal`:
   : REQUIRED. An object with `iss` and `sub`. The accountable human
     (or human-accountable principal) who consented. MAY equal
     `subject`.
 
   `activation`:
-  : REQUIRED. An object naming what activated this Mission
-    instance, shaped by `type`. For `direct`: `approval_event_id`,
-    mirroring the record's own `approval_event_id` (below).
+  : OPTIONAL for `direct`. What activated this Mission instance; its
+    implied value for `direct` is an object whose `approval_event_id`
+    is the record's own `approval_event_id` (below).
 
   `activation_actor`:
-  : REQUIRED. An object with `iss` and `sub`. Who or what triggered
-    this instance. For `direct` it equals `consent_principal`: the
-    Approver triggers their own approval.
+  : OPTIONAL for `direct`. Who or what triggered this instance; its
+    implied value for `direct` is `consent_principal`: the Approver
+    triggers their own approval.
 
   `root_commitment`:
-  : REQUIRED. A string. The commitment to the consented root: an
-    integrity anchor where the root is a committed object, otherwise
-    the committed reference that identifies it. For `direct`, this
-    Mission's own `authority_hash`.
+  : OPTIONAL for `direct`. The commitment to the consented root; its
+    implied value for `direct` is this Mission's own `authority_hash`.
+
+  When present for `direct`, `activation`, `activation_actor`, and
+  `root_commitment` MUST each match its implied value. The implied
+  values are semantic defaults: an omitted member has its implied
+  value, and a reader does not insert it into a record before hashing
+  or committing the record. A standing-consent basis requires and
+  defines all three ({{standing-consent-bases}}).
 
   `adjudication`:
   : OPTIONAL. A discriminated object naming the decision *mechanism*
@@ -2340,34 +2384,17 @@ The following subsections define the record's members.
       mechanism, not a storage location for supporting evidence; a
       companion profile MUST NOT define a `kind` value that names a
       record, an evidence store, or the requesting or dispatching
-      party. An unrecognized value is handled under the same rule as
-      `approval_basis.type` ({{record-principal-members}}).
+      party.
 
-    `governance_record`:
-    : OPTIONAL. A boolean. `true` when an Approval Governance Record is
-      recorded for this approval event
-      ({{I-D.draft-mcguinness-mission-approval-governance}}), joined by
-      this Mission's own `approval_event_id`.
-
-      - It never changes `kind`, which follows the basis (below and
-        {{standing-consent-bases}}).
-      - Approval Governance aligns the record's accountable assertion,
-        where it carries one, with that `kind`: a governed decision
-        still names its mechanism, and the record supplies the fuller
-        assertion set behind it, including any multi-assertion set,
-        never flattened into it.
+    A companion profile can define further members of `adjudication`;
+    Approval Governance defines `governance_record`
+    ({{I-D.draft-mcguinness-mission-approval-governance}}).
 
     For `kind: human`: no additional kind-specific members; the
     deciding human is `consent_principal`.
 
-    For `kind: policy`: `policy`, a REQUIRED object with `id` and
-    `version` identifying the deciding policy or workflow. It decides
-    deterministically over recorded inputs, so re-evaluating that
-    `version` over them re-checks the decision. A model's output can
-    be one such input, recorded with the model's identifier and
-    version: it can refuse an activation or narrow the authority it
-    activates, and the AS MUST NOT let it supply or widen authority.
-    A model is never itself the deciding policy or workflow.
+    For `kind: policy`: the kind-specific members that
+    {{standing-consent-bases}} defines.
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
@@ -2404,28 +2431,13 @@ The following subsections define the record's members.
 
   `type`:
   : REQUIRED. A string: `user_delegated`, `service_owned`, or
-    `organizational`. An unrecognized value is handled under the same
-    rule as an unrecognized `approval_basis.type`
-    ({{record-principal-members}}): it is preserved unchanged as opaque
-    provenance and does not by itself invalidate or deactivate the
-    Mission, and only an operation that itself requires recognized
-    source semantics refuses (for example, applying the source's
-    authority ceiling or its governed policy). An AS MUST NOT approve a
-    Mission whose authority source it does not recognize.
+    `organizational`.
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
     draws on.
-
-    - `digest` is a prefixed commitment ({{commitment-mechanisms}})
-      whose exact committed input and construction the policy's format
-      specifies: its species and, for an envelope anchor, its `typ`,
-      `iss`, and `value`.
-    - The party that produces the reference computes `digest`; a
-      consumer holding the policy can reproduce it, and one that does
-      not compares it as an opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
@@ -2436,23 +2448,39 @@ The following subsections define the record's members.
 : REQUIRED. A string. The Agent (OAuth client) that submitted the
   Mission Intent.
 
+An unrecognized `approval_basis.type`, `adjudication.kind`, or
+`authority_source.type` value is preserved unchanged as opaque
+provenance on an otherwise valid record: a consumer MUST NOT infer or
+fabricate the human, policy, or Approval Governance Record standing
+behind it, and MUST refuse only a profile operation that itself
+requires recognized adjudication semantics to proceed (for example,
+evaluating a policy-approval recency ceiling); for
+`authority_source.type`, the operation refused is any operation, of
+this document or a profile, that itself requires recognized source
+semantics (for example, applying the source's authority ceiling or
+its governed policy). Unlike an unrecognized
+lifecycle state ({{lifecycle}}), such a value does not by itself
+invalidate or deactivate the Mission.
+
 ### Provenance and Expiry {#record-provenance-members}
 
 `policy_version`:
-: REQUIRED. A string. An opaque audit correlator naming the
+: OPTIONAL. A string. An opaque audit correlator naming the
   derivation policy version in effect at the approval event; the
-  policy itself does not travel.
+  policy itself does not travel. It is REQUIRED where a feature or
+  profile the deployment uses depends on versioned derivation-policy
+  identification, such as standing-consent recency
+  ({{standing-consent-recency}}). A deployment using such a feature
+  records it from creation and never supplies a replacement value
+  later.
 
 `approval_event_id`:
 : REQUIRED. A string. A unique identifier of the approval event, used
-  as the approval idempotency key: a retried or duplicate delivery of
-  the same approval decision (a replayed callback, a double-submitted
-  consent form, a retried standing-consent activation) MUST NOT create
-  a second Mission, and the AS deduplicates on this identifier. The
-  identifier names the approval event that creates this Mission
-  ({{approval-event}}); under a standing-consent basis
-  ({{standing-consent-bases}}), it identifies this instance's creation,
-  not the earlier standing approval.
+  as the approval idempotency key: one approval event creates at most
+  one Mission ({{approval-idempotency}}). The identifier names the
+  approval event that creates this Mission ({{approval-event}}); under
+  a standing-consent basis ({{standing-consent-bases}}), it identifies
+  this instance's creation, not the earlier standing approval.
 
 `created_at`:
 : REQUIRED. A string. RFC 3339 timestamp of creation.
@@ -2462,17 +2490,6 @@ The following subsections define the record's members.
   effective Mission expiry ({{lifecycle}}, {{issuance-gating}}). It
   MUST be later than `created_at` and MUST NOT be later than
   `intent.expires_at`, the requested ceiling ({{mission-intent}}).
-
-  Shortening under applicable AS policy, or under an already-approved
-  parent, predecessor, or standing-consent bound a Mission-creating
-  profile defines, is ordinary narrowing of the granted lifetime, not
-  Authority Set derivation; for direct creation under this document
-  the only additional ceiling is applicable AS policy.
-
-The **audit horizon** is the deployment-declared retention window for
-the Mission Record and its evidence: at least the Mission's lifetime
-plus a declared post-expiry period. A deployment retains a
-`terminated` Mission's record for its audit horizon.
 
 ### Mission Identifier Format {#mission-id}
 
@@ -2666,9 +2683,9 @@ records it.
 `intent_hash` and `authority_hash` are independent commitments to
 independent objects. That the approved task bounds the derived
 authority is a governance assertion, made by derivation policy and
-auditable through `policy_version` ({{authorization-derivation}}),
-not a cryptographic relation between the anchors: neither anchor
-proves anything about the other's object.
+auditable through `policy_version` where the Mission records it
+({{authorization-derivation}}), not a cryptographic relation between
+the anchors: neither anchor proves anything about the other's object.
 
 The `typ` value space is an extension point ({{extensibility}}):
 additional committed objects use this same envelope with a new `typ`
@@ -5374,6 +5391,26 @@ This document makes no Mission Substrate conformance claim and takes
 no requirement from the substrate contract
 ({{I-D.draft-mcguinness-mission-substrate}}), which is informative.
 
+# Implementation Considerations {#implementation-considerations}
+
+This section states two requirements: approval idempotency and the
+retention of the Mission Record.
+
+## Approval Idempotency {#approval-idempotency}
+
+The record's `approval_event_id` ({{record-provenance-members}}) is
+the approval idempotency key: a retried or duplicate delivery of the
+same approval decision (a replayed callback, a double-submitted
+consent form, a retried standing-consent activation) MUST NOT create
+a second Mission, and the AS deduplicates on this identifier.
+
+## Audit Horizon {#audit-horizon}
+
+The **audit horizon** is the deployment-declared retention window for
+the Mission Record and its evidence: at least the Mission's lifetime
+plus a declared post-expiry period. A deployment retains a
+`terminated` Mission's record for its audit horizon.
+
 # Security Considerations {#security-considerations}
 
 The security considerations of OAuth 2.0 ({{Section 10 of RFC6749}}),
@@ -5483,7 +5520,7 @@ The AS is trusted to derive authority no broader than the Mission
 Intent. Both Authority Set derivation modes
 ({{authorization-derivation}}), a proposal narrowed to policy and a
 configured mapping, are mechanical rather than free-form inference.
-The recorded `policy_version` makes each Authority Set derivation
+Where recorded, `policy_version` makes each Authority Set derivation
 auditable by naming the policy it ran under.
 
 ## Agent-Specific Threats {#sec-agent}
@@ -5703,8 +5740,7 @@ the AS's signing key, whose publication and rotation
 {{token-claims}} specifies.
 
 Verification for audit outlives validity: keeping a key resolvable for
-the audit horizon ({{record-provenance-members}}) of every Mission
-whose tokens it
+the audit horizon ({{audit-horizon}}) of every Mission whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
 Mandate, registered evidence) states its own retention bound.
@@ -5823,7 +5859,7 @@ authority, or recorded-evidence member:
 Whatever the member, it:
 
 - persists on the Mission Record for its audit horizon
-  ({{record-provenance-members}});
+  ({{audit-horizon}});
 - concentrates at the AS with the record ({{record-access}}); and
 - if committed, is confirmable through the unsalted anchors by any
   party holding a candidate value
@@ -5853,7 +5889,7 @@ Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
 a byproduct of holding a Mission reference. Retention and erasure are
 deployment policy, bounded below by the audit horizon
-({{record-provenance-members}}).
+({{audit-horizon}}).
 
 Where approval-event evidence was registered under the audit
 transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its
@@ -6847,6 +6883,23 @@ resolve before interoperating.
 
 -02
 
+- Mission Record names its required members, and every other member
+  is optional or defined by the profile that uses it. `activation`,
+  `activation_actor`, and `root_commitment` are optional for `direct`,
+  with implied values that a present member must match, and are
+  defined in Standing-Consent Bases. `policy_version` is optional, and
+  required where a feature such as standing-consent recency depends on
+  it. Approval procedure moves out of the member definitions to
+  Preparing the Approval and Authority Sources; the policy
+  adjudication rules move to Standing-Consent Bases; the
+  `submission_evidence` explanation moves to Intent Submission
+  Evidence; and approval idempotency and the audit horizon move to a
+  new Implementation Considerations section. The unrecognized-value
+  rule for `approval_basis.type`, `adjudication.kind`, and
+  `authority_source.type` is stated once, and a consumer neither
+  interprets nor removes a record member it does not recognize.
+  Approval Governance defines `governance_record` (#1912, D1047,
+  D1048).
 - Editorial, no requirement change: citations elsewhere in the
   document name the subsection that states the cited rule, not its
   parent section, where #1908's subsections make one precise (#1910,

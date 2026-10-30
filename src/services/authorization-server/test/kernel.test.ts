@@ -1,10 +1,21 @@
 import { randomBytes } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { authorityHash, entryWithinCeiling, intentHash } from "@mission/core";
+import {
+  approvalContextCommitment,
+  approvalContextManifest,
+  authorityHash,
+  entryWithinCeiling,
+  intentHash,
+} from "@mission/core";
 import { DERIVATION_POLICY, MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
 import { generateKeyPair } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
+  type ApprovalBasisDirect,
+  assertDirectBasisConsistent,
+  DirectBasisMismatchError,
+  type DirectBasisRecord,
+  directBasisMembers,
   deriveAuthoritySet,
   GateError,
   IntentError,
@@ -531,6 +542,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
           ...record,
           id: newMissionId(),
           approval_event_id: "apev-funnel-2",
+          approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-funnel-2" } },
           expires_at: "2026-07-01T02:00:00Z",
         },
         undefined,
@@ -548,7 +560,12 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
       clientId: "ap-agent",
       approvalEventId: "apev-audiences-1",
     });
-    const derived = { ...record, id: newMissionId(), approval_event_id: "apev-audiences-2" };
+    const derived = {
+      ...record,
+      id: newMissionId(),
+      approval_event_id: "apev-audiences-2",
+      approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-audiences-2" } },
+    };
     const source = { inherited: k.committedSourceBinding(record.id) };
     expect(() => k.insertRecord(derived, undefined, { source, audiences: { inherited: [] } })).toThrow(
       /inherited audiences are not aligned with its Authority Set/,
@@ -576,6 +593,7 @@ describe("mission record expiry ceiling (@spec mission#mission-record)", () => {
         ...record,
         id: newMissionId(),
         approval_event_id: "apev-atomic-2",
+        approval_basis: { ...(record.approval_basis as ApprovalBasisDirect), activation: { approval_event_id: "apev-atomic-2" } },
         created_at: "2026-07-01T01:00:00Z",
         },
         undefined,
@@ -633,6 +651,9 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
       activation_actor: { iss: ISS, sub: "bob" },
       root_commitment: record.authority_hash,
     });
+    // activation names the stored record's own approval_event_id, read from
+    // the record rather than from the identifier the approval was given.
+    expect(stored?.approval_basis.activation).toEqual({ approval_event_id: stored?.approval_event_id });
     // The Approver IS approval_basis.consent_principal (D48/O-38 convergence):
     // the record carries no separate `approver` alias (#705), and the
     // NOT NULL approver_* columns hold the identical value without being read.
@@ -645,6 +666,109 @@ describe("approval basis (@spec mission#record-principal-members)", () => {
     // weight in the digests (the lock's hashing decision, made checkable).
     expect(record.intent_hash).toBe(intentHash(ISS, record.intent as never));
     expect(record.authority_hash).toBe(authorityHash(ISS, record.authority_set as never));
+  });
+
+  // @spec mission#record-principal-members (#1912, D1047): for `direct`,
+  // activation, activation_actor and root_commitment are OPTIONAL, each with
+  // an implied value; a present one MUST match it, and the implied values
+  // are semantic defaults a reader never inserts before hashing or committing.
+  const BOB = { iss: ISS, sub: "bob" };
+  const handBuiltDirect = (basis: Partial<ApprovalBasisDirect> = {}): DirectBasisRecord => ({
+    approval_basis: { type: "direct", consent_principal: BOB, ...basis },
+    approval_event_id: "apev-hand-1912",
+    authority_hash: "sha-256:hand-built-authority-hash",
+  });
+
+  it("reads the implied activation, activation_actor and root_commitment of a direct basis that omits them", () => {
+    const record = handBuiltDirect();
+    const members = directBasisMembers(record);
+    expect(members.activation).toEqual({ approval_event_id: record.approval_event_id });
+    expect(record.approval_event_id).toBe("apev-hand-1912");
+    expect(members.activation_actor).toEqual(record.approval_basis.consent_principal);
+    expect(members.root_commitment).toBe(record.authority_hash);
+    // Reading inserts nothing: the basis still omits all three.
+    expect(record.approval_basis).toStrictEqual({ type: "direct", consent_principal: BOB });
+    // The implied values are exactly what kernel.approve() records explicitly.
+    const emitted = kernel.get(approve(intent(), 103).id) as MissionRecord;
+    const { activation, activation_actor, root_commitment, ...omitting } =
+      emitted.approval_basis as ApprovalBasisDirect;
+    expect(directBasisMembers({ ...emitted, approval_basis: omitting })).toEqual({
+      activation,
+      activation_actor,
+      root_commitment,
+    });
+    expect(directBasisMembers(emitted)).toEqual({ activation, activation_actor, root_commitment });
+  });
+
+  it("refuses a direct basis whose present activation, activation_actor or root_commitment differs from its implied value", () => {
+    const refusedMember = (basis: Partial<ApprovalBasisDirect>) => {
+      const e = refuse(() => assertDirectBasisConsistent(handBuiltDirect(basis)));
+      expect(e).toBeInstanceOf(DirectBasisMismatchError);
+      return (e as DirectBasisMismatchError).member;
+    };
+    // An activation naming another approval event than the record's own.
+    expect(refusedMember({ activation: { approval_event_id: "apev-other" } })).toBe("activation");
+    // An activation_actor that is not consent_principal (here the Subject).
+    expect(refusedMember({ activation_actor: { iss: ISS, sub: "alice" } })).toBe("activation_actor");
+    expect(refusedMember({ activation_actor: { iss: "https://other.test", sub: "bob" } })).toBe("activation_actor");
+    // A root_commitment that is not the record's authority_hash.
+    expect(refusedMember({ root_commitment: "sha-256:not-the-authority-hash" })).toBe("root_commitment");
+    // The other two members at their implied values do not mask a mismatch.
+    expect(
+      refusedMember({
+        activation: { approval_event_id: "apev-hand-1912" },
+        activation_actor: BOB,
+        root_commitment: "sha-256:not-the-authority-hash",
+      }),
+    ).toBe("root_commitment");
+  });
+
+  it("accepts a direct basis that carries the three members at their implied values, or omits any of them", () => {
+    // kernel.approve() records all three, each at its implied value.
+    const emitted = kernel.get(approve(intent(), 104).id) as MissionRecord;
+    expect(() => assertDirectBasisConsistent(emitted)).not.toThrow();
+    expect(() => assertDirectBasisConsistent(handBuiltDirect())).not.toThrow();
+    const full = {
+      activation: { approval_event_id: "apev-hand-1912" },
+      activation_actor: { iss: ISS, sub: "bob" },
+      root_commitment: "sha-256:hand-built-authority-hash",
+    };
+    expect(() => assertDirectBasisConsistent(handBuiltDirect(full))).not.toThrow();
+    for (const omitted of ["activation", "activation_actor", "root_commitment"] as const) {
+      const { [omitted]: _dropped, ...rest } = full;
+      expect(() => assertDirectBasisConsistent(handBuiltDirect(rest)), omitted).not.toThrow();
+    }
+  });
+
+  it("commits a direct basis that omits them exactly as recorded: neither the store nor the Approval Context Manifest input inserts an implied member", () => {
+    const record = approve(intent(), 105);
+    const { activation: _a, activation_actor: _b, root_commitment: _c, ...omitting } =
+      record.approval_basis as ApprovalBasisDirect;
+    const minimal: MissionRecord = {
+      ...record,
+      id: newMissionId(),
+      approval_event_id: "apev-105-minimal",
+      approval_basis: omitting,
+    };
+    kernel.insertRecord(minimal, undefined, {
+      source: { inherited: kernel.committedSourceBinding(record.id) },
+      audiences: "fresh",
+    });
+    // The store keeps the basis as committed.
+    const stored = kernel.get(minimal.id) as MissionRecord;
+    expect(stored.approval_basis).toStrictEqual({ type: "direct", consent_principal: BOB });
+    // The manifest input and the manifest copy it verbatim.
+    const input = kernel.approvalContextInput(stored);
+    expect(input.approval_basis).toStrictEqual({ type: "direct", consent_principal: BOB });
+    expect(approvalContextManifest(input).approval_basis).toStrictEqual({ type: "direct", consent_principal: BOB });
+    // The rule is load-bearing: inserting the implied members would commit a
+    // different approval context than the one the record states.
+    const filled = { ...input, approval_basis: { ...omitting, ...directBasisMembers(stored) } };
+    expect(approvalContextCommitment(ISS, approvalContextManifest(filled))).not.toBe(
+      approvalContextCommitment(ISS, approvalContextManifest(input)),
+    );
+    // Its implied values still read through the helper.
+    expect(directBasisMembers(stored).activation).toEqual({ approval_event_id: "apev-105-minimal" });
   });
 
   it("keeps the baseline mission claim to exactly {id, issuer}, with no authority_hash/approval_basis (#702)", () => {

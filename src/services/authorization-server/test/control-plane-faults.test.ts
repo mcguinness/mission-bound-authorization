@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { withTransaction } from "@mission/store";
 import { DERIVATION_POLICY } from "@mission/demo-data";
 import {
+  type ApprovalBasisDirect,
   type ContainmentPolicy,
   deriveAttenuationRoot,
   LifecycleConflictError,
@@ -153,7 +154,18 @@ describe("single-process control-plane fault boundaries", () => {
         }),
       ).toThrow("record issuer does not own this kernel");
       b.kernel.insertRecord(
-        { ...b.record, id: a.record.id, approval_event_id: "second-approval", status_list_idx: null },
+        {
+          ...b.record,
+          id: a.record.id,
+          approval_event_id: "second-approval",
+          // The copy's explicit activation names its own approval event
+          // (@spec mission#record-principal-members).
+          approval_basis: {
+            ...(b.record.approval_basis as ApprovalBasisDirect),
+            activation: { approval_event_id: "second-approval" },
+          },
+          status_list_idx: null,
+        },
         undefined,
         { source: { inherited: b.kernel.committedSourceBinding(b.record.id) }, audiences: "fresh" },
       );

@@ -183,6 +183,7 @@ import {
   witnessSharesStoreTree,
 } from "./recovery-witness.js";
 import { newMissionId } from "./mission-id.js";
+import { assertDirectBasisConsistent } from "./approval-basis.js";
 import {
   assembleResourceContracts,
   assertCarriedContractsResolvable,
@@ -2247,6 +2248,13 @@ export class MissionKernel {
     ) {
       throw new Error(`mission ${record.id}: child-actor provenance is not aligned with its Authority Set`);
     }
+    // @spec mission#record-principal-members (#1912, D1048): a `direct` basis
+    // that carries activation, activation_actor or root_commitment carries
+    // each at its implied value. Every creating body reaches this funnel, so a
+    // contradicting member is refused here, before any write, whatever built
+    // the record. An omitted member passes and stays omitted: nothing inserts
+    // its implied value into the record committed below.
+    if (record.approval_basis.type === "direct") assertDirectBasisConsistent(record);
     const inheritedPin = this.inheritedPinResolver(record, options.inheritPinsFrom);
     // @spec discharge#discharge-authority — the LAST point at which a
     // `terminal_when` condition can enter an immutable Mission-record entry: the

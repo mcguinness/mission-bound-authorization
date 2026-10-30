@@ -437,11 +437,20 @@ export interface ApprovalBasisDirect {
   type: "direct";
   /** The approving human. Identical to {@link MissionRecord.approver}. */
   consent_principal: { iss: string; sub: string };
-  activation: { approval_event_id: string };
-  /** The Approver themselves: identical to `consent_principal` for `direct`. */
-  activation_actor: { iss: string; sub: string };
-  /** This Mission's own `authority_hash`. */
-  root_commitment: string;
+  /*
+   * @spec mission#record-principal-members (#1912, D1047): the next three
+   * members are OPTIONAL for `direct`. An omitted member has its implied
+   * value, read through `directBasisMembers` (./approval-basis.ts) and never
+   * written into the record; a present one MUST match it
+   * (`assertDirectBasisConsistent`). Every direct path here still records
+   * all three.
+   */
+  /** Implied: an object whose `approval_event_id` is the record's own. */
+  activation?: { approval_event_id: string };
+  /** The Approver themselves. Implied: `consent_principal`. */
+  activation_actor?: { iss: string; sub: string };
+  /** Implied: this Mission's own `authority_hash`. */
+  root_commitment?: string;
   /**
    * @spec approval-governance#issuance-relationship (#1470): present only
    * where the issuer records a voluntary Approval Governance Record for this
