@@ -368,15 +368,15 @@ withdrawing that approval need not stop issuance under those grants.
 
 No existing OAuth object fills that role
 ({{I-D.draft-mcguinness-mission-architecture}}, Section "Relationship
-to Existing OAuth Objects"); an
-`authorization_details` entry ({{RFC9396}}), for example, expresses
-authority but not the task it serves or a lifecycle of its own. A
-Mission, held by the AS beside the grant, does. It commits the
-disclosed task with its approved authority and has an identifier and
-a lifecycle independent of any grant. It can be revoked by that
-identifier through an authenticated means, independent of possession
-of any token ({{revocation}}), and a token derived from it by Token
-Exchange identifies the same Mission ({{grant-binding}}).
+to Existing OAuth Objects"): an `authorization_details` entry
+({{RFC9396}}), for example, expresses authority but not the task it
+serves, and has no lifecycle of its own. A Mission, held by the AS
+beside the grant, commits the disclosed task with its approved
+authority and has an identifier and a lifecycle independent of any
+grant. It can be revoked by that identifier, through an authenticated
+means independent of possession of any token ({{revocation}}), and a
+token derived from it by Token Exchange identifies the same Mission
+({{grant-binding}}).
 
 A Mission is created and used in a single chain:
 
