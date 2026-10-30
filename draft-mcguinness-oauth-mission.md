@@ -898,15 +898,24 @@ The following is an example of a Mission Intent:
 }
 ~~~
 
-## Submission via PAR {#submission-via-par}
+## Submitting a Mission Intent {#submission-via-par}
 
-On the authorization-code path ({{approval-event}}), a client MUST
-submit a Mission Intent through a Pushed Authorization Request
-{{RFC9126}} using the `mission_intent` request parameter. The parameter
-value is the UTF-8 JSON {{RFC8259}} serialization of the Submission
-envelope, form-encoded in the `application/x-www-form-urlencoded` PAR
-request body like any other OAuth parameter. The Submission envelope is
-a JSON object with exactly these members:
+A client submits a Mission Intent, with any Intent Submission
+Evidence, in a Submission envelope ({{submission-envelope}}) sent as
+`mission_intent`. On the authorization-code path, the envelope travels
+through a Pushed Authorization Request ({{submission-par-carriage}}); a
+companion profile can define another, back-channel carriage
+({{submission-other-carriages}}).
+
+A Mission Intent, and any authority proposal submitted alongside it
+({{authority-proposal}}), is untrusted client input; trust enters only
+when the AS validates it and the Approver consents to the rendered
+result. The AS derives and bounds authority by its own policy, whatever
+the client submitted ({{authorization-derivation}}).
+
+### The Submission Envelope {#submission-envelope}
+
+The Submission envelope is a JSON object with exactly these members:
 
 `intent`:
 : REQUIRED. The Mission Intent object ({{mission-intent}}).
@@ -919,15 +928,13 @@ a JSON object with exactly these members:
 `intent_hash` commits exactly the `intent` object, not the
 Submission envelope or its `evidence` array ({{integrity-anchors}}).
 
-The AS returns a `request_uri` as usual, which the client uses to
-start authorization. An AS that cannot parse `mission_intent` as a
-JSON object, or that parses it but finds the Submission envelope or
-the Intent structurally invalid against this document's member
-definitions, MUST refuse the request with the `invalid_request`
-error code.
+The following rules govern a submission:
 
-Submission is governed by the following rules:
-
+- **Structural validity.** An AS that cannot parse `mission_intent` as
+  a JSON object, or that parses it but finds the Submission envelope or
+  the Intent structurally invalid against this document's member
+  definitions, MUST refuse the request with the `invalid_request`
+  error code.
 - **Closed top levels.** The AS MUST reject a submission with the
   `invalid_request` error code if the Submission envelope contains a
   top-level member other than `intent` and `evidence`, or if the
@@ -936,48 +943,6 @@ Submission is governed by the following rules:
   ({{extensibility}}). A bare Mission Intent submitted as the
   parameter value fails this rule, since its `goal` and sibling
   members are unknown envelope members.
-- **Carriage through PAR.** On the authorization-code path, the
-  AS accepts the Intent in one of two forms:
-
-  1. the form-encoded `mission_intent` parameter of the PAR request
-     body; or
-  2. a `mission_intent` claim inside a signed Request Object
-     ({{RFC9101}}) that is itself pushed through PAR. The claim's
-     value is the Submission envelope itself, a JSON object, not its
-     serialization; the AS MUST reject with `invalid_request` a claim
-     whose value is a string or any other value that is not a JSON
-     object.
-
-  The AS MUST reject with `invalid_request` a `mission_intent` presented
-  on a front-channel authorization request that does not use a
-  PAR-issued `request_uri`. A client MUST NOT send `mission_intent` as a
-  plaintext front-channel authorization-request parameter, whether or
-  not a Request Object is also present.
-
-  When the pushed request carries a Request Object (a `request`
-  parameter value), that object is authoritative: a `mission_intent`
-  submitted outside the Request Object in the same push MUST be rejected
-  with `invalid_request`, strengthening {{Section 6.3 of RFC9101}},
-  under which the AS would only ignore such a value.
-- **Alternative back-channel profiles.** A Mission Intent travels on no
-  other request unless a companion profile explicitly defines that
-  request as a back-channel carriage of the Submission envelope. Such a
-  profile carries the envelope and any authority proposal in one request
-  that never traverses a user agent, and preserves:
-
-  - this section's envelope and proposal rules;
-  - the processing order ({{submission-processing}});
-  - Authority Set derivation ({{authorization-derivation}});
-  - the approval-event rules for the Mission's approval basis
-    ({{approval-event}}, {{standing-consent-instances}}, with a direct
-    approval relocated only as {{extensibility}} permits); and
-  - the grant binding ({{grant-binding}}).
-
-  Support for a grant type or endpoint never establishes such a carriage
-  on its own. The experimental Mission Device Authorization profile
-  ({{I-D.draft-mcguinness-oauth-mission-device-authorization}}) defines
-  one for a client that cannot complete the authorization-code path, on
-  the device authorization grant {{RFC8628}}.
 - **Bounded size.** The AS MUST bound the Submission envelope's
   total size, the Intent's total size and the lengths of its arrays,
   and the count and per-entry sizes of `evidence` entries, refusing
@@ -985,23 +950,6 @@ Submission is governed by the following rules:
   `invalid_request`. The verification-cost bound of
   {{I-D.draft-mcguinness-oauth-mission-submission-evidence}}
   accompanies these.
-- **Concrete authority is proposed via `authorization_details`.**
-  A client proposes concrete authority on the standard
-  `authorization_details` parameter in the same push
-  ({{authority-proposal}}). A client can also push `scope` and
-  `resource` ({{RFC8707}}) values; the AS treats them as a requested
-  subset of the authority the Mission Intent yields
-  ({{authorization-derivation}}).
-- **Pushed parameters are authoritative.** On the front-channel
-  request that redeems the `request_uri`, the AS MUST ignore any
-  `mission_intent`, `authorization_details`, `scope`, or `resource`
-  presented.
-- **A proposal, not authority.** A Mission Intent, and any authority
-  proposal submitted alongside it ({{authority-proposal}}), is untrusted
-  client input; trust enters only when the AS validates it and the
-  Approver consents to the rendered result. The AS derives and bounds
-  authority by its own policy, whatever the client submitted
-  ({{authorization-derivation}}).
 
 The following is an example of a Submission envelope carrying a
 compact Intent and one evidence entry of an illustrative,
@@ -1025,6 +973,77 @@ deployment-defined type:
   ]
 }
 ~~~
+
+### Carriage Through PAR {#submission-par-carriage}
+
+On the authorization-code path ({{approval-event}}), a client MUST
+submit a Mission Intent through a Pushed Authorization Request
+{{RFC9126}} using the `mission_intent` request parameter. The parameter
+value is the UTF-8 JSON {{RFC8259}} serialization of the Submission
+envelope, form-encoded in the `application/x-www-form-urlencoded` PAR
+request body like any other OAuth parameter.
+
+On the authorization-code path, the AS accepts the Intent in one of
+two forms:
+
+1. the form-encoded `mission_intent` parameter of the PAR request
+   body; or
+2. a `mission_intent` claim inside a signed Request Object
+   ({{RFC9101}}) that is itself pushed through PAR. The claim's
+   value is the Submission envelope itself, a JSON object, not its
+   serialization; the AS MUST reject with `invalid_request` a claim
+   whose value is a string or any other value that is not a JSON
+   object.
+
+When the pushed request carries a Request Object (a `request`
+parameter value), that object is authoritative: a `mission_intent`
+submitted outside the Request Object in the same push MUST be rejected
+with `invalid_request`, strengthening {{Section 6.3 of RFC9101}},
+under which the AS would only ignore such a value.
+
+A client proposes concrete authority on the standard
+`authorization_details` parameter in the same push
+({{authority-proposal}}). A client can also push `scope` and
+`resource` ({{RFC8707}}) values; the AS treats them as a requested
+subset of the authority the Mission Intent yields
+({{authorization-derivation}}).
+
+The AS returns a `request_uri` as usual, which the client uses to
+start authorization. Pushed parameters are authoritative: on the
+front-channel request that redeems the `request_uri`, the AS MUST
+ignore any `mission_intent`, `authorization_details`, `scope`, or
+`resource` presented.
+
+The AS MUST reject with `invalid_request` a `mission_intent` presented
+on a front-channel authorization request that does not use a
+PAR-issued `request_uri`. A client MUST NOT send `mission_intent` as a
+plaintext front-channel authorization-request parameter, whether or
+not a Request Object is also present.
+
+### Other Carriages {#submission-other-carriages}
+
+A Mission Intent travels on no other request unless a companion profile
+explicitly defines that request as a back-channel carriage of the
+Submission envelope. Support for a grant type or endpoint never
+establishes such a carriage on its own.
+
+A profile that defines such a carriage carries the envelope and any
+authority proposal in one request that never traverses a user agent,
+and preserves:
+
+- the envelope and proposal rules of {{submission-via-par}};
+- the processing order ({{submission-processing}});
+- Authority Set derivation ({{authorization-derivation}});
+- the approval-event rules for the Mission's approval basis
+  ({{approval-event}}, {{standing-consent-instances}}, with a direct
+  approval relocated only as {{extensibility}} permits); and
+- the grant binding ({{grant-binding}}).
+
+The experimental Mission Device Authorization profile
+({{I-D.draft-mcguinness-oauth-mission-device-authorization}}) defines
+such a carriage for a client that cannot complete the
+authorization-code path, on the device authorization grant
+{{RFC8628}}.
 
 ## Authority Proposal {#authority-proposal}
 
