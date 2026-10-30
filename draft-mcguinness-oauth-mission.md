@@ -2063,10 +2063,6 @@ define. The `type` values form a specification-defined namespace with
 no registry ({{namespace-taxonomy}}): each further basis is defined by
 the companion profile that introduces it.
 
-For a standing-consent `type`, `activation` takes the shape that its
-companion profile defines, and `activation_actor` names a dispatching
-or requesting party distinct from the consenting human.
-
 An unrecognized `type` or `adjudication.kind` is handled as
 {{record-principal-members}} states for every record consumer.
 
@@ -2079,6 +2075,25 @@ carries for an instance it activates. That value identifies this
 instance's approval event, never the standing approval, so a retried
 activation deduplicates and each distinct activation creates its own
 Mission.
+
+A standing-consent basis carries the following `approval_basis`
+members ({{record-principal-members}}):
+
+`activation`:
+: REQUIRED for every standing-consent `type`. An object naming what
+  activated this Mission instance, in the shape that the basis's
+  companion profile defines.
+
+`activation_actor`:
+: REQUIRED for every standing-consent `type`. An object with `iss`
+  and `sub`. Who or what triggered this instance: a dispatching or
+  requesting party distinct from the consenting human.
+
+`root_commitment`:
+: REQUIRED for every standing-consent `type`. A string. The
+  commitment to the consented root: an integrity anchor where the
+  root is a committed object, otherwise the committed reference that
+  identifies it.
 
 `approved_at`:
 : REQUIRED for every standing-consent `type`. An RFC 3339 date-time:
@@ -2097,6 +2112,15 @@ standing-consent `type` populates `adjudication`, `kind` MUST be
 that adjudicated the instance. A companion profile MUST NOT flatten a
 policy's or an Approval Governance Record's assertion set into a
 single principal member.
+
+For `kind: policy`, `adjudication` carries `policy`, a REQUIRED object
+with `id` and `version` identifying the deciding policy or workflow.
+It decides deterministically over recorded inputs, so re-evaluating
+that `version` over them re-checks the decision. A model's output can
+be one such input, recorded with the model's identifier and version:
+it can refuse an activation or narrow the authority it activates, and
+the AS MUST NOT let it supply or widen authority. A model is never
+itself the deciding policy or workflow.
 
 ### Standing-Consent Instances {#standing-consent-instances}
 
@@ -2324,20 +2348,25 @@ the profile that uses it.
     `subject`.
 
   `activation`:
-  : REQUIRED. An object naming what activated this Mission
-    instance, shaped by `type`. For `direct`: `approval_event_id`,
-    mirroring the record's own `approval_event_id` (below).
+  : OPTIONAL for `direct`. What activated this Mission instance; its
+    implied value for `direct` is an object whose `approval_event_id`
+    is the record's own `approval_event_id` (below).
 
   `activation_actor`:
-  : REQUIRED. An object with `iss` and `sub`. Who or what triggered
-    this instance. For `direct` it equals `consent_principal`: the
-    Approver triggers their own approval.
+  : OPTIONAL for `direct`. Who or what triggered this instance; its
+    implied value for `direct` is `consent_principal`: the Approver
+    triggers their own approval.
 
   `root_commitment`:
-  : REQUIRED. A string. The commitment to the consented root: an
-    integrity anchor where the root is a committed object, otherwise
-    the committed reference that identifies it. For `direct`, this
-    Mission's own `authority_hash`.
+  : OPTIONAL for `direct`. The commitment to the consented root; its
+    implied value for `direct` is this Mission's own `authority_hash`.
+
+  When present for `direct`, `activation`, `activation_actor`, and
+  `root_commitment` MUST each match its implied value. The implied
+  values are semantic defaults: an omitted member has its implied
+  value, and a reader does not insert it into a record before hashing
+  or committing the record. A standing-consent basis requires and
+  defines all three ({{standing-consent-bases}}).
 
   `adjudication`:
   : OPTIONAL. A discriminated object naming the decision *mechanism*
@@ -2373,14 +2402,8 @@ the profile that uses it.
     For `kind: human`: no additional kind-specific members; the
     deciding human is `consent_principal`.
 
-    For `kind: policy`: `policy`, a REQUIRED object with `id` and
-    `version` identifying the deciding policy or workflow. It decides
-    deterministically over recorded inputs, so re-evaluating that
-    `version` over them re-checks the decision. A model's output can
-    be one such input, recorded with the model's identifier and
-    version: it can refuse an activation or narrow the authority it
-    activates, and the AS MUST NOT let it supply or widen authority.
-    A model is never itself the deciding policy or workflow.
+    For `kind: policy`: the kind-specific members that
+    {{standing-consent-bases}} defines.
 
   `approved_at`:
   : Absent for `direct`, whose approval event carries its own instant
