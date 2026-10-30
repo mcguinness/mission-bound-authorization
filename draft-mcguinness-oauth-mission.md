@@ -6889,6 +6889,19 @@ resolve before interoperating.
 
 -02
 
+- Mission Creation states the direct creation path, with the Mission
+  Approval subsections in the order of the steps they serve.
+  Standing-Consent Bases and Commitment Mechanisms move to
+  Extensibility, which lists approval bases as an extension point.
+  Commitment Mechanisms imports the digest rules that stay in Digest
+  Input and Algorithm, and the Authority Set entry commitment is its
+  own subsection. Approval Comprehension folds into Consent Binding
+  and Rendering Safeguards, Achieved Authentication into Approver
+  Authentication Strength, and the binding index into Implementation
+  Considerations. Grant Bindings and Related Mechanisms drops what
+  Template and Continuation state, and Approval Governance holds the
+  record-digest, per-action and later-reliance points. No requirement
+  changed (#1914).
 - Mission Record names its required members, and every other member
   is optional or defined by the profile that uses it. `activation`,
   `activation_actor`, and `root_commitment` are optional for `direct`,

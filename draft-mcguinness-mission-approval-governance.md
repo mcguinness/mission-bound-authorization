@@ -2289,6 +2289,11 @@ disclosed mismatch is definitive.
 
 \[\[ To be removed from the final specification ]]
 
+- Relationship to the Issuance Profile states how an artifact refers
+  to the record, that the record binds a governance evaluation to the
+  approval event rather than to each later action, and that later
+  reliance depends on deployment policy, moved here from the OAuth
+  binding unchanged. No requirement changed (#1914).
 - Relationship to the Issuance Profile defines the `governance_record`
   member of `approval_basis.adjudication`, which the OAuth binding no
   longer defines; its definition and its alignment with the
