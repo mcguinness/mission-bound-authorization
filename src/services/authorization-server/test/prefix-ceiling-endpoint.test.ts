@@ -37,8 +37,10 @@ import type { Server } from "node:http";
 import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
 import { type AuthorityEntry, type BuiltAs, buildAuthorizationServer } from "../src/index.js";
 import { renderedRevision, TEST_APPROVAL_PRINCIPALS, trustedApprovalHeaders } from "./approval-fixture.js";
+import { delegationHandleParams } from "./delegation-handle.helper.js";
 
 const PORT = 14940;
 const ISSUER = `http://localhost:${PORT}`;
@@ -199,6 +201,24 @@ const schedule = (resource_match?: "prefix"): AuthorityEntry =>
     constraints: { max_amount: { amount: "500.00", currency: "USD" }, vendors: ["acme"] },
   }) as AuthorityEntry;
 
+/** The async-delegation Token Exchange over the base token's delegation handle. */
+async function exchange(base: string, keys: Keys, requested: AuthorityEntry[]): Promise<{ status: number; body: Json }> {
+  const handle = await token(delegationHandleParams(base, "ap-agent"), keys);
+  expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+  return token(
+    {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: handle.body.access_token as string,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+      authorization_details: JSON.stringify(requested),
+    },
+    keys,
+  );
+}
+
 /** The derived entries' resource members, as the Mission records them. */
 const resourcesOf = (entries: readonly AuthorityEntry[] | undefined) =>
   (entries ?? []).map((e) => ({ resource: e.resource, ...(e.resource_match ? { resource_match: e.resource_match } : {}) }));
@@ -241,6 +261,22 @@ describe("a configured prefix ceiling derives through the authorization server (
     expect(resourcesOf(claims(issued.at).authorization_details as AuthorityEntry[])).toEqual([
       { resource: INVOICES, resource_match: "prefix" },
     ]);
+  });
+
+  it("a Token Exchange from a prefix entry issues a narrower prefix or an exact resource beneath it, and refuses a broader prefix or a sibling", async () => {
+    const issued = await issue([read(INVOICES, "prefix")], [RESOURCE, INVOICES]);
+    for (const requested of [read(`${INVOICES}/2026`, "prefix"), read(INV1)]) {
+      const ok = await exchange(issued.at, issued.keys, [requested]);
+      expect(ok.status, JSON.stringify(ok.body)).toBe(200);
+      expect(resourcesOf(claims(ok.body.access_token as string).authorization_details as AuthorityEntry[])).toEqual(
+        resourcesOf([requested]),
+      );
+    }
+    for (const requested of [read(RESOURCE, "prefix"), read(SIBLING)]) {
+      const res = await exchange(issued.at, issued.keys, [requested]);
+      expect(res.status, JSON.stringify(requested)).toBe(400);
+      expect(res.body.error, JSON.stringify(requested)).toBe("invalid_authorization_details");
+    }
   });
 
   it("a proposal for a sibling outside the prefix boundary derives nothing and is refused at the approval decision, creating no Mission", async () => {
