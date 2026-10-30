@@ -1156,7 +1156,7 @@ MUST be recorded as one, in which:
   recorded as the basis's `adjudication` ({{ceiling-drawdown-basis}});
 - the Approver who consented the ceiling remains the accountable
   `consent_principal` ({{I-D.draft-mcguinness-oauth-mission}}, Section
-  "Role Mapping"); and
+  "Principals and Approval Basis"); and
 - the successor's `predecessor` member links the drawdown chain for an
   authorized auditor exactly as for human-approved expansions
   ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
@@ -1398,6 +1398,10 @@ Denial Reasons Registry"):
 
 -01
 
+- Audit Linkage cites the OAuth binding's Principals and Approval Basis
+  section for the accountable `consent_principal`, since that binding's
+  Role Mapping appendix moved to the architecture document. No
+  requirement changed (#1892).
 - `ceiling_consent_hash` keeps the latest explicitly human-consented
   ceiling's hash apart from a policy-narrowed `ceiling_hash`; the
   `ceiling_drawdown` basis's `root_commitment` and `approved_at` name

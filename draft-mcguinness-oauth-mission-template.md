@@ -933,8 +933,8 @@ The Mission Issuer adjudicates a Dispatch in this order:
        authentication established, never a value taken from the
        request's parameters or its dispatch intent; distinct from
        `consent_principal` and never the instance's adjudicator
-       ({{I-D.draft-mcguinness-oauth-mission}}, Section "Role
-       Mapping");
+       ({{I-D.draft-mcguinness-oauth-mission}}, Section "Principals
+       and Approval Basis");
      - `root_commitment`: `template_hash`; and
      - `approved_at` (the issuance profile's standing-consent
        requirement): the instant the consenting human approved this
@@ -1874,6 +1874,10 @@ IANA action. Following the restraint of the sibling profiles:
 
 \[\[ To be removed from the final specification ]]
 
+- Adjudication cites the OAuth binding's Principals and Approval Basis
+  section for the roles `activation_actor` stays distinct from, since
+  that binding's Role Mapping appendix moved to the architecture
+  document. No requirement changed (#1892).
 - Changes a requirement (#813, D814, D830): Standing Payment Exception
   admits, as an option, dispatch of one designated payment-execution
   operation whose only prohibited class is the irreversible class,

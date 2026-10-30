@@ -62,6 +62,14 @@ normative:
     date: 2026
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC8725:
   RFC8792:
   I-D.draft-mcguinness-oauth-mission-template:
@@ -274,7 +282,8 @@ disclosure or the Consent Evidence object, and the verified facts
 they yield land on the Mission record's `submission_evidence`.
 
 Material verified provenance is nonetheless part of the approval
-surface: the disclosure commits it through
+surface ({{I-D.draft-mcguinness-oauth-mission}}, Section "Submission
+Processing Order"): the disclosure commits it through
 `submission_provenance_hash` ({{consent-disclosure}}), covered by
 `consent_rendering_hash`, so the recorded rendering proves which
 provenance supported the decision.
@@ -618,6 +627,21 @@ behind further interaction, provided that:
 `consent_rendering_hash` ({{consent-rendering-hash}}) commits the
 disclosure object, not a layer, so layering changes presentation, not
 evidence.
+
+A short task can legitimately have a large or varied Authority Set:
+an erasure request whose proposal or configured lookup
+({{I-D.draft-mcguinness-oauth-mission}}, Section "Derivation Modes")
+yields dozens of delete entries across resources. The first layer can
+then summarize every resource, action, and bound; a summary is a view
+of the set, never a substitute for it. Two further non-normative
+practices can help make the set reviewable:
+
+- **Group** entries by resource and action, keeping visible an entry
+  whose constraints, such as its resource range or consumption bound,
+  differ materially from the rest of its group.
+- **Split rather than approve** when the set is too large or varied
+  for one decision ({{I-D.draft-mcguinness-mission-architecture}},
+  Section "Mission Granularity").
 
 ## Disclosure Interrogation {#interrogation}
 
@@ -1841,6 +1865,13 @@ encoding difference to resolve before interoperating.
 - Removed the uncited Mission Deferred Approval reference; the
   Approval Governance Record is the cited home of approval-governance
   facts.
+
+- Layered Rendering adds non-normative practices for a large or varied
+  Authority Set, grouping and splitting, from the OAuth binding's
+  Approval Comprehension, the split practice citing the architecture
+  document's Mission Granularity; the evidence model cites the binding's
+  rule that a committed approval surface covers the provenance facts.
+  No requirement changes (#1892).
 
 # Acknowledgments
 {:numbered="false"}
