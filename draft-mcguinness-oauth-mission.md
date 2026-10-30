@@ -6718,13 +6718,14 @@ resolve before interoperating.
 
 -02
 
-- Editorial, no requirement change: the Introduction no longer
+- Editorial, no requirement change: the Introduction states the
+  problem and the approach and points to the Overview; it no longer
   restates the flow that Protocol Flow and the Introductory Example
-  show. Its six-step chain becomes one paragraph stating what the flow
-  provides, the gap agent-identity work leaves is stated once, and the
-  commitment-recomputation and Approved-Set Verification sentences,
-  which Consent Binding and Resource Server Enforcement carry, are
-  removed (#1906, D1039).
+  show, or details stated in their own sections (consent to the
+  Authority Set, the commitments, grant binding, revocation by
+  identifier, the `mission` claim and resource-server enforcement).
+  The issuance-only deployment pointer moves to Issuance Scope and
+  Runtime Enforcement (#1906, D1039).
 - Editorial, no requirement change: the back matter that describes
   the family rather than the protocol moves to the Architecture: the
   Mapping Assessment of this document against the Mission Substrate
