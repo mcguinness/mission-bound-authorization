@@ -609,8 +609,9 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
       // and the Authority Set are unchanged.
       stubAdmissionIssuer = CHANGED_ISSUER;
       const refused = await flow.decide(stale);
-      const refusal = (await refused.json()) as { error?: string; changed?: string[] };
-      expect(refused.status, JSON.stringify(refusal)).toBe(409);
+      const refusedBody = await refused.text();
+      expect(refused.status, refusedBody).toBe(409);
+      const refusal = JSON.parse(refusedBody) as { error?: string; changed?: string[] };
       expect(refusal.error).toBe("approval_context_changed");
       expect(refusal.changed).toEqual(["submission_evidence"]);
       expect(e2eAs.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
