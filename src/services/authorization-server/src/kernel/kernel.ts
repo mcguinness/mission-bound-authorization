@@ -1946,7 +1946,7 @@ export class MissionKernel {
     // so a later drawdown draws them with it rather than with a later mapping.
     const ceilingAudiences = ceiling ? this.mappedEntryAudiences(ceiling.authority_ceiling) : undefined;
     if (ceiling && ceilingAudiences) ceiling.ceiling_audiences = ceilingAudiences;
-    // @spec mission#approval-basis — direct: the human approval event itself
+    // @spec mission#record-principal-members — direct: the human approval event itself
     // creates the record; consent_principal == activation_actor == approver,
     // and root_commitment is this Mission's own authority_hash.
     const approvalBasis: ApprovalBasis = {
@@ -2339,12 +2339,12 @@ export class MissionKernel {
           record.authority_hash,
           record.subject.iss,
           record.subject.sub,
-          // @spec mission#approval-basis: the NOT NULL `approver_*` columns
+          // @spec mission#record-principal-members: the NOT NULL `approver_*` columns
           // hold the Approver, `approval_basis.consent_principal` (the
           // identical value); they are never read back into the record.
           record.approval_basis.consent_principal.iss,
           record.approval_basis.consent_principal.sub,
-          // @spec mission#approval-basis: fixed at creation, immutable (like
+          // @spec mission#record-principal-members: fixed at creation, immutable (like
           // `parent`/`template`), so it is written only here.
           JSON.stringify(record.approval_basis),
           // @spec mission#authority-sources: established at the approval event

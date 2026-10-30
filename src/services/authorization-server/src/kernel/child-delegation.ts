@@ -788,7 +788,7 @@ export function createChildMission(kernel: MissionKernel, input: CreateChildInpu
   const primaryChildren = childrenOf(parentEntry(primaryPi));
   const primaryPolicy = primaryChildren?.child_creation_policy;
   const approvalEventId = `dlg_${randomBytes(12).toString("base64url")}`;
-  // @spec mission#approval-basis, child-delegation#child-creation — every
+  // @spec mission#standing-consent-bases, child-delegation#child-creation — every
   // child creation in this reference implementation is policy-adjudicated
   // (the fan-out on-switch above), never a separate per-child human
   // approval: consent_principal is the parent's accountable human (== the

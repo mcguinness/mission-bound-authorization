@@ -249,7 +249,7 @@ export function createExpansion(kernel: MissionKernel, input: ExpansionInput): E
 
   const id = input.successorId ?? newMissionId();
   const authorityHashValue = authorityHash(predecessor.issuer, authoritySet as never);
-  // @spec mission#approval-basis — Expansion is a fresh human approval that
+  // @spec mission#record-principal-members — Expansion is a fresh human approval that
   // widens authority (like kernel.approve()'s direct path): consent_principal
   // == activation_actor == the new approver, and root_commitment is the
   // successor's own authority_hash.

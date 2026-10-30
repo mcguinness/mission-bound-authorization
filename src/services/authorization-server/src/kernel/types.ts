@@ -352,7 +352,7 @@ export interface ContainmentEventRecord {
 }
 
 /**
- * @spec mission#approval-basis — convergence Finding #1: the reframed
+ * @spec mission#record-principal-members — convergence Finding #1: the reframed
  * invariant is "every Mission is rooted in an approved authorization basis,"
  * generalizing "every Mission is created by an explicit approval event."
  * `approval_basis` is a Mission Record member, fixed at creation and
@@ -428,7 +428,7 @@ export interface UnrecognizedAuthoritySource {
 export type RecordedAuthoritySource = AuthoritySource | UnrecognizedAuthoritySource;
 
 /**
- * @spec mission#approval-basis — the default and strongest basis: a human
+ * @spec mission#record-principal-members — the default and strongest basis: a human
  * approval event created this Mission directly. `approver`/`activation_actor`
  * are the SAME approving human; this is the pre-existing, unchanged behavior
  * of {@link MissionKernel.approve}, now named.
@@ -682,7 +682,7 @@ export interface MissionRecord {
   submission_evidence?: IntentSubmissionEvidenceFact[];
   subject: { iss: string; sub: string };
   /**
-   * @spec mission#approval-basis: fixed at creation, immutable. The
+   * @spec mission#record-principal-members: fixed at creation, immutable. The
    * Approver is `approval_basis.consent_principal`; see {@link ApprovalBasis}.
    */
   approval_basis: ApprovalBasis;
@@ -998,7 +998,7 @@ export interface MissionClaim {
    */
   expires_at?: string;
   /**
-   * @spec mission#approval-basis — the read-only wire signal of the basis
+   * @spec mission#record-principal-members — the read-only wire signal of the basis
    * type. MUST NOT be relied on to grant authority; the full
    * {@link ApprovalBasis} lives on the Mission Record only. NOT carried on
    * the baseline claim (#702); disclosed only via introspection under the
