@@ -1712,15 +1712,20 @@ Refusals follow {{error-mapping}}.
    These are distinct checks: an organizational owner may be
    authorized to activate policy without personally holding every
    operational permission. The AS MUST refuse when either relationship
-   cannot be established. {{record-principal-members}} states the
-   refusal to approve a Mission whose authority source the AS does not
-   recognize.
+   cannot be established. An AS MUST NOT approve a Mission whose
+   authority source it does not recognize.
 
 4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
    any ceiling an applicable Mission-creating profile defines. The
    value is bounded as `expires_at` requires ({{mission-record}}) and
    is rechecked at the creation commit (step 7).
+
+   Shortening under applicable AS policy, or under an already-approved
+   parent, predecessor, or standing-consent bound a Mission-creating
+   profile defines, is ordinary narrowing of the granted lifetime, not
+   Authority Set derivation; for direct creation under this document
+   the only additional ceiling is applicable AS policy.
 
 5. **Render for consent** the derived Authority Set in human-meaningful
    terms, with the `goal`, `task_bounds`, and the effective
@@ -1891,6 +1896,18 @@ Approval activates only authority the source already holds: the AS
 establishes the source and verifies the derived Authority Set against
 it before approval ({{direct-approval-steps}},
 {{standing-consent-instances}}).
+
+An organizational Mission's `authority_source.policy` reference
+({{record-principal-members}}) commits to the governed policy through
+its `digest`:
+
+- `digest` is a prefixed commitment ({{commitment-mechanisms}})
+  whose exact committed input and construction the policy's format
+  specifies: its species and, for an envelope anchor, its `typ`,
+  `iss`, and `value`.
+- The party that produces the reference computes `digest`; a
+  consumer holding the policy can reproduce it, and one that does
+  not compares it as an opaque value.
 
 The subject-representation discipline is the same in every source:
 
@@ -2162,15 +2179,12 @@ and their values and requires no storage form. Where a surface or
 profile exchanges or signs the record, the record's JSON form, with
 the members this section defines, governs.
 
-Record member names omit the `mission` prefix because the record is
-the Mission. Prefixed names, such as the `mission_intent` request
-parameter and the `mission_id` response parameter, belong to surfaces
-that reference a Mission from outside it.
-
-Member names are spelled out (`issuer`, `expires_at`, `created_at`)
-and spelled identically on every surface. The compact JWT names
-(`iss`, `exp`, `iat`) describe a signed artifact's own envelope, or
-identify a party in an `{iss, sub}` object, not the Mission.
+Record member names omit the `mission` prefix, which marks surfaces
+that reference a Mission from outside it, such as the `mission_id`
+response parameter. They are spelled out (`issuer`, `expires_at`,
+`created_at`) and spelled identically on every surface; the compact
+JWT names (`iss`, `exp`, `iat`) belong to a signed artifact's own
+envelope or to an `{iss, sub}` party object, not the Mission.
 
 Like the `mission` claim ({{mission-claim}}), the record is open
 ({{extensibility}}): a companion profile of this document MAY record
@@ -2179,7 +2193,15 @@ it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
 collision-resistant names.
 
-The following subsections define the record's members.
+The following subsections define the record's members. The record's
+required members are its invariants: `id`, `issuer`, `state`,
+`intent`, `authority_set`, `authority_hash`, `intent_hash`, `subject`,
+`approval_basis` and `authority_source` with the members each
+requires, `client_id`, `policy_version`, `approval_event_id`,
+`created_at`, and `expires_at`, and, under the condition each states,
+`termination`, `proposed_authority`, `proposal_hash`, and
+`submission_evidence`. Every other member is optional or defined by
+the profile that uses it.
 
 ### Identity and Lifecycle Members {#record-identity-members}
 
@@ -2410,22 +2432,13 @@ The following subsections define the record's members.
     provenance and does not by itself invalidate or deactivate the
     Mission, and only an operation that itself requires recognized
     source semantics refuses (for example, applying the source's
-    authority ceiling or its governed policy). An AS MUST NOT approve a
-    Mission whose authority source it does not recognize.
+    authority ceiling or its governed policy).
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
     `id`, `version`, and `digest`: the stable reference to, and
     commitment over, the governed organizational policy the Mission
     draws on.
-
-    - `digest` is a prefixed commitment ({{commitment-mechanisms}})
-      whose exact committed input and construction the policy's format
-      specifies: its species and, for an envelope anchor, its `typ`,
-      `iss`, and `value`.
-    - The party that produces the reference computes `digest`; a
-      consumer holding the policy can reproduce it, and one that does
-      not compares it as an opaque value.
 
   `authority_source` is provenance like `approval_basis`: recorded
   alongside it, folded into neither `intent_hash` nor
@@ -2462,12 +2475,6 @@ The following subsections define the record's members.
   effective Mission expiry ({{lifecycle}}, {{issuance-gating}}). It
   MUST be later than `created_at` and MUST NOT be later than
   `intent.expires_at`, the requested ceiling ({{mission-intent}}).
-
-  Shortening under applicable AS policy, or under an already-approved
-  parent, predecessor, or standing-consent bound a Mission-creating
-  profile defines, is ordinary narrowing of the granted lifetime, not
-  Authority Set derivation; for direct creation under this document
-  the only additional ceiling is applicable AS policy.
 
 The **audit horizon** is the deployment-declared retention window for
 the Mission Record and its evidence: at least the Mission's lifetime
