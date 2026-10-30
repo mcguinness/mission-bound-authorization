@@ -402,6 +402,47 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     expect(out).toMatchObject({ outcome: "emit", values: ["r.read", "r.write"] });
   });
 
+  // @spec mission#transformation-capabilities, resource-access#transformation-capabilities
+  // (#1377, D1037): an entry of a type without a declared `projection`
+  // supplies no safe projection, and a `scope`-only target is refused only
+  // when no other carried entry supplies one.
+  it("projection is declared per entry type: an undeclared type's entry supplies no value, another carried entry still does, and none refuses invalid_target", () => {
+    const WIDGET = "example_widget";
+    const typed: ScopeProjectionMapping = {
+      audiences: {
+        [RS]: {
+          version: "v1",
+          mission_aware: false,
+          mode: "scope_only",
+          scopes: { "r.read": value(["read"]), "w.write": value(["write"], { type: WIDGET }) },
+        },
+      },
+    };
+    const entries = [entry(["read"]), { type: WIDGET, resource: RS, actions: ["write"] }];
+    const project = (declared: string[], requested?: string[]) =>
+      projectScope({
+        projectionDeclared: (type) => declared.includes(type),
+        mapping: typed,
+        audiences: [RS],
+        entries,
+        ...(requested ? { requested: { values: requested, explicit: true } } : {}),
+      });
+    expect(project(["mission_resource_access", WIDGET])).toMatchObject({
+      outcome: "emit",
+      values: ["r.read", "w.write"],
+    });
+    expect(project(["mission_resource_access"])).toMatchObject({
+      outcome: "emit",
+      values: ["r.read"],
+    });
+    expect(project([WIDGET])).toMatchObject({ outcome: "emit", values: ["w.write"] });
+    expect(project([])).toMatchObject({ outcome: "refuse", error: "invalid_target" });
+    expect(project(["mission_resource_access"], ["w.write"])).toMatchObject({
+      outcome: "refuse",
+      error: "invalid_scope",
+    });
+  });
+
   it("local interpretation: a value named for the entry's action is judged by the rights the target grants for it, not by its name", () => {
     const local = (actions: string[]): ScopeProjectionMapping => ({
       audiences: {

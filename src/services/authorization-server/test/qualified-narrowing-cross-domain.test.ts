@@ -35,6 +35,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { testAuthoritySourceCatalog } from "./authority-source.helper.js";
+import { capabilitiesWith, type CapabilityVariant, UNDECLARED_VARIANTS } from "./transformation-capabilities.helper.js";
 
 const ISS = "https://as.test";
 const RAS = "https://ras.partner.test";
@@ -229,5 +230,59 @@ describe("the effective set keeps a partially contained entry's remainder; issua
       { ...prefix, actions: [READ] },
     ]);
     expect(domain.issuableAuthoritySet(record)).toEqual([{ ...plain, actions: [READ] }]);
+  });
+});
+
+/**
+ * @spec mission#transformation-capabilities (#1377, D1037): "The AS MUST NOT
+ * ... delegate ... an entry of a type for which it has not declared the
+ * corresponding capability." A cross-domain grant issued to a delegate above
+ * Mission delegation depth 0 carries only the entries that delegate may be
+ * delegated, so with `delegation` omitted or declared `false` it carries none
+ * and is refused before anything is counted.
+ */
+describe("a cross-domain grant to a delegate conveys an entry only where delegation is declared (@spec mission#transformation-capabilities, #1377, D1037)", () => {
+  const DELEGABLE: AuthorityEntry = {
+    type: "mission_resource_access",
+    resource: R_PLAIN,
+    actions: [READ],
+    delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+  };
+  function kernelDeclaring(variant: CapabilityVariant): MissionKernel {
+    return new MissionKernel({
+      issuer: ISS,
+      policy: { policy_version: "qualified-narrowing-xd-delegation-1", ceiling: [DELEGABLE] },
+      authoritySourceCatalog: testAuthoritySourceCatalog([DELEGABLE], ["agent"], ["approver"]),
+      statusKey: signKey,
+      statusKid: "as-status",
+      narrowing: NARROWING_IN_FULL,
+      transformationCapabilities: capabilitiesWith({ delegation: variant }),
+    });
+  }
+  async function grantTo(kernel: MissionKernel, missionId: string, depth: number): Promise<AuthorityEntry[]> {
+    const { grant } = await issueCrossDomainGrant(kernel, signKey, "as-xd", {
+      missionId,
+      targetAs: RAS,
+      clientId: "svc-b",
+      cnfJkt: "jkt-svc-b",
+      resourceToAs: () => RAS,
+      delegation: { delegate: { sub: "svc-b", assertedProfile: "ai_agent" }, depth },
+    });
+    return decodeJwt(grant).authorization_details as AuthorityEntry[];
+  }
+
+  it("with delegation omitted or false, a grant at depth 1 is refused, counting nothing, while a depth-0 grant is conveyed; declared, the depth-1 grant conveys the entry", async () => {
+    for (const variant of UNDECLARED_VARIANTS) {
+      const kernel = kernelDeclaring(variant);
+      const m = approve(kernel, [structuredClone(DELEGABLE)]);
+      const before = kernel.get(m.id)?.derivation_count;
+      await expect(grantTo(kernel, m.id, 1), variant).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+      expect(kernel.get(m.id)?.derivation_count).toBe(before);
+      // Mission delegation depth 0 delegates nothing, so the gate leaves it.
+      expect(await grantTo(kernel, m.id, 0)).toEqual([DELEGABLE]);
+    }
+    const declared = kernelDeclaring("true");
+    const d = approve(declared, [structuredClone(DELEGABLE)]);
+    expect(await grantTo(declared, d.id, 1)).toEqual([DELEGABLE]);
   });
 });

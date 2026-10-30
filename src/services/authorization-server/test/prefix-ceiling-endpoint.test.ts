@@ -24,6 +24,12 @@ const hoisted = await vi.hoisted(async () => {
   const file = join(dir, "policy.json");
   const policy = JSON.parse(readFileSync(file, "utf8")) as { ceiling: Record<string, unknown>[] };
   (policy.ceiling[0] as Record<string, unknown>).resource_match = "prefix";
+  // #1377 (D1037): the plain resource server's ceiling is a prefix too, so a
+  // prefix entry beneath it can be projected to its scope-only mapping.
+  const topology = JSON.parse(readFileSync(join(dir, "topology.json"), "utf8")) as { resources: { plainRs: string } };
+  const plainCeiling = policy.ceiling.find((e) => e.resource === topology.resources.plainRs);
+  if (!plainCeiling) throw new Error("policy.json names no plain resource server ceiling");
+  plainCeiling.resource_match = "prefix";
   writeFileSync(file, JSON.stringify(policy, null, 2));
   // The shipped containment rules stay configured: since #1463 containment
   // pairs by resource-set overlap, so a prefix ceiling loads beside them.
@@ -34,7 +40,7 @@ const hoisted = await vi.hoisted(async () => {
 
 import { rmSync } from "node:fs";
 import type { Server } from "node:http";
-import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN } from "@mission/demo-data";
+import { CONTAINMENT_POLICY, DERIVATION_POLICY, DEV_SERVICE_TOKEN, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
 import { exportJWK, generateKeyPair, importJWK, SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { ACCESS_TOKEN_TOKEN_TYPE, TOKEN_EXCHANGE_GRANT_TYPE } from "../src/adapters/continuation-grant.js";
@@ -49,6 +55,11 @@ const RESOURCE = DERIVATION_POLICY.ceiling[0]?.resource as string;
 const INVOICES = `${RESOURCE}/invoices`;
 const INV1 = `${INVOICES}/inv-1`;
 const SIBLING = `${RESOURCE}-archive/invoices`;
+const PLAIN = TOPOLOGY.resources.plainRs;
+const REPORTS = `${PLAIN}/reports`;
+const REPORT_READ = "reports:report.read";
+/** The live mapping the AS reads at every issuance. */
+const MAPPING = structuredClone(SCOPE_PROJECTION);
 const FAR_EXP = "2027-06-01T00:00:00Z";
 const VERIFIER = "prefix-ceiling-verifier-0123456789-0123456789-0123456";
 
@@ -96,7 +107,11 @@ async function token(params: Record<string, string>, keys: Keys): Promise<{ stat
   return { status: res.status, body: (await res.json()) as Json };
 }
 
-async function push(proposal: AuthorityEntry[], targets: string[]): Promise<{ status: number; body: Json }> {
+async function push(
+  proposal: AuthorityEntry[],
+  targets: string[],
+  resource = RESOURCE,
+): Promise<{ status: number; body: Json }> {
   const challenge = Buffer.from(
     await crypto.subtle.digest("SHA-256", new TextEncoder().encode(VERIFIER)),
   ).toString("base64url");
@@ -107,7 +122,7 @@ async function push(proposal: AuthorityEntry[], targets: string[]): Promise<{ st
       client_id: "ap-agent",
       response_type: "code",
       redirect_uri: REDIRECT_URI,
-      resource: RESOURCE,
+      resource,
       code_challenge: challenge,
       code_challenge_method: "S256",
       login_hint: "alice",
@@ -123,8 +138,8 @@ async function push(proposal: AuthorityEntry[], targets: string[]): Promise<{ st
 }
 
 /** PAR and the approval decision: the final redirect (a code, or the refusal). */
-async function approve(proposal: AuthorityEntry[], targets: string[]): Promise<URL> {
-  const pushed = await push(proposal, targets);
+async function approve(proposal: AuthorityEntry[], targets: string[], resource = RESOURCE): Promise<URL> {
+  const pushed = await push(proposal, targets, resource);
   expect(pushed.status, JSON.stringify(pushed.body)).toBe(201);
   const jar = new Map<string, string>();
   const keep = (res: Response) => {
@@ -162,6 +177,18 @@ async function approve(proposal: AuthorityEntry[], targets: string[]): Promise<U
   return new URL(location);
 }
 
+/** The code exchange for an approval's redirect, under a fresh DPoP key. */
+async function redeem(redirect: URL, resource: string): Promise<{ status: number; body: Json; keys: Keys }> {
+  const code = redirect.searchParams.get("code");
+  expect(code, redirect.toString()).toBeTruthy();
+  const keys = (await generateKeyPair("ES256", { extractable: true })) as Keys;
+  const exchanged = await token(
+    { grant_type: "authorization_code", code: code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource },
+    keys,
+  );
+  return { ...exchanged, keys };
+}
+
 const claims = (jwt: string): Json =>
   JSON.parse(Buffer.from(jwt.split(".")[1] as string, "base64url").toString()) as Json;
 
@@ -169,18 +196,17 @@ const claims = (jwt: string): Json =>
 async function issue(
   proposal: AuthorityEntry[],
   targets: string[],
+  resource = RESOURCE,
 ): Promise<{ at: string; rt: string; keys: Keys; missionId: string }> {
-  const redirect = await approve(proposal, targets);
-  const code = redirect.searchParams.get("code");
-  expect(code, redirect.toString()).toBeTruthy();
-  const keys = (await generateKeyPair("ES256", { extractable: true })) as Keys;
-  const exchanged = await token(
-    { grant_type: "authorization_code", code: code as string, redirect_uri: REDIRECT_URI, code_verifier: VERIFIER, resource: RESOURCE },
-    keys,
-  );
+  const exchanged = await redeem(await approve(proposal, targets, resource), resource);
   expect(exchanged.status, JSON.stringify(exchanged.body)).toBe(200);
   const at = exchanged.body.access_token as string;
-  return { at, rt: exchanged.body.refresh_token as string, keys, missionId: (claims(at).mission as { id: string }).id };
+  return {
+    at,
+    rt: exchanged.body.refresh_token as string,
+    keys: exchanged.keys,
+    missionId: (claims(at).mission as { id: string }).id,
+  };
 }
 
 const read = (resource: string, resource_match?: "prefix"): AuthorityEntry =>
@@ -228,6 +254,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     allowHeadlessAdjudication: true,
     serviceTokenPrincipals: TEST_APPROVAL_PRINCIPALS,
+    scopeProjection: MAPPING,
   });
   server = as.provider.listen(PORT);
   await new Promise<void>((r) => server.once("listening", () => r()));
@@ -419,5 +446,61 @@ describe("containment beside a configured prefix ceiling, through the lifecycle 
     expect(((await res.json()) as Json).error).toBe("invalid_request");
     expect(as.kernel.get(issued.missionId)?.version).toBe(before);
     expect(as.kernel.get(issued.missionId)?.containment).toBeUndefined();
+  });
+});
+
+/**
+ * @spec resource-access#scope-projection, condition 1 (#1377, D1037): "A
+ * `prefix` entry projects safely only when the mapping scopes the value to
+ * that same prefix, or to a narrower resource within it"; a value over a
+ * broader ancestor is never a safe projection of it. The plain resource
+ * server's ceiling is a prefix here, and its mapping is `scope`-only.
+ */
+describe("a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377)", () => {
+  const value = (resource: string, match: "exact" | "prefix") => ({
+    rights: { type: "mission_resource_access", resource, match, actions: [REPORT_READ] },
+    mandatory_controls: {},
+  });
+  async function withPlain(scopes: Record<string, unknown>, run: () => Promise<void>): Promise<void> {
+    const audiences = MAPPING.audiences as Record<string, unknown>;
+    const saved = audiences[PLAIN];
+    audiences[PLAIN] = { version: `prefix-${Object.keys(scopes).join("+")}`, mission_aware: false, mode: "scope_only", scopes };
+    try {
+      await run();
+    } finally {
+      audiences[PLAIN] = saved;
+    }
+  }
+  const reports = {
+    type: "mission_resource_access",
+    resource: REPORTS,
+    resource_match: "prefix",
+    actions: [REPORT_READ],
+  } as AuthorityEntry;
+
+  it("emits the values scoped to the entry's prefix or to a narrower resource within it, and not the ancestor's value", async () => {
+    await withPlain(
+      {
+        "reports.read": value(REPORTS, "prefix"),
+        "reports.q3.read": value(`${REPORTS}/q3`, "exact"),
+        "all.read": value(PLAIN, "prefix"),
+      },
+      async () => {
+        const issued = await issue([reports], [PLAIN, REPORTS], PLAIN);
+        expect(resourcesOf(as.kernel.get(issued.missionId)?.authority_set)).toEqual([
+          { resource: REPORTS, resource_match: "prefix" },
+        ]);
+        expect(claims(issued.at).scope).toBe("reports.q3.read reports.read");
+      },
+    );
+  });
+
+  it("refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix", async () => {
+    await withPlain({ "all.read": value(PLAIN, "prefix") }, async () => {
+      const res = await redeem(await approve([reports], [PLAIN, REPORTS], PLAIN), PLAIN);
+      expect(res.status, JSON.stringify(res.body)).toBe(400);
+      expect(res.body.error).toBe("invalid_target");
+      expect(res.body.error_description).toMatch(/no safe scope projection/);
+    });
   });
 });

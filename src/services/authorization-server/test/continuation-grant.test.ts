@@ -61,6 +61,7 @@ import {
   validateMissionIntent,
 } from "../src/index.js";
 import { confirmRing } from "./ring-confirm.helper.js";
+import { liveCapabilities, UNDECLARED_VARIANTS, withCapability } from "./transformation-capabilities.helper.js";
 
 const PORT = 14475;
 const ISSUER = `http://localhost:${PORT}`;
@@ -120,6 +121,8 @@ type Keys = { privateKey: CryptoKey; publicKey: CryptoKey };
 
 let as: BuiltAs;
 let asServer: Server;
+/** The live transformation capabilities the AS reads at every delegation (#1377, D1037). */
+const CAPS = liveCapabilities();
 let clientKey: CryptoKey; // ap-agent private_key_jwt key (kid ap-agent-auth)
 let caiKeys: Keys; // the Continuation Assertion Issuer's ICA signing key
 let otherCaiKeys: Keys; // CAI_OTHER's ICA signing key
@@ -442,6 +445,7 @@ beforeAll(async () => {
     issuer: ISSUER,
     signingKeys: { ring },
     allowHeadlessAdjudication: true,
+    transformationCapabilities: CAPS,
     // Further token-exchange clients, so a hop can be continued by an actor
     // other than the one that obtained it.
     testClients: [
@@ -1489,6 +1493,26 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
     const reason = await refused(await exchangeAs(h3.hop, "B"), "invalid_target");
     expect(reason).toMatch(/Mission delegation depth 3/);
     expect(sideEffects(missionId)).toEqual(before);
+  });
+
+  // @spec mission#transformation-capabilities (#1377, D1037): "The AS MUST
+  // NOT ... delegate ... an entry of a type for which it has not declared the
+  // corresponding capability."
+  it("with delegation omitted or false, A->B (Mission delegation depth 1) is invalid_target with no hop and no derivation, while A's own continuation still issues; declared, A->B issues", async () => {
+    const { missionId, handle: root } = newLineage("apev-d-caps");
+    for (const variant of UNDECLARED_VARIANTS) {
+      await withCapability(CAPS, "delegation", variant, async () => {
+        const before = sideEffects(missionId);
+        const reason = await refused(await exchangeAs(root, "B"), "invalid_target");
+        expect(reason, variant).toMatch(/Mission delegation depth 1/);
+        expect(sideEffects(missionId)).toEqual(before);
+        // Mission delegation depth 0 delegates nothing, so the gate leaves it.
+        const same = await granted(await exchangeAs(root, "A"));
+        expect(same.details.map((d) => d.resource)).toEqual([RESOURCE]);
+      });
+    }
+    const hB = await granted(await exchangeAs(root, "B"));
+    expect(hB.details.map((d) => d.resource)).toEqual([RESOURCE]);
   });
 
   it("A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact", async () => {
