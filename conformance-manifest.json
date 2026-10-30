@@ -8901,6 +8901,216 @@
    "notes": "#1892 ruling 6 (row debt). Partial: the witness asserts activation equals {approval_event_id: 'apev-100'}, the identifier the approval was given, but never reads the stored record's approval_event_id, so a record whose own member diverged would still pass; one assertion against stored.approval_event_id would make it tested. mission-approval-deferral.test.ts makes the same comparison against store.approvalEventId(code) on Deferred Approval's relocated direct approval, also not against the record member."
   },
   {
+   "id": "core.approval-basis.activation-actor-direct",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object with `iss` and `sub`. Who or what triggered this instance. For `direct` it equals `consent_principal`: the Approver triggers their own approval.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.activation_actor, an object with iss and sub, equal to its consent_principal"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1898 (from #1892's review). The witness's toEqual over the stored basis fixes activation_actor to consent_principal. Proved by mutation (2026-10-30, #1898): an activation_actor set to the Subject fails it."
+  },
+  {
+   "id": "core.approval-basis.root-commitment-direct",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. A string. The commitment to the consented root: an integrity anchor where the root is a committed object, otherwise the committed reference that identifies it. For `direct`, this Mission's own `authority_hash`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.root_commitment, a string equal to its own authority_hash"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1898. Facet: the direct basis; standing-consent roots are rowed under their bases. The witness fixes root_commitment to the record's authority_hash. Proved by mutation (2026-10-30, #1898): a root_commitment other than authority_hash fails it."
+  },
+  {
+   "id": "core.approval-basis.approved-at-absent-direct",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "Absent for `direct`, whose approval event carries its own instant ({{approval-event}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a direct approval_basis carries no approved_at member"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1898. The standing-consent half is core.approval-basis.approved-at-standing-consent. The witness's toEqual over the stored basis admits no approved_at. Proved by mutation (2026-10-30, #1898): adding approved_at to the direct basis fails it."
+  },
+  {
+   "id": "core.approval-basis.direct-human-approval-event",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "For `direct`, `activation.approval_event_id` MUST identify a human approval event ({{approval-event}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "approval-ceremony",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a direct Mission's activation.approval_event_id identifies a human approval event: no direct Mission is created without an authenticated Approver's decision"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approver-login.test.ts",
+     "name": "the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > refuses an ID Token whose signature does not verify against the provider's published keys, recording no login",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1898. Partial: the witness (and its sibling refused-login cases) shows a decision without an authenticated Approver answers 401 and creates no Mission and no grant. Not witnessed: the reference also admits a trusted headless approval service's named Approver (approvalPrincipal in provider.ts), whose humanity rests on that service; and the identifier's tie to the record's own approval_event_id is the open gap of core.approval-basis.activation-direct-event-id."
+  },
+  {
+   "id": "core.approval-basis.not-in-integrity-anchors",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "`approval_basis` is provenance: none of the record's integrity anchors, such as `intent_hash`, `authority_hash` or `proposal_hash`, covers it ({{integrity-anchors}}); a profile that commits the Mission Record itself covers it under that profile's own anchor.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "no integrity anchor of the Mission Record (intent_hash, authority_hash, proposal_hash) is computed over approval_basis; a profile that commits the Mission Record itself covers it under that profile's own anchor"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1898. Partial: the witness recomputes intent_hash and authority_hash from intent and authority_set alone and matches the record's values. Not witnessed: proposal_hash (the witness submits no proposal), and the clause on a profile that commits the Mission Record."
+  },
+  {
+   "id": "core.approval-basis.not-on-baseline-claim",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "It is not carried on the baseline `mission` claim ({{mission-claim}})",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the baseline mission claim a Mission-bound token carries holds no approval_basis"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > keeps the baseline mission claim to exactly {id, issuer}, with no authority_hash/approval_basis (#702)",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1898. The witness fixes the baseline claim to exactly {id, issuer}. Proved by mutation (2026-10-30, #1898): adding approval_basis to the claim builder fails it."
+  },
+  {
+   "id": "core.approval-basis.never-grants-authority",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "it MUST NOT be relied on to grant or widen authority wherever it does appear.",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authority a Mission's derivations issue and its enforcement admits does not depend on approval_basis: a Mission whose approval_basis differs, its type or consent_principal included, derives and is admitted exactly the same authority"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1898. Todo: no witness. One would alter a stored record's approval_basis (its type, or its consent_principal) and show that derivation, refresh and introspection-based enforcement issue and admit exactly the authority they did before."
+  },
+  {
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
@@ -11830,6 +12040,37 @@
     }
    ],
    "notes": "#1892 ruling 9 (iv) (D1026). Shares its witness with status.lifecycle.rfc7009-not-by-itself, Mission Status's statement of the same rule. The witness revokes, at the RFC 7009 endpoint, the refresh token of an async-delegation family under the Mission (a Token Exchange refresh lineage), asserts the 200 and the family's grant destroyed, and asserts the Mission's state is still active: no transition, for an active Mission. Partial: it runs with the delegation capability on, and no test revokes an access token or a code-redemption refresh token, or a token of a suspended or terminated Mission, and then checks that the Mission's state is unchanged. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state."
+  },
+  {
+   "id": "core.revocation.state-beyond-token-lifetime",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "A deployment whose consumers rely on Mission state beyond a token's lifetime offers token introspection ({{introspection}}) or Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}}), so they read current state rather than infer it from token validity.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "introspection",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where consumers rely on Mission state beyond a token's lifetime, the deployment offers token introspection or Mission Status, through which a consumer reads the Mission's current state rather than inferring it from the token's validity"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "revocation with a scope-only Resource Server (@spec mission#scope-projection) > after the Mission is revoked, refresh refuses invalid_grant, introspection returns active false, and the plain RS in introspection mode denies the next call",
+     "level": "cross-component",
+     "surface": "introspection"
+    }
+   ],
+   "notes": "#1898 (C7's retained duty, #1892). The reference always offers introspection. The witness revokes the Mission while its access token is unexpired: introspection answers active false and the introspection-mode resource server denies, while the JWT-only resource server still accepts the token. Proved by mutation (2026-10-30, #1898): skipping the access-token branch's Mission-state check in introspection fails it (active true)."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
