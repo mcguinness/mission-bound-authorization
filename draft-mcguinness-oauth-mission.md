@@ -6892,6 +6892,22 @@ resolve before interoperating.
 
 -02
 
+- Mission Record names its required members, and every other member
+  is optional or defined by the profile that uses it. `activation`,
+  `activation_actor`, and `root_commitment` are optional for `direct`,
+  with implied values that a present member must match, and are
+  defined in Standing-Consent Bases. `policy_version` is optional, and
+  required where a feature such as standing-consent recency depends on
+  it. Approval procedure moves out of the member definitions to
+  Preparing the Approval and Authority Sources; the policy
+  adjudication rules move to Standing-Consent Bases; the
+  `submission_evidence` explanation moves to Intent Submission
+  Evidence; and approval idempotency and the audit horizon move to a
+  new Implementation Considerations section. The unrecognized-value
+  rule for `approval_basis.type`, `adjudication.kind`, and
+  `authority_source.type` is stated once, and a consumer neither
+  interprets nor removes a record member it does not recognize
+  (#1912, D1047).
 - Editorial, no requirement change: citations elsewhere in the
   document name the subsection that states the cited rule, not its
   parent section, where #1908's subsections make one precise (#1910,
