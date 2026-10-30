@@ -12157,7 +12157,7 @@
    "id": "core.issuance-gating.acknowledged-at-termination-commit",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "issuance-gating",
-   "text": "The AS acknowledges a revocation when it commits the Mission's termination with reason `revoked` ({{termination}}), whether a revocation request or the deployment's policy caused it ({{revocation}})",
+   "text": "The AS acknowledges a revocation when it commits the Mission's termination with reason `revoked` ({{termination}}), whether a revocation request or the deployment's policy caused it ({{revocation}}). Receiving or queuing a revocation request does not acknowledge it, and acknowledgment does not wait for an HTTP response to complete or an event to be delivered. The refusal at release re-checks only an acknowledged revocation; it is not a general re-check of Mission state.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -12170,7 +12170,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "the release-time refusal binds from the AS's commit of the Mission's termination with reason revoked, whether a revocation request or the deployment's policy caused it: a derivation released after that commit is refused, receiving or queuing a request does not by itself refuse one, and the refusal does not wait for a response or an event to be delivered"
+    "normative": "the AS acknowledges a revocation when it commits the Mission's termination with reason revoked, whether a revocation request or the deployment's policy caused it; receiving or queuing a revocation request does not acknowledge it; acknowledgment does not wait for an HTTP response to complete or an event to be delivered; and the refusal at release re-checks only an acknowledged revocation, not Mission state in general"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -12188,7 +12188,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1892 ruling 2 (D1031). Partial: the release-fence witnesses commit a revocation by request after the save-time gate and the signature, and assert the code exchange and the refresh refused at release with nothing issued. Not witnessed: a policy-initiated termination with reason revoked, and that receiving or queuing a request alone does not refuse a derivation."
+   "notes": "#1892 ruling 2 (D1031). Partial: the release-fence witnesses commit a revocation by request after the save-time gate and the signature, and assert the code exchange and the refresh refused at release with nothing issued. Not witnessed: a policy-initiated termination with reason revoked, that receiving or queuing a request alone does not acknowledge it, and that the refusal at release re-checks no other Mission state."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -81371,7 +81371,7 @@
    "id": "core.self-exchange.unsupported-refusal",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "self-exchange",
-   "text": "An AS that does not support it refuses a no-actor exchange: with `unsupported_grant_type` ({{Section 5.2 of RFC6749}}) if it does not support the Token Exchange grant type, and otherwise with `invalid_request`",
+   "text": "An AS that does not support it refuses a no-actor exchange: with `unsupported_grant_type` ({{Section 5.2 of RFC6749}}) if it does not support the Token Exchange grant type, and otherwise with `invalid_request`, as for a presented token it does not accept for the exchange ({{Section 2.2.2 of RFC8693}}). Any other error that applies still applies, such as `invalid_client` for a client that fails authentication.",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -81383,7 +81383,7 @@
    "surface": "token-endpoint",
    "assertion": "refusal",
    "observation": {
-    "normative": "an AS that does not support self-exchange refuses a no-actor exchange, issuing nothing: with unsupported_grant_type when it does not support the Token Exchange grant type, and otherwise with invalid_request; any other applicable error, such as invalid_client, still applies",
+    "normative": "an AS that does not support self-exchange refuses a no-actor exchange with unsupported_grant_type if it does not support the Token Exchange grant type, and otherwise with invalid_request; any other error that applies, such as invalid_client for a client that fails authentication, still applies",
     "local": "the reference registers the Token Exchange grant type only when a token-exchange profile is enabled, and it supports self-exchange wherever it registers the grant"
    },
    "level": "endpoint",
@@ -81396,7 +81396,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1892 ruling 1 (D1031). Partial: the witness builds the AS with every token-exchange profile off, so the grant is not registered, and asserts unsupported_grant_type with no token member, with a refresh control. Mutation proof (2026-10-29): registering the grant unconditionally fails it (invalid_request). The invalid_request branch, an AS that registers the grant but does not support self-exchange, has no witness: the reference supports self-exchange wherever it registers the grant."
+   "notes": "#1892 ruling 1 (D1031). Partial: the witness builds the AS with every token-exchange profile off, so the grant is not registered, and asserts unsupported_grant_type with no token member, with a refresh control. Mutation proof (2026-10-29): registering the grant unconditionally fails it (invalid_request). Not witnessed: the invalid_request branch, an AS that registers the grant but does not support self-exchange (the reference supports self-exchange wherever it registers the grant), and that another applicable error, such as invalid_client, still applies. The witness also asserts that no token is issued."
   },
   {
    "id": "runtime.oauth.required-instance-attribution",
