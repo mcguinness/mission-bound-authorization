@@ -1803,8 +1803,8 @@ The same procedure continues from step 5:
 The `authority_hash` is the **authority commitment**: it commits, by
 cryptographic digest, exactly the authority the Approver approved.
 
-{{record-provenance-members}} states how the AS deduplicates a retried
-or duplicate delivery of the same approval decision on
+{{approval-idempotency}} states how the AS deduplicates a retried or
+duplicate delivery of the same approval decision on
 `approval_event_id`.
 
 ### Subject Establishment {#subject-establishment}
@@ -2173,8 +2173,8 @@ snapshot it evaluates, and MUST NOT activate the instance under that
 policy when the result differs; the companion profile fixes what
 follows, as it does for an activation the policy does not authorize.
 The issuer MUST retain each snapshot's bytes and media type for the
-audit horizon ({{record-provenance-members}}) of every Mission it activates
-under that snapshot, so an auditor can reproduce the digest.
+audit horizon ({{audit-horizon}}) of every Mission it activates under
+that snapshot, so an auditor can reproduce the digest.
 Where no separate policy artifact exists, as when child creation is
 adjudicated against the approved delegation entry itself, this rule
 does not apply.
@@ -2485,14 +2485,11 @@ invalidate or deactivate the Mission.
 
 `approval_event_id`:
 : REQUIRED. A string. A unique identifier of the approval event, used
-  as the approval idempotency key: a retried or duplicate delivery of
-  the same approval decision (a replayed callback, a double-submitted
-  consent form, a retried standing-consent activation) MUST NOT create
-  a second Mission, and the AS deduplicates on this identifier. The
-  identifier names the approval event that creates this Mission
-  ({{approval-event}}); under a standing-consent basis
-  ({{standing-consent-bases}}), it identifies this instance's creation,
-  not the earlier standing approval.
+  as the approval idempotency key: one approval event creates at most
+  one Mission ({{approval-idempotency}}). The identifier names the
+  approval event that creates this Mission ({{approval-event}}); under
+  a standing-consent basis ({{standing-consent-bases}}), it identifies
+  this instance's creation, not the earlier standing approval.
 
 `created_at`:
 : REQUIRED. A string. RFC 3339 timestamp of creation.
@@ -2502,11 +2499,6 @@ invalidate or deactivate the Mission.
   effective Mission expiry ({{lifecycle}}, {{issuance-gating}}). It
   MUST be later than `created_at` and MUST NOT be later than
   `intent.expires_at`, the requested ceiling ({{mission-intent}}).
-
-The **audit horizon** is the deployment-declared retention window for
-the Mission Record and its evidence: at least the Mission's lifetime
-plus a declared post-expiry period. A deployment retains a
-`terminated` Mission's record for its audit horizon.
 
 ### Mission Identifier Format {#mission-id}
 
@@ -5408,6 +5400,26 @@ This document makes no Mission Substrate conformance claim and takes
 no requirement from the substrate contract
 ({{I-D.draft-mcguinness-mission-substrate}}), which is informative.
 
+# Implementation Considerations {#implementation-considerations}
+
+This section states two Mission Issuer requirements: approval
+idempotency and the retention of the Mission Record.
+
+## Approval Idempotency {#approval-idempotency}
+
+The record's `approval_event_id` ({{record-provenance-members}}) is
+the approval idempotency key: a retried or duplicate delivery of the
+same approval decision (a replayed callback, a double-submitted
+consent form, a retried standing-consent activation) MUST NOT create
+a second Mission, and the AS deduplicates on this identifier.
+
+## Audit Horizon {#audit-horizon}
+
+The **audit horizon** is the deployment-declared retention window for
+the Mission Record and its evidence: at least the Mission's lifetime
+plus a declared post-expiry period. A deployment retains a
+`terminated` Mission's record for its audit horizon.
+
 # Security Considerations {#security-considerations}
 
 The security considerations of OAuth 2.0 ({{Section 10 of RFC6749}}),
@@ -5737,8 +5749,7 @@ the AS's signing key, whose publication and rotation
 {{token-claims}} specifies.
 
 Verification for audit outlives validity: keeping a key resolvable for
-the audit horizon ({{record-provenance-members}}) of every Mission
-whose tokens it
+the audit horizon ({{audit-horizon}}) of every Mission whose tokens it
 signed lets an auditor verify those tokens later. A companion that
 anchors a longer-lived artifact to the same keys (a status assertion, a
 Mandate, registered evidence) states its own retention bound.
@@ -5857,7 +5868,7 @@ authority, or recorded-evidence member:
 Whatever the member, it:
 
 - persists on the Mission Record for its audit horizon
-  ({{record-provenance-members}});
+  ({{audit-horizon}});
 - concentrates at the AS with the record ({{record-access}}); and
 - if committed, is confirmable through the unsalted anchors by any
   party holding a candidate value
@@ -5887,7 +5898,7 @@ Access to the record and to Mission evidence is policy-governed and
 auditable: reading a Mission's evidence is a privileged operation, not
 a byproduct of holding a Mission reference. Retention and erasure are
 deployment policy, bounded below by the audit horizon
-({{record-provenance-members}}).
+({{audit-horizon}}).
 
 Where approval-event evidence was registered under the audit
 transparency profile ({{I-D.draft-mcguinness-mission-audit}}), its
