@@ -1840,5 +1840,49 @@ describe("the per-entry projection conditions at the token endpoint (@spec resou
       expect(ok.status, JSON.stringify(ok.body)).toBe(200);
       expect(ok.body.scope).toBe("reports.read");
     });
+    // "An entry without the member satisfies this condition only where the
+    // target requires no reference for those operations."
+    await withPlain(readValue({}, { requires_resource_contract: true }), async () => {
+      const refused = await issue([entry([READ])]);
+      expect(refused.status, JSON.stringify(refused.body)).toBe(400);
+      expect(refused.body.error).toBe("invalid_target");
+      expect(refused.body.error_description).toMatch(/no safe scope projection/);
+    });
+  });
+
+  // @spec resource-access#scope-projection (#1377, D1037): "Where a target's
+  // `scope` values are themselves action identifiers, each value can stand
+  // for the action of the same name, and the mapping is the identity." "A
+  // value the action grammar does not admit, such as a URI-form `scope`,
+  // stands for an action identifier the mapping names instead."
+  it("scope values that are action identifiers project through the identity mapping, both ways, and a URI-form value stands for the action its mapping names", async () => {
+    const only = (value: string) => ({
+      version: `value-form-${value}`,
+      mission_aware: false,
+      mode: "scope_only",
+      scopes: { [value]: { rights: rights([READ]), mandatory_controls: {} } },
+    });
+    await withPlain(only(READ), async () => {
+      const projected = await issue([entry([READ])]);
+      expect(projected.status, JSON.stringify(projected.body)).toBe(200);
+      expect(projected.body.scope).toBe(READ);
+      // The requested value stands for the entry carrying the action of the same name.
+      const r = await authorize(undefined, { scope: READ });
+      expect(r.code, JSON.stringify(r)).toBeTruthy();
+      const res = await redeem(r.code as string, await newKeys());
+      expect(res.status, JSON.stringify(res.body)).toBe(200);
+      expect(res.body.scope).toBe(READ);
+      const missionId = (decodeJwt(res.body.access_token as string).mission as { id: string }).id;
+      expect(as.kernel.get(missionId)?.authority_set.map((e) => e.actions)).toEqual([[READ]]);
+    });
+    const URI_VALUE = "https://plain.test/scopes/reports.read";
+    await withPlain(only(URI_VALUE), async () => {
+      const projected = await issue([entry([READ, WRITE])]);
+      expect(projected.status, JSON.stringify(projected.body)).toBe(200);
+      expect(projected.body.scope).toBe(URI_VALUE);
+      const requested = await issue([entry([READ, WRITE])], URI_VALUE);
+      expect(requested.status, JSON.stringify(requested.body)).toBe(200);
+      expect(requested.body.scope).toBe(URI_VALUE);
+    });
   });
 });

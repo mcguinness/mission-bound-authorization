@@ -1541,6 +1541,22 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
     expect(sideEffects(missionId)).toEqual(before);
   });
 
+  // @spec resource-access#matching-allowed-delegates, mission#delegated-exchange
+  // (#1377, D1037): "A self-asserted `sub_profile` MUST NOT satisfy a delegate
+  // matcher"; "An asserted actor identity grants nothing."
+  it("a sub_profile the presented assertion's act claims for the delegate satisfies no matcher: svc-x claiming ai_agent is invalid_target, with no hop and no derivation", async () => {
+    const { missionId, handle: root } = newLineage("apev-d-self");
+    const before = sideEffects(missionId);
+    const ica = await mintICA(root, { act: { iss: ISSUER, sub: "svc-x", sub_profile: "ai_agent" }, cnfJkt: svcXJkt });
+    const res = await tokenExchange(
+      { subjectToken: ica },
+      { issuer: ISSUER, clientKey: svcXKeys.privateKey, clientId: "svc-x", dpopKeys: svcXDpopKeys },
+    );
+    const reason = await refused(res, "invalid_target");
+    expect(reason).toMatch(/Mission delegation depth 1/);
+    expect(sideEffects(missionId)).toEqual(before);
+  });
+
   it("a narrowed-out entry cannot be requested: by authorization_details (invalid_authorization_details) or by resource (invalid_target), with no hop and no derivation", async () => {
     const { missionId, handle: root } = newLineage("apev-d5", {}, MISSION_EXP, {}, [READ_C]);
     // The approved entry, as derived (it takes the ceiling's vendors constraint).
