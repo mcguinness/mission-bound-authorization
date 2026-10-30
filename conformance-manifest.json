@@ -16642,15 +16642,101 @@
     "issuance",
     "runtime-enforced"
    ],
-   "surface": "deployment-documentation",
-   "assertion": "output-bound",
+   "surface": "token-endpoint",
+   "assertion": "refusal",
    "observation": {
-    "normative": "for every AS-supported authorization_details type, the AS declares three independent capabilities (narrowing, delegation, projection understood or not), through a machine-readable carrier where implemented or deployment documentation as the always-sufficient floor."
+    "normative": "the AS applies none of narrowing, delegation and projection to an entry of a type for which it has not declared that capability: with narrowing undeclared, a request that would narrow an entry is refused or the entry is carried unchanged; with delegation undeclared, no entry of the type is delegated, and an exchange left with no entry is refused; with projection undeclared, no scope is projected from an entry of the type, so a scope-only target is refused and an explicitly requested value is answered invalid_scope",
+    "local": "the reference declares all three for mission_resource_access (narrowing as a qualified domain, delegation and projection true) in its metadata entry and its deployment documentation, from one configuration, and applies each per entry type: narrowing at every narrowing site (D1025); delegation in delegableEntries, on the designation, the delegated redemption, the ID-JAG continuation and the cross-domain grant to a delegate; projection in projectScope, on the code exchange, refresh, the authorization decision, the async-delegation Token Exchange and the cross-org chain exchange (D1037). Each witness runs the capability omitted and declared false beside a declared control."
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "Documentation surface: observable by reading the deployment's published supported-type documentation, not by an endpoint probe. #1377 (D1025): narrowing is declared for mission_resource_access, as a qualified domain, in the metadata entry and the deployment documentation, and applied at every narrowing site. delegation and projection stay undeclared while the reference delegates (the delegated exchanges) and projects to scope (projectScope), so this row stays todo until their separate audits."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > a Token Exchange requesting the presented entry unchanged is issued; one requesting it narrowed is refused",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "narrowing undeclared: derivation and the Token Exchange carry entries only as approved (@spec mission#transformation-capabilities, #1720 item 7) > derivation refuses a proposal it would have narrowed, creating no Mission, where the shipped declaration narrows it",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the token endpoint gates the projected output under the declaration, whatever source supplies the effective set (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > with narrowing undeclared, a remote source that removes one of an entry's actions refuses the refresh invalid_grant before consumption, saving no refresh token, where the shipped declaration issues the narrowed entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
+     "name": "audience projection to a Resource AS counts as narrowing: a grant conveys an entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > narrowing in full conveys an unchanged entry; with narrowing undeclared the grant is refused, the entry unchanged notwithstanding",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegation capability gates designation and redemption (@spec mission#transformation-capabilities) > with delegation omitted or false, a designation and a pending redemption are refused invalid_target, counting nothing; declared, both are issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > with delegation omitted or false, A->B (Mission delegation depth 1) is invalid_target with no hop and no derivation, while A's own continuation still issues; declared, A->B issues",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
+     "name": "a cross-domain grant to a delegate conveys an entry only where delegation is declared (@spec mission#transformation-capabilities, #1377, D1037) > with delegation omitted or false, a grant at depth 1 is refused, counting nothing, while a depth-0 grant is conveyed; declared, the depth-1 grant conveys the entry",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > a refresh to a scope-only target is refused invalid_target while projection is omitted or false, and the same refresh token projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an explicitly requested scope is answered invalid_scope at the authorization decision, before any Mission exists, and at the token endpoint, while projection is omitted or false; declared, the same request is granted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the async-delegation Token Exchange to a scope-only target is refused invalid_target, counting no derivation, while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > projection is declared per entry type: an undeclared type's entry supplies no value, another carried entry still does, and none refuses invalid_target",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    }
+   ],
+   "notes": "D1025 declared narrowing and applied it at every narrowing site; this row stayed todo while delegation and projection were applied with no declaration. #1377 (D1037). Both declared and gated per entry type. Proved by mutation: removing the delegation gate from delegableEntries fails the three delegation witnesses, and so does resolving an omitted delegation as declared; removing the projection gate from projectScope fails the five projection witnesses and the per-type unit witness, and resolving an omitted projection as declared fails the endpoint ones; bypassing the declaration at one projectScope call site alone (the token endpoint's scope decision, the authorization decision, the async-delegation exchange, the cross-org chain exchange) fails that site's witness. The narrowing witnesses carry their D1025 proofs (row core.other-types.no-narrowing-original-audience). One configuration feeds both carriers, so the carrier-order rows stay todo (D845)."
   },
   {
    "id": "core.other-types.narrowing-governs-derivation",
@@ -16824,7 +16910,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1717 (D845) witness (a), moved to #1377 by D859, witnessed under D1025. The test configuration declares delegation without narrowing for mission_resource_access. The reference gates nothing on the delegation declaration (the shipped configuration leaves it undeclared; its audit is separate); the equal-only carriage comes from narrowing being undeclared: delegableAuthority (adapters/delegation-exchange.ts) applies carriedUnder. A designation carrying the presented entry unchanged is issued with its approved audience kept. Its outcome without the precondition remains asserted by core.tokens.designation-permitted-subset-kept-audience."
+   "notes": "#1717 (D845) witness (a), moved to #1377 by D859, witnessed under D1025. The test configuration declares delegation without narrowing for mission_resource_access. The declared delegation keeps the entry delegable (#1377, D1037); the equal-only carriage comes from narrowing being undeclared: delegableAuthority (adapters/delegation-exchange.ts) applies carriedUnder. A designation carrying the presented entry unchanged is issued with its approved audience kept. Its outcome without the precondition remains asserted by core.tokens.designation-permitted-subset-kept-audience."
   },
   {
    "id": "core.other-types.no-narrowing-original-audience",
@@ -16844,10 +16930,10 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
-    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. One gap keeps it partial. \"only exactly as approved\" holds for narrowing: with narrowing undeclared or outside the declared domain, no path issues a modified entry: issuance carries an effective entry only where it equals its approved origin or narrowing it is permitted (while Mission Status keeps a partially contained entry's remainder), the token endpoint gates the credential's projected output per presented entry whatever source supplies the effective set, keeping an unchanged entry as it stands, governed-policy activation refuses a model output that narrows an entry, and the requested-subset gates are equal-only, and audience projection to a Resource AS is refused (#1377, D1025). The gap: the reference delegates and projects to scope with no declared delegation or projection capability (row core.other-types.transformation-boundary-declared). With narrowing undeclared (a test configuration), derivation and the Token Exchange issue an entry only exactly as approved; proved by mutation only with both exchange gates disabled together, since the gate against the Mission's effective set also refuses."
+    "local": "witnessed: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. \"only exactly as approved\" holds for narrowing: with narrowing undeclared or outside the declared domain, no path issues a modified entry: issuance carries an effective entry only where it equals its approved origin or narrowing it is permitted (while Mission Status keeps a partially contained entry's remainder), the token endpoint gates the credential's projected output per presented entry whatever source supplies the effective set, keeping an unchanged entry as it stands, governed-policy activation refuses a model output that narrows an entry, and the requested-subset gates are equal-only, and audience projection to a Resource AS is refused (#1377, D1025). Scope is the one other form, and only under the declared projection (row core.other-types.projection-only-transformed-form; #1377, D1037). With narrowing undeclared (a test configuration), derivation and the Token Exchange issue an entry only exactly as approved; proved by mutation only with both exchange gates disabled together, since the gate against the Mission's effective set also refuses."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/original-approved-audience.test.ts",
@@ -16998,9 +17084,70 @@
      "name": "the effective set keeps a partially contained entry's remainder; issuance carries it only where the declared narrowing permits it (@spec containment#visibility, resource-access#qualified-narrowing, #1377, D1025) > under an exact-only domain, a partially contained exact entry is issuable narrowed, and a partially contained prefix entry is reported but not issuable",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "without narrowing, scope is the one transformed form, and only under a declared projection (@spec mission#transformation-capabilities, #1377, D1037) > with narrowing undeclared, a scope-only target is issued the projected scope while projection is declared, and refused invalid_target while it is omitted or false",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025), second round: the effective set is reported accurately and issuance gates what it carries. Proved by mutation (2026-10-29): an ungated projection of the credential's rar fails the remote-source witness (200 with the modified entry) and the explicit-exact witness (the member dropped); not carrying an unchanged entry as it stands fails the explicit-exact witness; a refresh pre-check that swallows the projection's refusal fails the rotating remote-source witness (one refresh token saved); counting every effective entry as issuable fails the kernel issuable witnesses; a derivation gate that reads the reported set fails the authority_contained witness; and conveying an entry without narrowing permitted fails the cross-domain witnesses."
+   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025), second round: the effective set is reported accurately and issuance gates what it carries. Proved by mutation (2026-10-29): an ungated projection of the credential's rar fails the remote-source witness (200 with the modified entry) and the explicit-exact witness (the member dropped); not carrying an unchanged entry as it stands fails the explicit-exact witness; a refresh pre-check that swallows the projection's refusal fails the rotating remote-source witness (one refresh token saved); counting every effective entry as issuable fails the kernel issuable witnesses; a derivation gate that reads the reported set fails the authority_contained witness; and conveying an entry without narrowing permitted fails the cross-domain witnesses. #1377 (D1037): the gap that kept this row partial, delegation and projection applied with no declaration, closed when both were declared and gated; the witness with narrowing undeclared issues a scope-only target its projected scope only while projection is declared, and fails when the projection gate is removed."
+  },
+  {
+   "id": "core.other-types.projection-only-transformed-form",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "other-types",
+   "text": "except as `scope` under a declared `projection`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "without narrowing, scope is the only form other than exactly as approved in which an entry is issued, and only under a declared projection: with projection undeclared, no scope is projected from the entry and a scope-only target is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "without narrowing, scope is the one transformed form, and only under a declared projection (@spec mission#transformation-capabilities, #1377, D1037) > with narrowing undeclared, a scope-only target is issued the projected scope while projection is declared, and refused invalid_target while it is omitted or false",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an authorization_details target is issued while projection is omitted or false, its entries carried as approved and no scope emitted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > a refresh to a scope-only target is refused invalid_target while projection is omitted or false, and the same refresh token projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an explicitly requested scope is answered invalid_scope at the authorization decision, before any Mission exists, and at the token endpoint, while projection is omitted or false; declared, the same request is granted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The first witness leaves narrowing undeclared and switches projection; the others keep the shipped qualified narrowing, so they witness the projection half. Proved by mutation: removing the projection gate fails the narrowing-undeclared witness and the scope-only ones."
   },
   {
    "id": "core.other-types.entry-audience-trusted-mapping",
@@ -17179,7 +17326,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1720 item 2 (D845). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable. With narrowing declared, a transformation that fails a required check is still refused with that check's error: a Token Exchange requesting a broader entry is refused invalid_authorization_details, and a token for an audience its entries are not approved for is refused invalid_target. Partial: an entry the subset comparison cannot decide is not cited at a declared transformation."
+   "notes": "#1720 item 2 (D845). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable. With narrowing declared, a transformation that fails a required check is still refused with that check's error: a Token Exchange requesting a broader entry is refused invalid_authorization_details, and a token for an audience its entries are not approved for is refused invalid_target. Partial: an entry the subset comparison cannot decide is not cited at a declared transformation."
   },
   {
    "id": "core.other-types.capability-value-unvalidated-false",
@@ -17246,6 +17393,190 @@
     }
    ],
    "notes": "#869 (D449): proven by disabling the code it covers: a fixed redemption depth fails the depth-2 witness; the helper gates on the accounted depth, not the presented `act` (unit)."
+  },
+  {
+   "id": "core.delegation-constraints.no-policy-non-delegable",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "An entry carrying no type-defined delegation policy is non-delegable, the default.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry whose type defines no delegation policy for it narrows out of every delegated token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility) > (1) narrows out an entry that carries NO delegation member (non-delegable default)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: counting an entry without delegation as eligible in delegableEntries fails the ICA witness."
+  },
+  {
+   "id": "core.delegation-constraints.policy-test-every-exchange",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "applies the policy's own eligibility test at every exchange",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the type's eligibility test, and the delegation-authorization policy where it leaves a matcher unstated, is applied afresh at every exchange, and absence is never a grant"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an entry with no list that defers to policy is not delegable while the policy permits nobody: absence is never a grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > policy change between issuance steps: a permit at one exchange is never reused at the next",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > the policy is asked again at the mint: a decision that changes after the pre-check refuses, with no hop",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved as for resource-access.delegate-eligibility.policy-at-every-exchange."
+  },
+  {
+   "id": "core.delegation-constraints.surviving-entry-policy-intact",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "a surviving entry carries it intact so the next hop is evaluated the same way",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carried in a delegated token keeps its delegation policy as the Mission recorded it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: stripping delegation from the gate's surviving entries fails both witnesses."
+  },
+  {
+   "id": "core.delegation-constraints.empty-result-invalid-target",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegation-constraints",
+   "text": "If narrowing leaves no entries for the delegate, the AS MUST refuse the exchange with the `invalid_target` error code",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an exchange whose per-entry enforcement leaves no entry for the delegate is refused invalid_target and issues no token"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a delegate allowed_delegates does not name narrows the entry out: invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "the delegation capability gates designation and redemption (@spec mission#transformation-capabilities) > with delegation omitted or false, a designation and a pending redemption are refused invalid_target, counting nothing; declared, both are issued",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > with delegation omitted or false, A->B (Mission delegation depth 1) is invalid_target with no hop and no derivation, while A's own continuation still issues; declared, A->B issues",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Witnessed at the designation, the delegated redemption and the ID-JAG continuation. Proved by mutation at each site alone: answering the empty result with another error code fails that site's witness."
   },
   {
    "id": "core.delegation-constraints.unestablished-depth-refused",
@@ -17453,6 +17784,86 @@
     }
    ],
    "notes": "#1718 (D845). Proven by disabling the code it covers: removing the delegated-exchange handler's check of the registered method fails the witness, a delegated token being issued to the public client."
+  },
+  {
+   "id": "core.delegation.eligibility-input-asserted-delegate",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "is the delegate the AS authenticates and asserts at the exchange, not an entry read from the chain",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "eligibility is matched against the authenticated client and the profile the AS asserts for it, not against an actor a presented token or assertion names"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a sub_profile the presented assertion's act claims for the delegate satisfies no matcher: svc-x claiming ai_agent is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > a record whose chain does not match the token's act is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved as for resource-access.delegate-eligibility.self-asserted-profile: with the continuation validator keeping a claimed profile and the gate reading it, the self-asserted witness is issued a token."
+  },
+  {
+   "id": "core.delegation.asserted-identity-grants-nothing",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "delegated-exchange",
+   "text": "An asserted actor identity grants nothing.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an actor identity or profile asserted in a presented token or assertion, or in an actor_token, grants no eligibility"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a sub_profile the presented assertion's act claims for the delegate satisfies no matcher: svc-x claiming ai_agent is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > the delegated exchange identifies the delegate by its client authentication: an actor_token is refused invalid_request",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved as for core.delegation.eligibility-input-asserted-delegate."
   },
   {
    "id": "core.delegation.actor-token-refused",
@@ -66818,6 +67229,135 @@
    "notes": "#869 (D449): proven by disabling the code it covers: the AS authenticates the delegate as its own client and asserts its `sub_profile` from its own registry; substituting a fixed profile for the registry's fails the witnesses. D415 scopes this facet to same-Mission delegation."
   },
   {
+   "id": "resource-access.delegate-eligibility.non-delegable-default",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "the entry carries a `delegation` member (otherwise it is non-delegable, the default)",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carrying no delegation member narrows out of every delegated token, beside a delegable entry that is carried"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility) > (1) narrows out an entry that carries NO delegation member (non-delegable default)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: counting an entry without delegation as eligible in delegableEntries fails the ICA witness."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.policy-at-every-exchange",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "which the authorization server MUST apply at every exchange",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "for an entry whose eligibility defers to the delegation-authorization policy, the policy decides at every exchange, asked afresh, and an absent list of matchers never permits a delegate the policy does not"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > an entry with no list that defers to policy is not delegable while the policy permits nobody: absence is never a grant",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > policy change between issuance steps: a permit at one exchange is never reused at the next",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-eligibility-endpoint.test.ts",
+     "name": "delegate eligibility with retained provenance at the ICA continuation exchange (@spec resource-access#delegate-eligibility, #1275) > the policy is asked again at the mint: a decision that changes after the pre-check refuses, with no hop",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > a policy change between designation and redemption is enforced at redemption: refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The reference's default policy denies every delegate; the witnesses install a policy they control. Proved by mutation: treating a policy-origin entry as eligible without asking the policy fails the absence witness and both policy-change witnesses."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.surviving-delegation-intact",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "delegate-eligibility",
+   "text": "Surviving entries keep their `delegation` member intact",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry carried in a delegated token carries its delegation member as the Mission recorded it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: stripping delegation from the gate's surviving entries fails both witnesses."
+  },
+  {
    "id": "resource-access.delegate-eligibility.as-authenticates-delegate-cross-org",
    "spec": "draft-mcguinness-oauth-mission-resource-access.md",
    "anchor": "delegate-eligibility",
@@ -66860,7 +67400,7 @@
     "normative": "a scope value the target's own interpretation extends to a broader ancestor resource is not a safe projection of a narrower prefix entry."
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
@@ -66873,9 +67413,21 @@
      "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a prefix scope for an exact entry",
      "level": "endpoint",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > emits the values scoped to the entry's prefix or to a narrower resource within it, and not the ancestor's value",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "The narrower-prefix-entry clause is unit-level only. Derivation implements prefix (#1276) and the ceiling loaders admit it (#1440), but the shipped ceilings are exact, so no shipped issuance path carries a prefix entry, the cross-org exchange's tool mapping emits none, and no endpoint test projects a scope for a narrower prefix entry. The endpoint test covers the exact-entry half (a prefix scope is not a safe projection of an exact entry)."
+   "notes": "#1377 (D1037): the narrower-prefix-entry clause is witnessed at the token endpoint, with a prefix ceiling configured for the plain resource server: a value scoped to an ancestor of the entry's prefix is not emitted beside the safe ones, and is refused invalid_target where it is the only mapped value; removing the resource-set comparison (condition 1) fails both. The exact-entry half: a prefix scope is not a safe projection of an exact entry."
   },
   {
    "id": "resource-access.scope-projection.actions-no-aggregation",
@@ -66958,8 +67510,15 @@
      "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > constraints: every carried key needs an independently enforced control at least as tight",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
-   ]
+   ],
+   "notes": "#1377 (D1037): max_amount at the token endpoint, a control looser than the entry's cap refused invalid_target and one at or above it projected; removing the max_amount comparison fails it."
   },
   {
    "id": "resource-access.scope-projection.metadata-not-evidence",
@@ -67051,16 +67610,145 @@
     "normative": "an entry carrying resource_contract, or one without it for a target that requires a reference, is projected to scope only where the mapping states the target performs the scope's operations under exactly that contract; otherwise no scope is emitted for it"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/resource-contract.test.ts",
      "name": "the reference is preserved exactly by derivation and projection (@spec resource-access#subset step 4, #249) > scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "configured-mapping mode keyed on a requested scope (@spec mission#derivation-modes, resource-access#scope-projection) > a value whose mapping names the current contract stands for an entry carrying that reference; the approval keeps it and the token projects (@spec resource-access#scope-projection)",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A scope_only value may declare resource_contract and requires_resource_contract; an entry carrying a reference projects only where the value states exactly that contract, and an entry without one only where the value requires none. Partial: witnessed through projectScope (unit); no token-endpoint test projects an entry carrying a reference. Proved by removing projection condition 4."
+   "notes": "#249 implementation (D553, payments-runtime-profile-v13). A scope_only value may declare resource_contract and requires_resource_contract; an entry carrying a reference projects only where the value states exactly that contract, and an entry without one only where the value requires none. At the token endpoint (#1377, D1037): an entry carrying a reference projects where the value names exactly that contract and is refused invalid_target where it names none, and an entry without one is refused where the value requires a reference. Proved by removing projection condition 4, and by removing the required-reference refusal."
+  },
+  {
+   "id": "resource-access.scope-projection.failing-entry-not-projected",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "An entry failing any condition MUST NOT be projected to `scope`",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an entry failing any of the four conditions yields no scope value: a scope-only target with no other safe entry is refused invalid_target"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). One refusal witness per condition. Proved by mutation: removing condition 1, 3 or 4 fails its witness; conditions 2 and 3's unenforced-key half carry their own rows' proofs (resource-access.scope-projection.actions-no-aggregation, resource-access.scope-projection.constraints-independently-enforced)."
+  },
+  {
+   "id": "resource-access.scope-projection.identity-mapping",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "each value can stand for the action of the same name, and the mapping is the identity",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a scope-only target's values are action identifiers, a value names the action it stands for: an entry carrying that action projects to it, and a requested value stands for the entry carrying it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > scope values that are action identifiers project through the identity mapping, both ways, and a URI-form value stands for the action its mapping names",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: never emitting a value shaped as an action identifier fails it."
+  },
+  {
+   "id": "resource-access.scope-projection.uri-form-value",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "scope-projection",
+   "text": "A value the action grammar does not admit, such as a URI-form `scope`, stands for an action identifier the mapping names instead",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a URI-form scope value stands for the action its mapping names, so an entry carrying that action projects to it and a request naming it is granted it"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > scope values that are action identifiers project through the identity mapping, both ways, and a URI-form value stands for the action its mapping names",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: judging a value by its own name as an action, instead of by the rights its mapping names, fails it."
   },
   {
    "id": "resource-access.transformation-capabilities.projection-undeclared-fallback",
@@ -67076,15 +67764,157 @@
     "issuance",
     "runtime-enforced"
    ],
-   "surface": "derivation",
+   "surface": "token-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "an AS that does not implement the full projection safety analysis declares projection undeclared, triggering the issuance profile's carried-as-approved fallback for scope on this type."
+    "normative": "with projection undeclared for the type, the AS applies the carried-as-approved fallback to scope: it emits no projected scope for the type's entries, carries them as approved where the target consumes authorization_details, and refuses issuance to a scope-only target that no other carried entry serves",
+    "local": "the reference implements the four conditions and declares projection true (D1037), so it does not itself make this choice; configured with projection omitted or declared false, it applies this fallback on every scope-emitting path"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1377. The reference declares only a qualified narrowing for this type (D1025), leaving projection undeclared in every carrier, yet projects scope for it, so it does not apply this undeclared fallback. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an authorization_details target is issued while projection is omitted or false, its entries carried as approved and no scope emitted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > a refresh to a scope-only target is refused invalid_target while projection is omitted or false, and the same refresh token projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an explicitly requested scope is answered invalid_scope at the authorization decision, before any Mission exists, and at the token endpoint, while projection is omitted or false; declared, the same request is granted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the async-delegation Token Exchange to a scope-only target is refused invalid_target, counting no derivation, while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The witnesses run the same server with projection omitted and declared false. Proved by mutation: removing the projection gate, or resolving an omitted projection as declared, fails the scope-only witnesses; the authorization_details witness holds either way, as the fallback requires. Inventory: src/docs/resource-access-transformation-capabilities.md (sections 1 and 4)."
+  },
+  {
+   "id": "resource-access.transformation-capabilities.delegation-declared-bounds",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "an entry's `delegation` member states its own depth and eligibility bounds",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS declaring delegation true for the type applies the delegate eligibility test to each entry by that entry's own delegation member, its max_depth and its allowed_delegates"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > past max_depth the entry narrows out: designating a depth-2 delegate under max_depth 1 is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a delegate matcher naming both members needs both, at the designation exchange (@spec resource-access#matching-allowed-delegates) > issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The metadata entry declares delegation true. Proved by mutation: removing the declaration from the configuration fails the metadata witness; the depth bound and the matcher checks are proved for their own rows (core.delegation-constraints.depth-from-accounting, resource-access.delegate-eligibility.matcher-conjunction)."
+  },
+  {
+   "id": "resource-access.transformation-capabilities.projection-declared-conditions",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "transformation-capabilities",
+   "text": "whose conditions apply to each entry before `scope` is emitted",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS declaring projection true for the type emits scope for an entry only where the four conditions hold for it, and refuses a scope-only target where they hold for no applicable entry"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). One witness per condition: the resource set (an ancestor's value), the actions (aggregation), the constraints (max_amount) and the contract. Proved by mutation: removing condition 1, 3 or 4 fails its witness; condition 2's proof is the action-aggregation row's (resource-access.scope-projection.actions-no-aggregation)."
   },
   {
    "id": "resource-access.conformance.rs-role-independent-of-as-duties",
@@ -67108,6 +67938,177 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": []
+  },
+  {
+   "id": "resource-access.conformance.delegation-implements-eligibility",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "conformance",
+   "text": "the delegate eligibility test",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS declaring delegation true for the type implements the delegate eligibility test: an entry is carried only where it carries delegation, the depth is within its max_depth and the delegate is permitted"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation depth from the AS's accounting (@spec mission#delegation-constraints) > past max_depth the entry narrows out: designating a depth-2 delegate under max_depth 1 is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The conformance list item for the declared delegation. Its parts are proved for their own rows (resource-access.delegate-eligibility.non-delegable-default, core.delegation-constraints.depth-from-accounting, resource-access.delegate-eligibility.sub-profile-member)."
+  },
+  {
+   "id": "resource-access.conformance.projection-implements-conditions",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "conformance",
+   "text": "the four per-entry, per-target safety conditions of",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an AS declaring projection true for the type checks the four conditions for each entry and target before emitting scope"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the types metadata entry carries the declared transformation capabilities (@spec mission#transformation-capabilities, resource-access#qualified-narrowing) > the shipped server declares narrowing for mission_resource_access as its qualified value, delegation and projection as true, and nothing it does not declare",
+     "level": "endpoint",
+     "surface": "deployment-documentation"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "scope projection at the token endpoint (@spec mission#scope-projection) > refuses a scope that aggregates an action the entry does not carry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 3: an entry's max_amount below the target's enforced cap is refused invalid_target; a cap at or above the control projects",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the per-entry projection conditions at the token endpoint (@spec resource-access#scope-projection) > condition 4: an entry carrying a resource_contract is refused invalid_target where the mapping value names no contract, and projects where it names the same one",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The conformance list item for the declared projection; proved as for resource-access.transformation-capabilities.projection-declared-conditions."
+  },
+  {
+   "id": "resource-access.conformance.unclaimed-projection-no-scope",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "conformance",
+   "text": "An authorization server that does not claim `projection` MUST NOT emit `scope` for a `mission_resource_access` entry",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "with projection not claimed, no scope is emitted for a mission_resource_access entry: an authorization_details target carries the entry, a scope-only target is refused"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an authorization_details target is issued while projection is omitted or false, its entries carried as approved and no scope emitted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > a refresh to a scope-only target is refused invalid_target while projection is omitted or false, and the same refresh token projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > an explicitly requested scope is answered invalid_scope at the authorization decision, before any Mission exists, and at the token endpoint, while projection is omitted or false; declared, the same request is granted",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the async-delegation Token Exchange to a scope-only target is refused invalid_target, counting no derivation, while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The reference claims projection; the witnesses run it with projection omitted and declared false. Proved by mutation: removing the projection gate, or resolving an omitted projection as declared, fails the scope-only witnesses."
   },
   {
    "id": "resource-access.resource-matching.tool-call-target-from-arguments",
@@ -69814,8 +70815,8 @@
     "normative": "a matcher naming sub and sub_profile permits only a delegate satisfying both; separate matchers are alternatives",
     "local": "#1373: the reference AS refuses a matcher, in allowed_delegates or allowed_child_actors, that carries a member other than sub and sub_profile, carries neither, or carries an empty or non-string value, at proposal intake, configuration load, template consent and derivation, and in the requested authority of the deferred grant, the dispatch handoff and the async-delegation exchange, rather than deriving or issuing it without the member; Resource Access Entry Validation states the rule (resource-access.entry-validation.matcher-members). At runtime, delegatePermitted applies the same rule, so a malformed matcher that a record committed before these refusals still holds permits nothing, and the list's other matchers still decide"
    },
-   "level": "unit",
-   "coverage": "partial",
+   "level": "endpoint",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
@@ -69828,9 +70829,212 @@
      "name": "delegatePermitted — sub exact match > permits if ANY matcher in the list matches",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a delegate matcher naming both members needs both, at the designation exchange (@spec resource-access#matching-allowed-delegates) > issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1258 item 11. Helper-level witness (delegatePermitted); the gate reaches HTTP only at the ICA continuation exchange. Cases dg-match-01..04 run through the reader; dg-match-03 fails when sub is ignored for a matcher that also names a profile."
+   "notes": "#1258 item 11. #1377 (D1037). Endpoint witness at the designation exchange, under a ceiling listing two matchers that each name a delegate's sub and the ai_agent profile: the delegate meeting both members of one is issued; a delegate meeting only the profile, or only a matcher's sub, is refused invalid_target, counting nothing. Proved by mutation: dropping the sub check, skipping the profile check when a matcher also names sub, or requiring every matcher instead of any, each fails it. Cases dg-match-01..04 run through the reader; dg-match-03 fails when sub is ignored for a matcher that also names a profile."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.sub-matcher",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "matching-allowed-delegates",
+   "text": "matcher permits a specific delegate by client identifier",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a sub matcher permits the delegate whose authenticated client identifier it names, and no other"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a delegate matcher naming both members needs both, at the designation exchange (@spec resource-access#matching-allowed-delegates) > issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy and list both permit: the designation and the delegated token are issued, the approved list intact, the policy asked at each step",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegate eligibility with retained provenance at designation and redemption (@spec resource-access#delegate-eligibility, #1275) > policy permits, list omits: designating a client the policy permits but the list omits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility) > a { sub } matcher permits by CLIENT IDENTIFIER (the delegate's sub), and rejects a different sub",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: dropping the sub check fails the endpoint matcher witness."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.sub-profile-member",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "matching-allowed-delegates",
+   "text": "matcher is satisfied when its value is among the actor's values",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a sub_profile matcher naming one actor type is satisfied when that type is among the delegate's AS-asserted sub_profile values, and not otherwise",
+    "local": "#1902: Resource Access gives a matcher value carrying several space-separated values no meaning. The reference reads one as requiring every value; that is its interpretation, not specified behavior, and no witness cited here relies on it."
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "who presents which proof (@spec mission#designation, mission#delegation) > a designation carries only entries the named client may be delegated: a client no entry admits is refused invalid_target",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a delegate allowed_delegates does not name narrows the entry out: invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — sub_profile MEMBERSHIP against the ASSERTED profile > matches when the matcher value is AMONG the actor's space-separated asserted values",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — sub_profile MEMBERSHIP against the ASSERTED profile > does NOT match a class the actor is not asserted to be (raw non-membership denied)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: not checking membership fails the three endpoint refusal witnesses."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.any-matcher-permits",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "matching-allowed-delegates",
+   "text": "A delegate is permitted if it satisfies any of the entry's delegate matchers",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a delegate satisfying one of an entry's matchers is permitted though it satisfies none of the others"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "a delegate matcher naming both members needs both, at the designation exchange (@spec resource-access#matching-allowed-delegates) > issues to the delegate meeting both members of a matcher, and refuses invalid_target one meeting only the profile or only the sub, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — sub exact match > permits if ANY matcher in the list matches",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: requiring every matcher instead of any fails the endpoint witness."
+  },
+  {
+   "id": "resource-access.delegate-eligibility.self-asserted-profile",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "matching-allowed-delegates",
+   "text": "A self-asserted `sub_profile` MUST NOT satisfy a delegate matcher",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a sub_profile the delegate or a presented token claims satisfies no matcher; only the profile the AS asserts for the authenticated client is matched"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > a sub_profile the presented assertion's act claims for the delegate satisfies no matcher: svc-x claiming ai_agent is invalid_target, with no hop and no derivation",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "authority bounds every exchange from the credential and the Mission as they stand (@spec mission#designation, mission#delegation, #869 acceptance) > redemption re-evaluates eligibility: a delegate whose AS-asserted profile is withdrawn after the designation is refused invalid_target, counting nothing",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegate-matcher.test.ts",
+     "name": "delegatePermitted — a SELF-ASSERTED sub_profile MUST NOT satisfy a matcher > DENIES a sub_profile matcher when the candidate carries NO asserted profile",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility) > a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). The continuation's assertion validator drops a claimed sub_profile, and the gate reads the AS's assertion for the authenticated client. Proved by mutation only with both disabled together (the validator keeping the claim and the gate reading it), since either alone keeps the claim out of the decision: the self-asserted witness is then issued a token."
   },
   {
    "id": "resource-access.common-constraints.recipient-every",
@@ -70563,16 +71767,28 @@
     "normative": "a prefix entry projects to a narrower resource only when the value's complete effective rights stay within the entry; a broader ancestor is never safe"
    },
    "level": "endpoint",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/packages/mission-core/test/scope-projection.test.ts",
      "name": "mission_resource_access scope-projection conditions (@spec resource-access#scope-projection) > narrower resource: a prefix entry projects safely to a value over that prefix or a narrower resource within it, never a sibling, a dot-segment escape or an ancestor; an exact entry only to its own resource (#1276)",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > emits the values scoped to the entry's prefix or to a narrower resource within it, and not the ancestor's value",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/prefix-ceiling-endpoint.test.ts",
+     "name": "a prefix entry projects to scope only within its own prefix (@spec resource-access#scope-projection, #1377) > refuses invalid_target where the only mapped value is scoped to an ancestor of the entry's prefix",
+     "level": "endpoint",
+     "surface": "token-endpoint"
     }
    ],
-   "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Unit level: the shipped configuration's ceilings are exact only, so no token-endpoint issuance carries a prefix entry. Mutation: restoring the byte-exact comparison fails the witness. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
+   "notes": "#1258 item 11. #1276: the resource condition applies the subset rule's resource step to the mapping's declared rights, so a prefix entry projects to a value over that prefix or a narrower resource within it (pj-05's shape) and never to a sibling, a dot-segment escape or an ancestor (pj-06's shape). Mutation: restoring the byte-exact comparison fails the unit witness. At the token endpoint (#1377, D1037), with a prefix ceiling configured for the plain resource server, a prefix entry projects to values over its prefix and a narrower resource within it, never to the ancestor's value, and is refused invalid_target where only the ancestor's value is mapped; removing the resource-set comparison (condition 1) fails both. Cases pj-05 and pj-06 stay skipped: the case reader has no projection executor."
   },
   {
    "id": "resource-access.scope-projection.requested-scope-entry",
@@ -71912,7 +73128,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities). #1377: no carrier declares any capability for this type, so no carrier order is exercised; inventory: src/docs/resource-access-transformation-capabilities.md (section 1)."
+   "notes": "#1258 item 9. Case pj-01 skipped (transformation-capabilities). #1377 (D1025, D1037): one configuration feeds both carriers and declares every capability for this type, so no carrier omits one and no carrier order is exercised; inventory: src/docs/resource-access-transformation-capabilities.md (section 1)."
   },
   {
    "id": "resource-access.transformation-capabilities.scope-only-refusal-conditional",
@@ -71934,9 +73150,28 @@
     "normative": "with projection undeclared everywhere, a scope-only issuance is refused when no other applicable entry projects safely and succeeds through one that does"
    },
    "level": "endpoint",
-   "coverage": "todo",
-   "tests": [],
-   "notes": "#1258 item 9 (D444 revision 1). Cases pj-02, pj-03 skipped. #1377: the reference projects this type without a declaration, so this undeclared-projection path is not implemented; inventory: src/docs/resource-access-transformation-capabilities.md (section 4)."
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/scope-projection.test.ts",
+     "name": "the projection capability gates scope projection (@spec mission#transformation-capabilities, resource-access#transformation-capabilities) > the code exchange to a scope-only target is refused invalid_target while projection is omitted or false, and projects once declared",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-org-grant-endpoint.test.ts",
+     "name": "scope projection on the cross-org exchange (@spec mission#scope-projection) > refuses invalid_target, recording no derivation evidence, while projection is omitted or false, where the declared server emits the safe scope",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/packages/mission-core/test/scope-projection.test.ts",
+     "name": "projectScope (@spec mission#scope-projection) > projection is declared per entry type: an undeclared type's entry supplies no value, another carried entry still does, and none refuses invalid_target",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1258 item 9 (D444 revision 1). #1377 (D1037). The refusal half is witnessed at the token endpoint and the cross-org exchange with projection omitted and declared false. The other half, issuance succeeding through another applicable entry that projects safely, is witnessed only through projectScope (unit): the reference supports one type, so no configuration carries an entry of another type beside it. Cases pj-02 and pj-03 stay skipped (no issuance executor; pj-03 also needs a second supported type)."
   },
   {
    "id": "resource-access.qualified-narrowing.value-form",
@@ -72327,6 +73562,49 @@
     }
    ],
    "notes": "#1374. Proven by disabling the code it covers: skipping the delegation gate at depth above 0 fails the non-delegable witness; applying the omission before the gate fails the admitted witnesses."
+  },
+  {
+   "id": "resource-access.type.absent-delegation-not-delegated",
+   "spec": "draft-mcguinness-oauth-mission-resource-access.md",
+   "anchor": "resource-access-type",
+   "text": "When absent, this entry's authority is non-delegable: it MUST NOT appear in a delegated token",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an entry without delegation, the entry the AS evaluates for a delegated token, never appears in one"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/continuation-grant.test.ts",
+     "name": "continuation delegation constraints (@spec mission#delegation-constraints) > A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/cross-domain-conveyed-delegation.test.ts",
+     "name": "the delegated branch, at depth above 0: the gate decides the current grant, the conveyed copy restricts only onward delegation (@spec cross-domain#conveyed-delegation) > a non-delegable entry is never carried at depth 1, whatever the policy: the omission grants nothing",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/delegation.test.ts",
+     "name": "gateDelegableAuthority: per-entry enforcement over retained provenance (@spec per-entry-enforcement, resource-access#delegate-eligibility) > (1) narrows out an entry that carries NO delegation member (non-delegable default)",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1377 (D1037). Proved by mutation: counting an entry without delegation as eligible in delegableEntries fails the ICA witness."
   },
   {
    "id": "resource-access.type.delegation-unsupported-member-refused",
