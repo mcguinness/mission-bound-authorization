@@ -17247,7 +17247,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), first conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), first conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-carrier-first-true-governs",
@@ -17271,7 +17271,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), second conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), second conflict direction. Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-carrier-absent-falls-through",
@@ -17295,7 +17295,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are absent from both. Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
+   "notes": "#1720 item 2 (D845), absent-member fall-through (#645, D138). Since #1377 (D1025) the reference's metadata entry (/authorization-details-types) carries mission_transformation_capabilities with a qualified narrowing, and its deployment documentation (src/docs/resource-access-transformation-capabilities.md section 1) states the same value; delegation and projection are declared true in both (D1037). Both carriers come from one configuration, so they never disagree and no member absent from the first is declared by the second: the conflict and fall-through directions have nothing to exercise. Per D845 the reference builds no carrier or endpoint to make this testable."
   },
   {
    "id": "core.other-types.capability-declaration-waives-no-check",

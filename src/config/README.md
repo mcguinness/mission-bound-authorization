@@ -424,13 +424,15 @@ not a protocol rule.
 
 The transformation capabilities the AS declares per supported
 `authorization_details` type (`@spec mission#transformation-capabilities`,
-`@spec resource-access#qualified-narrowing`, #1377, D1025). `types` holds each
-type's `mission_transformation_capabilities` value, which the AS emits in the
-type's entry at `/authorization-details-types` and which the deployment
-documentation (`src/docs/resource-access-transformation-capabilities.md`,
+`@spec resource-access#qualified-narrowing`, #1377, D1025, D1037). `types`
+holds each type's `mission_transformation_capabilities` value, which the AS
+emits in the type's entry at `/authorization-details-types` and which the
+deployment documentation (`src/docs/resource-access-transformation-capabilities.md`,
 section 1) states. For `mission_resource_access` it declares `narrowing` as a
-qualified value naming a narrowing domain document by `id` and `digest`;
-`delegation` and `projection` are not declared.
+qualified value naming a narrowing domain document by `id` and `digest`, and
+`delegation` and `projection` as `true`. Each of `delegation` and `projection`
+is a boolean; omitted or `false`, it is undeclared, and the AS then delegates
+no entry of the type and projects none to `scope`.
 
 `narrowing_domains` lists the domain documents, by path under this
 directory: `narrowing-domains/mission-resource-access-2026-10-29.json` covers
