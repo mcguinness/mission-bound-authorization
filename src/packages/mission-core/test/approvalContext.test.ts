@@ -69,6 +69,29 @@ describe("Approval Context Manifest (approval-governance § approval-context-man
     const withCeiling = approvalContextManifest({ ...ALWAYS_PRESENT, ceiling_hash: "sha-256:x" });
     expect(withCeiling).toHaveProperty("ceiling_hash", "sha-256:x");
   });
+
+  // core § record-principal-members (#1912, D1047): a direct basis's
+  // activation, activation_actor and root_commitment are OPTIONAL, and their
+  // implied values are semantic defaults that no reader inserts before
+  // hashing or committing. The vectors above keep their full basis unchanged.
+  it("copies a direct approval_basis that omits its implied members exactly as recorded", () => {
+    const {
+      activation: _activation,
+      activation_actor: _actor,
+      root_commitment: _root,
+      ...omitting
+    } = ALWAYS_PRESENT.approval_basis;
+    const manifest = approvalContextManifest({ ...ALWAYS_PRESENT, approval_basis: omitting });
+    expect(manifest.approval_basis).toStrictEqual({
+      type: "direct",
+      consent_principal: { iss: "https://idp.example.com", sub: "user_3p2q8mN1a0kV7tR" },
+      adjudication: { kind: "human" },
+    });
+    // A different recorded basis commits a different approval context than vector 1.
+    expect(approvalContextCommitment(ISS, manifest)).not.toBe(
+      "sha-256:dPaMl8eUhPExoiVA2zHbz4wPzmDLVsfZnHDxCYHDGos",
+    );
+  });
 });
 
 describe("Approval Context Commitment vectors (approval-governance § approval-context-vectors)", () => {
