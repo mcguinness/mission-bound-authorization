@@ -6847,6 +6847,10 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: citations elsewhere in the
+  document name the subsection that states the cited rule, not its
+  parent section, where #1908's subsections make one precise (#1910,
+  D1045).
 - Editorial, no requirement change: Submission via PAR is retitled
   Submitting a Mission Intent, with subsections for the Submission
   envelope, its carriage through PAR, and other carriages. Authority
