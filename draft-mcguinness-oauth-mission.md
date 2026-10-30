@@ -3011,32 +3011,43 @@ handoff grant ({{I-D.draft-mcguinness-oauth-mission-template}}). A
 companion profile bounds the number of derivations under a Mission
 ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}).
 
-This document defines five issuance paths: code redemption, the token
-response that redeems a newly created Mission's authorization code
-({{approval-code-protection}}); a refresh ({{refresh-tokens}}); a
-designation ({{designation}}); a delegated exchange
-({{delegated-exchange}}); and a self-exchange ({{self-exchange}}).
-Designation and the delegated exchange belong to the optional Delegation
-capability, and self-exchange is optional too
-({{optional-capabilities}}). Each of these paths passes every check
-below, each stated where cited,
-with any difference by path; a path's own section states its further
-rules. Any other derivation, such as one a companion profile defines,
-passes at least checks 1, 3, 5, and 7, the `exp` bound of check 8, and
-check 10.
+This document defines five issuance paths:
 
-The numbering is presentation order: it imposes no execution order and
-no error precedence ({{error-mapping}} gives the error codes). An order
-that a rule states still applies, including these: the Mission-governed
-refusal applies only to an otherwise processable request and, on a
-refresh, is decided before the refresh token is consumed or rotated
-({{authority-proposal}}); a refresh establishes any scope projection
-before then or within the same atomic issuance
-({{scope-projection-refresh}}); a delegated exchange authenticates the
-client before it refuses an `actor_token` ({{delegated-exchange}}); the
-revocation refusal applies at the AS's final decision to release the
-result (check 10); and a companion profile that sequences a check
-within a path keeps that sequence.
+- code redemption, the token response that redeems a newly created
+  Mission's authorization code ({{approval-code-protection}});
+- a refresh ({{refresh-tokens}});
+- a designation ({{designation}});
+- a delegated exchange ({{delegated-exchange}}); and
+- a self-exchange ({{self-exchange}}).
+
+Designation and the delegated exchange belong to the optional
+Delegation capability, and self-exchange is optional too
+({{optional-capabilities}}).
+
+Each of these paths passes every check below. Each check is stated in
+the sections it cites, with any difference by path, and a path's own
+section states its further rules. Any other derivation, such as one a
+companion profile defines, passes at least checks 1, 3, 5, and 7, the
+`exp` bound of check 8, and check 10.
+
+The numbering is presentation order only: it imposes no execution
+order and no error precedence ({{error-mapping}} gives the error
+codes). An order that a rule states still applies, including these:
+
+- The Mission-governed refusal applies only to an otherwise
+  processable request. On a refresh, it is decided before the refresh
+  token is consumed or rotated ({{authority-proposal}}).
+- A refresh establishes any scope projection before the refresh token
+  is consumed or rotated, or within the same atomic issuance
+  ({{scope-projection-refresh}}).
+- A delegated exchange authenticates the client before it refuses an
+  `actor_token` ({{delegated-exchange}}).
+- The revocation refusal applies at the AS's final decision to release
+  the result (check 10).
+- A companion profile that sequences a check within a path keeps that
+  sequence.
+
+The checks are:
 
 1. Mission resolution from the presented grant
    ({{grant-binding-resolution}}): the code, the refresh token, or the
@@ -3046,38 +3057,42 @@ within a path keeps that sequence.
    ({{refresh-tokens}}), the token a designation request presents
    ({{designation}}), the delegate ({{delegated-exchange}}), and the
    self-exchanging agent ({{self-exchange}}).
-3. Mission state: the Mission is `active` (below, {{lifecycle}}); a
-   delegated exchange evaluates each redemption afresh
-   ({{delegated-exchange}}).
-4. Mission-governed resources ({{authority-proposal}}); a refresh, a
+3. Mission state: the Mission is `active` ({{refusing-a-derivation}},
+   {{lifecycle}}). A delegated exchange evaluates each redemption
+   afresh ({{delegated-exchange}}).
+4. Mission-governed resources ({{authority-proposal}}). A refresh, a
    self-exchange, or a designation request needs no `mission_intent`.
 5. Subset ({{subset}}): against the Mission Authority Set, and also
    against the presented refresh grant on a refresh, the presented
-   token on a designation or a self-exchange, and the designation on a
-   delegated exchange; on a designation or a delegated exchange, only
-   as {{delegation-constraints}} permits. An entry is narrowed, issued to
-   another audience, delegated, or projected only under a declared
-   capability ({{transformation-capabilities}}).
+   token on a designation or a self-exchange, and the designation on
+   a delegated exchange; on a designation or a delegated exchange,
+   only as {{delegation-constraints}} permits. An entry is narrowed,
+   issued to another audience, delegated, or projected only under a
+   declared capability ({{transformation-capabilities}}).
 6. Audience ({{token-claims}}, {{token-response}},
    {{transformation-capabilities}}): by each entry's original approved
-   audience; for a designation, the resource
-   audiences of its entries, not the client its `aud` names; for a
-   delegated token, also an audience that processes the `act` chain
+   audience. For a designation, the check uses the resource audiences
+   of its entries, not the client its `aud` names. For a delegated
+   token, the audience is also one that processes the `act` chain
    ({{rs-mission-unaware}}).
 7. Scope projection ({{scope-projection}}), wherever `scope` is
-   emitted, requested, or the only form the target consumes; on a
-   refresh, with that section's protection of the refresh token.
+   emitted, requested, or the only form the target consumes. On a
+   refresh, it applies with that section's protection of the refresh
+   token.
 8. Claims and lifetime ({{token-claims}}, {{mission-claim}},
-   {{mission-claim-reservation}}, {{token-authentication-lifetime}}):
-   each token's `exp` does not exceed the Mission's `expires_at`; a
+   {{mission-claim-reservation}}, {{token-authentication-lifetime}}).
+   Each token's `exp` does not exceed the Mission's `expires_at`. A
    designation, a delegated exchange, and a self-exchange keep the
    presented token's `mission` claim, with the differences
    {{designation}} and {{delegated-exchange}} state.
 9. Response members: the response echoes the granted
-   `authorization_details` ({{token-response}}) and carries `mission_id`
-   and `mission_expires_at` as {{mission-response-parameters}} states.
-10. Release: the revocation refusal below applies at the AS's final
-    decision to release the result.
+   `authorization_details` ({{token-response}}) and carries
+   `mission_id` and `mission_expires_at` as
+   {{mission-response-parameters}} states.
+10. Release: the revocation refusal ({{refusing-a-derivation}})
+   applies at the AS's final decision to release the result.
+
+### Refusing a Derivation {#refusing-a-derivation}
 
 Unless the referenced Mission is `active`, the AS MUST refuse a
 request to derive a token at the token endpoint: a Token Exchange
@@ -3085,13 +3100,16 @@ request to derive a token at the token endpoint: a Token Exchange
 ({{Section 2.2.2 of RFC8693}}), and any other grant, refresh
 included, with the `invalid_grant` error code. The AS MUST refuse a
 derivation request it answers after it has acknowledged a revocation
-of the Mission, with the same error code. The AS answers a request
-when it makes its final decision to release the result, not when
-network delivery of the response completes: a result prepared before
-the acknowledgment and released after it is refused. A Token Exchange
-takes `invalid_request` because a presented token whose Mission is
-not `active` is unacceptable for the exchange, a case
+of the Mission, with the same error code.
+
+A Token Exchange takes `invalid_request` because a presented token
+whose Mission is not `active` is unacceptable for the exchange, a case
 {{Section 2.2.2 of RFC8693}} assigns to that code.
+
+The AS answers a request when it makes its final decision to release
+the result, not when network delivery of the response completes. A
+result prepared before the acknowledgment and released after it is
+therefore refused.
 
 The AS acknowledges a revocation when it commits the Mission's
 termination with reason `revoked` ({{termination}}), whether a
@@ -3105,52 +3123,64 @@ re-check of Mission state.
 Where a profile of a Token Exchange that the AS implements assigns
 its own error code to either refusal, such as a continuation
 profile's code for an ended chain, the AS uses that profile's code
-instead; the refusal itself, and the `mission_error` member below,
-still apply.
+instead; the refusal itself, and the `mission_error` member
+({{mission-error-member}}), still apply.
+
+### Mission Error Member {#mission-error-member}
 
 The error code alone does not tell a client which gate refused. On a
-refusal under this section the AS SHOULD include, alongside `error`,
-the `mission_error` token-error-response member
-({{oauth-parameters-registration}}) with one
-of the values `revoked`, `expired`, or `superseded` (where a companion
-defines supersession), the Mission's termination reason
-({{termination}}).
+refusal under {{issuance-gating}}, the AS SHOULD include, alongside
+`error`, the `mission_error` token-error-response member
+({{oauth-parameters-registration}}) with one of the values `revoked`,
+`expired`, or `superseded` (where a companion defines supersession),
+the Mission's termination reason ({{termination}}).
 
 These values are termination reasons. A companion profile that
-defines another Mission state ({{lifecycle}}), which this section
-also refuses, or a further refusal at issuance defines any
-`mission_error` value for it, as Mission Status does for a suspended
-Mission ({{I-D.draft-mcguinness-oauth-mission-status}}, Section
-"Mission Lifecycle Endpoint") and Derivation Limits does for an
-exhausted limit
-({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
-"Enforcement at Issuance"). A Mission in a state from which it can
-return to `active` MUST NOT be reported with a termination reason.
+defines either of the following defines any `mission_error` value for
+it:
+
+- another Mission state ({{lifecycle}}), which {{issuance-gating}}
+  also refuses, as Mission Status defines one for a suspended Mission
+  ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission
+  Lifecycle Endpoint"); or
+- a further refusal at issuance, as Derivation Limits defines one for
+  an exhausted limit
+  ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
+  "Enforcement at Issuance").
+
+A Mission in a state from which it can return to `active` MUST NOT be
+reported with a termination reason.
 
 The `mission_error` member is diagnostic only and optional, whichever
-document defines its value: it grants nothing, an unrecognized value
-is ignored and is not authoritative about the Mission's state, and it
-is returned only to the authenticated client presenting the Mission's
-grant.
+document defines its value:
 
-The `mission_error` values this section names each report a
-terminated Mission ({{termination}}): no retry under the same grant
-cures the refusal. Further work needs a new approval or, for
-`superseded`, the successor Mission
-({{I-D.draft-mcguinness-oauth-mission-expansion}}). A new approval is
-a fresh approval event, not an automatic consequence of the refusal; a
-credential held outside the Mission is no fallback for its task
-({{downgrade-by-omission}}); and the refusal gives no assurance that
-the refresh token remains usable. This reading is keyed on the value,
-not on the error code, because the same refusal covers a Mission in a
-non-terminal state that a companion profile registers
+- it grants nothing;
+- an unrecognized value is ignored and is not authoritative about the
+  Mission's state; and
+- it is returned only to the authenticated client presenting the
+  Mission's grant.
+
+Each `mission_error` value this section names reports a terminated
+Mission ({{termination}}): no retry under the same grant cures the
+refusal. Further work needs a new approval or, for `superseded`, the
+successor Mission ({{I-D.draft-mcguinness-oauth-mission-expansion}}).
+A new approval is a fresh approval event, not an automatic consequence
+of the refusal. A credential held outside the Mission is no fallback
+for its task ({{downgrade-by-omission}}). The refusal gives no
+assurance that the refresh token remains usable. This reading is keyed
+on the value, not on the error code, because the same refusal covers a
+Mission in a non-terminal state that a companion profile registers
 ({{iana-lifecycle-states}}), whose meaning that profile defines.
 
+### Derived Token Lifetime {#derived-token-lifetime}
+
 Derived tokens SHOULD be short-lived so that a transition to
-`terminated` takes effect promptly without per-request
-revocation checks. A resource server that does not check Mission state
-per request can accept a derived token until its `exp`, so the token's
-lifetime is the termination latency there ({{runtime-boundary}}).
+`terminated` takes effect promptly without per-request revocation
+checks. A resource server that does not check Mission state per
+request can accept a derived token until its `exp`. At such a resource
+server, the token's lifetime is therefore the termination latency
+({{runtime-boundary}}).
+
 Short-lived means within the termination latency the deployment
 accepts. This document sets no numerical bound; a deployment profile
 can. The cap at the Mission's `expires_at`
