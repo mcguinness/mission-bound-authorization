@@ -1684,6 +1684,7 @@ Refusals follow {{error-mapping}}.
    identity or achieved authentication context from unauthenticated
    client input; the authenticated surface that resolved the approval
    establishes both.
+
 2. **Establish the Subject**: the principal the task is for, recorded as
    the Mission's `subject` and mapped to the `sub` of every derived
    token ({{token-claims}}). The Subject can be a workload or
@@ -1693,39 +1694,51 @@ Refusals follow {{error-mapping}}.
      is the authenticated Approver.
    - **Another principal or an external Subject.** The rules of
      {{subject-establishment}} apply at this step.
+
 3. **Establish the authority source**: whose authority the approval
    draws on, recorded as the Mission's `authority_source`
    ({{authority-sources}}, {{mission-record}}). The AS MUST establish
    it from trusted configuration or authenticated governance state,
-   never from client assertion. The AS MUST verify the Approver is
-   authorized under local policy to activate the established source,
-   and MUST verify the derived Authority Set lies within that
-   source's authority (for `organizational`, within the governed
-   policy identified by `authority_source.policy`). These are
-   distinct checks: an organizational owner may be authorized to
-   activate policy without personally holding every operational
-   permission. The AS MUST refuse when either relationship cannot be
-   established. {{record-principal-members}} states the refusal to
-   approve a Mission whose authority source the AS does not recognize.
+   never from client assertion.
+
+   The AS then makes two checks:
+
+   - The AS MUST verify the Approver is authorized under local policy
+     to activate the established source.
+   - The AS MUST verify the derived Authority Set lies within that
+     source's authority (for `organizational`, within the governed
+     policy identified by `authority_source.policy`).
+
+   These are distinct checks: an organizational owner may be
+   authorized to activate policy without personally holding every
+   operational permission. The AS MUST refuse when either relationship
+   cannot be established. {{record-principal-members}} states the
+   refusal to approve a Mission whose authority source the AS does not
+   recognize.
+
 4. **Establish the effective Mission expiry**: the requested
    `intent.expires_at` ceiling narrowed by applicable AS policy and
    any ceiling an applicable Mission-creating profile defines. The
    value is bounded as `expires_at` requires ({{mission-record}}) and
    is rechecked at the creation commit (step 7).
+
 5. **Render for consent** the derived Authority Set in human-meaningful
    terms, with the `goal`, `task_bounds`, and the effective
    `expires_at` (and, when it differs, the requested
    `intent.expires_at`, so the Approver sees the narrowing) as
-   context:
-   - The consent object is the **derived Authority Set**, what the
-     agent may do, not the `goal` or Mission Intent: Authority Set
-     derivation is local policy, and nothing commits that the derived
-     authority reflects the goal the Approver read. An approval
-     surface that renders only the `goal` or Mission Intent does not
-     conform.
+   context.
+
+   The consent object is the **derived Authority Set**: what the agent
+   may do. It is not the `goal` or Mission Intent, because Authority
+   Set derivation is local policy and nothing commits that the derived
+   authority reflects the goal the Approver read. An approval surface
+   that renders only the `goal` or Mission Intent does not conform.
+
+   These requirements apply to the rendering:
+
    - The rendering MUST identify the OAuth client that receives the
      authority, the Agent, from client identity information the AS
-     trusts, such as its own registration of the client; display text
+     trusts, such as its own registration of the client. Display text
      the client supplies does not by itself identify it.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
@@ -1736,10 +1749,11 @@ Refusals follow {{error-mapping}}.
      ({{authority-proposal}}), the rendering MUST distinguish the
      entries the client proposed from any narrowing or restructuring
      the AS applied.
-   - Mission Capability Binding
-     ({{I-D.draft-mcguinness-mission-capability-binding}}) states
-     what the rendering presents about the source binding of a
-     catalog-sourced action.
+
+   Mission Capability Binding
+   ({{I-D.draft-mcguinness-mission-capability-binding}}) states what
+   the rendering presents about the source binding of a
+   catalog-sourced action.
 
 #### Committing the Mission {#approval-commit}
 
