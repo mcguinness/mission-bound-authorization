@@ -956,7 +956,7 @@ Table of Contents
    When a Mission record cites a shaping_evidence_hash, the deployment
    SHOULD retain the Shaping Evidence and its input_exclusion_ruleset
    for as long as it retains the Mission record (the audit horizon of
-   [I-D.draft-mcguinness-oauth-mission], Section "Mission Record"), so
+   [I-D.draft-mcguinness-oauth-mission], Section "Audit Horizon"), so
    that the cited evidence stays reproducible.  Retained Shaping
    Evidence is not rewritten, for example to update a label: any change
    breaks the commitment the Mission record cites.

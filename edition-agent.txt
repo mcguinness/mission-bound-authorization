@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-30T19:11:22Z
-Source repository commit: 1da17d504df541669aacf988f23446e682c80d5e
+Generated: 2026-10-30T21:45:40Z
+Source repository commit: cab75579f66d526236bf24d4f052accd66ee7d48
 Member count: 9
 
 Reading order:
@@ -8612,44 +8612,47 @@ Table of Contents
      15.1.  Conformance Roles
      15.2.  Optional Capabilities
      15.3.  Claiming Conformance
-   16. Security Considerations
-     16.1.  Commitment and Consent Integrity
-       16.1.1.  Consent Binding
-       16.1.2.  Downgrade by Omission
-       16.1.3.  Compromised or Over-Broad Derivation
-     16.2.  Agent-Specific Threats
-       16.2.1.  Prompt Injection and Data Exfiltration
-       16.2.2.  Authority and Propagated Information
-     16.3.  Enforcement Boundaries
-       16.3.1.  Issuance Scope and Runtime Enforcement
-       16.3.2.  Denial Detail Disclosure
-       16.3.3.  Revocation Authority
-     16.4.  Credentials and Delegation
-       16.4.1.  Token Theft
-       16.4.2.  Delegation and Chain Compromise
-       16.4.3.  Composition and the Effective Ceiling
-       16.4.4.  Client Attribution and Delegation Lineage
-       16.4.5.  Signing and Key Rotation
-   17. Privacy Considerations
-     17.1.  Mission Identifier Correlation
-     17.2.  Token Payload Disclosure
-     17.3.  Intent Retention and Anchor Disclosure
-     17.4.  Third-Party Data Subjects
-     17.5.  Mission Record and Evidence Access
-   18. Internationalization Considerations
-   19. IANA Considerations
-     19.1.  OAuth Parameters Registration
-     19.2.  OAuth Extensions Error Registration
-     19.3.  JSON Web Token Claims Registration
-     19.4.  OAuth Token Introspection Response Registration
-     19.5.  OAuth Authorization Server Metadata Registration
-     19.6.  OAuth Protected Resource Metadata Registration
-     19.7.  Mission Lifecycle States Registry
-     19.8.  Mission Termination Reasons Registry
-     19.9.  Mission Intent Members Registry
-   20. References
-     20.1.  Normative References
-     20.2.  Informative References
+   16. Implementation Considerations
+     16.1.  Approval Idempotency
+     16.2.  Audit Horizon
+   17. Security Considerations
+     17.1.  Commitment and Consent Integrity
+       17.1.1.  Consent Binding
+       17.1.2.  Downgrade by Omission
+       17.1.3.  Compromised or Over-Broad Derivation
+     17.2.  Agent-Specific Threats
+       17.2.1.  Prompt Injection and Data Exfiltration
+       17.2.2.  Authority and Propagated Information
+     17.3.  Enforcement Boundaries
+       17.3.1.  Issuance Scope and Runtime Enforcement
+       17.3.2.  Denial Detail Disclosure
+       17.3.3.  Revocation Authority
+     17.4.  Credentials and Delegation
+       17.4.1.  Token Theft
+       17.4.2.  Delegation and Chain Compromise
+       17.4.3.  Composition and the Effective Ceiling
+       17.4.4.  Client Attribution and Delegation Lineage
+       17.4.5.  Signing and Key Rotation
+   18. Privacy Considerations
+     18.1.  Mission Identifier Correlation
+     18.2.  Token Payload Disclosure
+     18.3.  Intent Retention and Anchor Disclosure
+     18.4.  Third-Party Data Subjects
+     18.5.  Mission Record and Evidence Access
+   19. Internationalization Considerations
+   20. IANA Considerations
+     20.1.  OAuth Parameters Registration
+     20.2.  OAuth Extensions Error Registration
+     20.3.  JSON Web Token Claims Registration
+     20.4.  OAuth Token Introspection Response Registration
+     20.5.  OAuth Authorization Server Metadata Registration
+     20.6.  OAuth Protected Resource Metadata Registration
+     20.7.  Mission Lifecycle States Registry
+     20.8.  Mission Termination Reasons Registry
+     20.9.  Mission Intent Members Registry
+   21. References
+     21.1.  Normative References
+     21.2.  Informative References
    Appendix A.  End-to-End Example
      A.1.  Stage 1: Mission Creation
      A.2.  Stage 2: Mission-Bound Token Issuance
@@ -9124,7 +9127,7 @@ Table of Contents
          semantics (Section 5).
 
       *  Prose here persists on the record and can carry personal data
-         about third parties (Section 17.4).
+         about third parties (Section 18.4).
 
    goal_lang:  OPTIONAL.  A string.  A BCP 47 language tag [RFC5646]
       declaring the language of the Intent's human-readable members
@@ -9136,7 +9139,7 @@ Table of Contents
 
       *  At submission acceptance, the AS MUST refuse a goal_lang that
          is not a well-formed language tag with invalid_request
-         (Section 18).
+         (Section 19).
 
    target_resources:  REQUIRED.  An array of strings.  A client-
       requested Intent ceiling on the task's target resources, each an
@@ -9450,7 +9453,7 @@ Table of Contents
    Submitting authorization_details without mission_intent is an
    ordinary [RFC9396] request that this document does not govern.  Two
    AS-side rules keep a governed task from being downgraded to such a
-   request (Section 12 states the client-side rules and Section 16.1.2
+   request (Section 12 states the client-side rules and Section 17.1.2
    the threat):
 
    1.  Where a resource is Mission-governed, its AS MUST NOT issue a
@@ -9537,7 +9540,7 @@ Table of Contents
       (Section 4.5).  The AS MUST refuse an entry whose type it does not
       support, and an entry that fails its type's validation or
       verification, with the invalid_mission_intent_evidence error code
-      (Section 19.2).  A submission is accepted only when every
+      (Section 20.2).  A submission is accepted only when every
       presented entry verifies.
 
    *  *Policy input, not authority.* A verified entry is not copied into
@@ -9550,6 +9553,18 @@ Table of Contents
    Supporting an evidence type is optional, but these rules are not: an
    AS that supports none still applies them and refuses every presented
    entry (Section 15.1).
+
+   submission_evidence (Section 6.3.2) is provenance, not enforcement
+   input, and is not carried on the mission claim (Section 7.8).
+   Recorded facts, such as a verified consent reference, are provenance
+   and policy input only; a resource domain validates them under its own
+   current policy (Section 18.4).
+
+   No integrity anchor commits submission_evidence: its digests are only
+   as trustworthy as the Mission Record that holds them and do not
+   independently prove which artifacts were presented at admission.  A
+   profile whose threat model requires that proof commits normalized
+   provenance under its own anchor typ (Section 6.4.1, Section 14).
 
    Mission Intent Submission Evidence for OAuth 2.0
    ([I-D.draft-mcguinness-oauth-mission-submission-evidence]) specifies
@@ -9708,8 +9723,8 @@ Table of Contents
    token entry that target_resources does not name, and a candidate
    outside every Authority Set entry fails that rule.
 
-   The Mission records the policy version in force as policy_version
-   (Section 6.3).
+   Where recorded, the Mission's policy_version names the policy version
+   in force (Section 6.3).
 
    Generative Authority Set derivation is not one of this document's
    modes.  As a local-policy extension, a model's output can be a
@@ -9854,7 +9869,7 @@ Table of Contents
 
    *  evaluating the entry against a concrete request is the
       responsibility of the resource server, under the entry's type
-      (Section 9.1.1), or of a composing runtime layer (Section 16.3.1),
+      (Section 9.1.1), or of a composing runtime layer (Section 17.3.1),
       not the AS's.
 
 5.5.1.  Declared Transformation Capabilities
@@ -10051,15 +10066,21 @@ Table of Contents
        These are distinct checks: an organizational owner may be
        authorized to activate policy without personally holding every
        operational permission.  The AS MUST refuse when either
-       relationship cannot be established.  Section 6.3.3 states the
-       refusal to approve a Mission whose authority source the AS does
-       not recognize.
+       relationship cannot be established.  An AS MUST NOT approve a
+       Mission whose authority source it does not recognize.
 
    4.  *Establish the effective Mission expiry*: the requested
        intent.expires_at ceiling narrowed by applicable AS policy and
        any ceiling an applicable Mission-creating profile defines.  The
        value is bounded as expires_at requires (Section 6.3) and is
        rechecked at the creation commit (step 7).
+
+       Shortening under applicable AS policy, or under an already-
+       approved parent, predecessor, or standing-consent bound a
+       Mission-creating profile defines, is ordinary narrowing of the
+       granted lifetime, not Authority Set derivation; for direct
+       creation under this document the only additional ceiling is
+       applicable AS policy.
 
    5.  *Render for consent* the derived Authority Set in human-
        meaningful terms, with the goal, task_bounds, and the effective
@@ -10125,7 +10146,7 @@ Table of Contents
    The authority_hash is the *authority commitment*: it commits, by
    cryptographic digest, exactly the authority the Approver approved.
 
-   Section 6.3.4 states how the AS deduplicates a retried or duplicate
+   Section 16.1 states how the AS deduplicates a retried or duplicate
    delivery of the same approval decision on approval_event_id.
 
 6.1.3.  Subject Establishment
@@ -10208,7 +10229,7 @@ Table of Contents
    The approval event commits the Mission Intent and Authority Set the
    AS records as approved.  Those commitments establish neither that the
    AS rendered them faithfully nor that the Approver understood them
-   (Section 16.1.1).  Step 5 of Section 6.1.2 requires human-meaningful
+   (Section 17.1.1).  Step 5 of Section 6.1.2 requires human-meaningful
    rendering; comprehension cannot be inferred from an approval or its
    integrity anchors.
 
@@ -10238,6 +10259,17 @@ Table of Contents
    Approval activates only authority the source already holds: the AS
    establishes the source and verifies the derived Authority Set against
    it before approval (Section 6.1.2, Section 6.2.1).
+
+   An organizational Mission's authority_source.policy reference
+   (Section 6.3.3) commits to the governed policy through its digest:
+
+   *  digest is a prefixed commitment (Section 6.4.3) whose exact
+      committed input and construction the policy's format specifies:
+      its species and, for an envelope anchor, its typ, iss, and value.
+
+   *  The party that produces the reference computes digest; a consumer
+      holding the policy can reproduce it, and one that does not
+      compares it as an opaque value.
 
    The subject-representation discipline is the same in every source:
 
@@ -10394,10 +10426,6 @@ Table of Contents
    no registry (Section 14.2): each further basis is defined by the
    companion profile that introduces it.
 
-   For a standing-consent type, activation takes the shape that its
-   companion profile defines, and activation_actor names a dispatching
-   or requesting party distinct from the consenting human.
-
    An unrecognized type or adjudication.kind is handled as Section 6.3.3
    states for every record consumer.
 
@@ -10409,6 +10437,23 @@ Table of Contents
    instance it activates.  That value identifies this instance's
    approval event, never the standing approval, so a retried activation
    deduplicates and each distinct activation creates its own Mission.
+
+   A standing-consent basis carries the following approval_basis members
+   (Section 6.3.3):
+
+   activation:  REQUIRED for every standing-consent type.  An object
+      naming what activated this Mission instance, in the shape that the
+      basis's companion profile defines.
+
+   activation_actor:  REQUIRED for every standing-consent type.  An
+      object with iss and sub.  Who or what triggered this instance: a
+      dispatching or requesting party distinct from the consenting
+      human.
+
+   root_commitment:  REQUIRED for every standing-consent type.  A
+      string.  The commitment to the consented root: an integrity anchor
+      where the root is a committed object, otherwise the committed
+      reference that identifies it.
 
    approved_at:  REQUIRED for every standing-consent type.  An RFC 3339
       date-time: the instant the accountable human approved the exact
@@ -10425,6 +10470,15 @@ Table of Contents
    version of the policy or workflow that adjudicated the instance.  A
    companion profile MUST NOT flatten a policy's or an Approval
    Governance Record's assertion set into a single principal member.
+
+   For kind: policy, adjudication carries policy, a REQUIRED object with
+   id and version identifying the deciding policy or workflow.  It
+   decides deterministically over recorded inputs, so re-evaluating that
+   version over them re-checks the decision.  A model's output can be
+   one such input, recorded with the model's identifier and version: it
+   can refuse an activation or narrow the authority it activates, and
+   the AS MUST NOT let it supply or widen authority.  A model is never
+   itself the deciding policy or workflow.
 
 6.2.1.  Standing-Consent Instances
 
@@ -10465,11 +10519,10 @@ Table of Contents
    that policy when the result differs; the companion profile fixes what
    follows, as it does for an activation the policy does not authorize.
    The issuer MUST retain each snapshot's bytes and media type for the
-   audit horizon (Section 6.3.4) of every Mission it activates under
-   that snapshot, so an auditor can reproduce the digest.  Where no
-   separate policy artifact exists, as when child creation is
-   adjudicated against the approved delegation entry itself, this rule
-   does not apply.
+   audit horizon (Section 16.2) of every Mission it activates under that
+   snapshot, so an auditor can reproduce the digest.  Where no separate
+   policy artifact exists, as when child creation is adjudicated against
+   the approved delegation entry itself, this rule does not apply.
 
 6.2.3.  Standing-Consent Recency
 
@@ -10512,24 +10565,30 @@ Table of Contents
    profile exchanges or signs the record, the record's JSON form, with
    the members this section defines, governs.
 
-   Record member names omit the mission prefix because the record is the
-   Mission.  Prefixed names, such as the mission_intent request
-   parameter and the mission_id response parameter, belong to surfaces
-   that reference a Mission from outside it.
-
-   Member names are spelled out (issuer, expires_at, created_at) and
-   spelled identically on every surface.  The compact JWT names (iss,
-   exp, iat) describe a signed artifact's own envelope, or identify a
-   party in an {iss, sub} object, not the Mission.
+   Record member names omit the mission prefix, which marks surfaces
+   that reference a Mission from outside it, such as the mission_id
+   response parameter.  They are spelled out (issuer, expires_at,
+   created_at) and spelled identically on every surface; the compact JWT
+   names (iss, exp, iat) belong to a signed artifact's own envelope or
+   to an {iss, sub} party object, not the Mission.
 
    Like the mission claim (Section 7.8), the record is open
    (Section 14): a companion profile of this document MAY record
    additional members set at creation using short names coordinated with
    it (for example, a lineage member linking the Mission to a
    predecessor or parent); any other extension MUST use collision-
-   resistant names.
+   resistant names.  A consumer does not interpret a member it does not
+   recognize, and does not remove it from a record it retains or
+   commits.
 
-   The following subsections define the record's members.
+   The following subsections define the record's members.  The record's
+   required members are its invariants: id, issuer, state, intent,
+   authority_set, authority_hash, intent_hash, subject, approval_basis
+   and authority_source with the members each requires, client_id,
+   approval_event_id, created_at, and expires_at, and, under the
+   condition each states, termination, proposed_authority,
+   proposal_hash, submission_evidence, and policy_version.  Every other
+   member is optional or defined by the profile that uses it.
 
 6.3.1.  Identity and Lifecycle Members
 
@@ -10595,19 +10654,6 @@ Table of Contents
          specification selects for recording, nested so type-owned facts
          cannot collide with the common members.
 
-      submission_evidence is provenance, not enforcement input, and is
-      not carried on the mission claim (Section 7.8).  Recorded facts,
-      such as a verified consent reference, are provenance and policy
-      input only; a resource domain validates them under its own current
-      policy (Section 17.4).
-
-      No integrity anchor commits submission_evidence: its digests are
-      only as trustworthy as the Mission Record that holds them and do
-      not independently prove which artifacts were presented at
-      admission.  A profile whose threat model requires that proof
-      commits normalized provenance under its own anchor typ
-      (Section 6.4.1, Section 14).
-
 6.3.3.  Principals and Approval Basis
 
    subject:  REQUIRED.  An object.  The Subject, an object with iss and
@@ -10626,33 +10672,29 @@ Table of Contents
       type:  REQUIRED.  A string: direct, or a standing-consent value
          that a companion profile defines (Section 6.2).
 
-      An unrecognized type, and likewise an unrecognized
-      adjudication.kind (Section 6.3), is preserved unchanged as opaque
-      provenance on an otherwise valid record: a consumer MUST NOT infer
-      or fabricate the human, policy, or Approval Governance Record
-      standing behind it, and MUST refuse only a profile operation that
-      itself requires recognized adjudication semantics to proceed (for
-      example, evaluating a policy-approval recency ceiling).  Unlike an
-      unrecognized lifecycle state (Section 10), an unrecognized value
-      here does not by itself invalidate or deactivate the Mission.
-
       consent_principal:  REQUIRED.  An object with iss and sub.  The
          accountable human (or human-accountable principal) who
          consented.  MAY equal subject.
 
-      activation:  REQUIRED.  An object naming what activated this
-         Mission instance, shaped by type.  For direct:
-         approval_event_id, mirroring the record's own approval_event_id
+      activation:  OPTIONAL for direct.  What activated this Mission
+         instance; its implied value for direct is an object whose
+         approval_event_id is the record's own approval_event_id
          (below).
 
-      activation_actor:  REQUIRED.  An object with iss and sub.  Who or
-         what triggered this instance.  For direct it equals
+      activation_actor:  OPTIONAL for direct.  Who or what triggered
+         this instance; its implied value for direct is
          consent_principal: the Approver triggers their own approval.
 
-      root_commitment:  REQUIRED.  A string.  The commitment to the
-         consented root: an integrity anchor where the root is a
-         committed object, otherwise the committed reference that
-         identifies it.  For direct, this Mission's own authority_hash.
+      root_commitment:  OPTIONAL for direct.  The commitment to the
+         consented root; its implied value for direct is this Mission's
+         own authority_hash.
+
+      When present for direct, activation, activation_actor, and
+      root_commitment MUST each match its implied value.  The implied
+      values are semantic defaults: an omitted member has its implied
+      value, and a reader does not insert it into a record before
+      hashing or committing the record.  A standing-consent basis
+      requires and defines all three (Section 6.2).
 
       adjudication:  OPTIONAL.  A discriminated object naming the
          decision _mechanism_ that adjudicated this instance: distinct
@@ -10667,36 +10709,17 @@ Table of Contents
             mechanism, not a storage location for supporting evidence; a
             companion profile MUST NOT define a kind value that names a
             record, an evidence store, or the requesting or dispatching
-            party.  An unrecognized value is handled under the same rule
-            as approval_basis.type (Section 6.3.3).
+            party.
 
-         governance_record:  OPTIONAL.  A boolean. true when an Approval
-            Governance Record is recorded for this approval event
-            ([I-D.draft-mcguinness-mission-approval-governance]), joined
-            by this Mission's own approval_event_id.
-
-            *  It never changes kind, which follows the basis (below and
-               Section 6.2).
-
-            *  Approval Governance aligns the record's accountable
-               assertion, where it carries one, with that kind: a
-               governed decision still names its mechanism, and the
-               record supplies the fuller assertion set behind it,
-               including any multi-assertion set, never flattened into
-               it.
+         A companion profile can define further members of adjudication;
+         Approval Governance defines governance_record
+         ([I-D.draft-mcguinness-mission-approval-governance]).
 
          For kind: human: no additional kind-specific members; the
          deciding human is consent_principal.
 
-         For kind: policy: policy, a REQUIRED object with id and version
-         identifying the deciding policy or workflow.  It decides
-         deterministically over recorded inputs, so re-evaluating that
-         version over them re-checks the decision.  A model's output can
-         be one such input, recorded with the model's identifier and
-         version: it can refuse an activation or narrow the authority it
-         activates, and the AS MUST NOT let it supply or widen
-         authority.  A model is never itself the deciding policy or
-         workflow.
+         For kind: policy: the kind-specific members that Section 6.2
+         defines.
 
       approved_at:  Absent for direct, whose approval event carries its
          own instant (Section 6.1); a standing-consent basis carries it
@@ -10718,7 +10741,7 @@ Table of Contents
          anchors, such as intent_hash, authority_hash or proposal_hash,
          covers it (Section 6.4.1); a profile that commits the Mission
          Record itself covers it under that profile's own anchor.  Two
-         optional profiles commit it (Section 16.1.1).
+         optional profiles commit it (Section 17.1.1).
 
       *  Its disclosure through introspection follows Section 9.2.1.
 
@@ -10732,28 +10755,12 @@ Table of Contents
       Members:
 
       type:  REQUIRED.  A string: user_delegated, service_owned, or
-         organizational.  An unrecognized value is handled under the
-         same rule as an unrecognized approval_basis.type
-         (Section 6.3.3): it is preserved unchanged as opaque provenance
-         and does not by itself invalidate or deactivate the Mission,
-         and only an operation that itself requires recognized source
-         semantics refuses (for example, applying the source's authority
-         ceiling or its governed policy).  An AS MUST NOT approve a
-         Mission whose authority source it does not recognize.
+         organizational.
 
       policy:  REQUIRED for organizational, absent otherwise.  An object
          with id, version, and digest: the stable reference to, and
          commitment over, the governed organizational policy the Mission
          draws on.
-
-         *  digest is a prefixed commitment (Section 6.4.3) whose exact
-            committed input and construction the policy's format
-            specifies: its species and, for an envelope anchor, its typ,
-            iss, and value.
-
-         *  The party that produces the reference computes digest; a
-            consumer holding the policy can reproduce it, and one that
-            does not compares it as an opaque value.
 
       authority_source is provenance like approval_basis: recorded
       alongside it, folded into neither intent_hash nor authority_hash,
@@ -10763,20 +10770,35 @@ Table of Contents
    client_id:  REQUIRED.  A string.  The Agent (OAuth client) that
       submitted the Mission Intent.
 
+   An unrecognized approval_basis.type, adjudication.kind, or
+   authority_source.type value is preserved unchanged as opaque
+   provenance on an otherwise valid record: a consumer MUST NOT infer or
+   fabricate the human, policy, or Approval Governance Record standing
+   behind it, and MUST refuse only a profile operation that itself
+   requires recognized adjudication semantics to proceed (for example,
+   evaluating a policy-approval recency ceiling); for
+   authority_source.type, the operation refused is any operation, of
+   this document or a profile, that itself requires recognized source
+   semantics (for example, applying the source's authority ceiling or
+   its governed policy).  Unlike an unrecognized lifecycle state
+   (Section 10), such a value does not by itself invalidate or
+   deactivate the Mission.
+
 6.3.4.  Provenance and Expiry
 
-   policy_version:  REQUIRED.  A string.  An opaque audit correlator
+   policy_version:  OPTIONAL.  A string.  An opaque audit correlator
       naming the derivation policy version in effect at the approval
-      event; the policy itself does not travel.
+      event; the policy itself does not travel.  It is REQUIRED where a
+      feature or profile the deployment uses depends on versioned
+      derivation-policy identification, such as standing-consent recency
+      (Section 6.2.3).  A deployment using such a feature records it
+      from creation and never supplies a replacement value later.
 
    approval_event_id:  REQUIRED.  A string.  A unique identifier of the
-      approval event, used as the approval idempotency key: a retried or
-      duplicate delivery of the same approval decision (a replayed
-      callback, a double-submitted consent form, a retried standing-
-      consent activation) MUST NOT create a second Mission, and the AS
-      deduplicates on this identifier.  The identifier names the
-      approval event that creates this Mission (Section 6.1); under a
-      standing-consent basis (Section 6.2), it identifies this
+      approval event, used as the approval idempotency key: one approval
+      event creates at most one Mission (Section 16.1).  The identifier
+      names the approval event that creates this Mission (Section 6.1);
+      under a standing-consent basis (Section 6.2), it identifies this
       instance's creation, not the earlier standing approval.
 
    created_at:  REQUIRED.  A string.  RFC 3339 timestamp of creation.
@@ -10785,17 +10807,6 @@ Table of Contents
       established effective Mission expiry (Section 10, Section 7.1).
       It MUST be later than created_at and MUST NOT be later than
       intent.expires_at, the requested ceiling (Section 4).
-
-      Shortening under applicable AS policy, or under an already-
-      approved parent, predecessor, or standing-consent bound a Mission-
-      creating profile defines, is ordinary narrowing of the granted
-      lifetime, not Authority Set derivation; for direct creation under
-      this document the only additional ceiling is applicable AS policy.
-
-   The *audit horizon* is the deployment-declared retention window for
-   the Mission Record and its evidence: at least the Mission's lifetime
-   plus a declared post-expiry period.  A deployment retains a
-   terminated Mission's record for its audit horizon.
 
 6.3.5.  Mission Identifier Format
 
@@ -10986,9 +10997,9 @@ Table of Contents
    intent_hash and authority_hash are independent commitments to
    independent objects.  That the approved task bounds the derived
    authority is a governance assertion, made by derivation policy and
-   auditable through policy_version (Section 5), not a cryptographic
-   relation between the anchors: neither anchor proves anything about
-   the other's object.
+   auditable through policy_version where the Mission records it
+   (Section 5), not a cryptographic relation between the anchors:
+   neither anchor proves anything about the other's object.
 
    The typ value space is an extension point (Section 14): additional
    committed objects use this same envelope with a new typ and the
@@ -11472,7 +11483,7 @@ Table of Contents
 
    The error code alone does not tell a client which gate refused.  On a
    refusal under Section 7.1, the AS SHOULD include, alongside error,
-   the mission_error token-error-response member (Section 19.1) with one
+   the mission_error token-error-response member (Section 20.1) with one
    of the values revoked, expired, or superseded (where a companion
    defines supersession), the Mission's termination reason
    (Section 10.1).
@@ -11511,11 +11522,11 @@ Table of Contents
    successor Mission ([I-D.draft-mcguinness-oauth-mission-expansion]).
    A new approval is a fresh approval event, not an automatic
    consequence of the refusal.  A credential held outside the Mission is
-   no fallback for its task (Section 16.1.2).  The refusal gives no
+   no fallback for its task (Section 17.1.2).  The refusal gives no
    assurance that the refresh token remains usable.  This reading is
    keyed on the value, not on the error code, because the same refusal
    covers a Mission in a non-terminal state that a companion profile
-   registers (Section 19.7), whose meaning that profile defines.
+   registers (Section 20.7), whose meaning that profile defines.
 
 7.1.3.  Derived Token Lifetime
 
@@ -11524,7 +11535,7 @@ Table of Contents
    checks.  A resource server that does not check Mission state per
    request can accept a derived token until its exp.  At such a resource
    server, the token's lifetime is therefore the termination latency
-   (Section 16.3.1).
+   (Section 17.3.1).
 
    Short-lived means within the termination latency the deployment
    accepts.  This document sets no numerical bound; a deployment profile
@@ -11578,7 +11589,7 @@ Table of Contents
    The primary access token may be a bearer token, preserving
    compatibility with bearer-only resource servers while retaining
    Section 2.2.1 of [RFC9700]'s recommendation; the cost is the stolen-
-   token exposure (Section 16.4.1).
+   token exposure (Section 17.4.1).
 
    A delegated token is sender-constrained to the delegate's own key
    (Section 8.2); the cross-domain companion requires sender-constraint
@@ -11744,7 +11755,7 @@ Table of Contents
       committed effective value unchanged.
 
    On OAuth token responses mission_expires_at is additionally
-   registered as a token-endpoint response parameter (Section 19.1).  It
+   registered as a token-endpoint response parameter (Section 20.1).  It
    is informational in the same way: presenting it authorizes nothing.
 
 7.4.  Refresh Tokens
@@ -12603,7 +12614,7 @@ Table of Contents
        governed resource, reject a token that lacks it with the
        invalid_token error code.  The issuance-side duty that pairs with
        this rejection is stated in Section 4.3.3, the downgrade it
-       prevents in Section 16.1.2, and the metadata that advertises the
+       prevents in Section 17.1.2, and the metadata that advertises the
        requirement in Section 13.
 
    6.  MUST accept a mission claim only from an issuer it explicitly
@@ -12758,7 +12769,7 @@ Table of Contents
    insufficient_authority.  A resource server SHOULD include the
    attribute only in a response to a validly signed, audience-correct
    token whose holder its deployment permits to learn the distinction
-   (Section 16.3.2).
+   (Section 17.3.2).
 
 9.1.5.  Remediation Grains
 
@@ -13127,8 +13138,8 @@ Table of Contents
 
                   Table 2: Mission lifecycle transitions
 
-   The Mission Lifecycle States registry (Section 19.7) holds these
-   states, and the Mission Termination Reasons registry (Section 19.8)
+   The Mission Lifecycle States registry (Section 20.7) holds these
+   states, and the Mission Termination Reasons registry (Section 20.8)
    holds the reasons.  A companion profile MAY register an additional
    state for a lifecycle it introduces (for example, a paused state).  A
    companion profile that defines a further way for a Mission to end
@@ -13160,7 +13171,7 @@ Table of Contents
    Mission in any other state carries none.  Its members are:
 
    reason:  REQUIRED.  A string, a value of the Mission Termination
-      Reasons registry (Section 19.8): revoked or expired in this
+      Reasons registry (Section 20.8): revoked or expired in this
       document, or a reason a companion profile registers.
 
    terminated_at:  REQUIRED, except as described below.  A string.  An
@@ -13357,7 +13368,7 @@ Table of Contents
    | another state that is not       | any other grant, or the code a  |
    | active, such as one a           | Token Exchange profile assigns  |
    | companion profile defines       | (Section 7.1.1).  Detail:       |
-   |                                 | mission_error (Section 19), or  |
+   |                                 | mission_error (Section 20), or  |
    |                                 | a value the companion profile   |
    |                                 | defines for its state           |
    |                                 | (Section 7.1.2)                 |
@@ -13596,7 +13607,7 @@ Table of Contents
    holding a Mission Intent MUST NOT submit the same authority as bare
    scope or authorization_details to an AS whose Mission support is
    neither advertised nor otherwise established; it surfaces the
-   inability instead (Section 16.1.2).  Where the deployment's AS cannot
+   inability instead (Section 17.1.2).  Where the deployment's AS cannot
    change, the standalone Mission Authority Server
    ([I-D.draft-mcguinness-mission-authority-server]) is the governed
    alternative.
@@ -13609,7 +13620,7 @@ Table of Contents
    Mission Identifier the client supplies nor documentation alone
    establishes the Mission for a request, and the path confers no
    authority beyond the Mission's.  The rule does not restrict the
-   client's workflows unrelated to the Mission (Section 16.1.2).
+   client's workflows unrelated to the Mission (Section 17.1.2).
 
    An AS that advertises support for this document MUST include at least
    one AS-supported type in its authorization_details_types_supported
@@ -13734,7 +13745,7 @@ Table of Contents
    *  *Mission Intent members.* The Mission Intent's top level
       (Section 4) is open to members a companion profile defines, under
       a short name it registers in the Mission Intent Members registry
-      (Section 19.9) before use, or under a collision-resistant name.
+      (Section 20.9) before use, or under a collision-resistant name.
       The owning specification defines, produces, and enforces each such
       member, and a recognized member never grants or widens authority
       beyond what that specification states.  Closed-top-level
@@ -13770,10 +13781,10 @@ Table of Contents
    *  *Lifecycle state and termination reason.* The lifecycle state
       space (Section 10) is open to additional states that companion
       profiles register in the Mission Lifecycle States registry
-      (Section 19.7) for lifecycles they introduce.  The termination
+      (Section 20.7) for lifecycles they introduce.  The termination
       reasons (Section 10.1) are likewise open to reasons that companion
       profiles register in the Mission Termination Reasons registry
-      (Section 19.8).  Under the forward-compatibility rule of
+      (Section 20.8).  Under the forward-compatibility rule of
       Section 10, only active permits issuance.
 
    *  *Approval-event sequencing.* The approval-event steps, their
@@ -13807,8 +13818,8 @@ Table of Contents
    *  *Registry-backed.* A namespace whose values determine fail-closed
       behavior and span multiple documents is backed by an IANA
       registry.  This document creates the Mission Lifecycle States
-      (Section 19.7), Mission Termination Reasons (Section 19.8), and
-      Mission Intent Members (Section 19.9) registries and seeds each
+      (Section 20.7), Mission Termination Reasons (Section 20.8), and
+      Mission Intent Members (Section 20.9) registries and seeds each
       with the values it defines; every further document that defines a
       value requests that value's registration, carrying any Internet-
       Draft reference as a publication dependency under the registry's
@@ -13997,7 +14008,27 @@ Table of Contents
    no requirement from the substrate contract
    ([I-D.draft-mcguinness-mission-substrate]), which is informative.
 
-16.  Security Considerations
+16.  Implementation Considerations
+
+   This section states two requirements: approval idempotency and the
+   retention of the Mission Record.
+
+16.1.  Approval Idempotency
+
+   The record's approval_event_id (Section 6.3.4) is the approval
+   idempotency key: a retried or duplicate delivery of the same approval
+   decision (a replayed callback, a double-submitted consent form, a
+   retried standing-consent activation) MUST NOT create a second
+   Mission, and the AS deduplicates on this identifier.
+
+16.2.  Audit Horizon
+
+   The *audit horizon* is the deployment-declared retention window for
+   the Mission Record and its evidence: at least the Mission's lifetime
+   plus a declared post-expiry period.  A deployment retains a
+   terminated Mission's record for its audit horizon.
+
+17.  Security Considerations
 
    The security considerations of OAuth 2.0 (Section 10 of [RFC6749]),
    the OAuth 2.0 Security Best Current Practice [RFC9700], Rich
@@ -14008,9 +14039,9 @@ Table of Contents
    those of DPoP (Section 11 of [RFC9449]) and mutual TLS (Section 7 of
    [RFC8705]) apply where a token is sender-constrained.
 
-16.1.  Commitment and Consent Integrity
+17.1.  Commitment and Consent Integrity
 
-16.1.1.  Consent Binding
+17.1.1.  Consent Binding
 
    The security goal of this document is that a user's approval of a
    task bounds every token derived for it.  The Mission records
@@ -14078,7 +14109,7 @@ Table of Contents
    [I-D.draft-mcguinness-mission-approval-governance], whose closed
    manifest includes the approval basis, in a signed artifact.
 
-16.1.2.  Downgrade by Omission
+17.1.2.  Downgrade by Omission
 
    A token bearing equivalent authorization_details but no mission claim
    is governed by no Mission state, revocation, or consent commitment.
@@ -14098,17 +14129,17 @@ Table of Contents
    metadata rests on the retrieval protections of [RFC8414] and
    [RFC9728], whose security considerations apply.
 
-16.1.3.  Compromised or Over-Broad Derivation
+17.1.3.  Compromised or Over-Broad Derivation
 
    The AS is trusted to derive authority no broader than the Mission
    Intent.  Both Authority Set derivation modes (Section 5), a proposal
    narrowed to policy and a configured mapping, are mechanical rather
-   than free-form inference.  The recorded policy_version makes each
+   than free-form inference.  Where recorded, policy_version makes each
    Authority Set derivation auditable by naming the policy it ran under.
 
-16.2.  Agent-Specific Threats
+17.2.  Agent-Specific Threats
 
-16.2.1.  Prompt Injection and Data Exfiltration
+17.2.1.  Prompt Injection and Data Exfiltration
 
    This document assumes that an agent reading attacker-influenceable
    content can be prompt-injected.  Authority is fixed at the approval
@@ -14124,11 +14155,11 @@ Table of Contents
    authorized action.  The Mission Security Model
    ([I-D.draft-mcguinness-mission-security-model]) analyzes that
    residual; constraining it is the runtime layer's role
-   (Section 16.3.1), and even there it is bounded, not closed:
+   (Section 17.3.1), and even there it is bounded, not closed:
    preventing misuse of data within the authorized scope needs an
    information-flow layer this document does not define.
 
-16.2.2.  Authority and Propagated Information
+17.2.2.  Authority and Propagated Information
 
    Issuance gating bounds escalation by token acquisition (Section 7.1,
    Section 5.4), and the same bound holds for information: an agent can
@@ -14141,9 +14172,9 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]) analyzes that
    coordination.
 
-16.3.  Enforcement Boundaries
+17.3.  Enforcement Boundaries
 
-16.3.1.  Issuance Scope and Runtime Enforcement
+17.3.1.  Issuance Scope and Runtime Enforcement
 
    This document governs Authority Set derivation and the issuance of
    authority: it bounds what authority a Mission yields, binds it to the
@@ -14204,7 +14235,7 @@ Table of Contents
    audience tokens (Section 5.4) keep gated and ungated authority from
    sharing one long-lived token.
 
-16.3.2.  Denial Detail Disclosure
+17.3.2.  Denial Detail Disclosure
 
    The mission_denial attribute and the [RFC9470]
    insufficient_user_authentication challenge (Section 9.1) each tell a
@@ -14220,7 +14251,7 @@ Table of Contents
    distinction.  Of the two values, insufficient_authority reveals
    least, and omitting the attribute reveals nothing.
 
-16.3.3.  Revocation Authority
+17.3.3.  Revocation Authority
 
    A deployment's policy can authorize no party to request a Mission's
    revocation (Section 10.2).  Under such a policy no external party can
@@ -14230,9 +14261,9 @@ Table of Contents
    authority by default, and the policy's choice does not remove the
    Mission Issuer's token-independent revocation means.
 
-16.4.  Credentials and Delegation
+17.4.  Credentials and Delegation
 
-16.4.1.  Token Theft
+17.4.1.  Token Theft
 
    Derived tokens are sender-constrained (DPoP [RFC9449] or mTLS
    [RFC8705]) where Section 7 and Section 8.2 require it.  A designation
@@ -14244,7 +14275,7 @@ Table of Contents
    by the Authority Set and the Mission lifetime regardless, but sender-
    constraint prevents replay by a different party.
 
-16.4.2.  Delegation and Chain Compromise
+17.4.2.  Delegation and Chain Compromise
 
    Delegation (Section 8) widens the set of parties holding Mission-
    derived authority.  Because authority only narrows down the chain, a
@@ -14289,7 +14320,7 @@ Table of Contents
    (Section 7.2) likewise keeps a stolen token from being designated or
    self-exchanged.
 
-16.4.3.  Composition and the Effective Ceiling
+17.4.3.  Composition and the Effective Ceiling
 
    Delegation depth (Section 8.4) resets at each cross-domain hop
    ([I-D.draft-mcguinness-oauth-mission-cross-domain]) and, where a
@@ -14302,7 +14333,7 @@ Table of Contents
    ([I-D.draft-mcguinness-mission-security-model]) analyzes the
    composition.
 
-16.4.4.  Client Attribution and Delegation Lineage
+17.4.4.  Client Attribution and Delegation Lineage
 
    Because this document keeps the ordinary [RFC9068] meaning of the
    client_id claim (Appendix C.3), a generic [RFC9068] resource server,
@@ -14318,7 +14349,7 @@ Table of Contents
    tokens; Section 9.1 states what a resource server may not infer or
    route on client_id.
 
-16.4.5.  Signing and Key Rotation
+17.4.5.  Signing and Key Rotation
 
    The mission claim and authorization_details are covered by the AS's
    signature on the [RFC9068] JWT, so their integrity reduces to the
@@ -14326,11 +14357,10 @@ Table of Contents
    specifies.
 
    Verification for audit outlives validity: keeping a key resolvable
-   for the audit horizon (Section 6.3.4) of every Mission whose tokens
-   it signed lets an auditor verify those tokens later.  A companion
-   that anchors a longer-lived artifact to the same keys (a status
-   assertion, a Mandate, registered evidence) states its own retention
-   bound.
+   for the audit horizon (Section 16.2) of every Mission whose tokens it
+   signed lets an auditor verify those tokens later.  A companion that
+   anchors a longer-lived artifact to the same keys (a status assertion,
+   a Mandate, registered evidence) states its own retention bound.
 
    Revocation for a known or suspected compromise is distinct from
    routine retirement: the issuer publishes the compromised key as
@@ -14347,7 +14377,7 @@ Table of Contents
    high-volume token signing.  Verification is kid-indexed, so this
    needs no wire change.
 
-17.  Privacy Considerations
+18.  Privacy Considerations
 
    The privacy considerations of Section 13 of [RFC9396], Section 8 of
    [RFC9126], and Section 6 of [RFC9068] apply to this document, as do
@@ -14366,7 +14396,7 @@ Table of Contents
    *  minimizing status and introspection disclosures to authorized
       callers (Section 9.2.1).
 
-17.1.  Mission Identifier Correlation
+18.1.  Mission Identifier Correlation
 
    This document carries a single canonical Mission Identifier on every
    derived token, and cross-domain projection
@@ -14388,7 +14418,7 @@ Table of Contents
    does not define them.  A deployment that carries the canonical
    Mission Identifier on the wire accepts this correlation.
 
-17.2.  Token Payload Disclosure
+18.2.  Token Payload Disclosure
 
    The carried constraints and a multi-resource Authority Set disclose
    the shape of the task and its business bounds (for example, an amount
@@ -14397,11 +14427,11 @@ Table of Contents
    carries only the entries the consuming resource server needs, as
    Section 2.3 of [RFC9700] recommends (Section 7.3).
 
-17.3.  Intent Retention and Anchor Disclosure
+18.3.  Intent Retention and Anchor Disclosure
 
    The Mission Record's Intent members (goal, task_bounds) are personal-
    data sinks: they carry whatever task description the user supplied,
-   and their retention and erasure follow Section 17.5.
+   and their retention and erasure follow Section 18.5.
 
    The integrity anchors are unsalted commitments: a party holding a
    candidate Intent can confirm it against intent_hash, and a candidate
@@ -14409,7 +14439,7 @@ Table of Contents
    content each anchor is therefore a disclosure channel, and
    deployments treat it as one when the Intent itself is sensitive.
 
-17.4.  Third-Party Data Subjects
+18.4.  Third-Party Data Subjects
 
    A task can be about a person who holds no Mission role: in a
    background check, the employer's agent queries a registrar about a
@@ -14452,19 +14482,19 @@ Table of Contents
    Whatever the member, it:
 
    *  persists on the Mission Record for its audit horizon
-      (Section 6.3.4);
+      (Section 16.2);
 
-   *  concentrates at the AS with the record (Section 17.5); and
+   *  concentrates at the AS with the record (Section 18.5); and
 
    *  if committed, is confirmable through the unsalted anchors by any
-      party holding a candidate value (Section 17.3).
+      party holding a candidate value (Section 18.3).
 
    Referencing a third party through resource-scoped or pseudonymous
    identifiers, rather than identifying prose, minimizes this exposure.
    An opaque identifier is minimization, not anonymity, and personal-
    data obligations follow it.
 
-17.5.  Mission Record and Evidence Access
+18.5.  Mission Record and Evidence Access
 
    The Mission Record concentrates the task, its authority, and its
    principals at the AS.  Every evidence artifact joins on the Mission
@@ -14483,7 +14513,7 @@ Table of Contents
    auditable: reading a Mission's evidence is a privileged operation,
    not a byproduct of holding a Mission reference.  Retention and
    erasure are deployment policy, bounded below by the audit horizon
-   (Section 6.3.4).
+   (Section 16.2).
 
    Where approval-event evidence was registered under the audit
    transparency profile ([I-D.draft-mcguinness-mission-audit]), its
@@ -14493,7 +14523,7 @@ Table of Contents
    operational Mission Record and its audit-horizon retention floor
    untouched.
 
-18.  Internationalization Considerations
+19.  Internationalization Considerations
 
    Mission Intent prose (goal, task_bounds) is human-readable
    disclosure. goal_lang (Section 4) declares the language of that prose
@@ -14522,9 +14552,9 @@ Table of Contents
       Localizing how authority is explained is the approval surface's
       duty under Section 6.1, not a property of the committed set.
 
-19.  IANA Considerations
+20.  IANA Considerations
 
-19.1.  OAuth Parameters Registration
+20.1.  OAuth Parameters Registration
 
    This document requests registration of the following in the "OAuth
    Parameters" registry:
@@ -14574,7 +14604,7 @@ Table of Contents
    the WWW-Authenticate scheme ([RFC6750], Section 9.1), for which no
    IANA registry exists; no action is required for it.
 
-19.2.  OAuth Extensions Error Registration
+20.2.  OAuth Extensions Error Registration
 
    This document requests registration of the following in the "OAuth
    Extensions Error" registry [RFC6749]:
@@ -14595,7 +14625,7 @@ Table of Contents
    submission from missing or untrusted evidence, and remedy each
    differently.
 
-19.3.  JSON Web Token Claims Registration
+20.3.  JSON Web Token Claims Registration
 
    This document requests registration of the following in the "JSON Web
    Token Claims" registry:
@@ -14617,7 +14647,7 @@ Table of Contents
    this document translates into authorization.  The two claim names do
    not collide in that registry.
 
-19.4.  OAuth Token Introspection Response Registration
+20.4.  OAuth Token Introspection Response Registration
 
    This document requests registration of the following in the "OAuth
    Token Introspection Response" registry ([RFC7662]):
@@ -14632,7 +14662,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 9.2
 
-19.5.  OAuth Authorization Server Metadata Registration
+20.5.  OAuth Authorization Server Metadata Registration
 
    This document requests registration of the following in the "OAuth
    Authorization Server Metadata" registry ([RFC8414]):
@@ -14646,7 +14676,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 12
 
-19.6.  OAuth Protected Resource Metadata Registration
+20.6.  OAuth Protected Resource Metadata Registration
 
    This document requests registration of the following in the "OAuth
    Protected Resource Metadata" registry ([RFC9728]):
@@ -14660,7 +14690,7 @@ Table of Contents
 
    *  Specification Document(s): this document, Section 13
 
-19.7.  Mission Lifecycle States Registry
+20.7.  Mission Lifecycle States Registry
 
    IANA is requested to create the "Mission Lifecycle States" registry.
    The registration policy is Specification Required [RFC8126].
@@ -14673,7 +14703,7 @@ Table of Contents
    *  a Terminal value of no, consistent with the transitions the
       registrant's specification defines (a no state admits a further
       transition; terminated is the one terminal state, and a further
-      way for a Mission to end is a termination reason, Section 19.8);
+      way for a Mission to end is a termination reason, Section 20.8);
       and
 
    *  a Semantics sentence precise enough to distinguish the state from
@@ -14728,9 +14758,9 @@ Table of Contents
    Each further document that defines a lifecycle state requests that
    state's registration in its own IANA considerations.  A Designated
    Expert MUST reject a further state registered as terminal: a further
-   way for a Mission to end is a termination reason (Section 19.8).
+   way for a Mission to end is a termination reason (Section 20.8).
 
-19.8.  Mission Termination Reasons Registry
+20.8.  Mission Termination Reasons Registry
 
    IANA is requested to create the "Mission Termination Reasons"
    registry.  The registration policy is Specification Required
@@ -14787,7 +14817,7 @@ Table of Contents
    Each further document that defines a termination reason requests that
    reason's registration in its own IANA considerations.
 
-19.9.  Mission Intent Members Registry
+20.9.  Mission Intent Members Registry
 
    IANA is requested to create the "Mission Intent Members" registry.
    The registration policy is Specification Required [RFC8126].
@@ -14864,9 +14894,9 @@ Table of Contents
    Each further document that defines a Mission Intent member requests
    that member's registration in its own IANA considerations.
 
-20.  References
+21.  References
 
-20.1.  Normative References
+21.1.  Normative References
 
    [I-D.draft-ietf-oauth-rar-metadata-remediation]
               Zehavi, Y., "OAuth 2.0 RAR Metadata and Error
@@ -15036,7 +15066,7 @@ Table of Contents
               DOI 10.17487/RFC9728, April 2025,
               <https://www.rfc-editor.org/rfc/rfc9728>.
 
-20.2.  Informative References
+21.2.  Informative References
 
    [AuthZEN.ARAP]
               OpenID Foundation, "OpenID AuthZEN Access Request and
@@ -15513,7 +15543,7 @@ A.4.  Stage 4: Resource Server Refusal
    500.00 USD, so the ERP refuses it from the token alone as outside the
    carried authority (Section 9.1).  This deployment accepts the agent
    learning that more authority needs a new approval or an expansion
-   (Section 16.3.2), so the challenge carries mission_denial:
+   (Section 17.3.2), so the challenge carries mission_denial:
 
    HTTP/1.1 403 Forbidden
    WWW-Authenticate: DPoP error="insufficient_scope",
@@ -15785,7 +15815,7 @@ C.2.  Non-Goals
    *  *Semantic / intent verification.* This document does not evaluate
       whether a runtime action serves the Mission's purpose beyond
       matching the approved authorization_details and constraints; per-
-      action evaluation is the runtime layer's role (Section 16.3.1).
+      action evaluation is the runtime layer's role (Section 17.3.1).
       Verifying an agent's declared reasoning against the task is a
       further attestation problem outside both layers.
 
@@ -15839,7 +15869,7 @@ C.2.  Non-Goals
       disclosure privilege (Section 7.8, Section 9.2.1), not on every
       token by default.  Pairwise or unlinkable presentation of Mission-
       bound authority works against the identifier and is therefore
-      future work (Section 17.1).
+      future work (Section 18.1).
 
 C.3.  Client Identification in Delegated Tokens
 
@@ -16043,6 +16073,24 @@ Appendix E.  Document History
    [[ To be removed from the final specification ]]
 
    -02
+
+   *  Mission Record names its required members, and every other member
+      is optional or defined by the profile that uses it. activation,
+      activation_actor, and root_commitment are optional for direct,
+      with implied values that a present member must match, and are
+      defined in Standing-Consent Bases. policy_version is optional, and
+      required where a feature such as standing-consent recency depends
+      on it.  Approval procedure moves out of the member definitions to
+      Preparing the Approval and Authority Sources; the policy
+      adjudication rules move to Standing-Consent Bases; the
+      submission_evidence explanation moves to Intent Submission
+      Evidence; and approval idempotency and the audit horizon move to a
+      new Implementation Considerations section.  The unrecognized-value
+      rule for approval_basis.type, adjudication.kind, and
+      authority_source.type is stated once, and a consumer neither
+      interprets nor removes a record member it does not recognize.
+      Approval Governance defines governance_record (#1912, D1047,
+      D1048).
 
    *  Editorial, no requirement change: citations elsewhere in the
       document name the subsection that states the cited rule, not its
