@@ -135,6 +135,9 @@ let svcXJkt: string;
 let svcCKeys: Keys; // a fourth client, svc-c, a second ai_agent delegate
 let svcCDpopKeys: Keys;
 let svcCJkt: string;
+/** The public client's DPoP keys (#1901). */
+let svcPubDpopKeys: Keys;
+let svcPubJkt: string;
 let remoteJwks: ReturnType<typeof createRemoteJWKSet>;
 
 /** A continuation lineage: an active Mission + a grant anchor + an initial handle. */
@@ -338,6 +341,8 @@ interface ExchangeFields {
   noDpop?: boolean;
   /** Replaces the default fresh proof (the freshness cases). */
   makeProof?: (extra: Record<string, unknown>) => Promise<string>;
+  /** Authenticate as a public client: `client_id` only, no client assertion. */
+  publicClient?: boolean;
 }
 
 /** POST /token with the token-exchange grant + private_key_jwt + DPoP (nonce retry). */
@@ -355,11 +360,15 @@ async function tokenExchange(f: ExchangeFields, t: Target = { issuer: ISSUER, cl
   if (f.actorTokenType !== undefined) params.actor_token_type = f.actorTokenType;
   const resources = f.resource === null ? [] : [f.resource ?? RESOURCE].flat();
   const send = async (extra: Record<string, unknown> = {}): Promise<Response> => {
-    const body = new URLSearchParams({
-      ...params,
-      client_assertion: await clientAssertion(t),
-      client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
-    });
+    const body = new URLSearchParams(
+      f.publicClient
+        ? { ...params, client_id: t.clientId ?? "ap-agent" }
+        : {
+            ...params,
+            client_assertion: await clientAssertion(t),
+            client_assertion_type: "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+          },
+    );
     for (const r of resources) body.append("resource", r);
     for (const [name, value] of f.repeated ?? []) body.append(name, value);
     return fetch(htu, {
@@ -417,10 +426,12 @@ beforeAll(async () => {
     jwks: { keys: [{ ...(await exportJWK(keys.publicKey)), kid: `${clientId}-auth`, alg: "ES256" }] },
   });
 
+  svcPubDpopKeys = await generateKeyPair("ES256", { extractable: true });
+  svcPubJkt = await calculateJwkThumbprint(await exportJWK(svcPubDpopKeys.publicKey));
   CROSS_DOMAIN_CLIENTS.push(
     ...TOPOLOGY.crossDomainClients,
     { targetAs: OTHER_RAS, clientId: "ap-agent", destinationClientId: "ap-agent" },
-    ...["svc-b", "svc-x", "svc-c"].flatMap((c) => [
+    ...["svc-b", "svc-x", "svc-c", "svc-pub"].flatMap((c) => [
       { targetAs: RAS_AUD, clientId: c, destinationClientId: c },
       { targetAs: OTHER_RAS, clientId: c, destinationClientId: c },
     ]),
@@ -437,11 +448,19 @@ beforeAll(async () => {
       await exchangeClient("svc-b", svcKeys),
       await exchangeClient("svc-x", svcXKeys),
       await exchangeClient("svc-c", svcCKeys),
+      // A public client (#1901): eligible by profile, authenticated by no method.
+      {
+        client_id: "svc-pub",
+        grant_types: [TOKEN_EXCHANGE_GRANT_TYPE],
+        response_types: [],
+        redirect_uris: [],
+        token_endpoint_auth_method: "none",
+      },
     ],
     // The AS-asserted actor profiles the delegation policies match: the
     // ceiling's payments entries are delegable to ai_agent actors through
     // depth 2 (config/policy.json), and svc-x is a class none names.
-    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service", "svc-c": "ai_agent" },
+    actorProfiles: { "ap-agent": "ai_agent", "svc-b": "ai_agent", "svc-x": "service", "svc-c": "ai_agent", "svc-pub": "ai_agent" },
     continuationAssertionIssuers: [
       // Trusted for the root hops (this AS) and the child hops (RAS_AUD).
       { iss: CAI, jwks: { keys: [caiPub] }, attestsFor: [ISSUER, RAS_AUD] },
@@ -1398,6 +1417,23 @@ describe("continuation delegation constraints (@spec mission#delegation-constrai
   const sideEffects = (missionId: string) => ({
     hops: as.continuationStore.handlesForMission(missionId).length,
     derivations: as.kernel.get(missionId)?.derivation_count,
+  });
+
+  it("a public client continuing at Mission delegation depth 1 is refused invalid_client, with no hop and no derivation, where a private_key_jwt client is issued (#1901)", async () => {
+    const { missionId, handle: root } = newLineage("apev-d-pub", {}, MISSION_EXP, {}, []);
+    const before = sideEffects(missionId);
+    const ica = await mintICA(root, { act: { iss: ISSUER, sub: "svc-pub" }, cnfJkt: svcPubJkt });
+    const res = await tokenExchange(
+      { subjectToken: ica, publicClient: true },
+      { issuer: ISSUER, clientKey, clientId: "svc-pub", dpopKeys: svcPubDpopKeys },
+    );
+    const body = (await res.json()) as { error?: string; error_description?: string };
+    expect(res.status, JSON.stringify(body)).toBe(401);
+    expect(body.error).toBe("invalid_client");
+    expect(sideEffects(missionId)).toEqual(before);
+    // Control: a private_key_jwt client in the same position is issued.
+    const hB = await granted(await exchangeAs(root, "B"));
+    expect(hB.details.map((d) => d.resource)).toEqual([RESOURCE]);
   });
 
   it("max_depth 1: B continuing its own hop (A->B->B) stays at Mission delegation depth 1 and issues, carrying the entry", async () => {

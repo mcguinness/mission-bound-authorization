@@ -817,6 +817,15 @@ export async function handleTokenExchangeGrant(
   // where that entry's eligibility defers to policy, the current
   // delegation-authorization policy AND every retained list must permit.
   const missionDelegationDepth = flattenActChain(onwardAct).length - 1;
+  // @spec mission#delegated-exchange (#1901, D1037): at Mission delegation
+  // depth 1 or more the authenticated client acts as a delegate, and "This
+  // document does not support a public client as a delegate". Refused as the
+  // designated redemption refuses one, before any authority is read for it or
+  // anything is counted.
+  if (missionDelegationDepth > 0 && (client.clientAuthMethod === undefined || client.clientAuthMethod === "none")) {
+    txError(ctx, 401, "invalid_client", "a delegate requires client authentication; a public client is not a delegate");
+    return;
+  }
   const delegate: DelegateCandidate = {
     sub: client.clientId,
     assertedProfile: opts.kernel.actorProfile(client.clientId),
