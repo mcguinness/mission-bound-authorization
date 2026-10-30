@@ -1917,63 +1917,75 @@ The subject-representation discipline is the same in every source:
 A deployment MUST publish a statement declaring the minimum
 approval-authentication strength (the approval-authentication floor)
 it enforces for Missions whose derived Authority Set carries high-risk
-authority, and the deployment scope it applies to. High-risk
-authority means irreversible, external-commitment, or
+authority, and the deployment scope it applies to. This document
+requires no particular serialization.
+
+High-risk authority means irreversible, external-commitment, or
 privileged-administration actions under the deployment's
 classification, or a consumption bound
-({{I-D.draft-mcguinness-mission-metering}}). This document requires
-no particular serialization.
+({{I-D.draft-mcguinness-mission-metering}}).
+
+#### Requested Strength {#approval-requested-strength}
 
 For the direct flow, a client MAY additionally request an
 approval-authentication strength on the authorization request using
 the `acr_values` and `max_age` parameters defined in Section 3.1.2.1
-of {{OpenID.Core}}. In a Mission approval interaction these
-parameters describe the requested authentication of the
-**Approver**, not of the token's Subject, who can be a different
-principal ({{subject-establishment}}).
+of {{OpenID.Core}}.
 
-Requesting these parameters implies nothing about the authentication
-claims of an issued token, which describe the token's Subject, not the
-Approver ({{token-authentication-lifetime}}); when the Approver is the
+In a Mission approval interaction, these parameters describe the
+requested authentication of the **Approver**, not of the token's
+Subject, who can be a different principal ({{subject-establishment}}).
+Requesting them implies nothing about the authentication claims of an
+issued token: those claims describe the token's Subject, not the
+Approver ({{token-authentication-lifetime}}). When the Approver is the
 Subject, one authentication event can back both.
 
 The Approver's authentication satisfies `acr_values` when it matches
-any one listed value under the deployment's own policy mapping (this
-document defines no global ordering of `acr` values); `max_age`
-bounds the elapsed time since that authentication.
+any one listed value under the deployment's own policy mapping. This
+document defines no global ordering of `acr` values. The `max_age`
+parameter bounds the elapsed time since that authentication.
 
 Approval authentication for a high-risk Mission MUST satisfy both the
 published floor and, where the client requested one, the
 `acr_values`/`max_age` carriage above; the floor is never relaxed by
 a narrower or absent client request.
 
+#### OpenID Connect Requests {#approval-openid-connect}
+
 This document does not require an AS to support OpenID Connect
-{{OpenID.Core}}. An authorization request whose `scope` includes
-`openid` asks for an ID Token about the End-User the approval
-interaction authenticates, who is the Approver. When the Approver is
-not the Subject established at step 2 of {{direct-approval-steps}}, the AS
-MUST refuse such a request, without creating the Mission, with the
-`invalid_scope` error code ({{Section 4.1.2.1 of RFC6749}}). When the
-Approver is not the Subject, whether or not `openid` was requested,
-the AS MUST NOT issue an ID Token, serve UserInfo, or establish an
-authentication session for the Subject solely as a result of the
-Approver's authentication or approval.
+{{OpenID.Core}}.
+
+An authorization request whose `scope` includes `openid` asks for an
+ID Token about the End-User the approval interaction authenticates,
+who is the Approver. When the Approver is not the Subject established
+at step 2 of {{direct-approval-steps}}, the AS MUST refuse such a
+request, without creating the Mission, with the `invalid_scope` error
+code ({{Section 4.1.2.1 of RFC6749}}).
+
+When the Approver is not the Subject, whether or not `openid` was
+requested, the AS MUST NOT issue an ID Token, serve UserInfo, or
+establish an authentication session for the Subject solely as a
+result of the Approver's authentication or approval.
 
 When the Approver is the Subject, the `openid` scope value and the
 `acr_values` and `max_age` parameters keep their {{OpenID.Core}}
 meaning, which then describes the same authentication this document
-requires. In every approval interaction, the `prompt`, `login_hint`,
-and `id_token_hint` parameters concern the Approver.
+requires.
+
+In every approval interaction, the `prompt`, `login_hint`, and
+`id_token_hint` parameters concern the Approver.
+
+#### Achieved Authentication {#approval-achieved-authentication}
 
 The authentication actually achieved for the approval event (`acr`,
 `amr`, and `auth_time`, in the sense {{RFC9470}} and {{OpenID.Core}}
-define them) is approval-time provenance, not requested Intent: this
-document never records it as, and an AS MUST NOT read it back from, a
-Mission Intent member.
+define them) is approval-time provenance, not requested Intent. This
+document never records it as a Mission Intent member, and an AS
+MUST NOT read it back from a Mission Intent member.
 
 Where a deployment records Consent Evidence, the achieved values
 belong in its `authentication_context` member
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}); this
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
 document defines no Mission Record member for them.
 
 ### Single Accountable Approver {#multi-party-approval}
