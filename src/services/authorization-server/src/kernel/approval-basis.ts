@@ -91,6 +91,10 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
  * and `sub` are `consent_principal`'s; `root_commitment` when it is the
  * record's `authority_hash`. A member this check does not recognize inside
  * `activation` or `activation_actor` is not interpreted.
+ *
+ * `MissionKernel.insertRecord`, the record-creation funnel, calls it for every
+ * `direct` record before any write, so the AS refuses a contradicting record
+ * at creation whichever path built it.
  */
 export function assertDirectBasisConsistent(record: DirectBasisRecord): void {
   const basis = directBasisOf(record);
