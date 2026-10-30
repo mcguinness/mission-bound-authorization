@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         29 October 2026
-Expires: 2 May 2027
+Intended status: Standards Track                         30 October 2026
+Expires: 3 May 2027
 
 
                Mission-Bound Authorization for OAuth 2.0
@@ -64,7 +64,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -2349,8 +2349,10 @@ Table of Contents
       own right (the sub model of [RFC9068]), not only the task's
       beneficiary.
 
-   *  The actor model does not vary by source: client_id names the
-      Agent, and delegates are carried in the act chain (Section 12).
+   *  The actor model does not vary by source: the Mission Record's
+      client_id names the Agent, a token's client_id names the client
+      that requested it (Section 8.4), and delegates are carried in the
+      act chain (Section 12).
 
 6.8.  Approver Authentication Strength
 
@@ -8616,6 +8618,12 @@ Appendix F.  Document History
       requirement; a companion's containment overlay or suspension
       schedule is issuer-held state associated with the Mission, outside
       the record (#1873, #1879, D1014).
+
+   *  Editorial correction, no requirement change: Authority Sources
+      says the Mission Record's client_id names the Agent and a token's
+      client_id names the client that requested it, as Token Claims
+      states, so it no longer reads as saying a delegated token's
+      client_id names the Agent (#1851, D971).
 
    -01
 
