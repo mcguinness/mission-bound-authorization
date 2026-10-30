@@ -2908,7 +2908,7 @@ describe("invalid or unacceptable subject tokens at the async exchange and the d
   });
 });
 
-describe("a fully contained family is refused after rotation, within the owner's boundary (#914 ruling 3)", () => {
+describe("a fully contained family is refused before rotation, within the owner's boundary (#914 ruling 3; #1377 review of #1891)", () => {
   const contain = (missionId: string, eventId: string, remove: Array<{ resource: string; actions?: string[] }>) =>
     as.kernel.contain(missionId, {
       event: {
@@ -2959,9 +2959,11 @@ describe("a fully contained family is refused after rotation, within the owner's
     expect(refusedA.result.status, JSON.stringify(bodyA)).toBe(400);
     expect(bodyA.error).toBe("invalid_grant");
     expect(bodyA.access_token).toBeUndefined();
-    // Refused after rotation, at the `rar` hook: a rotated token was saved.
-    // The boundary permits this ordering; it does not require it.
-    expect(refusedA.saved).toBe(1);
+    // Refused before rotation: the refresh pre-check raises the projection's
+    // refusal before consumption, so no rotated token is saved (#1377 review
+    // of #1891). The boundary permitted the earlier ordering at the `rar`
+    // hook; it did not require it.
+    expect(refusedA.saved).toBe(0);
 
     const okB = await refreshFamily(b.refresh_token);
     const bodyB = (await okB.json()) as { authorization_details?: unknown };

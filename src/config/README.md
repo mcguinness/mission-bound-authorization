@@ -443,6 +443,6 @@ The loader refuses to start on a declaration naming a missing, malformed or
 mismatched document, or a domain listing a `constraints` key or member the AS
 does not implement. Every path that issues an entry of the type applies the
 resolved declaration (`src/docs/resource-access-transformation-capabilities.md`,
-section 1): an entry outside the domain is carried only as approved,
-containment that would remove some of its actions contains it whole, and it is
-never projected to a Resource AS.
+section 1): an entry outside the domain is carried only as approved, is not
+issued once containment has removed some of its actions (Mission Status still
+reports its remainder), and is never projected to a Resource AS.

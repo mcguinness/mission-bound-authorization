@@ -67,14 +67,26 @@ The declaration governs every path that issues an entry of the type
   Token Exchange, refresh and code-exchange narrowing, dispatch handoff,
   deferred approval and transaction authorization apply the subset relation
   under it, equality where narrowing is not permitted for the pair;
-- automatic projection: the effective set itself (`effectiveEntriesWithOrigin`,
-  `services/authorization-server/src/kernel/kernel.ts`) contains an entry whole
-  where containment would remove some of its actions and the declaration does
-  not permit narrowing it, as a selector finer than its entry already
-  over-contains (D606). Every refresh, code, device, child, dispatch,
-  deferred, successor and continuation mint that projects or copies the
-  effective set therefore issues no modified entry, and a Mission left with
-  none is refused (`authority_contained`; `invalid_grant` at refresh);
+- automatic projection: the effective set is reported as it stands, keeping a
+  partially contained entry's uncontained remainder on Mission Status and
+  introspection (Containment's Visibility). Issuance decides separately which
+  effective entries it may carry: each must equal its approved origin, or the
+  declaration must permit narrowing the origin to it (`issuableAuthoritySet`,
+  `services/authorization-server/src/kernel/kernel.ts`; for an effective set
+  from a possibly remote source, `carriedUnder` against the approved set). The
+  child, dispatch, deferred, successor, attenuation-root and carryover mints
+  copy that set, the deferred-approval and transaction-authorization gates
+  compare against it, and the derivation gate reads it, so a Mission left with
+  nothing issuance may carry is refused `authority_contained`, before a
+  refresh token is consumed. The code, refresh, device and resumed-delivery
+  responses, the async-delegation family, the delegation handle and the
+  dispatch handoff gate the credential's projected output per presented entry
+  (`projectThroughEffectiveUnder`, `kernel/derive.ts`): its fragments where
+  narrowing is permitted, otherwise the entry as it stands where the effective
+  set still holds it unchanged, otherwise nothing;
+- governed-policy activation: a model output that removes some of an entry's
+  actions is refused (`narrowing_not_permitted`) where the declaration does
+  not permit narrowing the entry, before anything is committed;
 - the delegated exchanges carry a projected entry only where narrowing is
   permitted for it or it equals the presented one;
 - cross-domain issuance: audience projection to a Resource AS counts as

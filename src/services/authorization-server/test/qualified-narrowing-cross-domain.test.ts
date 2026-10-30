@@ -8,8 +8,8 @@
  * grant conveys an entry, changed (by containment, or by the conveyed copy
  * dropping `delegation`) or not, only where the declaration permits narrowing
  * it. A grant left with none is refused: by the derivation gate
- * (`authority_contained`) where containment leaves the Mission no entry, before
- * anything is reserved, and otherwise at signing. Each case runs under a kernel declaring narrowing in full, one with
+ * (`authority_contained`) where containment leaves the Mission no entry that
+ * issuance may carry, before anything is reserved, and otherwise at signing. Each case runs under a kernel declaring narrowing in full, one with
  * narrowing undeclared, and one whose narrowing domain covers `exact` entries
  * only.
  *
@@ -158,7 +158,8 @@ describe("audience projection to a Resource AS counts as narrowing: a grant conv
     expect(domain.effectiveAuthoritySet(domain.get(partial.id) as MissionRecord)).toEqual([
       { ...PREFIX, actions: PREFIX.actions.filter((a) => a !== LIST) },
     ]);
-    await expect(conveyed(domain, partial.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+    // Nothing is left that issuance may carry: the derivation gate refuses first.
+    await expect(conveyed(domain, partial.id)).rejects.toMatchObject({ reason: "authority_contained" });
 
     const full = kernelWith(NARROWING_IN_FULL);
     const m = approve(full, [structuredClone(PREFIX)]);
@@ -173,5 +174,60 @@ describe("audience projection to a Resource AS counts as narrowing: a grant conv
     const undeclared = kernelWith(NARROWING_UNDECLARED);
     const u = approve(undeclared, [structuredClone(POLICY)]);
     await expect(conveyed(undeclared, u.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
+  });
+});
+
+/** The derivation gate's outcome: "derivable", or the refusal's reason. */
+function gateOutcome(kernel: MissionKernel, missionId: string): string {
+  try {
+    kernel.gateDerivation(missionId);
+    return "derivable";
+  } catch (e) {
+    return (e as { reason?: string }).reason ?? String(e);
+  }
+}
+
+describe("the effective set keeps a partially contained entry's remainder; issuance carries it only where the declared narrowing permits it (@spec containment#visibility, resource-access#qualified-narrowing, #1377, D1025)", () => {
+  it("narrowing undeclared: the reported set keeps the remainder, the issuable set omits it, and derivation is refused authority_contained; in full, both carry the remainder and derivation proceeds", () => {
+    const undeclared = kernelWith(NARROWING_UNDECLARED);
+    const u = approve(undeclared, [structuredClone(PLAIN)]);
+    const [approved] = u.authority_set as [AuthorityEntry];
+    contain(undeclared, u.id, R_PLAIN, [LIST]);
+    const record = undeclared.get(u.id) as MissionRecord;
+    expect(undeclared.effectiveAuthoritySet(record)).toEqual([{ ...approved, actions: [READ] }]);
+    expect(undeclared.issuableAuthoritySet(record)).toEqual([]);
+    expect(gateOutcome(undeclared, u.id)).toBe("authority_contained");
+
+    const full = kernelWith(NARROWING_IN_FULL);
+    const f = approve(full, [structuredClone(PLAIN)]);
+    contain(full, f.id, R_PLAIN, [LIST]);
+    const fr = full.get(f.id) as MissionRecord;
+    expect(full.issuableAuthoritySet(fr)).toEqual([{ ...(f.authority_set[0] as AuthorityEntry), actions: [READ] }]);
+    expect(gateOutcome(full, f.id)).toBe("derivable");
+  });
+
+  it("an untouched entry stays issuable beside one the declaration does not let issuance carry, and derivation proceeds", () => {
+    const undeclared = kernelWith(NARROWING_UNDECLARED);
+    const m = approve(undeclared, [structuredClone(PLAIN), structuredClone(POLICY)]);
+    const [plain, policy] = m.authority_set as [AuthorityEntry, AuthorityEntry];
+    contain(undeclared, m.id, R_PLAIN, [LIST]);
+    const record = undeclared.get(m.id) as MissionRecord;
+    expect(undeclared.effectiveAuthoritySet(record)).toEqual([{ ...plain, actions: [READ] }, policy]);
+    expect(undeclared.issuableAuthoritySet(record)).toEqual([policy]);
+    expect(gateOutcome(undeclared, m.id)).toBe("derivable");
+  });
+
+  it("under an exact-only domain, a partially contained exact entry is issuable narrowed, and a partially contained prefix entry is reported but not issuable", () => {
+    const domain = kernelWith(exactOnly());
+    const m = approve(domain, [structuredClone(PLAIN), structuredClone(PREFIX)]);
+    const [plain, prefix] = m.authority_set as [AuthorityEntry, AuthorityEntry];
+    contain(domain, m.id, R_PLAIN, [LIST]);
+    contain(domain, m.id, R_PREFIX, [LIST]);
+    const record = domain.get(m.id) as MissionRecord;
+    expect(domain.effectiveAuthoritySet(record)).toEqual([
+      { ...plain, actions: [READ] },
+      { ...prefix, actions: [READ] },
+    ]);
+    expect(domain.issuableAuthoritySet(record)).toEqual([{ ...plain, actions: [READ] }]);
   });
 });
