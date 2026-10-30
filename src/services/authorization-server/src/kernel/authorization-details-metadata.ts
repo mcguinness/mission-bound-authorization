@@ -192,7 +192,7 @@ export const MISSION_RESOURCE_ACCESS_SCHEMA: Record<string, JsonValue> = {
         // Exact-string tool identities; an empty list admits no tool.
         allowed_tools: { type: "array", items: { type: "string", minLength: 1 } },
       },
-      // @spec mission#derivation-policy (issue #784) — CLOSED to
+      // @spec mission#authority-proposal (issue #784) — CLOSED to
       // SUPPORTED_CONSTRAINT_KEYS: an unsupported key is refused at intake,
       // not admitted then dropped at derivation.
       additionalProperties: false,
@@ -382,7 +382,7 @@ export function validateMissionResourceAccessSchema(entry: unknown): string | un
       return "constraints must be an object";
     }
     const c = e.constraints as Record<string, unknown>;
-    // @spec mission#derivation-policy (issue #784) — the member set is CLOSED
+    // @spec mission#authority-proposal (issue #784) — the member set is CLOSED
     // to SUPPORTED_CONSTRAINT_KEYS (the SAME declaration {@link
     // isAuthorityEntry} enforces at the config-load boundary): an entry
     // carrying a constraint this engine cannot compare is refused here,

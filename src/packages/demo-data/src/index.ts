@@ -2518,7 +2518,7 @@ export interface GovernedPolicy {
 }
 
 /**
- * @spec mission#derivation-policy (issue #784) — the OTHER typed ceiling
+ * @spec mission#subset (issue #784) — the OTHER typed ceiling
  * loader, serving `governed-policy.json` and `authority-sources.json`. Runs
  * the SAME two admission gates {@link parseCeilingEntry} runs for
  * `policy.json`/`ras-policy.json`: {@link isAuthorityEntry} (a `constraints`

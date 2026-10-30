@@ -54,6 +54,14 @@ normative:
       Internet-Draft: draft-mcguinness-oauth-mission-01
 
 informative:
+  I-D.draft-mcguinness-mission-architecture:
+    title: "An Architecture for Mission-Bound Authorization"
+    target: https://mcguinness.github.io/mission-bound-authorization/draft-mcguinness-mission-architecture.html
+    author:
+      -
+        ins: K. McGuinness
+        name: Karl McGuinness
+    date: 2026
   RFC6750:
   RFC8126:
   I-D.draft-niyikiza-oauth-attenuating-agent-tokens:
@@ -710,8 +718,8 @@ A Common Constraint definition fixes:
 
 A constraint's intersection rule applies where a derivation combines
 two bounds for the same key, as in the proposal and policy-ceiling
-example of the Derivation Policy appendix of
-{{I-D.draft-mcguinness-oauth-mission}}. A derivation need not run a
+example ({{I-D.draft-mcguinness-mission-architecture}}, Section
+"Derivation Rule Example"). A derivation need not run a
 particular intersection algorithm, and a ceiling whose specification
 defines a refusal rule is enforced by that rule, not silently
 intersected.
@@ -1758,6 +1766,9 @@ Omission-Equivalent Value is `false`.
 
 -01
 
+- Common Constraints points to the architecture document's Derivation
+  Rule Example, which carries the example the OAuth binding's
+  Derivation Policy appendix held. No requirement changed (#1892).
 - Scope Projection states the entry a requested `scope` value stands
   for, so one mapping serves both projection and the OAuth binding's
   scope-keyed configured mapping, and gives the identity case for

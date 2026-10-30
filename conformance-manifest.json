@@ -27,44 +27,44 @@
     "content_sha256": "49b65b4cc89ccb1aaf406b04873d381d9ea89916618296deb0987d5e54a5d8b3"
    },
    "draft-mcguinness-mission-runtime-oauth.md": {
-    "revision": "1ad300a59a32dc2d88ff8bb9aeb9ac353032e59a",
-    "content_sha256": "cc8617aaf61a34d8f501734344cafbdfaac8baee97f27c45af59af553c676b1a"
+    "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
+    "content_sha256": "5f3ef9caeea3f002939703cd4edcb347904f52342e914df27583050a473a85cf"
    },
    "draft-mcguinness-mission-substrate.md": {
-    "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
-    "content_sha256": "fad30b610b02d6830f5476fac4532af4f1bbfa8ff135fcc542ec054c6015d3b1"
+    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
+    "content_sha256": "f2b396959fa4779fe264efc023daab2313f5939d09590c060b452b2593aadf56"
    },
    "draft-mcguinness-oauth-mission-cross-org-delegation.md": {
     "revision": "48a30f5451f35abe44b0d6f15c1f91c0f0c5ca87",
     "content_sha256": "921c383cf8768d561e12d1b308d64e0e2e5bbc34a857f347fcbbf0a8d1d63243"
    },
    "draft-mcguinness-oauth-mission-cross-domain.md": {
-    "revision": "0411ee0fceb158da5e14f427dc8581deb9c14ba3",
-    "content_sha256": "d1fffe913dbd9ef23e768ac7b28a1575af348321f73965376dd9635be4f1fbf8"
+    "revision": "59c6b46b2fec08aba727ae3a4e49916379546d07",
+    "content_sha256": "3b0e17cee2fa13b891a498a016808851edc931af76d8c8d54fbee79ec03d368e"
    },
    "draft-mcguinness-oauth-mission-continuation.md": {
     "revision": "1199e650a853bb0006c2384c589157f263547a7e",
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "63c795f98124820f8ada478ee1aa138bffc433be",
-    "content_sha256": "68e551548c65361f188678d755a4f120344e1fcfd723c29028378a59de301d88"
+    "revision": "414cab3b308a32538d256ced5b18a2231dd1f9a4",
+    "content_sha256": "25f344685260fbf8b54502eafeb8c61bd68c447d60928da48b86f7ba1dcafd07"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
     "content_sha256": "1fd8352aefeab9c0e3b0cdd2c9ae44902823188dadc368bc3dd374c12730b9dd"
    },
    "draft-mcguinness-oauth-mission-status.md": {
-    "revision": "040c91142da925de4b9e32fbf358fdce2e9f402f",
-    "content_sha256": "05784187f2dc142cc3887e93d8f8b0eee9bcefe33b39efb3d7ff1f07119b1c98"
+    "revision": "92a67d4e062e07f82744cb146eb5a3e6fc1fd946",
+    "content_sha256": "e47c8deee7b1b3bb75355aeed4ae871acd4d2608fca1bfb512fb9ebb4d4386dd"
    },
    "draft-mcguinness-oauth-mission-management.md": {
     "revision": "cb963b585961949baf7fdfa82223b544cf8a4712",
     "content_sha256": "a975b4b5579699e3f3b5855589e2369b6bfb942e6a6aea20ffc9103b82b02420"
    },
    "draft-mcguinness-oauth-mission-template.md": {
-    "revision": "9f8e8aca8a6bd9b40e432e49183f6e22b6a54840",
-    "content_sha256": "7268d249b9685c5ed5f9739af2dee18f8a6b1c1c19b0a7e97c3fbb4bde4bd5c4"
+    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
+    "content_sha256": "e2b90083a5df6d0adb3cd212f1a48fbb62ae353d9f5be5ea19937b75fddbd4cd"
    },
    "draft-mcguinness-oauth-mission-transaction-authorization.md": {
     "revision": "b7c28f65dae86c9d9810630597e0ca0575520181",
@@ -87,8 +87,8 @@
     "content_sha256": "466ca49adc94e89990ca4106712b27b7b917d6c425ece61b9a9984094ca4d573"
    },
    "draft-mcguinness-oauth-mission-progressive.md": {
-    "revision": "35ee996a993777eda9aaadcf90eb690fe22d2efa",
-    "content_sha256": "6b1af63354697423fb6b73b8a3ddf1d592106c4835848f99c5a3a03299eda724"
+    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
+    "content_sha256": "c28c09703af09e7fd03362001a67590f9629113d7049c266aad5c8ce01bbe35b"
    },
    "draft-mcguinness-mission-orchestration.md": {
     "revision": "2a6a46507eb6ee83b70afe908d5a8e44b8686627",
@@ -99,8 +99,8 @@
     "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "4a904d2f0a0df0d87f8986fab437600736674163",
-    "content_sha256": "3eca33ca871a15671b3515010f5580f46000500880f176118e93e3eaa1a3bcef"
+    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
+    "content_sha256": "9ca2b5bb01c0f72848efcd4fb70fdb03d43d6795d0c03e5a5e5343302661b5c6"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "ec82149461dec8f4a5955f1a12f236366de06047",
-    "content_sha256": "6d69c4cbcdff9c4eb7aca3f81ff0d1dd9c247ad097beabb300c6fbc85e9da6ec"
+    "revision": "4b59db208ef26f6355215359974921375b90e13c",
+    "content_sha256": "19e1a71ccc86b98f03c8244d8a4c14341685ea292b0cfeb26516d9155a31603b"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
@@ -147,8 +147,8 @@
     "content_sha256": "62a8d5f78cc611ecd5273218b3543dbae583b80c0f4c4af6e2f9bf303f36d0b0"
    },
    "draft-mcguinness-oauth-mission-device-authorization.md": {
-    "revision": "7bf7805dfce06d10a22c0b14422f07a3751637fc",
-    "content_sha256": "0cf5d28c251f983b6739f42810e79f1e784fc35f029e2de7f5baf14889432579"
+    "revision": "547a8b55c39222e4177aa9ddfe7de47eb51d02fd",
+    "content_sha256": "25a6b946d364855f3857b3cb99b8c94df0854561d1c836b79efdf2af04084d25"
    },
    "draft-mcguinness-mission-discovery.md": {
     "revision": "1c6c3a3af40acf3df68c68969ab72c7134b8aee9",
@@ -300,6 +300,7 @@
    "child-delegation.direct-approval",
    "core.instance-context",
    "core.delegation",
+   "core.self-exchange",
    "runtime.instance-context",
    "runtime.credential-lifetime-freshness",
    "mas.instance-bound-join",
@@ -6253,7 +6254,7 @@
    "id": "core.authority-proposal.governed-client-token-request-not-reached",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-proposal",
-   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh, a self-exchange ({{self-exchange}}) or an exchange for a delegation designation ({{designation}}), needs no `mission_intent` under the second rule",
+   "text": "A token request under an existing Mission-bound grant, such as a narrowing refresh or a self-exchange ({{self-exchange}}), needs no `mission_intent` under the second rule",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -6270,7 +6271,7 @@
    "level": "endpoint",
    "coverage": "todo",
    "tests": [],
-   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work."
+   "notes": "D585 (#1448): ruled A. Tests for a governed narrowing refresh, a widening refusal and the supported exchange paths are #1448's implementation work. #1892 Stage 2a moved the designation example out of the quoted list; the general clause still covers a designation request, which the Designation section classifies as such a request."
   },
   {
    "id": "core.mission-claim-reservation.conforming-issuance-only",
@@ -7062,6 +7063,60 @@
     }
    ],
    "notes": "#1503 finding 12 (D620): dispatch and verification stay at step 6. Proved by dispatching at parse on the PAR form intake (the proposal-before-dispatch test fails on an unknown type beside an entry outside target_resources) and in the Request Object hook (the Request Object test fails on an unsupported type beside a proposal entry missing its resource)."
+  },
+  {
+   "id": "core.submission.step8-provenance-rendered",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Render the Intent, the Authority Set, and the material verified provenance for approval; a change to any of them before the decision is re-rendered and approved over the changed context",
+   "facet": "verified-provenance",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a submission presented evidence that verified, the approval rendering presents its normalized verified facts with the Intent and the Authority Set, and a change to those facts between rendering and decision is rendered again and approved over the changed context before a Mission is created"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-envelope.test.ts",
+     "name": "end-to-end verified facts on the Mission Record (@spec mission#intent-submission-evidence) > PAR-submitted evidence is verified, RENDERED to the Approver, and landed request-derived on submission_evidence — outside all anchors",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the provenance part of step 8; the Intent and Authority Set parts are rowed under approval-context-changes and approval-preparation. Partial: the witness asserts the page's 'Verified intent provenance' section and a verified fact value (admission.example). No test changes the verified facts between rendering and decision. The re-render clause applies (#1892 ruling 6, D1031): the reference's approval context omits submission_evidence, so a change to the verified facts alone is not re-rendered; #1897 tracks the fix and its witness. The cited leaf title contains a U+2014 character, written as a JSON escape here; it must match the test title exactly."
+  },
+  {
+   "id": "core.submission.rendered-surface-covers-provenance",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "submission-processing",
+   "text": "Where a deployment commits the rendered approval surface, that commitment MUST cover the normalized provenance facts, at least as a digest of their canonical `submission_evidence` representation ({{mission-record}})",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where a deployment commits the rendered approval surface of a submission that presented evidence, the commitment covers the normalized verified facts, at least as a digest over their canonical submission_evidence representation, so the committed surface cannot stand for the same approval with different provenance facts"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 rulings 5 and 6 (row debt; the MUST stays in the OAuth binding, only its example moves). Unconditional with the condition in the observation, as for core.approval-basis.adjudication-direct-human: the condition is a deployment choice that no one capability names. Consent Evidence (submission_provenance_hash) and Approval Governance (submission_evidence_commitment) each satisfy it for their adopters, and a deployment that commits the surface by other means is bound too, so scoping the row to consent-evidence.recording would drop the obligation for the others. The reference implements neither companion's commitment; mission-core approvalContext.test.ts vector 4 checks Approval Governance's construction only and is not a witness. #1892 ruling 6 (D1031): the reference's render revision commits the rendered approval surface (the context a rendering showed, which the decision is bound to), so this MUST applies to it; its context omits the provenance facts, a gap #1897 tracks. The row stays todo until a witness shows a change to the verified facts alone keeps a stale approval from proceeding, with an unchanged-facts control; it is not inapplicable."
   },
   {
    "id": "core.submission-evidence.structural-entry-refusal",
@@ -8701,6 +8756,151 @@
    "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type applies the same rule since #1503 (D620), and its preservation is witnessed on core.mission-record.authority-source-type-enum; this row stays scoped to the two fields the review named."
   },
   {
+   "id": "core.approval-basis.required-fixed-at-approval",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object. The approved authorization basis this Mission is rooted in, fixed at the approval event and immutable thereafter, like `subject`.",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event carries approval_basis from its creation, persisted with the record, and no later derivation or lifecycle transition changes it"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "Mission Record immutability (@spec mission#mission-record) > every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#approval-basis, which is not a core anchor. Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis. Fresh review of #1893: partial: the immutability witness runs a derivation, suspend, resume and revoke, not the expired commit, so 'no later lifecycle transition changes it' is not asserted for expiry."
+  },
+  {
+   "id": "core.approval-basis.type-direct",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. A string: `direct`, or a standing-consent value that a companion profile defines ({{standing-consent-bases}}).",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.type as the string direct"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 2 (record): the Mission records the workload principal as Subject, the agent as client, the administrator as consent principal, and the service_owned source",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct value; the standing-consent values are companion-defined. The kernel witness compares the whole stored basis with toEqual; the workload witness reads the record created over the approval endpoints. Mutation proof (2026-10-29): recording a type other than direct fails both witnesses on their assertions (the kernel toEqual over the stored basis; the workload step 2 type check)."
+  },
+  {
+   "id": "core.approval-basis.consent-principal-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object with `iss` and `sub`. The accountable human (or human-accountable principal) who consented.",
+   "facet": "direct-basis",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission records approval_basis.consent_principal as an object with iss and sub naming the principal who consented; for a direct approval, the authenticated Approver"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/workload-principal-agent.test.ts",
+     "name": "an agent acting for its own workload principal (@spec mission#authority-sources, mission#mission-bound-tokens, status#lifecycle-authorization, #1194) > step 2 (record): the Mission records the workload principal as Subject, the agent as client, the administrator as consent principal, and the service_owned source",
+     "level": "endpoint",
+     "surface": "approval-ceremony"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis, where the consent principal is the Approver. Both witnesses approve for a Subject other than the Approver (bob for alice; an administrator for a workload principal) and assert the {iss, sub} pair of the Approver. Quoted with its second sentence, since 'REQUIRED. An object with `iss` and `sub`.' also opens activation_actor. Mutation proof (2026-10-29): recording a consent principal other than the Approver fails both witnesses on their assertions. Fresh review of #1893: the observation restates the member's definition without an added comparison with the Subject."
+  },
+  {
+   "id": "core.approval-basis.activation-direct-event-id",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "REQUIRED. An object naming what activated this Mission instance, shaped by `type`. For `direct`: `approval_event_id`, mirroring the record's own `approval_event_id` (below).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission created at a direct approval event records approval_basis.activation as an object whose approval_event_id equals the record's own approval_event_id"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#approval-basis) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witness asserts activation equals {approval_event_id: 'apev-100'}, the identifier the approval was given, but never reads the stored record's approval_event_id, so a record whose own member diverged would still pass; one assertion against stored.approval_event_id would make it tested. mission-approval-deferral.test.ts makes the same comparison against store.approvalEventId(code) on Deferred Approval's relocated direct approval, also not against the record member."
+  },
+  {
    "id": "core.authority-sources.accountable-principal-not-from-sub",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "authority-sources",
@@ -9514,6 +9714,116 @@
    "notes": "#1802 (owner ruling 3). The clause's condition (the Approver is not the Subject) has no applicability kind, so the row stays unconditional; the witness renders both an approval on Alice's behalf, which names her, and a self-approval, which names no separate Subject. Proved by disabling the Subject section (the witness failed)."
   },
   {
+   "id": "core.approval-event.render-derived-set-with-intent-context",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "the derived Authority Set in human-meaningful terms, with the `goal`, `task_bounds`, and the effective `expires_at` (and, when it differs, the requested `intent.expires_at`, so the Approver sees the narrowing) as context",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering presents the derived Authority Set with the Intent's goal and task_bounds and the effective expires_at as context; where the effective expires_at is earlier than the requested intent.expires_at, the rendering shows both values, so the Approver sees the narrowing",
+    "local": "The authorization-code approval page (renderApprovalPage) shows the Intent as JSON under 'Intent (task context, untrusted)', the derived set under 'Derived authority (what approval grants)', and the effective value in a 'Mission expiry' section (time.mission-expires-at); the requested value appears only inside the Intent JSON."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > control: an authenticated Approver who may approve and activate is shown the page and approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-context-changes.test.ts",
+     "name": "Changes Before the Decision (@spec mission#approval-context-changes, #1446) > the Mission commits the effective expires_at its rendering showed: a lifetime measured from a later decision never moves it",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Step 5's lead sentence; quoted after its bold label. Partial: the render-gate control asserts the goal, the task bounds and the exact derived entries on the page, and the effective-expiry witness asserts a policy-narrowed effective expires_at in its own element; no test asserts that the requested intent.expires_at is shown beside a narrowed effective value. 'Human-meaningful terms' is a judgment clause with no mechanical assertion."
+  },
+  {
+   "id": "core.approval-event.consent-object-derived-set",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "An approval surface that renders only the `goal` or Mission Intent does not conform.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "an approval rendering that presents only the goal or the Mission Intent, without the derived Authority Set as the object of the decision, does not conform"
+   },
+   "level": "endpoint",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/submission-precedence.test.ts",
+     "name": "Authority Set derivation timing (@spec mission#derivation-modes) > renders the complete candidate Authority Set for approval, and the Mission Record commits exactly the rendered set",
+     "level": "endpoint",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/approval-page-render-gate.test.ts",
+     "name": "the approval page renders only after steps 1 to 3 (@spec mission#direct-approval-steps, mission#approval-preparation, #1802) > control: an authenticated Approver who may approve and activate is shown the page and approves",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). The consent-object bullet of step 5. The derivation-timing witness parses the page's derived-authority block and compares it with the full derivation of the same Intent and proposal (two or more entries, capability bindings included), then checks the record commits exactly that set; the render-gate control asserts the goal and the derived entries appear together. Mutation proof (2026-10-29): rendering only the first derived entry fails the derivation-timing witness on its assertion (one entry against the two derived); the render-gate control witnesses the goal and the derived entries shown together, not completeness. Fresh review of #1893: the observation restates the quoted sentence; that the record commits the rendered set is the approval-commit rows' obligation, which the derivation-timing witness also exercises."
+  },
+  {
+   "id": "core.approval-event.proposal-narrowing-distinguished",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "approval-preparation",
+   "text": "When the client submitted an authority proposal ({{authority-proposal}}), the rendering MUST distinguish the entries the client proposed from any narrowing or restructuring the AS applied",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the client submitted an authority proposal that the AS narrowed or restructured, the approval rendering presents the entries as the client proposed them apart from the derived Authority Set, so the Approver can see which proposed entries, actions or bounds the AS narrowed, dropped or restructured",
+    "local": "The page renders the submitted proposal verbatim under 'Proposed authority (submitted, untrusted)' and the derived set under 'Derived authority (what approval grants)'; it marks no individual narrowing."
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "end-to-end issuance under the new carriage > derives issuer-side, echoes the granted set, surfaces proposal_hash issuer-only",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "client-supplied text attributed to the client (@spec mission#rendering-safeguards, #1532) > attributes the Intent and the proposal to the requesting client, apart from the derived authority",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the end-to-end witness submits an over-ask the AS narrows (a cap above the policy ceiling and an action the ceiling does not grant) and asserts only that the page carries both the proposed and the derived headings; the attribution witness asserts the proposal section stands apart from the derived section, on a proposal the AS does not narrow. No test asserts that the proposed section shows the submitted entries and the derived section the narrowed values for a narrowed proposal."
+  },
+  {
    "id": "core.rendering-safeguards.client-text-attributed",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "rendering-safeguards",
@@ -9578,6 +9888,119 @@
    "coverage": "todo",
    "tests": [],
    "notes": "#1532, D859. Replaces the removed misleading-goal refusal, which would have gated issuance on goal text against the binding's prohibition on gating issuance on goal, goal_lang or task_bounds. No test renders an over-long goal and checks it is not truncated."
+  },
+  {
+   "id": "core.rendering-safeguards.client-strings-inert",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as inert text and MUST NOT be interpreted as markup.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a goal or task_bounds value carrying markup (an element, an attribute, a script or a link) appears on the approval rendering as its literal characters: the rendering contains no element, attribute, script or link that the value supplies"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). The MUST and the MUST NOT state one behavior and share this row. The reference escapes the Intent JSON on the approval page (provider.ts escapeHtml), but no test submits markup in goal or task_bounds. Patterns to reuse: approval-context-changes.test.ts 'a tool's description renders as inert text, and the binding commits the definition shown' (a capability-binding tool description) and device-authorization.test.ts (a client-supplied name), neither of which covers goal or task_bounds."
+  },
+  {
+   "id": "core.rendering-safeguards.unicode-presentation-mitigated",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "The AS SHOULD mitigate Unicode direction-override and confusable-character presentation in them.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the AS mitigates Unicode direction-override and confusable-character presentation in a goal or task_bounds value it renders; a departure is a recorded SHOULD departure, not a failure"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). A search of the authorization server's approval rendering (provider.ts renderApprovalPage) finds HTML escaping only, with no direction-control or confusable handling, and no test covers either."
+  },
+  {
+   "id": "core.rendering-safeguards.unenforced-bound-not-presented-enforced",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "a deployment MUST NOT present a rendered bound as enforced when no party enforces it",
+   "role": "AS",
+   "strength": "MUST NOT",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering never presents a rendered bound (a task_bounds item, or a constraint of a derived entry) as enforced unless some party in the deployment enforces it",
+    "local": "the authorization-code approval page states that a derived entry's max_amount applies to each action and imposes no total spending cap, so it does not present a Mission-wide total as enforced"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witness covers one bound, a per-action max_amount, which the page states imposes no Mission-wide total cap, so it is not presented as a limit nothing enforces. No test covers task_bounds, or a derived-entry constraint that the deployment's resource servers do not enforce. Derivation Limits cites this rule through the Mission Approval section."
+  },
+  {
+   "id": "core.rendering-safeguards.enforced-bounds-made-clear",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "rendering-safeguards",
+   "text": "An AS SHOULD make clear to the Approver which rendered bounds its deployment actually enforces, so consent is not given to a limit that binds nowhere.",
+   "role": "AS",
+   "strength": "SHOULD",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the approval rendering tells the Approver, for the bounds it renders, which ones the deployment enforces and how far; a departure is a recorded SHOULD departure, not a failure"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > states that the limits apply to each action and impose no total spending cap when a derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/rar-carriage.test.ts",
+     "name": "approval page per-action limit wording (D284, #1328) > does not state the per-action limit wording when no derived entry carries max_amount",
+     "level": "endpoint",
+     "surface": "authorization-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 6 (row debt). Partial: the witnesses cover the extent of one bound only (a max_amount applies to each action, with no total cap), stated when a derived entry carries max_amount and absent otherwise. No rendering states which other rendered bounds, task_bounds included, the deployment enforces."
   },
   {
    "id": "core.approval-event.authority-source-rendering",
@@ -11149,7 +11572,7 @@
    "id": "core.revocation.revoke-by-mission-id",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "revocation",
-   "text": "A deployment MUST provide an authenticated means, independent of possession of any token, by which a party its policy authorizes revokes a Mission by `mission_id`",
+   "text": "A Mission Issuer MUST accept, through an authenticated means independent of possession of any token, a revocation by `mission_id` from a party the deployment's policy authorizes",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -11162,8 +11585,8 @@
    "surface": "lifecycle-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a party the deployment's policy authorizes to revoke the Mission, authenticated and holding none of the Mission's tokens, revokes it by its identifier, after which every derivation under the Mission refuses",
-    "local": "the authorized parties are a lifecycle client at the advertised Mission Lifecycle endpoint and a service principal at the development route, each holding the deployment's `mission_lifecycle` grant"
+    "normative": "a party the deployment's policy authorizes to revoke the Mission, authenticated through a means independent of possession of any token, revokes it by its `mission_id`, after which every derivation under the Mission refuses",
+    "local": "the token-independent means is the advertised Mission Lifecycle endpoint: a lifecycle client registered with no grant at the token endpoint authenticates by private_key_jwt with its own key, presents no access, refresh or service token, and holds the deployment's configured `mission_lifecycle` authorization. The reference also serves an additional, token-authenticated path, which the requirement neither requires nor forbids: a service principal presenting a service token at the development route, under the same `mission_lifecycle` authorization"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -11181,7 +11604,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1182 (D378). #1503 finding 14 (D620): the obligation names a party the deployment's policy authorizes, not the Subject, the Approver or an administrator by role, so the former partial gap (Subject and Approver access to the surface not exercised) no longer describes an obligation; that no role alone authorizes revocation is core.revocation.no-role-entitlement."
+   "notes": "#1182 (D378). #1503 finding 14 (D620): the obligation names a party the deployment's policy authorizes, not the Subject, the Approver or an administrator by role, so the former partial gap (Subject and Approver access to the surface not exercised) no longer describes an obligation; that no role alone authorizes revocation is core.revocation.no-role-entitlement. #1892 ruling 9 (D1026): re-quoted to the Mission Issuer's duty; the observation follows the text's \"independent of possession of any token\", replacing \"holding none of the Mission's tokens\", which a token-authenticated path also meets. The two witnesses prove different things. The revoke-only Lifecycle test carries every clause: a security tool registered with no grant at the token endpoint authenticates by private_key_jwt with its own key, presents no token, revokes by mission_id under its configured lifecycle authorization, and the refresh, the family refresh and a new exchange then refuse with nothing saved. The workload-principal test (step 8) authenticates by a service token at the development route: it witnesses an additional, token-authenticated revocation path, used by a party holding none of the Mission's tokens, and the refusals after it, not the token-independent means."
   },
   {
    "id": "core.revocation.authorized-revoker",
@@ -11375,6 +11798,38 @@
     }
    ],
    "notes": "#830 Q-e (D798); witnessed by #830 Q-d's reference reconciler (owner review of #1695). partial: two clauses of the observation have no witness. An owner's departure: the reference records no accountable owner apart from the Subject and the Approver. The non-recall of already-issued tokens: no witness observes token storage; the reference's revocation is the lifecycle commit alone. A deployment that does not follow the rule documents why (deployment documentation, not separately witnessed). Mutation-proved for the witnessed clauses: deprovisioning committing suspend instead of revoke, skipping a suspended Mission, evaluating the Approver in place of the recorded Subject, a source outage revoking, and matching the principal by sub alone, each failed its witness."
+  },
+  {
+   "id": "core.revocation.token-revocation-not-mission",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "revocation",
+   "text": "Revoking a token does not by itself revoke a Mission.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "unless the deployment documents a coupling of token revocation to Mission revocation, revoking a token issued under the Mission, an access token or a refresh token, does not itself cause a Mission lifecycle transition",
+    "local": "the reference does not couple token revocation to Mission revocation: its RFC 7009 route revokes the token and its grant, and its revocation hooks cancel only deferral codes, never committing a Mission lifecycle transition"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
+     "name": "delegation by designation: the agent designates, the sub-agent redeems (@spec mission#delegation, mission#designation) > RFC 7009 revocation of the family's refresh token refuses new designations and pending redemptions and inactivates the delegated token",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 9 (iv) (D1026). Shares its witness with status.lifecycle.rfc7009-not-by-itself, Mission Status's statement of the same rule. The witness revokes, at the RFC 7009 endpoint, the refresh token of an async-delegation family under the Mission (a Token Exchange refresh lineage), asserts the 200 and the family's grant destroyed, and asserts the Mission's state is still active: no transition, for an active Mission. Partial: it runs with the delegation capability on, and no test revokes an access token or a code-redemption refresh token, or a token of a suspended or terminated Mission, and then checks that the Mission's state is unchanged. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state."
   },
   {
    "id": "core.issuance-gating.inactive-refused-by-grant",
@@ -11696,7 +12151,44 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "Release fence #1498 (D663); witnesses on every fenced path, #250. Single-process only (#641); counter settlement for work spent before the fence stays with #935."
+   "notes": "Release fence #1498 (D663); witnesses on every fenced path, #250. Single-process only (#641); counter settlement for work spent before the fence stays with #935. #1892 ruling 2 (D1031): an acknowledged revocation is the AS's commit of the termination with reason revoked (core.issuance-gating.acknowledged-at-termination-commit)."
+  },
+  {
+   "id": "core.issuance-gating.acknowledged-at-termination-commit",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "issuance-gating",
+   "text": "The AS acknowledges a revocation when it commits the Mission's termination with reason `revoked` ({{termination}}), whether a revocation request or the deployment's policy caused it ({{revocation}}). Receiving or queuing a revocation request does not acknowledge it, and acknowledgment does not wait for an HTTP response to complete or an event to be delivered. The refusal at release re-checks only an acknowledged revocation; it is not a general re-check of Mission state.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "the AS acknowledges a revocation when it commits the Mission's termination with reason revoked, whether a revocation request or the deployment's policy caused it; receiving or queuing a revocation request does not acknowledge it; acknowledgment does not wait for an HTTP response to complete or an event to be delivered; and the refusal at release re-checks only an acknowledged revocation, not Mission state in general"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > code exchange: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same exchange without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/issuance-release-fence.test.ts",
+     "name": "the release fence: a revocation committed after the save-time gate refuses at release (@spec mission#issuance-gating, #250) > refresh: a revocation committed after the gate and the signature is refused invalid_grant with mission_error revoked and no token member, where the same refresh without it delivers",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 2 (D1031). Partial: the release-fence witnesses commit a revocation by request after the save-time gate and the signature, and assert the code exchange and the refresh refused at release with nothing issued. Not witnessed: a policy-initiated termination with reason revoked, that receiving or queuing a request alone does not acknowledge it, and that the refusal at release re-checks no other Mission state."
   },
   {
    "id": "core.issuance-gating.profile-code-override",
@@ -13088,8 +13580,8 @@
   {
    "id": "core.response.mission-members-on-delegated-exchange",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-response-parameters",
-   "text": "A delegated exchange response ({{delegated-exchange}}) MUST carry both",
+   "anchor": "delegated-exchange",
+   "text": "A delegated exchange response MUST carry `mission_id` and `mission_expires_at`",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -13173,7 +13665,7 @@
   {
    "id": "core.response.replay-returns-committed-value",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "grant-binding",
+   "anchor": "mission-response-parameters",
    "text": "A creation replay deduplicated under the applicable operation identifier (`approval_event_id` for direct approval ({{mission-record}}), or the identifier a Mission-creating profile defines) returns the committed effective value unchanged",
    "role": "AS",
    "strength": "stated",
@@ -14315,7 +14807,7 @@
   {
    "id": "core.tokens.backing-grant-revocation-refuses-redemption",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-authentication-lifetime",
+   "anchor": "designation",
    "text": "Revoking the grant state backing that credential still refuses every later redemption",
    "role": "AS",
    "strength": "stated",
@@ -16261,7 +16753,7 @@
   {
    "id": "core.other-types.delegation-only-unchanged",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "other-types",
+   "anchor": "delegated-exchange",
    "text": "the AS MUST NOT include an entry of such a type in a delegated token unless it is equal ({{subset}}) to an entry of the presented delegating token",
    "role": "AS",
    "strength": "MUST NOT",
@@ -16302,8 +16794,8 @@
   {
    "id": "core.other-types.designation-equal-entry-issued",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "transformation-capabilities",
-   "text": "A designation's `aud` names its redeemer ({{designation}}) and reassigns no entry's original approved audience",
+   "anchor": "designation",
+   "text": "A designation's `aud` names its redeemer and reassigns no entry's original approved audience",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -17627,8 +18119,8 @@
   {
    "id": "core.introspection.designation-inactive",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "composite-active",
-   "text": "A designation ({{designation}}) authorizes no resource access: the AS MUST return `active: false` for one, with no `mission` member",
+   "anchor": "designation",
+   "text": "the AS MUST return `active: false` for one, with no `mission` member",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -21237,10 +21729,10 @@
    "surface": "token-endpoint",
    "assertion": "no-side-effect",
    "observation": {
-    "normative": "an RFC 7009 revocation of a Mission's refresh token leaves the Mission active where no revocation policy couples them"
+    "normative": "where no revocation policy couples them, an RFC 7009 revocation of a Mission's refresh token causes no Mission lifecycle transition"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -21249,7 +21741,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint."
+   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state; the witness asserts it for an active Mission. Fresh review of #1893: partial, as for core.revocation.token-revocation-not-mission: the witness asserts no transition for an active Mission's delegation-family refresh token; no test revokes a refresh token of a suspended or terminated Mission and checks that its state is unchanged."
   },
   {
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",
@@ -25332,6 +25824,170 @@
     }
    ],
    "notes": "#1877 review (D1023, ruling 4). Partial: the latch is witnessed on the spec-rule model in stream-pause.test.ts, which stays stale after the enabled notice and resumed liveness until it re-establishes state, and on the reference receiver only through its observation-anchored stand-in: past its bound, the Stream Updated and verification SETs are refused and no lease returns, and a Mission Status refresh re-establishes it (consumer-reliance.test.ts). The receiver does not implement the stream-liveness rule itself (#1747)."
+  },
+  {
+   "id": "signals.consumer.heartbeat-may-send",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Mission Issuer MAY send heartbeats.",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer may send a Verification Event on a stream on its own initiative, with no request from the stream's consumer preceding it",
+    "local": "attestLiveness sends the heartbeat to every stream that is not held and has no undelivered earlier event; the caller drives it on its own schedule; the emitter is in process, so the SET goes to registered sinks, not an SSF HTTP transport"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > sends a heartbeat as an SSF Verification Event on the Mission Issuer's own initiative, with no state and the stream id as its sub_id; a requested verification echoes the requester's state, and one requested without state carries none",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). The permission is exercised: a liveness attestation with no verification request on the stream delivers a Verification Event to both streams. The heartbeat's shape is signals.consumer.heartbeat-carries-no-state."
+  },
+  {
+   "id": "signals.consumer.heartbeat-carries-no-state",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Verification Event sent without a request is a heartbeat, and it carries no `state`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a heartbeat is an SSF Verification Event: the SET's only event is the verification event type, its sub_id is the opaque stream id, and its event body carries no state member; a verification the consumer requested is the same event and echoes the state its request carried, and carries none when the request carried none (SSF 1.0 Section 8.1.4.2)",
+    "local": "attestLiveness sends the heartbeat and requestVerification journals a requested verification; the stream id is the consumer's configured stream_id, or its audience when none is configured"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > sends a heartbeat as an SSF Verification Event on the Mission Issuer's own initiative, with no state and the stream id as its sub_id; a requested verification echoes the requester's state, and one requested without state carries none",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). SSF 1.0 Section 8.1.4.2: the request's state is echoed by the Transmitter, and \"If the Verification Event is initiated by the Transmitter then this parameter MUST not be set\". A requested verification may also lack state, so its absence describes a heartbeat without identifying one. Proved by mutation: a heartbeat body carrying state fails the heartbeat assertion; dropping the echoed state fails the requested assertion; giving a stateless request a state fails the stateless assertion."
+  },
+  {
+   "id": "signals.delivery.stream-updated-not-liveness",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Stream Updated event ({{OIDC-SSF}}, Section 8.1.5) reports the stream's status and is not a liveness event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the Mission Issuer counts only verification and heartbeat delivery attempts as liveness when it bounds a pause: a Stream Updated event, paused or enabled, in flight or acknowledged, records no liveness, is no unresolved liveness attempt, and leaves the paused stream's re-enable instant where the last verification attempt set it",
+    "local": "the emitter's liveness record is its stream status (last_liveness_at, liveness_resolved_at, liveness_unresolved, reenable_after); a Stream Updated job's hand-off journals no liveness attempt, while a verification's does"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > records liveness only for verification attempts: a Stream Updated notice, paused or enabled, in flight or acknowledged, never moves the stream's liveness record",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). The issuer's side of the statement: the pause bound runs from verification attempts only. Proved by mutation: journaling a liveness attempt for a Stream Updated hand-off fails the test while the paused notice is in flight (one unresolved attempt). The consumer's side is signals.consumer.stream-updated-not-liveness."
+  },
+  {
+   "id": "signals.consumer.stream-updated-not-liveness",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Stream Updated event ({{OIDC-SSF}}, Section 8.1.5) reports the stream's status and is not a liveness event",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer does not count a Stream Updated event as liveness: a stream whose last verified verification or heartbeat event is older than its heartbeat interval is not verified live although a Stream Updated event arrived since, and the staleness fallback still runs from that last verification or heartbeat event"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1886 (D1023 ruling 2). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver reads no stream-control SET; it refuses verification and Stream Updated SETs as malformed and bounds reliance by the issuer's observation time (#1747), so it has no liveness to count. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver test in which a Stream Updated SET received after the heartbeat interval leaves the stream not verified live and the cached state stale once mission_max_stale_seconds has passed since the last verification or heartbeat event. The spec-rule model in stream-pause.test.ts ignores Stream Updated events, but it models the rule; it is not a consumer."
+  },
+  {
+   "id": "signals.consumer.heartbeat-interval-finite-agreed",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "It is finite, and the Mission Issuer and the consumer agree it through configuration or through a discovery mechanism another document defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer's heartbeat interval for a stream is a finite duration, the value agreed with that stream's consumer; this document defines no discovery member, so without another document's mechanism the agreement is configuration",
+    "local": "the emitter takes the agreed interval as heartbeatIntervalSeconds and refuses at construction any value that is not a positive whole number of seconds (infinite, NaN, zero, negative or fractional); the agreement with the consumer is configuration outside the emitter"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > takes the agreed heartbeat interval only as a finite, positive whole number of seconds: an infinite, NaN, zero, negative or fractional interval is refused at construction",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 3). Partial. Evidence of the interval agreement is owned by #1896 (D1028), transferred from #1886, not completed: the emitter's interval is witnessed finite, but the agreement with the consumer is configuration no test observes, and no discovery member exists. Proved by mutation: a guard that refuses only NaN and non-positive values accepts an infinite interval and fails the test. The withholding issuer's MUST is signals.discharge.agreed-heartbeat-interval."
+  },
+  {
+   "id": "signals.consumer.unknown-interval-not-verified-live",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A stream whose heartbeat interval the consumer does not know is not verified live, so the staleness fallback below applies to it",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer that does not know its stream's heartbeat interval treats the stream as not verified live: its cached Mission state is stale once the stream has gone longer than mission_max_stale_seconds without a verified verification or heartbeat event, whatever interval the Mission Issuer serves the stream with"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1886 (D1023 ruling 3). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver does not implement the stream-liveness rule; it reads no verification or heartbeat event and bounds reliance by the issuer's observation time plus maxStaleSeconds (#1747), which is what this rule yields for an unknown interval but is no witness of it. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver configured with no heartbeat interval gives no lease once mission_max_stale_seconds has passed since its last verified verification or heartbeat event, while one configured with a longer agreed interval still relies on the stream it holds verified live."
   },
   {
    "id": "management.bulk.version-pinned-per-member",
@@ -79716,7 +80372,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.self-exchange"
    },
    "profiles": [
     "issuance"
@@ -79742,7 +80399,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token."
+   "notes": "#1153 review (D353). The AS issues one Mission access token to a client other than the Mission Record's client_id: a Dispatch returns the instance's token to the Dispatcher while the instance's approved agent is the selected Agent. The Dispatcher's exchange of that token is refused (the dispatch-handoff test); the selected Agent reaches the transport through the Template profile's Dispatch Handoff (#1158). The async-delegation test changes the Mission Record's client_id under a real token. #1892 ruling 1 (D1031): self-exchange is an OPTIONAL capability, so the row applies where core.self-exchange is claimed; the reference supports it wherever it registers the Token Exchange grant type."
   },
   {
    "id": "core.error-mapping.token-exchange-token-refusal",
@@ -80429,8 +81086,8 @@
   {
    "id": "core.tokens.designation-entry-audiences-tested",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
-   "text": "For a designation ({{designation}}), these rules test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
+   "anchor": "designation",
+   "text": "For a designation, the audience rules of {{token-response}} test the resource audiences associated with the entries it carries, never the designated client its `aud` names",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -80459,7 +81116,7 @@
   {
    "id": "core.tokens.designation-permitted-subset-kept-audience",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
+   "anchor": "designation",
    "text": "A designation carries only a permitted subset of the presented token's entries ({{subset}}, {{delegation-constraints}}), each keeping its original approved audience ({{transformation-capabilities}})",
    "role": "AS",
    "strength": "stated",
@@ -80489,7 +81146,7 @@
   {
    "id": "core.tokens.designation-unassociated-entry-not-carried",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
+   "anchor": "designation",
    "text": "An entry without an original approved audience is not carried",
    "role": "AS",
    "strength": "stated",
@@ -80525,8 +81182,8 @@
   {
    "id": "core.tokens.designation-redemption-audience-rules",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "token-response",
-   "text": "The delegated token issued at its redemption is subject to every rule of this section unchanged",
+   "anchor": "designation",
+   "text": "The delegated token issued at its redemption is subject to every rule of {{token-response}} unchanged",
    "role": "AS",
    "strength": "stated",
    "applicability": {
@@ -81269,7 +81926,8 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "unconditional"
+    "kind": "capability",
+    "capability": "core.self-exchange"
    },
    "profiles": [
     "issuance"
@@ -81337,7 +81995,38 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is child-delegation.attenuation.presented-token-bound (D353)."
+   "notes": "#825 PR 2c (D312); the recovery path was closed after the owner's review (D353). The presented token in the tests is a real down-scoped token, a family's own access token. The AS's one no-actor exchange is the async-delegation transport; it has no separate self-exchange endpoint. The unreadable-authority guard is covered directly through presentedTokenAuthority, since the AS never signs a Mission access token without authorization_details. The child-grant bound is child-delegation.attenuation.presented-token-bound (D353). #1892 ruling 1 (D1031): self-exchange is an OPTIONAL capability, so the row applies where core.self-exchange is claimed; the reference supports it wherever it registers the Token Exchange grant type."
+  },
+  {
+   "id": "core.self-exchange.unsupported-refusal",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "self-exchange",
+   "text": "An AS that does not support it refuses a no-actor exchange: with `unsupported_grant_type` ({{Section 5.2 of RFC6749}}) if it does not support the Token Exchange grant type, and otherwise with `invalid_request`, as for a presented token it does not accept for the exchange ({{Section 2.2.2 of RFC8693}}). Any other error that applies still applies, such as `invalid_client` for a client that fails authentication.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "token-endpoint",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "an AS that does not support self-exchange refuses a no-actor exchange with unsupported_grant_type if it does not support the Token Exchange grant type, and otherwise with invalid_request; any other error that applies, such as invalid_client for a client that fails authentication, still applies",
+    "local": "the reference registers the Token Exchange grant type only when a token-exchange profile is enabled, and it supports self-exchange wherever it registers the grant"
+   },
+   "level": "endpoint",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/self-exchange-unsupported.test.ts",
+     "name": "an AS without the Token Exchange grant refuses a self-exchange (@spec mission#self-exchange, mission#optional-capabilities, #1892, D1031) > refuses a no-actor exchange of the Mission's own access token with unsupported_grant_type, issuing nothing, while the Mission's refresh still succeeds",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1892 ruling 1 (D1031). Partial: the witness builds the AS with every token-exchange profile off, so the grant is not registered, and asserts unsupported_grant_type with no token member, with a refresh control. Mutation proof (2026-10-29): registering the grant unconditionally fails it (invalid_request). Not witnessed: the invalid_request branch, an AS that registers the grant but does not support self-exchange (the reference supports self-exchange wherever it registers the grant), and that another applicable error, such as invalid_client, still applies. The witness also asserts that no token is issued."
   },
   {
    "id": "runtime.oauth.required-instance-attribution",
@@ -91866,6 +92555,29 @@
     }
    ],
    "notes": "#1202: an assembly without the opt-in device-authorization capability answers a device authorization request carrying mission_intent 404 and creates no Mission. Proved by enabling the capability by default (the request then yields a device_code). Partial: only the device authorization request is witnessed, and only on an AS without the device grant."
+  },
+  {
+   "id": "core.i18n.rendering-rules-any-script",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "i18n",
+   "text": "Rendering to the Approver follows the rendering rules of {{rendering-safeguards}} unchanged: client prose stays inert text in any language and any script, including bidirectional text.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "authorization-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "goal and task_bounds in any language or script, bidirectional text included, render under the same safeguards as other client prose: as inert text, attributed to the client, apart from the derived Authority Set, and untruncated"
+   },
+   "level": "endpoint",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1892 ruling 6 (row debt). Restates the rendering-safeguards rules for prose in any language or script; no test renders non-Latin or bidirectional goal or task_bounds text."
   },
   {
    "id": "discovery.mission-substrate.only-active-rule",
