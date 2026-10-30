@@ -330,6 +330,16 @@ this record exists:
   ({{assertion-requirements}}), that assertion's own `kind` MUST equal
   `adjudication.kind`.
 
+An artifact that refers to the record does so by its record digest
+({{envelope}}). The record binds a governance evaluation to the
+Mission's approval event. It does not, by itself, establish a separate
+business decision for each subsequent action.
+
+Authenticating approval evidence does not, by itself, establish that
+conditions governing later reliance remain satisfied. Whether
+subsequent changes to an Approver's role, a delegation, or governing
+policy affect an existing Mission depends on the deployment's policy.
+
 # Recording Triggers {#triggers}
 
 A profile MAY require this record; the Enterprise Mission Authority

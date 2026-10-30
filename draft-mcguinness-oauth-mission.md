@@ -2049,24 +2049,13 @@ Where a deployment needs either, the Approval Governance Record
 and Consent Evidence can carry a partial presentation of that record
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}).
 
-The `adjudication.governance_record` member ({{mission-record}})
-marks an approval such a record backs, and
+Approval Governance defines the `adjudication.governance_record`
+member that marks an approval such a record backs
+({{I-D.draft-mcguinness-mission-approval-governance}}, Section
+"Relationship to the Issuance Profile"), and
 {{I-D.draft-mcguinness-mission-architecture}} (Section "Approval Role
 Mapping") shows how the common creation scenarios assign the three
 `approval_basis` roles.
-
-The issuer retains the Approval Governance Record, and this document
-defines no surface that discloses it. An artifact that refers to it
-does so by its record digest
-({{I-D.draft-mcguinness-mission-approval-governance}}, Section
-"Conventions and Definitions"). The record binds a governance
-evaluation to the Mission's approval event. It does not, by itself,
-establish a separate business decision for each subsequent action.
-
-Authenticating approval evidence does not, by itself, establish that
-conditions governing later reliance remain satisfied. Whether
-subsequent changes to an Approver's role, a delegation, or governing
-policy affect an existing Mission depends on the deployment's policy.
 
 ## Mission Record {#mission-record}
 
@@ -2729,24 +2718,16 @@ The grant binding relates to other mechanisms as follows:
   new grant binding, rooted in that same Mission. Three Token
   Exchanges are covered by the two items below instead: cross-domain
   projection and child creation, which return a JWT authorization
-  grant, and expansion, which creates a successor. Redeeming the
-  Template profile's handoff grant
-  ({{I-D.draft-mcguinness-oauth-mission-template}}) issues a derived
-  token and creates or extends no grant binding. In the continuation
-  profile's Identity Continuation Transport
-  ({{I-D.draft-mcguinness-oauth-mission-continuation}}), redeeming a
-  root or onward Identity Assertion JWT Authorization Grant (ID-JAG)
-  at a Resource AS produces a local derived access token. A Resource
-  AS holds a destination-side grant binding only where it separately
-  establishes a redeemable grant lineage mapped to the Mission, such
-  as a refresh-token family.
+  grant, and expansion, which creates a successor.
 - **Cross-domain projection.** A cross-domain projection
   ({{I-D.draft-mcguinness-oauth-mission-cross-domain}}) establishes
   no destination-side grant binding. A Resource AS consumes the
   cross-domain grant, and the local access token it mints there is a
   derived token: it identifies the one originating Mission
   (`mission.id`, `mission.issuer`) but is not backed by a persistent
-  local lineage.
+  local lineage. A Resource AS holds a destination-side grant binding
+  only where it separately establishes a redeemable grant lineage
+  mapped to the Mission, such as a refresh-token family.
 - **Child Missions and successors.** A Child Mission
   ({{I-D.draft-mcguinness-oauth-mission-child-delegation}}) and an
   expansion successor
