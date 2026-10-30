@@ -1051,112 +1051,57 @@ A client MAY propose concrete authority for the task by submitting
 the standard {{RFC9396}} `authorization_details` request parameter,
 a JSON array of `authorization_details` objects, alongside
 `mission_intent` in the same pushed request
-({{submission-via-par}}).
+({{submission-via-par}}). The carriage rules of {{submission-via-par}}
+apply to the proposal.
 
 The submitted `authorization_details` is a proposal, not authority
 ({{submission-via-par}}); the AS derives and bounds the Authority
 Set from it ({{authorization-derivation}}).
 
-The AS validates each submitted entry per {{Section 5 of RFC9396}}:
-it refuses a request carrying an entry of a type it does not support
+### Validating Proposed Entries {#proposal-validation}
+
+The AS validates each submitted entry per {{Section 5 of RFC9396}}.
+It refuses a request carrying an entry of a type it does not support
 ({{other-types}}, {{discovery}}), or one that fails its type's
-documented definition, with the `invalid_authorization_details`
-error code, and never repairs a failure by omitting the entry. Where
-a machine-readable JSON Schema for the type is advertised
+documented definition, with the `invalid_authorization_details` error
+code. It never repairs a failure by omitting the entry. Where a
+machine-readable JSON Schema for the type is advertised
 ({{discovery}}) or established out of band, the entry MUST also
 validate against that schema, and the AS MUST refuse a request
 carrying an entry that fails it with the
 `invalid_authorization_details` error code.
 
-Policy narrowing is distinct. During Authority Set derivation the AS
-MAY omit a syntactically valid entry that policy cannot accept, or
-narrow it where the AS has declared `narrowing` for its type
-({{authorization-derivation}}, {{transformation-capabilities}}). The granted
-`authorization_details` in the token response reflects every
-narrowing and omission ({{token-response}}).
+Each proposed entry that carries a `resource` member MUST have it
+among the Intent's `target_resources`, compared as
+{{authorization-derivation}} states; the AS refuses a request
+violating this with the `invalid_request` error code.
+
+### Deriving From a Proposal {#proposal-derivation}
 
 When a proposal is present, the AS MUST derive each Authority Set
 entry as a subset ({{subset}}) of some proposed entry of the *same
 type*: narrowed under that type's own subset rule where the AS has
 declared `narrowing` for the type, or carried through unchanged
-otherwise ({{transformation-capabilities}}).
+otherwise ({{transformation-capabilities}}). With a proposal present,
+`goal` and `task_bounds` serve as rendering and bounding context over
+the proposed authority.
 
-`goal` and `task_bounds` then serve as rendering and bounding context
-over the proposed authority. Each proposed entry that carries a
-`resource` member MUST have it among the Intent's `target_resources`,
-compared as {{authorization-derivation}} states; the AS refuses a
-request violating this with the `invalid_request` error code.
+Policy narrowing is distinct from validation ({{proposal-validation}}).
+During Authority Set derivation the AS MAY omit a syntactically valid
+entry that policy cannot accept, or narrow it where the AS has
+declared `narrowing` for its type ({{authorization-derivation}},
+{{transformation-capabilities}}). The granted `authorization_details`
+in the token response reflects every narrowing and omission
+({{token-response}}).
 
-The carriage rules of {{submission-via-par}} apply to the proposal.
-The AS records the array on the Mission exactly as submitted and
-commits it by `proposal_hash` ({{integrity-anchors}},
-{{mission-record}}), separately from the task (`intent_hash`) and
-the approved Authority Set (`authority_hash`), so a narrowed
-approved Authority Set can be audited against the proposal that
-sought it.
+The AS records the proposed array on the Mission exactly as submitted
+and commits it by `proposal_hash` ({{integrity-anchors}},
+{{mission-record}}), separately from the task (`intent_hash`) and the
+approved Authority Set (`authority_hash`), so a narrowed approved
+Authority Set can be audited against the proposal that sought it.
 
-Submitting `authorization_details` without `mission_intent` is an
-ordinary {{RFC9396}} request that this document does not govern. Two
-AS-side rules keep a governed task from being downgraded to such a
-request ({{discovery}} states the client-side rules and
-{{downgrade-by-omission}} the threat):
-
-- Where a resource is Mission-governed, its AS MUST NOT issue a token
-  for that resource outside a Mission, on any grant type. A resource is
-  Mission-governed (a Mission-governed resource) when the deployment
-  classifies it so, or when protected resource metadata the AS has
-  authenticated ({{RFC9728}}) declares
-  `mission_bound_authorization_required` as `true`
-  ({{protected-resource-metadata}}). Metadata that omits the member or
-  sets it to `false` does not clear a deployment's classification, and
-  a less restrictive local classification does not override metadata
-  that declares the requirement. This document defines no exception to
-  this rule; an exception requires a concrete scope that a separate
-  specification defines, and none applies to a resource whose
-  metadata declares the requirement.
-- If a client registered as Mission-governed sends an authorization
-  request, through PAR or at the authorization endpoint, that carries
-  `authorization_details` but no `mission_intent`, the AS MUST reject
-  the request with the `invalid_request` error code, so the client
-  cannot drop the Intent from a request that still carries
-  `authorization_details`. The rule applies to that request until it
-  completes, including when the AS resumes it after an interaction. A
-  request carrying neither is an ordinary request that this rule does
-  not reach; the first rule, for a Mission-governed resource, is what
-  keeps that resource's tokens inside a Mission.
-
-Under the first rule, a token is issued outside a Mission when the
-request has no qualifying Mission binding: no grant bound to a Mission
-({{grant-binding}}), or to a companion profile's equivalent binding,
-from which the issuance derives under {{mission-claim-reservation}}.
-The AS refuses a token request the first rule forbids with the
-`invalid_target` error code ({{Section 2 of RFC8707}}) once the
-request is otherwise processable. Authentication, syntax, and
-grant-validation failures keep their errors and precedence, an invalid
-or expired grant keeps its error, and a request under a grant bound to
-a Mission that is not `active` keeps the refusal of
-{{issuance-gating}}. The rule applies to every audience the token
-would carry, including one the AS infers or applies by default when the
-request names no `resource`: the AS MUST refuse the request if any of
-them is Mission-governed, and MUST NOT issue the token for the others.
-On a refresh, the AS MUST decide this refusal before it consumes or
-rotates the refresh token.
-
-A token request under an existing Mission-bound grant, such as a
-narrowing refresh or a self-exchange ({{self-exchange}}), needs no
-`mission_intent` under the second rule. This exception opens no
-Mission submission carriage, and every other check still applies to
-the request: Issuance Gating ({{issuance-gating}}), the subset rule
-({{subset}}), the first rule above, and the grant's binding to its
-Mission, client and sender.
-
-The following is an example of an authority proposal submitted alongside
-the example Intent of {{mission-intent}}. Authority Set derivation,
-under a declared `narrowing` capability, narrows `invoices.*` to
-`invoices.read`, keeps the proposed Q3
-issuance window and write ceiling, which the Intent's task bounds
-support, and carries the proposed `delegation` policy through
-unchanged (the example Authority Set of {{authorization-derivation}}):
+The following is an example of an authority proposal submitted
+alongside the example Intent of {{mission-intent}}:
 
 ~~~ json
 [
@@ -1179,6 +1124,82 @@ unchanged (the example Authority Set of {{authorization-derivation}}):
     } }
 ]
 ~~~
+
+Under a declared `narrowing` capability, Authority Set derivation
+narrows `invoices.*` to `invoices.read`. It keeps the proposed Q3
+issuance window and write ceiling, which the Intent's task bounds
+support, and carries the proposed `delegation` policy through
+unchanged. The result is the example Authority Set of
+{{authorization-derivation}}.
+
+### Mission-Governed Resources and Clients {#mission-governed}
+
+Submitting `authorization_details` without `mission_intent` is an
+ordinary {{RFC9396}} request that this document does not govern. Two
+AS-side rules keep a governed task from being downgraded to such a
+request ({{discovery}} states the client-side rules and
+{{downgrade-by-omission}} the threat):
+
+1. Where a resource is Mission-governed, its AS MUST NOT issue a token
+   for that resource outside a Mission, on any grant type.
+2. If a client registered as Mission-governed sends an authorization
+   request, through PAR or at the authorization endpoint, that carries
+   `authorization_details` but no `mission_intent`, the AS MUST reject
+   the request with the `invalid_request` error code, so the client
+   cannot drop the Intent from a request that still carries
+   `authorization_details`.
+
+A resource is Mission-governed (a Mission-governed resource) when the
+deployment classifies it so, or when protected resource metadata the
+AS has authenticated ({{RFC9728}}) declares
+`mission_bound_authorization_required` as `true`
+({{protected-resource-metadata}}). Metadata that omits the member or
+sets it to `false` does not clear a deployment's classification, and
+a less restrictive local classification does not override metadata
+that declares the requirement. This document defines no exception to
+the first rule; an exception requires a concrete scope that a separate
+specification defines, and none applies to a resource whose metadata
+declares the requirement.
+
+Under the first rule, a token is issued outside a Mission when the
+request has no qualifying Mission binding: no grant bound to a Mission
+({{grant-binding}}), or to a companion profile's equivalent binding,
+from which the issuance derives under {{mission-claim-reservation}}.
+The rule applies to every audience the token would carry, including
+one the AS infers or applies by default when the request names no
+`resource`: the AS MUST refuse the request if any of them is
+Mission-governed, and MUST NOT issue the token for the others.
+
+The AS refuses a token request the first rule forbids with the
+`invalid_target` error code ({{Section 2 of RFC8707}}) once the
+request is otherwise processable. On a refresh, the AS MUST decide
+this refusal before it consumes or rotates the refresh token. Other
+failures keep their own errors:
+
+- authentication, syntax, and grant-validation failures keep their
+  errors and precedence;
+- an invalid or expired grant keeps its error; and
+- a request under a grant bound to a Mission that is not `active`
+  keeps the refusal of {{issuance-gating}}.
+
+The second rule applies to a Mission-governed client's authorization
+request that carries `authorization_details` but no `mission_intent`
+until that request completes, including when the AS resumes it after
+an interaction. A request carrying neither `authorization_details`
+nor `mission_intent` is an ordinary request that the second rule does
+not reach; the first rule, for a Mission-governed resource, is what
+keeps that resource's tokens inside a Mission.
+
+A token request under an existing Mission-bound grant, such as a
+narrowing refresh or a self-exchange ({{self-exchange}}), needs no
+`mission_intent` under the second rule. This exception opens no
+Mission submission carriage, and every other check still applies to
+the request:
+
+- Issuance Gating ({{issuance-gating}});
+- the subset rule ({{subset}});
+- the first rule above; and
+- the grant's binding to its Mission, client and sender.
 
 ## Intent Submission Evidence {#intent-submission-evidence}
 
