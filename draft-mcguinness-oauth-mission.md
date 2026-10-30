@@ -1297,7 +1297,10 @@ The material verified provenance of step 8 is part of the approval
 surface. Where a deployment commits the rendered approval surface,
 that commitment MUST cover the normalized provenance facts, at least
 as a digest of their canonical `submission_evidence` representation
-({{mission-record}}).
+({{mission-record}}). That commitment MAY omit each element's
+`verified_at`, which the AS generates at each verification, and no
+other member: `type`, `artifact_hash`, and `facts`, including any
+timestamp within `facts`, stay covered.
 
 # Mission Authority {#authorization-derivation}
 
@@ -7152,6 +7155,10 @@ resolve before interoperating.
   define a value other than a boolean for a capability member, and a
   value the reader cannot validate declares that capability `false`
   (#1377, D1025).
+- Submission Processing Order: a commitment to the rendered approval
+  surface may omit each provenance element's `verified_at`, which the
+  AS generates at each verification, and no other member (#1897,
+  D1035).
 
 -01
 

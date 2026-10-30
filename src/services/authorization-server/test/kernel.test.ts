@@ -622,7 +622,7 @@ function refuse(fn: () => unknown): unknown {
   throw new Error("expected a refusal");
 }
 
-describe("approval basis (@spec mission#approval-basis)", () => {
+describe("approval basis (@spec mission#record-principal-members)", () => {
   it("records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor", () => {
     const record = approve(intent(), 100);
     const stored = kernel.get(record.id);
