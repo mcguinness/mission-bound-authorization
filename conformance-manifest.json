@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "4fb7c1dd14480b2bdaa1871eaff786ec9afff785",
-    "content_sha256": "44fc0c085d6e8612bf745ddf45c4ac9d2d9b6d8167570771913eff0af11b492c"
+    "revision": "4ef21e0287517ff120065a38aa08f87c507dabb3",
+    "content_sha256": "d2c10cb5d3c40ab192d53d9dc9bfcc4919b8ceff33b8b00b7aadd6ad54dd1a36"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -99,8 +99,8 @@
     "content_sha256": "f42a2713d042528189015f468361a76676417bc6dd2355b7562980a7289f5c13"
    },
    "draft-mcguinness-mission-approval-governance.md": {
-    "revision": "443822f0e3b0715c2f9b17f166b8ee2aa08f2cb6",
-    "content_sha256": "9ca2b5bb01c0f72848efcd4fb70fdb03d43d6795d0c03e5a5e5343302661b5c6"
+    "revision": "4ef21e0287517ff120065a38aa08f87c507dabb3",
+    "content_sha256": "f6fff368122ed7ef2336f00ce79a5ebe9d455703832afa947148103c7f70b943"
    },
    "draft-mcguinness-mission-capability-binding.md": {
     "revision": "68d0babc99367de83264b6393c42ba72412bde7e",
@@ -8679,8 +8679,8 @@
   },
   {
    "id": "core.approval-basis.adjudication-no-flatten",
-   "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "spec": "draft-mcguinness-mission-approval-governance.md",
+   "anchor": "issuance-relationship",
    "text": "a governed decision still names its mechanism, and the record supplies the fuller assertion set behind it, including any multi-assertion set, never flattened into it",
    "role": "AS",
    "strength": "stated",
