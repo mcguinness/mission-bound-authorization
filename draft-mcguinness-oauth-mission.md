@@ -1654,25 +1654,6 @@ at that event or an earlier standing consent authorizes the instance:
   instance is decided under an accountable human's earlier approval,
   with no fresh human approval.
 
-### Authorization Code Protection {#approval-code-protection}
-
-The direct realization runs as an OAuth 2.0 {{RFC6749}}
-authorization-code flow initiated from the PAR-issued `request_uri`
-({{submission-par-carriage}}). Because the authorization code is the
-artifact the Mission grant binds to ({{grant-binding-resolution}})
-and it passes through the front channel, the AS MUST bind the code
-to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
-method) or, equivalently, issue a DPoP-bound authorization code
-({{RFC9449}}). Redemption is then verified as
-{{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
-This prevents authorization-code injection from yielding the Mission
-grant. Issuance at the code's redemption applies the issuance procedure of
-{{issuance-gating}} as it states for code redemption.
-
-The AS SHOULD include the `iss` authorization-response parameter
-({{RFC9207}}) on the authorization response, so the client can detect
-a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
-
 ### Direct Approval Steps {#direct-approval-steps}
 
 At a direct approval event the AS MUST perform steps 1 to 7, in
@@ -1807,142 +1788,6 @@ cryptographic digest, exactly the authority the Approver approved.
 duplicate delivery of the same approval decision on
 `approval_event_id`.
 
-### Subject Establishment {#subject-establishment}
-
-These rules apply at step 2 of the direct approval steps
-({{direct-approval-steps}}).
-
-- **Approval for another principal.** When the Approver is a
-  different principal (for example, an administrator approving on
-  a user's behalf), the AS MUST NOT take the Subject from
-  unauthenticated client input, and MUST authorize the Approver to
-  approve for that Subject under local policy. This document
-  defines no wire parameter for the Subject; how the AS establishes
-  it (administrative selection, a directory, an authenticated
-  reference) is a deployment matter.
-- **External Subject.** When the Subject's home issuer
-  (`subject.iss`) differs from the AS, the AS MUST map the external
-  (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
-  injective mapping (no two distinct external Subjects map to the
-  same local `sub`). A derived token's (`iss`, `sub`) pair then
-  denotes exactly one Subject. Adopting the external `sub` verbatim
-  is valid only where it collides with no other principal's `sub`.
-
-### Rendering Safeguards {#rendering-safeguards}
-
-The consent rendering is hardened against client text:
-
-- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
-  inert text and MUST NOT be interpreted as markup.
-- The AS SHOULD mitigate Unicode direction-override and
-  confusable-character presentation in them.
-- The rendering MUST visually distinguish the AS-derived Authority
-  Set from client-supplied text and attribute that text to the client,
-  identified from client identity information the AS trusts
-  ({{approval-preparation}}), so crafted client text cannot pass as
-  derived authority or as a statement of the AS.
-
-The rendering presents `goal` and `task_bounds` as recorded, without
-truncation: the Intent is recorded verbatim and committed by
-`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
-show the Approver less than the record holds.
-
-Rendering a bound is not the same as enforcing it: a deployment MUST
-NOT present a rendered bound as enforced when no party enforces it.
-Which party enforces each bound, and what holds when that party is
-absent, follows from Enforcement Requirements ({{rs-requirements}})
-and, for a resource server that enforces only `scope`, from Scope
-Projection ({{scope-projection}}).
-An AS SHOULD make clear to the Approver which rendered bounds its
-deployment actually enforces, so consent is not given to a limit that
-binds nowhere.
-
-### Changes Before the Decision {#approval-context-changes}
-
-If any of the following changes between approval rendering and the
-approval decision, the AS MUST recompute the affected values and the
-anchors the Mission records, and MUST NOT create the Mission without
-the Approver's consent to the changed context:
-
-- the task or the authority proposal;
-- the derived Authority Set;
-- the established authority source ({{authority-sources}});
-- the effective `expires_at`; or
-- a policy input establishing any of them.
-
-Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where
-a proposal was submitted) is computed over the approved context. Because
-the proposal is committed separately, a proposal swapped between
-rendering and decision changes `proposal_hash` even where `intent_hash`
-is unchanged.
-
-### Approval Comprehension {#approval-comprehension}
-
-The approval event commits the Mission Intent and Authority Set the
-AS records as approved. Those commitments establish neither that the
-AS rendered them faithfully nor that the Approver understood them
-({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
-human-meaningful rendering; comprehension cannot be inferred from an
-approval or its integrity anchors.
-
-Mission Consent Evidence
-({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
-layered rendering of a committed disclosure, including what its first
-layer carries and practices for a large or varied Authority Set, and
-lets the Approver ask the basis for an entry before deciding.
-
-### Authority Sources {#authority-sources}
-
-A Mission draws its authority from one of three sources:
-
-- **user-delegated**: a delegating person's own authority;
-- **service-owned**: a workload's own provisioned authority; or
-- **organizational**: explicitly governed organizational policy with
-  a named accountable owner.
-
-The source names whose authority the approval draws on, recorded
-immutably as the Mission's `authority_source`; `approval_basis`
-records how drawing on it was activated ({{mission-record}}). The two
-compose: any source may activate under the `direct` basis or a
-standing-consent basis a companion defines.
-
-Approval activates only authority the source already holds: the AS
-establishes the source and verifies the derived Authority Set against
-it before approval ({{direct-approval-steps}},
-{{standing-consent-instances}}).
-
-An organizational Mission's `authority_source.policy` reference
-({{record-principal-members}}) commits to the governed policy through
-its `digest`:
-
-- `digest` is a prefixed commitment ({{commitment-mechanisms}})
-  whose exact committed input and construction the policy's format
-  specifies: its species and, for an envelope anchor, its `typ`,
-  `iss`, and `value`.
-- The party that produces the reference computes `digest`; a
-  consumer holding the policy can reproduce it, and one that does
-  not compares it as an opaque value.
-
-The subject-representation discipline is the same in every source:
-
-- The accountable principal is the record's
-  `approval_basis.consent_principal` in every source; it MUST NOT be
-  inferred from the token `sub`.
-- `sub` carries a delegating person only in the user-delegated
-  source. A service-owned or organizational Mission MUST record the
-  workload or organizational principal as `subject` and MUST NOT
-  record a human principal in its place. The injective mapping of
-  {{subject-establishment}} applies unchanged: that principal
-  receives its own AS-local `sub`, denotes itself, and impersonates
-  nobody. It
-  MUST be an authorization subject the AS recognizes as a resource
-  owner in its own right (the `sub` model of {{RFC9068}}), not only
-  the task's beneficiary.
-- The actor model does not vary by source: the Mission Record's
-  `client_id` names the Agent, a token's `client_id` names the client
-  that requested it ({{token-claims}}), and delegates are carried in
-  the `act` chain ({{delegation}}).
-
 ### Approver Authentication Strength {#approval-authentication}
 
 A deployment MUST publish a statement declaring the minimum
@@ -2018,6 +1863,161 @@ Where a deployment records Consent Evidence, the achieved values
 belong in its `authentication_context` member
 ({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}). This
 document defines no Mission Record member for them.
+
+### Subject Establishment {#subject-establishment}
+
+These rules apply at step 2 of the direct approval steps
+({{direct-approval-steps}}).
+
+- **Approval for another principal.** When the Approver is a
+  different principal (for example, an administrator approving on
+  a user's behalf), the AS MUST NOT take the Subject from
+  unauthenticated client input, and MUST authorize the Approver to
+  approve for that Subject under local policy. This document
+  defines no wire parameter for the Subject; how the AS establishes
+  it (administrative selection, a directory, an authenticated
+  reference) is a deployment matter.
+- **External Subject.** When the Subject's home issuer
+  (`subject.iss`) differs from the AS, the AS MUST map the external
+  (`subject.iss`, `subject.sub`) pair to an AS-local `sub` under an
+  injective mapping (no two distinct external Subjects map to the
+  same local `sub`). A derived token's (`iss`, `sub`) pair then
+  denotes exactly one Subject. Adopting the external `sub` verbatim
+  is valid only where it collides with no other principal's `sub`.
+
+### Authority Sources {#authority-sources}
+
+A Mission draws its authority from one of three sources:
+
+- **user-delegated**: a delegating person's own authority;
+- **service-owned**: a workload's own provisioned authority; or
+- **organizational**: explicitly governed organizational policy with
+  a named accountable owner.
+
+The source names whose authority the approval draws on, recorded
+immutably as the Mission's `authority_source`; `approval_basis`
+records how drawing on it was activated ({{mission-record}}). The two
+compose: any source may activate under the `direct` basis or a
+standing-consent basis a companion defines.
+
+Approval activates only authority the source already holds: the AS
+establishes the source and verifies the derived Authority Set against
+it before approval ({{direct-approval-steps}},
+{{standing-consent-instances}}).
+
+An organizational Mission's `authority_source.policy` reference
+({{record-principal-members}}) commits to the governed policy through
+its `digest`:
+
+- `digest` is a prefixed commitment ({{commitment-mechanisms}})
+  whose exact committed input and construction the policy's format
+  specifies: its species and, for an envelope anchor, its `typ`,
+  `iss`, and `value`.
+- The party that produces the reference computes `digest`; a
+  consumer holding the policy can reproduce it, and one that does
+  not compares it as an opaque value.
+
+The subject-representation discipline is the same in every source:
+
+- The accountable principal is the record's
+  `approval_basis.consent_principal` in every source; it MUST NOT be
+  inferred from the token `sub`.
+- `sub` carries a delegating person only in the user-delegated
+  source. A service-owned or organizational Mission MUST record the
+  workload or organizational principal as `subject` and MUST NOT
+  record a human principal in its place. The injective mapping of
+  {{subject-establishment}} applies unchanged: that principal
+  receives its own AS-local `sub`, denotes itself, and impersonates
+  nobody. It
+  MUST be an authorization subject the AS recognizes as a resource
+  owner in its own right (the `sub` model of {{RFC9068}}), not only
+  the task's beneficiary.
+- The actor model does not vary by source: the Mission Record's
+  `client_id` names the Agent, a token's `client_id` names the client
+  that requested it ({{token-claims}}), and delegates are carried in
+  the `act` chain ({{delegation}}).
+
+### Rendering Safeguards {#rendering-safeguards}
+
+The consent rendering is hardened against client text:
+
+- Client-supplied strings (`goal`, `task_bounds`) MUST be rendered as
+  inert text and MUST NOT be interpreted as markup.
+- The AS SHOULD mitigate Unicode direction-override and
+  confusable-character presentation in them.
+- The rendering MUST visually distinguish the AS-derived Authority
+  Set from client-supplied text and attribute that text to the client,
+  identified from client identity information the AS trusts
+  ({{approval-preparation}}), so crafted client text cannot pass as
+  derived authority or as a statement of the AS.
+
+The rendering presents `goal` and `task_bounds` as recorded, without
+truncation: the Intent is recorded verbatim and committed by
+`intent_hash` ({{integrity-anchors}}), so a truncated rendering would
+show the Approver less than the record holds.
+
+Rendering a bound is not the same as enforcing it: a deployment MUST
+NOT present a rendered bound as enforced when no party enforces it.
+Which party enforces each bound, and what holds when that party is
+absent, follows from Enforcement Requirements ({{rs-requirements}})
+and, for a resource server that enforces only `scope`, from Scope
+Projection ({{scope-projection}}).
+An AS SHOULD make clear to the Approver which rendered bounds its
+deployment actually enforces, so consent is not given to a limit that
+binds nowhere.
+
+### Changes Before the Decision {#approval-context-changes}
+
+If any of the following changes between approval rendering and the
+approval decision, the AS MUST recompute the affected values and the
+anchors the Mission records, and MUST NOT create the Mission without
+the Approver's consent to the changed context:
+
+- the task or the authority proposal;
+- the derived Authority Set;
+- the established authority source ({{authority-sources}});
+- the effective `expires_at`; or
+- a policy input establishing any of them.
+
+Each anchor (`intent_hash`, `authority_hash`, and `proposal_hash` where
+a proposal was submitted) is computed over the approved context. Because
+the proposal is committed separately, a proposal swapped between
+rendering and decision changes `proposal_hash` even where `intent_hash`
+is unchanged.
+
+### Approval Comprehension {#approval-comprehension}
+
+The approval event commits the Mission Intent and Authority Set the
+AS records as approved. Those commitments establish neither that the
+AS rendered them faithfully nor that the Approver understood them
+({{consent-binding}}). Step 5 of {{direct-approval-steps}} requires
+human-meaningful rendering; comprehension cannot be inferred from an
+approval or its integrity anchors.
+
+Mission Consent Evidence
+({{I-D.draft-mcguinness-oauth-mission-consent-evidence}}) defines
+layered rendering of a committed disclosure, including what its first
+layer carries and practices for a large or varied Authority Set, and
+lets the Approver ask the basis for an entry before deciding.
+
+### Authorization Code Protection {#approval-code-protection}
+
+The direct realization runs as an OAuth 2.0 {{RFC6749}}
+authorization-code flow initiated from the PAR-issued `request_uri`
+({{submission-par-carriage}}). Because the authorization code is the
+artifact the Mission grant binds to ({{grant-binding-resolution}})
+and it passes through the front channel, the AS MUST bind the code
+to the requesting client with PKCE ({{RFC7636}}, `S256` challenge
+method) or, equivalently, issue a DPoP-bound authorization code
+({{RFC9449}}). Redemption is then verified as
+{{Section 4.6 of RFC7636}} or {{Section 10 of RFC9449}} specifies.
+This prevents authorization-code injection from yielding the Mission
+grant. Issuance at the code's redemption applies the issuance procedure of
+{{issuance-gating}} as it states for code redemption.
+
+The AS SHOULD include the `iss` authorization-response parameter
+({{RFC9207}}) on the authorization response, so the client can detect
+a mix-up attack on the consent-bearing redirect leg ({{RFC9700}}).
 
 ### Single Accountable Approver {#multi-party-approval}
 
