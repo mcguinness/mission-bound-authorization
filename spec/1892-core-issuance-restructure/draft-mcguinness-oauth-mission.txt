@@ -4967,6 +4967,13 @@ Table of Contents
    | authenticated client is not       | Detail: safe                  |
    | the Mission's approved agent      | error_description             |
    +-----------------------------------+-------------------------------+
+   | Token exchange with no actor      | unsupported_grant_type        |
+   | (Section 7.5) at an AS that       | (Section 5.2 of [RFC6749]) if |
+   | does not support self-exchange    | the AS does not support the   |
+   |                                   | Token Exchange grant type;    |
+   |                                   | otherwise invalid_request     |
+   |                                   | (Section 2.2.2 of [RFC8693])  |
+   +-----------------------------------+-------------------------------+
    | Delegated token exchange          | invalid_client (Section 5.2   |
    | (Section 8.2): the AS does not    | of [RFC6749]).  Detail: safe  |
    | authenticate the requesting       | error_description             |

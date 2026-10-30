@@ -7462,6 +7462,11 @@ exchange rows of the third table.<a href="#section-11-4" class="pilcrow">¶</a><
 </td>
           </tr>
           <tr>
+            <td class="text-left" rowspan="1" colspan="1">Token exchange with no actor (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>) at an AS that does not support self-exchange</td>
+            <td class="text-left" rowspan="1" colspan="1">
+              <code>unsupported_grant_type</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>) if the AS does not support the Token Exchange grant type; otherwise <code>invalid_request</code> (<span><a href="https://rfc-editor.org/rfc/rfc8693#section-2.2.2" class="relref">Section 2.2.2</a> of [<a href="#RFC8693" class="cite xref">RFC8693</a>]</span>)</td>
+          </tr>
+          <tr>
             <td class="text-left" rowspan="1" colspan="1">Delegated token exchange (<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>): the AS does not authenticate the requesting client by a method it relies on to identify the client, which no public client meets</td>
             <td class="text-left" rowspan="1" colspan="1">
               <code>invalid_client</code> (<span><a href="https://rfc-editor.org/rfc/rfc6749#section-5.2" class="relref">Section 5.2</a> of [<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>). Detail: safe <code>error_description</code>

@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: floor
-Generated: 2026-10-30T04:01:08Z
-Source repository commit: f048bfe1f808552cba2848baf35ee8ff0a7c7a98
+Generated: 2026-10-30T04:09:18Z
+Source repository commit: 21b3c795409012b2dc4246bc5fc173fd478eb1d6
 Member count: 7
 
 Reading order:
@@ -13385,6 +13385,13 @@ Table of Contents
    | (Section 7.5): the                | (Section 2.2.2 of [RFC8693]). |
    | authenticated client is not       | Detail: safe                  |
    | the Mission's approved agent      | error_description             |
+   +-----------------------------------+-------------------------------+
+   | Token exchange with no actor      | unsupported_grant_type        |
+   | (Section 7.5) at an AS that       | (Section 5.2 of [RFC6749]) if |
+   | does not support self-exchange    | the AS does not support the   |
+   |                                   | Token Exchange grant type;    |
+   |                                   | otherwise invalid_request     |
+   |                                   | (Section 2.2.2 of [RFC8693])  |
    +-----------------------------------+-------------------------------+
    | Delegated token exchange          | invalid_client (Section 5.2   |
    | (Section 8.2): the AS does not    | of [RFC6749]).  Detail: safe  |
