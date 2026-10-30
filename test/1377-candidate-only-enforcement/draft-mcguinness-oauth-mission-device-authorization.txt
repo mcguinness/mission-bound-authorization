@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            29 October 2026
-Expires: 2 May 2027
+Intended status: Experimental                            30 October 2026
+Expires: 3 May 2027
 
 
                Mission Device Authorization for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -399,11 +399,11 @@ Table of Contents
    inherits that binding atomically with its issuance.  Issuance gating
    applies to the first redemption as to any later derivation.  The
    OAuth binding's token rules apply unchanged
-   ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound Access
-   Tokens"); they require a public client's Mission-bound refresh token
-   to be sender-constrained or rotated.  A client can sender-constrain
-   the issued tokens with DPoP [RFC9449] on the device access token
-   request.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Mission-Bound Token
+   Issuance"); they require a public client's Mission-bound refresh
+   token to be sender-constrained or rotated.  A client can sender-
+   constrain the issued tokens with DPoP [RFC9449] on the device access
+   token request.
 
    A client MUST NOT use the tokens of a successful device access token
    response unless the response carries mission_id, mission_expires_at,
@@ -655,6 +655,10 @@ Appendix B.  Document History
    [[ To be removed from the final specification ]]
 
    -00
+
+   *  The token-rules citation names the OAuth binding's Mission-Bound
+      Token Issuance chapter, the retitled Mission-Bound Access Tokens.
+      No requirement changed (#1892).
 
    *  Initial version (#1202).  Carries the Submission envelope and
       authority proposal on the RFC 8628 device authorization request

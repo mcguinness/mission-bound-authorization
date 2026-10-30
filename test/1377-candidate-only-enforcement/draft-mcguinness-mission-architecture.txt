@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           29 October 2026
-Expires: 2 May 2027
+Intended status: Informational                           30 October 2026
+Expires: 3 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -81,11 +81,13 @@ Table of Contents
    2.  Conventions and Terminology
    3.  A Mission's Life
    4.  The Mission
-     4.1.  Approval and Lifecycle
-     4.2.  The Authority Path
-     4.3.  The Delegated-Authority Layer
-     4.4.  The Capability Envelope
-     4.5.  Survivable Incorrectness
+     4.1.  Relationship to Existing OAuth Objects
+     4.2.  Missions, Plans, and Execution
+     4.3.  Approval and Lifecycle
+     4.4.  The Authority Path
+     4.5.  The Delegated-Authority Layer
+     4.6.  The Capability Envelope
+     4.7.  Survivable Incorrectness
    5.  Non-Goals
    6.  Mission Roles and Components
      6.1.  The Actor Chain
@@ -94,6 +96,7 @@ Table of Contents
      7.1.  Propose
      7.2.  Approve and Record
        7.2.1.  Mission Creation Paths
+       7.2.2.  Approval Role Mapping
      7.3.  Govern
      7.4.  Enforce Each Action
      7.5.  Run and Wind Down
@@ -111,7 +114,8 @@ Table of Contents
        9.3.1.  Policy Artifact
        9.3.2.  Derivation Policy Properties
        9.3.3.  Fixtures and Authoring Discipline
-       9.3.4.  Ownership and Operational Signals
+       9.3.4.  Derivation Rule Example
+       9.3.5.  Ownership and Operational Signals
      9.4.  Approval Fidelity
    10. The Mission Substrate
      10.1.  The Primitives, at a Glance
@@ -132,9 +136,10 @@ Table of Contents
      12.1.  Entry Ramps by Estate
      12.2.  The Issuance-Only Deployment
      12.3.  The Short Mission
-     12.4.  The Quarantine Pattern
-     12.5.  The Standing-Agent Pattern
-     12.6.  The Mission Deployment Profile
+     12.4.  Mission Granularity
+     12.5.  The Quarantine Pattern
+     12.6.  The Standing-Agent Pattern
+     12.7.  The Mission Deployment Profile
    13. Security Considerations
    14. Privacy Considerations
    15. IANA Considerations
@@ -236,13 +241,15 @@ Table of Contents
    The body reads in four parts, followed by appendices:
 
    *  *The model* comes first: a Mission's life end to end (Section 3);
-      the Mission (Section 4), with its approval and lifecycle
-      (Section 4.1), authority path (Section 4.2), delegated-authority
-      layer (Section 4.3), capability envelope (Section 4.4), and
-      survivable incorrectness (Section 4.5); what the family does not
-      do (Section 5); the roles (Section 6); the verb spine that
-      organizes every mechanism (Section 7); the invariants (Section 8);
-      and who owns meaning and who commits authority (Section 9).
+      the Mission (Section 4), with its relationship to existing OAuth
+      objects (Section 4.1), plans and execution (Section 4.2), approval
+      and lifecycle (Section 4.3), authority path (Section 4.4),
+      delegated-authority layer (Section 4.5), capability envelope
+      (Section 4.6), and survivable incorrectness (Section 4.7); what
+      the family does not do (Section 5); the roles (Section 6); the
+      verb spine that organizes every mechanism (Section 7); the
+      invariants (Section 8); and who owns meaning and who commits
+      authority (Section 9).
 
    *  *The substrate and the bindings* follow (Section 10): the binding-
       neutral kernel, the validity model (Section 10.4), and how the
@@ -254,7 +261,7 @@ Table of Contents
       Section 11.6).
 
    *  *Deployment* (Section 12) covers entry ramps (Section 12.1),
-      patterns, and the Deployment Profile (Section 12.6).
+      patterns, and the Deployment Profile (Section 12.7).
 
    *  *The appendices* hold the requirements the family answers
       (Appendix A), a comparison with a conventional stack (Appendix B),
@@ -472,7 +479,55 @@ Table of Contents
    Authority Set is the concrete authority (resources, actions,
    constraints) derived for the Mission.
 
-4.1.  Approval and Lifecycle
+4.1.  Relationship to Existing OAuth Objects
+
+   OAuth already has objects near this need, but none is the approved
+   task:
+
+   *  A scope value or an authorization_details entry ([RFC9396])
+      expresses authority but neither the task it serves nor a lifecycle
+      of its own.
+
+   *  An access token is a short-lived projection; its jti claim
+      identifies the token, not the task.
+
+   *  A refresh token preserves the ability to obtain further tokens but
+      commits no bounded, approved authority.
+
+   *  A consent record proves that an approval event happened; it does
+      not govern the resulting work as it continues.
+
+   The Mission is the durable object these project from: the approved
+   task that bounds and outlives them and that every derived token
+   refers back to.  It is not another authorization_details type, since
+   Rich Authorization Requests already express authority; it is the
+   approved task with a lifecycle, which an Authority Set is derived for
+   and gated by.
+
+4.2.  Missions, Plans, and Execution
+
+   The Mission is the durable object, held by its Controller (the
+   authorization server in the OAuth binding), that commits the approved
+   authority and owns the task's lifecycle.  Two related things an agent
+   produces around a task draw on the Mission's authority but carry none
+   of their own and never enlarge it.
+
+   The agent's *plan* (how it decomposes the task, chooses tools, and
+   delegates to sub-agents) is its own strategy, which the family does
+   not define (Section 5).  It grants nothing: a sub-agent's authority
+   is carried on its delegated token, derived from the Mission and only
+   narrowed from it ([I-D.draft-mcguinness-oauth-mission],
+   Section "Subset Rule").
+
+   The agent's *execution* (the tokens it derives, the calls it makes,
+   and the decisions taken on them) references the Mission but cannot
+   expand it.  Revoking the Mission stops further derivation
+   ([I-D.draft-mcguinness-oauth-mission], Section "Issuance Gating") but
+   does not undo completed actions.  Evaluating each action against the
+   Mission at the point of use is the runtime layer's concern
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+4.3.  Approval and Lifecycle
 
    In every binding, an explicit approval event creates the Mission and
    commits its approved context, or a verifiable commitment to it, and
@@ -546,7 +601,7 @@ Table of Contents
    registered reason in a termination object.  The AAuth binding maps
    the two reason sets ([I-D.draft-mcguinness-mission-aauth]).
 
-4.2.  The Authority Path
+4.4.  The Authority Path
 
    In OAuth's names, authority moves along one path from the approval
    event to an action, and no stage holds more than the stage before it:
@@ -593,7 +648,7 @@ Table of Contents
    is deployed, a resource relies on the credential alone, and the
    materialized-credential residual remains (Section 10.4).
 
-4.3.  The Delegated-Authority Layer
+4.5.  The Delegated-Authority Layer
 
    This family defines a delegated-authority layer.  It governs the
    approved task a delegate performs on a principal's behalf: its
@@ -643,7 +698,7 @@ Table of Contents
     (crossing)    evidence, Mission Receipts, the Mandate,
                   audit transparency
 
-4.4.  The Capability Envelope
+4.6.  The Capability Envelope
 
    A Mission commits its authority and intent once, at approval, but an
    agent's work is open-ended: the actions a task will take are not
@@ -712,7 +767,7 @@ Table of Contents
    (Section 11.4); without it, a deployment attributes an action to its
    Mission only.
 
-4.5.  Survivable Incorrectness
+4.7.  Survivable Incorrectness
 
    The levers share one strategy: they convert semantic risk into
    structural signals.  A policy decision point is never asked to judge
@@ -727,7 +782,7 @@ Table of Contents
    agent is probabilistic, so the family never bets on the model being
    right and builds so that wrong is survivable, on two arms:
 
-   *  The action arm is the capability envelope (Section 4.4) and its
+   *  The action arm is the capability envelope (Section 4.6) and its
       levers, wire-backed, with in-flight work unwinding through
       recorded reversibility classes
       ([I-D.draft-mcguinness-mission-orchestration]).
@@ -744,7 +799,7 @@ Table of Contents
    [I-D.draft-mcguinness-mission-authzen]).  Its interior (retrieval,
    memory, and context assembly scoped to the Mission) has no
    interoperable form and is deployment discipline, declared in the
-   Deployment Profile (Section 12.6) rather than claimed.
+   Deployment Profile (Section 12.7) rather than claimed.
 
    A bound makes an error survivable only along the dimension it meters.
    A per-action cap, a cumulative budget, and a recipient list each
@@ -752,7 +807,7 @@ Table of Contents
    still cause harm none of them measures, so staying within the
    authorized envelope does not by itself make the harm tolerable.  A
    deployment states which harms its bounds cover and lists the rest as
-   residuals (Section 12.6).
+   residuals (Section 12.7).
 
 5.  Non-Goals
 
@@ -768,8 +823,8 @@ Table of Contents
       restraint applies to GNAP and the capability-system lineage
       (macaroons, Biscuit, UCAN, object-capability narrowing): the
       family composes with deployed grant protocols and attenuation
-      primitives rather than adding a competing one.  The OAuth binding
-      states the comparison ([I-D.draft-mcguinness-oauth-mission]).
+      primitives rather than adding a competing one.  Section 4.1
+      compares the Mission with the OAuth objects near it.
 
    *  *A policy language.* The PDP evaluates the Mission's Authority
       Set, constraints, and state; how a deployment authors policy
@@ -777,7 +832,7 @@ Table of Contents
 
    *  *Entitlement governance.* What standing access a principal should
       hold over time belongs to existing governance layers; the
-      delegated-authority layer composes with them (Section 4.3).
+      delegated-authority layer composes with them (Section 4.5).
 
    *  *Agent identity and deployment governance.* Who the agent is, its
       concrete instance, and its approved behavioral version belong to
@@ -968,7 +1023,7 @@ Table of Contents
       binding).
 
    Executing delegate:  the outermost act actor (the OAuth binding's
-      Delegation section).
+      Delegation Within a Mission section).
 
    Credential holder:  the mediating PEP under mediated custody
       ([I-D.draft-mcguinness-mission-runtime]).
@@ -1039,7 +1094,7 @@ Table of Contents
       [I-D.draft-mcguinness-oauth-mission] names the profile and its
       required properties but defines none of its wire mechanics itself.
       An Agent Deployment is distinct from the Mission Deployment
-      Profile (Section 12.6), the estate's published claims manifest,
+      Profile (Section 12.7), the estate's published claims manifest,
       not a property of an agent.
 
    Mission (why the authority exists):  This family's object: the
@@ -1115,7 +1170,7 @@ Table of Contents
 
    The family organizes along a verb spine.  Each verb answers one
    question, sits on one trust boundary, and is owned by named
-   documents; the levers of Section 4.4 sort onto the spine by the
+   documents; the levers of Section 4.6 sort onto the spine by the
    question each answers.
 
     propose      OAuth Intent Shaping or AAuth native proposal
@@ -1529,6 +1584,119 @@ Table of Contents
      }
    }
 
+7.2.2.  Approval Role Mapping
+
+   In the OAuth binding, approval_basis separates three questions about
+   a Mission's own creation, which a scenario can assign to different
+   principals:
+
+   *  who is accountable for it (consent_principal);
+
+   *  who or what triggered it (activation_actor); and
+
+   *  what decided it (adjudication).
+
+   The companion profiles cited below define the scenarios; the list
+   shows how each assigns the three roles: its accountability root
+   (consent_principal), activation actor (activation_actor), and
+   adjudication (where a profile or deployment populates it).
+
+   Direct approval:
+      *  Accountability root: The approving human
+
+      *  Activation actor: Equal to consent_principal: the Approver
+         triggers their own approval
+
+      *  Adjudication: kind: human; the deciding human is
+         consent_principal itself
+
+   Relocated human approval
+   ([I-D.draft-mcguinness-oauth-mission-approval]):
+      *  Accountability root: The human who completes the relocated
+         approval event
+
+      *  Activation actor: Equal to consent_principal, unchanged from
+         the direct case: the instance activates at that human's
+         decision, not at any earlier submission
+
+      *  Adjudication: kind: human, as direct
+
+   Template dispatch ([I-D.draft-mcguinness-oauth-mission-template]):
+      *  Accountability root: The template's human approver, fixed at
+         template creation
+
+      *  Activation actor: The Dispatcher that requested the Dispatch,
+         distinct from consent_principal
+
+      *  Adjudication: kind: policy, policy naming the template's
+         dispatch_policy id and version (already carried in the
+         dispatched Mission's template lineage member), never the
+         Template's own id/template_version nor the Dispatcher
+
+   Policy drawdown
+   ([I-D.draft-mcguinness-oauth-mission-child-delegation]):
+      *  Accountability root: The Parent Mission's human Approver
+
+      *  Activation actor: The requesting parent Agent, distinct from
+         consent_principal
+
+      *  Adjudication: kind: policy, naming the child-creation policy's
+         id/version where the entry carries one, otherwise the Parent
+         Mission's approved delegation entry; never the requesting
+         parent Agent
+
+   Ceiling drawdown
+   ([I-D.draft-mcguinness-oauth-mission-progressive]):
+      *  Accountability root: The Approver who consented the ceiling
+
+      *  Activation actor: The requesting client, distinct from
+         consent_principal
+
+      *  Adjudication: kind: policy, naming the drawdown policy's
+         policy_id/policy_version carried in activation; never the
+         requesting client
+
+   Governed policy approval
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: The human who approved the exact policy
+         version the instance activates under
+
+      *  Activation actor: The authenticated client that requested the
+         activation, distinct from consent_principal
+
+      *  Adjudication: kind: policy, policy naming the deciding policy's
+         id/version (the approved policy itself or the evaluator it
+         commits), with governance_record: true; never the requesting
+         client
+
+   AGR-backed direct approval
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: The approving human, whose own human
+         assertion is the Approval Governance Record's accountable
+         assertion
+
+      *  Activation actor: Equal to consent_principal, as for direct
+         approval
+
+      *  Adjudication: kind: human, governance_record: true; how other
+         assertions contribute is Approval Governance's
+
+   AGR-backed template or drawdown activation
+   ([I-D.draft-mcguinness-mission-approval-governance]):
+      *  Accountability root: Unchanged from the underlying basis, whose
+         approval_basis stands in for an accountable assertion
+
+      *  Activation actor: Unchanged from the underlying basis
+
+      *  Adjudication: kind: policy, as the underlying basis assigns it,
+         with governance_record: true; the full assertion set is never
+         collapsed into a single principal
+
+   Direct approval is the degenerate case where one human fills every
+   role.  Where a profile or deployment does not populate adjudication
+   ([I-D.draft-mcguinness-oauth-mission], Section "Principals and
+   Approval Basis"), the list shows the value it would carry.
+
 7.3.  Govern
 
    Question:  How do consumers observe Mission state, and how does
@@ -1936,8 +2104,9 @@ Table of Contents
       itself.  The Mission Work Products companion carries the rule
       through non-transitive Mission-to-Mission handoff
       ([I-D.draft-mcguinness-oauth-mission-work-products]), and the
-      OAuth binding states it in its "Authority and Propagated
-      Information" section ([I-D.draft-mcguinness-oauth-mission]).
+      Mission Security Model catalogs the threat it answers
+      ([I-D.draft-mcguinness-mission-security-model], Section "Adversary
+      Model and Coverage").
 
    Composition:  An approval bounds the authority each derivation under
       the Mission carries; it does not bound the aggregate effect of a
@@ -1965,9 +2134,10 @@ Table of Contents
       force otherwise
       ([I-D.draft-mcguinness-oauth-mission-cross-domain],
       [I-D.draft-mcguinness-oauth-mission-child-delegation],
-      [I-D.draft-mcguinness-mission-metering]).  The OAuth binding
-      states the same property in its "Composition and the Effective
-      Ceiling" section ([I-D.draft-mcguinness-oauth-mission]).
+      [I-D.draft-mcguinness-mission-metering]).  The Mission Security
+      Model analyzes the same property
+      ([I-D.draft-mcguinness-mission-security-model], Section "Adversary
+      Model and Coverage").
 
       Cross-issuer joint authorization is outside the family's scope.
       Independent issuers run independent Missions, each bounded on its
@@ -1990,7 +2160,7 @@ Table of Contents
 
 9.1.  The Ontology Contract
 
-   The capability envelope (Section 4.4) meets its hardest case in the
+   The capability envelope (Section 4.6) meets its hardest case in the
    open world.  The OAuth model starts with authority the client
    proposes and the approval enumerates.  An agent that discovers
    resources at encounter time breaks that premise, and some
@@ -2171,10 +2341,7 @@ Table of Contents
    Authority-Set outcomes, making the local policy reviewable even
    though it does not travel.  Section 9.3 describes that policy
    artifact, its fixtures (Section 9.3.3), and its ownership
-   (Section 9.3.4); the OAuth binding's informative Derivation Policy
-   appendix works one narrowing rule through
-   ([I-D.draft-mcguinness-oauth-mission], Section "Derivation Rule
-   Example").
+   (Section 9.3.5); Section 9.3.4 works one narrowing rule through.
 
    The ceiling the derivation narrows against is a composition, not a
    single object.  The derived Authority Set sits inside every bound on
@@ -2238,10 +2405,8 @@ Table of Contents
    that the authority-bearing bindings share.  It is not a requirement
    for every binding.  It is illustrative and adds no requirements: it
    describes an authoring artifact for that derivation contract, not a
-   standardized policy language or an alternative subset relation.  The
-   OAuth binding's Derivation Policy appendix works one derivation rule
-   through ([I-D.draft-mcguinness-oauth-mission], Section "Derivation
-   Rule Example").
+   standardized policy language or an alternative subset relation.
+   Section 9.3.4 works one derivation rule through.
 
 9.3.1.  Policy Artifact
 
@@ -2348,7 +2513,65 @@ Table of Contents
    workload.  Applying the same entry checks at configuration load and
    at client intake keeps those two surfaces from disagreeing.
 
-9.3.4.  Ownership and Operational Signals
+9.3.4.  Derivation Rule Example
+
+   The following example works one derivation rule through the OAuth
+   binding's derivation contract ([I-D.draft-mcguinness-oauth-mission],
+   Section "Mission Authority").  It uses a catalog whose read actions
+   supply no amount for a cap to compare against, while a journal write
+   does.  The ceiling separates those actions:
+
+   [
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["invoices.read", "journal-entries.read"] },
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["journal-entries.write"],
+       "constraints": {
+         "max_amount": { "amount": "500.00", "currency": "USD" } } }
+   ]
+
+   The validated proposal also separates the read from the amount-bound
+   write:
+
+   [
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["invoices.read"] },
+     { "type": "mission_resource_access",
+       "resource": "https://erp.example.com",
+       "actions": ["journal-entries.write"],
+       "constraints": {
+         "max_amount": { "amount": "900.00", "currency": "USD" } } }
+   ]
+
+   Under a declared narrowing capability
+   ([I-D.draft-mcguinness-oauth-mission], Section "Declared
+   Transformation Capabilities"), the resulting Authority Set contains
+   the proposed invoices.read entry unchanged, and the proposed journal-
+   entries.write entry with max_amount narrowed to 500.00 USD.  The
+   ceiling's unrequested journal-entries.read does not appear.  Each
+   proposed entry intersects the same-resource ceiling entries; an empty
+   action intersection contributes no authority.
+
+   Negative fixtures accompany this positive result; none is a special
+   case that relaxes the type's relation:
+
+   *  A single mixed read and write proposal carrying the amount cap is
+      refused at intake: the read supplies no amount for the cap to
+      compare against, and Authority Set derivation does not drop the
+      cap from the read fragment.
+
+   *  A write proposal naming a different currency cannot produce the
+      USD intersection shown.
+
+   *  A proposal carrying a Common Constraint this deployment does not
+      compare is refused with the invalid_authorization_details error
+      code ([I-D.draft-mcguinness-oauth-mission], Section "Error and
+      Challenge Mapping"), not derived with the constraint dropped.
+
+9.3.5.  Ownership and Operational Signals
 
    +=====================+===============+============================+
    | Artifact            | Owner         | Responsibility             |
@@ -2476,7 +2699,7 @@ Table of Contents
    |              |syntax                  |                |Mandate       |
    +--------------+------------------------+----------------+--------------+
    |Lifecycle     |The states of           |The OAuth       |Runtime per-  |
-   |state space   |Section 4.1, open to    |binding (state  |class re-check|
+   |state space   |Section 4.3, open to    |binding (state  |class re-check|
    |              |companion-defined       |space, only-    |(fail closed  |
    |              |states, with the only-  |active); the    |on staleness),|
    |              |active rule, fail-safe  |status and      |harness pause,|
@@ -2590,7 +2813,7 @@ Table of Contents
    claim (id, issuer) and Mission-derived authorization details, issued
    only under a Mission-binding profile, which ties its issuance to the
    Mission being active (the OAuth binding's Claim Reservation).  Its
-   home is the OAuth binding's Mission-Bound Access Tokens and Mission
+   home is the OAuth binding's Mission-Bound Token Issuance and Mission
    Claim sections.  The claim's id and issuer are the Mission-identity
    condition; a token-carried Authority Set commitment is never required
    for it, per condition 2 of credential-mission-bound (Section 11.4).
@@ -2720,7 +2943,7 @@ Table of Contents
    Authority Server, and (as experimental sketches) UMA 2.0 and GNAP.
    AAuth composes at the shared Mission Context layer: approval, stable
    reference, lifecycle gating where the PS is on path, and governance
-   history (Section 4.1).
+   history (Section 4.3).
 
    Peer standing among the bindings is a deployment-topology claim, not
    a data-model-independence claim: each attaches to its own protocol as
@@ -2930,7 +3153,7 @@ Table of Contents
      |             |                                       | 11.6    |
      +-------------+---------------------------------------+---------+
      | Deployment  | Where a deployment declares all of    | Section |
-     | Profile     | the above                             | 12.6    |
+     | Profile     | the above                             | 12.7    |
      +-------------+---------------------------------------+---------+
 
                          Table 8: Assurance frames
@@ -3138,7 +3361,7 @@ Table of Contents
    remains authoritative for its own objects, and what a level grants
    varies with the binding.  A deployment states its own
    mediated_action_classes and exclusions in the Mission Deployment
-   Profile (Section 12.6).
+   Profile (Section 12.7).
 
    Every level above Baseline Issuance also carries the cross-cutting
    obligations its mechanisms imply:
@@ -3196,7 +3419,7 @@ Table of Contents
 
    What a deployment can prove is an axis orthogonal to the levels:
    named *assurance claims*, each with a proof obligation an existing
-   profile fixes, listed in the Deployment Profile (Section 12.6) rather
+   profile fixes, listed in the Deployment Profile (Section 12.7) rather
    than implied by a level:
 
    *  *Approved-record integrity*: the committed Intent, authority
@@ -3575,7 +3798,7 @@ Table of Contents
    names the covered issuer, resource, and action-class paths.  The
    Enforcement Scope Statement carries the per-path declarations for the
    enforcement-adjacent properties, and the Mission Deployment Profile
-   (Section 12.6) composes them.  A binding's Statement declares what
+   (Section 12.7) composes them.  A binding's Statement declares what
    the binding can supply, which is never itself a deployment claim.  An
    unknown property identifier, an undeclared path, or an unstated
    property is not claimed, and a consumer treats it as not held;
@@ -3929,12 +4152,11 @@ Table of Contents
        ([I-D.draft-mcguinness-mission-orchestration], Section "In-Flight
        Requests"), and runtime evidence reconciles each executed effect
        with its action ([I-D.draft-mcguinness-mission-runtime],
-       Section "Runtime Enforcement Evidence").  The OAuth binding
-       states that revoking a Mission does not undo completed actions
-       ([I-D.draft-mcguinness-oauth-mission], Section "Missions, Plans,
-       and Execution"), and AAuth Management bounds the AAuth residual
-       window ([I-D.draft-mcguinness-mission-aauth-management],
-       Section "Honest Residual Bounds").
+       Section "Runtime Enforcement Evidence").  Revoking a Mission does
+       not undo completed actions (Section 4.2), and AAuth Management
+       bounds the AAuth residual window
+       ([I-D.draft-mcguinness-mission-aauth-management], Section "Honest
+       Residual Bounds").
 
    4.  A route that does not consult Mission state is outside these
        limits.  It runs to its binding's credential, session or
@@ -3985,17 +4207,17 @@ Table of Contents
    decided, or did.  It does not make the human attentive, the producer
    honest, or the unmediated path disappear.  Those are the residues the
    Mission Assurance Levels (Section 11) and the security model make a
-   deployment state rather than assume.  The input arm (Section 4.5)
+   deployment state rather than assume.  The input arm (Section 4.7)
    carries the same honesty in the other direction.
 
 12.  Mission Deployment Patterns
 
    A deployment enters the family from the estate it already runs
    (Section 12.1).  It can stop at issuance alone (Section 12.2), adopt
-   Missions one short task at a time (Section 12.3), and compose named
-   patterns for untrusted input (Section 12.4) and for work that never
-   ends (Section 12.5).  The Deployment Profile states what it built
-   (Section 12.6).
+   Missions one short task at a time (Section 12.3, Section 12.4), and
+   compose named patterns for untrusted input (Section 12.5) and for
+   work that never ends (Section 12.6).  The Deployment Profile states
+   what it built (Section 12.7).
 
 12.1.  Entry Ramps by Estate
 
@@ -4117,7 +4339,39 @@ Table of Contents
    where missions grow long enough to need suspend, complete, or kill-
    now.
 
-12.4.  The Quarantine Pattern
+12.4.  Mission Granularity
+
+   A Mission is intended to cover one concrete task, not an agent's
+   whole lifetime.  Narrow Missions, each separately approved and
+   revocable, are preferred over one broad standing Mission that
+   accumulates authority across unrelated tasks.
+
+   This preference has a consent cost: many narrow Missions can create
+   approval fatigue, and combining unrelated authority into one broad
+   Mission can make approval difficult to evaluate.  A useful boundary
+   is a task whose purpose, authority, and bounds the Approver can
+   evaluate together ([I-D.draft-mcguinness-oauth-mission],
+   Section "Approval Comprehension").
+
+   Optional companions can reduce repeated approvals through standing
+   consent ([I-D.draft-mcguinness-oauth-mission], Section "Standing-
+   Consent Bases"; Section 12.6): for example, a template, an authority
+   ceiling, or a policy that a human approved once governs later
+   Missions.  The template, ceiling, or policy still needs a meaningful
+   human approval, and no such mechanism removes its profile's human-
+   approval requirement for high-consequence authority.
+
+   The unit of governance is the action, not the content.  A Mission
+   bounds where an agent may act (resources, actions) and how much
+   (constraints and, where metered, cumulative bounds).  It does not
+   inspect the content that flows within an authorized action: an
+   approved egress channel carries a status update or an exfiltrated
+   payload with equal authority.  Content-level controls (data loss
+   prevention, redaction) are complementary; under mediated execution
+   they fit at the mediating enforcement component
+   ([I-D.draft-mcguinness-mission-runtime]).
+
+12.5.  The Quarantine Pattern
 
    The quarantine pattern removes a leg of the injection-to-exfiltration
    chain instead of gating it: no single Mission ever holds untrusted
@@ -4155,7 +4409,7 @@ Table of Contents
    Agent Deployment, and Mission stay a gating pipeline, not a
    containment hierarchy (Section 6.2).
 
-12.5.  The Standing-Agent Pattern
+12.6.  The Standing-Agent Pattern
 
    The *standing-agent pattern* governs the agent whose work never ends.
    The agent stands; the authority cycles: each unit of work runs under
@@ -4189,7 +4443,7 @@ Table of Contents
    Missions, with deferred approval
    ([I-D.draft-mcguinness-oauth-mission-approval]) absorbing the volume.
 
-12.6.  The Mission Deployment Profile
+12.7.  The Mission Deployment Profile
 
    The Mission Assurance Levels (Section 11) name what to deploy, and
    the assurance claims (Section 11.3) name what may be proven.  A claim
@@ -4958,63 +5212,77 @@ Appendix B.  Comparison to a Conventional Stack
    mark where that local composition meets what this family
    standardizes:
 
-   +===========+=============+======================================+=============+
-   |Requirement|Conventional |Mission standardization               |Illustrative |
-   |           |OAuth+PDP    |                                      |added Mission|
-   |           |realization  |                                      |cost         |
-   +===========+=============+======================================+=============+
-   |Durable    |OAuth grants,|An independently addressable,         |Durable-     |
-   |task       |refresh      |lifecycle-bearing approved task with  |object and   |
-   |semantics  |families, or |anchors consistently interpreted by   |lifecycle    |
-   |across     |PDP records  |the authorization server, PDP, agents,|storage      |
-   |tokens and |outlive the  |audiences, and evidence producers; it |             |
-   |restarts   |token        |does not make persistence newly       |             |
-   |           |             |possible                              |             |
-   |           |             |([I-D.draft-mcguinness-oauth-mission],|             |
-   |           |             |Section "Relationship to Existing     |             |
-   |           |             |OAuth Objects"; Appendix C)           |             |
-   +-----------+-------------+--------------------------------------+-------------+
-   |Multi-     |A deployment-|Stable approved-task semantics for    |New claims   |
-   |credential,|invented     |that join, bound to authority and     |and endpoints|
-   |multi-actor|transaction, |carried through delegation and fan-out|             |
-   |join       |grant, or    |outside one private PDP schema        |             |
-   |           |workflow     |(Section 7.7)                         |             |
-   |           |identifier   |                                      |             |
-   |           |shared across|                                      |             |
-   |           |credentials  |                                      |             |
-   +-----------+-------------+--------------------------------------+-------------+
-   |A second   |The partner  |Bounded local credentials and common  |State        |
-   |trust      |calls the    |anchors carried by Cross-Domain       |consistency  |
-   |domain     |origin PDP,  |Projection, accepting local-token     |and          |
-   |           |shares state,|revocation latency (the Project verb):|distribution;|
-   |           |or federates |a portability choice, not the only    |privacy and  |
-   |           |policy,      |possible design                       |correlation  |
-   |           |trading      |                                      |surface      |
-   |           |synchronous  |                                      |             |
-   |           |coupling,    |                                      |             |
-   |           |availability,|                                      |             |
-   |           |and          |                                      |             |
-   |           |disclosure   |                                      |             |
-   +-----------+-------------+--------------------------------------+-------------+
-   |Approval as|A local      |A standardized immutable snapshot,    |Evidence     |
-   |a first-   |consent or   |integrity anchors, and one reference  |operations   |
-   |class      |grant        |portable evidence can cite            |             |
-   |record     |database plus|([I-D.draft-mcguinness-oauth-mission],|             |
-   |           |versioned    |Section "Relationship to Existing     |             |
-   |           |decision logs|OAuth Objects"; the Prove verb)       |             |
-   +-----------+-------------+--------------------------------------+-------------+
-   |Persistent |A stateful   |Monotonic subset semantics across     |AS or MAS    |
-   |narrowing  |authorization|issuance, delegation, attenuation, and|integration; |
-   |           |server or PDP|cross-domain projections, auditable   |ecosystem    |
-   |           |stores       |across components (Section 8)         |adoption     |
-   |           |reduced      |                                      |             |
-   |           |entitlements |                                      |             |
-   |           |and consults |                                      |             |
-   |           |them at      |                                      |             |
-   |           |issuance     |                                      |             |
-   +-----------+-------------+--------------------------------------+-------------+
+   +=============+===============+====================+===============+
+   | Requirement | Conventional  | Mission            | Illustrative  |
+   |             | OAuth+PDP     | standardization    | added Mission |
+   |             | realization   |                    | cost          |
+   +=============+===============+====================+===============+
+   | Durable     | OAuth grants, | An independently   | Durable-      |
+   | task        | refresh       | addressable,       | object and    |
+   | semantics   | families, or  | lifecycle-bearing  | lifecycle     |
+   | across      | PDP records   | approved task with | storage       |
+   | tokens and  | outlive the   | anchors            |               |
+   | restarts    | token         | consistently       |               |
+   |             |               | interpreted by the |               |
+   |             |               | authorization      |               |
+   |             |               | server, PDP,       |               |
+   |             |               | agents, audiences, |               |
+   |             |               | and evidence       |               |
+   |             |               | producers; it does |               |
+   |             |               | not make           |               |
+   |             |               | persistence newly  |               |
+   |             |               | possible           |               |
+   |             |               | (Section 4.1;      |               |
+   |             |               | Appendix C)        |               |
+   +-------------+---------------+--------------------+---------------+
+   | Multi-      | A deployment- | Stable approved-   | New claims    |
+   | credential, | invented      | task semantics for | and endpoints |
+   | multi-actor | transaction,  | that join, bound   |               |
+   | join        | grant, or     | to authority and   |               |
+   |             | workflow      | carried through    |               |
+   |             | identifier    | delegation and     |               |
+   |             | shared across | fan-out outside    |               |
+   |             | credentials   | one private PDP    |               |
+   |             |               | schema             |               |
+   |             |               | (Section 7.7)      |               |
+   +-------------+---------------+--------------------+---------------+
+   | A second    | The partner   | Bounded local      | State         |
+   | trust       | calls the     | credentials and    | consistency   |
+   | domain      | origin PDP,   | common anchors     | and           |
+   |             | shares state, | carried by Cross-  | distribution; |
+   |             | or federates  | Domain Projection, | privacy and   |
+   |             | policy,       | accepting local-   | correlation   |
+   |             | trading       | token revocation   | surface       |
+   |             | synchronous   | latency (the       |               |
+   |             | coupling,     | Project verb): a   |               |
+   |             | availability, | portability        |               |
+   |             | and           | choice, not the    |               |
+   |             | disclosure    | only possible      |               |
+   |             |               | design             |               |
+   +-------------+---------------+--------------------+---------------+
+   | Approval as | A local       | A standardized     | Evidence      |
+   | a first-    | consent or    | immutable          | operations    |
+   | class       | grant         | snapshot,          |               |
+   | record      | database plus | integrity anchors, |               |
+   |             | versioned     | and one reference  |               |
+   |             | decision logs | portable evidence  |               |
+   |             |               | can cite           |               |
+   |             |               | (Section 4.1; the  |               |
+   |             |               | Prove verb)        |               |
+   +-------------+---------------+--------------------+---------------+
+   | Persistent  | A stateful    | Monotonic subset   | AS or MAS     |
+   | narrowing   | authorization | semantics across   | integration;  |
+   |             | server or PDP | issuance,          | ecosystem     |
+   |             | stores        | delegation,        | adoption      |
+   |             | reduced       | attenuation, and   |               |
+   |             | entitlements  | cross-domain       |               |
+   |             | and consults  | projections,       |               |
+   |             | them at       | auditable across   |               |
+   |             | issuance      | components         |               |
+   |             |               | (Section 8)        |               |
+   +-------------+---------------+--------------------+---------------+
 
-     Table 17: Where a conventional stack meets Mission standardization
+    Table 17: Where a conventional stack meets Mission standardization
 
    Past these crossovers, a conventional deployment often accumulates a
    durable task record, a stable join key, lifecycle checks, narrowing
@@ -5359,7 +5627,7 @@ Appendix E.  A Worked Composition
    and the consequence class.  It is ordinary deployment documentation;
    no machine-readable declaration format is defined, and the Mission
    Deployment Profile's schema remains reserved future work
-   (Section 12.6).
+   (Section 12.7).
 
    The deployment runs PS authorization (three-party) access; agent
    identity, person identity, resource-managed, and federated access are
@@ -5503,7 +5771,7 @@ Appendix G.  Illustrative Verification Guidance
        published reliance bound.
 
    Expiry ceiling, where the binding imposes one (the OAuth binding's
-   Mission-Bound Access Tokens section,
+   Mission-Bound Token Issuance section,
    [I-D.draft-mcguinness-oauth-mission]; the UMA and GNAP bindings,
    [I-D.draft-mcguinness-mission-uma],
    [I-D.draft-mcguinness-mission-gnap]; for AAuth, the expiry profile,
@@ -5546,7 +5814,7 @@ Appendix G.  Illustrative Verification Guidance
 Appendix H.  Deployment Profile Example Shapes
 
    These shapes are illustrative.  This document fixes no serialization,
-   and each fact's owning profile governs its meaning (Section 12.6).
+   and each fact's owning profile governs its meaning (Section 12.7).
 
    The first shape is for a deployment that runs mediated credential
    custody but makes neither High-Assurance claim.  In this shape:
@@ -5560,7 +5828,7 @@ Appendix H.  Deployment Profile Example Shapes
 
    *  Its key_custody entries are declarations under the same rule: a
       custody statement made legible, not a checked assurance grade (the
-      member's definition in Section 12.6 states the open verifier gap).
+      member's definition in Section 12.7 states the open verifier gap).
 
    *  Its revocation_exposure member, under runtime, states inputs that
       size what can still happen inside the mediated classes' revocation
@@ -6133,6 +6401,26 @@ Appendix J.  Document History
 
    [[ To be removed from the final specification ]]
 
+   *  Gains, from the OAuth binding, Approval Role Mapping beside
+      Mission Creation Paths: how each creation scenario assigns the
+      three approval_basis roles.  The OAuth binding's Single
+      Accountable Approver section points here.  No requirement changed
+      (#1892).
+
+   *  Gains, from the OAuth binding, Relationship to Existing OAuth
+      Objects and Missions, Plans, and Execution under The Mission, the
+      Derivation Rule Example under Derivation Policy Authoring, and
+      Mission Granularity among the deployment patterns; its citations
+      of those sections become local, and its two citations of the
+      binding's Mission-Bound Access Tokens chapter follow its retitling
+      as Mission-Bound Token Issuance.  No requirement changed (#1892).
+
+   *  Mission Invariants' work-products and composition entries cite the
+      Security Model's adversary model, which carries the analysis the
+      OAuth binding's Authority and Propagated Information and
+      Composition and the Effective Ceiling sections restated.  No
+      requirement changed (#1892).
+
    *  Gains, from the OAuth binding, the OAuth Binding Mapping
       Assessment, pinned to and citing a commit-pinned Editor's Draft
       snapshot of that binding, with later revisions unassessed;
@@ -6480,7 +6768,7 @@ Appendix J.  Document History
       composition readings under Section 8 tightened to a summary
       sentence plus citation each, with their "not this summary, is the
       normative text this passage tracks" deferral kept; several over-
-      long paragraphs in Section 4.4, Section 10.4, Section 11, and
+      long paragraphs in Section 4.6, Section 10.4, Section 11, and
       Section 11.5 split for one idea per paragraph and front-loaded
       openers.  No normative content, anchor, or table row changed.
 

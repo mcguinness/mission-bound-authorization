@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         29 October 2026
-Expires: 2 May 2027
+Intended status: Standards Track                         30 October 2026
+Expires: 3 May 2027
 
 
                       Mission Approval Governance
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -279,8 +279,8 @@ Table of Contents
    never joins this record.
 
    Where the governed Mission populates approval_basis.adjudication
-   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping") and
-   this record exists:
+   ([I-D.draft-mcguinness-oauth-mission], Section "Principals and
+   Approval Basis") and this record exists:
 
    *  adjudication.governance_record is true;
 
@@ -2463,6 +2463,12 @@ Appendix B.  Portable Approval-Binding Check Vectors
 Appendix C.  Document History
 
    [[ To be removed from the final specification ]]
+
+   *  Relationship to the Issuance Profile cites the OAuth binding's
+      Principals and Approval Basis section, which defines
+      approval_basis.adjudication, since that binding's Role Mapping
+      appendix moved to the architecture document.  No requirement
+      changed (#1892).
 
    *  Scope of the Recency Rules says the record is historical evidence
       and that the effect of a later change to an Approver's role, a

@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Experimental                            29 October 2026
-Expires: 2 May 2027
+Intended status: Experimental                            30 October 2026
+Expires: 3 May 2027
 
 
      Mission-Bound Authorization for User-Managed Access (UMA) 2.0
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -458,11 +458,11 @@ Table of Contents
    decision mechanism, not the Approver: the approval event records the
    policy identity and version as that mechanism, the resource owner who
    registered it stays the accountable person
-   ([I-D.draft-mcguinness-oauth-mission], Section "Role Mapping"), and
-   the anchors commit as in the interactive case.  A deployment SHOULD
-   reserve policy approval for Missions within bounds the owner has
-   expressly pre-consented and route everything else to
-   request_submitted.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Principals and
+   Approval Basis"), and the anchors commit as in the interactive case.
+   A deployment SHOULD reserve policy approval for Missions within
+   bounds the owner has expressly pre-consented and route everything
+   else to request_submitted.
 
    The need_info rotation loop is the clarification and narrowing
    surface: the authorization server may require further claims, and the
