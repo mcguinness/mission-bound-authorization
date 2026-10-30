@@ -76,6 +76,11 @@ export interface AuthorizationDetailsTypeMetadata {
   /** Mutually exclusive with schema_uri (draft-zehavi §5); this AS always inlines `schema`. */
   schema: Record<string, JsonValue>;
   examples?: JsonValue[];
+  /**
+   * @spec mission#transformation-capabilities: the first carrier, the type's
+   * declared `narrowing`, `delegation` and `projection` (#1377, D1025).
+   */
+  mission_transformation_capabilities?: Readonly<Record<string, JsonValue>>;
 }
 
 /**
@@ -287,9 +292,23 @@ export const SUPPORTED_AUTHORIZATION_DETAILS_TYPES: ReadonlySet<string> = new Se
   Object.keys(AUTHORIZATION_DETAILS_TYPES_METADATA),
 );
 
-/** The full endpoint response body (draft-zehavi §5). */
-export function authorizationDetailsTypesMetadata(): Record<string, AuthorizationDetailsTypeMetadata> {
-  return AUTHORIZATION_DETAILS_TYPES_METADATA;
+/**
+ * The full endpoint response body (draft-zehavi §5), each type's entry
+ * carrying the transformation capabilities `declared` names for it
+ * (@spec mission#transformation-capabilities, the first carrier). A type
+ * `declared` does not name carries no member, so each capability falls
+ * through to the next carrier.
+ */
+export function authorizationDetailsTypesMetadata(
+  declared?: Readonly<Record<string, Readonly<Record<string, JsonValue>>>>,
+): Record<string, AuthorizationDetailsTypeMetadata> {
+  if (!declared) return AUTHORIZATION_DETAILS_TYPES_METADATA;
+  return Object.fromEntries(
+    Object.entries(AUTHORIZATION_DETAILS_TYPES_METADATA).map(([type, entry]) => {
+      const capabilities = declared[type];
+      return [type, capabilities ? { ...entry, mission_transformation_capabilities: structuredClone(capabilities) } : entry];
+    }),
+  );
 }
 
 /**

@@ -16,9 +16,9 @@ import { randomBytes } from "node:crypto";
 import { createLocalJWKSet, type CryptoKey, type JSONWebKeySet, jwtVerify, SignJWT } from "jose";
 import { errors, type KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
-import { isSubsetSetIgnoringCapabilitySources } from "@mission/core";
+import { carriedUnder, isSubsetSetUnderIgnoringCapabilitySources } from "@mission/core";
 import { malformedMatcherInRequest, refusedMemberInRequest } from "../kernel/authorization-details-metadata.js";
-import { issuedWhole, projectThroughEffective, SourceUnavailableError } from "../kernel/derive.js";
+import { issuedWhole, projectThroughEffectiveUnder, SourceUnavailableError } from "../kernel/derive.js";
 import type { AuthorityEntry, MissionRecord } from "../kernel/types.js";
 import { GateError } from "../kernel/kernel.js";
 import { CHILD_JWT_BEARER_GRANT_TYPE } from "./child-grant.js";
@@ -276,19 +276,25 @@ export async function handleDispatchHandoffExchange(opts: AdapterOptions, ctx: K
     }
     throw e;
   }
+  // @spec resource-access#qualified-narrowing (#1377, D1025): only the
+  // effective entries issuance may carry, whatever source supplied them; a
+  // modified entry is carried only where the declared `narrowing` permits it,
+  // and an unchanged one as it stands.
+  const narrowing = opts.kernel.narrowingDeclaration();
+  effective = carriedUnder(narrowing, effective, active.authority_set);
   let authority: AuthorityEntry[];
   if (requested === undefined) {
-    authority = projectThroughEffective(presented, effective);
+    authority = projectThroughEffectiveUnder(narrowing, presented, effective);
   } else {
-    if (!isSubsetSetIgnoringCapabilitySources(requested, presented)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, presented)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the presented token's authority");
       return;
     }
-    if (!isSubsetSetIgnoringCapabilitySources(requested, effective)) {
+    if (!isSubsetSetUnderIgnoringCapabilitySources(narrowing, requested, effective)) {
       txError(ctx, 400, "invalid_authorization_details", "requested authorization_details exceed the Mission authority");
       return;
     }
-    authority = projectThroughEffective(requested, effective);
+    authority = projectThroughEffectiveUnder(narrowing, requested, effective);
     // @spec mission#subset, mission#error-mapping (#1513; #1508, D625): every
     // requested entry is issued whole, or the request is refused.
     if (!issuedWhole(requested, effective)) {
@@ -437,7 +443,13 @@ export async function handleDispatchHandoffRedemption(
     }
     throw e;
   }
-  const authority = projectThroughEffective(grant.authority, effective);
+  // @spec resource-access#qualified-narrowing (#1377, D1025): as at the mint.
+  const narrowing = opts.kernel.narrowingDeclaration();
+  const authority = projectThroughEffectiveUnder(
+    narrowing,
+    grant.authority,
+    carriedUnder(narrowing, effective, record.authority_set),
+  );
   if (authority.length === 0) {
     refuse(ctx, "invalid_grant", "the handed-off authority is no longer within the instance's effective authority");
     return;

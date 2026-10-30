@@ -73,7 +73,7 @@ export async function mintChildGrant(
     mission: childMissionClaim(kernel, child),
     // Containment: the assertion carries the child's EFFECTIVE set (a fresh
     // child has no containment, so this is its approved set as-is).
-    authorization_details: kernel.effectiveAuthoritySet(child),
+    authorization_details: kernel.issuableAuthoritySet(child),
     // @spec #child-client-identity — the child actor is the only authorized redeemer.
     client_id: child.client_id,
   })

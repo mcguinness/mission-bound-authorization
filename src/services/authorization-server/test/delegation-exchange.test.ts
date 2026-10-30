@@ -9,6 +9,7 @@ import { FIXTURE_BROWSER_LOGIN, floorApprovalHeaders, renderedRevision, TEST_APP
 import { ApprovalSessionStore } from "../src/index.js";
 
 import { type Server } from "node:http";
+import { NARROWING_UNDECLARED } from "@mission/core";
 import { AUTHORITY_SOURCES, CANONICAL_RESOURCE, DERIVATION_POLICY, SCOPE_PROJECTION, TOPOLOGY } from "@mission/demo-data";
 import {
   calculateJwkThumbprint,
@@ -1792,5 +1793,103 @@ describe("the delegated exchange authenticates the designated client (@spec miss
     expect(authenticated.body.error_description).toMatch(/actor_token is not supported/);
     expect(authenticated.body.access_token).toBeUndefined();
     expect(derivations(on, missionId)).toBe(before);
+  });
+});
+
+describe("delegation declared without narrowing: a delegated token carries an entry only when it equals the presented token's (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1717, #1377, D1025)", () => {
+  // The configuration meets the rows' precondition: `delegation` declared and
+  // `narrowing` not. The authorization server gates nothing on `delegation`
+  // in this implementation; the equal-only carriage comes from the undeclared
+  // `narrowing`. The ceiling is the Mission's own entry, so the proposal equals
+  // it and derives unchanged.
+  /** A second delegable entry, so a credential can carry one of the Mission's entries unchanged. */
+  const vendorReads = () => ({
+    type: "mission_resource_access",
+    resource: RESOURCE,
+    actions: ["payments:vendor.read"],
+    constraints: { vendors: ["acme"] },
+    delegation: { max_depth: 2, allowed_delegates: [{ sub_profile: "ai_agent" }] },
+  });
+  let h: Harness;
+  beforeAll(async () => {
+    h = await harness(14954, {
+      capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
+      derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads(), vendorReads()] },
+      transformationCapabilities: {
+        declared: { mission_resource_access: { delegation: true } },
+        narrowing: NARROWING_UNDECLARED,
+      },
+    });
+  });
+  afterAll(() => {
+    h?.server.close();
+  });
+  const entriesOf = (jwt: string) => (decodeJwt(jwt) as { authorization_details: Body[] }).authorization_details;
+
+  it("a designation carrying an entry equal to the presented token's is issued with its approved audience kept, and its redemption carries the entry unchanged", async () => {
+    const { missionId, accessToken } = await baseMission(h, [broadReads()]);
+    const [presented] = entriesOf(accessToken);
+    expect(presented?.actions).toEqual(["payments:invoice.list", "payments:invoice.read"]);
+    const designation = await designate(h, accessToken, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(entriesOf(designation.body.access_token as string)).toEqual([presented]);
+    const record = h.as.kernel.get(missionId);
+    expect(record?.approved_audiences?.[0]).toEqual([RESOURCE]);
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([presented]);
+  });
+
+  it("once the Mission narrows the entry, a redemption and a new designation are refused invalid_target, counting nothing", async () => {
+    const { missionId, accessToken } = await baseMission(h, [broadReads()]);
+    const designation = (await designate(h, accessToken, SUBAGENT)).body.access_token as string;
+    contain(h, missionId, ["payments:invoice.list"]);
+    const before = derivations(h, missionId);
+    const redeemed = await redeem(h, designation, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(redeemed.status, JSON.stringify(redeemed.body)).toBe(400);
+    expect(redeemed.body.error).toBe("invalid_target");
+    const designated = await designate(h, accessToken, SUBAGENT);
+    expect(designated.status, JSON.stringify(designated.body)).toBe(400);
+    expect(designated.body.error).toBe("invalid_target");
+    expect(derivations(h, missionId)).toBe(before);
+  });
+
+  it("a credential carrying one of the Mission's entries unchanged: the designation and its redemption never restore the entry it omits", async () => {
+    const { accessToken } = await baseMission(h, [broadReads(), vendorReads()]);
+    const entries = entriesOf(accessToken);
+    expect(entries).toHaveLength(2);
+    const reads = entries.find((e) => (e.actions as string[]).includes("payments:invoice.read")) as Body;
+    const handle = await designate(h, accessToken, "ap-agent");
+    expect(handle.status, JSON.stringify(handle.body)).toBe(200);
+    const credential = await token(h, "ap-agent", dpop.get("ap-agent") as Keys, {
+      grant_type: TOKEN_EXCHANGE_GRANT_TYPE,
+      request_refresh_token: "true",
+      subject_token: handle.body.access_token as string,
+      subject_token_type: ACCESS_TOKEN_TOKEN_TYPE,
+      resource: RESOURCE,
+      creation_request_id: crypto.randomUUID(),
+      authorization_details: JSON.stringify([reads]),
+    });
+    expect(credential.status, JSON.stringify(credential.body)).toBe(200);
+    expect(entriesOf(credential.body.access_token as string)).toEqual([reads]);
+    const designation = await designate(h, credential.body.access_token as string, SUBAGENT);
+    expect(designation.status, JSON.stringify(designation.body)).toBe(200);
+    expect(entriesOf(designation.body.access_token as string)).toEqual([reads]);
+    const delegated = await redeem(h, designation.body.access_token as string, SUBAGENT, undefined, { resource: RESOURCE });
+    expect(delegated.status, JSON.stringify(delegated.body)).toBe(200);
+    expect(entriesOf(delegated.body.access_token as string)).toEqual([reads]);
+  });
+
+  it("a refresh after partial containment of one of two entries carries the other unchanged and omits the contained one whole (@spec resource-access#qualified-narrowing, D1025)", async () => {
+    const { missionId, accessToken, refreshToken } = await baseMission(h, [broadReads(), vendorReads()]);
+    const vendor = entriesOf(accessToken).find((e) => (e.actions as string[]).includes("payments:vendor.read")) as Body;
+    contain(h, missionId, ["payments:invoice.list"]);
+    const refreshed = await token(h, "ap-agent", dpop.get("ap-agent") as Keys, {
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      resource: RESOURCE,
+    });
+    expect(refreshed.status, JSON.stringify(refreshed.body)).toBe(200);
+    expect(entriesOf(refreshed.body.access_token as string)).toEqual([vendor]);
   });
 });

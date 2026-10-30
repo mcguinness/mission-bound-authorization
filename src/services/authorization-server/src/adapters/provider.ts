@@ -10,7 +10,7 @@ import {
   MissionStatusRateLimiter,
 } from "./status-rate-limit.js";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { MISSION_MAX_STALE_SECONDS } from "@mission/demo-data";
+import { MISSION_MAX_STALE_SECONDS, type TransformationCapabilities } from "@mission/demo-data";
 import { APPROVAL_SUBJECT_HEADER, ApprovalSessionStore, MISSION_APPROVAL_SCOPE, validApprovalPrincipal, type ApprovalPrincipal } from "./approval-resolution.js";
 import {
   approvalContext,
@@ -62,7 +62,7 @@ import {
   delegatedRoutingRefusal,
   earlyScopeRefusal,
   entryOverlapsResource,
-  isSubsetSetIgnoringCapabilitySources,
+  isSubsetSetUnderIgnoringCapabilitySources,
   type MissionAccessProfile,
   projectScope,
   readMissionAccessProfile,
@@ -1206,6 +1206,14 @@ export interface AdapterOptions {
    */
   scopeProjection?: ScopeProjectionMapping;
   /**
+   * @spec mission#transformation-capabilities (#1377, D1025): the declared
+   * transformation capabilities, emitted as each type's
+   * `mission_transformation_capabilities` in its metadata entry. Absent: no
+   * carrier member, so every capability falls through to deployment
+   * documentation.
+   */
+  transformationCapabilities?: TransformationCapabilities;
+  /**
    * The deployment's enabled capabilities (`adapters/capabilities.ts`).
    * Absent: every capability is on, which is the full reference provider. A
    * disabled capability refuses with its path's standard error.
@@ -1774,7 +1782,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
     rar: AuthorityEntry[],
   ): { projected: AuthorityEntry[]; collapsed: boolean } {
     try {
-      return projectRarThroughMission(authoritySource, record, rar);
+      return projectRarThroughMission(authoritySource, record, rar, kernel.narrowingDeclaration());
     } catch (e) {
       if (e instanceof SourceUnavailableError) throw sourceUnavailableError(e.message);
       throw e;
@@ -2055,7 +2063,13 @@ export function buildProvider(opts: AdapterOptions): Provider {
     const granted = Array.isArray(ceiling) ? (ceiling as AuthorityEntry[]) : [];
     // Every requested entry is within the grant and issued whole, or the
     // request is refused (#1508, #1513).
-    if (!isSubsetSetIgnoringCapabilitySources(requested, granted) || !issuedWhole(requested, granted)) {
+    // @spec resource-access#qualified-narrowing (#1377, D1025): within the
+    // grant under the declared `narrowing`, and only by equality where it is
+    // not permitted for the pair.
+    if (
+      !isSubsetSetUnderIgnoringCapabilitySources(opts.kernel.narrowingDeclaration(), requested, granted) ||
+      !issuedWhole(requested, granted)
+    ) {
       throw new InvalidAuthorizationDetails("requested authorization_details are not within the authority of the grant");
     }
     return projectThroughEffective(requested, granted);
@@ -2091,7 +2105,10 @@ export function buildProvider(opts: AdapterOptions): Provider {
    * before consumption. It returns the grant's `ceiling` and the set the
    * access token will carry (`issued`), which the projection pre-check
    * decides over; undefined where the grant's authority does not resolve,
-   * a failure left to the ordinary path.
+   * a failure left to the ordinary path. A projection that leaves the
+   * credential nothing it may carry (fully contained, or modified where the
+   * narrowing declaration does not permit it; #1377, D1025) refuses
+   * `invalid_grant` here, before consumption, not after it.
    */
   function preCheckRefreshRar(ctx: unknown): { ceiling: unknown; issued: unknown } | undefined {
     const c = ctx as {
@@ -2106,7 +2123,8 @@ export function buildProvider(opts: AdapterOptions): Provider {
     let ceiling: unknown;
     try {
       ceiling = rarThroughEffectiveSet(c.oidc.entities.Grant);
-    } catch {
+    } catch (e) {
+      if (e instanceof errors.InvalidGrant) throw e;
       return undefined;
     }
     return { ceiling, issued: narrowToRequestedRar(ctx, ceiling) };
@@ -3893,8 +3911,10 @@ async function handleChildJwtBearerGrant(
   //    AccessToken name the SAME client (record.client_id == the authenticated
   //    client, guaranteed by steps 3-4), which oidc-provider requires.
   // Containment: every copy of the child's authority into rar/authorization_
-  // details projects the EFFECTIVE set (approved minus containment overlay).
-  const effective = kernel.effectiveAuthoritySet(record);
+  // details projects the ISSUABLE set: the effective set (approved minus the
+  // containment overlay) as far as the narrowing declaration lets issuance
+  // carry it (#1377, D1025).
+  const effective = kernel.issuableAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
   let grantId: string;
   if (record.grant_id) {
@@ -5174,7 +5194,7 @@ function makeRoutes(provider: Provider, opts: AdapterOptions) {
     if (ctx.path === "/authorization-details-types" && ctx.method === "GET") {
       ctx.status = 200;
       ctx.set("content-type", "application/json");
-      ctx.body = authorizationDetailsTypesMetadata();
+      ctx.body = authorizationDetailsTypesMetadata(opts.transformationCapabilities?.declared);
       return;
     }
 
@@ -7342,7 +7362,7 @@ async function handleMissionDispatchGrant(
   // because there record.client_id IS the authenticated client.
   // Containment: every copy of the instance's authority into rar/authorization_
   // details projects the EFFECTIVE set (approved minus containment overlay).
-  const effective = kernel.effectiveAuthoritySet(record);
+  const effective = kernel.issuableAuthoritySet(record);
   const resource = effective[0]?.resource ?? opts.issuer;
   // @spec mission-template#grant-type, expansion#creation-recovery: a repeated
   // dispatch_event_id is gated to the previously committed instance rather
@@ -8177,11 +8197,11 @@ async function decide(
     if (requestedScope.resource.length && audience) {
       grant.addResourceScope(audience, requestedScope.resource.join(" "));
     }
-    // Containment: the grant's rar copies the EFFECTIVE set: on a retry, the
-    // committed record's; otherwise the prepared set, which is exactly what the
+    // Containment: the grant's rar copies the ISSUABLE set (the effective set
+    // issuance may carry; #1377, D1025): on a retry, the committed record's; otherwise the prepared set, which is exactly what the
     // commit records (a freshly approved Mission has no containment).
     const grantAuthority = existing
-      ? opts.kernel.effectiveAuthoritySet(existing)
+      ? opts.kernel.issuableAuthoritySet(existing)
       : (prepared as PreparedApproval).authoritySet;
     for (const entry of grantAuthority) {
       (grant as unknown as { addRar: (d: unknown) => void }).addRar(entry);

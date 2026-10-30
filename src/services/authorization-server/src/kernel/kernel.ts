@@ -13,7 +13,10 @@ import {
   COMMIT_IS_EFFECT_REASONS,
   entryOverlapsResource,
   intentHash,
+  isSubsetEntryUnder,
   type JsonValue,
+  NARROWING_IN_FULL,
+  type NarrowingDeclaration,
   proposalHash,
   type ResourceContractDeclarations,
 } from "@mission/core";
@@ -884,6 +887,13 @@ export interface KernelOptions {
    */
   resourceContracts?: ResourceContractDeclarations;
   /**
+   * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+   * (#1377, D1025): the `narrowing` capability this server declares for
+   * `mission_resource_access`, as it resolves it. Absent: declared in full,
+   * so a kernel constructed without it narrows as before.
+   */
+  narrowing?: NarrowingDeclaration;
+  /**
    * @spec mission#authority-sources, mission#approval-event — the deployment's
    * TRUSTED authority-source catalog. The approval event establishes
    * `authority_source` from this and from nothing else: never from
@@ -1376,6 +1386,11 @@ export class MissionKernel {
     return this.opts.resourceContracts ?? RESOURCE_CONTRACTS;
   }
 
+  /** @spec resource-access#qualified-narrowing (#1377, D1025): the declared `narrowing` capability every narrowing site applies. */
+  narrowingDeclaration(): NarrowingDeclaration {
+    return this.opts.narrowing ?? NARROWING_IN_FULL;
+  }
+
   /**
    * {@link derive}, with each derived entry's delegate eligibility origin
    * (@spec resource-access#delegate-eligibility, #1275), index-aligned with
@@ -1397,6 +1412,7 @@ export class MissionKernel {
       undefined,
       undefined,
       requestedScope,
+      this.narrowingDeclaration(),
     );
     // @spec discharge#discharge-authority: resolve every `discharge_authority`
     // selector the derived entries carry, refusing the derivation when one maps
@@ -4164,9 +4180,39 @@ export class MissionKernel {
       if (removal.whole) continue; // a selector with no actions -> entry dropped
       const actions = entry.actions.filter((a) => !removal.actions.has(a));
       if (actions.length === 0) continue; // every action contained -> entry dropped
+      if (actions.length === entry.actions.length) {
+        out.push({ origin: entry, entry }); // no action of this entry contained -> unchanged
+        continue;
+      }
+      // @spec containment#visibility: the uncontained remainder is kept, whatever
+      // the narrowing declaration; which entries issuance may carry is decided
+      // separately ({@link issuableEntriesWithOrigin}).
       out.push({ origin: entry, entry: { ...entry, actions } });
     }
     return out;
+  }
+
+  /**
+   * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+   * (#1377, D1025): the effective entries issuance may carry, each with its
+   * origin. The effective set is reported as it stands; issuance carries an
+   * effective entry only where it equals its approved origin, or where the
+   * narrowing declaration permits narrowing the origin to it. An entry the
+   * overlays modified otherwise is not carried, never issued as if approved.
+   */
+  issuableEntriesWithOrigin(record: MissionRecord): Array<{ origin: AuthorityEntry; entry: AuthorityEntry }> {
+    return this.effectiveEntriesWithOrigin(record).filter((e) => this.issuable(e));
+  }
+
+  /** Whether issuance may carry an effective entry computed from `origin` ({@link issuableEntriesWithOrigin}). */
+  issuable(e: { origin: AuthorityEntry; entry: AuthorityEntry }): boolean {
+    return e.entry === e.origin || isSubsetEntryUnder(this.narrowingDeclaration(), e.entry, e.origin);
+  }
+
+  /** {@link issuableEntriesWithOrigin}'s entries: the effective set issuance may carry. */
+  issuableAuthoritySet(record: MissionRecord): AuthorityEntry[] {
+    if (!record.containment && !record.discharged?.length) return record.authority_set;
+    return this.issuableEntriesWithOrigin(record).map((e) => e.entry);
   }
 
   /**
@@ -4558,9 +4604,15 @@ export class MissionKernel {
     // containment is the only overlay effectiveAuthoritySet composes, so the
     // exhausted branch means an empty approved set; the branch is structural for
     // the next mechanism (discharge), which will not live in `containment`.
-    if (this.effectiveAuthoritySet(record).length === 0) {
+    //
+    // @spec resource-access#qualified-narrowing (#1377, D1025): derivation
+    // issues only what issuance may carry, so the gate reads the issuable set.
+    // A Mission whose remaining entries the containment left modified, where
+    // the declaration does not permit narrowing them, has nothing left to
+    // derive; its Status still reports their remainder.
+    if (this.issuableAuthoritySet(record).length === 0) {
       const { containment: _overlay, ...withoutOverlay } = record;
-      if (this.effectiveAuthoritySet(withoutOverlay).length === 0) {
+      if (this.issuableAuthoritySet(withoutOverlay).length === 0) {
         throw new GateError("authority_exhausted", `mission ${id} has no effective authority to derive`);
       }
       throw new GateError("authority_contained", `mission ${id} effective authority is fully contained`);

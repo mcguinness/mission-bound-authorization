@@ -555,7 +555,7 @@ async function mintMissionToken(
 ): Promise<Record<string, unknown>> {
   const { kernel } = opts;
   const record = kernel.get(mission.id) as MissionRecord;
-  const effective = kernel.effectiveAuthoritySet(record);
+  const effective = kernel.issuableAuthoritySet(record);
   let grantId: string;
   if (record.grant_id) {
     grantId = record.grant_id;

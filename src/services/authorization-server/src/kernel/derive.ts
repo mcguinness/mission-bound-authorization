@@ -14,6 +14,7 @@ import {
   capabilitySourceIdentity,
   compareAmounts,
   delegateMatcherListViolation,
+  entriesEqual,
   IMPLEMENTED_COMMON_CONSTRAINTS,
   intersectCommonConstraints,
   carriesHttpUserinfo,
@@ -22,6 +23,9 @@ import {
   isSubsetEntry,
   isSubsetSet,
   isSubsetSetIgnoringCapabilitySources,
+  NARROWING_IN_FULL,
+  type NarrowingDeclaration,
+  narrowingPermits,
   refusedEntryMember,
   resourceMatchViolation,
   resourceWithin,
@@ -446,6 +450,7 @@ export function deriveAuthoritySetWithProvenance(
   proposalProvenance?: readonly RetainedOrigin[],
   proposalChildActorProvenance?: readonly RetainedOrigin[],
   requestedScope?: readonly AuthorityEntry[],
+  narrowing: NarrowingDeclaration = NARROWING_IN_FULL,
 ): DerivedAuthority {
   // @spec mission#common-constraints (issue #784, review on PR #803) — every
   // ceiling entry and every submitted proposal entry is checked for an
@@ -538,7 +543,17 @@ export function deriveAuthoritySetWithProvenance(
     const inheritedChildActor: RetainedOrigin =
       hasProposal && proposalChildActorProvenance ? (proposalChildActorProvenance[p] ?? null) : "list";
     for (const ceiling of matchingCeilings) {
-      const entry = intersect(proposal, ceiling);
+      // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+      // (#1720 item 7, #1377, D1025): "The `narrowing` capability also
+      // governs Authority Set derivation". Where the declaration does not
+      // permit narrowing this pair, the candidate is retained unchanged only
+      // when it equals the ceiling entry, and is never modified under a
+      // claimed subset relation.
+      const entry = narrowingPermits(narrowing, proposal, ceiling)
+        ? intersect(proposal, ceiling)
+        : entriesEqual(proposal, ceiling)
+          ? proposal
+          : null;
       if (!entry) continue;
       derived.push(entry);
       // @spec resource-access#delegate-eligibility: the origin is recorded
@@ -1289,12 +1304,58 @@ export class SourceUnavailableError extends Error {}
  * choose their own failure shape; both current call sites (provider.ts's
  * code/refresh rar projection, continuation-grant.ts's resumed-delivery
  * projection) treat a `collapsed` result as `invalid_grant`.
+ *
+ * The output is gated by `declaration` ({@link projectThroughEffectiveUnder}),
+ * whatever source supplied the effective set: a remote source's set is gated
+ * here as the kernel's is.
  */
 export function projectRarThroughMission(
   source: EffectiveAuthoritySource,
   record: MissionRecord,
   rar: readonly AuthorityEntry[],
+  declaration: NarrowingDeclaration,
 ): { projected: AuthorityEntry[]; collapsed: boolean } {
-  const projected = projectThroughEffective(rar, source.effectiveAuthoritySet(record));
+  const projected = projectThroughEffectiveUnder(declaration, rar, source.effectiveAuthoritySet(record));
   return { projected, collapsed: rar.length > 0 && projected.length === 0 };
+}
+
+/**
+ * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+ * (#1377, D1025): {@link projectThroughEffective} with its final output gated
+ * by `declaration`. For each candidate entry:
+ *  - its fragments, where the declaration permits narrowing each of them
+ *    against the entry (always, in full: the ungated projection);
+ *  - otherwise the entry itself, as it stands, where an effective entry
+ *    equals it: the projection rebuilds every fragment, so an entry the
+ *    Mission still holds unchanged would otherwise be issued normalized (an
+ *    explicit `resource_match: "exact"` dropped);
+ *  - otherwise only its permitted fragments. An entry the effective set
+ *    modified, where narrowing it is not permitted, is never issued as if
+ *    approved.
+ * The result follows `candidate` order with identical entries de-duplicated,
+ * as projectThroughEffective's does.
+ */
+export function projectThroughEffectiveUnder(
+  declaration: NarrowingDeclaration,
+  candidate: readonly AuthorityEntry[],
+  effective: readonly AuthorityEntry[],
+): AuthorityEntry[] {
+  const out: AuthorityEntry[] = [];
+  const seen = new Set<string>();
+  const add = (entry: AuthorityEntry): void => {
+    const key = JSON.stringify(entry);
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(entry);
+  };
+  for (const entry of candidate) {
+    const fragments = projectThroughEffective([entry], effective);
+    const permitted = fragments.filter((f) => narrowingPermits(declaration, f, entry));
+    if (permitted.length < fragments.length && effective.some((e) => entriesEqual(e, entry))) {
+      add(entry);
+      continue;
+    }
+    for (const f of permitted) add(f);
+  }
+  return out;
 }

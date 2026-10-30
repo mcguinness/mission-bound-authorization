@@ -20,7 +20,7 @@
  * delegated token therefore lives and dies with that grant or family.
  */
 
-import { canonicalize, delegatedRoutingRefusal, entryOverlapsResource, type JsonValue } from "@mission/core";
+import { canonicalize, carriedUnder, delegatedRoutingRefusal, entryOverlapsResource, type JsonValue } from "@mission/core";
 import type { KoaContextWithOIDC } from "oidc-provider";
 import type Provider from "oidc-provider";
 import { audienceReferences, derivedAudiences } from "../kernel/approved-audience.js";
@@ -239,7 +239,15 @@ function delegableAuthority(
   delegate: DelegateCandidate,
   depth: number,
 ): AuthorityEntry[] {
-  return opts.kernel.delegableEntries(record, projectThroughEffectiveWithOrigin(presented, effective), delegate, depth);
+  // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+  // (#1717, #1377, D1025): an entry the projection modified is carried only
+  // where the declared `narrowing` permits it; otherwise the delegated token
+  // carries an entry only when it is equal to one the presented token carries.
+  return carriedUnder(
+    opts.kernel.narrowingDeclaration(),
+    opts.kernel.delegableEntries(record, projectThroughEffectiveWithOrigin(presented, effective), delegate, depth),
+    presented,
+  );
 }
 
 /**

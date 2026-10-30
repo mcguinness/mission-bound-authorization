@@ -1034,6 +1034,12 @@ export function prepareCarryover(
     const parentOldId = child.parent?.id as string;
     const newParentId = parentOldId === predecessor.id ? successorId : replacementIds.get(parentOldId);
     const oldChildEffective = kernel.effectiveAuthoritySet(child);
+    // @spec resource-access#qualified-narrowing (#1377, D1025): the replacement
+    // carries only the old child's entries issuance may carry; the evidence
+    // below still commits the effective set as reported. Index-aligned with
+    // the effective entries and their retained origins.
+    const oldChildCarried = kernel.effectiveEntriesWithOrigin(child).map((e) => kernel.issuable(e));
+    const oldChildIssuable = oldChildEffective.filter((_, i) => oldChildCarried[i]);
     const external = externalStateFor(child, input.config);
     const base: Omit<CarryoverEntry, "outcome"> = {
       child_id: child.id,
@@ -1077,7 +1083,7 @@ export function prepareCarryover(
     }
     const parentEffective = effectiveSetOf.get(newParentId) as readonly AuthorityEntry[];
     const prospectiveParent = parentOf.get(newParentId) as ChildActorParent;
-    const candidateAuthority = replacementAuthority(oldChildEffective, parentEffective);
+    const candidateAuthority = replacementAuthority(oldChildIssuable, parentEffective);
     if (!isSubsetSet(candidateAuthority, parentEffective as AuthorityEntry[])) {
       cascade("not_strict_subset");
       continue;
@@ -1137,7 +1143,10 @@ export function prepareCarryover(
       approved: candidateAuthority,
       origins: inheritChildActorOrigins(
         candidateAuthority,
-        kernel.effectiveEntriesWithRetainedChildActorOrigin(child).map((e) => e.origin),
+        kernel
+          .effectiveEntriesWithRetainedChildActorOrigin(child)
+          .filter((_, i) => oldChildCarried[i])
+          .map((e) => e.origin),
         prospectiveParent.approved.map((entry, i) => ({ entry, origin: prospectiveParent.origins[i] ?? null })),
       ),
     });
@@ -1502,7 +1511,11 @@ export function applyCarryoverInCallerTx(
     const parentEffective = kernel.effectiveAuthoritySet(newParent);
     // The effective entries WITH their approved origins: the pairing below
     // names the old RECORD entry, whose bytes a containment rewrite changes.
-    const oldChildWithOrigin = kernel.effectiveEntriesWithOrigin(oldChild);
+    // @spec resource-access#qualified-narrowing (#1377, D1025): only the
+    // entries issuance may carry, as at preparation.
+    const oldChildAll = kernel.effectiveEntriesWithOrigin(oldChild);
+    const oldChildCarried = oldChildAll.map((e) => kernel.issuable(e));
+    const oldChildWithOrigin = oldChildAll.filter((_, i) => oldChildCarried[i]);
     const oldChildEffective = oldChildWithOrigin.map((e) => e.entry);
     const authority = replacementAuthority(oldChildEffective, parentEffective);
     // @spec resource-access#delegate-eligibility: a replacement entry is the
@@ -1512,14 +1525,20 @@ export function applyCarryoverInCallerTx(
     // entries it falls within.
     const replacementProvenance = inheritOrigins(
       authority,
-      kernel.effectiveEntriesWithRetainedOrigin(oldChild).map((e) => e.origin),
+      kernel
+        .effectiveEntriesWithRetainedOrigin(oldChild)
+        .filter((_, i) => oldChildCarried[i])
+        .map((e) => e.origin),
       kernel.effectiveEntriesWithRetainedOrigin(newParent),
     );
     // @spec child-delegation#fanout (#1304): the child-actor origins the same
     // way, kept apart from the delegate origins.
     const replacementChildActorProvenance = inheritChildActorOrigins(
       authority,
-      kernel.effectiveEntriesWithRetainedChildActorOrigin(oldChild).map((e) => e.origin),
+      kernel
+        .effectiveEntriesWithRetainedChildActorOrigin(oldChild)
+        .filter((_, i) => oldChildCarried[i])
+        .map((e) => e.origin),
       kernel.effectiveEntriesWithRetainedChildActorOrigin(newParent),
     );
     // @spec child-delegation#carryover-evidence — the per-entry pairing,

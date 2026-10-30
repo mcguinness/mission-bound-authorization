@@ -1356,6 +1356,81 @@ carried entry supplies a safe projection, and answers an explicitly
 requested `scope` it cannot grant as
 {{I-D.draft-mcguinness-oauth-mission}} specifies.
 
+## Qualified Narrowing {#qualified-narrowing}
+
+An authorization server that implements the subset rule for part of
+this document can declare `narrowing` for `mission_resource_access` as
+a qualified value instead of `true`: a JSON object with exactly one
+member, `domain`, whose value is an object with exactly these members:
+
+`id`:
+: REQUIRED. A string containing an absolute URI that names one
+  narrowing domain document.
+
+`digest`:
+: REQUIRED. A string. The SHA-256 digest of the JCS {{RFC8785}}
+  serialization of that document, in the form of `resource_contract`'s
+  `digest` ({{resource-access-type}}).
+
+A **narrowing domain** document is a JSON object whose bytes never
+change for its `id`; a changed domain has a new `id`. The authorization
+server publishes it in deployment documentation; this document defines
+no metadata member or endpoint for it. It has exactly these members:
+
+`id`:
+: REQUIRED. The `id` that names it.
+
+`type`:
+: REQUIRED. The string `mission_resource_access`.
+
+`capability`:
+: REQUIRED. The string `narrowing`, the capability the domain
+  qualifies.
+
+`resource_match`:
+: REQUIRED. A non-empty array of the matching modes the domain covers
+  ({{resource-matching}}): `exact`, `prefix`, or both.
+
+`members`:
+: REQUIRED. An array of the entry members the domain covers, including
+  `type`, `resource`, and `actions`.
+
+`constraints`:
+: REQUIRED. An array of the `constraints` keys the domain covers, each
+  a Common Constraint ({{common-constraints}}) or a key whose subset and
+  intersection rules another specification or the deployment defines.
+
+`limitations`:
+: OPTIONAL. An array of identifiers, each naming a comparison the
+  authorization server makes more conservatively than this document
+  defines, so that it refuses rather than narrows. This document
+  defines `delegate-matcher-identity`: an `allowed_delegates` or
+  `children.allowed_child_actors` list is within its reference only
+  when each matcher equals a reference matcher on `sub` and
+  `sub_profile`, so a list narrower by containment is refused.
+
+An entry is within a domain when its `resource_match` (`exact` when
+absent) is among the domain's `resource_match`, each of its members is
+among `members`, each of its `constraints` keys is among
+`constraints`, and each of its actions is an action identifier rather
+than an action family. Under a qualified declaration the authorization
+server applies {{subset}} and the intersection rules of
+{{common-constraints}} to a pair of entries both within the domain,
+with each listed limitation. For any other pair, `narrowing` is
+undeclared ({{I-D.draft-mcguinness-oauth-mission}}): the entry is
+carried as approved, and a subset is established only by equality. An
+authorization server MUST NOT declare a qualified value whose domain
+lists a `constraints` key whose subset and intersection rules it does
+not implement.
+
+A qualified value declares `narrowing` for the domain only, and never
+as `true`. A reader treats a carrier as declaring `narrowing` `false`
+when the qualified value has a member other than `domain`, when `id` or
+`digest` is malformed, or when the document is unavailable, does not
+have this form, names another `id`, `type`, or `capability`, or does
+not match `digest`; that carrier still governs `narrowing`, and a later carrier
+does not supply it. `delegation` and `projection` remain booleans.
+
 # Modeling Tools and Function Calls {#tools}
 
 This section is non-normative. A tool an agent invokes, such as a Model
@@ -1707,6 +1782,12 @@ Omission-Equivalent Value is `false`.
   defines do not use `60` for the seconds field, though RFC 3339 permits
   it for an actual leap second; an entry carrying one is refused at
   submission.
+- Qualified Narrowing: `narrowing` for `mission_resource_access` can be
+  declared for a narrowing domain, a document named by `id` and
+  `digest` that states the matching modes, members, constraints, and
+  limitations it covers; an entry outside the domain is carried as
+  approved, and a value the reader cannot validate declares `narrowing`
+  `false` (#1377, D1025).
 
 -00
 

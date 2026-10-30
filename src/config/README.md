@@ -419,3 +419,30 @@ refused.
 The AS refuses a token whose audiences span both modes. That is an
 implementation restriction (one `scope` claim is shared by every audience),
 not a protocol rule.
+
+## `transformation-capabilities.json`
+
+The transformation capabilities the AS declares per supported
+`authorization_details` type (`@spec mission#transformation-capabilities`,
+`@spec resource-access#qualified-narrowing`, #1377, D1025). `types` holds each
+type's `mission_transformation_capabilities` value, which the AS emits in the
+type's entry at `/authorization-details-types` and which the deployment
+documentation (`src/docs/resource-access-transformation-capabilities.md`,
+section 1) states. For `mission_resource_access` it declares `narrowing` as a
+qualified value naming a narrowing domain document by `id` and `digest`;
+`delegation` and `projection` are not declared.
+
+`narrowing_domains` lists the domain documents, by path under this
+directory: `narrowing-domains/mission-resource-access-2026-10-29.json` covers
+`exact` and `prefix` resources, the members and constraint keys the AS
+implements, and the `delegate-matcher-identity` limitation. A document's
+bytes never change for its `id`; a changed domain is a new file with a new
+`id`, and the declaration names its new digest.
+
+The loader refuses to start on a declaration naming a missing, malformed or
+mismatched document, or a domain listing a `constraints` key or member the AS
+does not implement. Every path that issues an entry of the type applies the
+resolved declaration (`src/docs/resource-access-transformation-capabilities.md`,
+section 1): an entry outside the domain is carried only as approved, is not
+issued once containment has removed some of its actions (Mission Status still
+reports its remainder), and is never projected to a Resource AS.
