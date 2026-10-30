@@ -47,8 +47,8 @@
     "content_sha256": "3e76453c13322a3586481cd021766799a75f5cbe1f9517cb2698dd5a2942e868"
    },
    "draft-mcguinness-oauth-mission-signals.md": {
-    "revision": "63c795f98124820f8ada478ee1aa138bffc433be",
-    "content_sha256": "68e551548c65361f188678d755a4f120344e1fcfd723c29028378a59de301d88"
+    "revision": "414cab3b308a32538d256ced5b18a2231dd1f9a4",
+    "content_sha256": "25f344685260fbf8b54502eafeb8c61bd68c447d60928da48b86f7ba1dcafd07"
    },
    "draft-mcguinness-oauth-mission-discharge.md": {
     "revision": "e47a9a548a5ddf6d3e636baa2688f8559ef20688",
@@ -25623,6 +25623,170 @@
     }
    ],
    "notes": "#1877 review (D1023, ruling 4). Partial: the latch is witnessed on the spec-rule model in stream-pause.test.ts, which stays stale after the enabled notice and resumed liveness until it re-establishes state, and on the reference receiver only through its observation-anchored stand-in: past its bound, the Stream Updated and verification SETs are refused and no lease returns, and a Mission Status refresh re-establishes it (consumer-reliance.test.ts). The receiver does not implement the stream-liveness rule itself (#1747)."
+  },
+  {
+   "id": "signals.consumer.heartbeat-may-send",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Mission Issuer MAY send heartbeats.",
+   "role": "AS",
+   "strength": "MAY",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer may send a Verification Event on a stream on its own initiative, with no request from the stream's consumer preceding it",
+    "local": "attestLiveness sends the heartbeat to every stream that is not held and has no undelivered earlier event; the caller drives it on its own schedule; the emitter is in process, so the SET goes to registered sinks, not an SSF HTTP transport"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > sends a heartbeat as an SSF Verification Event on the Mission Issuer's own initiative, with no state and the stream id as its sub_id; a requested verification echoes the requester's state, and one requested without state carries none",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). The permission is exercised: a liveness attestation with no verification request on the stream delivers a Verification Event to both streams. The heartbeat's shape is signals.consumer.heartbeat-carries-no-state."
+  },
+  {
+   "id": "signals.consumer.heartbeat-carries-no-state",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Verification Event sent without a request is a heartbeat, and it carries no `state`",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a heartbeat is an SSF Verification Event: the SET's only event is the verification event type, its sub_id is the opaque stream id, and its event body carries no state member; a verification the consumer requested is the same event and echoes the state its request carried, and carries none when the request carried none (SSF 1.0 Section 8.1.4.2)",
+    "local": "attestLiveness sends the heartbeat and requestVerification journals a requested verification; the stream id is the consumer's configured stream_id, or its audience when none is configured"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > sends a heartbeat as an SSF Verification Event on the Mission Issuer's own initiative, with no state and the stream id as its sub_id; a requested verification echoes the requester's state, and one requested without state carries none",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). SSF 1.0 Section 8.1.4.2: the request's state is echoed by the Transmitter, and \"If the Verification Event is initiated by the Transmitter then this parameter MUST not be set\". A requested verification may also lack state, so its absence describes a heartbeat without identifying one. Proved by mutation: a heartbeat body carrying state fails the heartbeat assertion; dropping the echoed state fails the requested assertion; giving a stateless request a state fails the stateless assertion."
+  },
+  {
+   "id": "signals.delivery.stream-updated-not-liveness",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Stream Updated event ({{OIDC-SSF}}, Section 8.1.5) reports the stream's status and is not a liveness event",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "no-side-effect",
+   "observation": {
+    "normative": "the Mission Issuer counts only verification and heartbeat delivery attempts as liveness when it bounds a pause: a Stream Updated event, paused or enabled, in flight or acknowledged, records no liveness, is no unresolved liveness attempt, and leaves the paused stream's re-enable instant where the last verification attempt set it",
+    "local": "the emitter's liveness record is its stream status (last_liveness_at, liveness_resolved_at, liveness_unresolved, reenable_after); a Stream Updated job's hand-off journals no liveness attempt, while a verification's does"
+   },
+   "level": "cross-component",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > records liveness only for verification attempts: a Stream Updated notice, paused or enabled, in flight or acknowledged, never moves the stream's liveness record",
+     "level": "cross-component",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 2). The issuer's side of the statement: the pause bound runs from verification attempts only. Proved by mutation: journaling a liveness attempt for a Stream Updated hand-off fails the test while the paused notice is in flight (one unresolved attempt). The consumer's side is signals.consumer.stream-updated-not-liveness."
+  },
+  {
+   "id": "signals.consumer.stream-updated-not-liveness",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A Stream Updated event ({{OIDC-SSF}}, Section 8.1.5) reports the stream's status and is not a liveness event",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer does not count a Stream Updated event as liveness: a stream whose last verified verification or heartbeat event is older than its heartbeat interval is not verified live although a Stream Updated event arrived since, and the staleness fallback still runs from that last verification or heartbeat event"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1886 (D1023 ruling 2). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver reads no stream-control SET; it refuses verification and Stream Updated SETs as malformed and bounds reliance by the issuer's observation time (#1747), so it has no liveness to count. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver test in which a Stream Updated SET received after the heartbeat interval leaves the stream not verified live and the cached state stale once mission_max_stale_seconds has passed since the last verification or heartbeat event. The spec-rule model in stream-pause.test.ts ignores Stream Updated events, but it models the rule; it is not a consumer."
+  },
+  {
+   "id": "signals.consumer.heartbeat-interval-finite-agreed",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "It is finite, and the Mission Issuer and the consumer agree it through configuration or through a discovery mechanism another document defines",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a Mission Issuer's heartbeat interval for a stream is a finite duration, the value agreed with that stream's consumer; this document defines no discovery member, so without another document's mechanism the agreement is configuration",
+    "local": "the emitter takes the agreed interval as heartbeatIntervalSeconds and refuses at construction any value that is not a positive whole number of seconds (infinite, NaN, zero, negative or fractional); the agreement with the consumer is configuration outside the emitter"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/packages/mission-signals/test/stream-pause.test.ts",
+     "name": "the heartbeat and the liveness event (@spec signals#consumer-behavior, signals#discharge-compatibility, #1886) > takes the agreed heartbeat interval only as a finite, positive whole number of seconds: an infinite, NaN, zero, negative or fractional interval is refused at construction",
+     "level": "unit",
+     "surface": "signals"
+    }
+   ],
+   "notes": "#1886 (D1023 ruling 3). Partial. Evidence of the interval agreement is owned by #1896 (D1028), transferred from #1886, not completed: the emitter's interval is witnessed finite, but the agreement with the consumer is configuration no test observes, and no discovery member exists. Proved by mutation: a guard that refuses only NaN and non-positive values accepts an infinite interval and fails the test. The withholding issuer's MUST is signals.discharge.agreed-heartbeat-interval."
+  },
+  {
+   "id": "signals.consumer.unknown-interval-not-verified-live",
+   "spec": "draft-mcguinness-oauth-mission-signals.md",
+   "anchor": "consumer-behavior",
+   "text": "A stream whose heartbeat interval the consumer does not know is not verified live, so the staleness fallback below applies to it",
+   "role": "RS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "signals.events"
+   },
+   "profiles": [],
+   "surface": "signals",
+   "assertion": "refusal",
+   "observation": {
+    "normative": "a consumer that does not know its stream's heartbeat interval treats the stream as not verified live: its cached Mission state is stale once the stream has gone longer than mission_max_stale_seconds without a verified verification or heartbeat event, whatever interval the Mission Issuer serves the stream with"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1886 (D1023 ruling 3). Todo. Owner: #1896 (D1028), to which #1886 transferred this witness; transferred, not completed.  the reference receiver does not implement the stream-liveness rule; it reads no verification or heartbeat event and bounds reliance by the issuer's observation time plus maxStaleSeconds (#1747), which is what this rule yields for an unknown interval but is no witness of it. Planned witness, in #1896, under the receiver's reliance bound from #1824 (merged): a receiver configured with no heartbeat interval gives no lease once mission_max_stale_seconds has passed since its last verified verification or heartbeat event, while one configured with a longer agreed interval still relies on the stream it holds verified live."
   },
   {
    "id": "management.bulk.version-pinned-per-member",
