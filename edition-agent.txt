@@ -9,8 +9,8 @@ remains the normative text; consult its own front matter for
 authorship, status, and boilerplate.
 
 Edition: agent
-Generated: 2026-10-30T05:44:47Z
-Source repository commit: 977b7c429be649cc5f015295b1d58b24453f5b7b
+Generated: 2026-10-30T15:45:41Z
+Source repository commit: 1b62fca7845f686a18faa8e0fd2b1905674adc2f
 Member count: 9
 
 Reading order:
@@ -9628,7 +9628,10 @@ Table of Contents
    surface.  Where a deployment commits the rendered approval surface,
    that commitment MUST cover the normalized provenance facts, at least
    as a digest of their canonical submission_evidence representation
-   (Section 6.3).
+   (Section 6.3).  That commitment MAY omit each element's verified_at,
+   which the AS generates at each verification, and no other member:
+   type, artifact_hash, and facts, including any timestamp within facts,
+   stay covered.
 
 5.  Mission Authority
 
@@ -16403,6 +16406,11 @@ Appendix E.  Document History
       define a value other than a boolean for a capability member, and a
       value the reader cannot validate declares that capability false
       (#1377, D1025).
+
+   *  Submission Processing Order: a commitment to the rendered approval
+      surface may omit each provenance element's verified_at, which the
+      AS generates at each verification, and no other member (#1897,
+      D1035).
 
    -01
 
