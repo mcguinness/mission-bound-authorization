@@ -4399,34 +4399,15 @@ companion profile <span class="bcp14">MUST NOT</span> define a <code>kind</code>
 record, an evidence store, or the requesting or dispatching
 party.<a href="#section-6.3.3-1.4.4.2.2.2.1" class="pilcrow">¶</a></p>
 </dd>
-                    <dd class="break"></dd>
-<dt id="section-6.3.3-1.4.4.2.2.3">
-<code>governance_record</code>:</dt>
-                    <dd style="margin-left: 1.5em" id="section-6.3.3-1.4.4.2.2.4">
-                      <p id="section-6.3.3-1.4.4.2.2.4.1"><span class="bcp14">OPTIONAL</span>. A boolean. <code>true</code> when an Approval Governance Record is
-recorded for this approval event
-(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>), joined by
-this Mission's own <code>approval_event_id</code>.<a href="#section-6.3.3-1.4.4.2.2.4.1" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-6.3.3-1.4.4.2.2.4.2.1">
-                          <p id="section-6.3.3-1.4.4.2.2.4.2.1.1">It never changes <code>kind</code>, which follows the basis (below and
-<a href="#standing-consent-bases" class="auto internal xref">Section 6.2</a>).<a href="#section-6.3.3-1.4.4.2.2.4.2.1.1" class="pilcrow">¶</a></p>
-</li>
-                        <li class="normal" id="section-6.3.3-1.4.4.2.2.4.2.2">
-                          <p id="section-6.3.3-1.4.4.2.2.4.2.2.1">Approval Governance aligns the record's accountable assertion,
-where it carries one, with that <code>kind</code>: a governed decision
-still names its mechanism, and the record supplies the fuller
-assertion set behind it, including any multi-assertion set,
-never flattened into it.<a href="#section-6.3.3-1.4.4.2.2.4.2.2.1" class="pilcrow">¶</a></p>
-</li>
-                      </ul>
-</dd>
                   <dd class="break"></dd>
 </dl>
-<p id="section-6.3.3-1.4.4.2.3">For <code>kind: human</code>: no additional kind-specific members; the
-deciding human is <code>consent_principal</code>.<a href="#section-6.3.3-1.4.4.2.3" class="pilcrow">¶</a></p>
-<p id="section-6.3.3-1.4.4.2.4">For <code>kind: policy</code>: the kind-specific members that
-<a href="#standing-consent-bases" class="auto internal xref">Section 6.2</a> defines.<a href="#section-6.3.3-1.4.4.2.4" class="pilcrow">¶</a></p>
+<p id="section-6.3.3-1.4.4.2.3">A companion profile can define further members of <code>adjudication</code>;
+Approval Governance defines <code>governance_record</code>
+(<span>[<a href="#I-D.draft-mcguinness-mission-approval-governance" class="cite xref">I-D.draft-mcguinness-mission-approval-governance</a>]</span>).<a href="#section-6.3.3-1.4.4.2.3" class="pilcrow">¶</a></p>
+<p id="section-6.3.3-1.4.4.2.4">For <code>kind: human</code>: no additional kind-specific members; the
+deciding human is <code>consent_principal</code>.<a href="#section-6.3.3-1.4.4.2.4" class="pilcrow">¶</a></p>
+<p id="section-6.3.3-1.4.4.2.5">For <code>kind: policy</code>: the kind-specific members that
+<a href="#standing-consent-bases" class="auto internal xref">Section 6.2</a> defines.<a href="#section-6.3.3-1.4.4.2.5" class="pilcrow">¶</a></p>
 </dd>
                 <dd class="break"></dd>
 <dt id="section-6.3.3-1.4.4.3">
@@ -10697,8 +10678,9 @@ Evidence; and approval idempotency and the audit horizon move to a
 new Implementation Considerations section. The unrecognized-value
 rule for <code>approval_basis.type</code>, <code>adjudication.kind</code>, and
 <code>authority_source.type</code> is stated once, and a consumer neither
-interprets nor removes a record member it does not recognize
-(#1912, D1047).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+interprets nor removes a record member it does not recognize.
+Approval Governance defines <code>governance_record</code> (#1912, D1047,
+D1048).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-E-3.2">
           <p id="appendix-E-3.2.1">Editorial, no requirement change: citations elsewhere in the
