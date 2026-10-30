@@ -348,99 +348,31 @@ action is a separate, optional layer.
 This document defines a **Mission**: a durable authorization object
 that binds a disclosed task to an explicitly approved Authority Set
 and governs the lifecycle of the authority derived from that
-approval. The authorization server (AS) issues tokens under a Mission
-only while it is `active`, each bounded by the approved Authority
-Set, and resource servers enforce the resulting credentials. Revoking
-or expiring a Mission stops further issuance and refresh but does
-not, by itself, invalidate an already-issued access token, which
-remains valid until it expires ({{revocation}}).
+approval.
 
 Agent-identity work such as {{I-D.draft-ietf-wimse-aims}}
 establishes how an AI agent authenticates and how a user delegates
-authority to it. The agent is an OAuth 2.0 {{RFC6749}} client
-identified by `client_id`, the delegating user is the access token
-`sub`, and the agent obtains tokens for the resources its task
-requires. That work leaves out of scope:
+authority to it. It leaves out of scope how the agent's task is
+translated into authorization, how the user's approval of that task
+is captured, and how later token issuance stays bound to that
+approval. OAuth itself defines no task record that links approval of
+a task to the grants obtained for it: an `authorization_details`
+entry ({{RFC9396}}) expresses authority, but not the task it serves
+or a lifecycle of its own, so withdrawing approval of a task need not
+stop issuance under its grants.
 
-- how an agent's task (its "mission") is translated into
-  authorization;
-- how a user's approval of that task is captured as a durable
-  artifact; and
-- how later token issuance stays bound to what the user approved.
+A Mission fills that gap. A client submits a Mission Intent
+describing the task, the authorization server (AS) derives the
+Authority Set the task needs, and an Approver consents to that
+Authority Set. The AS records the Mission and binds the resulting
+grant to it. It then issues tokens under the Mission only while the
+Mission is `active`, each bounded by the approved Authority Set, and
+resource servers enforce the resulting tokens. Revoking or expiring a
+Mission stops further issuance and refresh, but does not by itself
+invalidate an already-issued access token ({{revocation}}).
+{{overview}} shows the protocol flow and an example.
 
-OAuth does not define a task record that links approval of a task to
-every grant obtained for it. Without that linkage, withdrawing task
-approval need not stop issuance under those grants.
-
-No existing OAuth object fills that role
-({{I-D.draft-mcguinness-mission-architecture}}, Section "Relationship
-to Existing OAuth Objects"); an
-`authorization_details` entry ({{RFC9396}}), for example, expresses
-authority but not the task it serves or a lifecycle of its own. A
-Mission, held by the AS beside the grant, does. It commits the
-disclosed task with its approved authority and has an identifier and
-a lifecycle independent of any grant. It can be revoked by that
-identifier through an authenticated means, independent of possession
-of any token ({{revocation}}), and a token derived from it by Token
-Exchange identifies the same Mission ({{grant-binding}}).
-
-A Mission is created and used in a single chain:
-
-1. **Submit.** The client submits a structured **Mission Intent**
-   describing the task (goal, target resources, task bounds) instead
-   of requesting raw scopes, optionally proposing concrete authority
-   alongside it as standard `authorization_details`.
-2. **Derive authority.** The AS derives **authorization details**
-   ({{RFC9396}}), the **Authority Set**: the concrete authority the
-   task needs.
-3. **Approve.** At an **approval event**, the approval rendering
-   shows the Intent's task, and the Approver consents to the derived
-   Authority Set itself, not to the task description alone
-   ({{approval-event}}). The AS commits the Mission Intent as
-   **`intent_hash`** and the approved Authority Set as
-   **`authority_hash`** ({{integrity-anchors}}). It records a durable
-   **Mission** whose record associates the disclosed task, the
-   approved authority, and the approval basis ({{mission-record}}).
-4. **Bind the grant.** The AS binds the OAuth grant the approval
-   produces to that Mission, server-side ({{grant-binding}}). Each
-   later issuance operation from that grant lineage, such as a
-   refresh, is a derivation ({{issuance-gating}}) and resolves to
-   exactly this Mission; the client never selects or reassigns it.
-   Under a profile, the AS can bind a further grant lineage to the
-   same Mission; each lineage resolves to exactly one Mission.
-5. **Issue and enforce.** Every derived authority is no broader than
-   the approved Authority Set ({{subset}}). Every access token the
-   agent obtains under the Mission carries the derived authorization
-   details and a **`mission` claim** identifying that Mission (`id`,
-   `issuer`). A resource server enforces statelessly from the token.
-6. **Stop issuance.** Token issuance and refresh are **gated on
-   Mission state**: a Mission that is not `active` yields no further
-   derivation ({{issuance-gating}}), including from any grant lineage
-   bound to it ({{grant-binding-state}}). Revoking or expiring the
-   Mission therefore stops the agent from obtaining further
-   authority.
-
-Steps 3 to 6 state the properties this document provides;
-{{conformance}} states the requirements that realize them.
-
-A user thus approves the authority for a task once, and that
-approval, not a per-request scope grant, bounds and outlives every
-token the agent derives. The Mission Record commits the consented
-authority once, as `authority_hash`; a party holding the complete
-Authority Set can recompute the commitment and compare the result
-with `authority_hash` ({{consent-binding}}). Mission Approved-Set
-Verification
-({{I-D.draft-mcguinness-oauth-mission-approved-set-verification}})
-defines how a token that carries only a narrowed subset is checked
-against the complete set.
-
-A deployment can run the chain alone
-({{I-D.draft-mcguinness-mission-architecture}}, Section "The
-Issuance-Only Deployment"); a separately specified runtime layer adds
-a per-action check for the action classes whose consequence needs one
-({{runtime-boundary}}).
-
-The sections follow that chain. {{mission-intent}} and
+The sections follow this flow. {{mission-intent}} and
 {{authorization-derivation}} define what a client submits and what the
 AS derives from it; {{mission-creation}} the approval, the record, and
 the grant binding; {{mission-bound-tokens}} issuance on every path;
@@ -501,6 +433,37 @@ the other terms:
       |                                     |   + mission claim
       v
 ~~~
+
+1. **Submit.** The client pushes a Mission Intent describing the
+   task, optionally with proposed `authorization_details`
+   ({{submission-via-par}}). The AS derives the Authority Set, the
+   concrete authority the task needs ({{authorization-derivation}}).
+2. **Approve and commit.** The Approver consents to that Authority
+   Set itself, not to the task description alone ({{approval-event}}).
+   The AS records the active Mission, commits the Intent as
+   `intent_hash` and the approved Authority Set as `authority_hash`
+   ({{integrity-anchors}}), and binds the grant the approval produces
+   to the Mission server-side. Any grant lineage bound to a Mission
+   resolves to exactly that Mission, and no client input chooses it
+   ({{grant-binding}}).
+3. **Issue.** At each token request the AS checks that the Mission is
+   `active` and derives authority no broader than the approved
+   Authority Set ({{issuance-gating}}, {{subset}}). The access token
+   carries the derived authorization details and a `mission` claim
+   identifying the Mission ({{mission-claim}}), and a resource server
+   enforces statelessly from the token ({{rs-enforcement}}).
+
+Each later issuance from that grant lineage, such as a refresh, is a
+derivation under the same checks, and a token derived by Token
+Exchange carries the same `mission` claim ({{self-exchange}},
+{{delegated-exchange}}). Revoking or expiring the Mission stops
+further issuance and refresh, including from any grant lineage bound
+to it ({{grant-binding-state}}). An already-issued access token can
+still be honored on a stateless enforcement path until it expires
+({{revocation}}). A user thus approves
+a task's authority once, and that approval bounds every token the
+agent derives. {{first-mission}} walks through these steps with
+concrete values.
 
 ## Introductory Example {#first-mission}
 
@@ -5485,8 +5448,11 @@ ambient authority for individual consequential actions. Short token
 lifetimes and narrow authority bound this exposure but do not
 eliminate it.
 
-A runtime layer ({{I-D.draft-mcguinness-mission-runtime}}), out of
-scope for this document, evaluates each consequential action against
+A deployment can use Missions for issuance alone
+({{I-D.draft-mcguinness-mission-architecture}}, Section "The
+Issuance-Only Deployment"). A runtime layer
+({{I-D.draft-mcguinness-mission-runtime}}), out of scope for this
+document, evaluates each consequential action against
 the Mission, with parameter binding, and records evidence for the
 actions it covers. A deployment adds one for an action class that needs
 any of the following, which issuance-time bounds alone do not provide:
@@ -6783,6 +6749,16 @@ resolve before interoperating.
 
 -02
 
+- Editorial, no requirement change: the Introduction states the
+  problem and the approach and points to the Overview; it no longer
+  restates the flow that Protocol Flow and the Introductory Example
+  show, or details stated in their own sections (consent to the
+  Authority Set, the commitments, grant binding, revocation by
+  identifier, the `mission` claim and resource-server enforcement).
+  The issuance-only deployment pointer moves to Issuance Scope and
+  Runtime Enforcement. Protocol Flow gains a legend keyed to its
+  figure that carries the flow's properties, with a pointer to each
+  section that specifies them (#1906, D1039).
 - Editorial, no requirement change: the back matter that describes
   the family rather than the protocol moves to the Architecture: the
   Mapping Assessment of this document against the Mission Substrate
