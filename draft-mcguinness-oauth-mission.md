@@ -6755,7 +6755,9 @@ resolve before interoperating.
   Authority Set, the commitments, grant binding, revocation by
   identifier, the `mission` claim and resource-server enforcement).
   The issuance-only deployment pointer moves to Issuance Scope and
-  Runtime Enforcement (#1906, D1039).
+  Runtime Enforcement. Protocol Flow gains a legend keyed to its
+  figure that carries the flow's properties, with a pointer to each
+  section that specifies them (#1906, D1039).
 - Editorial, no requirement change: the back matter that describes
   the family rather than the protocol moves to the Architecture: the
   Mapping Assessment of this document against the Mission Substrate
