@@ -16697,9 +16697,15 @@
      "name": "a narrowing domain is read: an entry outside it is carried only as approved (@spec resource-access#qualified-narrowing) > a prefix proposal narrower than the prefix ceiling entry is refused, while one equal to it derives unchanged: the domain does not cover prefix",
      "level": "endpoint",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy activation (@spec approval-governance#governed-policy-activation) > refuses a model output that removes an action where the narrowing declaration does not permit narrowing the entry, committing nothing, while an unchanged output activates (@spec resource-access#qualified-narrowing, #1377, D1025)",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1720 item 7 (D845, D859), #1377 (D1025). The reference declares narrowing for mission_resource_access as a qualified domain covering every entry it admits, so in its shipped configuration derivation narrows within the domain. deriveAuthoritySetWithProvenance (kernel/derive.ts) applies narrowingPermits to each proposal and ceiling pair and otherwise retains the candidate only when it is equal. Witnessed with narrowing undeclared (a test configuration): a proposal equal to a ceiling entry is retained unchanged, one the shipped declaration narrows is refused with no Mission, and configured-mapping derivation yields each mapped entry unchanged; and with an exact-only domain, a prefix proposal outside it is carried only when equal. Proved by mutation: a derivation that narrows whatever is declared fails the refusal witnesses. The configured-mapping witness holds by construction (the mapping intersects each candidate with itself), so no mutation of the gate fails it."
+   "notes": "#1720 item 7 (D845, D859), #1377 (D1025). The reference declares narrowing for mission_resource_access as a qualified domain covering every entry it admits, so in its shipped configuration derivation narrows within the domain. deriveAuthoritySetWithProvenance (kernel/derive.ts) applies narrowingPermits to each proposal and ceiling pair and otherwise retains the candidate only when it is equal. Witnessed with narrowing undeclared (a test configuration): a proposal equal to a ceiling entry is retained unchanged, one the shipped declaration narrows is refused with no Mission, and configured-mapping derivation yields each mapped entry unchanged; and with an exact-only domain, a prefix proposal outside it is carried only when equal. Proved by mutation: a derivation that narrows whatever is declared fails the refusal witnesses. The configured-mapping witness holds by construction (the mapping intersects each candidate with itself), so no mutation of the gate fails it. #1377 review of #1891, second round: governed-policy activation applies the declaration to the model-evaluated set before commit; with narrowing undeclared and identical policy, source and root ceilings, a model output removing an action is refused (narrowing_not_permitted, a local refusal) with no Mission, and a no-objection output activates the entry unchanged. Proved by mutation (2026-10-29): skipping the check activates the narrowed set."
   },
   {
    "id": "core.authority-proposal.same-type-subset-under-narrowing",
@@ -16838,7 +16844,7 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "an entry of a type without a declared narrowing capability is issued only to its original approved audience and only exactly as approved, or as scope under a declared projection; audience projection to a Resource AS counts as narrowing",
-    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. One gap keeps it partial. \"only exactly as approved\" holds for narrowing: with narrowing undeclared or outside the declared domain, no path issues a modified entry (the effective set contains a partially contained entry whole, and the requested-subset gates are equal-only), and audience projection to a Resource AS is refused (#1377, D1025). The gap: the reference delegates and projects to scope with no declared delegation or projection capability (row core.other-types.transformation-boundary-declared). With narrowing undeclared (a test configuration), derivation and the Token Exchange issue an entry only exactly as approved; proved by mutation only with both exchange gates disabled together, since the gate against the Mission's effective set also refuses."
+    "local": "witnessed for its audience clause: a token for an audience carries only the entries whose retained original approved audience includes it, on every Mission-bound mint path, the delegated Token Exchange and the child redemption included, and an audience the trusted mapping assigns the entry only after approval is refused. One gap keeps it partial. \"only exactly as approved\" holds for narrowing: with narrowing undeclared or outside the declared domain, no path issues a modified entry: issuance carries an effective entry only where it equals its approved origin or narrowing it is permitted (while Mission Status keeps a partially contained entry's remainder), the token endpoint gates the credential's projected output per presented entry whatever source supplies the effective set, keeping an unchanged entry as it stands, governed-policy activation refuses a model output that narrows an entry, and the requested-subset gates are equal-only, and audience projection to a Resource AS is refused (#1377, D1025). The gap: the reference delegates and projects to scope with no declared delegation or projection capability (row core.other-types.transformation-boundary-declared). With narrowing undeclared (a test configuration), derivation and the Token Exchange issue an entry only exactly as approved; proved by mutation only with both exchange gates disabled together, since the gate against the Mission's effective set also refuses."
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -16929,13 +16935,13 @@
     },
     {
      "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
-     "name": "automatic projection after partial containment: an entry the declaration does not let the AS narrow is contained whole (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > with narrowing undeclared, the partially contained entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token",
+     "name": "automatic projection after partial containment: the effective set keeps the uncontained remainder, and issuance carries an entry the declaration does not let the AS narrow only as approved (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, containment#visibility, #1377, D1025) > with narrowing undeclared, Status keeps the partially contained entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
     {
      "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
-     "name": "automatic projection after partial containment: an entry the declaration does not let the AS narrow is contained whole (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > under an exact-only domain, a partially contained prefix entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token",
+     "name": "automatic projection after partial containment: the effective set keeps the uncontained remainder, and issuance carries an entry the declaration does not let the AS narrow only as approved (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, containment#visibility, #1377, D1025) > under an exact-only domain, Status keeps a partially contained prefix entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token",
      "level": "endpoint",
      "surface": "token-endpoint"
     },
@@ -16953,7 +16959,7 @@
     },
     {
      "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
-     "name": "audience projection to a Resource AS counts as narrowing: a grant conveys an entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > under an exact-only domain, a prefix entry outside it is refused, unchanged or partially contained (contained whole)",
+     "name": "audience projection to a Resource AS counts as narrowing: a grant conveys an entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > under an exact-only domain, a prefix entry outside it is refused, unchanged or partially contained, while the effective set keeps the contained entry's remainder",
      "level": "unit",
      "surface": "token-endpoint"
     },
@@ -16962,9 +16968,39 @@
      "name": "audience projection to a Resource AS counts as narrowing: a grant conveys an entry only where the declared narrowing permits it (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > an entry whose conveyed copy drops `delegation` is conveyed without it where narrowing is permitted, and refused undeclared",
      "level": "unit",
      "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the token endpoint gates the projected output under the declaration, whatever source supplies the effective set (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > with narrowing undeclared, a remote source that removes one of an entry's actions refuses the refresh invalid_grant before consumption, saving no refresh token, where the shipped declaration issues the narrowed entry",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "the token endpoint gates the projected output under the declaration, whatever source supplies the effective set (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025) > with narrowing undeclared, an approved entry stating resource_match exact is issued at the code exchange as it stands, the member kept",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
+     "name": "the effective set keeps a partially contained entry's remainder; issuance carries it only where the declared narrowing permits it (@spec containment#visibility, resource-access#qualified-narrowing, #1377, D1025) > narrowing undeclared: the reported set keeps the remainder, the issuable set omits it, and derivation is refused authority_contained; in full, both carry the remainder and derivation proceeds",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
+     "name": "the effective set keeps a partially contained entry's remainder; issuance carries it only where the declared narrowing permits it (@spec containment#visibility, resource-access#qualified-narrowing, #1377, D1025) > an untouched entry stays issuable beside one the declaration does not let issuance carry, and derivation proceeds",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-cross-domain.test.ts",
+     "name": "the effective set keeps a partially contained entry's remainder; issuance carries it only where the declared narrowing permits it (@spec containment#visibility, resource-access#qualified-narrowing, #1377, D1025) > under an exact-only domain, a partially contained exact entry is issuable narrowed, and a partially contained prefix entry is reported but not issuable",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025): the refresh and cross-domain witnesses are proved by mutation: containing a partially contained entry as modified, and conveying an entry without narrowing permitted, each fail them."
+   "notes": "#1503 finding 7 (D620). The reference declares narrowing for mission_resource_access only as a qualified domain (#1377, D1025), so the rule applies to every entry outside it. Proved by skipping the issuance check and by deciding from the mapping current at issuance instead of the retained association: both witnesses failed each time. On owner review of #1604 at 509a92ea (P2): the refusal on a refresh was decided at the access token's save, after oidc-provider had rotated a rotating refresh token, so a refused refresh spent it and a retry for the original approved audience got invalid_grant. The refusal now runs in rotateRefreshToken before consumption; the rotating-lineage witness fails on 509a92ea. D733: the gap where an entry approved for another audience rode in a token closed; every Mission-bound token now carries only the entries approved for its audience. Proved by carrying every computed entry instead of the audience's (the save-time check then refused the two-audience witnesses), and by bypassing the code and refresh hook's filter. #1377 review of #1891 (D1025), second round: the effective set is reported accurately and issuance gates what it carries. Proved by mutation (2026-10-29): an ungated projection of the credential's rar fails the remote-source witness (200 with the modified entry) and the explicit-exact witness (the member dropped); not carrying an unchanged entry as it stands fails the explicit-exact witness; a refresh pre-check that swallows the projection's refusal fails the rotating remote-source witness (one refresh token saved); counting every effective entry as issuable fails the kernel issuable witnesses; a derivation gate that reads the reported set fails the authority_contained witness; and conveying an entry without narrowing permitted fails the cross-domain witnesses."
   },
   {
    "id": "core.other-types.entry-audience-trusted-mapping",
@@ -77946,7 +77982,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1463, D606. Mutations: a raw string-prefix comparison in selectorOverlapsEntry fails the kernel witness (the exact service root reaches the finer entry); string-equality pairing in effectiveEntriesWithOrigin fails the endpoint witness (the declared prefix selector reaches nothing); dropping the loader's resource_match fails the loader witness. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), removing some of its actions contains it whole instead, as conservative over-containment already does (#1377, D1025; qualified-narrowing-endpoint.test.ts)."
+   "notes": "#1463, D606. Mutations: a raw string-prefix comparison in selectorOverlapsEntry fails the kernel witness (the exact service root reaches the finer entry); string-equality pairing in effectiveEntriesWithOrigin fails the endpoint witness (the declared prefix selector reaches nothing); dropping the loader's resource_match fails the loader witness. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), the effective set still keeps its uncontained remainder, as Visibility requires, and issuance does not carry the modified entry (#1377, D1025; #1891 review, second round)."
   },
   {
    "id": "containment.selector-matching.overlap-applies",
@@ -78077,7 +78113,7 @@
      "surface": "lifecycle-endpoint"
     }
    ],
-   "notes": "#1463. Mutation: treating every removal as whole fails the kernel witness. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), removing some of its actions contains it whole instead, as conservative over-containment already does (#1377, D1025; qualified-narrowing-endpoint.test.ts)."
+   "notes": "#1463. Mutation: treating every removal as whole fails the kernel witness. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), the effective set still keeps its uncontained remainder, as Visibility requires, and issuance does not carry the modified entry (#1377, D1025; #1891 review, second round)."
   },
   {
    "id": "containment.selector-matching.union",
@@ -78166,7 +78202,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness. #1500 review: what over-containment removes returns only through restoration; expansion reconciliation and the progressive drawdown compare successor authority against the removals as they land on the predecessor's approved entries. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), removing some of its actions contains it whole instead, as conservative over-containment already does (#1377, D1025; qualified-narrowing-endpoint.test.ts)."
+   "notes": "#1463, D606. Mutation: dropping the selector-within-entry direction of the overlap fails the witness. #1500 review: what over-containment removes returns only through restoration; expansion reconciliation and the progressive drawdown compare successor authority against the removals as they land on the predecessor's approved entries. Under the shipped declaration, which permits narrowing every entry the reference admits. Where the declared narrowing does not permit narrowing an entry (undeclared, or outside the declared domain), the effective set still keeps its uncontained remainder, as Visibility requires, and issuance does not carry the modified entry (#1377, D1025; #1891 review, second round)."
   },
   {
    "id": "containment.selector-matching.child-propagation",
@@ -78203,6 +78239,41 @@
     }
    ],
    "notes": "#1463, D606. Mutations: propagating the selectors unwidened fails the sibling witness; filtering a child's entries by string equality fails the finer-entry witness."
+  },
+  {
+   "id": "containment.visibility.uncontained-remainder",
+   "spec": "draft-mcguinness-oauth-mission-containment.md",
+   "anchor": "visibility",
+   "text": "any surface of those profiles that discloses Mission authority MUST omit contained capability, removing contained actions, keeping an entry's uncontained remainder, and omitting an entry with no authority left",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "containment.narrowing"
+   },
+   "profiles": [],
+   "surface": "lifecycle-endpoint",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "on a contained Mission, a Mission Status Response or token introspection Mission projection that discloses Mission authority omits the contained actions, keeps each entry's uncontained remainder, and omits an entry with no authority left"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "automatic projection after partial containment: the effective set keeps the uncontained remainder, and issuance carries an entry the declaration does not let the AS narrow only as approved (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, containment#visibility, #1377, D1025) > with narrowing undeclared, Status keeps the partially contained entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/qualified-narrowing-endpoint.test.ts",
+     "name": "automatic projection after partial containment: the effective set keeps the uncontained remainder, and issuance carries an entry the declaration does not let the AS narrow only as approved (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, containment#visibility, #1377, D1025) > under an exact-only domain, Status keeps a partially contained prefix entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token",
+     "level": "unit",
+     "surface": "lifecycle-endpoint"
+    }
+   ],
+   "notes": "#1377 review of #1891, second round (finding 3). Partial: witnessed on the Status surface for the remainder clause under a declaration that does not let issuance carry the modified entry (narrowing undeclared; an exact-only domain over a prefix entry): the response keeps the entry with its contained action removed, where the earlier whole-entry containment dropped it. Not cited here: the introspection Mission projection, and omitting an entry with no authority left. Proved by mutation (2026-10-29): reinstating whole-entry containment in effectiveEntriesWithOrigin fails both witnesses."
   },
   {
    "id": "child-delegation.child-state.parent-terminated-immediate-parent",
