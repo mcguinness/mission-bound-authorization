@@ -71,12 +71,12 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "abc60736cc74c125497ee5945909d1ac373ebc76",
-    "content_sha256": "7f67e00191ba9c73a55e3f2299e2acd4c59a7e4307ec851e3b28352dfb26781c"
+    "revision": "4b59db208ef26f6355215359974921375b90e13c",
+    "content_sha256": "2cbd376324add548a7fda7f5d3cbdd32638043116ce0f7987812c5ade4431923"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
-    "revision": "49f794495b2c0caafd9710733abef405699c736c",
-    "content_sha256": "339c2903528735d0782946aabb1a35b67706b45de60537e1a28f708eb2730bf2"
+    "revision": "4b59db208ef26f6355215359974921375b90e13c",
+    "content_sha256": "a2fc4f20845bf5635fb7cb442880987bf29e3d8af93bf928476a30a6e365fa08"
    },
    "draft-mcguinness-oauth-mission-attenuation.md": {
     "revision": "c1307f579ed5c96693321ada82523b60c61519fa",
@@ -115,8 +115,8 @@
     "content_sha256": "c9636bdc3bc0a3b7baffd573b69e56708887aacb5b9fecdd0d35516a4d1d69d5"
    },
    "draft-mcguinness-oauth-mission-derivation-limits.md": {
-    "revision": "99a4e1f88e18225879761ff7a1b08c941ddbbe54",
-    "content_sha256": "757a171e76042e2fb56cd7aaf634c8a3ab7142b709575aacd9363ab82a963842"
+    "revision": "4b59db208ef26f6355215359974921375b90e13c",
+    "content_sha256": "19e1a71ccc86b98f03c8244d8a4c14341685ea292b0cfeb26516d9155a31603b"
    },
    "draft-mcguinness-oauth-mission-approved-set-verification.md": {
     "revision": "526fc49618b12e5b97562465a6bb1b88d2cb6546",
