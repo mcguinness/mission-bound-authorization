@@ -287,7 +287,7 @@ describe("the reference is preserved exactly by derivation and projection (@spec
       },
     });
     const emit = (extra: Record<string, unknown>, r?: ResourceContractRef) =>
-      projectScope({ mapping: mapping(extra), audiences: [RESOURCE], entries: proposal(r) });
+      projectScope({ projectionDeclared: () => true, mapping: mapping(extra), audiences: [RESOURCE], entries: proposal(r) });
     expect(emit({ resource_contract: V1 }, V1)).toMatchObject({ outcome: "emit", values: ["invoices.read"] });
     expect(emit({}, V1).outcome).toBe("refuse");
     expect(emit({ resource_contract: V2 }, V1).outcome).toBe("refuse");

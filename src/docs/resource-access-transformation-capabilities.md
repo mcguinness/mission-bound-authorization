@@ -6,8 +6,8 @@ claims (#1377). Resource Access names deployment documentation as a
 declaration carrier (§ Transformation Capabilities,
 `{#transformation-capabilities}`). **This note is that carrier for the
 reference** (§1): it declares `narrowing` for the type as a qualified value
-naming a narrowing domain (§ Qualified Narrowing), and leaves `delegation`
-and `projection` undeclared. It is not the interoperable supported-subset
+naming a narrowing domain (§ Qualified Narrowing), and `delegation` and
+`projection` as `true`. It is not the interoperable supported-subset
 profile either:
 that is #249's fixture (`vectors/mission-resource-access-subset/`), which §5
 relates to the reference's domain.
@@ -46,7 +46,9 @@ both carriers it uses:
       "id": "https://mission-reference.example/narrowing-domains/mission-resource-access/2026-10-29",
       "digest": "sha-256:rvNN2eeexb_xw1lWEjn9-tAO-wP2P8LSK-2kHDQEHeQ"
     }
-  }
+  },
+  "delegation": true,
+  "projection": true
 }
 ```
 
@@ -110,14 +112,25 @@ action-family clauses, refusing family input (§2.1), and compares delegate
 matchers structurally (§2.4). The domain states what it implements instead
 (D538, D1025).
 
-`delegation` and `projection` stay undeclared. The reference still delegates
-(§3) and projects to `scope` (§4) without declaring them, so the OAuth
-binding's rule that "the AS MUST NOT narrow, delegate, or project to `scope`
-an entry of a type for which it has not declared the corresponding
-capability" is not met for those two:
-`core.other-types.transformation-boundary-declared` and
-`resource-access.transformation-capabilities.projection-undeclared-fallback`
-stay `todo`, each for its own audit (D1025).
+`delegation` and `projection` are declared `true` (D1037), after an audit of
+every rule each claims (§3, §4). Each is applied only where it is declared,
+per entry type:
+
+- `delegation`: no entry of a type without it is delegable
+  (`delegableEntries`, `services/authorization-server/src/kernel/kernel.ts`), so
+  the designation, the delegated redemption, the ID-JAG continuation and the
+  cross-domain grant each refuse a request left with no entry. A public client
+  is never a delegate on any of them (#1901).
+- `projection`: an entry of a type without it supplies no safe projection
+  (`projectScope`, `packages/mission-core/src/scope-projection.ts`), so it is
+  carried as approved where the target consumes `authorization_details`, and
+  a `scope`-only target is refused only when no other carried entry supplies
+  a safe projection.
+
+`capability-gates-endpoint.test.ts`, `continuation-grant.test.ts`,
+`qualified-narrowing-cross-domain.test.ts` and
+`packages/mission-core/test/scope-projection.test.ts` witness each gate with the
+capability omitted and declared `false`, beside declared controls.
 
 ## 2. `narrowing`
 
@@ -228,15 +241,15 @@ matcher is `delegatePermitted` (`kernel/delegate-matcher.ts`).
 
 | Rule | Status | Witness |
 |---|---|---|
-| 1. The entry carries `delegation`; otherwise it is non-delegable | implemented | `delegation.test.ts` "(1) narrows out an entry that carries NO delegation member (non-delegable default)" |
+| 1. The entry carries `delegation`; otherwise it is non-delegable | implemented | `delegation.test.ts` "(1) narrows out an entry that carries NO delegation member (non-delegable default)"; endpoint: `continuation-grant.test.ts` "A->B narrows out a non-delegable entry and keeps the delegable one, its delegation policy intact" |
 | 2. `d` is within `max_depth`, with `d` from the server's own accounting | implemented | `delegation.test.ts` "(2) narrows out an entry when depth EXCEEDS delegation.max_depth" and "gates on the accounted depth, not the nesting of the presented act (@spec mission#delegation-constraints, D198)" |
 | 3. The delegate is permitted by `allowed_delegates` or, when absent, by policy at every exchange | implemented; the reference policy denies every delegate (`DENY_ALL_DELEGATION_POLICY`) | `delegation.test.ts` "(3) an ABSENT allowed_delegates list defers to policy and is never a blanket grant"; case dg-policy-01 |
-| Surviving entries keep `delegation` intact | implemented | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
+| Surviving entries keep `delegation` intact | implemented | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP"; endpoint: `delegation-exchange.test.ts` "issues a designation naming the sub-agent, then a delegated token bound to the sub-agent's own key, counting one derivation each" |
 | Inherited eligibility: the policy decision and every retained list must both permit | implemented (`ceilingOrigin`, `combineOrigins`, `inheritOrigins`) | cases dg-inherit-01, -02, -04, -05, -07; row `resource-access.subset.inherited-allowed-delegates` |
 | Provenance retained with the Mission; an unresolvable approved entry or origin narrows out | implemented (`MissionRecord.eligibility_provenance`, `retainedOrigins`) | cases dg-inherit-03, dg-inherit-06 |
 | A `sub` matcher compares the client identifier exactly | implemented | `delegation.test.ts` "a { sub } matcher permits by CLIENT IDENTIFIER (the delegate's sub), and rejects a different sub" |
-| A `sub_profile` matcher is satisfied by membership among the actor's values | implemented; a matcher value naming several space-separated tokens requires every token | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
-| A matcher with both members needs both; any matcher in the list permits | implemented | cases dg-match-01 to dg-match-04 |
+| A `sub_profile` matcher is satisfied by membership among the actor's values | implemented for a matcher value naming one actor type. Resource Access gives a matcher value carrying several space-separated values no meaning; the reference reads one as requiring every value, which is its interpretation, not specified behavior (#1902) | `delegation.test.ts` "(3) includes an entry when the delegate matches allowed_delegates by sub_profile MEMBERSHIP" |
+| A matcher with both members needs both; any matcher in the list permits | implemented | cases dg-match-01 to dg-match-04 (kernel helper level); endpoint: `capability-gates-endpoint.test.ts`, a designation under a matcher naming both members issued for the delegate that has both and refused for another |
 | Only an asserted `sub_profile` satisfies a matcher, never a self-asserted one | implemented (`DelegateCandidate.assertedProfile`) | `delegation.test.ts` "a SELF-ASSERTED profile (no asserted class) does NOT satisfy a sub_profile matcher"; case dg-match-05 |
 | A matcher carrying another member, neither member, or an empty or non-string value permits nothing, and the list's other matchers still decide | implemented (local, #1373): intake refuses such a matcher, and `delegatePermitted` applies the same rule (`delegateMatcherListViolation`) to one a record committed earlier still holds | `delegate-matcher.test.ts` "does NOT match a matcher whose sub or sub_profile matches but which carries another member"; `delegate-eligibility-endpoint.test.ts` "a committed matcher carrying another member permits nothing (#1373): a record holding one, from before intake refused it, does not admit the delegate it names" |
 
@@ -257,7 +270,7 @@ per-audience document `parseScopeProjectionMapping` validates.
 | 3. Every carried `constraints` key is independently enforced | implemented for `max_amount` and `vendors`, the only controls a mapping can declare (`SCOPE_CONTROL_KEYS`); `requires_action_approval: false` counts as omitted. An entry carrying any other key, including the seven `common-constraints.ts` keys, `terminal_when` and `requires_action_approval: true`, is never projected. | `packages/mission-core/test/scope-projection.test.ts` "constraints: every carried key needs an independently enforced control at least as tight"; `scope-projection.test.ts` "refuses invalid_target when an entry constraint is not independently enforced by the target, and projects once the mapping declares a control at least as tight" |
 | 4. The contract is preserved: an entry carrying `resource_contract` projects only to a value whose mapping states the target performs its operations under exactly that contract, and an entry without one only where the target requires none (#249) | implemented: a `scope_only` value may declare `resource_contract` and `requires_resource_contract` | `packages/mission-core/test/resource-contract.test.ts` "projects an entry carrying a reference only where the mapping states the target performs under exactly that contract" and "projects an entry without one only where the target requires no reference"; `resource-contract.test.ts` "scope projection never drops it: an entry carrying a reference projects only to a value the mapping states is performed under exactly that contract" |
 | An entry member the projection does not understand fails closed | implemented (`KNOWN_ENTRY_MEMBERS`) | `packages/mission-core/test/scope-projection.test.ts` "an entry member the projection does not understand, or a capability-source binding, fails closed" |
-| With `projection` undeclared, emit no projected `scope` for the type | not implemented: the reference projects without a declaration | none; cases pj-01 to pj-04 skip (`transformation-capabilities` and `scope-projection` are not in the case reader's implemented set) |
+| With `projection` undeclared, emit no projected `scope` for the type | implemented: `projectScope` takes the declaration per entry type; an undeclared type's entry supplies no safe projection, another carried entry still can | `capability-gates-endpoint.test.ts`, with `projection` omitted and declared `false`; `packages/mission-core/test/scope-projection.test.ts`, the fallback; cases pj-01 to pj-04 skip (`transformation-capabilities` and `scope-projection` are not in the case reader's implemented set) |
 
 ## 5. Supported domain
 
@@ -313,6 +326,6 @@ domain. Before it was made:
 
 A declaration is never an unqualified whole-type boolean narrowed by prose.
 The qualified `narrowing` establishes no `projection` evidence, and the four
-per-entry, per-target projection conditions of §4 still apply. The
-`delegation` declaration remains a separate audit. #249's fixture and #819's
-independent-consumer subset stay `exact`-only.
+per-entry, per-target projection conditions of §4 still apply. `delegation`
+and `projection` were declared after their own audit (D1037). #249's fixture
+and #819's independent-consumer subset stay `exact`-only.

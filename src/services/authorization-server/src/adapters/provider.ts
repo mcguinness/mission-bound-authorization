@@ -1909,6 +1909,7 @@ export function buildProvider(opts: AdapterOptions): Provider {
       mapping: opts.scopeProjection,
       audiences,
       entries,
+      projectionDeclared: (type) => opts.kernel.projectionDeclared(type),
       ...(request.requested ? { requested: request.requested } : {}),
     });
     if (outcome.outcome === "refuse") throw scopeProjectionError(outcome);
@@ -7937,6 +7938,7 @@ async function decide(
       mapping: opts.scopeProjection,
       audiences: [audience],
       entries: authority,
+      projectionDeclared: (type) => opts.kernel.projectionDeclared(type),
       requested: { values: requestedScope.resource, explicit: true },
     });
     if (outcome.outcome === "refuse" && outcome.error === "invalid_scope") {

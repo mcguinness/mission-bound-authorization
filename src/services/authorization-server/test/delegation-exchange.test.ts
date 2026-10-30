@@ -1816,8 +1816,10 @@ describe("delegation declared without narrowing: a delegated token carries an en
       capabilities: new Set([...ALL_PROVIDER_CAPABILITIES, "delegation"]),
       derivationPolicy: { policy_version: "delegation-without-narrowing", ceiling: [broadReads(), vendorReads()] },
       transformationCapabilities: {
-        declared: { mission_resource_access: { delegation: true } },
+        declared: { mission_resource_access: { delegation: true, projection: true } },
         narrowing: NARROWING_UNDECLARED,
+        delegation: true,
+        projection: true,
       },
     });
   });

@@ -35,9 +35,11 @@ function load(narrowing: unknown, docs: Record<string, unknown> = { [DOMAIN_PATH
 describe("the shipped transformation-capability declaration (@spec resource-access#qualified-narrowing)", () => {
   it("declares narrowing for mission_resource_access as a qualified value naming the reference's narrowing domain, and nothing else", () => {
     expect(Object.keys(TRANSFORMATION_CAPABILITIES.declared)).toEqual(["mission_resource_access"]);
-    expect(Object.keys(TRANSFORMATION_CAPABILITIES.declared.mission_resource_access ?? {})).toEqual(
-      ["narrowing"],
-    );
+    expect(
+      Object.keys(TRANSFORMATION_CAPABILITIES.declared.mission_resource_access ?? {}).sort(),
+    ).toEqual(["delegation", "narrowing", "projection"]);
+    expect(TRANSFORMATION_CAPABILITIES.delegation).toBe(true);
+    expect(TRANSFORMATION_CAPABILITIES.projection).toBe(true);
     const { narrowing } = TRANSFORMATION_CAPABILITIES;
     expect(narrowing.kind).toBe("domain");
     if (narrowing.kind !== "domain") return;
@@ -74,6 +76,31 @@ describe("the loader refuses to start on a declaration it cannot validate (@spec
         { [DOMAIN_PATH]: claiming },
       ),
     ).toThrow(/x_region/);
+  });
+
+  it("resolves delegation and projection only from an explicit true: omitted or false is undeclared", () => {
+    const shipped = JSON.parse(SHIPPED) as {
+      types: { mission_resource_access: Record<string, unknown> };
+    };
+    const variant = (members: Record<string, unknown>) => {
+      const config = structuredClone(shipped);
+      const entry = config.types.mission_resource_access;
+      delete entry.delegation;
+      delete entry.projection;
+      Object.assign(entry, members);
+      return loadTransformationCapabilities(JSON.stringify(config), (path) =>
+        JSON.stringify(path === DOMAIN_PATH ? DOMAIN : {}),
+      );
+    };
+    for (const members of [{}, { delegation: false, projection: false }]) {
+      const caps = variant(members);
+      expect(caps.delegation, JSON.stringify(members)).toBe(false);
+      expect(caps.projection, JSON.stringify(members)).toBe(false);
+    }
+    const declared = variant({ delegation: true, projection: true });
+    expect(declared.delegation).toBe(true);
+    expect(declared.projection).toBe(true);
+    expect(() => variant({ delegation: "yes" })).toThrow(/delegation must be a boolean/);
   });
 
   it("keeps true and false, and an absent narrowing member declares nothing", () => {

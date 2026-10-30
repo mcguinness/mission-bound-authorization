@@ -378,17 +378,23 @@ describe("projectScope (@spec mission#scope-projection)", () => {
   };
 
   it("emits exactly the values a single entry covers, sorted", () => {
-    expect(projectScope({ mapping, audiences: [RS], entries: [entry(["write", "read"])] })).toEqual(
-      {
-        outcome: "emit",
-        scope: "r.read r.rw r.write",
-        values: ["r.read", "r.rw", "r.write"],
-      },
-    );
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries: [entry(["write", "read"])],
+      }),
+    ).toEqual({
+      outcome: "emit",
+      scope: "r.read r.rw r.write",
+      values: ["r.read", "r.rw", "r.write"],
+    });
   });
 
   it("union widening: a value only two entries together cover is not emitted", () => {
     const out = projectScope({
+      projectionDeclared: () => true,
       mapping,
       audiences: [RS],
       entries: [entry(["read"]), entry(["write"])],
@@ -408,10 +414,16 @@ describe("projectScope (@spec mission#scope-projection)", () => {
       },
     });
     expect(
-      projectScope({ mapping: local(["read"]), audiences: [RS], entries: [entry(["read"])] }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: local(["read"]),
+        audiences: [RS],
+        entries: [entry(["read"])],
+      }),
     ).toMatchObject({ outcome: "emit", values: ["read"] });
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping: local(["read", "write"]),
         audiences: [RS],
         entries: [entry(["read"])],
@@ -420,7 +432,14 @@ describe("projectScope (@spec mission#scope-projection)", () => {
   });
 
   it("omits scope for an authorization_details audience", () => {
-    expect(projectScope({ mapping, audiences: [OTHER], entries: [entry(["read"])] })).toEqual({
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [OTHER],
+        entries: [entry(["read"])],
+      }),
+    ).toEqual({
       outcome: "omit",
     });
   });
@@ -428,17 +447,37 @@ describe("projectScope (@spec mission#scope-projection)", () => {
   it("refuses invalid_target for an unknown audience, no mapping, no audience, and a scope-only target with no safe value", () => {
     const target = { outcome: "refuse", error: "invalid_target" };
     expect(
-      projectScope({ mapping, audiences: ["https://unknown.example"], entries: [] }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: ["https://unknown.example"],
+        entries: [],
+      }),
     ).toMatchObject(target);
-    expect(projectScope({ mapping: undefined, audiences: [OTHER], entries: [] })).toMatchObject(
-      target,
-    );
-    expect(projectScope({ mapping, audiences: [], entries: [entry(["read"])] })).toMatchObject(
-      target,
-    );
-    expect(projectScope({ mapping, audiences: [RS], entries: [entry(["delete"])] })).toMatchObject(
-      target,
-    );
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: undefined,
+        audiences: [OTHER],
+        entries: [],
+      }),
+    ).toMatchObject(target);
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [],
+        entries: [entry(["read"])],
+      }),
+    ).toMatchObject(target);
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries: [entry(["delete"])],
+      }),
+    ).toMatchObject(target);
   });
 
   it("evaluates the mapping current at each issuance: a changed version still projects", () => {
@@ -448,7 +487,14 @@ describe("projectScope (@spec mission#scope-projection)", () => {
         [RS]: { ...(mapping.audiences[RS] as object), version: "v2" } as never,
       },
     };
-    expect(projectScope({ mapping: bumped, audiences: [RS], entries: [entry(["read"])] })).toEqual({
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: bumped,
+        audiences: [RS],
+        entries: [entry(["read"])],
+      }),
+    ).toEqual({
       outcome: "emit",
       scope: "r.read",
       values: ["r.read"],
@@ -458,15 +504,22 @@ describe("projectScope (@spec mission#scope-projection)", () => {
   it("a requested scope narrows the projection; an explicit ungrantable value refuses invalid_scope; an inherited one narrows", () => {
     const entries = [entry(["read", "write"])];
     const ask = (values: string[], explicit = true) => ({ values, explicit });
-    expect(projectScope({ mapping, audiences: [RS], entries, requested: ask(["r.read"]) })).toEqual(
-      {
-        outcome: "emit",
-        scope: "r.read",
-        values: ["r.read"],
-      },
-    );
     expect(
       projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries,
+        requested: ask(["r.read"]),
+      }),
+    ).toEqual({
+      outcome: "emit",
+      scope: "r.read",
+      values: ["r.read"],
+    });
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: [RS],
         entries: [entry(["read"])],
@@ -478,10 +531,22 @@ describe("projectScope (@spec mission#scope-projection)", () => {
       reason: expect.stringMatching(/r\.write/),
     });
     expect(
-      projectScope({ mapping, audiences: [RS], entries, requested: ask(["r.unmapped"]) }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries,
+        requested: ask(["r.unmapped"]),
+      }),
     ).toMatchObject({ outcome: "refuse", error: "invalid_scope" });
     expect(
-      projectScope({ mapping, audiences: [OTHER], entries, requested: ask(["r.read"]) }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [OTHER],
+        entries,
+        requested: ask(["r.read"]),
+      }),
     ).toMatchObject({
       outcome: "refuse",
       error: "invalid_scope",
@@ -490,6 +555,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     // Inherited (a refresh naming no scope): narrowed to what is still safe, never refused invalid_scope.
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: [RS],
         entries: [entry(["read"])],
@@ -498,6 +564,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     ).toEqual({ outcome: "emit", scope: "r.read", values: ["r.read"] });
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: [RS],
         entries: [entry(["read"])],
@@ -505,13 +572,20 @@ describe("projectScope (@spec mission#scope-projection)", () => {
       }),
     ).toMatchObject({ outcome: "refuse", error: "invalid_target" });
     expect(
-      projectScope({ mapping, audiences: [OTHER], entries, requested: ask(["r.read"], false) }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [OTHER],
+        entries,
+        requested: ask(["r.read"], false),
+      }),
     ).toEqual({ outcome: "omit" });
   });
 
   it("inherited values none of which is still safe refuse invalid_scope; an empty safe set still refuses invalid_target", () => {
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: [RS],
         entries: [entry(["read"])],
@@ -524,6 +598,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     });
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: [RS],
         entries: [entry(["delete"])],
@@ -535,16 +610,29 @@ describe("projectScope (@spec mission#scope-projection)", () => {
   it("an explicit request naming no resource value refuses invalid_scope at a scope-only audience and omits at an authorization_details one", () => {
     const none = { values: [], explicit: true };
     expect(
-      projectScope({ mapping, audiences: [RS], entries: [entry(["read"])], requested: none }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries: [entry(["read"])],
+        requested: none,
+      }),
     ).toMatchObject({ outcome: "refuse", error: "invalid_scope" });
     expect(
-      projectScope({ mapping, audiences: [OTHER], entries: [entry(["read"])], requested: none }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [OTHER],
+        entries: [entry(["read"])],
+        requested: none,
+      }),
     ).toEqual({ outcome: "omit" });
   });
 
   it("an unknown mapping refuses invalid_target even when the request names a scope value", () => {
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping,
         audiences: ["https://unknown.example"],
         entries: [entry(["read"])],
@@ -557,6 +645,7 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     });
     expect(
       projectScope({
+        projectionDeclared: () => true,
         mapping: undefined,
         audiences: [RS],
         entries: [entry(["read"])],
@@ -590,7 +679,12 @@ describe("projectScope (@spec mission#scope-projection)", () => {
       },
     };
     expect(
-      projectScope({ mapping: two, audiences: [RS, RS2], entries: [entry(["read", "write"])] }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: two,
+        audiences: [RS, RS2],
+        entries: [entry(["read", "write"])],
+      }),
     ).toEqual({
       outcome: "emit",
       scope: "r.read",
@@ -598,10 +692,20 @@ describe("projectScope (@spec mission#scope-projection)", () => {
     });
     // Independent of audience order: each audience narrows the emitted set.
     expect(
-      projectScope({ mapping: two, audiences: [RS2, RS], entries: [entry(["read", "write"])] }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: two,
+        audiences: [RS2, RS],
+        entries: [entry(["read", "write"])],
+      }),
     ).toMatchObject({ outcome: "emit", values: ["r.read"] });
     expect(
-      projectScope({ mapping: two, audiences: [RS, OTHER], entries: [entry(["read"])] }),
+      projectScope({
+        projectionDeclared: () => true,
+        mapping: two,
+        audiences: [RS, OTHER],
+        entries: [entry(["read"])],
+      }),
     ).toMatchObject({
       outcome: "refuse",
     });
@@ -637,15 +741,33 @@ describe("delegated routing (@spec mission#rs-enforcement)", () => {
     expect(delegatedRoutingRefusal(mapping, [])).toMatch(/no audience/);
 
     const entries = [entry(["read"])];
-    expect(projectScope({ mapping, audiences: [RS], entries, delegated: true })).toMatchObject({
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [RS],
+        entries,
+        delegated: true,
+      }),
+    ).toMatchObject({
       outcome: "refuse",
       reason: expect.stringMatching(/Mission-aware/),
     });
-    expect(projectScope({ mapping, audiences: [RS], entries })).toMatchObject({
+    expect(
+      projectScope({ projectionDeclared: () => true, mapping, audiences: [RS], entries }),
+    ).toMatchObject({
       outcome: "emit",
       scope: "r.read",
     });
-    expect(projectScope({ mapping, audiences: [AWARE], entries, delegated: true })).toMatchObject({
+    expect(
+      projectScope({
+        projectionDeclared: () => true,
+        mapping,
+        audiences: [AWARE],
+        entries,
+        delegated: true,
+      }),
+    ).toMatchObject({
       outcome: "omit",
     });
   });

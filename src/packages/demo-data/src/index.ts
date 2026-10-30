@@ -2850,6 +2850,10 @@ export const SCOPE_PROJECTION: ScopeProjectionMapping = loadScopeProjection();
 export interface TransformationCapabilities {
   declared: Readonly<Record<string, Readonly<Record<string, JsonValue>>>>;
   narrowing: NarrowingDeclaration;
+  /** `delegation` declared `true` for `mission_resource_access`; absent or `false` is undeclared. */
+  delegation: boolean;
+  /** `projection` declared `true` for `mission_resource_access`; absent or `false` is undeclared. */
+  projection: boolean;
 }
 
 const CAPABILITY_MEMBERS: readonly string[] = ["narrowing", "delegation", "projection"];
@@ -2906,6 +2910,8 @@ export function loadTransformationCapabilities(
   if (!isJsonObject(types)) throw new ConfigError(file, "types must be an object keyed by type");
   const declared: Record<string, Record<string, JsonValue>> = {};
   let narrowing: NarrowingDeclaration = NARROWING_UNDECLARED;
+  let delegation = false;
+  let projection = false;
   for (const [type, value] of Object.entries(types)) {
     if (type !== "mission_resource_access") {
       throw new ConfigError(file, `${type} is not a supported authorization_details type`);
@@ -2927,9 +2933,11 @@ export function loadTransformationCapabilities(
       if (claim !== undefined) throw new ConfigError(file, `${type}.narrowing: ${claim}`);
     }
     if (resolved) narrowing = resolved.declaration;
+    delegation = value.delegation === true;
+    projection = value.projection === true;
     declared[type] = structuredClone(value) as Record<string, JsonValue>;
   }
-  return { declared, narrowing };
+  return { declared, narrowing, delegation, projection };
 }
 
 /** The validated shipped transformation capabilities (@see loadTransformationCapabilities). */

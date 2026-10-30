@@ -477,6 +477,15 @@ export interface ScopeProjectionInput {
    * must be Mission-aware.
    */
   delegated?: boolean;
+  /**
+   * @spec mission#transformation-capabilities, resource-access#transformation-capabilities
+   * (#1377, D1037): whether this server declares `projection` for an entry's
+   * type. An entry of a type without it supplies no safe projection, so it is
+   * carried as approved where the target consumes `authorization_details`,
+   * and a `scope`-only target is refused only when no other carried entry
+   * supplies a safe projection.
+   */
+  projectionDeclared: (type: string) => boolean;
 }
 
 /**
@@ -600,6 +609,13 @@ export function unenforcedConstraintRefusal(
  * emitted only when it is safe at every audience and a token spanning both
  * modes is refused (an implementation restriction, not a protocol rule).
  */
+/** Whether `entry`'s type is one this server declares `projection` for. */
+function projectionDeclaredFor(input: ScopeProjectionInput, entry: unknown): boolean {
+  const type =
+    entry !== null && typeof entry === "object" ? (entry as { type?: unknown }).type : undefined;
+  return typeof type === "string" && input.projectionDeclared(type);
+}
+
 export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcome {
   const target = (reason: string): ScopeProjectionOutcome => ({
     outcome: "refuse",
@@ -645,7 +661,11 @@ export function projectScope(input: ScopeProjectionInput): ScopeProjectionOutcom
     }
     const here = new Set(
       Object.entries(m.scopes)
-        .filter(([, value]) => input.entries.some((entry) => scopeValueSafeForEntry(value, entry)))
+        .filter(([, value]) =>
+          input.entries.some(
+            (entry) => projectionDeclaredFor(input, entry) && scopeValueSafeForEntry(value, entry),
+          ),
+        )
         .map(([name]) => name),
     );
     safe = safe ? new Set([...safe].filter((s) => here.has(s))) : here;
