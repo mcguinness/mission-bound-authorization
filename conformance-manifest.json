@@ -9029,14 +9029,44 @@
     "runtime-enforced"
    ],
    "surface": "derivation",
-   "assertion": "output-bound",
+   "assertion": "refusal",
    "observation": {
-    "normative": "a direct record that carries activation, activation_actor or root_commitment carries each at its implied value: activation names the record's own approval_event_id, activation_actor is consent_principal, and root_commitment is the record's authority_hash; a record whose present member differs (another approval event, a party other than consent_principal, a commitment other than authority_hash) does not conform, and the check refuses it naming that member",
-    "local": "the AS records all three, each built from the value it implies; assertDirectBasisConsistent (kernel/approval-basis.ts) is the check, throwing DirectBasisMismatchError. It is a library check, not a gate on the creation funnel: insertRecord does not call it"
+    "normative": "a direct record that carries activation, activation_actor or root_commitment carries each at its implied value: activation names the record's own approval_event_id, activation_actor is consent_principal, and root_commitment is the record's authority_hash; the AS refuses at creation a record whose present member differs (another approval event, a party other than consent_principal, a commitment other than authority_hash), naming that member, and stores nothing",
+    "local": "the AS records all three, each built from the value it implies. assertDirectBasisConsistent (kernel/approval-basis.ts) is the check, throwing DirectBasisMismatchError; insertRecord, the single record-creation funnel, calls it for every direct record before the creation transaction and any write. Every creating path reaches that funnel: kernel.approve (Deferred Approval's relocated approval included), createExpansion (a deferred Expansion's completion included), the carryover replacement, template dispatch, governed-policy approval, child delegation and progressive drawdown; the first three build a direct basis. An omitted member passes and is not inserted"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > refuses a direct record whose present activation contradicts its implied value before storing it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > refuses a direct record whose present activation_actor contradicts its implied value before storing it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > refuses a direct record whose present root_commitment contradicts its implied value before storing it",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > stores a direct record whose three members are present at their implied values",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > stores a direct record that omits any or all of the three members, and reads it back without them",
+     "level": "unit",
+     "surface": "derivation"
+    },
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
      "name": "approval basis (@spec mission#record-principal-members) > refuses a direct basis whose present activation, activation_actor or root_commitment differs from its implied value",
@@ -9056,7 +9086,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047), new rule. The refusal witness takes a hand-built direct record and refuses an activation naming another approval event, an activation_actor that is the Subject or carries another issuer, and a root_commitment other than authority_hash, also when the other two members match. The acceptance witness passes a record kernel.approve emitted and records omitting any of the three. The round trip shows kernel.approve's stored members at their implied values. Proved by mutation (2026-10-30, #1912): disabling the activation, activation_actor or root_commitment comparison, or comparing activation_actor's iss alone, fails the refusal witness (\"expected a refusal\"); treating an omitted activation or root_commitment as a mismatch fails the acceptance witness. Witnessed creating path: kernel.approve. carryover.test.ts checks a carryover replacement's activation.approval_event_id and root_commitment; an Expansion successor builds the same three members and is not separately witnessed here."
+   "notes": "#1912 (D1047), new rule; owner review of #1913 (D1048): the check had no production caller, and a contradicting record passed to kernel.insertRecord was stored. The creation witnesses (direct-basis-creation.test.ts, the owner's probe) pass to kernel.insertRecord a copy of an approved direct record whose activation names another approval event, whose activation_actor is not consent_principal, or whose root_commitment is not authority_hash: each is refused with DirectBasisMismatchError naming that member, and neither the record nor its approval event is stored. The control stores the same copy with every member at its implied value, so each refusal is the contradiction alone; the omission witness stores records omitting all three members or any one and reads them back unchanged. Proved by mutation (2026-10-30, #1912): removing the insertRecord call fails the three refusal witnesses (\"expected { refused: false, stored: true } to deeply equal { refused: true, stored: false }\"), and the owner's unmodified probe fails the same way, while the control and omission witnesses pass. The kernel.test.ts witnesses exercise the standalone check: the refusal witness takes a hand-built direct record and refuses an activation naming another approval event, an activation_actor that is the Subject or carries another issuer, and a root_commitment other than authority_hash, also when the other two members match; the acceptance witness passes a record kernel.approve emitted and records omitting any of the three; the round trip shows kernel.approve's stored members at their implied values. Proved by mutation (2026-10-30, #1912): disabling the activation, activation_actor or root_commitment comparison, or comparing activation_actor's iss alone, fails the refusal witness (\"expected a refusal\"); treating an omitted activation or root_commitment as a mismatch fails the acceptance witness. carryover.test.ts checks a carryover replacement's activation.approval_event_id and root_commitment; an Expansion successor builds the same three members and is not separately witnessed here."
   },
   {
    "id": "core.approval-basis.direct-implied-not-inserted",
@@ -9076,11 +9106,17 @@
    "assertion": "output-bound",
    "observation": {
     "normative": "a direct record that omits activation, activation_actor or root_commitment reads each at its implied value, while the record committed to the store, read back, and given to the Approval Context Manifest keeps the basis exactly as recorded: no implied member is inserted, so the approval context committed is the one the record states",
-    "local": "the reference's direct paths record all three members, so the witness builds the omitting record by removing them from an approved record and commits it through insertRecord; directBasisMembers reads values without writing them"
+    "local": "the reference's direct paths record all three members, so the witnesses build omitting records by removing members from an approved record and commit them through insertRecord, which checks a direct basis without filling it; directBasisMembers reads values without writing them"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/direct-basis-creation.test.ts",
+     "name": "direct basis consistency at record creation (@spec mission#record-principal-members) > stores a direct record that omits any or all of the three members, and reads it back without them",
+     "level": "unit",
+     "surface": "commitment"
+    },
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
      "name": "approval basis (@spec mission#record-principal-members) > commits a direct basis that omits them exactly as recorded: neither the store nor the Approval Context Manifest input inserts an implied member",
@@ -9100,7 +9136,7 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1912 (D1047), new rule. The commit witness reads the omitting record back from the store and checks the Approval Context Manifest input and manifest with toStrictEqual, and shows the filled basis would commit a different approval_context_commitment. Proved by mutation (2026-10-30, #1912): the kernel's approvalContextInput filling the implied members, or rowToRecord filling them on load, fails the commit witness; the mission-core manifest builder filling activation fails the mission-core witness; directBasisMembers without its fallback, or with a wrong implied value, fails the omission witness. The committed vectors are unchanged: approvalContext.test.ts vectors 1 to 6, lifecycle-termination.test.ts, and vectors/baseline-q3."
+   "notes": "#1912 (D1047), new rule. The commit witness reads the omitting record back from the store and checks the Approval Context Manifest input and manifest with toStrictEqual, and shows the filled basis would commit a different approval_context_commitment. Proved by mutation (2026-10-30, #1912): the kernel's approvalContextInput filling the implied members, or rowToRecord filling them on load, fails the commit witness; the mission-core manifest builder filling activation fails the mission-core witness; directBasisMembers without its fallback, or with a wrong implied value, fails the omission witness. The committed vectors are unchanged: approvalContext.test.ts vectors 1 to 6, lifecycle-termination.test.ts, and vectors/baseline-q3. Owner review of #1913 (D1048): with the consistency check now in insertRecord, the creation witness (direct-basis-creation.test.ts) commits records omitting all three members or any one through the funnel and reads each back with toStrictEqual. Proved by mutation (2026-10-30, #1912): insertRecord filling the implied members before the write fails it and the kernel.test.ts commit witness."
   },
   {
    "id": "core.approval-basis.standing-consent-activation-required",
@@ -11471,8 +11507,7 @@
    "role": "AS",
    "strength": "MUST",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "unconditional"
    },
    "profiles": [
     "issuance"
@@ -11480,13 +11515,13 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "where the deployment uses a feature that depends on versioned derivation-policy identification, standing-consent recency ceilings among them, every Mission it creates records policy_version",
+    "normative": "where the deployment uses a feature or profile that depends on versioned derivation-policy identification, every Mission it creates records policy_version. Such features include standing-consent recency ceilings; Approval Governance's v1 commitment, whose Approval Context Manifest always includes policy_version; Mission Mandate, whose REQUIRED policy_version claim is the record's; Approval Revision, which re-derives under the proposed Mission's policy_version; Derivation Limits, whose audit recomputes derivation_limit from it; and Child Delegation, whose policy_drawdown limit is taken, absent a child_creation_policy snapshot, from the policy the Parent Mission's policy_version identifies",
     "local": "the reference records policy_version on every Mission whether or not such a feature is in use: kernel.approve copies the derivation policy's policy_version, and the missions column is NOT NULL"
    },
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1912 (D1047): policy_version is OPTIONAL in the base record and REQUIRED where such a feature is used. Todo: no test asserts a created record's policy_version where recency ceilings are declared. Approval Governance's v1 manifest and Mission Mandate state their own requirements for it."
+   "notes": "#1912 (D1047): policy_version is OPTIONAL in the base record and REQUIRED where such a feature is used. Owner review of #1913 (D1048): the row applied only where core.standing-consent-recency was claimed, but the requirement binds every deployment using a feature that depends on versioned derivation-policy identification. No capability names Mission Mandate or Approval Revision (Mission Mandate's rows are unconditional, and Approval Revision has none), so an any_of over capabilities cannot cover the set: the row is unconditional, and its observation states the condition. A deployment using none of the listed features may omit policy_version. Todo: no test asserts a created record's policy_version in a deployment shown to use a listed feature."
   },
   {
    "id": "core.mission-record.policy-version-from-creation",
@@ -11496,8 +11531,7 @@
    "role": "AS",
    "strength": "stated",
    "applicability": {
-    "kind": "capability",
-    "capability": "core.standing-consent-recency"
+    "kind": "unconditional"
    },
    "profiles": [
     "issuance"
@@ -11505,7 +11539,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "policy_version is on the record from its creation commit, and no later operation (a derivation, a lifecycle transition) adds or replaces it"
+    "normative": "where the deployment uses a feature that depends on versioned derivation-policy identification (standing-consent recency ceilings; Approval Governance's v1 commitment, whose Approval Context Manifest always includes policy_version; Mission Mandate, whose REQUIRED policy_version claim is the record's; Approval Revision, which re-derives under the proposed Mission's policy_version; Derivation Limits, whose audit recomputes derivation_limit from it; and Child Delegation, whose policy_drawdown limit is taken, absent a child_creation_policy snapshot, from the policy the Parent Mission's policy_version identifies), policy_version is on the record from its creation commit, and no later operation (a derivation, a lifecycle transition) adds or replaces it"
    },
    "level": "unit",
    "coverage": "partial",
@@ -11517,7 +11551,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1912 (D1047). Partial: the witness (also core.mission-record.members-immutable's) holds every member but state and termination, policy_version included, unchanged across a derivation, suspend, resume and revoke. Proved by mutation (2026-10-30, #1912): a suspend or resume UPDATE that replaces policy_version fails it. Not witnessed: that policy_version is present at creation (the witness compares whatever the record holds), and the witness runs without recency ceilings declared."
+   "notes": "#1912 (D1047). Owner review of #1913 (D1048): the row applied only where core.standing-consent-recency was claimed, but the requirement binds every deployment using a feature that depends on versioned derivation-policy identification. No capability names Mission Mandate or Approval Revision (Mission Mandate's rows are unconditional, and Approval Revision has none), so an any_of over capabilities cannot cover the set: the row is unconditional, and its observation states the condition. A deployment using none of the listed features may omit policy_version. Partial: the witness (also core.mission-record.members-immutable's) holds every member but state and termination, policy_version included, unchanged across a derivation, suspend, resume and revoke. Proved by mutation (2026-10-30, #1912): a suspend or resume UPDATE that replaces policy_version fails it. Not witnessed: that policy_version is present at creation (the witness compares whatever the record holds), or the rule in a deployment shown to use a listed feature."
   },
   {
    "id": "core.audit-horizon.terminated-record-retained",
