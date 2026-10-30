@@ -458,8 +458,9 @@ derivation under the same checks, and a token derived by Token
 Exchange carries the same `mission` claim ({{self-exchange}},
 {{delegated-exchange}}). Revoking or expiring the Mission stops
 further issuance and refresh, including from any grant lineage bound
-to it ({{grant-binding-state}}); an access token already issued
-remains valid until it expires ({{revocation}}). A user thus approves
+to it ({{grant-binding-state}}). An already-issued access token can
+still be honored on a stateless enforcement path until it expires
+({{revocation}}). A user thus approves
 a task's authority once, and that approval bounds every token the
 agent derives. {{first-mission}} walks through these steps with
 concrete values.
