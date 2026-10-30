@@ -729,7 +729,9 @@ describe("standing-payment Dispatch Policy defects refused at construction (@spe
       }
     }
     expect(outcomes).toEqual(expected);
-  });
+    // Sixteen server startups in sequence: about 4.7 s alone, past 5 s under
+    // the full suite's load.
+  }, 15_000);
 
   it("refuses to start with a Dispatch Policy whose budget omits its limit (#813)", async () => {
     const t = terms("ap-no-limit");
