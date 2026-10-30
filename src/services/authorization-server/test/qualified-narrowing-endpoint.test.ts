@@ -410,7 +410,23 @@ describe("a narrowing domain is read: an entry outside it is carried only as app
   });
 });
 
-describe("automatic projection after partial containment: an entry the declaration does not let the AS narrow is contained whole (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, #1377, D1025)", () => {
+/** Every refresh of `s`'s approval grants rotates (the elapsed share read as 80%) while `fn` runs. */
+async function rotating<T>(s: Srv, fn: () => Promise<T>): Promise<T> {
+  const spy = vi
+    .spyOn(s.as.provider.RefreshToken.prototype as unknown as { ttlPercentagePassed(): number }, "ttlPercentagePassed")
+    .mockReturnValue(80);
+  try {
+    return await fn();
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+/** The Mission authority the Status surface discloses for the payments audience. */
+const statusAuthority = (s: Srv, missionId: string) =>
+  s.as.kernel.statusObservation(missionId, { audience: RESOURCE, requester: RESOURCE }).payload.authorization_details as AuthorityEntry[];
+
+describe("automatic projection after partial containment: the effective set keeps the uncontained remainder, and issuance carries an entry the declaration does not let the AS narrow only as approved (@spec mission#transformation-capabilities, resource-access#qualified-narrowing, containment#visibility, #1377, D1025)", () => {
   it("under the shipped declaration, a refresh after partial containment issues the narrowed entry", async () => {
     const issued = await issue(shipped, [structuredClone(CEILING)]);
     contain(shipped, issued.missionId, ["payments:invoice.list"]);
@@ -419,22 +435,26 @@ describe("automatic projection after partial containment: an entry the declarati
     expect(entriesOf(refreshed.body.access_token as string)[0]?.actions).toEqual(["payments:invoice.read", "payments:vendor.read"]);
   });
 
-  it("with narrowing undeclared, the partially contained entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token", async () => {
+  it("with narrowing undeclared, Status keeps the partially contained entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token", async () => {
     const issued = await issue(undeclared, [structuredClone(CEILING)]);
     contain(undeclared, issued.missionId, ["payments:invoice.list"]);
-    expect(undeclared.as.kernel.effectiveAuthoritySet(undeclared.as.kernel.get(issued.missionId) as never)).toEqual([]);
-    const refused = await countingRefreshSaves(undeclared, () => refresh(undeclared, issued.rt, issued.keys));
+    expect(recorded(statusAuthority(undeclared, issued.missionId))).toEqual([
+      { ...CEILING, actions: ["payments:invoice.read", "payments:vendor.read"] },
+    ]);
+    const refused = await rotating(undeclared, () => countingRefreshSaves(undeclared, () => refresh(undeclared, issued.rt, issued.keys)));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
     expect(refused.saved).toBe(0);
   });
 
-  it("under an exact-only domain, a partially contained prefix entry is contained whole, and the refresh is refused invalid_grant, saving no refresh token", async () => {
+  it("under an exact-only domain, Status keeps a partially contained prefix entry's remainder, and the refresh, which may not carry it, is refused invalid_grant before consumption, saving no refresh token", async () => {
     expect(CEILING.resource_match).toBe("prefix");
     const issued = await issue(exactOnly, [structuredClone(CEILING)]);
     contain(exactOnly, issued.missionId, ["payments:invoice.list"]);
-    expect(exactOnly.as.kernel.effectiveAuthoritySet(exactOnly.as.kernel.get(issued.missionId) as never)).toEqual([]);
-    const refused = await countingRefreshSaves(exactOnly, () => refresh(exactOnly, issued.rt, issued.keys));
+    expect(recorded(statusAuthority(exactOnly, issued.missionId))).toEqual([
+      { ...CEILING, actions: ["payments:invoice.read", "payments:vendor.read"] },
+    ]);
+    const refused = await rotating(exactOnly, () => countingRefreshSaves(exactOnly, () => refresh(exactOnly, issued.rt, issued.keys)));
     expect(refused.result.status, JSON.stringify(refused.result.body)).toBe(400);
     expect(refused.result.body.error).toBe("invalid_grant");
     expect(refused.saved).toBe(0);

@@ -13,10 +13,10 @@ import {
   COMMIT_IS_EFFECT_REASONS,
   entryOverlapsResource,
   intentHash,
+  isSubsetEntryUnder,
   type JsonValue,
   NARROWING_IN_FULL,
   type NarrowingDeclaration,
-  narrowingPermits,
   proposalHash,
   type ResourceContractDeclarations,
 } from "@mission/core";
@@ -4184,17 +4184,33 @@ export class MissionKernel {
         out.push({ origin: entry, entry }); // no action of this entry contained -> unchanged
         continue;
       }
-      const contained = { ...entry, actions };
-      // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
-      // (#1377, D1025): removing some of an entry's actions modifies it, which
-      // only a declared `narrowing` permits. Where the declaration does not
-      // permit it for the pair, the entry is contained whole, as a selector
-      // finer than its entry already over-contains (D606): never modified, and
-      // never carried as approved past the containment.
-      if (!narrowingPermits(this.narrowingDeclaration(), contained, entry)) continue;
-      out.push({ origin: entry, entry: contained });
+      // @spec containment#visibility: the uncontained remainder is kept, whatever
+      // the narrowing declaration; which entries issuance may carry is decided
+      // separately ({@link issuableEntriesWithOrigin}).
+      out.push({ origin: entry, entry: { ...entry, actions } });
     }
     return out;
+  }
+
+  /**
+   * @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+   * (#1377, D1025): the effective entries issuance may carry, each with its
+   * origin. The effective set is reported as it stands; issuance carries an
+   * effective entry only where it equals its approved origin, or where the
+   * narrowing declaration permits narrowing the origin to it. An entry the
+   * overlays modified otherwise is not carried, never issued as if approved.
+   */
+  issuableEntriesWithOrigin(record: MissionRecord): Array<{ origin: AuthorityEntry; entry: AuthorityEntry }> {
+    const declaration = this.narrowingDeclaration();
+    return this.effectiveEntriesWithOrigin(record).filter(
+      (e) => e.entry === e.origin || isSubsetEntryUnder(declaration, e.entry, e.origin),
+    );
+  }
+
+  /** {@link issuableEntriesWithOrigin}'s entries: the effective set issuance may carry. */
+  issuableAuthoritySet(record: MissionRecord): AuthorityEntry[] {
+    if (!record.containment && !record.discharged?.length) return record.authority_set;
+    return this.issuableEntriesWithOrigin(record).map((e) => e.entry);
   }
 
   /**

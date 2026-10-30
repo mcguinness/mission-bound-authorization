@@ -149,13 +149,16 @@ describe("audience projection to a Resource AS counts as narrowing: a grant conv
     }
   });
 
-  it("under an exact-only domain, a prefix entry outside it is refused, unchanged or partially contained (contained whole)", async () => {
+  it("under an exact-only domain, a prefix entry outside it is refused, unchanged or partially contained, while the effective set keeps the contained entry's remainder", async () => {
     const domain = kernelWith(exactOnly());
     const unchanged = approve(domain, [structuredClone(PREFIX)]);
     await expect(conveyed(domain, unchanged.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
     const partial = approve(domain, [structuredClone(PREFIX)]);
     contain(domain, partial.id, R_PREFIX, [LIST]);
-    await expect(conveyed(domain, partial.id)).rejects.toThrow(/effective authority is fully contained/);
+    expect(domain.effectiveAuthoritySet(domain.get(partial.id) as MissionRecord)).toEqual([
+      { ...PREFIX, actions: PREFIX.actions.filter((a) => a !== LIST) },
+    ]);
+    await expect(conveyed(domain, partial.id)).rejects.toBeInstanceOf(AuthorityNarrowedToEmptyError);
 
     const full = kernelWith(NARROWING_IN_FULL);
     const m = approve(full, [structuredClone(PREFIX)]);
