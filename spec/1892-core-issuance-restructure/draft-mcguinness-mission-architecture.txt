@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           29 October 2026
-Expires: 2 May 2027
+Intended status: Informational                           30 October 2026
+Expires: 3 May 2027
 
 
             An Architecture for Mission-Bound Authorization
@@ -58,7 +58,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -241,13 +241,15 @@ Table of Contents
    The body reads in four parts, followed by appendices:
 
    *  *The model* comes first: a Mission's life end to end (Section 3);
-      the Mission (Section 4), with its approval and lifecycle
-      (Section 4.3), authority path (Section 4.4), delegated-authority
-      layer (Section 4.5), capability envelope (Section 4.6), and
-      survivable incorrectness (Section 4.7); what the family does not
-      do (Section 5); the roles (Section 6); the verb spine that
-      organizes every mechanism (Section 7); the invariants (Section 8);
-      and who owns meaning and who commits authority (Section 9).
+      the Mission (Section 4), with its relationship to existing OAuth
+      objects (Section 4.1), plans and execution (Section 4.2), approval
+      and lifecycle (Section 4.3), authority path (Section 4.4),
+      delegated-authority layer (Section 4.5), capability envelope
+      (Section 4.6), and survivable incorrectness (Section 4.7); what
+      the family does not do (Section 5); the roles (Section 6); the
+      verb spine that organizes every mechanism (Section 7); the
+      invariants (Section 8); and who owns meaning and who commits
+      authority (Section 9).
 
    *  *The substrate and the bindings* follow (Section 10): the binding-
       neutral kernel, the validity model (Section 10.4), and how the
@@ -821,8 +823,8 @@ Table of Contents
       restraint applies to GNAP and the capability-system lineage
       (macaroons, Biscuit, UCAN, object-capability narrowing): the
       family composes with deployed grant protocols and attenuation
-      primitives rather than adding a competing one.  The OAuth binding
-      states the comparison ([I-D.draft-mcguinness-oauth-mission]).
+      primitives rather than adding a competing one.  Section 4.1
+      compares the Mission with the OAuth objects near it.
 
    *  *A policy language.* The PDP evaluates the Mission's Authority
       Set, constraints, and state; how a deployment authors policy
@@ -1021,7 +1023,7 @@ Table of Contents
       binding).
 
    Executing delegate:  the outermost act actor (the OAuth binding's
-      Delegation section).
+      Delegation Within a Mission section).
 
    Credential holder:  the mediating PEP under mediated custody
       ([I-D.draft-mcguinness-mission-runtime]).
@@ -4212,10 +4214,10 @@ Table of Contents
 
    A deployment enters the family from the estate it already runs
    (Section 12.1).  It can stop at issuance alone (Section 12.2), adopt
-   Missions one short task at a time (Section 12.3), size each Mission
-   to one task (Section 12.4), and compose named patterns for untrusted
-   input (Section 12.5) and for work that never ends (Section 12.6).
-   The Deployment Profile states what it built (Section 12.7).
+   Missions one short task at a time (Section 12.3, Section 12.4), and
+   compose named patterns for untrusted input (Section 12.5) and for
+   work that never ends (Section 12.6).  The Deployment Profile states
+   what it built (Section 12.7).
 
 12.1.  Entry Ramps by Estate
 
@@ -6399,10 +6401,11 @@ Appendix J.  Document History
 
    [[ To be removed from the final specification ]]
 
-   *  Gains, from the OAuth binding, Approval Role Mapping under Mission
-      Creation Paths: how each creation scenario assigns the three
-      approval_basis roles.  The OAuth binding's Single Accountable
-      Approver section points here.  No requirement changed (#1892).
+   *  Gains, from the OAuth binding, Approval Role Mapping beside
+      Mission Creation Paths: how each creation scenario assigns the
+      three approval_basis roles.  The OAuth binding's Single
+      Accountable Approver section points here.  No requirement changed
+      (#1892).
 
    *  Gains, from the OAuth binding, Relationship to Existing OAuth
       Objects and Missions, Plans, and Execution under The Mission, the

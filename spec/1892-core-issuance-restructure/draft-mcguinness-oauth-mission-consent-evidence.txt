@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         29 October 2026
-Expires: 2 May 2027
+Intended status: Standards Track                         30 October 2026
+Expires: 3 May 2027
 
 
                  Mission Consent Evidence for OAuth 2.0
@@ -60,7 +60,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -2044,14 +2044,10 @@ Appendix C.  Document History
 
    *  Layered Rendering adds non-normative practices for a large or
       varied Authority Set, grouping and splitting, from the OAuth
-      binding's Approval Comprehension; the evidence model cites the
-      binding's rule that a committed approval surface covers the
-      provenance facts.  No requirement changes (#1892).
-
-   *  The split practice cites the architecture document's Mission
-      Granularity, which carries the evaluate-together boundary the
-      OAuth binding's Applicability stated.  No requirement changes
-      (#1892).
+      binding's Approval Comprehension, the split practice citing the
+      architecture document's Mission Granularity; the evidence model
+      cites the binding's rule that a committed approval surface covers
+      the provenance facts.  No requirement changes (#1892).
 
 Acknowledgments
 

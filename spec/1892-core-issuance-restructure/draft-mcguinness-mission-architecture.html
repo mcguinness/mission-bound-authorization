@@ -1063,7 +1063,7 @@ svg {
 </tr></thead>
 <tfoot><tr>
 <td class="left">McGuinness</td>
-<td class="center">Expires 2 May 2027</td>
+<td class="center">Expires 3 May 2027</td>
 <td class="right">[Page]</td>
 </tr></tfoot>
 </table>
@@ -1076,12 +1076,12 @@ svg {
 <dd class="internet-draft">draft-mcguinness-mission-architecture-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
-<time datetime="2026-10-29" class="published">29 October 2026</time>
+<time datetime="2026-10-30" class="published">30 October 2026</time>
     </dd>
 <dt class="label-intended-status">Intended Status:</dt>
 <dd class="intended-status">Informational</dd>
 <dt class="label-expires">Expires:</dt>
-<dd class="expires"><time datetime="2027-05-02">2 May 2027</time></dd>
+<dd class="expires"><time datetime="2027-05-03">3 May 2027</time></dd>
 <dt class="label-authors">Author:</dt>
 <dd class="authors">
 <div class="author">
@@ -1141,7 +1141,7 @@ it names is defined by the profile it points to.<a href="#section-abstract-1" cl
         time. It is inappropriate to use Internet-Drafts as reference
         material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
 <p id="section-boilerplate.1-4">
-        This Internet-Draft will expire on 2 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+        This Internet-Draft will expire on 3 May 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="copyright">
@@ -1535,7 +1535,9 @@ normative over both.<a href="#section-1-9" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="section-1.1-2.1">
             <p id="section-1.1-2.1.1"><strong>The model</strong> comes first: a Mission's life end to end
-(<a href="#mission-life" class="auto internal xref">Section 3</a>); the Mission (<a href="#the-mission" class="auto internal xref">Section 4</a>), with its approval
+(<a href="#mission-life" class="auto internal xref">Section 3</a>); the Mission (<a href="#the-mission" class="auto internal xref">Section 4</a>), with its
+relationship to existing OAuth objects (<a href="#why-a-new-object" class="auto internal xref">Section 4.1</a>), plans
+and execution (<a href="#the-mission-the-plan-and-execution" class="auto internal xref">Section 4.2</a>), approval
 and lifecycle (<a href="#approval-and-lifecycle" class="auto internal xref">Section 4.3</a>), authority path
 (<a href="#mission-authority-path" class="auto internal xref">Section 4.4</a>), delegated-authority layer
 (<a href="#delegated-authority-layer" class="auto internal xref">Section 4.5</a>), capability envelope
@@ -2223,8 +2225,8 @@ Resource Access Profile
 restraint applies to GNAP and the capability-system lineage
 (macaroons, Biscuit, UCAN, object-capability narrowing): the family
 composes with deployed grant protocols and attenuation primitives
-rather than adding a competing one. The OAuth binding states the
-comparison (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>).<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
+rather than adding a competing one. <a href="#why-a-new-object" class="auto internal xref">Section 4.1</a> compares
+the Mission with the OAuth objects near it.<a href="#section-5-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-5-2.2">
           <p id="section-5-2.2.1"><strong>A policy language.</strong> The PDP evaluates the Mission's Authority Set,
@@ -2490,7 +2492,8 @@ requested it, never the approved agent (the OAuth binding).<a href="#section-6.1
           <dd class="break"></dd>
 <dt id="section-6.1-2.13">Executing delegate:</dt>
           <dd style="margin-left: 1.5em" id="section-6.1-2.14">
-            <p id="section-6.1-2.14.1">the outermost <code>act</code> actor (the OAuth binding's Delegation section).<a href="#section-6.1-2.14.1" class="pilcrow">¶</a></p>
+            <p id="section-6.1-2.14.1">the outermost <code>act</code> actor (the OAuth binding's Delegation Within a
+Mission section).<a href="#section-6.1-2.14.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-6.1-2.15">Credential holder:</dt>
@@ -6290,9 +6293,10 @@ direction.<a href="#section-11.8-3" class="pilcrow">¶</a></p>
       </h2>
 <p id="section-12-1">A deployment enters the family from the estate it already runs
 (<a href="#entry-ramps" class="auto internal xref">Section 12.1</a>). It can stop at issuance alone (<a href="#issuance-only" class="auto internal xref">Section 12.2</a>),
-adopt Missions one short task at a time (<a href="#short-mission" class="auto internal xref">Section 12.3</a>), size each
-Mission to one task (<a href="#mission-granularity" class="auto internal xref">Section 12.4</a>), and compose named patterns for untrusted input (<a href="#quarantine-pattern" class="auto internal xref">Section 12.5</a>)
-and for work that never ends (<a href="#standing-agent" class="auto internal xref">Section 12.6</a>). The Deployment
+adopt Missions one short task at a time (<a href="#short-mission" class="auto internal xref">Section 12.3</a>,
+<a href="#mission-granularity" class="auto internal xref">Section 12.4</a>), and compose named patterns for untrusted
+input (<a href="#quarantine-pattern" class="auto internal xref">Section 12.5</a>) and for work that never ends
+(<a href="#standing-agent" class="auto internal xref">Section 12.6</a>). The Deployment
 Profile states what it built (<a href="#deployment-profile" class="auto internal xref">Section 12.7</a>).<a href="#section-12-1" class="pilcrow">¶</a></p>
 <div id="entry-ramps">
 <section id="section-12.1">
@@ -8650,7 +8654,7 @@ with no <code>suspended</code> state and its own termination reasons, served by
 <p id="appendix-J-1">[[ To be removed from the final specification ]]<a href="#appendix-J-1" class="pilcrow">¶</a></p>
 <ul class="normal">
 <li class="normal" id="appendix-J-2.1">
-          <p id="appendix-J-2.1.1">Gains, from the OAuth binding, Approval Role Mapping under Mission
+          <p id="appendix-J-2.1.1">Gains, from the OAuth binding, Approval Role Mapping beside Mission
 Creation Paths: how each creation scenario assigns the three
 <code>approval_basis</code> roles. The OAuth binding's Single Accountable
 Approver section points here. No requirement changed (#1892).<a href="#appendix-J-2.1.1" class="pilcrow">¶</a></p>

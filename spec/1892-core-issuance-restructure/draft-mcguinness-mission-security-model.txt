@@ -4,8 +4,8 @@
 
 Network Working Group                                      K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Informational                           29 October 2026
-Expires: 2 May 2027
+Intended status: Informational                           30 October 2026
+Expires: 3 May 2027
 
 
                          Mission Security Model
@@ -63,7 +63,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -221,13 +221,15 @@ Table of Contents
    narrows authority from everything the agent's standing credentials
    allow to the resources the approved task needs, and per-task Missions
    further limit the effect of a compromise
-   ([I-D.draft-mcguinness-oauth-mission]).  Issuance does not constrain
-   the external-communication leg: within an approved Authority Set, an
-   injected agent can read what the Mission permits and write to a sink
-   the Mission permits.  Constraining exfiltration by a compromised
-   agent is the runtime layer's role, and even there it is bounded, not
-   closed ([I-D.draft-mcguinness-mission-runtime]); preventing misuse of
-   data within the authorized scope needs an information-flow layer the
+   ([I-D.draft-mcguinness-oauth-mission];
+   [I-D.draft-mcguinness-mission-architecture], Section "Mission
+   Granularity").  Issuance does not constrain the external-
+   communication leg: within an approved Authority Set, an injected
+   agent can read what the Mission permits and write to a sink the
+   Mission permits.  Constraining exfiltration by a compromised agent is
+   the runtime layer's role, and even there it is bounded, not closed
+   ([I-D.draft-mcguinness-mission-runtime]); preventing misuse of data
+   within the authorized scope needs an information-flow layer the
    family does not define (Section 5).
 
    The agent and harness boundary assumes an isolation boundary between
@@ -1080,15 +1082,17 @@ Table of Contents
       an ordinary credential to the Mission, such as the Mission Join of
       [I-D.draft-mcguinness-mission-authority-server], is one
       realization of the trusted enforcement path the OAuth binding
-      permits for such a credential.  Residual: a held ordinary
-      credential needs no request to the AS, and neither an AS nor a
-      resource server can generally tell that a request made with one
-      serves a Mission; a workload's provisioned authority exists beside
-      any Mission that draws on it, and Mission state does not revoke a
-      grant held outside any Mission; at a resource that is not Mission-
-      governed, absent mandatory mediation, such a grant acts with no
-      Mission state, revocation, or consent commitment, and only the
-      client's own conformance closes that path.
+      permits for such a credential
+      ([I-D.draft-mcguinness-oauth-mission], Section "Authorization
+      Server Metadata").  Residual: a held ordinary credential needs no
+      request to the AS, and neither an AS nor a resource server can
+      generally tell that a request made with one serves a Mission; a
+      workload's provisioned authority exists beside any Mission that
+      draws on it, and Mission state does not revoke a grant held
+      outside any Mission; at a resource that is not Mission-governed,
+      absent mandatory mediation, such a grant acts with no Mission
+      state, revocation, or consent commitment, and only the client's
+      own conformance closes that path.
 
    Standing-authority creep through the source ceiling:  Addressed by
       the approval-time source check: approval activates only authority

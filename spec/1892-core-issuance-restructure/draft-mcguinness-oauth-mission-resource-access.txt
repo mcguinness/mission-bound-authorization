@@ -4,8 +4,8 @@
 
 Web Authorization Protocol                                 K. McGuinness
 Internet-Draft                                               Independent
-Intended status: Standards Track                         29 October 2026
-Expires: 2 May 2027
+Intended status: Standards Track                         30 October 2026
+Expires: 3 May 2027
 
 
              Mission Resource Access Profile for OAuth 2.0
@@ -55,7 +55,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 2 May 2027.
+   This Internet-Draft will expire on 3 May 2027.
 
 Copyright Notice
 
@@ -799,8 +799,8 @@ Table of Contents
 
    A constraint's intersection rule applies where a derivation combines
    two bounds for the same key, as in the proposal and policy-ceiling
-   example of [I-D.draft-mcguinness-mission-architecture],
-   Section "Derivation Rule Example".  A derivation need not run a
+   example ([I-D.draft-mcguinness-mission-architecture],
+   Section "Derivation Rule Example").  A derivation need not run a
    particular intersection algorithm, and a ceiling whose specification
    defines a refusal rule is enforced by that rule, not silently
    intersected.
