@@ -2191,7 +2191,9 @@ Like the `mission` claim ({{mission-claim}}), the record is open
 additional members set at creation using short names coordinated with
 it (for example, a lineage member linking the Mission to a
 predecessor or parent); any other extension MUST use
-collision-resistant names.
+collision-resistant names. A consumer does not interpret a member it
+does not recognize, and does not remove it from a record it retains
+or commits.
 
 The following subsections define the record's members. The record's
 required members are its invariants: `id`, `issuer`, `state`,
@@ -2316,16 +2318,6 @@ the profile that uses it.
   : REQUIRED. A string: `direct`, or a standing-consent value that a
     companion profile defines ({{standing-consent-bases}}).
 
-  An unrecognized `type`, and likewise an unrecognized
-  `adjudication.kind` ({{mission-record}}), is preserved unchanged as
-  opaque provenance on an otherwise valid record: a consumer MUST NOT
-  infer or fabricate the human, policy, or Approval Governance Record
-  standing behind it, and MUST refuse only a profile operation that
-  itself requires recognized adjudication semantics to proceed (for
-  example, evaluating a policy-approval recency ceiling). Unlike an
-  unrecognized lifecycle state ({{lifecycle}}), an unrecognized value
-  here does not by itself invalidate or deactivate the Mission.
-
   `consent_principal`:
   : REQUIRED. An object with `iss` and `sub`. The accountable human
     (or human-accountable principal) who consented. MAY equal
@@ -2362,8 +2354,7 @@ the profile that uses it.
       mechanism, not a storage location for supporting evidence; a
       companion profile MUST NOT define a `kind` value that names a
       record, an evidence store, or the requesting or dispatching
-      party. An unrecognized value is handled under the same rule as
-      `approval_basis.type` ({{record-principal-members}}).
+      party.
 
     `governance_record`:
     : OPTIONAL. A boolean. `true` when an Approval Governance Record is
@@ -2426,13 +2417,7 @@ the profile that uses it.
 
   `type`:
   : REQUIRED. A string: `user_delegated`, `service_owned`, or
-    `organizational`. An unrecognized value is handled under the same
-    rule as an unrecognized `approval_basis.type`
-    ({{record-principal-members}}): it is preserved unchanged as opaque
-    provenance and does not by itself invalidate or deactivate the
-    Mission, and only an operation that itself requires recognized
-    source semantics refuses (for example, applying the source's
-    authority ceiling or its governed policy).
+    `organizational`.
 
   `policy`:
   : REQUIRED for `organizational`, absent otherwise. An object with
@@ -2448,6 +2433,19 @@ the profile that uses it.
 `client_id`:
 : REQUIRED. A string. The Agent (OAuth client) that submitted the
   Mission Intent.
+
+An unrecognized `approval_basis.type`, `adjudication.kind`, or
+`authority_source.type` value is preserved unchanged as opaque
+provenance on an otherwise valid record: a consumer MUST NOT infer or
+fabricate the human, policy, or Approval Governance Record standing
+behind it, and MUST refuse only a profile operation that itself
+requires recognized adjudication semantics to proceed (for example,
+evaluating a policy-approval recency ceiling); for
+`authority_source.type`, that operation is one that itself requires
+recognized source semantics (for example, applying the source's
+authority ceiling or its governed policy). Unlike an unrecognized
+lifecycle state ({{lifecycle}}), such a value does not by itself
+invalidate or deactivate the Mission.
 
 ### Provenance and Expiry {#record-provenance-members}
 
