@@ -71,8 +71,8 @@
     "content_sha256": "e6221c0a590af138cbb86438eb958ae9970c75f82899efef5bfe4ff5c72035da"
    },
    "draft-mcguinness-oauth-mission.md": {
-    "revision": "13ca5f86e6a4ae3c579a338384c1409252992b34",
-    "content_sha256": "eb8632cce566405c588714d72c84f3c23de9bf6d8d4ac17485122ea9bf9d577a"
+    "revision": "8798f310b98d464b1e8b812bdbc633857451eb2b",
+    "content_sha256": "0a8f6a84714441b2bb39432837738dc8c3538eb42e60fee0d94d67082f1c6de3"
    },
    "draft-mcguinness-oauth-mission-resource-access.md": {
     "revision": "ab43aaf92c0a991da97a93e91c688dd5ed9e2f9f",
@@ -123,8 +123,8 @@
     "content_sha256": "0cf8e2d58c15528519fac2be96750514bd07b045ac6a19549dfefbedd5443133"
    },
    "draft-mcguinness-oauth-mission-submission-evidence.md": {
-    "revision": "2ae249cd813d36fe8eca463223b99179df75a26e",
-    "content_sha256": "3d5ad6ab47838637df5e7b8b42320452fef6480061991135bdf0c82169cb1dee"
+    "revision": "8517c163cac31656010c1c267ca3c604f6bdcef8",
+    "content_sha256": "a4ca4e6b26331e088e69b8c2b76fa0af0c703ac0314570c39edf5ae71aeb1498"
    },
    "draft-mcguinness-oauth-mission-request-provenance.md": {
     "revision": "77aa582c9ac6588eaa2bcf0ab6f1d298308f3f3b",
@@ -8702,7 +8702,7 @@
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8730,12 +8730,12 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs."
+   "notes": "Standing-consent facet: gated on core.standing-consent, the common source of kind policy (Template dispatch, policy drawdown, ceiling drawdown). The governance facet, core.approval-basis.adjudication-policy-model-input-narrows-governance, covers an Approval Governance Record accountable policy assertion. Re-checkability is the stated property beside it: re-evaluating the recorded policy version over the recorded inputs, model output included, reproduces the decision. #1185 implementation: witnessed on governed_policy, the one standing-consent basis that consults model inputs. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.approval-basis.adjudication-policy-model-input-narrows-governance",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "standing-consent-bases",
    "text": "the AS MUST NOT let it supply or widen authority",
    "role": "AS",
    "strength": "MUST NOT",
@@ -8760,7 +8760,7 @@
      "surface": "governance-decision"
     }
    ],
-   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent."
+   "notes": "Governance facet of core.approval-basis.adjudication-policy-model-input-narrows, quoting the same clause: kind policy reaches adjudication through an Approval Governance Record's accountable policy assertion without claiming capability core.standing-consent. #1912 (D1047): the `kind: policy` paragraph moved verbatim to Standing-Consent Bases; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.approval-basis.discriminator-unknown-value-rule",
@@ -8784,7 +8784,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. authority_source.type applies the same rule since #1503 (D620), and its preservation is witnessed on core.mission-record.authority-source-type-enum; this row stays scoped to the two fields the review named."
+   "notes": "New rule (#716 review, P1): approval_basis.type and adjudication.kind get their own unknown-value rule, distinct from the Mission Lifecycle state rule of {{lifecycle}} the earlier text miscited. #1912 (D1047) states the rule once, at the end of Principals and Approval Basis, for approval_basis.type, adjudication.kind and authority_source.type. This row stays scoped to the two adjudication discriminators; the authority_source.type facet, with its source-semantics refusal, is core.mission-record.authority-source-type-unrecognized (tested)."
   },
   {
    "id": "core.approval-basis.required-fixed-at-approval",
@@ -8904,9 +8904,9 @@
    "id": "core.approval-basis.activation-direct-event-id",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "REQUIRED. An object naming what activated this Mission instance, shaped by `type`. For `direct`: `approval_event_id`, mirroring the record's own `approval_event_id` (below).",
+   "text": "OPTIONAL for `direct`. What activated this Mission instance; its implied value for `direct` is an object whose `approval_event_id` is the record's own `approval_event_id` (below).",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -8917,27 +8917,34 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission created at a direct approval event records approval_basis.activation as an object whose approval_event_id equals the record's own approval_event_id"
+    "normative": "a direct record's approval_basis.activation, where present, is an object whose approval_event_id equals the record's own approval_event_id; where omitted, a reader takes that object as its value",
+    "local": "every direct path in the reference (kernel.approve, an Expansion successor, a carryover replacement) still records all three members; directBasisMembers (kernel/approval-basis.ts) reads an omitted one's implied value without writing it into the record"
    },
    "level": "unit",
-   "coverage": "partial",
+   "coverage": "tested",
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
      "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > reads the implied activation, activation_actor and root_commitment of a direct basis that omits them",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Partial: the witness asserts activation equals {approval_event_id: 'apev-100'}, the identifier the approval was given, but never reads the stored record's approval_event_id, so a record whose own member diverged would still pass; one assertion against stored.approval_event_id would make it tested. mission-approval-deferral.test.ts makes the same comparison against store.approvalEventId(code) on Deferred Approval's relocated direct approval, also not against the record member."
+   "notes": "#1892 ruling 6 (row debt); #1912 (D1047) made the member OPTIONAL for `direct` with this implied value. The round trip now compares activation with the stored record's own approval_event_id, the assertion the earlier partial lacked. Proved by mutation (2026-10-30, #1912): kernel.approve recording an approval_event_id other than the one activation names fails it (\"expected { approval_event_id: 'apev-100' } to deeply equal ...\"). The omission witness reads the implied value from a hand-built direct record and from an approved record with the three members removed; directBasisMembers without the fallback, or with an implied activation naming authority_hash, fails it. A present activation naming another approval event is refused by core.approval-basis.direct-members-match-implied's check. Strength is stated: the clause is OPTIONAL with a defined implied value. mission-approval-deferral.test.ts makes the same comparison against store.approvalEventId(code) on Deferred Approval's relocated direct approval."
   },
   {
    "id": "core.approval-basis.activation-actor-direct",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "REQUIRED. An object with `iss` and `sub`. Who or what triggered this instance. For `direct` it equals `consent_principal`: the Approver triggers their own approval.",
+   "text": "OPTIONAL for `direct`. Who or what triggered this instance; its implied value for `direct` is `consent_principal`: the Approver triggers their own approval.",
    "role": "AS",
-   "strength": "MUST",
+   "strength": "stated",
    "applicability": {
     "kind": "unconditional"
    },
@@ -8948,7 +8955,8 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission created at a direct approval event records approval_basis.activation_actor, an object with iss and sub, equal to its consent_principal"
+    "normative": "a direct record's approval_basis.activation_actor, where present, equals its consent_principal (an object with iss and sub); where omitted, a reader takes consent_principal as its value",
+    "local": "every direct path in the reference (kernel.approve, an Expansion successor, a carryover replacement) still records all three members; directBasisMembers (kernel/approval-basis.ts) reads an omitted one's implied value without writing it into the record"
    },
    "level": "unit",
    "coverage": "tested",
@@ -8958,15 +8966,59 @@
      "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
      "level": "unit",
      "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > reads the implied activation, activation_actor and root_commitment of a direct basis that omits them",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1898 (from #1892's review). The witness's toEqual over the stored basis fixes activation_actor to consent_principal. Proved by mutation (2026-10-30, #1898): an activation_actor set to the Subject fails it."
+   "notes": "#1898 (from #1892's review); #1912 (D1047) made the member OPTIONAL for `direct` with implied value consent_principal. The round trip's toEqual over the stored basis fixes a present activation_actor to consent_principal; proved by mutation (2026-10-30, #1898): an activation_actor set to the Subject fails it. The omission witness reads the implied value from a direct record that omits the member. Proved by mutation (2026-10-30, #1912): an implied activation_actor other than consent_principal fails it. A present value that differs is refused by core.approval-basis.direct-members-match-implied's check. Strength is stated: the clause is OPTIONAL with a defined implied value."
   },
   {
    "id": "core.approval-basis.root-commitment-direct",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "record-principal-members",
-   "text": "REQUIRED. A string. The commitment to the consented root: an integrity anchor where the root is a committed object, otherwise the committed reference that identifies it. For `direct`, this Mission's own `authority_hash`.",
+   "text": "OPTIONAL for `direct`. The commitment to the consented root; its implied value for `direct` is this Mission's own `authority_hash`.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a direct record's approval_basis.root_commitment, where present, is a string equal to its own authority_hash; where omitted, a reader takes authority_hash as its value",
+    "local": "every direct path in the reference (kernel.approve, an Expansion successor, a carryover replacement) still records all three members; directBasisMembers (kernel/approval-basis.ts) reads an omitted one's implied value without writing it into the record"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > reads the implied activation, activation_actor and root_commitment of a direct basis that omits them",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1898; #1912 (D1047) made the member OPTIONAL for `direct` with implied value the record's authority_hash. Facet: the direct basis; standing-consent roots are rowed under their bases and under core.approval-basis.standing-consent-root-commitment-required. The round trip fixes a present root_commitment to the record's authority_hash; proved by mutation (2026-10-30, #1898): a root_commitment other than authority_hash fails it. The omission witness reads the implied value from a direct record that omits it. Proved by mutation (2026-10-30, #1912): an implied root_commitment other than authority_hash fails it. A present value that differs is refused by core.approval-basis.direct-members-match-implied's check. Strength is stated: the clause is OPTIONAL with a defined implied value."
+  },
+  {
+   "id": "core.approval-basis.direct-members-match-implied",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "When present for `direct`, `activation`, `activation_actor`, and `root_commitment` MUST each match its implied value.",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -8979,11 +9031,24 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a Mission created at a direct approval event records approval_basis.root_commitment, a string equal to its own authority_hash"
+    "normative": "a direct record that carries activation, activation_actor or root_commitment carries each at its implied value: activation names the record's own approval_event_id, activation_actor is consent_principal, and root_commitment is the record's authority_hash; a record whose present member differs (another approval event, a party other than consent_principal, a commitment other than authority_hash) does not conform, and the check refuses it naming that member",
+    "local": "the AS records all three, each built from the value it implies; assertDirectBasisConsistent (kernel/approval-basis.ts) is the check, throwing DirectBasisMismatchError. It is a library check, not a gate on the creation funnel: insertRecord does not call it"
    },
    "level": "unit",
    "coverage": "tested",
    "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > refuses a direct basis whose present activation, activation_actor or root_commitment differs from its implied value",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > accepts a direct basis that carries the three members at their implied values, or omits any of them",
+     "level": "unit",
+     "surface": "derivation"
+    },
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
      "name": "approval basis (@spec mission#record-principal-members) > records a direct basis, round-tripped through the store, with approver == consent_principal == activation_actor",
@@ -8991,7 +9056,189 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1898. Facet: the direct basis; standing-consent roots are rowed under their bases. The witness fixes root_commitment to the record's authority_hash. Proved by mutation (2026-10-30, #1898): a root_commitment other than authority_hash fails it."
+   "notes": "#1912 (D1047), new rule. The refusal witness takes a hand-built direct record and refuses an activation naming another approval event, an activation_actor that is the Subject or carries another issuer, and a root_commitment other than authority_hash, also when the other two members match. The acceptance witness passes a record kernel.approve emitted and records omitting any of the three. The round trip shows kernel.approve's stored members at their implied values. Proved by mutation (2026-10-30, #1912): disabling the activation, activation_actor or root_commitment comparison, or comparing activation_actor's iss alone, fails the refusal witness (\"expected a refusal\"); treating an omitted activation or root_commitment as a mismatch fails the acceptance witness. Witnessed creating path: kernel.approve. carryover.test.ts checks a carryover replacement's activation.approval_event_id and root_commitment; an Expansion successor builds the same three members and is not separately witnessed here."
+  },
+  {
+   "id": "core.approval-basis.direct-implied-not-inserted",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "The implied values are semantic defaults: an omitted member has its implied value, and a reader does not insert it into a record before hashing or committing the record.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "commitment",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a direct record that omits activation, activation_actor or root_commitment reads each at its implied value, while the record committed to the store, read back, and given to the Approval Context Manifest keeps the basis exactly as recorded: no implied member is inserted, so the approval context committed is the one the record states",
+    "local": "the reference's direct paths record all three members, so the witness builds the omitting record by removing them from an approved record and commits it through insertRecord; directBasisMembers reads values without writing them"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > commits a direct basis that omits them exactly as recorded: neither the store nor the Approval Context Manifest input inserts an implied member",
+     "level": "unit",
+     "surface": "commitment"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > reads the implied activation, activation_actor and root_commitment of a direct basis that omits them",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/packages/mission-core/test/approvalContext.test.ts",
+     "name": "Approval Context Manifest (approval-governance § approval-context-manifest) > copies a direct approval_basis that omits its implied members exactly as recorded",
+     "level": "unit",
+     "surface": "commitment"
+    }
+   ],
+   "notes": "#1912 (D1047), new rule. The commit witness reads the omitting record back from the store and checks the Approval Context Manifest input and manifest with toStrictEqual, and shows the filled basis would commit a different approval_context_commitment. Proved by mutation (2026-10-30, #1912): the kernel's approvalContextInput filling the implied members, or rowToRecord filling them on load, fails the commit witness; the mission-core manifest builder filling activation fails the mission-core witness; directBasisMembers without its fallback, or with a wrong implied value, fails the omission witness. The committed vectors are unchanged: approvalContext.test.ts vectors 1 to 6, lifecycle-termination.test.ts, and vectors/baseline-q3."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-activation-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "REQUIRED for every standing-consent `type`. An object naming what activated this Mission instance, in the shape that the basis's companion profile defines.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mission the AS activates under a standing-consent basis records approval_basis.activation, an object in the shape its basis's companion profile defines: the template, version, hash and dispatch event of a template dispatch; the creation event (and any child_creation_policy) of a policy drawdown child; the drawdown policy of a ceiling drawdown"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without activation fails earlier, in its own record checks, so its witness is not cited here."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-activation-actor-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "REQUIRED for every standing-consent `type`. An object with `iss` and `sub`. Who or what triggered this instance: a dispatching or requesting party distinct from the consenting human.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mission the AS activates under a standing-consent basis records approval_basis.activation_actor, an object with iss and sub naming the dispatching or requesting party (the Dispatcher, the parent's agent, the requesting client), distinct from consent_principal"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/governed-policy-approval.test.ts",
+     "name": "governed policy root and record (@spec approval-governance#governed-policy-root, approval-governance#governed-policy-record) > records every governed_policy approval_basis member from retained state and the issuer's evaluation",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts, governed-policy-approval.ts) fails each witness's toEqual. The template, policy_drawdown and governed_policy witnesses also assert activation_actor differs from consent_principal; the ceiling_drawdown witness fixes it to the requesting client."
+  },
+  {
+   "id": "core.approval-basis.standing-consent-root-commitment-required",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "standing-consent-bases",
+   "text": "REQUIRED for every standing-consent `type`. A string. The commitment to the consented root",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "every Mission the AS activates under a standing-consent basis records approval_basis.root_commitment, a string committing the consented root: the template_hash, the child_creation_policy digest or the parent's authority_hash, or the ceiling_hash"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/template.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, mission-template#template-lineage) > records a template basis, round-tripped through the store, with the Dispatcher distinct from the consenting human",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/child-delegation.test.ts",
+     "name": "approval basis (@spec mission#standing-consent-bases, child-delegation#child-creation) > records a policy_drawdown basis, root_commitment falling back to the parent's authority_hash (no child_creation_policy reference carried)",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/progressive-drawdown-endpoint.test.ts",
+     "name": "policy-adjudicated drawdown (@spec progressive#in-ceiling-expansion) > completes in the token-exchange response: the successor is active under ceiling_drawdown, the predecessor superseded and the reservation committed",
+     "level": "endpoint",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1912 (D1047): the standing-consent half of the former basis-agnostic REQUIRED, defined in Standing-Consent Bases. Each witness's toEqual covers the stored basis whole. Proved by mutation (2026-10-30, #1912): renaming the member's key in the basis builder (template.ts, child-delegation.ts, progressive.ts) fails each witness's toEqual. A governed_policy activation built without root_commitment is refused by its own record check (approval_policy.digest is not the consented root's commitment), so its witness is not cited here."
   },
   {
    "id": "core.approval-basis.approved-at-absent-direct",
@@ -9041,7 +9288,7 @@
    "surface": "approval-ceremony",
    "assertion": "refusal",
    "observation": {
-    "normative": "a direct Mission's activation.approval_event_id identifies a human approval event: no direct Mission is created without an authenticated Approver's decision"
+    "normative": "a direct Mission's activation.approval_event_id (as recorded, or implied by the record's own approval_event_id where activation is omitted) identifies a human approval event: no direct Mission is created without an authenticated Approver's decision"
    },
    "level": "endpoint",
    "coverage": "partial",
@@ -9051,9 +9298,15 @@
      "name": "the approval surface's upstream Approver login (@spec mission#approval-authentication, #1320, D496) > refuses an ID Token whose signature does not verify against the provider's published keys, recording no login",
      "level": "endpoint",
      "surface": "approval-ceremony"
+    },
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "approval basis (@spec mission#record-principal-members) > reads the implied activation, activation_actor and root_commitment of a direct basis that omits them",
+     "level": "unit",
+     "surface": "derivation"
     }
    ],
-   "notes": "#1898. Partial: the witness (and its sibling refused-login cases) shows a decision without an authenticated Approver answers 401 and creates no Mission and no grant. Not witnessed: the reference also admits a trusted headless approval service's named Approver (approvalPrincipal in provider.ts), whose humanity rests on that service; and the identifier's tie to the record's own approval_event_id is the open gap of core.approval-basis.activation-direct-event-id."
+   "notes": "#1898. Partial: the witness (and its sibling refused-login cases) shows a decision without an authenticated Approver answers 401 and creates no Mission and no grant. Not witnessed: the reference also admits a trusted headless approval service's named Approver (approvalPrincipal in provider.ts), whose humanity rests on that service; and the identifier's tie to the record's own approval_event_id is the open gap of core.approval-basis.activation-direct-event-id. #1912 (D1047): with `activation` omitted the rule applies to its implied value, the record's own approval_event_id. The omission witness (kernel.test.ts) shows that implied identifier is the record's own, and the round trip now ties a recorded activation to the stored approval_event_id (core.approval-basis.activation-direct-event-id, tested); neither shows the event's humanity. Still partial for the headless approval service named above."
   },
   {
    "id": "core.approval-basis.not-in-integrity-anchors",
@@ -10801,6 +11054,30 @@
    "notes": "#1873: the record-level rule that core.mission-record.authority-source-immutable restates for one member. Takes MUST NOT under #1879 (D1014), the exceptions unchanged. Under #1879 option A (D1014), Containment's overlay and Status's schedule are issuer-held state associated with the Mission, outside the logical record, so the full-record witness leaves `containment` and `schedule` out as associated state, with the implementation's own fields. The lifecycle-termination witnesses show the recorded termination survives a later expiry and a parent termination. Mutation-proved: a suspend that rewrites `expires_at` fails the full-record witness while the Approved Context witnesses still pass."
   },
   {
+   "id": "core.mission-record.unknown-member-retained",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "mission-record",
+   "text": "A consumer does not interpret a member it does not recognize, and does not remove it from a record it retains or commits.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance",
+    "runtime-enforced"
+   ],
+   "surface": "derivation",
+   "assertion": "ignore",
+   "observation": {
+    "normative": "a Mission Record member the consumer does not recognize is neither interpreted nor removed: a record the consumer retains, and any record it commits, keeps that member unchanged"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1912 (D1047), new sentence. Todo, with a reference gap: the kernel store is column-mapped (insertRecord writes named columns and rowToRecord rebuilds the record from them), so an unrecognized top-level record member would not survive a commit and read. approval_basis is stored as JSON and read back verbatim (core.approval-basis.direct-implied-not-inserted's commit witness), and an unrecognized authority_source keeps every member (core.mission-record.authority-source-type-unrecognized). The reference creates its own records and admits no foreign one, so no current path commits a top-level member it does not recognize."
+  },
+  {
    "id": "core.mission-record.authority-source-immutable",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
@@ -10845,7 +11122,56 @@
    "id": "core.mission-record.authority-source-type-enum",
    "spec": "draft-mcguinness-oauth-mission.md",
    "anchor": "mission-record",
-   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`. An unrecognized value is handled under the same rule as an unrecognized `approval_basis.type` ({{record-principal-members}}): it is preserved unchanged as opaque provenance and does not by itself invalidate or deactivate the Mission, and only an operation that itself requires recognized source semantics refuses",
+   "text": "REQUIRED. A string: `user_delegated`, `service_owned`, or `organizational`.",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "the authority_source the AS records on a Mission it approves carries a type of user_delegated, service_owned, or organizational: an established source records its own type, and a source of any other type is refused at catalog load and at approval-time resolution, creating no Mission",
+    "local": "a catalog naming another type fails to load (validateAuthoritySourceCatalog); a resolver answering one is refused access_denied, the refusal every source that cannot be established gets; the draft names no error for it"
+   },
+   "level": "unit",
+   "coverage": "tested",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > records the established source on the direct approval path",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source establishment (@spec mission#authority-sources, mission#approval-event) > records the organizational policy reference with its digest",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "authority source discriminator (@spec mission#mission-record, mission#lifecycle) > refuses an unrecognized type at catalog load rather than widening the union",
+     "level": "unit",
+     "surface": "derivation"
+    },
+    {
+     "file": "src/services/authorization-server/test/authority-source.test.ts",
+     "name": "unrecognized authority source type (@spec mission#mission-record, #1503) > refuses an approval whose resolver answers an unrecognized type, creating no Mission",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1912 (D1047): the unknown-value treatment the member carried is stated once with the other two discriminators, so this row is re-quoted to the member's value space, and its preservation-and-refusal facet moved, with its four witnesses, to core.mission-record.authority-source-type-unrecognized. The witnesses here also back core.mission-record.authority-source-required, -policy-organizational and -unrecognized-not-approved: the direct path records user_delegated, an organizational source records its type with its policy, and another type is refused at load and at resolution."
+  },
+  {
+   "id": "core.mission-record.authority-source-type-unrecognized",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-principal-members",
+   "text": "for `authority_source.type`, that operation is one that itself requires recognized source semantics (for example, applying the source's authority ceiling or its governed policy)",
    "role": "AS",
    "strength": "MUST",
    "applicability": {
@@ -10888,12 +11214,12 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1503 finding 1 (D620) replaced the citation of the {{lifecycle}} rule, under which an unknown source deactivated the Mission, with the approval_basis.type rule. This id keeps the member's value space and preservation half; the issuer-side refusal is core.mission-record.authority-source-unrecognized-not-approved. Preservation is witnessed at every stored reader: the record (kernel get, introspection), the committed root binding and a restart's reconciliation (hydrate), and the template store (template). The refusing operations share one point, resolveCommittedSource: child creation and template dispatch are cited; a progressive successor and a carryover replacement reach the same guard."
+   "notes": "#1912 (D1047): split from core.mission-record.authority-source-type-enum when the unknown-value rule was stated once for approval_basis.type, adjudication.kind and authority_source.type. The quoted clause continues the paragraph that preserves an unrecognized value unchanged as opaque provenance on an otherwise valid record and does not let it invalidate or deactivate the Mission; it names the operations that refuse for an unrecognized source. Observation and witnesses carried over unchanged. From the earlier row: #1503 finding 1 (D620) replaced the citation of the {{lifecycle}} rule, under which an unknown source deactivated the Mission, with the approval_basis.type rule. The value space stays on core.mission-record.authority-source-type-enum; the issuer-side refusal is core.mission-record.authority-source-unrecognized-not-approved. Preservation is witnessed at every stored reader: the record (kernel get, introspection), the committed root binding and a restart's reconciliation (hydrate), and the template store (template). The refusing operations share one point, resolveCommittedSource: child creation and template dispatch are cited; a progressive successor and a carryover replacement reach the same guard."
   },
   {
    "id": "core.mission-record.authority-source-unrecognized-not-approved",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "approval-preparation",
    "text": "An AS MUST NOT approve a Mission whose authority source it does not recognize.",
    "role": "AS",
    "strength": "MUST NOT",
@@ -10925,7 +11251,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1503 finding 1 (D620): split from core.mission-record.authority-source-type-enum. Every fresh establishment (direct approval, Expansion, template consent, governed-policy activation) resolves through resolveApprovalSource, which the resolver test drives with a workload Subject so no other source gate would refuse."
+   "notes": "#1503 finding 1 (D620): split from core.mission-record.authority-source-type-enum. Every fresh establishment (direct approval, Expansion, template consent, governed-policy activation) resolves through resolveApprovalSource, which the resolver test drives with a workload Subject so no other source gate would refuse. #1912 (D1047): the sentence moved verbatim to Preparing the Approval, step 3; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.mission-record.authority-source-policy-organizational",
@@ -10971,7 +11297,7 @@
   {
    "id": "core.mission-record.authority-source-policy-digest-construction",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "authority-sources",
    "text": "`digest` is a prefixed commitment ({{commitment-mechanisms}}) whose exact committed input and construction the policy's format specifies",
    "role": "AS",
    "strength": "stated",
@@ -11003,12 +11329,12 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625). D971 (#1723 S2, X9): this row carries the reproducibility witnesses of the retired consumer row core.mission-record.authority-source-policy-digest-reproducible (\"a consumer holding the policy can reproduce it\", an ability the construction rule yields, not a duty). Both tests it cited are cited here: each recomputes the digest independently, the vector from a hand-written JCS string and the shipped pin from the policy file alone, and obtains the committed value."
+   "notes": "#1503 finding 2 (D620). The vector pins the construction against a hand-written JCS string hashed with node:crypto, so it does not echo computeAnchor; the shipped pin fixes the loader's output for the shipped policy. The reference `iss` is the governance authority, the issuer the governed policy's format defines, as Integrity Anchors states for this commitment (D625). D971 (#1723 S2, X9): this row carries the reproducibility witnesses of the retired consumer row core.mission-record.authority-source-policy-digest-reproducible (\"a consumer holding the policy can reproduce it\", an ability the construction rule yields, not a duty). Both tests it cited are cited here: each recomputes the digest independently, the vector from a hand-written JCS string and the shipped pin from the policy file alone, and obtains the committed value. #1912 (D1047): the `digest` bullets moved verbatim to Authority Sources; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-producer",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "authority-sources",
    "text": "The party that produces the reference computes `digest`",
    "role": "AS",
    "strength": "stated",
@@ -11039,12 +11365,12 @@
      "surface": "commitment"
     }
    ],
-   "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin."
+   "notes": "#1503 finding 2 (D620). The AS's trusted-configuration loader computes the digest at load and the organizational catalog entry carries exactly that value; a change to the committed input or its `iss` fails the shipped pin. #1912 (D1047): the `digest` bullets moved verbatim to Authority Sources; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.mission-record.authority-source-policy-digest-opaque",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "authority-sources",
    "text": "one that does not compares it as an opaque value",
    "role": "verifier",
    "strength": "stated",
@@ -11062,7 +11388,7 @@
    "level": "unit",
    "coverage": "todo",
    "tests": [],
-   "notes": "#1503 finding 2 (D620). A consumer role: no reference component consumes `policy.digest` without the policy (introspection never discloses it), so there is nothing to witness yet."
+   "notes": "#1503 finding 2 (D620). A consumer role: no reference component consumes `policy.digest` without the policy (introspection never discloses it), so there is nothing to witness yet. #1912 (D1047): the `digest` bullets moved verbatim to Authority Sources; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.mission-record.authority-source-outside-anchors",
@@ -11109,8 +11435,8 @@
   {
    "id": "core.mission-record.approval-idempotency",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
-   "text": "A unique identifier of the approval event, used as the approval idempotency key: a retried or duplicate delivery of the same approval decision (a replayed callback, a double-submitted consent form, a retried standing-consent activation) MUST NOT create a second Mission, and the AS deduplicates on this identifier.",
+   "anchor": "approval-idempotency",
+   "text": "The record's `approval_event_id` ({{record-provenance-members}}) is the approval idempotency key: a retried or duplicate delivery of the same approval decision (a replayed callback, a double-submitted consent form, a retried standing-consent activation) MUST NOT create a second Mission, and the AS deduplicates on this identifier.",
    "role": "AS",
    "strength": "MUST NOT",
    "applicability": {
@@ -11135,7 +11461,100 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation."
+   "notes": "#1608. The witness posts the same decision twice to /interaction/{uid}/decide and counts the store's Missions for the approval_event_id. The AS deduplicates at two points: the decision's findByApprovalEvent lookups (adapters/provider.ts, committedEarlier and commitApproval's existing) and the store key `missions.approval_event_id ... UNIQUE` with kernel.approve's UniqueViolationError recovery (kernel/kernel.ts). Mutation proof: setting both lookups to undefined and dropping UNIQUE from the missions DDL commits a second Mission, and the witness fails on its count assertion (\"a second Mission was created for the approval event: expected [ Array(2) ] to deeply equal [ ... ]\"). Either point alone keeps the witness passing, as it should, since each still deduplicates; bypassing the lookups and the recovery with the key in place answers the repeat 500. Only the direct approval decision is witnessed; a retried standing-consent activation is not cited here. Strength is MUST NOT, the clause's keyword. Partial (#1614 review): this row's witness covers the direct approval decision only. Of the standing-consent types, a retried Template Dispatch and a retried Progressive ceiling drawdown are witnessed by template.dispatch.approval-event-id-per-dispatch and progressive.in-ceiling.approval-event-id-per-drawdown, each citing a retry that recovers the committed instance. A retried Child Delegation policy_drawdown activation is not witnessed: child-delegation.record.policy-drawdown-approval-event-id checks only the identifier on a single creation. #1912 (D1047): the rule moved, with its wording and keyword, to Implementation Considerations, Approval Idempotency, naming the record's `approval_event_id` as its key; the Mission Record keeps the invariant that one approval event creates at most one Mission. Re-quoted; observation and witnesses unchanged."
+  },
+  {
+   "id": "core.mission-record.policy-version-required-where-used",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-provenance-members",
+   "text": "It is REQUIRED where a feature or profile the deployment uses depends on versioned derivation-policy identification, such as standing-consent recency ({{standing-consent-recency}}).",
+   "role": "AS",
+   "strength": "MUST",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "where the deployment uses a feature that depends on versioned derivation-policy identification, standing-consent recency ceilings among them, every Mission it creates records policy_version",
+    "local": "the reference records policy_version on every Mission whether or not such a feature is in use: kernel.approve copies the derivation policy's policy_version, and the missions column is NOT NULL"
+   },
+   "level": "unit",
+   "coverage": "todo",
+   "tests": [],
+   "notes": "#1912 (D1047): policy_version is OPTIONAL in the base record and REQUIRED where such a feature is used. Todo: no test asserts a created record's policy_version where recency ceilings are declared. Approval Governance's v1 manifest and Mission Mandate state their own requirements for it."
+  },
+  {
+   "id": "core.mission-record.policy-version-from-creation",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "record-provenance-members",
+   "text": "A deployment using such a feature records it from creation and never supplies a replacement value later.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "capability",
+    "capability": "core.standing-consent-recency"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "policy_version is on the record from its creation commit, and no later operation (a derivation, a lifecycle transition) adds or replaces it"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/kernel.test.ts",
+     "name": "Mission Record immutability (@spec mission#mission-record) > every member but state and termination keeps its persisted value across a derivation, suspend, resume and revoke; termination is written only at revoke",
+     "level": "unit",
+     "surface": "derivation"
+    }
+   ],
+   "notes": "#1912 (D1047). Partial: the witness (also core.mission-record.members-immutable's) holds every member but state and termination, policy_version included, unchanged across a derivation, suspend, resume and revoke. Proved by mutation (2026-10-30, #1912): a suspend or resume UPDATE that replaces policy_version fails it. Not witnessed: that policy_version is present at creation (the witness compares whatever the record holds), and the witness runs without recency ceilings declared."
+  },
+  {
+   "id": "core.audit-horizon.terminated-record-retained",
+   "spec": "draft-mcguinness-oauth-mission.md",
+   "anchor": "audit-horizon",
+   "text": "A deployment retains a `terminated` Mission's record for its audit horizon.",
+   "role": "AS",
+   "strength": "stated",
+   "applicability": {
+    "kind": "unconditional"
+   },
+   "profiles": [
+    "issuance"
+   ],
+   "surface": "derivation",
+   "assertion": "output-bound",
+   "observation": {
+    "normative": "a terminated Mission's record stays retained, readable with its recorded members and termination, until its audit horizon (at least the Mission's lifetime plus the deployment's declared post-expiry period) has passed",
+    "local": "the reference never prunes a Mission record: no production path deletes from the missions table"
+   },
+   "level": "unit",
+   "coverage": "partial",
+   "tests": [
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated revoked keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    },
+    {
+     "file": "src/services/authorization-server/test/lifecycle-termination.test.ts",
+     "name": "an earlier recorded cause is preserved (#705 witness 5) > a Mission terminated completed keeps its reason after expires_at passes, at every gate",
+     "level": "unit",
+     "surface": "token-endpoint"
+    }
+   ],
+   "notes": "#1912 (D1047): the rule moved verbatim to Implementation Considerations, Audit Horizon; no row covered it before. Partial: the witnesses read a revoked and a completed Mission's record back an hour after its expires_at, with its termination intact. Proved by mutation (2026-10-30, #1912): kernel.get dropping a terminated record once its expires_at has passed fails both, at the read of the absent record (a TypeError on its termination), not at a dedicated assertion. Not witnessed: the declared post-expiry period (policy.audit_horizon_s is read only by the signing key ring) and retention of the record's evidence."
   },
   {
    "id": "core.discovery.held-credential-no-substitution",
@@ -13134,7 +13553,7 @@
   {
    "id": "core.record.applicable-shortening",
    "spec": "draft-mcguinness-oauth-mission.md",
-   "anchor": "mission-record",
+   "anchor": "approval-preparation",
    "text": "Shortening under applicable AS policy, or under an already-approved parent, predecessor, or standing-consent bound a Mission-creating profile defines, is ordinary narrowing of the granted lifetime, not Authority Set derivation",
    "role": "AS",
    "strength": "stated",
@@ -13178,7 +13597,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "One resolveEffectiveExpiry hook takes the earliest applicable bound from a single supplied creation instant: the deployment's own max_mission_lifetime_s (policy.json, validated in the typed loader), a template's expiry and per-instance lifetime, a parent's expiry, the recorded approval expiry, and an expansion predecessor's expiry. The Authority Set is untouched by any of it. The reference deployment ships no lifetime ceiling of its own, so the narrowing arm is proven with an injected ceiling."
+   "notes": "One resolveEffectiveExpiry hook takes the earliest applicable bound from a single supplied creation instant: the deployment's own max_mission_lifetime_s (policy.json, validated in the typed loader), a template's expiry and per-instance lifetime, a parent's expiry, the recorded approval expiry, and an expansion predecessor's expiry. The Authority Set is untouched by any of it. The reference deployment ships no lifetime ceiling of its own, so the narrowing arm is proven with an injected ceiling. #1912 (D1047): the shortening sentence moved verbatim from `expires_at` to Preparing the Approval, step 4; anchor re-pointed, quote and witnesses unchanged."
   },
   {
    "id": "core.creation.atomic-expiry-check",
