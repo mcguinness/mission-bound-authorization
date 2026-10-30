@@ -1523,7 +1523,8 @@ that produces an untrusted proposal.<a href="#section-3.1-2" class="pilcrow">¶<
 kind. It produces a shaped proposal, which is untrusted client input
 under the issuance profile until the Mission Issuer validates and
 narrows it and binds authority at the approval event
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Submission via PAR").
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Submitting a Mission Intent").
 Nothing in this document changes that treatment, and a shaper
 <span class="bcp14">SHOULD NOT</span> structure its output to imply otherwise.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
 <p id="section-3.2-2">Three consequences follow:<a href="#section-3.2-2" class="pilcrow">¶</a></p>
@@ -1548,8 +1549,8 @@ and after the approval event (<span>[<a href="#I-D.draft-mcguinness-oauth-missio
 Section "Mission Record"). The issuance profile rejects a Mission
 Intent that carries an unrecognized top-level member, including any
 such issuer-output member, with the <code>invalid_request</code> error code
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Submission via
-PAR").<a href="#section-3.2-3.2.1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Submitting a Mission Intent").<a href="#section-3.2-3.2.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-3.2-3.3">
             <p id="section-3.2-3.3.1">It does not cross the trust boundary. Admitting input across the
@@ -2436,9 +2437,9 @@ commitment the Mission record cites.<a href="#section-8.1-8" class="pilcrow">¶<
 <p id="section-9.1-1">The issuance profile defines a <code>mission_intent</code> parameter carried in a
 Pushed Authorization Request (PAR) <span>[<a href="#RFC9126" class="cite xref">RFC9126</a>]</span>, whose value is the
 Submission envelope (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Submission via PAR"). The Mission Intent proposal is the envelope's
-<code>intent</code> member, and an Authority Proposal is the value of the
-<code>authorization_details</code> parameter in the same request.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
+"Submitting a Mission Intent"). The Mission Intent proposal is the
+envelope's <code>intent</code> member, and an Authority Proposal is the value of
+the <code>authorization_details</code> parameter in the same request.<a href="#section-9.1-1" class="pilcrow">¶</a></p>
 <p id="section-9.1-2">Intent-bound evidence in the envelope's <code>evidence</code> array names the
 exact <code>intent_hash</code> of the submitted Intent. Intent-bound evidence
 obtained for an earlier candidate does not admit a re-shaped Intent

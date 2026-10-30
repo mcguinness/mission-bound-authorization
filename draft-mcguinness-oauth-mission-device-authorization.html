@@ -1260,8 +1260,8 @@ client: the client makes a direct request to the authorization server
 (AS), and the user authorizes on a separate device. The OAuth binding
 admits a Mission Intent on another request only under a profile that
 explicitly defines that carriage
-(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section "Submission via
-PAR").<a href="#section-1-1" class="pilcrow">¶</a></p>
+(<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
+"Submitting a Mission Intent").<a href="#section-1-1" class="pilcrow">¶</a></p>
 <p id="section-1-2">This document is that profile for the device authorization grant.
 The client sends the Submission envelope and any authority proposal
 in its device authorization request. The AS validates them as it
@@ -1299,7 +1299,7 @@ codes. It uses three seams the OAuth binding defines
 <ul class="normal">
 <li class="normal" id="section-2-2.1">
           <p id="section-2-2.1.1">an alternative back-channel carriage of the Submission envelope
-(Section "Submission via PAR");<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
+(Section "Submitting a Mission Intent");<a href="#section-2-2.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="section-2-2.2">
           <p id="section-2-2.2.1">relocation of the approval event relative to code issuance (Section
@@ -1392,7 +1392,7 @@ Section "Authorization Server Metadata").<a href="#section-4-4" class="pilcrow">
         <dd style="margin-left: 1.5em" id="section-5-2.2">
           <p id="section-5-2.2.1"><span class="bcp14">REQUIRED</span>. The Submission envelope, encoded as the OAuth binding
 encodes it for PAR (<span>[<a href="#I-D.draft-mcguinness-oauth-mission" class="cite xref">I-D.draft-mcguinness-oauth-mission</a>]</span>, Section
-"Submission via PAR").<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
+"Submitting a Mission Intent").<a href="#section-5-2.2.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 <dt id="section-5-2.3">
@@ -1422,7 +1422,7 @@ authorization request carrying <code>mission_intent</code> entirely under this
 document or refuse it; it never ignores <code>mission_intent</code> or a member
 of the Submission envelope, and never answers such a request with an
 ordinary device authorization session. It applies the OAuth
-binding's Submission via PAR rules for the envelope's structure,
+binding's submission rules for the envelope's structure,
 closed top levels, and size bounds, and its Authority Proposal rules,
 reading "the same pushed request" as this request.<a href="#section-5-4" class="pilcrow">¶</a></p>
 <p id="section-5-5">The AS <span class="bcp14">MUST</span> complete steps 1 to 6 of the OAuth binding's Submission

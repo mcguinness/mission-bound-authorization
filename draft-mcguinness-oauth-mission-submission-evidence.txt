@@ -113,7 +113,7 @@ Table of Contents
 
    *  the Submission envelope's optional evidence member, with its size
       and count bounds ([I-D.draft-mcguinness-oauth-mission],
-      Section "Submission via PAR");
+      Section "Submitting a Mission Intent");
 
    *  the "reject, do not ignore" and "policy input, not authority"
       rules ([I-D.draft-mcguinness-oauth-mission], Section "Intent
@@ -217,11 +217,11 @@ Table of Contents
 4.4.  Bounded Verification
 
    Beyond the size and count bounds of the OAuth binding
-   ([I-D.draft-mcguinness-oauth-mission], Section "Submission via PAR"),
-   the AS MUST bound the verification cost a submission can impose (for
-   example, the number of signature verifications it performs), refusing
-   a submission that exceeds the bound with the invalid_request error
-   code.
+   ([I-D.draft-mcguinness-oauth-mission], Section "Submitting a Mission
+   Intent"), the AS MUST bound the verification cost a submission can
+   impose (for example, the number of signature verifications it
+   performs), refusing a submission that exceeds the bound with the
+   invalid_request error code.
 
 5.  Error Responses
 
