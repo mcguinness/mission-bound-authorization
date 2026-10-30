@@ -357,20 +357,14 @@ remains valid until it expires ({{revocation}}).
 
 Agent-identity work such as {{I-D.draft-ietf-wimse-aims}}
 establishes how an AI agent authenticates and how a user delegates
-authority to it. The agent is an OAuth 2.0 {{RFC6749}} client
-identified by `client_id`, the delegating user is the access token
-`sub`, and the agent obtains tokens for the resources its task
-requires. That work leaves out of scope:
-
-- how an agent's task (its "mission") is translated into
-  authorization;
-- how a user's approval of that task is captured as a durable
-  artifact; and
-- how later token issuance stays bound to what the user approved.
-
-OAuth does not define a task record that links approval of a task to
-every grant obtained for it. Without that linkage, withdrawing task
-approval need not stop issuance under those grants.
+authority to it: the agent is an OAuth 2.0 {{RFC6749}} client
+identified by `client_id`, and the delegating user is the access
+token's `sub`. It leaves out of scope how the agent's task is
+translated into authorization, how the user's approval of that task
+is captured as a durable artifact, and how later token issuance stays
+bound to what the user approved. OAuth defines no task record that
+links approval of a task to every grant obtained for it, so
+withdrawing that approval need not stop issuance under those grants.
 
 No existing OAuth object fills that role
 ({{I-D.draft-mcguinness-mission-architecture}}, Section "Relationship
