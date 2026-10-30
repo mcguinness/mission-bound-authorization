@@ -615,8 +615,12 @@ describe("end-to-end verified facts on the Mission Record (@spec mission#intent-
       expect(refusal.error).toBe("approval_context_changed");
       expect(refusal.changed).toEqual(["submission_evidence"]);
       expect(e2eAs.kernel.findByApprovalEvent(`apev_${flow.uid}`)).toBeUndefined();
-      // The page rendered again shows the changed facts, and its approval records them.
-      expect(await flow.page()).toContain("admission-changed.example");
+      // The page rendered again shows the changed facts with the Intent and the
+      // Authority Set, and its approval records them.
+      const again = await flow.page();
+      expect(again).toContain("admission-changed.example");
+      expect(again).toContain(TASK_INTENT.goal);
+      expect(again).toContain("payments:invoice.read");
       const fresh = await renderedRevision(ISSUER_E2E, flow.uid, flow.headers());
       const approved = await flow.decide(fresh);
       expect(approved.status, await approved.clone().text()).toBe(303);
