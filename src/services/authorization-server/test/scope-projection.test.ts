@@ -1723,6 +1723,12 @@ describe("the projection capability gates scope projection (@spec mission#transf
         expect(decided.code, `${variant}: ${JSON.stringify(decided)}`).toBeUndefined();
         expect(decided.error).toBe("invalid_scope");
         expect(decided.description).toMatch(/reports\.read cannot be granted/);
+        // Configured-mapping mode: the value keys the entry it stands for,
+        // which then supplies no safe projection of that value.
+        const intentOnly = await authorize(undefined, { scope: "reports.read" });
+        expect(intentOnly.par.status, JSON.stringify(intentOnly.par.body)).toBe(201);
+        expect(intentOnly.code, `${variant}: ${JSON.stringify(intentOnly)}`).toBeUndefined();
+        expect(intentOnly.error).toBe("invalid_scope");
         expect(as.kernel.allMissions().length).toBe(before);
 
         const redeemed = await redeem(code, keys);
@@ -1734,6 +1740,8 @@ describe("the projection capability gates scope projection (@spec mission#transf
     const declared = await issue([entry([READ, WRITE])], "reports.read");
     expect(declared.status, JSON.stringify(declared.body)).toBe(200);
     expect(declared.body.scope).toBe("reports.read");
+    const intentOnly = await authorize(undefined, { scope: "reports.read" });
+    expect(intentOnly.code, JSON.stringify(intentOnly)).toBeTruthy();
   });
 
   it("the async-delegation Token Exchange to a scope-only target is refused invalid_target, counting no derivation, while projection is omitted or false, and projects once declared", async () => {
