@@ -1182,10 +1182,10 @@ failures keep their own errors:
 - a request under a grant bound to a Mission that is not `active`
   keeps the refusal of {{issuance-gating}}.
 
-The second rule applies to a Mission-governed client's authorization
-request that carries `authorization_details` but no `mission_intent`
-until that request completes, including when the AS resumes it after
-an interaction. A request carrying neither `authorization_details`
+Until that request completes, including when the AS resumes it after
+an interaction, the second rule applies to a Mission-governed client's
+authorization request that carries `authorization_details` but no
+`mission_intent`. A request carrying neither `authorization_details`
 nor `mission_intent` is an ordinary request that the second rule does
 not reach; the first rule, for a Mission-governed resource, is what
 keeps that resource's tokens inside a Mission.
@@ -1738,7 +1738,7 @@ Refusals follow {{error-mapping}}.
 
    - The rendering MUST identify the OAuth client that receives the
      authority, the Agent, from client identity information the AS
-     trusts, such as its own registration of the client. Display text
+     trusts, such as its own registration of the client; display text
      the client supplies does not by itself identify it.
    - When the Approver is not the Subject, the rendering MUST
      identify the Subject the authority is granted for.
@@ -3036,7 +3036,7 @@ codes). An order that a rule states still applies, including these:
 
 - The Mission-governed refusal applies only to an otherwise
   processable request. On a refresh, it is decided before the refresh
-  token is consumed or rotated ({{authority-proposal}}).
+  token is consumed or rotated ({{mission-governed}}).
 - A refresh establishes any scope projection before the refresh token
   is consumed or rotated, or within the same atomic issuance
   ({{scope-projection-refresh}}).
@@ -3060,7 +3060,7 @@ The checks are:
 3. Mission state: the Mission is `active` ({{refusing-a-derivation}},
    {{lifecycle}}). A delegated exchange evaluates each redemption
    afresh ({{delegated-exchange}}).
-4. Mission-governed resources ({{authority-proposal}}). A refresh, a
+4. Mission-governed resources ({{mission-governed}}). A refresh, a
    self-exchange, or a designation request needs no `mission_intent`.
 5. Subset ({{subset}}): against the Mission Authority Set, and also
    against the presented refresh grant on a refresh, the presented
@@ -3140,11 +3140,12 @@ defines either of the following defines any `mission_error` value for
 it:
 
 - another Mission state ({{lifecycle}}), which {{issuance-gating}}
-  also refuses, as Mission Status defines one for a suspended Mission
+  also refuses, as Mission Status defines a `mission_error` value for
+  a suspended Mission
   ({{I-D.draft-mcguinness-oauth-mission-status}}, Section "Mission
   Lifecycle Endpoint"); or
-- a further refusal at issuance, as Derivation Limits defines one for
-  an exhausted limit
+- a further refusal at issuance, as Derivation Limits defines a
+  `mission_error` value for an exhausted limit
   ({{I-D.draft-mcguinness-oauth-mission-derivation-limits}}, Section
   "Enforcement at Issuance").
 
