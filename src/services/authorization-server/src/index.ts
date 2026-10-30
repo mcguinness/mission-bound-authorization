@@ -733,6 +733,15 @@ export {
   type RegisteredDirectApprovalRule,
 } from "./kernel/direct-approval-record.js";
 export {
+  assertDirectBasisConsistent,
+  type DirectBasisMember,
+  type DirectBasisMembers,
+  DirectBasisMismatchError,
+  type DirectBasisRecord,
+  directBasisMembers,
+  impliedDirectBasisMembers,
+} from "./kernel/approval-basis.js";
+export {
   assertDrawdownRecord,
   consentProvenanceOf,
   DRAWDOWN_RECORDING_RULE_ID,
