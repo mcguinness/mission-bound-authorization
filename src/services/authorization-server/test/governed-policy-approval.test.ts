@@ -3,6 +3,8 @@ import {
   activationPolicyDigest,
   approvalPolicyDigest,
   authorityHash,
+  NARROWING_UNDECLARED,
+  type NarrowingDeclaration,
   ResourceContractDeclarations,
   type ResourceContractRef,
 } from "@mission/core";
@@ -151,11 +153,13 @@ const makeKernel = (
     capabilityResolver?: CapabilitySourceResolver;
     entryAudiences?: () => readonly string[];
     resourceContracts?: ResourceContractDeclarations;
+    policy?: unknown;
+    narrowing?: NarrowingDeclaration;
   } = {},
 ) =>
   new MissionKernel({
     issuer: ISS,
-    policy: DERIVATION_POLICY as never,
+    policy: (opts.policy ?? DERIVATION_POLICY) as never,
     statusKey: key,
     statusKid: "as-status",
     authoritySourceCatalog: (opts.catalog ?? catalog()) as never,
@@ -164,6 +168,7 @@ const makeKernel = (
     ...(opts.capabilityResolver ? { capabilityResolver: opts.capabilityResolver } : {}),
     ...(opts.entryAudiences ? { entryAudiences: opts.entryAudiences } : {}),
     ...(opts.resourceContracts ? { resourceContracts: opts.resourceContracts } : {}),
+    ...(opts.narrowing ? { narrowing: opts.narrowing } : {}),
     now,
   });
 
@@ -889,6 +894,40 @@ describe("governed policy activation (@spec approval-governance#governed-policy-
       reason: "narrowed",
     });
     expect(record.evaluation.contributing).toEqual(["ast_policy", "ast_model_1"]);
+  });
+
+  it("refuses a model output that removes an action where the narrowing declaration does not permit narrowing the entry, committing nothing, while an unchanged output activates (@spec resource-access#qualified-narrowing, #1377, D1025)", () => {
+    const MODEL = { id: "risk-model", version: "3" };
+    // The derivation policy, the source and the root all bound authority to
+    // the same entry, so both derivation gates pass it unchanged and only the
+    // model's removal would modify it.
+    const kernel = makeKernel({
+      doc: rootDoc({ rules: { max_entries: 3, models: [MODEL] } }),
+      catalog: catalog([readEntry()]),
+      policy: { ...DERIVATION_POLICY, ceiling: [readEntry()] },
+      narrowing: NARROWING_UNDECLARED,
+    });
+    const c = consent(kernel);
+    const run = (approvalEventId: string, out: Partial<RecordedModelOutput>) => {
+      const view = previewGovernedActivation(kernel, { consentId: c.consent_id, approvalEventId, intent: intent(), clientId: "svc-agent" });
+      const output: RecordedModelOutput = {
+        model: MODEL,
+        approval_event_id: view.approval_event_id,
+        intent_hash: view.intent_hash,
+        authority_hash: view.authority_hash,
+        verdict: "no_objection",
+        ...out,
+      };
+      return { view, act: () => activate(kernel, c.consent_id, { approvalEventId, modelOutputs: [output] }) };
+    };
+    const narrowed = run("ape-n1", { remove: [{ resource: RESOURCE, actions: ["payments:vendor.read"] }], reason: "vendor data" });
+    expect(narrowed.view.authority).toEqual([readEntry()]);
+    expect(outcome(narrowed.act)).toBe("narrowing_not_permitted");
+    expect(kernel.allMissions()).toHaveLength(0);
+    // Control: a model with no objection leaves the entry unchanged, and it activates.
+    const plain = run("ape-n2", {});
+    expect(plain.act().mission.authority_set).toEqual([readEntry()]);
+    expect(kernel.allMissions()).toHaveLength(1);
   });
 
   it("does not count an assertion captured for another activation's approval event", () => {

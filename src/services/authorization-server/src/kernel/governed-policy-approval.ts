@@ -43,6 +43,7 @@ import {
   intentHash,
   isActivationPolicyRef,
   isAuthorityEntry,
+  isSubsetSetUnder,
   type JsonValue,
   proposalHash,
 } from "@mission/core";
@@ -504,7 +505,8 @@ export type GovernedPolicyRefusal =
   | "recency_exceeded"
   | "high_risk_without_exception"
   | "approval_event_used"
-  | "unclassified_action";
+  | "unclassified_action"
+  | "narrowing_not_permitted";
 
 export class GovernedPolicyError extends Error {
   constructor(
@@ -1265,6 +1267,17 @@ export function activateGovernedPolicy(kernel: MissionKernel, input: GovernedAct
   // A model input narrows or refuses; it never widens. Structural, not trusted.
   if (!isSubsetSet(decision.authority, bounded)) {
     throw new Error("governed policy evaluation widened the bounded set");
+  }
+  // @spec mission#transformation-capabilities, resource-access#qualified-narrowing
+  // (#1377, D1025): a model input that removes some of an entry's actions
+  // modifies it, which only a declared `narrowing` permits. Where the
+  // declaration does not permit it for the pair, every entry the policy
+  // activates must equal its bounded entry, or nothing is committed.
+  if (!isSubsetSetUnder(kernel.narrowingDeclaration(), decision.authority, bounded)) {
+    throw new GovernedPolicyError(
+      "narrowing_not_permitted",
+      "the deciding policy narrowed an entry the narrowing declaration does not let the issuer narrow",
+    );
   }
   // The trusted capability resolution runs against CURRENT trusted state, and
   // what it returned is retained with the activation so a re-check replays
