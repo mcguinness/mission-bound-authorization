@@ -8775,7 +8775,7 @@
     "normative": "a Mission created at a direct approval event carries approval_basis from its creation, persisted with the record, and no later derivation or lifecycle transition changes it"
    },
    "level": "unit",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/kernel.test.ts",
@@ -8790,7 +8790,7 @@
      "surface": "derivation"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#approval-basis, which is not a core anchor. Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis."
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis; standing-consent creations record their own bases under companion rows. Immutability overlaps core.mission-record.members-immutable, whose witness compares every member, approval_basis included; this row adds presence from creation. Anchored at record-principal-members, the subsection holding the member; the sibling approval-basis rows anchor at the parent mission-record, and both pass the span rule. The witness's @spec tag names mission#approval-basis, which is not a core anchor. Mutation proofs (2026-10-29): a revocation that rewrote approval_basis.consent_principal fails the immutability witness on its whole-record comparison; a wrong basis type or consent principal at creation fails the direct-basis witness on its toEqual over the stored basis. Fresh review of #1893: partial: the immutability witness runs a derivation, suspend, resume and revoke, not the expired commit, so 'no later lifecycle transition changes it' is not asserted for expiry."
   },
   {
    "id": "core.approval-basis.type-direct",
@@ -8848,7 +8848,7 @@
    "surface": "derivation",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a direct approval records approval_basis.consent_principal as an object with iss and sub naming the authenticated Approver who consented, never the Subject when the two differ"
+    "normative": "a Mission records approval_basis.consent_principal as an object with iss and sub naming the principal who consented; for a direct approval, the authenticated Approver"
    },
    "level": "unit",
    "coverage": "tested",
@@ -8866,7 +8866,7 @@
      "surface": "approval-ceremony"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis, where the consent principal is the Approver. Both witnesses approve for a Subject other than the Approver (bob for alice; an administrator for a workload principal) and assert the {iss, sub} pair of the Approver. Quoted with its second sentence, since 'REQUIRED. An object with `iss` and `sub`.' also opens activation_actor. Mutation proof (2026-10-29): recording a consent principal other than the Approver fails both witnesses on their assertions."
+   "notes": "#1892 ruling 6 (row debt). Facet: the direct basis, where the consent principal is the Approver. Both witnesses approve for a Subject other than the Approver (bob for alice; an administrator for a workload principal) and assert the {iss, sub} pair of the Approver. Quoted with its second sentence, since 'REQUIRED. An object with `iss` and `sub`.' also opens activation_actor. Mutation proof (2026-10-29): recording a consent principal other than the Approver fails both witnesses on their assertions. Fresh review of #1893: the observation restates the member's definition without an added comparison with the Subject."
   },
   {
    "id": "core.approval-basis.activation-direct-event-id",
@@ -9765,7 +9765,7 @@
    "surface": "authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "the approval rendering presents the complete derived Authority Set as the object of the decision, beside and never replaced by the goal or the Mission Intent, and the Mission created on approval commits exactly the set rendered"
+    "normative": "an approval rendering that presents only the goal or the Mission Intent, without the derived Authority Set as the object of the decision, does not conform"
    },
    "level": "endpoint",
    "coverage": "tested",
@@ -9783,7 +9783,7 @@
      "surface": "authorization-endpoint"
     }
    ],
-   "notes": "#1892 ruling 6 (row debt). The consent-object bullet of step 5. The derivation-timing witness parses the page's derived-authority block and compares it with the full derivation of the same Intent and proposal (two or more entries, capability bindings included), then checks the record commits exactly that set; the render-gate control asserts the goal and the derived entries appear together. Mutation proof (2026-10-29): rendering only the first derived entry fails the derivation-timing witness on its assertion (one entry against the two derived); the render-gate control witnesses the goal and the derived entries shown together, not completeness."
+   "notes": "#1892 ruling 6 (row debt). The consent-object bullet of step 5. The derivation-timing witness parses the page's derived-authority block and compares it with the full derivation of the same Intent and proposal (two or more entries, capability bindings included), then checks the record commits exactly that set; the render-gate control asserts the goal and the derived entries appear together. Mutation proof (2026-10-29): rendering only the first derived entry fails the derivation-timing witness on its assertion (one entry against the two derived); the render-gate control witnesses the goal and the derived entries shown together, not completeness. Fresh review of #1893: the observation restates the quoted sentence; that the record commits the rendered set is the approval-commit rows' obligation, which the derivation-timing witness also exercises."
   },
   {
    "id": "core.approval-event.proposal-narrowing-distinguished",
@@ -9927,7 +9927,7 @@
    "surface": "authorization-endpoint",
    "assertion": "output-bound",
    "observation": {
-    "normative": "a goal or task_bounds value carrying Unicode direction-override or isolate controls, or characters confusable with other text, is rendered so those controls cannot reorder the approval text around it and the confusable presentation is mitigated; a departure is a recorded SHOULD departure, not a failure"
+    "normative": "the AS mitigates Unicode direction-override and confusable-character presentation in a goal or task_bounds value it renders; a departure is a recorded SHOULD departure, not a failure"
    },
    "level": "endpoint",
    "coverage": "todo",
@@ -21532,7 +21532,7 @@
     "normative": "where no revocation policy couples them, an RFC 7009 revocation of a Mission's refresh token causes no Mission lifecycle transition"
    },
    "level": "endpoint",
-   "coverage": "tested",
+   "coverage": "partial",
    "tests": [
     {
      "file": "src/services/authorization-server/test/delegation-exchange.test.ts",
@@ -21541,7 +21541,7 @@
      "surface": "token-endpoint"
     }
    ],
-   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state; the witness asserts it for an active Mission."
+   "notes": "#1535 finding 15 (D649, -01). The reference does not couple token revocation to Mission revocation: its RFC 7009 route never reaches kernel.transition. Existing witness; no new mutation was run. Requoted (#1724 C10, D847): the authoritative-change clause names every lifecycle transition, not only the endpoint. #1893 review: the observation states no lifecycle transition rather than an active Mission, since a suspended or terminated Mission keeps its state; the witness asserts it for an active Mission. Fresh review of #1893: partial, as for core.revocation.token-revocation-not-mission: the witness asserts no transition for an active Mission's delegation-family refresh token; no test revokes a refresh token of a suspended or terminated Mission and checks that its state is unchanged."
   },
   {
    "id": "status.lifecycle.rfc7009-coupled-revoke-transition",

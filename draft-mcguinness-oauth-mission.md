@@ -447,9 +447,10 @@ the grant binding; {{mission-bound-tokens}} issuance on every path;
 {{delegation}}, an optional capability, delegation within a Mission;
 {{token-consumption}} enforcement and introspection; and {{lifecycle}}
 the Mission's state and its termination. {{error-mapping}},
-{{discovery}}, {{protected-resource-metadata}}, {{extensibility}}, and
-{{conformance}} are reference sections, and {{deployment-choices}}
-lists what a deployment decides and how each party learns it.
+{{discovery}}, {{protected-resource-metadata}}, and {{extensibility}}
+are reference sections; {{conformance}} defines the conformance roles;
+and {{deployment-choices}} lists what a deployment decides and how each
+party learns it.
 
 ## Applicability {#applicability}
 
@@ -1306,6 +1307,11 @@ submitted ({{authority-proposal}}), the AS derives the
 entries of an AS-supported type ({{other-types}}).
 
 ## Derivation Modes {#derivation-modes}
+
+Derivation is governed by local policy: different authorization servers
+can derive different Authority Sets from the same Mission Intent, and
+interoperability begins at the derived Authority Set and its integrity
+anchors ({{integrity-anchors}}).
 
 Authority Set derivation is mechanical: one procedure whose candidate
 entries depend on whether an authority proposal was submitted:
@@ -2976,25 +2982,30 @@ designation ({{designation}}); a delegated exchange
 Each of these paths passes every check below, each stated where cited,
 with any difference by path; a path's own section states its further
 rules. Any other derivation, such as one a companion profile defines,
-passes at least checks 1, 3, 5, 7, and 8.
+passes at least checks 1, 3, 5, and 7, the `exp` bound of check 8, and
+check 10.
 
 The numbering is presentation order: it imposes no execution order and
-no error precedence ({{error-mapping}} gives the error codes and the
-orders this document states). An order that a rule states still
-applies, including these: the Mission-governed refusal applies only to
-an otherwise processable request and, on a refresh, is decided before
-the refresh token is consumed or rotated ({{authority-proposal}}); a
-refresh establishes any scope projection before then
-({{scope-projection-refresh}}); the revocation refusal applies at the
-AS's final decision to release the result (check 10); and a companion
-profile that sequences a check within a path keeps that sequence.
+no error precedence ({{error-mapping}} gives the error codes). An order
+that a rule states still applies, including these: the Mission-governed
+refusal applies only to an otherwise processable request and, on a
+refresh, is decided before the refresh token is consumed or rotated
+({{authority-proposal}}); a refresh establishes any scope projection
+before then or within the same atomic issuance
+({{scope-projection-refresh}}); a delegated exchange authenticates the
+client before it refuses an `actor_token` ({{delegated-exchange}}); the
+revocation refusal applies at the AS's final decision to release the
+result (check 10); and a companion profile that sequences a check
+within a path keeps that sequence.
 
 1. Mission resolution from the presented grant
    ({{grant-binding-resolution}}): the code, the refresh token, or the
    `subject_token`, which on a delegated exchange is the designation.
 2. Client and sender binding, as the path's section states for the
-   code, the refresh token, the token a designation request presents,
-   the delegate, and the self-exchanging agent.
+   code ({{approval-code-protection}}), the refresh token
+   ({{refresh-tokens}}), the token a designation request presents
+   ({{designation}}), the delegate ({{delegated-exchange}}), and the
+   self-exchanging agent ({{self-exchange}}).
 3. Mission state: the Mission is `active` (below, {{lifecycle}}); a
    delegated exchange evaluates each redemption afresh
    ({{delegated-exchange}}).
@@ -3003,12 +3014,13 @@ profile that sequences a check within a path keeps that sequence.
 5. Subset ({{subset}}): against the Mission Authority Set, and also
    against the presented refresh grant on a refresh, the presented
    token on a designation or a self-exchange, and the designation on a
-   delegated exchange; on those two delegation exchanges, only as
-   {{delegation-constraints}} permits. An entry is narrowed, issued to
+   delegated exchange; on a designation or a delegated exchange, only
+   as {{delegation-constraints}} permits. An entry is narrowed, issued to
    another audience, delegated, or projected only under a declared
    capability ({{transformation-capabilities}}).
-6. Audience ({{token-claims}}, {{token-response}}): by each entry's
-   original approved audience; for a designation, the resource
+6. Audience ({{token-claims}}, {{token-response}},
+   {{transformation-capabilities}}): by each entry's original approved
+   audience; for a designation, the resource
    audiences of its entries, not the client its `aud` names; for a
    delegated token, also an audience that processes the `act` chain
    ({{rs-mission-unaware}}).
@@ -3017,11 +3029,13 @@ profile that sequences a check within a path keeps that sequence.
    refresh, with that section's protection of the refresh token.
 8. Claims and lifetime ({{token-claims}}, {{mission-claim}},
    {{mission-claim-reservation}}, {{token-authentication-lifetime}}):
-   each token's `exp` does not exceed the Mission's `expires_at`; the
-   three exchanges keep the presented token's `mission` claim, with
-   the differences {{designation}} and {{delegated-exchange}} state.
-9. Response members ({{token-response}},
-   {{mission-response-parameters}}).
+   each token's `exp` does not exceed the Mission's `expires_at`; a
+   designation, a delegated exchange, and a self-exchange keep the
+   presented token's `mission` claim, with the differences
+   {{designation}} and {{delegated-exchange}} state.
+9. Response members: the response echoes the granted
+   `authorization_details` ({{token-response}}) and carries `mission_id`
+   and `mission_expires_at` as {{mission-response-parameters}} states.
 10. Release: the revocation refusal below applies at the AS's final
     decision to release the result.
 
@@ -3348,8 +3362,8 @@ the agent's own authority downward. A designation ({{designation}})
 names a delegate, so it is not a self-exchange, and these rules do not
 apply to it. An exchange whose `subject_token` is a designation is a
 delegated exchange ({{delegated-exchange}}), not a no-actor exchange,
-even when it carries no `actor_token`. Issuance applies the issuance procedure of
-{{issuance-gating}} as it states for a self-exchange.
+even when it carries no `actor_token`. Issuance applies the issuance
+procedure of {{issuance-gating}} as it states for a self-exchange.
 {{authority-proposal}} states a self-exchange request's exemption from
 `mission_intent` and the checks that still apply to it. A no-actor
 exchange is subject to the following:
@@ -3709,8 +3723,9 @@ and otherwise the delegate that the AS's accounting records as the
 token's outermost actor ({{delegation-constraints}}).
 
 Issuing a designation applies the issuance procedure of
-{{issuance-gating}} as it states for a designation. A designation request is a token
-request under an existing Mission-bound grant ({{authority-proposal}}):
+{{issuance-gating}} as it states for a designation. A designation
+request is a token request under an existing Mission-bound grant
+({{authority-proposal}}):
 it needs no `mission_intent`, and every other check that section names
 still applies to it.
 
@@ -3770,8 +3785,8 @@ with no `mission` member.
 
 A delegate obtains a delegated token by Token Exchange
 ({{RFC8693}}), presenting a designation that the delegating party
-obtained for it ({{designation}}). Issuance applies the issuance procedure of
-{{issuance-gating}} as it states for a delegated exchange. The
+obtained for it ({{designation}}). Issuance applies the issuance
+procedure of {{issuance-gating}} as it states for a delegated exchange. The
 AS issues the delegated token subject to all of the following:
 
 - **The exchange is explicit.** The `subject_token` is a designation
@@ -4743,6 +4758,11 @@ independent of possession of any token, a revocation by `mission_id`
 from a party the deployment's policy authorizes (so a Mission can be
 stopped even when no refresh token is held).
 
+The wire shape of that revocation is out of scope for this document. A
+deployment-defined authenticated surface satisfies this requirement;
+Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
+defines an interoperable `revoke` operation.
+
 When the AS establishes that the principal identified by a Mission's
 recorded `subject` ({{record-principal-members}}) has been
 deprovisioned, it SHOULD terminate that Mission with termination
@@ -4762,14 +4782,11 @@ issuance ({{issuance-gating}}) but does not itself recall tokens
 already issued; an earlier execution cutoff depends on the
 deployment's enforcement mechanism.
 
-The wire shape of that operation is out of scope for this document. A
-deployment-defined authenticated surface satisfies this requirement;
-Mission Status ({{I-D.draft-mcguinness-oauth-mission-status}})
-defines an interoperable `revoke` operation.
-
-Revoking a token does not by itself revoke a Mission. As
-{{Section 2.1 of RFC7009}} permits, a deployment's revocation policy
-can treat revoking a Mission's refresh token as revoking the Mission;
+Revoking a token does not by itself revoke a Mission.
+{{Section 2.1 of RFC7009}} lets an authorization server's revocation
+policy extend a token's revocation to related tokens and the underlying
+grant; a deployment's revocation policy can likewise treat revoking a
+Mission's refresh token as revoking the Mission;
 a deployment that couples token revocation to Mission revocation
 documents that behavior.
 
@@ -4941,11 +4958,11 @@ below bind only an AS that advertises it:
 The optional capabilities are discovered first through existing OAuth
 metadata ({{RFC8414}}): `introspection_endpoint` for introspection,
 and `grant_types_supported` containing
-`urn:ietf:params:oauth:grant-type:token-exchange` for delegation and
-for the companion's cross-domain grant issuance. Absent such a signal,
-a capability is discovered out of band or by attempt: a Token
-Exchange, a cross-domain grant issuance, or an introspection request
-fails if the issuer does not support it.
+`urn:ietf:params:oauth:grant-type:token-exchange` for self-exchange,
+for delegation, and for the companion's cross-domain grant issuance.
+Absent such a signal, a capability is discovered out of band or by
+attempt: a Token Exchange, a cross-domain grant issuance, or an
+introspection request fails if the issuer does not support it.
 
 # Protected Resource Metadata {#protected-resource-metadata}
 
@@ -5364,6 +5381,15 @@ The integrity of the `mission_bound_authorization_supported`
 protections of {{RFC8414}} and {{RFC9728}}, whose security
 considerations apply.
 
+### Compromised or Over-Broad Derivation {#compromised-or-over-broad-derivation}
+
+The AS is trusted to derive authority no broader than the Mission
+Intent. Both Authority Set derivation modes
+({{authorization-derivation}}), a proposal narrowed to policy and a
+configured mapping, are mechanical rather than free-form inference.
+The recorded `policy_version` makes each Authority Set derivation
+auditable by naming the policy it ran under.
+
 ## Agent-Specific Threats {#sec-agent}
 
 ### Prompt Injection and Data Exfiltration {#prompt-injection}
@@ -5378,7 +5404,9 @@ consents to, and otherwise can only refuse or tighten; `goal` and
 ({{mission-intent}}, {{authorization-derivation}}).
 
 Within an approved Authority Set, an injected agent can still read
-what the Mission permits and write to a sink the Mission permits. The
+what the Mission permits and write to a sink the Mission permits: a
+Mission governs actions, not the content that flows within an
+authorized action. The
 Mission Security Model
 ({{I-D.draft-mcguinness-mission-security-model}}) analyzes that
 residual; constraining it is the runtime layer's role
@@ -6015,8 +6043,7 @@ This appendix follows one Mission in a single trust domain through
 Mission creation, token issuance, resource server enforcement, a
 refusal, and revocation. It is illustrative and adds no requirements.
 The OAuth steps follow
-this document; the identity setup follows
-{{I-D.draft-ietf-wimse-aims}}. Identifiers are illustrative; the hash
+this document. Identifiers are illustrative; the hash
 values are computed over the displayed objects
 ({{integrity-anchors}}).
 
@@ -6360,7 +6387,7 @@ or configuration. The cited sections govern.
 | Designated-client separation ({{designation}}) | Deployment | AS: no protocol signal; the AS establishes by deployment means, for example its configuration, that no resource server accepts the client's identifier as an audience |
 | Designation redemption count ({{designation}}) | AS | Delegate: no protocol signal; the AS's policy governs, and deployment documentation may describe it. An attempt reveals only its own outcome, not the permitted count |
 | Subject-authentication conveyance ({{rs-denials}}) | Deployment | Resource server: the `acr`, `amr`, and `auth_time` claims ({{token-authentication-lifetime}}), or introspection ({{Section 6 of RFC9470}}); where no Subject authentication applies, they are absent |
-| Revocation means ({{revocation}}) | Deployment | A party authorized to revoke: none in this document; a deployment-defined surface, or Mission Status's `revoke` operation |
+| Revocation means ({{revocation}}) | Mission Issuer, for the means; the deployment's policy, for who may revoke | A party authorized to revoke: none in this document; a deployment-defined surface, or Mission Status's `revoke` operation |
 {: title="Deployment choices and how each party learns them"}
 
 # Design Context and Boundaries {#design-context}
@@ -6981,22 +7008,25 @@ resolve before interoperating.
   states, so it no longer reads as saying a delegated token's
   `client_id` names the Agent (#1851, D971).
 - Editorial, no requirement change: Issuance Gating opens with the
-  issuance procedure, the numbered checks every issuance path passes,
-  in presentation order with no execution order or error precedence;
-  the release-time revocation refusal and any sequencing a companion
-  profile defines are unchanged. The Issuance Checks index is removed:
-  the procedure and the sections it cites state its paths and per-path
-  details (#1892, D1026).
+  issuance procedure, the numbered checks each of the five issuance
+  paths passes; any other derivation passes at least the resolution,
+  state, subset, scope-projection and `exp` checks the Issuance Gating
+  list it replaces required, and the release-time revocation refusal.
+  The numbering is presentation order, with no execution order or
+  error precedence, and the orders this document states are unchanged.
+  The Issuance Checks index is removed: the procedure and the sections
+  it cites state its paths and per-path details (#1892, D1026).
 - Editorial, no requirement change: text that restates rules stated
-  elsewhere is removed: the Implementation Map; the End-to-End
+  elsewhere is removed: the Implementation Map's index, its
+  deployment-choices table becoming the Deployment Choices appendix;
+  the End-to-End
   Example's timeline and companion variations (its Stage 5 is
   retitled Revocation); the derivation-policy paragraphs that the
   Architecture's Derivation Boundary carries; the step overview of
   Direct Approval Steps; the record summary in Committing the Mission;
-  the scope-only paragraph of Mission-Unaware Resource Servers; the
-  Projection Example, which the Resource Access Profile gives; the
-  three-sides restatement in Downgrade by Omission; Compromised or
-  Over-Broad Derivation; Authority Hash and Mission Identity; and
+  the Projection Example, which the Resource Access Profile gives; the
+  three-sides restatement in Downgrade by Omission; Authority Hash and
+  Mission Identity; and
   Authority Materialized Before Containment, which the Containment
   profile states (#1892, D1026).
 - Editorial, no requirement change: the sections follow processing
@@ -7040,7 +7070,8 @@ resolve before interoperating.
   Capabilities and the Mission Resource Access Profile state, is
   removed with its Cedar reference (#1892, D1026).
 - Editorial, no requirement change: Revocation no longer restates the
-  token-lifetime bound of Issuance Gating or the introspection overlay;
+  introspection overlay, and its wire-shape sentence follows the
+  requirement it scopes;
   its duty to offer token introspection or Mission Status where
   consumers rely on Mission state beyond a token's lifetime is
   unchanged (#1892, D1026).
@@ -7056,7 +7087,9 @@ resolve before interoperating.
   OAuth Objects; Missions, Plans, and Execution; the Derivation Policy
   appendix's worked example; and the guidance on sizing a Mission to
   one task, which Applicability now points to. The Introduction's
-  two-layer framing becomes a pointer, and the Mission Authority Server
+  two-layer framing becomes a pointer, and Mission-Unaware Resource
+  Servers states that a resource server receiving no delegated token
+  need not be Mission-aware; the Mission Authority Server
   pointer of Mission-Bound Token Issuance and the End-to-End Example's
   agent-identity stage, each stated elsewhere, are removed with the
   uncited SPIFFE client authentication reference (#1892, D1026).
@@ -7064,16 +7097,6 @@ resolve before interoperating.
   the Architecture as Approval Role Mapping, which Single Accountable
   Approver cites; the companions that cited it now cite Principals and
   Approval Basis, which defines the three roles (#1892, D1026).
-- Editorial, no requirement change: the issuance procedure covers the
-  five paths this document defines, and any other derivation passes at
-  least its resolution, state, subset, scope-projection and lifetime
-  checks, as the Issuance Gating list it replaced required; it names the
-  orders this document states, including the refresh-time ones of
-  Authority Proposal and Refresh Token Protection. Mission-Unaware
-  Resource Servers states that a resource server receiving no delegated
-  token need not be Mission-aware. The Deployment Choices appendix keeps
-  the Implementation Map's table of the choices a deployment makes and
-  how each party learns them (#1892, D1026).
 
 -01
 

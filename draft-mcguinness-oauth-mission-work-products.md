@@ -199,8 +199,10 @@ The invariant of {{invariant}} is not a new axiom. It is the
 artifact-plane reading of a claim the issuance profile already makes on
 the credential plane: authority exists only by derivation for a Mission,
 so no possessed thing, credential or artifact, substitutes for the
-Mission's live gate. This document states the property for work
-products and imposes nothing new on the issuance profile.
+Mission's live gate. The OAuth binding's Security Considerations
+state the same property ({{I-D.draft-mcguinness-oauth-mission}},
+Section "Authority and Propagated Information"); this document states
+it for work products and imposes nothing new on the issuance profile.
 
 Child delegation ({{I-D.draft-mcguinness-oauth-mission-child-delegation}})
 is the legitimate authority path this document points to: where an agent
@@ -837,10 +839,9 @@ which remains deferred in {{binding-guardrails}}.
 
 \[\[ To be removed from the final specification ]]
 
-- Relationship to Other Profiles no longer anticipates an
-  issuance-profile Security Considerations statement of the invariant;
-  the OAuth binding leaves that analysis to the Security Model. No
-  requirement changed (#1892).
+- Relationship to Other Profiles cites the OAuth binding's Security
+  Considerations statement of the invariant instead of anticipating
+  one. No requirement changed (#1892).
 
 - Added the informative Artifact-Lineage Label Persistence appendix
   and clarified the deferred-mechanism list. Labels use a declared
