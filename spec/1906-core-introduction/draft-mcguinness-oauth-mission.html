@@ -1809,6 +1809,43 @@ the other terms:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
       v
 </pre><a href="#section-2.1-2" class="pilcrow">¶</a>
 </div>
+<ol start="1" type="1" class="normal type-1" id="section-2.1-3">
+<li id="section-2.1-3.1">
+            <p id="section-2.1-3.1.1"><strong>Submit.</strong> The client pushes a Mission Intent describing the
+task, optionally with proposed <code>authorization_details</code>
+(<a href="#submission-via-par" class="auto internal xref">Section 4.2</a>). The AS derives the Authority Set, the
+concrete authority the task needs (<a href="#authorization-derivation" class="auto internal xref">Section 5</a>).<a href="#section-2.1-3.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.1-3.2">
+            <p id="section-2.1-3.2.1"><strong>Approve and commit.</strong> The Approver consents to that Authority
+Set itself, not to the task description alone (<a href="#approval-event" class="auto internal xref">Section 6.1</a>).
+The AS records the active Mission, commits the Intent as
+<code>intent_hash</code> and the approved Authority Set as <code>authority_hash</code>
+(<a href="#integrity-anchors" class="auto internal xref">Section 6.4.1</a>), and binds the grant the approval produces
+to the Mission server-side. Any grant lineage bound to a Mission
+resolves to exactly that Mission, and no client input chooses it
+(<a href="#grant-binding" class="auto internal xref">Section 6.5</a>).<a href="#section-2.1-3.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li id="section-2.1-3.3">
+            <p id="section-2.1-3.3.1"><strong>Issue.</strong> At each token request the AS checks that the Mission is
+<code>active</code> and derives authority no broader than the approved
+Authority Set (<a href="#issuance-gating" class="auto internal xref">Section 7.1</a>, <a href="#subset" class="auto internal xref">Section 5.4</a>). The access token
+carries the derived authorization details and a <code>mission</code> claim
+identifying the Mission (<a href="#mission-claim" class="auto internal xref">Section 7.8</a>), and a resource server
+enforces statelessly from the token (<a href="#rs-enforcement" class="auto internal xref">Section 9.1</a>).<a href="#section-2.1-3.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ol>
+<p id="section-2.1-4">Each later issuance from that grant lineage, such as a refresh, is a
+derivation under the same checks, and a token derived by Token
+Exchange carries the same <code>mission</code> claim (<a href="#self-exchange" class="auto internal xref">Section 7.5</a>,
+<a href="#delegated-exchange" class="auto internal xref">Section 8.2</a>). Revoking or expiring the Mission stops
+further issuance and refresh, including from any grant lineage bound
+to it (<a href="#grant-binding-state" class="auto internal xref">Section 6.5.3</a>). An already-issued access token can
+still be honored on a stateless enforcement path until it expires
+(<a href="#revocation" class="auto internal xref">Section 10.2</a>). A user thus approves
+a task's authority once, and that approval bounds every token the
+agent derives. <a href="#first-mission" class="auto internal xref">Section 2.2</a> walks through these steps with
+concrete values.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
 </section>
 </div>
 <div id="first-mission">
@@ -10371,7 +10408,9 @@ show, or details stated in their own sections (consent to the
 Authority Set, the commitments, grant binding, revocation by
 identifier, the <code>mission</code> claim and resource-server enforcement).
 The issuance-only deployment pointer moves to Issuance Scope and
-Runtime Enforcement (#1906, D1039).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
+Runtime Enforcement. Protocol Flow gains a legend keyed to its
+figure that carries the flow's properties, with a pointer to each
+section that specifies them (#1906, D1039).<a href="#appendix-E-3.1.1" class="pilcrow">¶</a></p>
 </li>
         <li class="normal" id="appendix-E-3.2">
           <p id="appendix-E-3.2.1">Editorial, no requirement change: the back matter that describes

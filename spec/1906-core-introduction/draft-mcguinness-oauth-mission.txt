@@ -321,6 +321,37 @@ Table of Contents
          |                                     |   + mission claim
          v
 
+   1.  *Submit.* The client pushes a Mission Intent describing the task,
+       optionally with proposed authorization_details (Section 4.2).
+       The AS derives the Authority Set, the concrete authority the task
+       needs (Section 5).
+
+   2.  *Approve and commit.* The Approver consents to that Authority Set
+       itself, not to the task description alone (Section 6.1).  The AS
+       records the active Mission, commits the Intent as intent_hash and
+       the approved Authority Set as authority_hash (Section 6.4.1), and
+       binds the grant the approval produces to the Mission server-side.
+       Any grant lineage bound to a Mission resolves to exactly that
+       Mission, and no client input chooses it (Section 6.5).
+
+   3.  *Issue.* At each token request the AS checks that the Mission is
+       active and derives authority no broader than the approved
+       Authority Set (Section 7.1, Section 5.4).  The access token
+       carries the derived authorization details and a mission claim
+       identifying the Mission (Section 7.8), and a resource server
+       enforces statelessly from the token (Section 9.1).
+
+   Each later issuance from that grant lineage, such as a refresh, is a
+   derivation under the same checks, and a token derived by Token
+   Exchange carries the same mission claim (Section 7.5, Section 8.2).
+   Revoking or expiring the Mission stops further issuance and refresh,
+   including from any grant lineage bound to it (Section 6.5.3).  An
+   already-issued access token can still be honored on a stateless
+   enforcement path until it expires (Section 10.2).  A user thus
+   approves a task's authority once, and that approval bounds every
+   token the agent derives.  Section 2.2 walks through these steps with
+   concrete values.
+
 2.2.  Introductory Example
 
    In the examples in this document, each service's operation contract
@@ -7487,7 +7518,9 @@ Appendix E.  Document History
       Authority Set, the commitments, grant binding, revocation by
       identifier, the mission claim and resource-server enforcement).
       The issuance-only deployment pointer moves to Issuance Scope and
-      Runtime Enforcement (#1906, D1039).
+      Runtime Enforcement.  Protocol Flow gains a legend keyed to its
+      figure that carries the flow's properties, with a pointer to each
+      section that specifies them (#1906, D1039).
 
    *  Editorial, no requirement change: the back matter that describes
       the family rather than the protocol moves to the Architecture: the
